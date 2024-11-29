@@ -1,0 +1,83 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header';
+
+---
+
+<Layout title="Settings">
+  <Header client:load />
+  <div class="max-w-2xl mx-auto px-4 pt-24">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-white mb-6">Settings</h1>
+      
+      <div class="space-y-6">
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Account Settings</h2>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value="akkuea.contact@gmail.com"
+                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                readonly
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Username
+              </label>
+              <input
+                type="text"
+                value="akkuea"
+                class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                readonly
+              />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Notifications</h2>
+          <div class="space-y-3">
+            <label class="flex items-center">
+              <input type="checkbox" checked class="form-checkbox h-5 w-5 text-primary-light dark:text-primary-dark" />
+              <span class="ml-2 text-gray-700 dark:text-gray-300">Email notifications</span>
+            </label>
+            
+            <label class="flex items-center">
+              <input type="checkbox" checked class="form-checkbox h-5 w-5 text-primary-light dark:text-primary-dark" />
+              <span class="ml-2 text-gray-700 dark:text-gray-300">Push notifications</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Privacy</h2>
+          <div class="space-y-3">
+            <label class="flex items-center">
+              <input type="checkbox" checked class="form-checkbox h-5 w-5 text-primary-light dark:text-primary-dark" />
+              <span class="ml-2 text-gray-700 dark:text-gray-300">Private account</span>
+            </label>
+            
+            <label class="flex items-center">
+              <input type="checkbox" class="form-checkbox h-5 w-5 text-primary-light dark:text-primary-dark" />
+              <span class="ml-2 text-gray-700 dark:text-gray-300">Show online status</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t dark:border-gray-700">
+          <button
+            class="px-4 py-2 bg-primary-light dark:bg-primary-dark text-white rounded-lg hover:opacity-80"
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>

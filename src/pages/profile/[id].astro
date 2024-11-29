@@ -1,0 +1,21 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Profile from '../../components/Profile';
+import Feed from '../../components/Feed';
+import Header from '../../components/Header';
+import { generateMockUser } from '../../utils/mockData';
+
+const { id } = Astro.params;
+const userId = parseInt(id || '1');
+const user = generateMockUser(userId);
+---
+
+<Layout title={`${user.username}'s Profile`}>
+  <Header client:load />
+  <div class="max-w-4xl mx-auto px-4">
+    <Profile user={user} client:load />
+    <div class="mt-8">
+      <Feed userId={userId} client:load />
+    </div>
+  </div>
+</Layout>

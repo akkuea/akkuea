@@ -7,7 +7,7 @@
   "scripts": {
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "dev": "bun run dev --parallel",
+    "dev": "next dev",
     "build": "bun run build",
     "start": "bun run start",
     "lint": "bun run lint",
@@ -26,6 +26,9 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "husky": "^9.1.7"
+    "husky": "^9.1.7",
+    "next": "^15.1.7",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   }
 }

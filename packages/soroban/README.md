@@ -10,6 +10,7 @@ Welcome to the Soroban smart contracts package! This is where all the blockchain
 - **Development Tools**: Integration with Soroban CLI and development network
 
 ## 📁 Project Structure
+
 ```
 soroban/
 ├── contracts
@@ -25,17 +26,20 @@ soroban/
 ## 🛠 Getting Started
 
 1. Install Rust and Soroban CLI:
+
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 cargo install soroban-cli
 ```
 
 2. Build the contracts:
+
 ```bash
 cargo build --target wasm32-unknown-unknown --release
 ```
 
 3. Run tests:
+
 ```bash
 cargo test
 ```
@@ -43,16 +47,19 @@ cargo test
 ## 🔐 Smart Contracts
 
 ### Token Contract (XYZ Token)
+
 - Custom token implementation with advanced features
 - Supports minting, burning, and transfers
 - Implements standard token interface
 
 ### NFT Marketplace
+
 - Buy and sell NFTs
 - Auction functionality
 - Royalty distribution system
 
 ### Secure Vault
+
 - Asset custody solution
 - Time-locked withdrawals
 - Multi-signature support
@@ -60,12 +67,14 @@ cargo test
 ## 🧪 Testing
 
 Each contract includes:
+
 - Unit tests
 - Integration tests
 - Fuzzing tests
 - Network simulation tests
 
 Run specific contract tests:
+
 ```bash
 cargo test -p token
 cargo test -p marketplace
@@ -75,11 +84,13 @@ cargo test -p vault
 ## 📚 Development Guidelines
 
 1. **Contract Safety**
+
    - Use safe math operations
    - Implement proper access control
    - Follow Soroban best practices
 
 2. **Code Organization**
+
    - Keep contracts modular
    - Use traits for shared functionality
    - Document all public interfaces

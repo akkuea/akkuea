@@ -1,14 +1,16 @@
 import React from 'react';
-import { Edit, MapPin, Link as LinkIcon, Calendar } from 'lucide-react';
+import { Edit, MapPin, Link, MessageCircle, Share2, Flag as LinkIcon, Calendar } from 'lucide-react';
+import { Flag } from "lucide-react";
 
 const ProfilePage = () => {
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 -mt-24">
     <div className="bg-white rounded-xl shadow-sm p-6">
+     
       <div className="flex flex-col md:flex-row items-start gap-6">
        
         <div className="w-full md:w-auto flex flex-col items-center md:items-start">
-         
+      
           <div className="w-32 h-32 md:w-44 md:h-44 rounded-full ring-4 ring-white bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden shadow-lg">
             <svg
               className="w-16 h-16 md:w-20 md:h-20 text-gray-400 transition-transform hover:scale-110 duration-300"
@@ -19,7 +21,7 @@ const ProfilePage = () => {
             </svg>
           </div>
   
-         
+        
           <div className="flex gap-2 mt-4">
             <span className="px-4 py-1.5 bg-teal-50 text-teal-600 rounded-full text-sm font-medium hover:bg-teal-100 transition-colors duration-200">
               Student
@@ -30,8 +32,9 @@ const ProfilePage = () => {
           </div>
         </div>
   
+    
         <div className="flex-1 pt-2 w-full">
-         
+        
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 hover:text-teal-600 transition-colors duration-200">
@@ -45,7 +48,7 @@ const ProfilePage = () => {
             </button>
           </div>
   
-         
+        
           <div className="flex flex-col sm:flex-row sm:flex-wrap gap-4 text-sm text-gray-600 mb-6">
             <div className="flex items-center gap-1">
               <MapPin size={16} className="text-gray-400" />
@@ -80,10 +83,36 @@ const ProfilePage = () => {
           </div>
   
           
-          <p className="text-gray-700 leading-relaxed">
+          <p className="text-gray-700 leading-relaxed mb-6">
             I'm a crack designer, I like software engineering and also mixing as a DJ. Passionate
             about creating beautiful and functional digital experiences.
           </p>
+  
+       
+          <div className="flex flex-col sm:flex-row gap-4">
+            
+            <button className="px-6 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 transition-colors duration-200">
+              Follow
+            </button>
+  
+          
+            <button className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all duration-200 hover:shadow-sm flex items-center gap-2 text-gray-700">
+              <MessageCircle size={16} />
+              Message
+            </button>
+  
+          
+            <button className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all duration-200 hover:shadow-sm flex items-center gap-2 text-gray-700">
+              <Share2 size={16} />
+              Share Profile
+            </button>
+  
+           
+            <button className="px-6 py-2 border border-gray-300 rounded-lg text-sm font-medium hover:bg-gray-50 transition-all duration-200 hover:shadow-sm flex items-center gap-2 text-gray-700">
+              <Flag size={16} />
+              Report User
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -92,3 +121,10 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
+
+
+
+
+
+
+

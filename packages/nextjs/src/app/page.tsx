@@ -4,7 +4,6 @@ import { useWallet } from "@/components/auth/hooks/useWallet.hook";
 import { useGlobalAuthenticationStore } from "@/components/auth/store/data";
 import { useState } from "react";
 import { Button } from "@/components/ui/button"
-import ProfilePage from "@/components/profile/Profile";
 
 export default function Home() {
   const { handleConnect, handleDisconnect } = useWallet();
@@ -25,7 +24,6 @@ export default function Home() {
       </header>
       <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
         <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <ProfilePage/>
           <p>{address}</p>
         </div>
       </main>

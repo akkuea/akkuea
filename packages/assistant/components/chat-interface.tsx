@@ -27,7 +27,7 @@ function useMediaQuery(query: string) {
   React.useEffect(() => {
     const media = window.matchMedia(query)
     const listener = () => setMatches(media.matches)
-    
+
     // Set initial value
     setMatches(media.matches)
 
@@ -83,54 +83,55 @@ export function ChatInterface() {
 
   return (
     <>
-      <Card className="w-full h-[calc(100vh-theme(spacing.16))] sm:h-[85vh] flex flex-col mx-auto">
-        <CardHeader className="px-4 sm:px-6">
-          <CardTitle className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-primary animate-pulse bg-green-600" />
-            Akkuea AI Assistant
-          </CardTitle>
-          <Separator />
-        </CardHeader>
+      <div className="flex justify-center items-center min-h-screen">
+        <Card className="w-full  min-h-[200px] max-h-[85vh] flex flex-col mx-auto">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-primary animate-pulse bg-green-600" />
+              Akkuea AI Assistant
+            </CardTitle>
+            <Separator />
+          </CardHeader>
 
-        <CardContent className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full pr-4">
-            <div
-              className={cn("space-y-4", {
-                "text-sm": fontSize === "sm",
-                "text-base": fontSize === "base",
-                "text-lg": fontSize === "lg",
-              })}
-            >
-              {messages.map((message, index) => (
-                <ChatMessage
-                  key={message.id}
-                  message={message}
-                  isLoading={isLoading && index === messages.length - 1}
-                />
-              ))}
-            </div>
-            <div ref={messagesEndRef} />
-          </ScrollArea>
-        </CardContent>
+          <CardContent className="flex-1 overflow-hidden">
+            <ScrollArea className="max-h-[70vh] pr-4">
+              <div
+                className={cn("space-y-4", {
+                  "text-sm": fontSize === "sm",
+                  "text-base": fontSize === "base",
+                  "text-lg": fontSize === "lg",
+                })}
+              >
+                {messages.map((message, index) => (
+                  <ChatMessage
+                    key={message.id}
+                    message={message}
+                    isLoading={isLoading && index === messages.length - 1}
+                  />
+                ))}
+              </div>
+              <div ref={messagesEndRef} />
+            </ScrollArea>
+          </CardContent>
 
-        <CardFooter>
-          <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
-            <Textarea
-              ref={textareaRef}
-              value={input}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholderText}
-              className="flex-1 min-h-[60px] max-h-[200px]"
-              disabled={isLoading}
-            />
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            </Button>
-          </form>
-        </CardFooter>
-      </Card>
-
+          <CardFooter>
+            <form onSubmit={handleSubmit} className="flex w-full items-center space-x-2">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder={placeholderText}
+                className="flex-1 min-h-[60px] max-h-[200px]"
+                disabled={isLoading}
+              />
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              </Button>
+            </form>
+          </CardFooter>
+        </Card>
+      </div>
       <AlertDialog open={isErrorOpen} onOpenChange={setIsErrorOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

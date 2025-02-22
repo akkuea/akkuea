@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^1.1.13",
+    "@ai-sdk/react": "^1.1.17",
     "@creit.tech/stellar-wallets-kit": "^1.4.1",
     "@prisma/client": "^5.9.1",
     "@radix-ui/react-alert-dialog": "^1.1.6",

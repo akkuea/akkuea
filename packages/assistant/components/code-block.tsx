@@ -11,6 +11,7 @@ interface CodeBlockProps {
   language: string
   code: string
 }
+
 export function CodeBlock({ language, code }: CodeBlockProps) {
   const [copied, setCopied] = React.useState(false)
 
@@ -33,19 +34,23 @@ export function CodeBlock({ language, code }: CodeBlockProps) {
   }
 
   return (
-    <div className="relative my-4 rounded-lg bg-secondary">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-secondary/10">
-        <span className="text-sm text-primary">{language}</span>
-        <div className="flex items-center gap-2">
+    <div className="relative my-3 sm:my-4 rounded-lg bg-secondary overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-1.5 sm:px-4 sm:py-2 border-b border-secondary/10">
+        <span className="text-xs sm:text-sm text-primary">{language}</span>
+        <div className="flex items-center gap-1 sm:gap-2">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={copyToClipboard}>
-                  {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={copyToClipboard}>
+                  {copied ? (
+                    <Check className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                  ) : (
+                    <Copy className="h-3 w-3 sm:h-4 sm:w-4" />
+                  )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>{copied ? "Copied!" : "Copy code"}</p>
+              <TooltipContent side="left">
+                <p className="text-xs sm:text-sm">{copied ? "Copied!" : "Copy code"}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -53,28 +58,31 @@ export function CodeBlock({ language, code }: CodeBlockProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={downloadCode}>
-                  <Download className="h-4 w-4" />
+                <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8" onClick={downloadCode}>
+                  <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p>Download code</p>
+              <TooltipContent side="left">
+                <p className="text-xs sm:text-sm">Download code</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
       </div>
-      <SyntaxHighlighter
-        language={language}
-        style={vscDarkPlus}
-        customStyle={{
-          margin: 0,
-          padding: "1rem",
-          background: "transparent",
-        }}
-      >
-        {code}
-      </SyntaxHighlighter>
+      <div className="text-xs sm:text-sm">
+        <SyntaxHighlighter
+          language={language}
+          style={vscDarkPlus}
+          customStyle={{
+            margin: 0,
+            padding: "0.75rem",
+            background: "transparent",
+            fontSize: "inherit",
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
+      </div>
     </div>
   )
 }

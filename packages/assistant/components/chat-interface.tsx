@@ -9,8 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { ChatMessage } from "./chat-message"
-import { Send, Loader2 } from "lucide-react"
-
+import { Send, Loader2 } from 'lucide-react'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -22,12 +21,31 @@ import {
 import { useChatStore } from "@/store/use-chat-store"
 import { useSettingsStore } from "@/store/use-settings-store"
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = React.useState(false)
+
+  React.useEffect(() => {
+    const media = window.matchMedia(query)
+    const listener = () => setMatches(media.matches)
+    
+    // Set initial value
+    setMatches(media.matches)
+
+    // Listen for changes
+    media.addEventListener('change', listener)
+    return () => media.removeEventListener('change', listener)
+  }, [query])
+
+  return matches
+}
+
 export function ChatInterface() {
   const [isErrorOpen, setIsErrorOpen] = React.useState(false)
   const [errorMessage, setErrorMessage] = React.useState("")
 
   const { messages, setMessages, addMessage } = useChatStore()
   const { autoScroll, fontSize } = useSettingsStore()
+  const isMobile = useMediaQuery('(max-width: 640px)')
 
   const { input, handleInputChange, handleSubmit, isLoading } = useChat({
     api: "/api/chat",
@@ -53,18 +71,22 @@ export function ChatInterface() {
   }, [autoScroll])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit(e as any)
     }
   }
 
+  const placeholderText = isMobile
+    ? "Ask a question... (Enter to send)"
+    : "Ask about Stellar development, smart contracts, or project structure... (Press Enter to send, Shift+Enter for new line)"
+
   return (
     <>
-      <Card className="w-full max-w-4xl mx-auto h-[85vh] flex flex-col">
-        <CardHeader>
+      <Card className="w-full h-[calc(100vh-theme(spacing.16))] sm:h-[85vh] flex flex-col mx-auto">
+        <CardHeader className="px-4 sm:px-6">
           <CardTitle className="flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full bg-primary animate-pulse bg-green-600`} />
+            <span className="h-2 w-2 rounded-full bg-primary animate-pulse bg-green-600" />
             Akkuea AI Assistant
           </CardTitle>
           <Separator />
@@ -98,13 +120,11 @@ export function ChatInterface() {
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
-              placeholder="Ask about Stellar development, smart contracts, or project structure... (Press Enter to send, Shift+Enter for new line)"
+              placeholder={placeholderText}
               className="flex-1 min-h-[60px] max-h-[200px]"
-              // autoResize
               disabled={isLoading}
-              rows={1}
             />
-            <Button type="submit" disabled={isLoading} className="mb-[3px]">
+            <Button type="submit" disabled={isLoading}>
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </form>
@@ -125,4 +145,3 @@ export function ChatInterface() {
     </>
   )
 }
-

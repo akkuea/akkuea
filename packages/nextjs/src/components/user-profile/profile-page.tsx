@@ -28,9 +28,8 @@ export default function EditProfilePage() {
     e.preventDefault()
     setIsSubmitting(true)
     try {
-      // Here you would typically send the updated profile data to your backend
       console.log("Profile updated:", { name, username, bio, selectedRoles })
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
       router.push("/profile")
     } catch (error) {
       console.error("Error updating profile:", error)
@@ -47,13 +46,13 @@ export default function EditProfilePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black">
-      <div className="container mx-auto px-4 py-8 max-w-lg">
+      <div className="px-8 py-8">
         <Card className="bg-white dark:bg-black dark:border-gray-800">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-[#38B2AC]">Edit Profile</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-6">
               <ProfileAvatar />
               <ProfileForm
                 name={name}

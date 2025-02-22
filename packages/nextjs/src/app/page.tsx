@@ -4,6 +4,7 @@ import { useWallet } from "@/components/auth/hooks/useWallet.hook"
 import { useGlobalAuthenticationStore } from "@/components/auth/store/data"
 import { Button } from "@/components/ui/button"
 import QuickPost from "@/components/quickPost/quickPost"
+import EditProfilePage from "@/components/user-profile/profile-page"
 
 export default function Home() {
   const { handleConnect, handleDisconnect } = useWallet()
@@ -23,7 +24,6 @@ export default function Home() {
           <h1>Hi</h1>
           <p>{address}</p>
         </div>
-        <QuickPost />
       </main>
       <footer className="w-full flex gap-6 flex-wrap items-center justify-center">
         <a className="flex items-center gap-2 hover:underline hover:underline-offset-4">

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react';
 
 interface TextInputProps {
   value: string;
@@ -26,7 +26,9 @@ const TextInput: React.FC<TextInputProps> = ({ value, onChange }) => {
         onChange={handleChange}
         rows={3}
       />
-      <div className="text-right text-sm text-gray-500">{charCount}/{maxChars}</div>
+      <div className="text-right text-sm text-gray-500">
+        {charCount}/{maxChars}
+      </div>
     </div>
   );
 };

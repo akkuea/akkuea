@@ -1,12 +1,12 @@
-import { create } from "zustand";
-import { devtools, DevtoolsOptions, persist } from "zustand/middleware";
-import { AuthenticationStore } from "./@types/authentication.entity";
-import { useGlobalAuthenticationSlice } from "./slices/authentication.slide";
+import { create } from 'zustand';
+import { devtools, DevtoolsOptions, persist } from 'zustand/middleware';
+import { AuthenticationStore } from './@types/authentication.entity';
+import { useGlobalAuthenticationSlice } from './slices/authentication.slide';
 
 type AuthState = AuthenticationStore;
 
 const devtoolsOptions: DevtoolsOptions = {
-  name: "Global State",
+  name: 'Global State',
   serialize: {
     options: {
       undefined: true,
@@ -22,13 +22,13 @@ const devtoolsOptions: DevtoolsOptions = {
       maxSize: 50000,
     },
   },
-  enabled: process.env.NODE_ENV === "development",
-  anonymousActionType: "Unknown",
+  enabled: process.env.NODE_ENV === 'development',
+  anonymousActionType: 'Unknown',
   stateSanitizer: (state: AuthState) => {
     return {
       ...state,
-      notificationsApi: "<NOTIFICATIONS_API>",
-      contextHolder: "<CONTEXT_HOLDER>",
+      notificationsApi: '<NOTIFICATIONS_API>',
+      contextHolder: '<CONTEXT_HOLDER>',
     };
   },
 };
@@ -40,7 +40,7 @@ export const useGlobalAuthenticationStore = create<AuthState>()(
         ...useGlobalAuthenticationSlice(...a),
       }),
       {
-        name: "address-wallet",
+        name: 'address-wallet',
       }
     ),
     devtoolsOptions

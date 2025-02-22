@@ -1,4 +1,4 @@
-import { Paperclip } from "lucide-react";
+import { Paperclip } from 'lucide-react';
 
 interface PostButtonProps {
   onClick: () => void;
@@ -19,7 +19,7 @@ const PostButton: React.FC<PostButtonProps> = ({ onClick, disabled, onUpload }) 
         onClick={onClick}
         disabled={disabled}
         className={`bg-[#59C9D0] text-white px-4 py-2 rounded-md font-medium ${
-          disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-[#45AAB1]"
+          disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#45AAB1]'
         }`}
       >
         Post
@@ -30,7 +30,7 @@ const PostButton: React.FC<PostButtonProps> = ({ onClick, disabled, onUpload }) 
           accept="image/*"
           multiple
           className="hidden"
-          onChange={handleFileChange} 
+          onChange={handleFileChange}
         />
         <Paperclip className="w-5 h-5" />
       </label>

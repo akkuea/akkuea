@@ -35,9 +35,12 @@ body {
     --radius: 0.5rem;
     --darkTurquoise: #00ced1;
     --darkTurquoise-dark: #008b8b;
+<<<<<<< HEAD
     --heading-color: 174 59% 56%;
     --button-background: 174 59% 56%;
     --button-hover: 174 59% 46%;
+=======
+>>>>>>> main
   }
 
   .dark {
@@ -47,13 +50,21 @@ body {
     --card-foreground: 0 0% 100%;
     --popover: 0 0% 7%;
     --popover-foreground: 0 0% 100%;
+<<<<<<< HEAD
     --primary: 174 59% 56%;
+=======
+    --primary: 181 100% 41%;
+>>>>>>> main
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 10%;
     --secondary-foreground: 0 0% 100%;
     --muted: 0 0% 10%;
     --muted-foreground: 0 0% 60%;
+<<<<<<< HEAD
     --accent: 174 59% 46%;
+=======
+    --accent: 181 100% 27%;
+>>>>>>> main
     --accent-foreground: 0 0% 100%;
     --destructive: 181 100% 41%;
     --destructive-foreground: 0 0% 100%;
@@ -78,4 +89,18 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+<<<<<<< HEAD
+=======
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+>>>>>>> main
 }

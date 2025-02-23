@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
-import { ProfileAvatar } from "./ ProfileAvatar"
+import { ProfileAvatar } from "./ProfileAvatar"
 import { ProfileForm } from "./ProfileForm"
 import { RoleSelector } from "./RoleSelector"
 import { ActionButtons } from "./ActionButtons"
@@ -68,7 +68,7 @@ export default function EditProfilePage() {
                 onRoleChange={handleRoleChange}
               />
               <ActionButtons
-                onCancel={() => router.push("/")}
+                onCancel={() => router.push("/profile")}
                 isSubmitting={isSubmitting}
               />
             </form>

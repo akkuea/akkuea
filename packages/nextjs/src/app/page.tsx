@@ -1,12 +1,5 @@
 'use client';
 
-<<<<<<< HEAD
-import EditProfilePage from "@/components/user-profile/profile-page"
-
-export default function ProfileEditPage() {
-  return <EditProfilePage />
-}
-=======
 import { useWallet } from '@/components/auth/hooks/useWallet.hook';
 import { useGlobalAuthenticationStore } from '@/components/auth/store/data';
 import { Button } from '@/components/ui/button';
@@ -38,4 +31,3 @@ export default function Home() {
     </div>
   );
 }
->>>>>>> main

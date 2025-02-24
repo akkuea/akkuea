@@ -7,12 +7,25 @@ import { Search, MessageCircle, User } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import AkkueaLogo from "@/components/logo/akkueaLogo" 
+import { useMessages } from "@/store/messaging-store"
+import { MessagePreview } from "@/components/messages/MessagePreview"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const searchRef = useRef<HTMLDivElement>(null)
+  const { conversations } = useMessages();
+  const unreadCount = conversations.reduce(
+    (count, conv) => count + (conv.unread ? 1 : 0),
+    0
+  );
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -51,7 +64,7 @@ const Navbar = () => {
 
   return (
     <nav className="w-full border-b bg-background text-foreground">
-      <div className="max-w-[1400px] mx-auto px-4 h-14 flex items-center gap-4">
+      <div className="max-w-[1400px] mx-auto px-4 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link href="/" className="flex items-center">
           <AkkueaLogo className="h-8 w-auto" />
@@ -82,6 +95,36 @@ const Navbar = () => {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Navigation Icons */}
+        <div className="flex items-center gap-4">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link 
+                  href="/messages-private" 
+                  className="p-2 hover:bg-muted rounded-full transition-colors relative"
+                >
+                  <MessageCircle className="h-5 w-5" style={{ color: '#59C9D0' }} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-[#00CECE] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <MessagePreview />
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <Link 
+            href="/edit-profile" 
+            className="p-2 hover:bg-muted rounded-full transition-colors"
+          >
+            <User className="h-5 w-5 text-muted-foreground" />
+          </Link>
         </div>
       </div>
     </nav>

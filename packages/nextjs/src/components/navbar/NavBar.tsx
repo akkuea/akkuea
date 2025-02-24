@@ -15,6 +15,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useWallet } from '@/components/auth/hooks/useWallet.hook';
+import { useGlobalAuthenticationStore } from '@/components/auth/store/data';
+import { Button } from '@/components/ui/button';
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("")
@@ -26,6 +29,8 @@ const Navbar = () => {
     (count, conv) => count + (conv.unread ? 1 : 0),
     0
   );
+  const { handleConnect, handleDisconnect } = useWallet();
+  const address = useGlobalAuthenticationStore((state) => state.address);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -125,6 +130,21 @@ const Navbar = () => {
           >
             <User className="h-5 w-5 text-muted-foreground" />
           </Link>
+          {address ? (
+            <Button 
+              onClick={handleDisconnect} 
+              className="bg-[#59C9D0] hover:bg-[#4ab5bc] text-white font-medium px-4 py-2 rounded-full transition-colors duration-200 text-sm shadow-sm hover:shadow-md"
+            >
+              Disconnect
+            </Button>
+          ) : (
+            <Button 
+              onClick={handleConnect} 
+              className="bg-[#59C9D0] hover:bg-[#4ab5bc] text-white font-medium px-4 py-2 rounded-full transition-colors duration-200 text-sm shadow-sm hover:shadow-md"
+            >
+              Connect
+            </Button>
+          )}
         </div>
       </div>
     </nav>

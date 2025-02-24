@@ -8,7 +8,7 @@ export function MessagePreview() {
   if (unreadMessages.length === 0) {
     return (
       <div className="p-2 text-sm text-gray-500">
-        No hay mensajes nuevos
+        No new messages
       </div>
     );
   }
@@ -16,7 +16,7 @@ export function MessagePreview() {
   return (
     <div className="w-64 max-h-80 overflow-y-auto">
       <div className="p-2">
-        <h3 className="text-sm font-semibold mb-2">Mensajes no leídos</h3>
+        <h3 className="text-sm font-semibold mb-2">Unread messages</h3>
         <div className="space-y-2">
           {unreadMessages.slice(0, 3).map((conversation) => (
             <div key={conversation.id} className="flex items-start space-x-2">
@@ -37,7 +37,7 @@ export function MessagePreview() {
           ))}
           {unreadMessages.length > 3 && (
             <p className="text-xs text-[#00CECE] text-center mt-2">
-              Ver {unreadMessages.length - 3} más...
+              View {unreadMessages.length - 3} more...
             </p>
           )}
         </div>

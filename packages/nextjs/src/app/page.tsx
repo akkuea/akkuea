@@ -7,7 +7,6 @@ import QuickPost from '@/components/quickPost/quickPost';
 import Navbar from '@/components/navbar/NavBar';
 import CreatePostModal from '@/components/floating-button/button';
 
-
 export default function Home() {
   const { handleConnect, handleDisconnect } = useWallet();
   const address = useGlobalAuthenticationStore((state) => state.address);

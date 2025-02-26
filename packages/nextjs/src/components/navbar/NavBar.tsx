@@ -1,53 +1,57 @@
-"use client"
+'use client';
 
-import type React from "react"
+import type React from 'react';
 
-import { useState, useEffect, useRef } from "react"
-import { Search, MessageCircle, User } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import Link from "next/link"
-import AkkueaLogo from "@/components/logo/akkueaLogo" 
+import { useState, useEffect, useRef } from 'react';
+import { Search, MessageCircle, User } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import Link from 'next/link';
+import AkkueaLogo from '@/components/logo/akkueaLogo';
 
 const Navbar = () => {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const searchRef = useRef<HTMLDivElement>(null)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false)
+        setShowSuggestions(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
+    document.addEventListener('mousedown', handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-    }
-  }, [])
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   useEffect(() => {
     if (searchQuery.length > 0) {
       // simulated Suggestions
-      const simulatedSuggestions = [`${searchQuery} en Akkuea`, `Buscar ${searchQuery}`, `${searchQuery} populares`]
-      setSuggestions(simulatedSuggestions)
-      setShowSuggestions(true)
+      const simulatedSuggestions = [
+        `${searchQuery} en Akkuea`,
+        `Buscar ${searchQuery}`,
+        `${searchQuery} populares`,
+      ];
+      setSuggestions(simulatedSuggestions);
+      setShowSuggestions(true);
     } else {
-      setSuggestions([])
-      setShowSuggestions(false)
+      setSuggestions([]);
+      setShowSuggestions(false);
     }
-  }, [searchQuery])
+  }, [searchQuery]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value)
-  }
+    setSearchQuery(e.target.value);
+  };
 
   const handleSuggestionClick = (suggestion: string) => {
-    setSearchQuery(suggestion)
-    setShowSuggestions(false)
+    setSearchQuery(suggestion);
+    setShowSuggestions(false);
     //Add here the logic to search
-  }
+  };
 
   return (
     <nav className="w-full border-b bg-background text-foreground">
@@ -85,7 +89,7 @@ const Navbar = () => {
         </div>
       </div>
     </nav>
-  )
-}
+  );
+};
 
-export default Navbar
+export default Navbar;

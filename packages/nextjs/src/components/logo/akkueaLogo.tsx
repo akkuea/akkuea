@@ -1,4 +1,4 @@
-import type React from "react";
+import type React from 'react';
 
 const AkkueaLogo: React.FC<React.SVGProps<SVGSVGElement>> = (props) => {
   return (

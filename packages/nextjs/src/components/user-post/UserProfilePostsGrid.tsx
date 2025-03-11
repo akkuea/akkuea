@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import Skeleton from '@/components/user-post/skeleton';
@@ -35,7 +35,7 @@ const UserProfilePostsGrid: React.FC<UserProfilePostsGridProps> = ({
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [hasMore, setHasMore] = useState<boolean>(true);
 
   const { ref, inView } = useInView({
@@ -43,73 +43,52 @@ const UserProfilePostsGrid: React.FC<UserProfilePostsGridProps> = ({
     triggerOnce: false,
   });
 
-  // Fetch posts function
-  const fetchPosts = async (pageNum: number) => {
+  // Wrap fetchPosts in useCallback
+  const fetchPosts = useCallback(async (pageNum: number) => {
     if (!hasMore) return;
 
     setIsLoading(true);
     try {
-      // Replace with your actual API call
-      // const response = await fetch(`/api/users/${userId}/posts?page=${pageNum}&limit=12`);
-      // if (!response.ok) throw new Error('Failed to fetch posts');
-      // const data = await response.json();
-
-      // Mock data for demonstration
       const mockData = Array(12)
         .fill(null)
-        .map((_, index) => {
-          const contentTypeIndex = Math.floor(Math.random() * 5);
-          const contentType = ['image', 'text', 'video', 'link', 'mixed'][
-            contentTypeIndex
-          ] as ContentType;
+        .map((_, index) => ({
+          id: `post-${pageNum}-${index}`,
+          userId,
+          contentType: ['image', 'text', 'video', 'link', 'mixed'][
+            Math.floor(Math.random() * 5)
+          ] as ContentType,
+          thumbnail: `https://via.placeholder.com/400x400?text=Post+${pageNum}-${index}`,
+          title: `Post ${pageNum}-${index}`,
+          description: `This is the description for post ${pageNum}-${index}`,
+          url: 'https://example.com',
+          content: 'Lorem ipsum dolor sit amet...',
+          videoUrl: 'https://example.com/video.mp4',
+          createdAt: new Date().toISOString(),
+        }));
 
-          return {
-            id: `post-${pageNum}-${index}`,
-            userId,
-            contentType,
-            thumbnail:
-              index % 3 === 0 && contentType !== 'image'
-                ? undefined
-                : `https://via.placeholder.com/400x400?text=Post+${pageNum}-${index}`,
-            title: `Post ${pageNum}-${index}`,
-            description: `This is the description for post ${pageNum}-${index}`,
-            url:
-              contentType === 'link' || contentType === 'mixed' ? 'https://example.com' : undefined,
-            content:
-              contentType === 'text'
-                ? 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam euismod, nisl eget aliquam ultricies, nunc nisl aliquet nunc, eget aliquam nisl nunc eget nisl.'
-                : undefined,
-            videoUrl: contentType === 'video' ? 'https://example.com/video.mp4' : undefined,
-            createdAt: new Date().toISOString(),
-          };
-        });
-
-      // Simulate end of data after 3 pages
-      const newHasMore = pageNum < 3;
-
-      setTimeout(() => {
-        setPosts((prevPosts) => (pageNum === 1 ? mockData : [...prevPosts, ...mockData]));
-        setHasMore(newHasMore);
-        setIsLoading(false);
-      }, 1000);
-    } catch (err) {
+      setPosts((prevPosts) => (pageNum === 1 ? mockData : [...prevPosts, ...mockData]));
+      setHasMore(pageNum < 3);
+    } catch (error) {
       setError('Failed to load posts. Please try again.');
+      console.error('Error fetching posts:', error);
+    } finally {
       setIsLoading(false);
     }
-  };
+  }, [hasMore, userId]);
 
   // Load initial posts
   useEffect(() => {
     fetchPosts(1);
-  }, [userId]);
+  }, [fetchPosts]);
 
   // Handle infinite scroll
   useEffect(() => {
     if (inView && !isLoading && hasMore) {
-      setPage((prevPage) => prevPage + 1);
-      fetchPosts(page + 1);
+      const nextPage = currentPage + 1;
+      setCurrentPage(nextPage);
+      fetchPosts(nextPage);
     }
-  }, [inView, isLoading, hasMore]);
+  }, [inView, isLoading, hasMore, fetchPosts, currentPage]);
 
   // Content type icon renderer
   const renderContentTypeIcon = (type: ContentType) => {

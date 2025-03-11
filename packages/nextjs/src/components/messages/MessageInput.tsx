@@ -14,6 +14,13 @@ const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
+interface LinkPreview {
+  url: string;
+  title: string;
+  description: string;
+  image: string;
+}
+
 export function MessageInput() {
   const { selectedConversationId, addMessage, setTypingStatus, conversations } = useMessages();
   const [newMessage, setNewMessage] = useState('');
@@ -22,40 +29,39 @@ export function MessageInput() {
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [linkPreview, setLinkPreview] = useState<LinkPreview | null>(null);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newMessage.trim() && !mediaFile) || !selectedConversationId) return;
 
     let mediaUrl = null;
-    let linkPreview = null;
 
-    // Handle media upload
     if (mediaFile) {
-      // In a real application, you would upload the file to a server here
-      // and get back a URL. For this example, we'll use a data URL.
       mediaUrl = mediaPreview;
     }
 
-    // Simple link detection (you might want to use a more robust solution)
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const urls = newMessage.match(urlRegex);
 
     if (urls && urls.length > 0) {
-      // In a real application, you would call an API to get the link preview
-      // For this example, we'll simulate it with a timeout
-      linkPreview = await new Promise((resolve) => {
-        setTimeout(() => {
-          resolve({
-            url: urls[0],
-            title: 'Example Link Title',
-            description: 'This is an example link description.',
-            image: 'https://react.semantic-ui.com/images/image-16by9.png',
-          });
-        }, 500);
-      });
+      try {
+        const preview = await new Promise<LinkPreview>((resolve) => {
+          setTimeout(() => {
+            resolve({
+              url: urls[0],
+              title: 'Example Link Title',
+              description: 'This is an example link description.',
+              image: 'https://react.semantic-ui.com/images/image-16by9.png'
+            });
+          }, 500);
+        });
+        setLinkPreview(preview);
+      } catch (error) {
+        console.error('Error fetching link preview:', error);
+      }
     }
 
     addMessage(selectedConversationId, {
@@ -64,15 +70,16 @@ export function MessageInput() {
       type: 'sent',
       read: true,
       mediaUrl,
-      linkPreview,
+      linkPreview
     });
 
     setNewMessage('');
     setMediaFile(null);
     setMediaPreview(null);
     setError(null);
+    setLinkPreview(null);
 
-    // Simulate received message with the selected contact's name
+    // Simulate received message
     setTimeout(() => {
       const selectedConversation = conversations.find((conv) => conv.id === selectedConversationId);
       if (selectedConversation) {
@@ -80,7 +87,7 @@ export function MessageInput() {
           content: `Thanks for your message! This is ${selectedConversation.name} responding.`,
           sender: selectedConversation.name,
           type: 'received',
-          read: false,
+          read: false
         });
       }
     }, 1000);

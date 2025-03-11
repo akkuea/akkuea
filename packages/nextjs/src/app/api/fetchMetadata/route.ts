@@ -1,43 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import * as cheerio from 'cheerio';
 
-export async function GET(req: NextRequest) {
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
   try {
-    const url = req.nextUrl.searchParams.get('url');
+    const url = request.nextUrl.searchParams.get('url');
+    
     if (!url) {
-      return NextResponse.json({ error: 'No URL provided' }, { status: 400 });
+      return NextResponse.json({ error: 'URL parameter is required' }, { status: 400 });
     }
 
-    console.log('Fetching metadata for URL:', url);
-
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0',
-      },
-    });
-
-    if (!response.ok) {
-      console.error('Error fetching metadata:', response.statusText);
-      return NextResponse.json({ error: 'Failed to fetch metadata' }, { status: response.status });
-    }
-
+    const response = await fetch(url);
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    const title = $('meta[property="og:title"]').attr('content') || $('title').text();
-    const description =
-      $('meta[property="og:description"]').attr('content') ||
-      $("meta[name='description']").attr('content') ||
-      'No description available';
-    const image = $('meta[property="og:image"]').attr('content') || null;
+    const metadata = {
+      url,
+      title: $('title').text() || $('meta[property="og:title"]').attr('content') || '',
+      description: $('meta[name="description"]').attr('content') || 
+                  $('meta[property="og:description"]').attr('content') || '',
+      image: $('meta[property="og:image"]').attr('content') || ''
+    };
 
-    return NextResponse.json({
-      title: title.trim(),
-      description: description.trim(),
-      image: image || null,
-    });
+    return NextResponse.json(metadata);
   } catch (error) {
-    console.error('Unexpected error:', error);
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    console.error('Error fetching metadata:', error);
+    return NextResponse.json({ error: 'Failed to fetch metadata' }, { status: 500 });
   }
 }

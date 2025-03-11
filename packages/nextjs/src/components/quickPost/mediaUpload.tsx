@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Paperclip } from 'lucide-react';
+import Image from 'next/image';
 
 interface MediaUploadProps {
   onUpload: (files: File[]) => void;
@@ -33,12 +34,14 @@ const MediaUpload: React.FC<MediaUploadProps> = ({ onUpload }) => {
       {previews.length > 0 && (
         <div className="mt-2 flex gap-2">
           {previews.map((src, index) => (
-            <img
-              key={index}
-              src={src}
-              alt={`preview-${index}`}
-              className="w-10 h-10 object-cover rounded-md"
-            />
+            <div key={index} className="relative w-10 h-10">
+              <Image
+                src={src}
+                alt={`preview-${index}`}
+                fill
+                className="object-cover rounded-md"
+              />
+            </div>
           ))}
         </div>
       )}

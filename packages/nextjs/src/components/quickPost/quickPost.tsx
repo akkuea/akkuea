@@ -5,6 +5,7 @@ import TextInput from '@/components/quickPost/textInput';
 import LinkPreview from '@/components/quickPost/linkPreview';
 import PostButton from '@/components/quickPost/postButton';
 import { Card } from '@/components/ui/card';
+import Image from 'next/image';
 
 const QuickPost = () => {
   const [text, setText] = useState('');
@@ -47,12 +48,14 @@ const QuickPost = () => {
           {images.length > 0 && (
             <div className="flex gap-2 mt-2">
               {images.map((src, index) => (
-                <img
-                  key={index}
-                  src={src}
-                  alt={`preview-${index}`}
-                  className="w-24 h-24 object-cover rounded-md"
-                />
+                <div key={index} className="relative w-24 h-24">
+                  <Image
+                    src={src}
+                    alt={`preview-${index}`}
+                    fill
+                    className="object-cover rounded-md"
+                  />
+                </div>
               ))}
             </div>
           )}

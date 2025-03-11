@@ -1,8 +1,8 @@
-"use client"
+'use client';
 
-import type React from "react"
+import type React from 'react';
 
-import { useState } from "react"
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -10,31 +10,31 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ReportDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onSubmit: (reason: string, details: string) => void
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (reason: string, details: string) => void;
 }
 
-const REPORT_REASONS = ["Inappropriate content", "Spam", "Harassment", "Misinformation", "Other"]
+const REPORT_REASONS = ['Inappropriate content', 'Spam', 'Harassment', 'Misinformation', 'Other'];
 
 export function ReportDialog({ open, onOpenChange, onSubmit }: ReportDialogProps) {
-  const [reason, setReason] = useState(REPORT_REASONS[0])
-  const [details, setDetails] = useState("")
+  const [reason, setReason] = useState(REPORT_REASONS[0]);
+  const [details, setDetails] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    onSubmit(reason, details)
-    onOpenChange(false)
-    setReason(REPORT_REASONS[0])
-    setDetails("")
-  }
+    e.preventDefault();
+    onSubmit(reason, details);
+    onOpenChange(false);
+    setReason(REPORT_REASONS[0]);
+    setDetails('');
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -71,7 +71,5 @@ export function ReportDialog({ open, onOpenChange, onSubmit }: ReportDialogProps
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-
-

@@ -1,15 +1,15 @@
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { formatDistanceToNow } from "date-fns"
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Comment {
-  id: string
-  text: string
-  author: string
-  createdAt: string
+  id: string;
+  text: string;
+  author: string;
+  createdAt: string;
 }
 
 interface CommentsSectionProps {
-  comments: Comment[]
+  comments: Comment[];
 }
 
 export function CommentsSection({ comments }: CommentsSectionProps) {
@@ -32,5 +32,5 @@ export function CommentsSection({ comments }: CommentsSectionProps) {
         </div>
       ))}
     </div>
-  )
+  );
 }

@@ -1,7 +1,6 @@
 import React from 'react';
 import UserProfilePostsGrid from './post-grid/userprofilepost';
 
-
 const UserProfileHeader = () => (
   <div className="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow">
     <div className="flex flex-col md:flex-row items-start md:items-center gap-6">

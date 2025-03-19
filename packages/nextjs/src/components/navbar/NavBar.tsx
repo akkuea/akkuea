@@ -7,14 +7,9 @@ import { Search, MessageCircle, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import AkkueaLogo from '@/components/logo/akkueaLogo';
-import { useMessages } from "@/store/messaging-store"
-import { MessagePreview } from "@/components/messages/MessagePreview"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+import { useMessages } from '@/store/messaging-store';
+import { MessagePreview } from '@/components/messages/MessagePreview';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWallet } from '@/components/auth/hooks/useWallet.hook';
 import { useGlobalAuthenticationStore } from '@/components/auth/store/data';
 import { Button } from '@/components/ui/button';
@@ -25,10 +20,7 @@ const Navbar = () => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const { conversations } = useMessages();
-  const unreadCount = conversations.reduce(
-    (count, conv) => count + (conv.unread ? 1 : 0),
-    0
-  );
+  const unreadCount = conversations.reduce((count, conv) => count + (conv.unread ? 1 : 0), 0);
   const { handleConnect, handleDisconnect } = useWallet();
   const address = useGlobalAuthenticationStore((state) => state.address);
 
@@ -111,8 +103,8 @@ const Navbar = () => {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Link 
-                  href="/messages-private" 
+                <Link
+                  href="/messages-private"
                   className="p-2 hover:bg-muted rounded-full transition-colors relative"
                 >
                   <MessageCircle className="h-5 w-5" style={{ color: '#59C9D0' }} />
@@ -128,29 +120,25 @@ const Navbar = () => {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <Link 
-            href="/edit-profile" 
-            className="p-2 hover:bg-muted rounded-full transition-colors"
-          >
+          <Link href="/edit-profile" className="p-2 hover:bg-muted rounded-full transition-colors">
             <User className="h-5 w-5 text-muted-foreground" />
           </Link>
           {address ? (
-            <Button 
-              onClick={handleDisconnect} 
+            <Button
+              onClick={handleDisconnect}
               className="bg-[#59C9D0] hover:bg-[#4ab5bc] text-white font-medium px-4 py-2 rounded-full transition-colors duration-200 text-sm shadow-sm hover:shadow-md"
             >
               Disconnect
             </Button>
           ) : (
-            <Button 
-              onClick={handleConnect} 
+            <Button
+              onClick={handleConnect}
               className="bg-[#59C9D0] hover:bg-[#4ab5bc] text-white font-medium px-4 py-2 rounded-full transition-colors duration-200 text-sm shadow-sm hover:shadow-md"
             >
               Connect
             </Button>
           )}
         </div>
-
       </div>
     </nav>
   );

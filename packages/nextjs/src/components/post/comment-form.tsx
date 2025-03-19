@@ -1,27 +1,27 @@
-"use client"
+'use client';
 
-import type React from "react"
+import type React from 'react';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface CommentFormProps {
-  onSubmit: (comment: string) => void
-  userInitials: string
+  onSubmit: (comment: string) => void;
+  userInitials: string;
 }
 
 export function CommentForm({ onSubmit, userInitials }: CommentFormProps) {
-  const [comment, setComment] = useState("")
+  const [comment, setComment] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (comment.trim()) {
-      onSubmit(comment)
-      setComment("")
+      onSubmit(comment);
+      setComment('');
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2 items-start">
@@ -42,5 +42,5 @@ export function CommentForm({ onSubmit, userInitials }: CommentFormProps) {
         </div>
       </div>
     </form>
-  )
+  );
 }

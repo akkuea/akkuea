@@ -1,25 +1,26 @@
-"use client"
+'use client';
 
-import type React from "react"
-import { useState } from "react"
-import Image from "next/image"
-import { Download, Flag, MessageCircle, Share2 } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Card} from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { useLocalStorage } from "@/components/auth/store/storage"
-import { CommentForm } from "./comment-form"
-import { CommentsSection } from "./comments-section"
-import { ReportDialog } from "./report-dialog"
-import { toast } from "sonner"
-import { Comment, PostProps } from "../auth/store/data/post-types"
+import type React from 'react';
+import { useState } from 'react';
+import Image from 'next/image';
+import { Download, Eye, Flag, MessageCircle, Share2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useLocalStorage } from '@/components/auth/store/storage';
+import { CommentForm } from './comment-form';
+import { CommentsSection } from './comments-section';
+import { ReportDialog } from './report-dialog';
+import { toast } from 'sonner';
+import { Comment, PostProps } from '../auth/store/data/post-types';
+import { useModalStore } from '@/store/useModalStore';
 
-
-export default function Post({ id, author, content, categories = [] }: PostProps) {
-  const [showComments, setShowComments] = useState(false)
-  const [reportDialogOpen, setReportDialogOpen] = useState(false)
-  const [comments, setComments] = useLocalStorage<Comment[]>(`post-${id}-comments`, [])
+export default function Post({ id, author, content, categories = [], modal }: PostProps) {
+  const isOpen = useModalStore((state) => state.isOpen);
+  const [showComments, setShowComments] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [comments, setComments] = useLocalStorage<Comment[]>(`post-${id}-comments`, []);
   const handleShare = async () => {
     try {
       if (navigator.share) {
@@ -27,68 +28,58 @@ export default function Post({ id, author, content, categories = [] }: PostProps
           title: `Post by ${author.name}`,
           text: content.text,
           url: window.location.href,
-        })
+        });
       } else {
-        await navigator.clipboard.writeText(window.location.href)
-        toast.info(
-                     "Link copied to clipboard" +
-                     "You can now share this post with others"
-                  )
+        await navigator.clipboard.writeText(window.location.href);
+        toast.info('Link copied to clipboard' + 'You can now share this post with others');
       }
     } catch (error) {
-      console.error("Error sharing:", error)
+      console.error('Error sharing:', error);
     }
-  }
+  };
   const handleComment = (text: string) => {
     const newComment: Comment = {
       id: Date.now().toString(),
       text,
-      author: "User", // In a real app, this would come from auth
+      author: 'User', // In a real app, this would come from auth
       createdAt: new Date().toISOString(),
-    }
-    setComments((prev) => [newComment, ...prev])
-  }
+    };
+    setComments((prev) => [newComment, ...prev]);
+  };
 
   const handleReport = (reason: string, details: string) => {
     // In a real app, this would send to an API
-    console.log("Report submitted:", { reason, details })
-    toast.info(
-      "Report submitted" + " "+ 
-       "Thank you for helping keep our community safe"
-  )
-  }
+    console.log('Report submitted:', { reason, details });
+    toast.info('Report submitted' + ' ' + 'Thank you for helping keep our community safe');
+  };
 
   const handleDownload = async () => {
     if (content.media?.[0]?.downloadUrl) {
       try {
-        const response = await fetch(content.media[0].downloadUrl)
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `post-${id}-media.${blob.type.split("/")[1]}`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        window.URL.revokeObjectURL(url)
+        const response = await fetch(content.media[0].downloadUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `post-${id}-media.${blob.type.split('/')[1]}`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
       } catch (error) {
-        console.error("Error downloading:", error)
-        toast.info(
-        "Download failed" + " "+
-          "There was an error downloading the file",
-        )
+        console.error('Error downloading:', error);
+        toast.info('Download failed' + ' ' + 'There was an error downloading the file');
       }
     }
-  }
+  };
 
   // function to render media content
   const renderMedia = (
-    media: NonNullable<PostProps["content"]["media"]>[number], 
+    media: NonNullable<PostProps['content']['media']>[number],
     index: number
   ) => {
-  
     switch (media.type) {
-      case "video":
+      case 'video':
         return (
           <div key={index} className="relative rounded-lg overflow-hidden border bg-muted">
             <iframe
@@ -98,38 +89,37 @@ export default function Post({ id, author, content, categories = [] }: PostProps
               allowFullScreen
             />
           </div>
-        )
-      case "image": 
+        );
+      case 'image':
         return (
           <div key={index} className="relative rounded-lg overflow-hidden border bg-muted">
             <Image
-              src={media.url || "/placeholder.svg"}
+              src={media.url || '/placeholder.svg'}
               alt={`Post image ${index + 1}`}
               width={600}
               height={media.aspectRatio ? 600 / media.aspectRatio : 400}
               className="w-full h-auto"
             />
           </div>
-        )
-      case "embed":
+        );
+      case 'embed':
         return (
           <div
             key={index}
             className="relative rounded-lg overflow-hidden border bg-muted"
             dangerouslySetInnerHTML={{ __html: media.url }}
           />
-        )
+        );
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   //  function to render link previews
   const renderLinkPreview = (
-    link: NonNullable<PostProps["content"]["links"]>[number],
+    link: NonNullable<PostProps['content']['links']>[number],
     index: number
   ) => {
-    
     return (
       <a
         key={index}
@@ -142,8 +132,8 @@ export default function Post({ id, author, content, categories = [] }: PostProps
           {link.image && (
             <div className="relative w-24 h-24 flex-shrink-0">
               <Image
-                src={link.image || "/placeholder.svg"}
-                alt={link.title || "Link preview"}
+                src={link.image || '/placeholder.svg'}
+                alt={link.title || 'Link preview'}
                 fill
                 className="object-cover rounded-md"
               />
@@ -151,28 +141,45 @@ export default function Post({ id, author, content, categories = [] }: PostProps
           )}
           <div className="flex-1 min-w-0">
             <h3 className="font-medium line-clamp-1">{link.title || link.url}</h3>
-            {link.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{link.description}</p>}
+            {link.description && (
+              <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{link.description}</p>
+            )}
             <p className="text-sm text-muted-foreground mt-1">{new URL(link.url).hostname}</p>
           </div>
         </div>
       </a>
-    )
-  }
+    );
+  };
 
   return (
     <Card className="max-w-4xl w-full p-4">
-      <div className="flex flex-row items-center gap-3 p-4">
-        <Avatar className="h-10 w-10">
-          <AvatarImage src={author.avatar} alt={author.name} />
-          <AvatarFallback>{author.name[0]}</AvatarFallback>
-        </Avatar>
-        <div className="flex flex-col">
-          <span className="font-semibold">{author.name}</span>
-          <span className="text-sm text-muted-foreground">@{author.username}</span>
+      <div className="flex flex-row justify-between items-center p-4">
+        <div className="flex gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={author.avatar} alt={author.name} />
+            <AvatarFallback>{author.name[0]}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <span className="font-semibold">{author.name}</span>
+            <span className="text-sm text-muted-foreground">@{author.username}</span>
+          </div>
         </div>
-        <Button variant="ghost" size="icon" className="ml-auto" onClick={() => setReportDialogOpen(true)}>
-          <Flag className="h-4 w-4" />
-        </Button>
+
+        <div className="flex gap-2">
+          {!isOpen && (
+            <Button variant="ghost" size="icon" className="ml-auto" onClick={modal}>
+              <Eye className="h-4 w-4" />
+            </Button>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto"
+            onClick={() => setReportDialogOpen(true)}
+          >
+            <Flag className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
       <div className="p-4 pt-0 space-y-4">
         {/* CHANGE: Text content with better formatting */}
@@ -180,16 +187,24 @@ export default function Post({ id, author, content, categories = [] }: PostProps
 
         {/* CHANGE: Multiple media items support */}
         {content.media && content.media.length > 0 && (
-          <div className="grid gap-4">{content.media.map((media, index) => renderMedia(media, index))}</div>
+          <div className="grid gap-4">
+            {content.media.map((media, index) => renderMedia(media, index))}
+          </div>
         )}
 
         {/* CHANGE: Link previews support */}
         {content.links && content.links.length > 0 && (
-          <div className="grid gap-4">{content.links.map((link, index) => renderLinkPreview(link, index))}</div>
+          <div className="grid gap-4">
+            {content.links.map((link, index) => renderLinkPreview(link, index))}
+          </div>
         )}
         <div className="flex items-center justify-between flex-wrap gap-2">
           {categories.map((category, index) => (
-            <Badge key={index} variant="secondary" className="flex items-center gap-1 text-[#008B8B] bg-[#EBFBFA]">
+            <Badge
+              key={index}
+              variant="secondary"
+              className="flex items-center gap-1 text-[#008B8B] bg-[#EBFBFA]"
+            >
               {category.icon}
               {category.name}
             </Badge>
@@ -227,7 +242,11 @@ export default function Post({ id, author, content, categories = [] }: PostProps
           </div>
         )}
       </div>
-      <ReportDialog open={reportDialogOpen} onOpenChange={setReportDialogOpen} onSubmit={handleReport} />
+      <ReportDialog
+        open={reportDialogOpen}
+        onOpenChange={setReportDialogOpen}
+        onSubmit={handleReport}
+      />
     </Card>
-  )
+  );
 }

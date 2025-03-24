@@ -13,16 +13,20 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useWallet } from '@/components/auth/hooks/useWallet.hook';
 import { useGlobalAuthenticationStore } from '@/components/auth/store/data';
 import { Button } from '@/components/ui/button';
+import { usePostsStore } from '@/store/postsStore';
+import { useRouter } from 'next/navigation';
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLFormElement>(null);
   const { conversations } = useMessages();
   const unreadCount = conversations.reduce((count, conv) => count + (conv.unread ? 1 : 0), 0);
   const { handleConnect, handleDisconnect } = useWallet();
   const address = useGlobalAuthenticationStore((state) => state.address);
+  const { searchPosts, clearSearch } = usePostsStore();
+  const router = useRouter();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -50,8 +54,9 @@ const Navbar = () => {
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
+      clearSearch();
     }
-  }, [searchQuery]);
+  }, [searchQuery, clearSearch]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -60,7 +65,28 @@ const Navbar = () => {
   const handleSuggestionClick = (suggestion: string) => {
     setSearchQuery(suggestion);
     setShowSuggestions(false);
-    //Add here the logic to search
+    searchPosts(suggestion);
+    router.push('/');
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      searchPosts(searchQuery);
+      setShowSuggestions(false);
+      router.push('/');
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (searchQuery.trim()) {
+        searchPosts(searchQuery);
+        setShowSuggestions(false);
+        router.push('/');
+      }
+    }
   };
 
   return (
@@ -72,15 +98,24 @@ const Navbar = () => {
         </Link>
 
         {/* Search Bar */}
-        <div className="flex-1 max-w-3xl mx-auto relative" ref={searchRef}>
+        <form onSubmit={handleSearch} className="flex-1 max-w-3xl mx-auto relative" ref={searchRef}>
           <Input
             type="search"
-            placeholder="Search..."
+            placeholder="Buscar posts..."
             className="w-full pl-10 h-10 bg-input border-border text-foreground placeholder:text-muted-foreground"
             value={searchQuery}
             onChange={handleSearchChange}
+            onKeyDown={handleKeyPress}
           />
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Button
+            type="submit"
+            size="icon"
+            variant="ghost"
+            className="absolute left-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+          >
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <span className="sr-only">Buscar</span>
+          </Button>
 
           {/* Suggestions */}
           {showSuggestions && suggestions.length > 0 && (
@@ -96,7 +131,7 @@ const Navbar = () => {
               ))}
             </div>
           )}
-        </div>
+        </form>
 
         {/* Navigation Icons */}
         <div className="flex items-center gap-4">

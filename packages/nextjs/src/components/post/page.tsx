@@ -1,50 +1,52 @@
 'use client';
 
-import { BookOpen, Tags } from 'lucide-react';
 import Post from './post';
 import { Toaster } from 'sonner';
 import { useModalStore } from '@/store/useModalStore';
+import { usePostsStore } from '@/store/postsStore';
 
 export default function Page() {
   const { onOpen } = useModalStore();
+  const { filteredPosts } = usePostsStore();
 
-  const component = (
+  if (filteredPosts.length === 0) {
+    return (
+      <div className="max-w-4xl w-full mx-auto px-8 py-12 text-center">
+        <h2 className="text-xl font-semibold mb-2">No se encontraron resultados</h2>
+        <p className="text-muted-foreground">Intenta con otra búsqueda</p>
+      </div>
+    );
+  }
+
+  return (
     <div className="max-w-4xl w-full mx-auto px-8">
-      <div className="w-full">
-        <Post
-          id="1"
-          author={{
-            name: 'Sebastián Salazar',
-            username: 'sebastiánsalazar',
-            avatar: '/placeholder.svg',
-          }}
-          content={{
-            text: "Check out this interactive particle effect! Click to create more particles that move around the screen. Ideal for visualising systems that multiply, like stars in space.\n\nHere's also an interesting article about particle systems:",
-            media: [
-              {
-                type: 'video',
-                url: 'https://www.youtube.com/embed/NWdEOAYm4FA?si=WbvhIlP1GBZkfwUt',
-                aspectRatio: 16 / 9,
-                downloadUrl: 'https://example.com/video.mp4',
-              },
-            ],
-          }}
-          categories={[
-            {
-              name: 'Computer',
-              icon: <BookOpen className="h-4 w-4" />,
-            },
-            {
-              name: 'Interactive Visualization',
-              icon: <Tags className="h-4 w-4" />,
-            },
-          ]}
-          modal={() => onOpen(component)}
-        />
+      <div className="w-full space-y-6">
+        {filteredPosts.map((post) => {
+          const component = (
+            <Post
+              key={post.id}
+              id={post.id}
+              author={post.author}
+              content={post.content}
+              categories={post.categories}
+              modal={() =>
+                onOpen(
+                  <Post
+                    id={post.id}
+                    author={post.author}
+                    content={post.content}
+                    categories={post.categories}
+                    modal={() => {}}
+                  />
+                )
+              }
+            />
+          );
+
+          return <div key={post.id}>{component}</div>;
+        })}
         <Toaster />
       </div>
     </div>
   );
-
-  return component;
 }

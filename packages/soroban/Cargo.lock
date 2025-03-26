@@ -157,6 +157,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "auction"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

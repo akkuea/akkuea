@@ -40,7 +40,7 @@
                   "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAITA4"
                 },
                 {
-                  "bytes": "f3295ded39aa4cdda89a72d5f0812e05b973f58b68f2148266826ea0eda7ac5b"
+                  "bytes": "9ce0dd52b4d859ec67089ac304bd2ea3079720c94cebfb99eb311836bdb02c1b"
                 },
                 {
                   "string": "PUR-0001"
@@ -359,7 +359,7 @@
                         "symbol": "transaction_id"
                       },
                       "val": {
-                        "bytes": "f3295ded39aa4cdda89a72d5f0812e05b973f58b68f2148266826ea0eda7ac5b"
+                        "bytes": "9ce0dd52b4d859ec67089ac304bd2ea3079720c94cebfb99eb311836bdb02c1b"
                       }
                     }
                   ]
@@ -583,7 +583,7 @@
                             },
                             {
                               "key": {
-                                "bytes": "f3295ded39aa4cdda89a72d5f0812e05b973f58b68f2148266826ea0eda7ac5b"
+                                "bytes": "9ce0dd52b4d859ec67089ac304bd2ea3079720c94cebfb99eb311836bdb02c1b"
                               },
                               "val": {
                                 "u32": 1

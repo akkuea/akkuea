@@ -62,3 +62,4 @@ Desktop.ini
 #bun
 bun.lock
 packages/nextjs/bun.lock
+.qodo

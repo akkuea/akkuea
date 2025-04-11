@@ -15,6 +15,7 @@ use verification::VerificationSystem;
 #[contract]
 pub struct EducatorVerificationContract;
 
+
 #[contractimpl]
 impl EducatorVerificationInterface for EducatorVerificationContract {
     fn initialize(env: Env, admin: Address) {

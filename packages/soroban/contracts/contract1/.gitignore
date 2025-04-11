@@ -4,6 +4,3 @@ target
 # Local settings
 .soroban
 .stellar
-.env
-local-devnet
-.qodo

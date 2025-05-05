@@ -18,6 +18,7 @@ The contract is built on Soroban, Stellar's smart contract platform, utilizing R
 ### Content Publishing
 
 Content creators can publish educational materials with:
+
 - Title
 - Content hash (reference to the actual content stored elsewhere)
 - Subject tags (categories/topics)
@@ -26,6 +27,7 @@ Content creators can publish educational materials with:
 ### Content Verification
 
 The verification system allows:
+
 - Marking content as verified
 - Maintaining verification status alongside upvotes
 - Enabling creators to self-verify their content
@@ -34,6 +36,7 @@ The verification system allows:
 ### Upvoting System
 
 The upvoting mechanism includes:
+
 - Protection against duplicate votes
 - Tracking content popularity
 - Facilitating content discovery based on community endorsement
@@ -74,7 +77,7 @@ The contract exposes four main functions:
 
 ```rust
 // Publish new educational content
-pub fn publish_content(env: Env, creator: Address, title: String, 
+pub fn publish_content(env: Env, creator: Address, title: String,
                        content_hash: BytesN<32>, subject_tags: Vec<String>) -> u64
 
 // Upvote content (with duplicate protection)
@@ -90,6 +93,7 @@ pub fn get_content(env: Env, content_id: u64) -> Content
 ### Events
 
 The contract emits events for tracking activities:
+
 - `PUBLISH`: When new content is published
 - `UPVOTE`: When content receives an upvote
 - `VERIFY`: When content is verified
@@ -114,6 +118,7 @@ cargo test
 ```
 
 The contract includes 15 comprehensive tests that verify all aspects of functionality, including:
+
 - Content publishing
 - Upvoting mechanics
 - Verification process

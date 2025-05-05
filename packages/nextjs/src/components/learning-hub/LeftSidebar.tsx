@@ -50,7 +50,7 @@ export default function LeftSidebar() {
         icon: Compass,
         label: 'Explore',
         description: 'Discover new content',
-        href: '/explore',  
+        href: '/explore',
       },
       {
         icon: Users,

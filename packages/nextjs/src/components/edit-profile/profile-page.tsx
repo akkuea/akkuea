@@ -48,7 +48,6 @@ export default function EditProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-black">
       <div className="px-8 py-8">
-
         <Card className="bg-white dark:bg-black dark:border-gray-800">
           <CardHeader>
             <CardTitle className="text-2xl font-bold text-[#38B2AC]">Edit Profile</CardTitle>

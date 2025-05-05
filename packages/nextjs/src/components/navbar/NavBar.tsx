@@ -15,7 +15,7 @@ import { useGlobalAuthenticationStore } from '@/components/auth/store/data';
 import { Button } from '@/components/ui/button';
 import { usePostsStore } from '@/store/postsStore';
 import { useRouter } from 'next/navigation';
-import { LogOut, Settings, UserCircle } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 
 import {
   DropdownMenu,

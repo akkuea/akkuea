@@ -33,3 +33,13 @@ export function getFormattedTime() {
     hour12: true,
   }).format(new Date());
 }
+
+/**
+ * Formats an address string to show the first 7 and last 4 characters with ellipses
+ * @param address The address string to format
+ * @returns Formatted address string (e.g., "0x12345...6789")
+ */
+export function formatAddress(address: string): string {
+  if (!address || address.length < 11) return address;
+  return `${address.slice(0, 7)}...${address.slice(-4)}`;
+}

@@ -1,7 +1,15 @@
-import type React from "react"
-import { Button } from "@/components/ui/button"
-import { ArrowRight, Code, Eye, FileJson, FileText, GitBranchPlus, Zap } from "lucide-react"
-import Link from "next/link"
+import type React from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  ArrowRight,
+  Code,
+  Eye,
+  FileJson,
+  FileText,
+  GitBranchPlus,
+  Zap,
+} from 'lucide-react';
+import Link from 'next/link';
 
 export default function Home() {
   return (
@@ -42,8 +50,9 @@ export default function Home() {
                 </h1>
 
                 <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto mb-10 leading-relaxed">
-                  Unlock powerful insights from your JSON data with dynamic, interactive visualizations. Discover new
-                  perspectives with every click.
+                  Unlock powerful insights from your JSON data with dynamic,
+                  interactive visualizations. Discover new perspectives with
+                  every click.
                 </p>
 
                 <div className="relative inline-block group">
@@ -153,9 +162,12 @@ export default function Home() {
                 <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-purple-600/10 rounded-full blur-3xl"></div>
 
                 <div className="relative z-10 text-center">
-                  <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to visualize your JSON data?</h2>
+                  <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                    Ready to visualize your JSON data?
+                  </h2>
                   <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
-                    Start exploring your JSON files with our beautiful visualization tools. No sign-up required.
+                    Start exploring your JSON files with our beautiful
+                    visualization tools. No sign-up required.
                   </p>
                   <div className="inline-block relative group">
                     <div className="absolute -inset-1 bg-gradient-to-r from-[#7CC635] to-purple-600 rounded-full blur group-hover:blur-md transition-all duration-300"></div>
@@ -187,25 +199,32 @@ export default function Home() {
                 </div>
               </div>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                © {new Date().getFullYear()} JSON Visualizer. All rights reserved.
+                © {new Date().getFullYear()} JSON Visualizer. All rights
+                reserved.
               </p>
             </div>
           </div>
         </footer>
       </div>
     </div>
-  )
+  );
 }
 
 interface FeatureCardProps {
-  icon: React.ReactNode
-  title: string
-  description: string
-  color: string
-  accentColor: string
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  color: string;
+  accentColor: string;
 }
 
-function FeatureCard({ icon, title, description, color, accentColor }: FeatureCardProps) {
+function FeatureCard({
+  icon,
+  title,
+  description,
+  color,
+  accentColor,
+}: FeatureCardProps) {
   return (
     <div className="relative group">
       <div className="absolute -inset-1 bg-gradient-to-r from-white/50 to-white/20 dark:from-gray-800/50 dark:to-gray-800/20 rounded-2xl blur-sm"></div>
@@ -213,7 +232,9 @@ function FeatureCard({ icon, title, description, color, accentColor }: FeatureCa
         {/* Accent corner */}
         <div
           className="absolute -top-10 -right-10 w-20 h-20 rounded-full blur-xl opacity-50 group-hover:opacity-70 transition-opacity duration-300"
-          style={{ background: `radial-gradient(circle, ${accentColor}, transparent 70%)` }}
+          style={{
+            background: `radial-gradient(circle, ${accentColor}, transparent 70%)`,
+          }}
         ></div>
 
         <div
@@ -223,23 +244,27 @@ function FeatureCard({ icon, title, description, color, accentColor }: FeatureCa
         </div>
 
         <h3 className="text-2xl font-bold mb-4">{title}</h3>
-        <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{description}</p>
+        <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+          {description}
+        </p>
 
         {/* Bottom accent */}
         <div
           className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-          style={{ backgroundImage: `linear-gradient(to right, ${accentColor}, transparent)` }}
+          style={{
+            backgroundImage: `linear-gradient(to right, ${accentColor}, transparent)`,
+          }}
         ></div>
       </div>
     </div>
-  )
+  );
 }
 
 interface BenefitCardProps {
-  icon: React.ReactNode
-  title: string
-  description: string
-  color: string
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+  color: string;
 }
 
 function BenefitCard({ icon, title, description, color }: BenefitCardProps) {
@@ -252,7 +277,11 @@ function BenefitCard({ icon, title, description, color }: BenefitCardProps) {
         ></div>
 
         <div className="flex items-start">
-          <div className={`bg-gradient-to-r ${color} p-4 rounded-xl mr-5 text-white shadow-md`}>{icon}</div>
+          <div
+            className={`bg-gradient-to-r ${color} p-4 rounded-xl mr-5 text-white shadow-md`}
+          >
+            {icon}
+          </div>
           <div>
             <h3 className="text-xl font-bold mb-2">{title}</h3>
             <p className="text-gray-600 dark:text-gray-400">{description}</p>
@@ -261,10 +290,11 @@ function BenefitCard({ icon, title, description, color }: BenefitCardProps) {
 
         <div
           className="absolute bottom-0 right-0 w-full h-1 bg-gradient-to-l opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-          style={{ backgroundImage: `linear-gradient(to left, ${color}, transparent)` }}
+          style={{
+            backgroundImage: `linear-gradient(to left, ${color}, transparent)`,
+          }}
         ></div>
       </div>
     </div>
-  )
+  );
 }
-

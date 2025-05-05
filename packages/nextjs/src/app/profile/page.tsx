@@ -5,7 +5,6 @@ import UserActivityDashboard from '@/components/Activity/UserActivity';
 import PublicationMain from '@/components/publication/PublicationMain';
 import Link from 'next/link';
 
-
 const ProfilePage = () => {
   return (
     <div className="bg-white dark:bg-black container md:mx-auto shadow-sm p-6 transition-colors duration-300">

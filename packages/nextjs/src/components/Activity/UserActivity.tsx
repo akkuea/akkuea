@@ -153,8 +153,10 @@ const UserActivityDashboard = () => {
 
             {/* Recent Activity List */}
             <div className="mt-6">
-              <h2 className="text-base font-medium mb-3 text-gray-800 dark:text-gray-200">Recent Activity</h2>
-              <div className='border rounded-xl px-4 py-6 dark:border-gray-700 transition-colors duration-300'>
+              <h2 className="text-base font-medium mb-3 text-gray-800 dark:text-gray-200">
+                Recent Activity
+              </h2>
+              <div className="border rounded-xl px-4 py-6 dark:border-gray-700 transition-colors duration-300">
                 <div className="flex flex-col space-y-4">
                   {recentActivity.map((activity) => (
                     <div key={activity.id} className="flex items-start">
@@ -162,8 +164,12 @@ const UserActivityDashboard = () => {
                         {getActivityIcon(activity.type)}
                       </div>
                       <div className="ml-3">
-                        <p className="text-sm text-gray-800 dark:text-gray-200">{activity.content}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">{activity.timeAgo}</p>
+                        <p className="text-sm text-gray-800 dark:text-gray-200">
+                          {activity.content}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {activity.timeAgo}
+                        </p>
                       </div>
                     </div>
                   ))}

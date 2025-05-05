@@ -7,23 +7,28 @@ The Contributor Reputation Contract is a Soroban-based smart contract built for 
 ## Features
 
 ### User Management
+
 - **User Registration**: Create user profiles with unique identifiers
 - **User Verification**: Verify user identities through credential tokens
 - **User Retrieval**: Access user profile information
 
 ### Reputation System
+
 - **Reputation Scoring**: Track reputation scores for users in specific subject areas
 - **Score Retrieval**: Query reputation scores for specific domains of expertise
 
 ### Expertise Management
+
 - **Expertise Areas**: Define and update a user's areas of expertise with proficiency levels
 - **Expertise Verification**: Allow verified experts to validate other users' knowledge
 
 ### Credential System
+
 - **Token Issuance**: Mint non-transferable credential tokens tied to user identities
 - **Verification Status**: Mark users as verified when they receive credential tokens
 
 ### Content Verification
+
 - **Subject-Based Verification**: Allow experts to verify content in their domains
 - **Authorization Controls**: Restrict verification to users with proven expertise
 
@@ -45,6 +50,7 @@ The contract is structured into several modules:
 ### Getting Started
 
 1. Build the contract:
+
    ```bash
    make build
    ```
@@ -57,21 +63,26 @@ The contract is structured into several modules:
 ### Contract Functions
 
 #### User Management
+
 - `initialize_user(caller: Address, name: String) -> u64`: Register a new user and return their ID
 - `get_user(user_id: u64) -> User`: Retrieve user profile data
 
 #### Reputation
+
 - `update_reputation(caller: Address, user_id: u64, subject: String, score: u32)`: Update reputation score
 - `get_reputation(user_id: u64, subject: String) -> u32`: Get reputation score for a specific domain
 
 #### Credentials
+
 - `mint_credential_token(caller: Address, user_id: u64) -> u64`: Issue a verification credential
 
 #### Expertise
+
 - `update_expertise_areas(caller: Address, user_id: u64, expertise_areas: Map<String, u32>)`: Set expertise levels
 - `get_expertise_areas(user_id: u64) -> Map<String, u32>`: Retrieve expertise mapping
 
 #### Verification
+
 - `verify_user(caller: Address, user_id: u64, verification_details: String) -> u64`: Verify user identity
 - `verify_content(caller: Address, content_id: u64, subject: String)`: Validate subject-specific content
 

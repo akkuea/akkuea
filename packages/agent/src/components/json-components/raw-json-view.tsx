@@ -1,23 +1,23 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { CopyIcon, CheckIcon } from "lucide-react"
-import { motion } from "framer-motion"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { CopyIcon, CheckIcon } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface RawJsonViewProps {
-  data: any
+  data: any;
 }
 
 export default function RawJsonView({ data }: RawJsonViewProps) {
-  const [copied, setCopied] = useState(false)
-  const jsonString = JSON.stringify(data, null, 2)
+  const [copied, setCopied] = useState(false);
+  const jsonString = JSON.stringify(data, null, 2);
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(jsonString)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
+    navigator.clipboard.writeText(jsonString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Function to colorize JSON syntax
   const colorizeJson = (json: string) => {
@@ -26,8 +26,8 @@ export default function RawJsonView({ data }: RawJsonViewProps) {
       .replace(/: "([^"]+)"/g, ': <span class="text-green-500">"$1"</span>')
       .replace(/: (\d+)/g, ': <span class="text-blue-500">$1</span>')
       .replace(/: (true|false)/g, ': <span class="text-purple-500">$1</span>')
-      .replace(/: (null)/g, ': <span class="text-gray-500">$1</span>')
-  }
+      .replace(/: (null)/g, ': <span class="text-gray-500">$1</span>');
+  };
 
   return (
     <div className="relative">
@@ -42,7 +42,7 @@ export default function RawJsonView({ data }: RawJsonViewProps) {
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 500, damping: 15 }}
+              transition={{ type: 'spring', stiffness: 500, damping: 15 }}
             >
               <CheckIcon className="h-4 w-4 text-green-500" />
             </motion.div>
@@ -61,6 +61,5 @@ export default function RawJsonView({ data }: RawJsonViewProps) {
         />
       </div>
     </div>
-  )
+  );
 }
-

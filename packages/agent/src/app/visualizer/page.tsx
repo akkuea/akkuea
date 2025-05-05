@@ -1,37 +1,43 @@
-"use client"
+'use client';
 
-import { useState, useEffect } from "react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { motion, AnimatePresence } from "framer-motion"
-import RawJsonView from "@/components/json-components/raw-json-view"
+import { useState, useEffect } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { motion, AnimatePresence } from 'framer-motion';
+import RawJsonView from '@/components/json-components/raw-json-view';
 
-import { FileJson, FileText, GitBranchPlus, ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import ParsedJsonView from "@/components/json-components/parsed-json-viewer"
-import GraphicalJsonView from "@/components/json-components/graphical-json-viewer"
+import { FileJson, FileText, GitBranchPlus, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import ParsedJsonView from '@/components/json-components/parsed-json-viewer';
+import GraphicalJsonView from '@/components/json-components/graphical-json-viewer';
 
 // Sample JSON files for demonstration
 const sampleFiles = {
-  "personality.json": {
-    name: "AI Assistant",
+  'personality.json': {
+    name: 'AI Assistant',
     personality: {
-      traits: ["helpful", "friendly", "knowledgeable"],
-      tone: "professional",
-      style: "conversational",
+      traits: ['helpful', 'friendly', 'knowledgeable'],
+      tone: 'professional',
+      style: 'conversational',
     },
     capabilities: [
-      { name: "Answer questions", enabled: true },
-      { name: "Generate content", enabled: true },
-      { name: "Translate text", enabled: true },
+      { name: 'Answer questions', enabled: true },
+      { name: 'Generate content', enabled: true },
+      { name: 'Translate text', enabled: true },
     ],
-    limitations: ["Cannot access the internet", "Cannot run code"],
+    limitations: ['Cannot access the internet', 'Cannot run code'],
   },
-  "config.json": {
-    version: "1.0.0",
+  'config.json': {
+    version: '1.0.0',
     settings: {
-      theme: "dark",
+      theme: 'dark',
       fontSize: 14,
       autoSave: true,
       notifications: {
@@ -40,41 +46,56 @@ const sampleFiles = {
       },
     },
     plugins: [
-      { id: "syntax-highlighter", active: true },
-      { id: "auto-formatter", active: false },
+      { id: 'syntax-highlighter', active: true },
+      { id: 'auto-formatter', active: false },
     ],
   },
-  "data.json": {
+  'data.json': {
     users: [
-      { id: 1, name: "John Doe", role: "admin", active: true },
-      { id: 2, name: "Jane Smith", role: "editor", active: true },
-      { id: 3, name: "Bob Johnson", role: "viewer", active: false },
+      { id: 1, name: 'John Doe', role: 'admin', active: true },
+      { id: 2, name: 'Jane Smith', role: 'editor', active: true },
+      { id: 3, name: 'Bob Johnson', role: 'viewer', active: false },
     ],
     statistics: {
       totalUsers: 3,
       activeUsers: 2,
-      lastUpdated: "2023-04-15T10:30:00Z",
+      lastUpdated: '2023-04-15T10:30:00Z',
     },
   },
-}
+};
 
 const viewOptions = [
-  { id: "raw", label: "Raw JSON", icon: FileJson, color: "from-pink-500 to-violet-500" },
-  { id: "parsed", label: "Parsed JSON", icon: FileText, color: "from-cyan-500 to-blue-500" },
-  { id: "graphical", label: "Graphical View", icon: GitBranchPlus, color: "from-green-400 to-teal-500" },
-]
+  {
+    id: 'raw',
+    label: 'Raw JSON',
+    icon: FileJson,
+    color: 'from-pink-500 to-violet-500',
+  },
+  {
+    id: 'parsed',
+    label: 'Parsed JSON',
+    icon: FileText,
+    color: 'from-cyan-500 to-blue-500',
+  },
+  {
+    id: 'graphical',
+    label: 'Graphical View',
+    icon: GitBranchPlus,
+    color: 'from-green-400 to-teal-500',
+  },
+];
 
 export default function VisualizerPage() {
-  const [selectedFile, setSelectedFile] = useState<string>("personality.json")
-  const [activeView, setActiveView] = useState<string>("raw")
-  const [mounted, setMounted] = useState(false)
-  const jsonData = sampleFiles[selectedFile as keyof typeof sampleFiles]
+  const [selectedFile, setSelectedFile] = useState<string>('personality.json');
+  const [activeView, setActiveView] = useState<string>('raw');
+  const [mounted, setMounted] = useState(false);
+  const jsonData = sampleFiles[selectedFile as keyof typeof sampleFiles];
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
-  if (!mounted) return null
+  if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4 sm:p-8">
@@ -87,7 +108,11 @@ export default function VisualizerPage() {
         >
           <div className="flex justify-between items-center mb-6">
             <Link href="/">
-              <Button variant="ghost" size="sm" className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1"
+              >
                 <ArrowLeft className="h-4 w-4" /> Back to Home
               </Button>
             </Link>
@@ -131,11 +156,11 @@ export default function VisualizerPage() {
               {viewOptions.map((option) => (
                 <Button
                   key={option.id}
-                  variant={activeView === option.id ? "default" : "ghost"}
+                  variant={activeView === option.id ? 'default' : 'ghost'}
                   className={`relative flex items-center gap-2 px-4 py-2 rounded-lg ${
                     activeView === option.id
                       ? `bg-gradient-to-r ${option.color} text-white`
-                      : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                   onClick={() => setActiveView(option.id)}
                 >
@@ -146,7 +171,7 @@ export default function VisualizerPage() {
                       layoutId="activeIndicator"
                       className="absolute inset-0 rounded-lg"
                       initial={false}
-                      transition={{ type: "spring", duration: 0.5 }}
+                      transition={{ type: 'spring', duration: 0.5 }}
                     />
                   )}
                 </Button>
@@ -164,9 +189,13 @@ export default function VisualizerPage() {
             >
               <Card className="overflow-hidden border-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm shadow-xl rounded-2xl">
                 <CardContent className="p-6">
-                  {activeView === "raw" && <RawJsonView data={jsonData} />}
-                  {activeView === "parsed" && <ParsedJsonView data={jsonData} />}
-                  {activeView === "graphical" && <GraphicalJsonView data={jsonData} />}
+                  {activeView === 'raw' && <RawJsonView data={jsonData} />}
+                  {activeView === 'parsed' && (
+                    <ParsedJsonView data={jsonData} />
+                  )}
+                  {activeView === 'graphical' && (
+                    <GraphicalJsonView data={jsonData} />
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
@@ -179,10 +208,11 @@ export default function VisualizerPage() {
           transition={{ duration: 0.5, delay: 0.4 }}
           className="text-center text-sm text-gray-500 dark:text-gray-400"
         >
-          <p>Select a file and visualization method to explore your JSON data</p>
+          <p>
+            Select a file and visualization method to explore your JSON data
+          </p>
         </motion.div>
       </div>
     </div>
-  )
+  );
 }
-

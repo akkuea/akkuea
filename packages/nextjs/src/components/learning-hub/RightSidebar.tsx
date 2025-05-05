@@ -9,7 +9,7 @@ import {
   Share2,
   User,
   Sparkles,
-  Flame
+  Flame,
 } from 'lucide-react';
 
 // Simulated API response types
@@ -36,22 +36,22 @@ const mockRecommendations: RecommendationItem[] = [
     type: 'Article',
     relevance: 98,
     title: 'Introduction to Functional Programming',
-    author: 'Kim Cascante'
+    author: 'Kim Cascante',
   },
   {
     id: '2',
     type: 'Tutorial',
     relevance: 92,
     title: 'Data Visualization with D3.js',
-    author: 'Carlos Rodriguez'
+    author: 'Carlos Rodriguez',
   },
   {
     id: '3',
     type: 'Article',
     relevance: 89,
     title: 'Machine Learning Fundamentals',
-    author: 'Ana López'
-  }
+    author: 'Ana López',
+  },
 ];
 
 const mockTrending: TrendingItem[] = [
@@ -60,22 +60,22 @@ const mockTrending: TrendingItem[] = [
     title: 'How AI is Transforming Education',
     category: 'Technology',
     comments: 156,
-    shares: 89
+    shares: 89,
   },
   {
     id: '2',
     title: 'Complete Guide to React Hooks',
     category: 'Programming',
     comments: 124,
-    shares: 76
+    shares: 76,
   },
   {
     id: '3',
     title: 'Neuroscience-based Study Techniques',
     category: 'Education',
     comments: 98,
-    shares: 112
-  }
+    shares: 112,
+  },
 ];
 
 export default function RightSidebar() {
@@ -91,7 +91,7 @@ export default function RightSidebar() {
     if (savedState) {
       setIsCollapsed(JSON.parse(savedState));
     }
-    
+
     const fetchData = async () => {
       setRecommendations(mockRecommendations);
       setTrending(mockTrending);
@@ -115,10 +115,10 @@ export default function RightSidebar() {
           const containerTop = contentRef.current.getBoundingClientRect().top;
           const targetTop = targetRef.current.getBoundingClientRect().top;
           const scrollOffset = targetTop - containerTop;
-          
+
           contentRef.current.scrollTo({
             top: scrollOffset,
-            behavior: 'smooth'
+            behavior: 'smooth',
           });
         }
       }, 300);
@@ -128,10 +128,10 @@ export default function RightSidebar() {
         const containerTop = contentRef.current.getBoundingClientRect().top;
         const targetTop = targetRef.current.getBoundingClientRect().top;
         const scrollOffset = targetTop - containerTop;
-        
+
         contentRef.current.scrollTo({
           top: scrollOffset,
-          behavior: 'smooth'
+          behavior: 'smooth',
         });
       }
     }
@@ -168,11 +168,11 @@ export default function RightSidebar() {
               <Compass className="w-5 h-5 text-[#0D9488] dark:text-[#0D9488]" />
             </div>
           </div>
-          
+
           <div className="space-y-4">
             <div className="relative group">
               <div className="flex justify-center">
-                <div 
+                <div
                   onClick={() => scrollToSection('recommendations')}
                   className="w-10 h-10 rounded-lg hover:bg-[#0D9488]/10 dark:hover:bg-[#0D9488]/20 
                     flex items-center justify-center transition-colors cursor-pointer"
@@ -180,16 +180,18 @@ export default function RightSidebar() {
                   <Sparkles className="w-5 h-5 text-[#0D9488] dark:text-[#0D9488]" />
                 </div>
               </div>
-              <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 
+              <div
+                className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 
                 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded 
-                opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all"
+              >
                 Recommendations
               </div>
             </div>
 
             <div className="relative group">
               <div className="flex justify-center">
-                <div 
+                <div
                   onClick={() => scrollToSection('trending')}
                   className="w-10 h-10 rounded-lg hover:bg-[#0D9488]/10 dark:hover:bg-[#0D9488]/20 
                     flex items-center justify-center transition-colors cursor-pointer"
@@ -197,9 +199,11 @@ export default function RightSidebar() {
                   <Flame className="w-5 h-5 text-[#0D9488] dark:text-[#0D9488]" />
                 </div>
               </div>
-              <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 
+              <div
+                className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 
                 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded 
-                opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all"
+              >
                 Trending
               </div>
             </div>
@@ -209,12 +213,10 @@ export default function RightSidebar() {
         // Expanded State
         <div className="h-full flex flex-col">
           <div className="p-4">
-            <h2 className="text-lg font-semibold text-[#0D9488] dark:text-[#0D9488]">
-              Discovery
-            </h2>
+            <h2 className="text-lg font-semibold text-[#0D9488] dark:text-[#0D9488]">Discovery</h2>
           </div>
 
-          <div 
+          <div
             ref={contentRef}
             className="flex-1 overflow-y-auto px-4 pb-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
@@ -228,7 +230,7 @@ export default function RightSidebar() {
 
                 <div className="space-y-3">
                   {recommendations.map((item) => (
-                    <div 
+                    <div
                       key={item.id}
                       className="border border-gray-100 dark:border-gray-800 rounded-lg p-3 
                         hover:border-[#0D9488]/20 dark:hover:border-[#0D9488]/40 
@@ -238,31 +240,41 @@ export default function RightSidebar() {
                         transition-all duration-200 cursor-pointer"
                     >
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-[11px] px-2 py-0.5 rounded-sm 
+                        <span
+                          className="text-[11px] px-2 py-0.5 rounded-sm 
                           bg-[#0D9488]/10 dark:bg-[#0D9488]/20 
-                          text-[#0D9488] dark:text-[#0D9488]">
+                          text-[#0D9488] dark:text-[#0D9488]"
+                        >
                           {item.type}
                         </span>
                         <span className="text-[11px] text-gray-400 dark:text-gray-500">
                           {item.relevance}% relevant
                         </span>
                       </div>
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 
-                        group-hover:text-[#0D9488] dark:group-hover:text-[#0D9488] transition-colors">
+                      <h4
+                        className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 
+                        group-hover:text-[#0D9488] dark:group-hover:text-[#0D9488] transition-colors"
+                      >
                         {item.title}
                       </h4>
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 
-                          flex items-center justify-center">
+                        <div
+                          className="w-5 h-5 rounded-full bg-gray-100 dark:bg-gray-800 
+                          flex items-center justify-center"
+                        >
                           <User size={12} className="text-gray-500 dark:text-gray-400" />
                         </div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">{item.author}</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {item.author}
+                        </span>
                       </div>
                     </div>
                   ))}
-                  
-                  <button className="text-sm text-[#0D9488] dark:text-[#0D9488] 
-                    hover:text-[#0D9488]/80 dark:hover:text-[#0D9488]/80 font-medium">
+
+                  <button
+                    className="text-sm text-[#0D9488] dark:text-[#0D9488] 
+                    hover:text-[#0D9488]/80 dark:hover:text-[#0D9488]/80 font-medium"
+                  >
                     See more recommendations →
                   </button>
                 </div>
@@ -277,7 +289,7 @@ export default function RightSidebar() {
 
                 <div className="space-y-3">
                   {trending.map((item) => (
-                    <div 
+                    <div
                       key={item.id}
                       className="border border-gray-100 dark:border-gray-800 rounded-lg p-3 
                         hover:border-[#0D9488]/20 dark:hover:border-[#0D9488]/40 
@@ -286,14 +298,18 @@ export default function RightSidebar() {
                         transform hover:scale-[1.02] hover:shadow-sm
                         transition-all duration-200 cursor-pointer"
                     >
-                      <h4 className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 
-                        group-hover:text-[#0D9488] dark:group-hover:text-[#0D9488] transition-colors">
+                      <h4
+                        className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2 
+                        group-hover:text-[#0D9488] dark:group-hover:text-[#0D9488] transition-colors"
+                      >
                         {item.title}
                       </h4>
                       <div className="flex justify-between items-center">
-                        <span className="text-[11px] px-2 py-0.5 rounded-sm 
+                        <span
+                          className="text-[11px] px-2 py-0.5 rounded-sm 
                           bg-[#0D9488]/10 dark:bg-[#0D9488]/20 
-                          text-[#0D9488] dark:text-[#0D9488]">
+                          text-[#0D9488] dark:text-[#0D9488]"
+                        >
                           {item.category}
                         </span>
                         <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
@@ -310,8 +326,10 @@ export default function RightSidebar() {
                     </div>
                   ))}
 
-                  <button className="text-sm text-[#0D9488] dark:text-[#0D9488] 
-                    hover:text-[#0D9488]/80 dark:hover:text-[#0D9488]/80 font-medium">
+                  <button
+                    className="text-sm text-[#0D9488] dark:text-[#0D9488] 
+                    hover:text-[#0D9488]/80 dark:hover:text-[#0D9488]/80 font-medium"
+                  >
                     See more trending topics →
                   </button>
                 </div>

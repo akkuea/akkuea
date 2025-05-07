@@ -268,6 +268,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "contributor-reputation-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -946,6 +953,13 @@ dependencies = [
 
 [[package]]
 name = "review-system"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "reward-system"
 version = "0.0.0"
 dependencies = [
  "soroban-sdk",

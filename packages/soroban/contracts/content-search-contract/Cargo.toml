@@ -1,0 +1,36 @@
+[package]
+name = "content-search-contract"
+version = "0.1.0"
+edition = "2021"
+publish = false
+resolver = "2"
+
+[lib]
+crate-type = ["cdylib"]
+doctest = false
+
+[features]
+default = ["export"]
+export = []
+testutils = ["soroban-sdk/testutils"]
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+overflow-checks = true
+debug = 0
+strip = "symbols"
+debug-assertions = false
+panic = "abort"
+
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1

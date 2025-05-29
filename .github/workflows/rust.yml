@@ -19,9 +19,8 @@ jobs:
 
     - name: Build Cargo
       run: cargo build --verbose
-      working-directory: soroban
+      working-directory: packages/soroban
 
     - name: Run tests
       run: cargo test --verbose
-      working-directory: soroban
-      
+      working-directory: packages/soroban

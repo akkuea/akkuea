@@ -27,3 +27,20 @@ export interface Publication {
   author: Author;
   hasVideo?: boolean;
 }
+export interface NotificationSettingsState {
+    enableNotifications: boolean;
+    emailNotifications: boolean;
+    pushNotifications: boolean;
+    sound: boolean;
+    comments: boolean;
+    likes: boolean;
+    mentions: boolean;
+    newFollowers: boolean;
+    directMessages: boolean;
+    platformUpdates: boolean;
+}
+
+export interface ToggleProps {
+    enabled: boolean;
+    onChange: () => void;
+}

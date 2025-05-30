@@ -52,6 +52,7 @@ export default function SettingsUI() {
 
       case 'privacy':
         return <PrivacyTab isDarkMode={isDarkMode} />;
+
       default:
         return (
           <GenericSettingsTab

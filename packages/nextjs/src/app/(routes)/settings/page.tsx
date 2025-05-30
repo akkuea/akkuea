@@ -6,6 +6,7 @@ import { TabProvider } from '@/contexts/TabContext';
 import { TabNav, TabItem, TabContent } from '@/components/settings/TabComponents';
 import { AppearanceTab } from '@/components/settings/AppearanceTab';
 import { EmptyTabContent } from '@/components/settings/EmptyTabContent';
+import Notifications from '@/components/settings/Notifications';
 import AccessibilityTab from '@/components/settings/AccessibilityTab';
 import Navbar from '@/components/navbar/NavBar';
 import { AccountTab } from '@/components/settings/AccountTab';
@@ -42,7 +43,7 @@ export default function SettingsPage() {
           </TabContent>
 
           <TabContent value="notifications">
-            <EmptyTabContent title="Notifications" />
+            <Notifications/>
           </TabContent>
 
           <TabContent value="privacy">

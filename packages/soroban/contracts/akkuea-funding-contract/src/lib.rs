@@ -80,3 +80,160 @@ impl CrowdfundContract {
         fund::release_funds(&env, project_id, caller, token_address, treasury_address);
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use soroban_sdk::{testutils::Address as _, Env, Address, String, vec};
+    use crate::project::Milestone;
+
+    #[test]
+    fn test_register_project() {
+        let env = Env::default();
+        let contract_id = env.register(CrowdfundContract, ());
+        let client = CrowdfundContractClient::new(&env, &contract_id);
+
+        let project_id = 1u64;
+        let creator = Address::generate(&env);
+        let title = String::from_str(&env, "Test Project");
+        let description = String::from_str(&env, "Test Description");
+        let total_funds = 1000u64;
+
+        // Create proper Milestone objects with correct field names
+        let milestone = Milestone {
+            id: 1u64,
+            description: String::from_str(&env, "Milestone 1"),
+            release_amount: 500u64,
+            is_completed: false,
+        };
+        let milestones = vec![&env, milestone];
+
+        // Mock authorization for all calls
+        env.mock_all_auths();
+
+        // register_project returns (), not an ID
+        client.register_project(&project_id, &creator, &title, &description, &total_funds, &milestones);
+
+        // Verify the project was registered by fetching its info
+        let (proj_title, _, _, _, _, _) = client.get_project_info(&project_id);
+        assert_eq!(proj_title, title);
+    }
+
+    #[test]
+    fn test_vote_for_project() {
+        let env = Env::default();
+        let contract_id = env.register(CrowdfundContract, ());
+        let client = CrowdfundContractClient::new(&env, &contract_id);
+
+        let project_id = 1u64;
+        let creator = Address::generate(&env);
+        let voter = Address::generate(&env);
+        let title = String::from_str(&env, "Test Project");
+        let description = String::from_str(&env, "Test Description");
+        let total_funds = 1000u64;
+
+        let milestone = Milestone {
+            id: 1u64,
+            description: String::from_str(&env, "Milestone 1"),
+            release_amount: 500u64,
+            is_completed: false,
+        };
+        let milestones = vec![&env, milestone];
+
+        // Mock authorization for all calls
+        env.mock_all_auths();
+
+        client.register_project(&project_id, &creator, &title, &description, &total_funds, &milestones);
+
+        client.vote_for_projects(&project_id, &voter);
+
+        assert_eq!(client.get_vote(&project_id), 1);
+    }
+
+    #[test]
+    fn test_multiple_votes() {
+        let env = Env::default();
+        let contract_id = env.register(CrowdfundContract, ());
+        let client = CrowdfundContractClient::new(&env, &contract_id);
+
+        let project_id = 1u64;
+        let creator = Address::generate(&env);
+        let title = String::from_str(&env, "Test Project");
+        let description = String::from_str(&env, "Test Description");
+        let total_funds = 1000u64;
+
+        let milestone = Milestone {
+            id: 1u64,
+            description: String::from_str(&env, "Milestone 1"),
+            release_amount: 500u64,
+            is_completed: false,
+        };
+        let milestones = vec![&env, milestone];
+
+        // Mock authorization for all calls
+        env.mock_all_auths();
+
+        client.register_project(&project_id, &creator, &title, &description, &total_funds, &milestones);
+
+        let voter1 = Address::generate(&env);
+        let voter2 = Address::generate(&env);
+        let voter3 = Address::generate(&env);
+
+        client.vote_for_projects(&project_id, &voter1);
+        client.vote_for_projects(&project_id, &voter2);
+        client.vote_for_projects(&project_id, &voter3);
+
+        assert_eq!(client.get_vote(&project_id), 3);
+    }
+
+    #[test]
+    #[should_panic(expected = "Project not found")]
+    fn test_vote_for_nonexistent_project() {
+        let env = Env::default();
+        let contract_id = env.register(CrowdfundContract, ());
+        let client = CrowdfundContractClient::new(&env, &contract_id);
+
+        let voter = Address::generate(&env);
+        let nonexistent_project_id = 999u64;
+
+        // Mock authorization for all calls
+        env.mock_all_auths();
+
+        client.vote_for_projects(&nonexistent_project_id, &voter);
+    }
+
+    #[test]
+    #[should_panic(expected = "Duplicate vote not allowed")]
+    fn test_duplicate_vote() {
+        let env = Env::default();
+        let contract_id = env.register(CrowdfundContract, ());
+        let client = CrowdfundContractClient::new(&env, &contract_id);
+
+        let project_id = 1u64;
+        let creator = Address::generate(&env);
+        let voter = Address::generate(&env);
+        let title = String::from_str(&env, "Test Project");
+        let description = String::from_str(&env, "Test Description");
+        let total_funds = 1000u64;
+
+        let milestone = Milestone {
+            id: 1u64,
+            description: String::from_str(&env, "Milestone 1"),
+            release_amount: 500u64,
+            is_completed: false,
+        };
+        let milestones = vec![&env, milestone];
+
+        // Mock authorization for all calls
+        env.mock_all_auths();
+
+        client.register_project(&project_id, &creator, &title, &description, &total_funds, &milestones);
+
+        client.vote_for_projects(&project_id, &voter);
+        // This should panic
+        client.vote_for_projects(&project_id, &voter);
+    }
+}
+
+
+

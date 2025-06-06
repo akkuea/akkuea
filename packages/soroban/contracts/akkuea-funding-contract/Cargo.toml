@@ -13,3 +13,23 @@ soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+
+[profile.test]
+opt-level = 0
+debug = true
+debug-assertions = true
+overflow-checks = true
+lto = false
+panic = 'unwind'
+incremental = true
+codegen-units = 256
+rpath = false
+
+# Reduce test snapshot generation
+[package.metadata.soroban]
+# Only generate snapshots when explicitly requested
+generate-snapshots = false
+# Add this section to reduce snapshot generation
+snapshot-dir = "test_snapshots"
+# Reduce snapshot verbosity
+verbose-snapshots = false

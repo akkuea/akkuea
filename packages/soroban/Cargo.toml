@@ -22,3 +22,9 @@ lto = true
 inherits = "release"
 debug-assertions = true
 
+[profile.test]
+opt-level = 0
+debug = true
+incremental = true
+codegen-units = 256
+

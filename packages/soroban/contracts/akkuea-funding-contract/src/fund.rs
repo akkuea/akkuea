@@ -94,7 +94,7 @@ pub fn release_funds(
     }
 
     // ✅ Do the token transfer from treasury to creator
-    let token = token::Client::new(&env, &token_address);
+    let token = token::Client::new(env, &token_address);
     token.transfer(
         &treasury_address,
         &project.creator,

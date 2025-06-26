@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import LeftSidebar from '@/components/learning-hub/LeftSidebar';
-import RightSidebar from '@/components/learning-hub/RightSidebar';
+import LeftSidebar from '@/components/learning-hub/left-sidebar';
+import RightSidebar from '@/components/learning-hub/right-sidebar';
 import { ThemeProvider } from '@/components/theme-provider'; // 👈 Ya hecho
 import './globals.css';
 import Navbar from '@/components/navbar/NavBar';

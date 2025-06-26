@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Search, MessageCircle, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import Link from 'next/link';
-import AkkueaLogo from '@/components/logo/akkueaLogo';
+import AkkueaLogo from '@/components/logo/akkuea-logo';
 import { useMessages } from '@/store/messaging-store';
 import { MessagePreview } from '@/components/messages/MessagePreview';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';

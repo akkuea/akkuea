@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { ProfileAvatar } from './ProfileAvatar';
-import { ProfileForm } from './ProfileForm';
-import { RoleSelector } from './RoleSelector';
-import { ActionButtons } from './ActionButtons';
+import { ProfileAvatar } from './profile-avatar';
+import { ProfileForm } from './profile-form';
+import { RoleSelector } from './role-selector';
+import { ActionButtons } from './action-buttons';
 
 const roles = [
   { id: 'teacher', label: 'Teacher' },

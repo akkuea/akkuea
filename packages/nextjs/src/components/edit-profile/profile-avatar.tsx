@@ -39,4 +39,4 @@ export const ProfileAvatar = () => {
       </Button>
     </div>
   );
-};
+}; 

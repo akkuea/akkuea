@@ -30,4 +30,4 @@ export const FilterTabs: React.FC<FilterTabsProps> = ({ tabs, activeTab, onTabCh
       ))}
     </div>
   );
-};
+}; 

@@ -5,7 +5,7 @@ import firstImage6 from '../../../public/Body(1).png';
 import firstImage1 from '../../../public/Effective.png';
 // pages/index.tsx or your desired page
 import React from 'react';
-import { PublicationsSection } from '../publication/PublicationsSection';
+import { PublicationsSection } from './publications-section';
 import { Publication } from '../types';
 
 // Sample data to match your image
@@ -120,4 +120,4 @@ export default function PublicationMain() {
       <PublicationsSection publications={publicationsData} />
     </div>
   );
-}
+} 

@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import { CategoryTag } from './CategoryTag';
+import { CategoryTag } from './category-tag';
 import { Publication } from '../types/index';
 import { ArrowRight } from 'lucide-react';
 
@@ -98,4 +98,4 @@ export const PublicationCard: React.FC<PublicationCardProps> = ({ publication })
       </div>
     </div>
   );
-};
+}; 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { PublicationCard } from './PublicationCard';
+import { PublicationCard } from './publication-card';
 import { Publication } from '../types/index';
 
 interface PublicationsGridProps {
@@ -15,4 +15,4 @@ export const PublicationsGrid: React.FC<PublicationsGridProps> = ({ publications
       ))}
     </div>
   );
-};
+}; 

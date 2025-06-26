@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import Skeleton from '@/components/user-post/skeleton';
 import { useInView } from 'react-intersection-observer';
 import { Play, Link, FileText, AlertCircle } from 'lucide-react';
-import PostContentRenderer from './PostContentRenderer';
+import PostContentRenderer from './post-content-renderer';
 
 // Define the types of posts
 type ContentType = 'image' | 'text' | 'video' | 'link' | 'mixed';

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import AkkueaLogo from '@/components/logo/akkuea-logo';
 import { useMessages } from '@/store/messaging-store';
-import { MessagePreview } from '@/components/messages/MessagePreview';
+import { MessagePreview } from '@/components/messages/message-preview';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWallet } from '@/components/auth/hooks/useWallet.hook';
 import { useGlobalAuthenticationStore } from '@/components/auth/store/data';

@@ -1,5 +1,5 @@
 import { useMessages } from '@/store/messaging-store';
-import { ConversationItem } from './ConversationItem';
+import { ConversationItem } from './conversation-item';
 import { ConversationListProps } from '@/app/Types/messages';
 
 export function ConversationList({ onSelectConversation }: ConversationListProps) {
@@ -28,4 +28,4 @@ export function ConversationList({ onSelectConversation }: ConversationListProps
       </div>
     </div>
   );
-}
+} 

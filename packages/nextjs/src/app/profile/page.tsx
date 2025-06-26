@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { Edit } from 'lucide-react';
-import UserActivityDashboard from '@/components/Activity/UserActivity';
+import UserActivityDashboard from '@/components/activity/user-activity';
 import PublicationMain from '@/components/publication/PublicationMain';
 import Link from 'next/link';
 

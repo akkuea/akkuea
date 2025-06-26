@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import AnnualContributions from './AnnualContributionsHeatmap';
+import AnnualContributions from './annual-contributions-heatmap';
 import { Calendar, Clock, MessageSquare, ThumbsUp, FileText, Award, Users } from 'lucide-react';
 
 // Activity type definition
@@ -182,4 +182,4 @@ const UserActivityDashboard = () => {
   );
 };
 
-export default UserActivityDashboard;
+export default UserActivityDashboard; 

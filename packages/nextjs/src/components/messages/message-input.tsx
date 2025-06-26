@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import MediaUpload from '@/components/quickPost/mediaUpload';
+import MediaUpload from '@/components/quick-post/media-upload';
 
 interface LinkPreview {
   url: string;

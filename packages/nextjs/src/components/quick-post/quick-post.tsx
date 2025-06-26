@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import TextInput from '@/components/quickPost/textInput';
-import LinkPreview from '@/components/quickPost/linkPreview';
-import PostButton from '@/components/quickPost/postButton';
+import TextInput from '@/components/quick-post/text-input';
+import LinkPreview from '@/components/quick-post/link-preview';
+import PostButton from '@/components/quick-post/post-button';
 import { Card } from '@/components/ui/card';
 import Image from 'next/image';
 

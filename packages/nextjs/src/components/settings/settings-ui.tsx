@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Bell, Eye, Lock, User, Palette, LucideIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { NavButton } from './nav-button';
-import { AppearanceTab } from './AppearanceTab';
+import { AppearanceTab } from './appearance-tab';
 import { PrivacyTab } from '@/components/settings/privacy';
 import { GenericSettingsTab } from './generic-settings';
 

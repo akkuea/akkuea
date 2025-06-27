@@ -1,7 +1,7 @@
 'use client';
 
 import { useMessages } from '@/store/messaging-store';
-import { MessageBubble } from './MessageBubble';
+import { MessageBubble } from './message-bubble';
 import { useEffect, useRef, useCallback } from 'react';
 
 export function MessageThread() {
@@ -26,4 +26,4 @@ export function MessageThread() {
       <div ref={messagesEndRef} />
     </div>
   );
-}
+} 

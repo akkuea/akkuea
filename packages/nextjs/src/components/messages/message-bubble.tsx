@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import type { MessageBubbleProps } from '@/app/Types/messages';
 import { useState } from 'react';
 
-import { Avatar } from './Avatar';
+import { Avatar } from './avatar';
 import Image from 'next/image';
 
 export function MessageBubble({ message }: MessageBubbleProps) {
@@ -71,4 +71,4 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       </div>
     </div>
   );
-}
+} 

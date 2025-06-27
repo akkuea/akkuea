@@ -1,5 +1,5 @@
 import React from 'react';
-import UserProfilePostsGrid from './post-grid/userprofilepost';
+import UserProfilePostsGrid from './post-grid/user-profile-post';
 
 const UserProfileHeader = () => (
   <div className="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow">

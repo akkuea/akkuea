@@ -1,5 +1,5 @@
 import { useMessages } from '@/store/messaging-store';
-import { Avatar } from './Avatar';
+import { Avatar } from './avatar';
 
 export function MessagePreview() {
   const { conversations } = useMessages();
@@ -32,4 +32,4 @@ export function MessagePreview() {
       </div>
     </div>
   );
-}
+} 

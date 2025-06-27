@@ -1,8 +1,8 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { FilterTabs } from './FilterTabs';
-import { SearchBar } from './SearchBar';
-import { PublicationsGrid } from './PublicationsGrid';
+import { FilterTabs } from './filter-tabs';
+import { SearchBar } from './search-bar';
+import { PublicationsGrid } from './publications-grid';
 import { Publication } from '../types/index';
 
 interface PublicationsSectionProps {
@@ -78,4 +78,4 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
       </div>
     </div>
   );
-};
+}; 

@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import AnnualContributions from './AnnualContributionsHeatmap';
-import { Calendar, Clock, MessageSquare, ThumbsUp, FileText, Award, Users } from 'lucide-react';
+import { Calendar } from 'lucide-react';
+import TabNavigation from './user-dashboard/TabNavigation';
+import TabContent from './user-dashboard/TabContent';
+import { generateHeatmapData } from '@/lib/utils';
 
 // Activity type definition
-
 interface Activity {
   id: number;
   type: 'comment' | 'like' | 'post' | 'achievement' | 'join';
@@ -17,8 +18,11 @@ const UserActivityDashboard = () => {
   const [activeTab, setActiveTab] = useState('Activity');
   const tabs = ['Activity', 'Achievements', 'Statistics'];
 
+  // Generate data but only use it in the component when needed
+  generateHeatmapData();
+
   // Sample recent activity data
-  const recentActivity = [
+  const recentActivity: Activity[] = [
     {
       id: 1,
       type: 'comment',
@@ -51,24 +55,6 @@ const UserActivityDashboard = () => {
     },
   ];
 
-  // Helper function to get icon for activity type
-  const getActivityIcon = (type: Activity['type'] | string) => {
-    switch (type) {
-      case 'comment':
-        return <MessageSquare size={16} className="text-teal-400" />;
-      case 'like':
-        return <ThumbsUp size={16} className="text-teal-400" />;
-      case 'post':
-        return <FileText size={16} className="text-teal-400" />;
-      case 'achievement':
-        return <Award size={16} className="text-teal-400" />;
-      case 'join':
-        return <Users size={16} className="text-teal-400" />;
-      default:
-        return <Clock size={16} className="text-teal-400" />;
-    }
-  };
-
   return (
     <div className="container bg-white dark:bg-black rounded-lg shadow mx-auto mb-10 transition-colors duration-300 border">
       {/* Header with title */}
@@ -78,72 +64,9 @@ const UserActivityDashboard = () => {
       </div>
 
       <div className="p-4">
-        <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1 mb-4 transition-colors duration-300">
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              className={`flex-1 py-2 px-4 text-sm font-medium rounded-md transition-colors duration-300 ${
-                activeTab === tab
-                  ? 'bg-white dark:bg-gray-600 text-teal-600 dark:text-teal-300 shadow'
-                  : 'text-gray-600 dark:text-gray-300 hover:text-teal-500 dark:hover:text-teal-400'
-              }`}
-              onClick={() => setActiveTab(tab)}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+        <TabNavigation tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {/* Content based on active tab */}
-        {activeTab === 'Activity' && (
-          <>
-            {/* Annual Contributions Heatmap */}
-            <AnnualContributions />
-
-            {/* Recent Activity List */}
-            <div className="mt-6">
-              <h2 className="text-base font-medium mb-3 text-gray-800 dark:text-gray-200">
-                Recent Activity
-              </h2>
-              <div className="border rounded-xl px-4 py-6 dark:border-gray-700 transition-colors duration-300">
-                <div className="flex flex-col space-y-4">
-                  {recentActivity.map((activity) => (
-                    <div key={activity.id} className="flex items-start">
-                      <div className="mt-1 p-1 bg-teal-100 dark:bg-teal-900/30 bg-opacity-20 rounded">
-                        {getActivityIcon(activity.type)}
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm text-gray-800 dark:text-gray-200">
-                          {activity.content}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {activity.timeAgo}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 text-right">
-                  <button className="text-sm text-teal-400 hover:text-teal-500 dark:hover:text-teal-300">
-                    View all activity history
-                  </button>
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {activeTab === 'Achievements' && (
-          <div className="h-52 flex items-center justify-center text-gray-500 dark:text-gray-400">
-            Achievements content would go here
-          </div>
-        )}
-
-        {activeTab === 'Statistics' && (
-          <div className="h-52 flex items-center justify-center text-gray-500 dark:text-gray-400">
-            Statistics content would go here
-          </div>
-        )}
+        <TabContent activeTab={activeTab} recentActivity={recentActivity} />
       </div>
     </div>
   );

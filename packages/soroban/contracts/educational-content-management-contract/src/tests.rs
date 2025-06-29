@@ -613,4 +613,436 @@ fn test_complex_workflow() {
     // Content 2 should have 2 upvotes and be verified
     assert_eq!(content2.upvotes, 2);
     assert_eq!(content2.is_verified, true);
-} 
+}
+
+#[test]
+fn test_filter_by_verification_empty_results() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    // Configure authentication
+    env.mock_all_auths();
+
+    // Test filtering when no content exists
+    let verified_content = client.filter_by_verification();
+    assert_eq!(verified_content.len(), 0);
+
+    // Create some content but don't verify any
+    let creator = Address::generate(&env);
+    let title = String::from_str(&env, "Unverified Content");
+    let content_hash = BytesN::random(&env);
+    let subject_tags = vec![&env, String::from_str(&env, "test")];
+
+    client.publish_content(&creator, &title, &content_hash, &subject_tags);
+
+    // Filter should still return empty results
+    let verified_content = client.filter_by_verification();
+    assert_eq!(verified_content.len(), 0);
+}
+
+#[test]
+fn test_filter_by_verification_mixed_content() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    // Configure authentication
+    env.mock_all_auths();
+
+    // Create multiple content items with mixed verification status
+    let creator = Address::generate(&env);
+    let verifier = Address::generate(&env);
+
+    // Content 1: Verified
+    let content_id1 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Verified Content 1"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "verified")]
+    );
+    client.verify_content(&content_id1, &verifier);
+
+    // Content 2: Not verified
+    let content_id2 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Unverified Content"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "unverified")]
+    );
+
+    // Content 3: Verified
+    let content_id3 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Verified Content 2"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "verified")]
+    );
+    client.verify_content(&content_id3, &verifier);
+
+    // Filter by verification
+    let verified_content = client.filter_by_verification();
+
+    // Should return exactly 2 verified content items
+    assert_eq!(verified_content.len(), 2);
+
+    // Check that all returned content is verified
+    for i in 0..verified_content.len() {
+        let content = verified_content.get(i).unwrap();
+        assert_eq!(content.is_verified, true);
+    }
+
+    // Check that the correct content IDs are returned
+    let mut found_content_1 = false;
+    let mut found_content_3 = false;
+    let mut found_content_2 = false;
+
+    for i in 0..verified_content.len() {
+        let content = verified_content.get(i).unwrap();
+        if content.id == content_id1 {
+            found_content_1 = true;
+        }
+        if content.id == content_id3 {
+            found_content_3 = true;
+        }
+        if content.id == content_id2 {
+            found_content_2 = true;
+        }
+    }
+
+    assert!(found_content_1);
+    assert!(found_content_3);
+    assert!(!found_content_2);
+}
+
+#[test]
+fn test_filter_by_min_upvotes_empty_results() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    // Configure authentication
+    env.mock_all_auths();
+
+    // Test filtering when no content exists
+    let popular_content = client.filter_by_min_upvotes(&5);
+    assert_eq!(popular_content.len(), 0);
+
+    // Create content with low upvotes
+    let creator = Address::generate(&env);
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Low Upvote Content"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "test")]
+    );
+
+    // Add only 2 upvotes
+    let voter1 = Address::generate(&env);
+    let voter2 = Address::generate(&env);
+    client.upvote_content(&content_id, &voter1);
+    client.upvote_content(&content_id, &voter2);
+
+    // Filter with min_upvotes = 5 should return empty
+    let popular_content = client.filter_by_min_upvotes(&5);
+    assert_eq!(popular_content.len(), 0);
+}
+
+#[test]
+fn test_filter_by_min_upvotes_various_thresholds() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    // Configure authentication
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+
+    // Create content with different upvote counts
+    // Content 1: 0 upvotes
+    let _content_id1 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "No Upvotes"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "zero")]
+    );
+
+    // Content 2: 3 upvotes
+    let content_id2 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Three Upvotes"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "three")]
+    );
+    for _ in 0..3 {
+        let voter = Address::generate(&env);
+        client.upvote_content(&content_id2, &voter);
+    }
+
+    // Content 3: 7 upvotes
+    let content_id3 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Seven Upvotes"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "seven")]
+    );
+    for _ in 0..7 {
+        let voter = Address::generate(&env);
+        client.upvote_content(&content_id3, &voter);
+    }
+
+    // Content 4: 10 upvotes
+    let content_id4 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Ten Upvotes"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "ten")]
+    );
+    for _ in 0..10 {
+        let voter = Address::generate(&env);
+        client.upvote_content(&content_id4, &voter);
+    }
+
+    // Test different thresholds
+
+    // min_upvotes = 0: should return all content
+    let result_0 = client.filter_by_min_upvotes(&0);
+    assert_eq!(result_0.len(), 4);
+
+    // min_upvotes = 1: should return content 2, 3, 4
+    let result_1 = client.filter_by_min_upvotes(&1);
+    assert_eq!(result_1.len(), 3);
+
+    // min_upvotes = 5: should return content 3, 4
+    let result_5 = client.filter_by_min_upvotes(&5);
+    assert_eq!(result_5.len(), 2);
+
+    // min_upvotes = 10: should return only content 4
+    let result_10 = client.filter_by_min_upvotes(&10);
+    assert_eq!(result_10.len(), 1);
+    assert_eq!(result_10.get(0).unwrap().id, content_id4);
+
+    // min_upvotes = 15: should return no content
+    let result_15 = client.filter_by_min_upvotes(&15);
+    assert_eq!(result_15.len(), 0);
+}
+
+#[test]
+fn test_filter_combinations_verified_and_popular() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    // Configure authentication
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let verifier = Address::generate(&env);
+
+    // Create diverse content for comprehensive testing
+
+    // Content 1: Verified + High upvotes (10)
+    let content_id1 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Verified and Popular"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "best")]
+    );
+    client.verify_content(&content_id1, &verifier);
+    for _ in 0..10 {
+        let voter = Address::generate(&env);
+        client.upvote_content(&content_id1, &voter);
+    }
+
+    // Content 2: Verified + Low upvotes (2)
+    let content_id2 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Verified but Unpopular"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "verified")]
+    );
+    client.verify_content(&content_id2, &verifier);
+    for _ in 0..2 {
+        let voter = Address::generate(&env);
+        client.upvote_content(&content_id2, &voter);
+    }
+
+    // Content 3: Not verified + High upvotes (8)
+    let content_id3 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Popular but Unverified"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "popular")]
+    );
+    for _ in 0..8 {
+        let voter = Address::generate(&env);
+        client.upvote_content(&content_id3, &voter);
+    }
+
+    // Content 4: Not verified + Low upvotes (1)
+    let content_id4 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Neither Verified nor Popular"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "basic")]
+    );
+    let voter = Address::generate(&env);
+    client.upvote_content(&content_id4, &voter);
+
+    // Test individual filters
+
+    // Filter by verification: should return content 1 and 2
+    let verified_content = client.filter_by_verification();
+    assert_eq!(verified_content.len(), 2);
+    let mut found_verified_1 = false;
+    let mut found_verified_2 = false;
+
+    for i in 0..verified_content.len() {
+        let content = verified_content.get(i).unwrap();
+        if content.id == content_id1 {
+            found_verified_1 = true;
+        }
+        if content.id == content_id2 {
+            found_verified_2 = true;
+        }
+    }
+
+    assert!(found_verified_1);
+    assert!(found_verified_2);
+
+    // Filter by min_upvotes = 5: should return content 1 and 3
+    let popular_content = client.filter_by_min_upvotes(&5);
+    assert_eq!(popular_content.len(), 2);
+    let mut found_popular_1 = false;
+    let mut found_popular_3 = false;
+
+    for i in 0..popular_content.len() {
+        let content = popular_content.get(i).unwrap();
+        if content.id == content_id1 {
+            found_popular_1 = true;
+        }
+        if content.id == content_id3 {
+            found_popular_3 = true;
+        }
+    }
+
+    assert!(found_popular_1);
+    assert!(found_popular_3);
+
+    // Test edge cases
+
+    // Filter by min_upvotes = 0: should return all content
+    let all_content = client.filter_by_min_upvotes(&0);
+    assert_eq!(all_content.len(), 4);
+
+    // Filter by min_upvotes = 10: should return only content 1
+    let very_popular = client.filter_by_min_upvotes(&10);
+    assert_eq!(very_popular.len(), 1);
+    assert_eq!(very_popular.get(0).unwrap().id, content_id1);
+}
+
+#[test]
+fn test_filters_with_large_dataset() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    // Configure authentication
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let verifier = Address::generate(&env);
+
+    // Create 20 content items with varied properties
+    let mut content_ids = vec![&env];
+    let mut expected_verified = 0u32;
+    let mut expected_popular_5 = 0u32;
+    let mut expected_popular_10 = 0u32;
+
+    for i in 0..20 {
+        let title = match i {
+            0 => String::from_str(&env, "Content 00"),
+            1 => String::from_str(&env, "Content 01"),
+            2 => String::from_str(&env, "Content 02"),
+            3 => String::from_str(&env, "Content 03"),
+            4 => String::from_str(&env, "Content 04"),
+            5 => String::from_str(&env, "Content 05"),
+            6 => String::from_str(&env, "Content 06"),
+            7 => String::from_str(&env, "Content 07"),
+            8 => String::from_str(&env, "Content 08"),
+            9 => String::from_str(&env, "Content 09"),
+            10 => String::from_str(&env, "Content 10"),
+            11 => String::from_str(&env, "Content 11"),
+            12 => String::from_str(&env, "Content 12"),
+            13 => String::from_str(&env, "Content 13"),
+            14 => String::from_str(&env, "Content 14"),
+            15 => String::from_str(&env, "Content 15"),
+            16 => String::from_str(&env, "Content 16"),
+            17 => String::from_str(&env, "Content 17"),
+            18 => String::from_str(&env, "Content 18"),
+            19 => String::from_str(&env, "Content 19"),
+            _ => unreachable!()
+        };
+
+        let content_id = client.publish_content(
+            &creator,
+            &title,
+            &BytesN::random(&env),
+            &vec![&env, String::from_str(&env, "test")]
+        );
+        content_ids.push_back(content_id);
+
+        // Verify every 3rd content (indices 0, 3, 6, 9, 12, 15, 18)
+        if i % 3 == 0 {
+            client.verify_content(&content_id, &verifier);
+            expected_verified += 1;
+        }
+
+        // Add upvotes based on index
+        let upvote_count = i / 2; // 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9
+        for _ in 0..upvote_count {
+            let voter = Address::generate(&env);
+            client.upvote_content(&content_id, &voter);
+        }
+
+        if upvote_count >= 5 {
+            expected_popular_5 += 1;
+        }
+        if upvote_count >= 10 {
+            expected_popular_10 += 1;
+        }
+    }
+
+    // Test filters
+
+    // Filter by verification
+    let verified_results = client.filter_by_verification();
+    assert_eq!(verified_results.len(), expected_verified);
+
+    // Verify all returned content is actually verified
+    for i in 0..verified_results.len() {
+        let content = verified_results.get(i).unwrap();
+        assert_eq!(content.is_verified, true);
+    }
+
+    // Filter by min_upvotes = 5
+    let popular_5_results = client.filter_by_min_upvotes(&5);
+    assert_eq!(popular_5_results.len(), expected_popular_5);
+
+    // Verify all returned content has >= 5 upvotes
+    for i in 0..popular_5_results.len() {
+        let content = popular_5_results.get(i).unwrap();
+        assert!(content.upvotes >= 5);
+    }
+
+    // Filter by min_upvotes = 10
+    let popular_10_results = client.filter_by_min_upvotes(&10);
+    assert_eq!(popular_10_results.len(), expected_popular_10);
+
+    // Verify all returned content has >= 10 upvotes
+    for i in 0..popular_10_results.len() {
+        let content = popular_10_results.get(i).unwrap();
+        assert!(content.upvotes >= 10);
+    }
+}

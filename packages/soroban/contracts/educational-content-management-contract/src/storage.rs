@@ -54,4 +54,46 @@ pub fn record_user_vote(env: &Env, voter: Address, content_id: u64) {
 pub fn has_user_voted(env: &Env, voter: &Address, content_id: u64) -> bool {
     let key = DataKey::UserVotes(voter.clone(), content_id);
     env.storage().instance().has(&key)
-} 
+}
+
+// Get the current content counter (total number of content items created)
+pub fn get_content_counter(env: &Env) -> u64 {
+    let key = DataKey::ContentCounter;
+    env.storage().instance().get(&key).unwrap_or(0u64)
+}
+
+// Check if content exists by ID
+pub fn content_exists(env: &Env, content_id: u64) -> bool {
+    let key = DataKey::Content(content_id);
+    env.storage().instance().has(&key)
+}
+
+// Get all existing content IDs (for filtering operations)
+pub fn get_all_content_ids(env: &Env) -> Vec<u64> {
+    let mut content_ids = Vec::new(env);
+    let total_content = get_content_counter(env);
+
+    // Iterate through all possible content IDs and check if they exist
+    for id in 0..total_content {
+        if content_exists(env, id) {
+            content_ids.push_back(id);
+        }
+    }
+
+    content_ids
+}
+
+// Get multiple content items by their IDs
+pub fn get_multiple_content(env: &Env, content_ids: &Vec<u64>) -> Vec<Content> {
+    let mut contents = Vec::new(env);
+
+    for i in 0..content_ids.len() {
+        let content_id = content_ids.get(i).unwrap();
+        if content_exists(env, content_id) {
+            let content = get_content(env, content_id);
+            contents.push_back(content);
+        }
+    }
+
+    contents
+}

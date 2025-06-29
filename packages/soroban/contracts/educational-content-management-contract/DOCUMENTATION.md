@@ -42,6 +42,12 @@ The contract serves as a foundation for Akkuea's educational marketplace, ensuri
    - **Popularity Queries**: Find content based on upvote counts
    - **Category Filtering**: Discover content by subject tags
 
+5. **Advanced Content Filtering**
+   - **Verification Filtering**: Retrieve only verified, trusted content
+   - **Popularity Filtering**: Find content with minimum upvote thresholds
+   - **Quality Discovery**: Enable users to discover high-quality content efficiently
+   - **Trust-based Search**: Support frontend features for advanced content discovery
+
 ## Contract Structure
 
 ```
@@ -132,6 +138,69 @@ Stores comprehensive information about educational content:
   - `content_id`: The unique identifier of the content
 - Returns the complete content data structure
 - Panics if the content does not exist
+
+### Advanced Content Filtering
+
+#### `filter_by_verification(env: Env) -> Vec<Content>`
+- Filters and retrieves only verified educational content
+- Parameters: None
+- Returns a vector of all content items where `is_verified == true`
+- This is a view-only function that does not modify contract state
+- Returns an empty vector if no verified content exists
+- Useful for discovering trusted, quality-assured educational materials
+
+**Usage Example:**
+```rust
+// Get all verified content
+let verified_content = client.filter_by_verification();
+
+// Process verified content
+for i in 0..verified_content.len() {
+    let content = verified_content.get(i).unwrap();
+    // Use verified content...
+}
+```
+
+#### `filter_by_min_upvotes(env: Env, min_upvotes: u32) -> Vec<Content>`
+- Filters and retrieves content with upvotes greater than or equal to the minimum threshold
+- Parameters:
+  - `min_upvotes`: The minimum number of upvotes required (inclusive)
+- Returns a vector of all content items where `upvotes >= min_upvotes`
+- This is a view-only function that does not modify contract state
+- Returns an empty vector if no content meets the upvote threshold
+- Useful for discovering popular, community-endorsed educational content
+
+**Usage Examples:**
+```rust
+// Get content with at least 10 upvotes (popular content)
+let popular_content = client.filter_by_min_upvotes(&10);
+
+// Get content with at least 5 upvotes (moderately popular)
+let moderately_popular = client.filter_by_min_upvotes(&5);
+
+// Get all content (including those with 0 upvotes)
+let all_content = client.filter_by_min_upvotes(&0);
+
+// Process popular content
+for i in 0..popular_content.len() {
+    let content = popular_content.get(i).unwrap();
+    // Use popular content...
+}
+```
+
+**Combining Filters:**
+While the contract provides individual filter functions, clients can combine their results to find content that meets multiple criteria:
+
+```rust
+// Get verified content
+let verified_content = client.filter_by_verification();
+
+// Get popular content (10+ upvotes)
+let popular_content = client.filter_by_min_upvotes(&10);
+
+// Find content that is both verified AND popular
+// (This would be done client-side by finding intersection of results)
+```
 
 ## Technical Details and Implementation Notes
 

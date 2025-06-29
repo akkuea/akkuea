@@ -19,12 +19,14 @@ The contract includes validation mechanisms to ensure that all indexed content m
 ## Functionalities
 
 1. **Content Indexing**
+
    - Add new educational content to the search index
    - Store comprehensive metadata about each content item
    - Assign unique identifiers to each content entry
    - Validate content metadata for completeness and quality
 
 2. **Subject-Based Search**
+
    - Search for content by specific subject tags
    - Return all content matching search criteria
    - Handle cases where no matching content is found
@@ -59,9 +61,11 @@ educational-content-index-contract/
 While the contract doesn't explicitly emit events in the examined code, it would be beneficial to implement events for the following actions:
 
 1. `content_added` - When new content is successfully added to the index
+
    - Data: content_id, title, subject_tags
 
 2. `content_updated` - When existing content is updated
+
    - Data: content_id, title, subject_tags
 
 3. `search_performed` - When a search is executed
@@ -72,6 +76,7 @@ While the contract doesn't explicitly emit events in the examined code, it would
 ### Contract Management
 
 #### `initialize(env: Env)`
+
 - Initializes the contract's storage and state
 - Creates empty content list and sets initial ID counter
 - Prevents re-initialization
@@ -80,6 +85,7 @@ While the contract doesn't explicitly emit events in the examined code, it would
 ### Content Management
 
 #### `add_content(env: Env, title: String, description: String, subject_tags: Vec<String>, content_url: String) -> Result<u64, Error>`
+
 - Adds new educational content to the search index
 - Parameters:
   - `title`: Title of the educational content
@@ -93,6 +99,7 @@ While the contract doesn't explicitly emit events in the examined code, it would
 ### Search Functionality
 
 #### `search_content(env: Env, subject: String) -> Result<Vec<Content>, Error>`
+
 - Searches for content matching a specific subject tag
 - Parameters:
   - `subject`: The subject tag to search for
@@ -102,52 +109,62 @@ While the contract doesn't explicitly emit events in the examined code, it would
 ### Internal Functions
 
 #### `ContentStorage::set_content(env: &Env, content: &Content)`
+
 - Stores content metadata in contract storage
 - Updates existing content or adds new content
 - Extends storage TTL appropriately
 
 #### `ContentStorage::get_all_content(env: &Env) -> Vec<Content>`
+
 - Retrieves all indexed content from storage
 - Returns an empty list if no content exists
 
 #### `search_content(env: &Env, subject: SorobanString) -> Result<Vec<Content>, Error>`
+
 - Internal implementation of content search
 - Iterates through all content to find matches
 - Returns error if no matches found
 
 #### `validate_content(content: &Content) -> Result<(), Error>`
+
 - Validates content metadata for completeness and quality
 - Checks title, description, URL, and tags
 - Returns error for invalid content
 
 #### `validate_subject(subject: &String) -> bool`
+
 - Validates search query format
 - Ensures non-empty and reasonable length
 
 ## Technical Details and Implementation Notes
 
 1. **Data Model**
+
    - `Content`: Stores metadata about educational content
    - `ContentList`: Container for multiple content items
    - Simple key-value storage model for content indexing
 
 2. **Storage**
+
    - Uses instance storage for content data
    - Implements TTL extension (50 ledgers, 100 entries)
    - Auto-incrementing ID system for content identification
 
 3. **Validation**
+
    - Input validation for all user-provided data
    - Length constraints for text fields
    - Non-empty validation for required fields
    - Tag validation for proper formatting
 
 4. **Error Handling**
+
    - Structured error types with descriptive messages
    - Specific error codes for different failure scenarios
    - Custom error conversion for client-friendly messages
 
 5. **Search Algorithm**
+
    - Simple tag-based exact matching
    - Linear search through all content items
    - No partial matching or relevance ranking (potential improvement area)

@@ -15,9 +15,11 @@ Join us in building a **decentralized educational ecosystem** where educators, s
 ## 🎯 Mission & Vision
 
 ### Mission
+
 To create a collaborative platform where education is **free**, **accessible**, and **high-quality**, built by a diverse and motivated community. We empower those who teach, learn, and share while recognizing the value of every contribution.
 
 ### Vision
+
 A world where anyone, regardless of background, can access and contribute to a **global knowledge library**. Akkuea aims to be the leading educational ecosystem for **collective, decentralized, and rewarded learning**.
 
 ---
@@ -25,6 +27,7 @@ A world where anyone, regardless of background, can access and contribute to a *
 ## 🚀 Why Akkuea?
 
 ### The Problem
+
 - 📚 **Scattered Resources**: Educational content is fragmented across platforms, making it hard to find and reuse.
 - 🖼️ **Low Quality**: Many resources suffer from poor visuals or organization.
 - 💸 **Lack of Incentives**: Educators and creators often go unrewarded for their efforts.
@@ -32,6 +35,7 @@ A world where anyone, regardless of background, can access and contribute to a *
 - 🔒 **Proprietary Platforms**: Closed systems prioritize profit over impact.
 
 ### Our Solution
+
 - **Centralized Hub**: A single platform with intelligent filters for educational content by level, language, and format.
 - **AI-Powered Enhancement**: Automatic improvements to readability, visuals, and structure.
 - **Transparent Rewards**: A **Stellar blockchain-based token system** that fairly rewards contributions.
@@ -42,17 +46,17 @@ A world where anyone, regardless of background, can access and contribute to a *
 
 ## 📚 Key Features
 
-| Feature                  | Description                                                                 |
-|--------------------------|-----------------------------------------------------------------------------|
-| **Centralized Resources** | Find and share educational materials in one place.                          |
-| **Rewards for Participation** | Earn tokens for contributing value to the community.                    |
-| **AI Visual Enhancement** | Enhance documents and images for better educational impact.                 |
-| **Transparent Blockchain** | Secure, traceable rewards via Stellar.                                     |
-| **Internal Marketplace**  | Request personalized resources from designers, paid with tokens.            |
-| **Automatic Translation** | Multilingual access for global inclusivity.                                 |
-| **Multi-Platform**        | Fully functional on computers, tablets, and mobiles.                        |
-| **Accessibility**         | Easy-to-read, multi-format resources for all users.                         |
-| **Open Source**           | Developers worldwide can contribute to Akkuea’s growth.                     |
+| Feature                       | Description                                                      |
+| ----------------------------- | ---------------------------------------------------------------- |
+| **Centralized Resources**     | Find and share educational materials in one place.               |
+| **Rewards for Participation** | Earn tokens for contributing value to the community.             |
+| **AI Visual Enhancement**     | Enhance documents and images for better educational impact.      |
+| **Transparent Blockchain**    | Secure, traceable rewards via Stellar.                           |
+| **Internal Marketplace**      | Request personalized resources from designers, paid with tokens. |
+| **Automatic Translation**     | Multilingual access for global inclusivity.                      |
+| **Multi-Platform**            | Fully functional on computers, tablets, and mobiles.             |
+| **Accessibility**             | Easy-to-read, multi-format resources for all users.              |
+| **Open Source**               | Developers worldwide can contribute to Akkuea’s growth.          |
 
 ---
 
@@ -68,6 +72,7 @@ A world where anyone, regardless of background, can access and contribute to a *
 ## 💰 Reward System
 
 Akkuea’s **Stellar blockchain** powers a transparent incentive system:
+
 - **Earn Tokens**: Publish impactful content and receive tokens based on community engagement.
 - **Bonuses**: Consistent contributors gain distinctions and extra rewards.
 - **Traceable Credits**: Every AI-enhanced or collaborative resource tracks contributions.
@@ -118,4 +123,3 @@ This project is licensed under the [MIT License](LICENSE).
 
 **Join the educational revolution! 🚀🎓**  
 **Happy Learning & Contributing! ✨**
-

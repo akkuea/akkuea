@@ -9,18 +9,21 @@ This document outlines the testing strategy and coverage for the Example Contrac
 The test suite focuses on several key security aspects:
 
 1. **Authentication and Authorization**
+
    - Tests verify that only the owner can perform restricted operations
    - Ensures proper authentication for withdrawal operations
    - Validates that unauthorized users cannot perform owner-only functions
    - Tests that authentication requirements are consistently enforced
 
 2. **Input Validation**
+
    - Tests validate that greeting messages meet required format and constraints
    - Ensures proper handling of various input types
    - Verifies that premium status is correctly set based on contributions
    - Tests edge cases for all input parameters
 
 3. **Data Integrity**
+
    - Verifies that greeting data is correctly stored and retrieved
    - Ensures counter values are accurately maintained
    - Tests that premium status is properly updated
@@ -37,6 +40,7 @@ The test suite focuses on several key security aspects:
 ### 1. Contract Initialization Tests
 
 - **Basic Initialization**
+
   - Tests successful contract initialization with valid owner address
   - Verifies storage is correctly set up (greeting, owner, counters)
   - Tests that re-initialization attempts are handled appropriately
@@ -51,12 +55,14 @@ The test suite focuses on several key security aspects:
 ### 2. Greeting Management Tests
 
 - **Greeting Retrieval**
+
   - Tests the `greeting` function returns the correct message
   - Verifies behavior when greeting is initialized
   - Tests behavior when greeting is not initialized
   - Ensures consistent retrieval across multiple calls
 
 - **Greeting Updates**
+
   - Tests the `set_greeting` function with various messages
   - Verifies greeting is correctly updated in storage
   - Tests updating with empty messages
@@ -71,6 +77,7 @@ The test suite focuses on several key security aspects:
 ### 3. Premium Status Tests
 
 - **Status Assignment**
+
   - Tests premium status assignment with various contribution amounts
   - Verifies status is correctly set when amount > 0
   - Tests status is correctly unset when amount = 0
@@ -85,6 +92,7 @@ The test suite focuses on several key security aspects:
 ### 4. Owner Operations Tests
 
 - **Withdrawal Simulation**
+
   - Tests the `withdraw` function with valid owner authentication
   - Verifies unauthorized users cannot withdraw
   - Tests withdrawal behavior with various contract states
@@ -99,6 +107,7 @@ The test suite focuses on several key security aspects:
 ### 5. Integration Tests
 
 - **End-to-End Workflows**
+
   - Tests complete contract workflows (initialization, greeting updates, premium status, withdrawals)
   - Verifies interaction between different contract functions
   - Tests complex scenarios with multiple operations
@@ -113,16 +122,19 @@ The test suite focuses on several key security aspects:
 ## Areas for Improvement
 
 1. **Test Coverage Expansion**
+
    - Add more tests for edge cases in greeting management
    - Implement property-based testing for complex operations
    - Add stress tests with large numbers of users and operations
 
 2. **Authorization Testing**
+
    - Add more tests for authorization boundaries
    - Implement role-based access control tests
    - Test contract ownership transfer scenarios
 
 3. **Integration Testing**
+
    - Expand tests for integration with other Akkuea contracts
    - Test interaction with token contracts for premium status
    - Implement cross-contract workflow testing

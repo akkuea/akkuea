@@ -18,16 +18,19 @@ The contract implements a simple greeting system with premium user features, dem
 ## Functionalities
 
 1. **Contract Initialization**
+
    - **Owner Assignment**: Set the contract owner during initialization
    - **Initial State Setup**: Configure default greeting and counters
    - **Storage Initialization**: Set up persistent storage structures
 
 2. **Greeting Management**
+
    - **Greeting Retrieval**: Get the current greeting message
    - **Greeting Updates**: Set a new greeting message
    - **Usage Tracking**: Count greeting updates globally and per user
 
 3. **Premium User System**
+
    - **Premium Status Assignment**: Mark users as premium based on contributions
    - **Status Verification**: Check if a user has premium status
    - **Premium Benefits**: Demonstrate conditional logic based on status
@@ -59,7 +62,9 @@ The contract emits the following events:
 ## Data Structures
 
 ### Storage Keys
+
 The contract uses the following storage keys:
+
 - `greeting`: Stores the current greeting message
 - `premium`: Tracks premium status
 - `total_counter`: Counts total greeting updates
@@ -71,6 +76,7 @@ The contract uses the following storage keys:
 ### Initialization
 
 #### `initialize(env: Env, owner: Address)`
+
 - Initializes the contract with the specified owner
 - Parameters:
   - `owner`: The address to be set as the contract owner
@@ -84,6 +90,7 @@ The contract uses the following storage keys:
 ### Greeting Management
 
 #### `greeting(env: Env) -> Bytes`
+
 - Retrieves the current greeting message
 - Parameters: None
 - Returns the current greeting as a byte array
@@ -91,6 +98,7 @@ The contract uses the following storage keys:
 - Panics if the greeting is not initialized
 
 #### `set_greeting(env: Env, new_greeting: Bytes, amount_xlm: U256)`
+
 - Updates the greeting message and potentially marks the caller as premium
 - Parameters:
   - `new_greeting`: The new greeting message as a byte array
@@ -106,6 +114,7 @@ The contract uses the following storage keys:
 ### Premium Status
 
 #### `premium(env: Env) -> bool`
+
 - Checks if the caller has premium status
 - Parameters: None
 - Returns true if the caller is marked as premium, false otherwise
@@ -114,6 +123,7 @@ The contract uses the following storage keys:
 ### Owner Operations
 
 #### `withdraw(env: Env)`
+
 - Simulates a withdrawal operation (owner-only)
 - Parameters: None
 - Requires authentication from the contract owner
@@ -124,21 +134,25 @@ The contract uses the following storage keys:
 ## Technical Details and Implementation Notes
 
 1. **Storage Management**
+
    - Uses Soroban's persistent storage for maintaining state
    - Implements helper functions for generating consistent storage keys
    - Properly handles initialization and retrieval of stored values
 
 2. **Authentication**
+
    - Implements owner authentication for sensitive operations
    - Uses `require_auth()` to verify transaction signatures
    - Restricts withdrawal functionality to the contract owner
 
 3. **Counter Implementation**
+
    - Tracks global usage statistics with a total counter
    - Maintains per-user statistics with an address-to-count map
    - Properly increments counters during greeting updates
 
 4. **Event System**
+
    - Emits structured events for off-chain tracking
    - Includes relevant data in event payloads
    - Uses standardized event topics

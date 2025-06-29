@@ -22,6 +22,7 @@ The contract includes several security and quality control mechanisms, including
 ## Functionalities
 
 1. **Review Submission and Management**
+
    - Submit detailed reviews with category ratings, text, and multimedia
    - Enforce purchase verification before review submission
    - Limit reviews to a specific time window after purchase
@@ -29,18 +30,21 @@ The contract includes several security and quality control mechanisms, including
    - Support interactive discussions through responses
 
 2. **Rating System**
+
    - Category-specific ratings for educational content
    - 5-star rating scale for standardized evaluation
    - Automatic calculation of rating summaries
    - Segmented ratings for different aspects of educational resources
 
 3. **Purchase Verification**
+
    - Record purchases through integration with payment contract
    - Verify purchase eligibility before allowing reviews
    - Link reviews to specific purchases for traceability
    - Prevent duplicate reviews for the same purchase
 
 4. **Dispute Resolution**
+
    - Flag problematic reviews through admin-initiated disputes
    - Track dispute evidence and resolution status
    - Resolve disputes with appropriate status updates
@@ -74,24 +78,31 @@ educational-review-contract/
 The contract emits several events to track important actions:
 
 1. `contract_initialized` - When the contract is initialized
+
    - Data: admin, payment_contract
 
 2. `product_owner_set` - When a product owner is assigned
+
    - Data: product_id, owner
 
 3. `purchase` - When a purchase is recorded
+
    - Data: "product_id", product_id
 
 4. `review_submitted` - When a review is successfully submitted
+
    - Data: user, (product_id, review_id, sum_ratings)
 
 5. `summary_retrieved` - When a review summary is retrieved
+
    - Data: product_id, total_ratings
 
 6. `response_added` - When a response is added to a review
+
    - Data: author, (product_id, review_id, response_text)
 
 7. `review_disputed` - When a review is marked as disputed
+
    - Data: product_id, review_id
 
 8. `dispute_resolved` - When a dispute is resolved
@@ -102,12 +113,14 @@ The contract emits several events to track important actions:
 ### Contract Management
 
 #### `initialize(env: Env, admin: Address, payment_contract: Address) -> Result<(), ReviewError>`
+
 - Initializes the contract with an admin address and payment contract
 - Prevents re-initialization
 - Sets up the initial contract state
 - Emits a contract_initialized event
 
 #### `set_product_owner(env: Env, product_id: u64, owner: Address) -> Result<(), ReviewError>`
+
 - Sets the owner for a specific product
 - Requires admin authentication
 - Enables product owners to respond to reviews
@@ -116,6 +129,7 @@ The contract emits several events to track important actions:
 ### Rating Operations
 
 #### `submit_review(env: Env, user: Address, product_id: u64, category_ratings: Vec<CategoryRating>, text: Option<String>, multimedia: Vec<MediaAttachment>) -> Result<u32, ReviewError>`
+
 - Submits a new review for a purchased product
 - Requires user authentication and purchase verification
 - Validates all inputs including ratings, text length, and multimedia count
@@ -124,6 +138,7 @@ The contract emits several events to track important actions:
 - Returns the assigned review ID
 
 #### `get_review_summary(env: Env, product_id: u64) -> Result<ReviewSummary, ReviewError>`
+
 - Retrieves the rating summary for a product
 - Returns total ratings and sum of ratings
 - Provides data for average rating calculation
@@ -132,6 +147,7 @@ The contract emits several events to track important actions:
 ### Review Operations
 
 #### `add_response(env: Env, author: Address, product_id: u64, review_id: u32, response_text: String) -> Result<(), ReviewError>`
+
 - Adds a response to an existing review
 - Requires author authentication
 - Validates that the author is either the product owner or the reviewer
@@ -140,6 +156,7 @@ The contract emits several events to track important actions:
 - Emits a response_added event
 
 #### `vote_helpful(env: Env, voter: Address, product_id: u64, review_id: u32, helpful: bool) -> Result<(), ReviewError>`
+
 - Records a helpfulness vote for a review
 - Requires voter authentication
 - Prevents duplicate votes from the same user
@@ -147,6 +164,7 @@ The contract emits several events to track important actions:
 - Helps surface valuable reviews
 
 #### `get_review(env: Env, product_id: u64, review_id: u32) -> Result<Review, ReviewError>`
+
 - Retrieves the full details of a specific review
 - Returns all review data including ratings, text, multimedia, and responses
 - Provides complete review information for display
@@ -154,6 +172,7 @@ The contract emits several events to track important actions:
 ### Verification Operations
 
 #### `record_purchase(env: Env, user: Address, product_id: u64, purchase_link: Option<String>) -> Result<(), ReviewError>`
+
 - Records a product purchase, enabling review submission
 - Requires payment contract authentication
 - Prevents duplicate purchase records
@@ -161,11 +180,13 @@ The contract emits several events to track important actions:
 - Emits a purchase event
 
 #### `has_verified_purchase(env: Env, user: Address, product_id: u64) -> Result<bool, ReviewError>`
+
 - Checks if a user has a verified purchase for a product
 - Returns boolean indicating purchase status
 - Used to verify eligibility for review submission
 
 #### `dispute_review(env: Env, product_id: u64, review_id: u32) -> Result<u32, ReviewError>`
+
 - Marks a review as disputed for moderation
 - Requires admin authentication
 - Creates a dispute record with timestamp
@@ -174,6 +195,7 @@ The contract emits several events to track important actions:
 - Emits a review_disputed event
 
 #### `resolve_dispute(env: Env, dispute_id: u32) -> Result<(), ReviewError>`
+
 - Resolves a previously opened dispute
 - Requires admin authentication
 - Updates dispute status to resolved
@@ -183,6 +205,7 @@ The contract emits several events to track important actions:
 ## Technical Details and Implementation Notes
 
 1. **Data Model**
+
    - `Review`: Core data structure containing ratings, text, multimedia, and responses
    - `CategoryRating`: Category-specific ratings with timestamps
    - `MediaAttachment`: Multimedia content references (IPFS links or URLs)
@@ -191,18 +214,21 @@ The contract emits several events to track important actions:
    - `ReviewSummary`: Aggregated rating data for products
 
 2. **Storage**
+
    - Uses persistent storage for all data
    - Structured key system for data organization
    - Separate storage for reviews, purchases, disputes, and summaries
    - Efficient lookup by product ID and review ID
 
 3. **Authorization**
+
    - Explicit authentication checks using `require_auth()`
    - Admin-only functions for sensitive operations
    - Payment contract authentication for purchase recording
    - User authentication for review submission and voting
 
 4. **Validation**
+
    - Purchase verification before review submission
    - Review window enforcement (30 days from purchase)
    - Text length validation (max 500 characters)
@@ -210,6 +236,7 @@ The contract emits several events to track important actions:
    - Rating validation (1-5 stars)
 
 5. **Error Handling**
+
    - Comprehensive error types for different failure scenarios
    - Descriptive error messages for client feedback
    - Proper error propagation throughout the contract

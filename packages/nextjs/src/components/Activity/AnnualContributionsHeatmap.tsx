@@ -23,11 +23,10 @@ const getActivityColor = (level: number): string => {
 };
 
 type IAnnualContributions = {
-  pattern?: number[][]
-}
+  pattern?: number[][];
+};
 
 const AnnualContributions: React.FC<IAnnualContributions> = ({ pattern }) => {
-
   const [heatmapData, setHeatmapData] = useState<number[][] | []>([]);
 
   useEffect(() => {
@@ -35,10 +34,10 @@ const AnnualContributions: React.FC<IAnnualContributions> = ({ pattern }) => {
   }, []);
 
   useEffect(() => {
-    if(pattern) {
-      setHeatmapData(pattern)
+    if (pattern) {
+      setHeatmapData(pattern);
     }
-  }, [pattern])
+  }, [pattern]);
 
   return (
     <div className="mb-8 w-full border rounded-xl p-3 shadow-lg dark:border-gray-700 dark:bg-black transition-colors duration-300 overflow-x-auto">
@@ -74,19 +73,17 @@ const AnnualContributions: React.FC<IAnnualContributions> = ({ pattern }) => {
           <div className="grid grid-rows-7 gap-[2px] md:ml-16">
             {TIME_CONSTS.weekdays.map((_, dayIndex) => (
               <div key={`day-row-${dayIndex}`} className="grid grid-cols-12 gap-[2px]">
-                { 
-                  TIME_CONSTS.months.map((month, monthIndex) => {
-                    const activityForDay = heatmapData[dayIndex]
-                    // Default activity to 0 in case data is blank
-                    const activityLevel = activityForDay ? activityForDay[monthIndex] : 0;
-                    return (
-                      <div
-                        key={`${month}-${dayIndex}`}
-                        className={`h-[10px] w-[10px] rounded-sm ${getActivityColor(activityLevel)}`}
-                      />
-                    );
-                  })
-                }
+                {TIME_CONSTS.months.map((month, monthIndex) => {
+                  const activityForDay = heatmapData[dayIndex];
+                  // Default activity to 0 in case data is blank
+                  const activityLevel = activityForDay ? activityForDay[monthIndex] : 0;
+                  return (
+                    <div
+                      key={`${month}-${dayIndex}`}
+                      className={`h-[10px] w-[10px] rounded-sm ${getActivityColor(activityLevel)}`}
+                    />
+                  );
+                })}
               </div>
             ))}
           </div>

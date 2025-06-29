@@ -9,18 +9,21 @@ This document outlines the testing strategy and coverage for the Educational Pur
 The test suite focuses on several key security aspects:
 
 1. **Authentication and Authorization**
+
    - Tests verify that only the admin can initialize the contract
    - Ensures proper authentication for NFT minting operations
    - Validates that only owners can transfer their NFTs
    - Tests that unauthorized users cannot perform restricted operations
 
 2. **Input Validation**
+
    - Tests validate that NFT metadata meets required format and constraints
    - Ensures transaction IDs are properly validated
    - Verifies that duplicate NFTs cannot be created for the same transaction
    - Tests edge cases for all input parameters
 
 3. **Data Integrity**
+
    - Verifies that NFT data is correctly stored and retrieved
    - Ensures transaction-to-NFT mappings are accurately maintained
    - Tests that ownership records are properly updated during transfers
@@ -37,6 +40,7 @@ The test suite focuses on several key security aspects:
 ### 1. Contract Initialization Tests
 
 - **Basic Initialization**
+
   - Tests successful contract initialization with valid admin address
   - Verifies storage is correctly set up (admin, counter, transaction mapping)
   - Tests that re-initialization attempts are rejected
@@ -51,12 +55,14 @@ The test suite focuses on several key security aspects:
 ### 2. NFT Minting Tests
 
 - **Basic Minting**
+
   - Tests successful NFT minting with valid parameters
   - Verifies token ID assignment and incrementation
   - Tests minting with various metadata configurations
   - Ensures proper event emission for minting operations
 
 - **Minting Validation**
+
   - Tests validation of recipient address
   - Verifies validation of seller address
   - Tests validation of metadata fields
@@ -71,12 +77,14 @@ The test suite focuses on several key security aspects:
 ### 3. NFT Retrieval Tests
 
 - **NFT Information Retrieval**
+
   - Tests the `get_nft_info` function with valid token IDs
   - Verifies all NFT details are correctly returned
   - Tests retrieval of non-existent NFTs
   - Ensures consistency between stored and retrieved data
 
 - **Transaction-based Retrieval**
+
   - Tests the `get_nft_by_transaction` function with valid transaction IDs
   - Verifies correct token ID is returned for existing transactions
   - Tests retrieval with non-existent transaction IDs
@@ -91,6 +99,7 @@ The test suite focuses on several key security aspects:
 ### 4. NFT Transfer Tests
 
 - **Ownership Transfer**
+
   - Tests transferring NFTs between addresses
   - Verifies ownership records are correctly updated
   - Tests authentication requirements for transfers
@@ -105,6 +114,7 @@ The test suite focuses on several key security aspects:
 ### 5. Metadata Management Tests
 
 - **Metadata Updates**
+
   - Tests updating NFT metadata fields
   - Verifies updated fields are correctly stored
   - Tests authentication requirements for updates
@@ -119,6 +129,7 @@ The test suite focuses on several key security aspects:
 ### 6. Integration Tests
 
 - **End-to-End Workflows**
+
   - Tests complete NFT lifecycle (minting, retrieval, transfer)
   - Verifies interaction between different contract functions
   - Tests complex scenarios with multiple NFTs and operations
@@ -133,16 +144,19 @@ The test suite focuses on several key security aspects:
 ## Areas for Improvement
 
 1. **Test Coverage Expansion**
+
    - Add more tests for edge cases in metadata management
    - Implement property-based testing for complex operations
    - Add stress tests with large numbers of NFTs
 
 2. **Authorization Testing**
+
    - Add more tests for authorization boundaries
    - Implement role-based access control tests
    - Test contract ownership transfer scenarios
 
 3. **Integration Testing**
+
    - Expand tests for integration with other Akkuea contracts
    - Test interaction with educational content contracts
    - Implement cross-contract workflow testing

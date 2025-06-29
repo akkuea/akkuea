@@ -1,59 +1,63 @@
-"use client"
+'use client';
 
-import type React from "react"
+import type React from 'react';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 export function SimpleChat() {
-  const [input, setInput] = useState("")
-  const [messages, setMessages] = useState<Array<{ role: string; content: string }>>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<
+    Array<{ role: string; content: string }>
+  >([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim()) return
+    e.preventDefault();
+    if (!input.trim()) return;
 
     // Add user message
-    const userMessage = { role: "user", content: input }
-    setMessages((prev) => [...prev, userMessage])
-    setInput("")
-    setIsLoading(true)
-    setError(null)
+    const userMessage = { role: 'user', content: input };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+    setError(null);
 
     try {
       // Call the simple API
-      const response = await fetch("/api/simple-chat", {
-        method: "POST",
+      const response = await fetch('/api/simple-chat', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           messages: [...messages, userMessage],
         }),
-      })
+      });
 
       if (!response.ok) {
-        throw new Error(`API responded with status: ${response.status}`)
+        throw new Error(`API responded with status: ${response.status}`);
       }
 
       // Check if response is JSON
-      const contentType = response.headers.get("content-type")
-      if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text()
-        throw new Error(`Response is not JSON. Content: ${text.substring(0, 100)}...`)
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(
+          `Response is not JSON. Content: ${text.substring(0, 100)}...`,
+        );
       }
 
-      const data = await response.json()
-      setMessages((prev) => [...prev, data])
+      const data = await response.json();
+      setMessages((prev) => [...prev, data]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error")
-      console.error("Chat error:", err)
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error('Chat error:', err);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col h-screen bg-black">
@@ -66,7 +70,9 @@ export function SimpleChat() {
       <div className="flex-1 overflow-y-auto p-4 container max-w-4xl mx-auto">
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-center">
-            <p className="text-zinc-400">No messages yet. Send a message to test the API.</p>
+            <p className="text-zinc-400">
+              No messages yet. Send a message to test the API.
+            </p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -74,7 +80,9 @@ export function SimpleChat() {
               <div
                 key={index}
                 className={`p-3 rounded-lg ${
-                  message.role === "user" ? "bg-turquoise-500 text-black ml-auto" : "bg-zinc-800 text-white"
+                  message.role === 'user'
+                    ? 'bg-turquoise-500 text-black ml-auto'
+                    : 'bg-zinc-800 text-white'
                 } max-w-[80%]`}
               >
                 {message.content}
@@ -84,11 +92,18 @@ export function SimpleChat() {
         )}
 
         {isLoading && <div className="text-zinc-400 mt-4">Loading...</div>}
-        {error && <div className="text-red-400 mt-4 p-2 border border-red-800 rounded bg-red-900/20">{error}</div>}
+        {error && (
+          <div className="text-red-400 mt-4 p-2 border border-red-800 rounded bg-red-900/20">
+            {error}
+          </div>
+        )}
       </div>
 
       <div className="border-t border-zinc-800 bg-zinc-950 p-4">
-        <form onSubmit={handleSubmit} className="container flex gap-2 items-center max-w-4xl mx-auto">
+        <form
+          onSubmit={handleSubmit}
+          className="container flex gap-2 items-center max-w-4xl mx-auto"
+        >
           <input
             type="text"
             value={input}
@@ -106,5 +121,5 @@ export function SimpleChat() {
         </form>
       </div>
     </div>
-  )
+  );
 }

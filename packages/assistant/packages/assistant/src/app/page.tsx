@@ -1,5 +1,5 @@
-import { ChatInterface } from "../components/chat-interface"
-import { NavLinks } from "../components/nav-links"
+import { ChatInterface } from '../components/chat-interface';
+import { NavLinks } from '../components/nav-links';
 
 export default function AssistantPage() {
   return (
@@ -7,5 +7,5 @@ export default function AssistantPage() {
       <ChatInterface />
       <NavLinks />
     </>
-  )
+  );
 }

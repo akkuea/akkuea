@@ -1,71 +1,79 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 export function ApiTester() {
-  const [testResult, setTestResult] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const testApi = async () => {
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
     try {
-      const response = await fetch("/api/test")
-      const data = await response.json()
-      setTestResult(JSON.stringify(data, null, 2))
+      const response = await fetch('/api/test');
+      const data = await response.json();
+      setTestResult(JSON.stringify(data, null, 2));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error")
-      console.error("API test error:", err)
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error('API test error:', err);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const testChatApi = async () => {
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
     try {
-      const response = await fetch("/api/assistant/chat", {
-        method: "POST",
+      const response = await fetch('/api/assistant/chat', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           messages: [
             {
-              role: "user",
-              content: "test message",
+              role: 'user',
+              content: 'test message',
             },
           ],
         }),
-      })
+      });
 
       // Check if response is JSON
-      const contentType = response.headers.get("content-type")
-      if (contentType && contentType.includes("application/json")) {
-        const data = await response.json()
-        setTestResult(JSON.stringify(data, null, 2))
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await response.json();
+        setTestResult(JSON.stringify(data, null, 2));
       } else {
         // If not JSON, get text
-        const text = await response.text()
-        setError(`Response is not JSON. Status: ${response.status}. Content: ${text.substring(0, 100)}...`)
+        const text = await response.text();
+        setError(
+          `Response is not JSON. Status: ${response.status}. Content: ${text.substring(0, 100)}...`,
+        );
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error")
-      console.error("Chat API test error:", err)
+      setError(err instanceof Error ? err.message : 'Unknown error');
+      console.error('Chat API test error:', err);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <div className="fixed bottom-4 left-4 z-50 p-4 bg-zinc-900 border border-zinc-800 rounded-lg shadow-lg w-80">
       <h3 className="font-medium text-white mb-4">API Tester</h3>
 
       <div className="space-y-2">
-        <Button variant="outline" size="sm" className="w-full border-zinc-800" onClick={testApi} disabled={isLoading}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full border-zinc-800"
+          onClick={testApi}
+          disabled={isLoading}
+        >
           Test /api/test
         </Button>
 
@@ -94,5 +102,5 @@ export function ApiTester() {
         </div>
       )}
     </div>
-  )
+  );
 }

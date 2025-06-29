@@ -20,6 +20,7 @@ The contract maintains persistent balances for all participants, ensuring that r
 ## Functionalities
 
 1. **Reward Distribution**
+
    - Distribute rewards to users based on their contributions
    - Validate reward amounts to prevent errors
    - Update recipient balances automatically
@@ -27,6 +28,7 @@ The contract maintains persistent balances for all participants, ensuring that r
    - Emit events for transparency and tracking
 
 2. **Balance Management**
+
    - Track reward balances for all users
    - Update balances safely with overflow protection
    - Query current balances for any address
@@ -70,6 +72,7 @@ The contract emits the following events:
 ### Reward Management
 
 #### `distribute_rewards(env: Env, recipient: Address, reward_type: RewardType, amount: i128) -> Result<(), Error>`
+
 - Distributes rewards to a recipient based on their actions
 - Validates that the reward amount is positive
 - Updates the recipient's balance
@@ -77,6 +80,7 @@ The contract emits the following events:
 - Returns an error if the amount is invalid or the balance update fails
 
 #### `log_reward_event(env: Env, recipient: Address, reward_type: RewardType, amount: i128)`
+
 - Logs a reward event for transparency and tracking
 - Records the recipient, reward type, amount, and timestamp
 - Creates an audit trail of all reward distributions
@@ -84,6 +88,7 @@ The contract emits the following events:
 ### Balance Management
 
 #### `update_balance(env: Env, recipient: Address, amount: i128) -> Result<(), Error>`
+
 - Updates the recipient's balance after reward distribution
 - Adds the reward amount to the recipient's existing balance
 - Handles overflow protection with checked addition
@@ -91,6 +96,7 @@ The contract emits the following events:
 - Returns an error if the balance update fails
 
 #### `get_balance(env: Env, recipient: Address) -> Result<i128, Error>`
+
 - Retrieves the current reward balance for a recipient
 - Returns 0 for addresses that haven't received rewards yet
 - Provides a way to query current reward status
@@ -98,21 +104,25 @@ The contract emits the following events:
 ## Technical Details and Implementation Notes
 
 1. **Data Model**
+
    - `RewardType`: Enum defining different categories of rewards
    - `RewardEvent`: Structure containing reward distribution details
    - `UserBalance`: Structure tracking a user's reward balance
 
 2. **Storage**
+
    - Uses persistent storage for balance tracking
    - Implements a map of addresses to balances
    - Single storage key (`balance`) for efficient access
 
 3. **Error Handling**
+
    - Comprehensive error types for different failure scenarios
    - Input validation to prevent invalid reward amounts
    - Overflow protection for balance calculations
 
 4. **Constants and Configuration**
+
    - `BALANCE_KEY`: Symbol used for storage access
    - Predefined reward types for standardization
 

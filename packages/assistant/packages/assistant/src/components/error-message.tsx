@@ -1,11 +1,11 @@
-import { AlertCircle } from "lucide-react"
+import { AlertCircle } from 'lucide-react';
 
 interface ErrorMessageProps {
-  error: Error | string
+  error: Error | string;
 }
 
 export function ErrorMessage({ error }: ErrorMessageProps) {
-  const errorMessage = typeof error === "string" ? error : error.message
+  const errorMessage = typeof error === 'string' ? error : error.message;
 
   return (
     <div className="flex items-start gap-4 max-w-[85%]">
@@ -14,8 +14,10 @@ export function ErrorMessage({ error }: ErrorMessageProps) {
       </div>
       <div className="rounded-lg px-4 py-3 shadow-sm bg-red-950 text-red-200 border border-red-900">
         <p className="text-sm font-medium">Error: {errorMessage}</p>
-        <p className="text-xs mt-1 text-red-300">Please try again or refresh the page.</p>
+        <p className="text-xs mt-1 text-red-300">
+          Please try again or refresh the page.
+        </p>
       </div>
     </div>
-  )
+  );
 }

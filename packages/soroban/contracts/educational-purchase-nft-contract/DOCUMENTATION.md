@@ -18,18 +18,21 @@ The contract creates a transparent and immutable record of educational purchases
 ## Functionalities
 
 1. **NFT Creation and Management**
+
    - **NFT Minting**: Create unique tokens for educational purchases
    - **Metadata Storage**: Store comprehensive purchase details
    - **Ownership Assignment**: Assign NFTs to purchasers
    - **Transaction Linking**: Connect NFTs to blockchain transactions
 
 2. **Purchase Verification**
+
    - **Transaction Verification**: Verify that purchases occurred on-chain
    - **Ownership Verification**: Confirm the current owner of educational content
    - **Purchase Details**: Access comprehensive purchase information
    - **Duplicate Prevention**: Ensure each transaction has only one NFT
 
 3. **Administrative Functions**
+
    - **Contract Initialization**: Set up the contract with administrative controls
    - **Access Control**: Restrict sensitive operations to authorized users
    - **System Monitoring**: Track the total number of NFTs in the system
@@ -63,9 +66,11 @@ educational-purchase-nft-contract/
 The contract emits the following events:
 
 1. `nft_minted` - When a new NFT is minted
+
    - Data: token_id, owner, transaction_id
 
 2. `nft_transferred` - When an NFT is transferred to a new owner
+
    - Data: token_id, from_address, to_address
 
 3. `metadata_updated` - When NFT metadata is updated
@@ -74,7 +79,9 @@ The contract emits the following events:
 ## Data Structures
 
 ### PurchaseMetadata
+
 Stores detailed information about the educational purchase:
+
 - `purchase_id`: Unique purchase identifier
 - `timestamp`: Transaction timestamp
 - `amount`: Transaction amount
@@ -84,14 +91,18 @@ Stores detailed information about the educational purchase:
 - `additional_attributes`: Additional flexible metadata as key-value pairs
 
 ### NFTMetadata
+
 Stores the complete metadata for the NFT:
+
 - `name`: Name of the NFT
 - `description`: Description of the NFT
 - `purchase_data`: Embedded PurchaseMetadata
 - `attributes`: Additional attributes as strings
 
 ### NFTDetail
+
 Stores the complete NFT information:
+
 - `owner`: Current owner (buyer) address
 - `seller`: Seller address
 - `metadata`: NFT metadata
@@ -102,6 +113,7 @@ Stores the complete NFT information:
 ### Administrative Functions
 
 #### `initialize(env: Env, admin: Address)`
+
 - Initializes the contract with an admin address
 - Parameters:
   - `admin`: The address that will have administrative privileges
@@ -110,6 +122,7 @@ Stores the complete NFT information:
 - Can only be called once
 
 #### `check_admin(env: &Env, caller: &Address)`
+
 - Internal function to verify admin privileges
 - Parameters:
   - `caller`: The address to check for admin privileges
@@ -118,6 +131,7 @@ Stores the complete NFT information:
 ### NFT Query Functions
 
 #### `get_nft_info(env: Env, token_id: u32) -> NFTDetail`
+
 - Retrieves detailed information about a specific NFT
 - Parameters:
   - `token_id`: The unique identifier of the NFT
@@ -125,24 +139,28 @@ Stores the complete NFT information:
 - Panics if the NFT does not exist
 
 #### `has_transaction_nft(env: Env, transaction_id: BytesN<32>) -> bool`
+
 - Checks if a transaction already has an associated NFT
 - Parameters:
   - `transaction_id`: The blockchain transaction identifier
 - Returns true if an NFT exists for the transaction, false otherwise
 
 #### `get_nft_by_transaction(env: Env, transaction_id: BytesN<32>) -> Option<u32>`
+
 - Retrieves the NFT token ID associated with a transaction
 - Parameters:
   - `transaction_id`: The blockchain transaction identifier
 - Returns the token ID if found, None otherwise
 
 #### `get_total_nfts(env: Env) -> u32`
+
 - Gets the total number of NFTs minted by the contract
 - Returns the current NFT count
 
 ### NFT Minting Functions (in minting.rs)
 
 #### `mint_nft(env: Env, to: Address, seller: Address, metadata: NFTMetadata, transaction_id: BytesN<32>) -> u32`
+
 - Mints a new NFT representing an educational purchase
 - Parameters:
   - `to`: The address of the purchaser/recipient
@@ -156,6 +174,7 @@ Stores the complete NFT information:
 ### NFT Distribution Functions (in distribution.rs)
 
 #### `transfer_nft(env: Env, token_id: u32, from: Address, to: Address) -> bool`
+
 - Transfers an NFT from one owner to another
 - Parameters:
   - `token_id`: The unique identifier of the NFT
@@ -168,6 +187,7 @@ Stores the complete NFT information:
 ### Metadata Management Functions (in metadata.rs)
 
 #### `update_metadata(env: Env, token_id: u32, updated_fields: Map<String, String>) -> bool`
+
 - Updates specific fields in the NFT metadata
 - Parameters:
   - `token_id`: The unique identifier of the NFT
@@ -179,22 +199,26 @@ Stores the complete NFT information:
 ## Technical Details and Implementation Notes
 
 1. **Storage Model**
+
    - Uses persistent storage for NFT data
    - Uses instance storage for contract configuration
    - Implements mapping from transaction IDs to token IDs
    - Uses counter for sequential token ID assignment
 
 2. **Authentication**
+
    - Implements admin authentication for sensitive operations
    - Uses `require_auth` for ownership verification
    - Restricts minting operations to authorized addresses
 
 3. **Transaction Linking**
+
    - Uses 32-byte transaction identifiers (BytesN<32>)
    - Maintains a mapping between transactions and NFTs
    - Prevents duplicate NFTs for the same transaction
 
 4. **Metadata Management**
+
    - Stores comprehensive purchase details
    - Supports flexible additional attributes
    - Includes both structured and unstructured data

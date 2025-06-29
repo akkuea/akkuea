@@ -18,18 +18,21 @@ The contract serves as a trust layer for the educational platform, ensuring that
 ## Functionalities
 
 1. **User Management**
+
    - **User Registration**: Create user profiles with unique identifiers
    - **User Verification**: Verify user identities through credential tokens
    - **User Retrieval**: Access user profile information
    - **Profile Updates**: Modify user profile information as needed
 
 2. **Reputation System**
+
    - **Reputation Scoring**: Track reputation scores for users in specific subject areas
    - **Score Retrieval**: Query reputation scores for specific domains of expertise
    - **Score Calculation**: Calculate reputation based on contributions, validations, and time
    - **Score History**: Maintain historical reputation data for trend analysis
 
 3. **Expertise Management**
+
    - **Expertise Areas**: Define and update a user's areas of expertise with proficiency levels
    - **Expertise Verification**: Allow verified experts to validate other users' knowledge
    - **Expertise Endorsement**: Enable peer endorsement of expertise claims
@@ -67,15 +70,19 @@ educational-contribution-reputation-contract/
 The contract emits the following events:
 
 1. `user_registered` - When a new user is registered
+
    - Data: user_id, registration_timestamp
 
 2. `reputation_updated` - When a user's reputation score changes
+
    - Data: user_id, domain, old_score, new_score, update_timestamp
 
 3. `expertise_verified` - When a user's expertise is verified
+
    - Data: user_id, domain, level, verifier_id, verification_timestamp
 
 4. `credential_issued` - When a credential token is issued
+
    - Data: user_id, credential_type, issuer_id, issuance_timestamp
 
 5. `credential_revoked` - When a credential token is revoked
@@ -86,6 +93,7 @@ The contract emits the following events:
 ### User Management
 
 #### `register_user(env: Env, user_address: Address, name: String, bio: Option<String>) -> u64`
+
 - Registers a new user in the system
 - Parameters:
   - `user_address`: The Stellar address of the user
@@ -95,12 +103,14 @@ The contract emits the following events:
 - Emits `user_registered` event
 
 #### `get_user(env: Env, user_id: u64) -> Option<User>`
+
 - Retrieves user information by ID
 - Parameters:
   - `user_id`: The unique identifier of the user
 - Returns user information or None if not found
 
 #### `update_user_profile(env: Env, user_id: u64, name: Option<String>, bio: Option<String>) -> Result<(), Error>`
+
 - Updates a user's profile information
 - Parameters:
   - `user_id`: The unique identifier of the user
@@ -112,6 +122,7 @@ The contract emits the following events:
 ### Reputation Management
 
 #### `update_reputation(env: Env, user_id: u64, domain: String, score_change: i32) -> Result<i32, Error>`
+
 - Updates a user's reputation in a specific domain
 - Parameters:
   - `user_id`: The unique identifier of the user
@@ -122,6 +133,7 @@ The contract emits the following events:
 - Emits `reputation_updated` event
 
 #### `get_reputation(env: Env, user_id: u64, domain: String) -> Option<i32>`
+
 - Retrieves a user's reputation score in a specific domain
 - Parameters:
   - `user_id`: The unique identifier of the user
@@ -131,6 +143,7 @@ The contract emits the following events:
 ### Expertise Management
 
 #### `add_expertise(env: Env, user_id: u64, domain: String, level: u8) -> Result<(), Error>`
+
 - Adds a domain of expertise to a user's profile
 - Parameters:
   - `user_id`: The unique identifier of the user
@@ -140,6 +153,7 @@ The contract emits the following events:
 - Requires authentication from the user's address
 
 #### `verify_expertise(env: Env, verifier_id: u64, user_id: u64, domain: String) -> Result<(), Error>`
+
 - Verifies a user's expertise claim
 - Parameters:
   - `verifier_id`: The ID of the verifying expert
@@ -152,6 +166,7 @@ The contract emits the following events:
 ### Credential Management
 
 #### `issue_credential(env: Env, user_id: u64, credential_type: String) -> Result<(), Error>`
+
 - Issues a credential token to a user
 - Parameters:
   - `user_id`: The unique identifier of the user
@@ -161,6 +176,7 @@ The contract emits the following events:
 - Emits `credential_issued` event
 
 #### `revoke_credential(env: Env, user_id: u64, credential_type: String) -> Result<(), Error>`
+
 - Revokes a previously issued credential
 - Parameters:
   - `user_id`: The unique identifier of the user
@@ -172,23 +188,27 @@ The contract emits the following events:
 ## Technical Details and Implementation Notes
 
 1. **Data Model**
+
    - `User`: Stores basic user information and profile data
    - `Reputation`: Maps users to domain-specific reputation scores
    - `Expertise`: Represents a user's claimed expertise in a domain
    - `Credential`: Represents a verification token issued to a user
 
 2. **Storage**
+
    - Uses instance storage for contract data
    - Implements key-based storage for users, reputations, expertise, and credentials
    - Uses symbolic keys for storage access
    - Maintains indices for efficient querying
 
 3. **Authentication**
+
    - Implements `require_auth` for user authentication
    - Uses role-based access control for administrative functions
    - Verifies transaction signatures for sensitive operations
 
 4. **Reputation Algorithm**
+
    - Calculates reputation scores based on:
      - Quantity and quality of contributions
      - Peer validations and endorsements
@@ -196,6 +216,7 @@ The contract emits the following events:
      - Expertise level in the domain
 
 5. **Credential Tokens**
+
    - Implements non-transferable tokens using Soroban token interface
    - Links tokens to user identities through cryptographic signatures
    - Provides verification mechanisms for credential authenticity

@@ -1,45 +1,53 @@
-"use client"
+'use client';
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
 
 export function DebugPanel() {
-  const [isOpen, setIsOpen] = useState(false)
-  const [apiStatus, setApiStatus] = useState<"unknown" | "success" | "error">("unknown")
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isOpen, setIsOpen] = useState(false);
+  const [apiStatus, setApiStatus] = useState<'unknown' | 'success' | 'error'>(
+    'unknown',
+  );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const checkApiConnection = async () => {
     try {
-      setApiStatus("unknown")
-      setErrorMessage(null)
+      setApiStatus('unknown');
+      setErrorMessage(null);
 
-      const response = await fetch("/api/assistant/chat", {
-        method: "POST",
+      const response = await fetch('/api/assistant/chat', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           messages: [
             {
-              role: "user",
-              content: "Test message",
+              role: 'user',
+              content: 'Test message',
             },
           ],
         }),
-      })
+      });
 
       if (response.ok) {
-        setApiStatus("success")
+        setApiStatus('success');
       } else {
-        const data = await response.json().catch(() => ({ error: "Failed to parse response" }))
-        setApiStatus("error")
-        setErrorMessage(data.error || `Error ${response.status}: ${response.statusText}`)
+        const data = await response
+          .json()
+          .catch(() => ({ error: 'Failed to parse response' }));
+        setApiStatus('error');
+        setErrorMessage(
+          data.error || `Error ${response.status}: ${response.statusText}`,
+        );
       }
     } catch (error) {
-      setApiStatus("error")
-      setErrorMessage(error instanceof Error ? error.message : "Unknown error occurred")
+      setApiStatus('error');
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Unknown error occurred',
+      );
     }
-  }
+  };
 
   if (!isOpen) {
     return (
@@ -51,7 +59,7 @@ export function DebugPanel() {
       >
         Debug
       </Button>
-    )
+    );
   }
 
   return (
@@ -69,14 +77,26 @@ export function DebugPanel() {
           <div className="flex items-center gap-2">
             <span
               className={`h-3 w-3 rounded-full ${
-                apiStatus === "unknown" ? "bg-zinc-500" : apiStatus === "success" ? "bg-green-500" : "bg-red-500"
+                apiStatus === 'unknown'
+                  ? 'bg-zinc-500'
+                  : apiStatus === 'success'
+                    ? 'bg-green-500'
+                    : 'bg-red-500'
               }`}
             />
             <span className="text-sm text-zinc-300">
-              {apiStatus === "unknown" ? "Not tested" : apiStatus === "success" ? "Connected" : "Failed"}
+              {apiStatus === 'unknown'
+                ? 'Not tested'
+                : apiStatus === 'success'
+                  ? 'Connected'
+                  : 'Failed'}
             </span>
           </div>
-          {errorMessage && <p className="text-xs text-red-400 mt-1 break-words">{errorMessage}</p>}
+          {errorMessage && (
+            <p className="text-xs text-red-400 mt-1 break-words">
+              {errorMessage}
+            </p>
+          )}
         </div>
 
         <Button
@@ -90,10 +110,13 @@ export function DebugPanel() {
 
         <div className="text-xs text-zinc-500">
           <p>Environment:</p>
-          <p>Next.js: {process.env.NEXT_PUBLIC_VERCEL_ENV || "development"}</p>
-          <p>API Key: {process.env.OPENAI_API_KEY ? "Configured" : "Not configured"}</p>
+          <p>Next.js: {process.env.NEXT_PUBLIC_VERCEL_ENV || 'development'}</p>
+          <p>
+            API Key:{' '}
+            {process.env.OPENAI_API_KEY ? 'Configured' : 'Not configured'}
+          </p>
         </div>
       </div>
     </div>
-  )
+  );
 }

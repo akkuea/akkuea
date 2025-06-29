@@ -21,23 +21,27 @@ The contract includes features for tip management, educator statistics tracking,
 ## Functionalities
 
 1. **Tip Management**
+
    - Send tips from users to educators
    - Record tip details including amount, token, and optional message
    - Validate tip amounts and prevent invalid operations
    - Transfer tokens from sender to recipient
 
 2. **Educator Statistics**
+
    - Track total tip amounts received by educators
    - Count number of tips received
    - Record timestamp of last tip
    - Update statistics with each new tip
 
 3. **Tip History**
+
    - Maintain a chronological record of all tips received by an educator
    - Store complete tip details including sender, amount, token, message, and timestamp
    - Provide query functionality for tip history retrieval
 
 4. **Top Educator Ranking**
+
    - Maintain a sorted list of top educators based on tip amounts
    - Update rankings dynamically with each new tip
    - Provide limited query functionality to retrieve top N educators
@@ -70,6 +74,7 @@ educational-content-tipping-contract/
 The contract emits the following events:
 
 1. `tip` - Emitted when a tip is sent
+
    - Topics: "tip", sender_address, recipient_address
    - Data: amount, token_address, optional_message, timestamp
 
@@ -82,6 +87,7 @@ The contract emits the following events:
 ### Contract Management
 
 #### `initialize(env: &Env, admin: Address)`
+
 - Initializes the contract with an admin address
 - Prevents re-initialization
 - Sets the admin address in contract storage
@@ -89,6 +95,7 @@ The contract emits the following events:
 ### Tip Management
 
 #### `send_tip(env: &Env, from: Address, to: Address, amount: i128, token: Address, message: Option<String>) -> Result<(), TippingError>`
+
 - Sends a tip from one user to an educator
 - Parameters:
   - `from`: Address of the tip sender
@@ -107,18 +114,21 @@ The contract emits the following events:
 ### Query Functions
 
 #### `get_educator_stats(env: &Env, educator: Address) -> Option<EducatorStats>`
+
 - Retrieves statistics for a specific educator
 - Parameters:
   - `educator`: Address of the educator
 - Returns educator statistics or None if not found
 
 #### `get_tip_history(env: &Env, educator: Address) -> Option<TipHistory>`
+
 - Retrieves tip history for a specific educator
 - Parameters:
   - `educator`: Address of the educator
 - Returns tip history or None if not found
 
 #### `get_top_educators(env: &Env, limit: u32) -> Vec<(Address, EducatorStats)>`
+
 - Retrieves a list of top educators by total tip amount
 - Parameters:
   - `limit`: Maximum number of educators to return
@@ -127,6 +137,7 @@ The contract emits the following events:
 ### Internal Functions
 
 #### Storage Functions
+
 - `get_admin(env: &Env) -> Option<Address>`
 - `set_admin(env: &Env, admin: &Address)`
 - `get_educator_stats(env: &Env, educator: &Address) -> Option<EducatorStats>`
@@ -138,33 +149,39 @@ The contract emits the following events:
 - `update_top_educators(env: &Env, educator: &Address, stats: &EducatorStats)`
 
 #### Event Functions
+
 - `emit_tip_event(env: &Env, tip: &Tip)`
 - `emit_educator_stats_updated(env: &Env, educator: &Address, total_tips: i128, tip_count: u32)`
 
 ## Technical Details and Implementation Notes
 
 1. **Data Model**
+
    - `Tip`: Stores information about a single tip transaction
    - `EducatorStats`: Tracks statistics for an educator
    - `TipHistory`: Maintains a chronological record of tips for an educator
    - `TippingError`: Defines possible error conditions
 
 2. **Storage**
+
    - Uses instance storage for contract data
    - Implements key-based storage for admin, educator stats, tip history, and top educators
    - Uses symbolic keys for storage access
 
 3. **Error Handling**
+
    - Structured error types with descriptive messages
    - Specific error codes for different failure scenarios
    - Error conversion for client-friendly messages
 
 4. **Top Educator Ranking**
+
    - Maintains a sorted list of educators by tip amount
    - Implements efficient insertion and removal for ranking updates
    - Provides limited query functionality to retrieve top N educators
 
 5. **Token Transfer**
+
    - Note: The token transfer functionality is currently commented out in the implementation
    - Designed to use a TokenClient to transfer tokens between addresses
 

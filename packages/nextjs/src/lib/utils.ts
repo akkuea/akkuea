@@ -44,34 +44,19 @@ export function formatAddress(address: string): string {
   return `${address.slice(0, 7)}...${address.slice(-4)}`;
 }
 
-
 export const TIME_CONSTS = {
   weekdays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-  months: [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ]
-} as const
+  months: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+} as const;
 
 // Generate sample heatmap data for user dashboard activity
-export function generateHeatmapData (): number[][] {
-  const months = TIME_CONSTS.months
+export function generateHeatmapData(): number[][] {
+  const months = TIME_CONSTS.months;
   return Array(TIME_CONSTS.weekdays.length)
     .fill(0)
     .map(() =>
       Array(months.length)
-      .fill(0)
-      .map(() => Math.floor(Math.random() * 5))
-    )
-};
-
+        .fill(0)
+        .map(() => Math.floor(Math.random() * 5))
+    );
+}

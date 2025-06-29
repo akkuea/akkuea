@@ -1,33 +1,35 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { Palette, Bell, LockKeyhole, User, Eye } from 'lucide-react';
-import { TabProvider } from '@/contexts/TabContext';
-import { TabNav, TabItem, TabContent } from '@/components/settings/TabComponents';
-import { AppearanceTab } from '@/components/settings/AppearanceTab';
-import { EmptyTabContent } from '@/components/settings/EmptyTabContent';
-import Notifications from '@/components/settings/Notifications';
-import AccessibilityTab from '@/components/settings/AccessibilityTab';
-import Navbar from '@/components/navbar/NavBar';
-import { AccountTab } from '@/components/settings/AccountTab';
+import { useState, useEffect } from "react"
+import { Palette, Bell, LockKeyhole, User, Eye } from "lucide-react"
+import { TabProvider } from "@/contexts/TabContext"
+import { TabNav, TabItem, TabContent } from "@/components/settings/TabComponents"
+import { AppearanceTab } from "@/components/settings/tabs/appearance-tab"
+import { PrivacyTab } from "@/components/settings/tabs/privacy-tab"
+import NotificationsTab from "@/components/settings/tabs/notifications-tab"
+import AccessibilityTab from "@/components/settings/tabs/accessibility-tab"
+import Navbar from "@/components/navbar/NavBar"
+import { AccountTab } from "@/components/settings/tabs/account-tab"
+// import { useTheme } from "next-themes"
 
 export default function SettingsPage() {
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(false)
+  // const { resolvedTheme } = useTheme()
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
+    setMounted(true)
+  }, [])
 
-  if (!mounted) return null;
+  if (!mounted) return null
+
+  // const isDarkMode = resolvedTheme === "dark"
 
   return (
     <>
       <Navbar />
       <div className="max-w-5xl mx-auto">
         <div className="space-y-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-teal-600 dark:text-teal-400">
-            Settings
-          </h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-teal-600 dark:text-teal-400">Settings</h1>
 
           <TabProvider>
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -46,11 +48,13 @@ export default function SettingsPage() {
                 </TabContent>
 
                 <TabContent value="notifications">
-                  <Notifications />
+                  <NotificationsTab />
                 </TabContent>
 
                 <TabContent value="privacy">
-                  <EmptyTabContent title="Privacy" />
+                  <PrivacyTab 
+                  // isDarkMode={isDarkMode} 
+                  />
                 </TabContent>
 
                 <TabContent value="account">
@@ -73,5 +77,5 @@ export default function SettingsPage() {
         </div>
       </div>
     </>
-  );
+  )
 }

@@ -1,5 +1,5 @@
 import { AlertTriangle, X } from 'lucide-react';
-import { ActionButton } from './action-button';
+import { Button } from '@/components/ui/button';
 
 export interface DeleteAccountModalProps {
   isDarkMode: boolean;
@@ -58,13 +58,12 @@ export function DeleteAccountModal({ isDarkMode, onCancel, onConfirm }: DeleteAc
         </div>
 
         <div className="flex justify-end space-x-3">
-          <ActionButton label="Cancel" onClick={onCancel} isDarkMode={isDarkMode} />
-          <button
-            onClick={onConfirm}
-            className="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white"
-          >
+          <Button variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
             Confirm Delete
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
-import {
-  Bell,
-  Mail,
-  Smartphone,
-  Volume2,
-  MessageSquare,
-  Heart,
-  AtSign,
-  MessageCircle,
-  Info,
-  Users,
-} from 'lucide-react';
-import { NotificationSettingsState } from '../types';
+import { Bell, Mail, Smartphone, Volume2, MessageSquare, Heart, AtSign, MessageCircle, Info, Users } from 'lucide-react';
 
-const NotificationSettings = () => {
-  const [settings, setSettings] = useState({
+interface NotificationSettingsState {
+  enableNotifications: boolean;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  sound: boolean;
+  comments: boolean;
+  likes: boolean;
+  mentions: boolean;
+  newFollowers: boolean;
+  directMessages: boolean;
+  platformUpdates: boolean;
+}
+
+const NotificationsTab = () => {
+  const [settings, setSettings] = useState<NotificationSettingsState>({
     enableNotifications: true,
     emailNotifications: true,
     pushNotifications: true,
@@ -52,7 +53,7 @@ const NotificationSettings = () => {
   const Toggle: React.FC<ToggleProps> = ({ enabled, onChange }) => (
     <div
       onClick={onChange}
-      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ease-in-out  cursor-pointer ${
+      className={`relative w-10 h-5 rounded-full transition-colors duration-300 ease-in-out cursor-pointer ${
         enabled ? 'bg-teal-500' : 'bg-gray-300 dark:bg-gray-600'
       }`}
     >
@@ -86,16 +87,15 @@ const NotificationSettings = () => {
   );
 
   return (
-    <div className="container bg-white dark:bg-gray-800/50 rounded-lg shadow mx-auto mb-10 transition-colors duration-300 border  dark:border-gray-700">
+    <div className="container bg-white dark:bg-gray-800/50 rounded-lg shadow mx-auto mb-10 transition-colors duration-300 border dark:border-gray-700">
       {/* Header */}
-      <div className="flex flex-col items-start mb-6 text-teal-600 dark:text-teal-400 mt-4  h-[55.99px] px-4">
+      <div className="flex flex-col items-start mb-6 text-teal-600 dark:text-teal-400 mt-4 h-[55.99px] px-4">
         <div className="flex flex-row items-center">
-          <Bell size={22} className="mr-2 " />
+          <Bell size={22} className="mr-2" />
           <h1 className="text-xl text-[#09090B] font-bold dark:text-white">
             Notification Preferences
           </h1>
         </div>
-
         <div>
           <p className="text-base text-gray-600 dark:text-gray-400 font-normal">
             Control how and when you receive notifications
@@ -123,7 +123,6 @@ const NotificationSettings = () => {
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Choose how you want to receive notifications
           </p>
-
           <div className="border border-gray-200 dark:border-none rounded-lg overflow-hidden">
             <SettingItem
               icon={Mail}
@@ -161,8 +160,7 @@ const NotificationSettings = () => {
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
             Select which events you want to be notified about
           </p>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4  dark:md:gap-0">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 dark:md:gap-0">
             {/* Left Column */}
             <div className="border border-gray-200 dark:border-none rounded-lg overflow-hidden">
               <SettingItem
@@ -227,4 +225,4 @@ const NotificationSettings = () => {
   );
 };
 
-export default NotificationSettings;
+export default NotificationsTab;

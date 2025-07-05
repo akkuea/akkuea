@@ -143,14 +143,16 @@ export default function LeftSidebar() {
                   transform hover:scale-[1.02] hover:shadow-sm`}
                 >
                   <div
-                    className={`bg-[#0D9488]  ${isActive ?"dark:bg-[#0D9488]":"dark:bg-gray-500"} rounded-[8px] h-9 w-9 flex items-center justify-center flex-shrink-0 ${isCollapsed ? 'h-8 w-8' : ''}`}
+                    className={`bg-[#0D9488]  ${isActive ? 'dark:bg-[#0D9488]' : 'dark:bg-gray-500'} rounded-[8px] h-9 w-9 flex items-center justify-center flex-shrink-0 ${isCollapsed ? 'h-8 w-8' : ''}`}
                   >
                     <item.icon className="w-5 h-5 text-white" />
                   </div>
                   <div
                     className={`flex flex-col overflow-hidden transition-all duration-200 ${isCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}
                   >
-                    <span className={`text-[16px] font-medium ${isActive?"dark:text-[#0D9488]": "dark:text-white"} text-[#0D9488]  whitespace-nowrap`}>
+                    <span
+                      className={`text-[16px] font-medium ${isActive ? 'dark:text-[#0D9488]' : 'dark:text-white'} text-[#0D9488]  whitespace-nowrap`}
+                    >
                       {item.label}
                     </span>
                     <span className="text-xs text-[#4B5563] dark:text-[#9CA3AF] whitespace-nowrap">
@@ -203,9 +205,7 @@ export default function LeftSidebar() {
             ))}
           </div>
         </div>
-
-     
       </div>
     </aside>
   );
-} 
+}

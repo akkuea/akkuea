@@ -78,4 +78,4 @@ export const PublicationsSection: React.FC<PublicationsSectionProps> = ({ public
       </div>
     </div>
   );
-}; 
+};

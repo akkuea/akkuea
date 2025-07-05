@@ -120,4 +120,4 @@ export default function PublicationMain() {
       <PublicationsSection publications={publicationsData} />
     </div>
   );
-} 
+}

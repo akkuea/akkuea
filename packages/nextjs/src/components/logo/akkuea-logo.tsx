@@ -24,4 +24,4 @@ const AkkueaLogo: React.FC<React.SVGProps<SVGSVGElement>> = (props) => {
   );
 };
 
-export default AkkueaLogo; 
+export default AkkueaLogo;

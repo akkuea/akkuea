@@ -98,4 +98,4 @@ export const PublicationCard: React.FC<PublicationCardProps> = ({ publication })
       </div>
     </div>
   );
-}; 
+};

@@ -32,4 +32,4 @@ export const RoleSelector = ({ roles, selectedRoles, onRoleChange }: RoleSelecto
       </div>
     </div>
   );
-}; 
+};

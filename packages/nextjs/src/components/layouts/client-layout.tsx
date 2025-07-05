@@ -8,4 +8,4 @@ export function ClientLayout({ children }: { children: React.ReactNode }) {
       <main className="min-h-screen bg-background antialiased pt-14">{children}</main>
     </ThemeProvider>
   );
-} 
+}

@@ -28,4 +28,4 @@ export function ConversationList({ onSelectConversation }: ConversationListProps
       </div>
     </div>
   );
-} 
+}

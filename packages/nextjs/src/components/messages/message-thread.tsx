@@ -26,4 +26,4 @@ export function MessageThread() {
       <div ref={messagesEndRef} />
     </div>
   );
-} 
+}

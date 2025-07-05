@@ -15,4 +15,4 @@ export const PublicationsGrid: React.FC<PublicationsGridProps> = ({ publications
       ))}
     </div>
   );
-}; 
+};

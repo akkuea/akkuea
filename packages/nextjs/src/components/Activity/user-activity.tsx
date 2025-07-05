@@ -182,4 +182,4 @@ const UserActivityDashboard = () => {
   );
 };
 
-export default UserActivityDashboard; 
+export default UserActivityDashboard;

@@ -38,4 +38,4 @@ export function ConversationItem({ conversation, onSelect }: ConversationItemPro
       </div>
     </button>
   );
-} 
+}

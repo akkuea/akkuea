@@ -63,4 +63,4 @@ export const CategoryTag: React.FC<CategoryTagProps> = ({ category }) => {
       {config.label}
     </div>
   );
-}; 
+};

@@ -35,6 +35,22 @@ impl ContentStorage {
         storage.extend_ttl(50, 100);
     }
 
+    pub fn get_content_by_id(env: &Env, id: u64) -> Option<Content> {
+        let storage = env.storage().instance();
+        if !storage.has(&CONTENT_KEY) {
+            return None;
+        }
+        
+        let content_list: ContentList = storage.get(&CONTENT_KEY).unwrap();
+        for i in 0..content_list.contents.len() {
+            let content = content_list.contents.get_unchecked(i);
+            if content.id == id {
+                return Some(content);
+            }
+        }
+        None
+    }
+
     pub fn get_all_content(env: &Env) -> Vec<Content> {
         let storage = env.storage().instance();
         if !storage.has(&CONTENT_KEY) {

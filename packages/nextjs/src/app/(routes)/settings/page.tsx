@@ -2,23 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import { Palette, Bell, LockKeyhole, User, Eye } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { TabProvider } from '@/contexts/TabContext';
 import { TabNav, TabItem, TabContent } from '@/components/settings/tab-components';
 import { AppearanceTab } from '@/components/settings/appearance-tab';
-import { EmptyTabContent } from '@/components/settings/empty-tab-content';
-import Notifications from '@/components/settings/notifications';
+import { PrivacyTab } from '@/components/settings/privacy';
+import NotificationsTab from '@/components/settings/Notifications';
 import AccessibilityTab from '@/components/settings/accessibility-tab';
 import Navbar from '@/components/navbar/NavBar';
 import { AccountTab } from '@/components/settings/account-tab';
 
 export default function SettingsPage() {
   const [mounted, setMounted] = useState(false);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) return null;
+
+  const isDarkMode = resolvedTheme === 'dark';
 
   return (
     <>
@@ -46,11 +50,11 @@ export default function SettingsPage() {
                 </TabContent>
 
                 <TabContent value="notifications">
-                  <Notifications />
+                  <NotificationsTab />
                 </TabContent>
 
                 <TabContent value="privacy">
-                  <EmptyTabContent title="Privacy" />
+                  <PrivacyTab isDarkMode={isDarkMode} />
                 </TabContent>
 
                 <TabContent value="account">

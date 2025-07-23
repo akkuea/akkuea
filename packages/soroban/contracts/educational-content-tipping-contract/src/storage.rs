@@ -83,3 +83,27 @@ pub fn update_top_educators(env: &Env, educator: &Address, stats: &EducatorStats
     
     set_top_educators(env, &top_educators);
 }
+
+// Subscriptions storage
+pub fn get_subscriptions(env: &Env, subscriber: &Address) -> Vec<(Address, crate::subscriptions::Subscription)> {
+    // TODO: Retrieve all subscriptions for a subscriber
+    Vec::new(env)
+}
+
+pub fn set_subscription(env: &Env, subscriber: &Address, educator: &Address, subscription: &crate::subscriptions::Subscription) {
+    // TODO: Store a subscription for a subscriber-educator pair
+}
+
+pub fn remove_subscription(env: &Env, subscriber: &Address, educator: &Address) {
+    // TODO: Remove a subscription
+}
+
+// Analytics storage
+pub fn get_tip_analytics(env: &Env, educator: &Address) -> Option<crate::analytics::TipAnalytics> {
+    // TODO: Retrieve analytics data for an educator
+    None
+}
+
+pub fn set_tip_analytics(env: &Env, educator: &Address, analytics: &crate::analytics::TipAnalytics) {
+    // TODO: Store analytics data for an educator
+}

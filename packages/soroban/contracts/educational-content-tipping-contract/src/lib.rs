@@ -9,6 +9,8 @@ mod storage;
 mod errors;
 mod events;
 mod test;
+mod subscriptions;
+mod analytics;
 
 use types::{Tip, EducatorStats, TipHistory};
 use storage::{get_educator_stats, set_educator_stats, get_tip_history, set_tip_history, update_top_educators};
@@ -128,5 +130,47 @@ impl TippingRewardContract {
         }
 
         result
+    }
+
+    // --- Subscriptions (Recurring Tips) ---
+    pub fn create_subscription(
+        env: &Env,
+        subscriber: Address,
+        educator: Address,
+        amount: i128,
+        token: Address,
+        interval_seconds: u64,
+        message: Option<String>,
+    ) {
+        // TODO: Call subscriptions::create_subscription
+    }
+
+    pub fn cancel_subscription(env: &Env, subscriber: Address, educator: Address) {
+        // TODO: Call subscriptions::cancel_subscription
+    }
+
+    pub fn process_due_subscriptions(env: &Env) {
+        // TODO: Call subscriptions::process_due_subscriptions
+    }
+
+    // --- Tip Goals and Milestones ---
+    pub fn set_tip_goal(env: &Env, educator: Address, goal_amount: i128) {
+        // TODO: Implement goal tracking logic
+    }
+
+    pub fn get_tip_goal(env: &Env, educator: Address) -> Option<i128> {
+        // TODO: Retrieve goal for educator
+        None
+    }
+
+    // --- Analytics ---
+    pub fn get_analytics(env: &Env, educator: Address) -> Option<analytics::TipAnalytics> {
+        // TODO: Call analytics::get_analytics
+        None
+    }
+
+    pub fn get_trend_report(env: &Env, educator: Address, period_seconds: u64) -> Vec<(u64, i128)> {
+        // TODO: Call analytics::get_trend_report
+        Vec::new(env)
     }
 }

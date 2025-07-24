@@ -25,11 +25,29 @@ pub fn create_subscription(
     interval_seconds: u64,
     message: Option<String>,
 ) {
-    // TODO: Store subscription and schedule next payment
+    // Calculate next payment timestamp
+    let now = env.ledger().timestamp();
+    let next_payment_timestamp = now + interval_seconds;
+
+    // Create subscription struct
+    let subscription = Subscription {
+        subscriber: subscriber.clone(),
+        educator: educator.clone(),
+        amount,
+        token,
+        interval_seconds,
+        next_payment_timestamp,
+        message,
+        active: true,
+    };
+
+    // Store subscription (overwrites any existing for this pair)
+    crate::storage::set_subscription(env, &subscriber, &educator, &subscription);
 }
 
 pub fn cancel_subscription(env: &Env, subscriber: Address, educator: Address) {
-    // TODO: Cancel the subscription
+    // Remove the subscription from storage
+    crate::storage::remove_subscription(env, &subscriber, &educator);
 }
 
 pub fn process_due_subscriptions(env: &Env) {

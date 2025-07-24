@@ -26,3 +26,11 @@ pub struct TipHistory {
     pub tips: Vec<Tip>,
     pub last_updated: u64,
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TipGoal {
+    pub educator: Address,
+    pub goal_amount: i128,
+    pub achieved: bool,
+}

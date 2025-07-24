@@ -84,26 +84,51 @@ pub fn update_top_educators(env: &Env, educator: &Address, stats: &EducatorStats
     set_top_educators(env, &top_educators);
 }
 
-// Subscriptions storage
-pub fn get_subscriptions(env: &Env, subscriber: &Address) -> Vec<(Address, crate::subscriptions::Subscription)> {
-    // TODO: Retrieve all subscriptions for a subscriber
-    Vec::new(env)
+// Helper functions for composite keys
+fn get_subscription_key(env: &Env, subscriber: &Address, educator: &Address) -> (Address, Address) {
+    (subscriber.clone(), educator.clone())
+}
+
+fn get_analytics_key(env: &Env, educator: &Address) -> Address {
+    educator.clone()
+}
+
+fn get_tip_goal_key(_env: &Env, educator: &Address) -> (Address, &'static str) {
+    (educator.clone(), "TIP_GOAL")
 }
 
 pub fn set_subscription(env: &Env, subscriber: &Address, educator: &Address, subscription: &crate::subscriptions::Subscription) {
-    // TODO: Store a subscription for a subscriber-educator pair
+    let key = get_subscription_key(env, subscriber, educator);
+    env.storage().instance().set(&key, subscription);
 }
 
 pub fn remove_subscription(env: &Env, subscriber: &Address, educator: &Address) {
-    // TODO: Remove a subscription
+    let key = get_subscription_key(env, subscriber, educator);
+    env.storage().instance().remove(&key);
 }
 
 // Analytics storage
 pub fn get_tip_analytics(env: &Env, educator: &Address) -> Option<crate::analytics::TipAnalytics> {
-    // TODO: Retrieve analytics data for an educator
-    None
+    let key = get_analytics_key(env, educator);
+    env.storage().instance().get(&key)
 }
 
 pub fn set_tip_analytics(env: &Env, educator: &Address, analytics: &crate::analytics::TipAnalytics) {
-    // TODO: Store analytics data for an educator
+    let key = get_analytics_key(env, educator);
+    env.storage().instance().set(&key, analytics);
+}
+
+pub fn set_tip_goal(env: &Env, educator: &Address, goal: &crate::types::TipGoal) {
+    let key = get_tip_goal_key(env, educator);
+    env.storage().instance().set(&key, goal);
+}
+
+pub fn get_tip_goal(env: &Env, educator: &Address) -> Option<crate::types::TipGoal> {
+    let key = get_tip_goal_key(env, educator);
+    env.storage().instance().get(&key)
+}
+
+pub fn remove_tip_goal(env: &Env, educator: &Address) {
+    let key = get_tip_goal_key(env, educator);
+    env.storage().instance().remove(&key);
 }

@@ -9,9 +9,13 @@ mod storage;
 mod errors;
 mod events;
 mod test;
+mod subscriptions;
+mod analytics;
 
-use types::{Tip, EducatorStats, TipHistory};
-use storage::{get_educator_stats, set_educator_stats, get_tip_history, set_tip_history, update_top_educators};
+use types::{Tip, EducatorStats, TipHistory, TipGoal};
+// use storage::{get_educator_stats, set_educator_stats, get_tip_history, set_tip_history, update_top_educators};
+use storage::*;
+use analytics::*;
 use errors::TippingError;
 use events::{emit_tip_event, emit_educator_stats_updated};
 
@@ -89,6 +93,15 @@ impl TippingRewardContract {
         // Emit tip event
         emit_tip_event(env, &tip);
 
+        // --- Tip Goal Achievement Check ---
+        if let Some(mut goal) = storage::get_tip_goal(env, &to) {
+            if !goal.achieved && stats.total_amount >= goal.goal_amount {
+                goal.achieved = true;
+                storage::set_tip_goal(env, &to, &goal);
+                events::emit_tip_goal_achieved(env, &to, goal.goal_amount);
+            }
+        }
+
         Ok(())
     }
 
@@ -128,5 +141,58 @@ impl TippingRewardContract {
         }
 
         result
+    }
+
+    // --- Subscriptions (Recurring Tips) ---
+    pub fn create_subscription(
+        env: &Env,
+        subscriber: Address,
+        educator: Address,
+        amount: i128,
+        token: Address,
+        interval_seconds: u64,
+        message: Option<String>,
+    ) {
+        crate::subscriptions::create_subscription(
+            env,
+            subscriber,
+            educator,
+            amount,
+            token,
+            interval_seconds,
+            message,
+        );
+    }
+
+    pub fn cancel_subscription(env: &Env, subscriber: Address, educator: Address) {
+        crate::subscriptions::cancel_subscription(env, subscriber, educator);
+    }
+
+    pub fn process_due_subscriptions(env: &Env) {
+        crate::subscriptions::process_due_subscriptions(env);
+    }
+
+    // --- Tip Goals and Milestones ---
+    pub fn set_tip_goal(env: &Env, educator: Address, goal_amount: i128) {
+        let goal = TipGoal {
+            educator: educator.clone(),
+            goal_amount,
+            achieved: false,
+        };
+        storage::set_tip_goal(env, &educator, &goal);
+        events::emit_tip_goal_set(env, &educator, goal_amount);
+    }
+
+    pub fn get_tip_goal(env: &Env, educator: Address) -> Option<TipGoal> {
+        storage::get_tip_goal(env, &educator)
+    }
+
+    // --- Analytics ---
+    pub fn get_analytics(env: &Env, educator: Address) -> Option<analytics::TipAnalytics> {
+        analytics::get_analytics(env, &educator)
+    }
+
+    pub fn get_trend_report(env: &Env, educator: Address, period_seconds: u64) -> Vec<(u64, i128)> {
+        analytics::get_trend_report(env, &educator, period_seconds)
     }
 }

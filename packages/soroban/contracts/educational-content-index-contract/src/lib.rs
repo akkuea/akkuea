@@ -15,7 +15,7 @@ use soroban_sdk::{contract, contractimpl, symbol_short, Env, String, Symbol, Vec
 use crate::error::Error;
 use crate::events::Events;
 use crate::metadata::Content;
-use crate::search::search_content;
+use crate::search::{search_content, search_content_advanced, search_content_partial, SearchMode};
 use crate::storage::ContentStorage;
 
 const INITIALIZED_KEY: Symbol = symbol_short!("INIT");
@@ -56,6 +56,70 @@ impl ContentSearchContract {
 
         // Emit search performed event
         Events::search_performed(&env, &subject, results.len() as u32);
+
+        Ok(results)
+    }
+
+    /// Advanced search with partial matching support
+    /// Allows searching for partial matches in tags, titles, and descriptions
+    pub fn search_content_partial(env: Env, query: String) -> Result<Vec<Content>, Error> {
+        // Verify contract is initialized
+        if !env.storage().instance().has(&INITIALIZED_KEY) {
+            return Err(Error::NotInitialized);
+        }
+
+        // Validate the query
+        if !crate::validate::validate_subject(&query) {
+            return Err(Error::InvalidInput);
+        }
+
+        let results = search_content_partial(&env, query.clone())?;
+
+        // Emit search performed event
+        Events::search_performed(&env, &query, results.len() as u32);
+
+        Ok(results)
+    }
+
+    /// Advanced multi-tag search with partial matching and search modes
+    /// Supports both AND and OR logic for multiple tags
+    /// @param tags: List of tags to search for
+    /// @param mode: "AND" for all tags must match, "OR" for any tag must match
+    /// @param partial: true for partial matching, false for exact matching
+    pub fn search_content_advanced(
+        env: Env,
+        tags: Vec<String>,
+        mode: String,
+        partial: bool,
+    ) -> Result<Vec<Content>, Error> {
+        // Verify contract is initialized
+        if !env.storage().instance().has(&INITIALIZED_KEY) {
+            return Err(Error::NotInitialized);
+        }
+
+        // Validate tags
+        if tags.is_empty() {
+            return Err(Error::InvalidInput);
+        }
+
+        for tag in tags.iter() {
+            if !crate::validate::validate_subject(&tag) {
+                return Err(Error::InvalidInput);
+            }
+        }
+
+        // Parse search mode
+        let search_mode = SearchMode::from_string(&env, &mode);
+
+        let results = search_content_advanced(&env, tags, search_mode, partial)?;
+
+        // Emit search performed event with mode information
+        let search_description = if mode == String::from_str(&env, "AND") {
+            String::from_str(&env, "advanced-AND")
+        } else {
+            String::from_str(&env, "advanced-OR")
+        };
+        Events::search_performed(&env, &search_description, results.len() as u32);
 
         Ok(results)
     }

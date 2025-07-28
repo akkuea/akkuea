@@ -2,19 +2,23 @@
 
 ## Overview
 
-The Content Search Contract is a specialized smart contract designed to index, store, and search educational content within the Akkuea ecosystem. It provides a decentralized search infrastructure that enables users to discover relevant educational resources based on subject tags. The contract implements a simple yet effective tagging system that allows content to be categorized and retrieved efficiently.
+The Content Search Contract is a specialized smart contract designed to index, store, and search educational content within the Akkuea ecosystem. It provides a decentralized search infrastructure that enables users to discover relevant educational resources based on subject tags with advanced search capabilities including partial matching, multi-tag search with logical operators, and basic fuzzy matching.
 
-This contract serves as a critical discovery layer in the Akkuea platform, connecting learners with educational content that matches their interests and needs. By maintaining a searchable index of content metadata, it enhances content discoverability while keeping the actual educational resources distributed across the ecosystem.
+This contract serves as a critical discovery layer in the Akkuea platform, connecting learners with educational content that matches their interests and needs. By maintaining a searchable index of content metadata with advanced search features, it enhances content discoverability while keeping the actual educational resources distributed across the ecosystem.
 
-The contract includes validation mechanisms to ensure that all indexed content meets minimum quality standards, such as having appropriate titles, descriptions, and valid subject tags. It also implements error handling to provide meaningful feedback when operations fail.
+The contract includes validation mechanisms to ensure that all indexed content meets minimum quality standards, such as having appropriate titles, descriptions, and valid subject tags. It also implements comprehensive error handling and provides both backward-compatible exact search and new advanced search capabilities.
 
 ## General Features
 
 - Content indexing with metadata storage
-- Subject-based search functionality
+- **Advanced search functionality** with partial matching support
+- **Multi-tag search** with AND/OR logical operators  
+- **Partial matching** for flexible content discovery
+- **Basic fuzzy matching** for typo tolerance
 - Content validation for quality assurance
 - Persistent storage with TTL management
 - Unique content identification
+- Backward compatibility with existing search methods
 
 ## Functionalities
 
@@ -25,14 +29,22 @@ The contract includes validation mechanisms to ensure that all indexed content m
    - Assign unique identifiers to each content entry
    - Validate content metadata for completeness and quality
 
-2. **Subject-Based Search**
+2. **Advanced Search Functionality**
+
+   - **Partial Matching Search**: Find content using abbreviated or partial terms (e.g., "bio" matches "biology", "biochemistry")
+   - **Multi-Tag Search with Logical Operators**: Search using multiple tags with AND/OR logic
+   - **Basic Fuzzy Matching**: Tolerance for minor variations in search terms
+   - **Flexible Content Discovery**: Search across tags, titles, and descriptions
+   - **Backward Compatibility**: All existing search methods remain unchanged
+
+3. **Subject-Based Search**
 
    - Search for content by specific subject tags
    - Return all content matching search criteria
    - Handle cases where no matching content is found
    - Validate search queries for proper formatting
 
-3. **Contract Management**
+4. **Contract Management**
    - Initialize contract storage and state
    - Maintain content indices with appropriate TTL
    - Prevent duplicate initialization
@@ -312,11 +324,146 @@ client.rebuild_search_indices();
 
 The indexed search architecture provides a foundation for additional optimizations:
 
-- **Advanced Query Operations**: AND/NOT operations between tags
+- **Enhanced Fuzzy Matching**: More sophisticated algorithms for typo tolerance  
 - **Relevance Ranking**: Score-based result ordering
-- **Fuzzy Matching**: Typo-tolerant search capabilities
 - **Search Analytics**: Track popular tags and search patterns
 - **Caching Layers**: Further gas optimization through result caching
+- **Content Popularity Weighting**: Factor in content usage for search ranking
+
+## Advanced Search Features
+
+### 1. Partial Matching Search
+
+**Function**: `search_content_partial(env: Env, query: String) -> Result<Vec<Content>, Error>`
+
+Enables flexible content discovery through partial term matching across tags, titles, and descriptions.
+
+**Supported Patterns**:
+- **Scientific Terms**: "bio" → "biology", "biochemistry"
+- **Academic Subjects**: "math" → "mathematics" 
+- **Technical Terms**: "prog" → "programming", "tech" → "technology"
+
+**Search Scope**:
+- Primary: Content tags
+- Secondary: Content titles  
+- Tertiary: Content descriptions
+
+### 2. Advanced Multi-Tag Search
+
+**Function**: `search_content_advanced(env: Env, tags: Vec<String>, mode: String, partial: bool) -> Result<Vec<Content>, Error>`
+
+Supports complex queries with multiple tags and logical operators.
+
+**Parameters**:
+- `tags`: Vector of search terms
+- `mode`: "AND" or "OR" logical operation  
+- `partial`: Enable/disable partial matching
+
+**Search Modes**:
+
+#### OR Mode (Any tag matches)
+```rust
+search_content_advanced(
+    env,
+    vec!["biology", "chemistry"],
+    "OR", 
+    false
+)
+```
+Returns content containing ANY of the specified tags.
+
+#### AND Mode (All tags must match)  
+```rust
+search_content_advanced(
+    env,
+    vec!["biology", "technology"],
+    "AND",
+    false  
+)
+```
+Returns content containing ALL specified tags.
+
+### 3. Partial Matching in Advanced Search
+
+Combine partial matching with multi-tag logic:
+
+```rust
+search_content_advanced(
+    env,
+    vec!["bio", "tech"],
+    "OR",
+    true  // Enable partial matching
+)
+```
+
+Matches content with tags like:
+- "biology", "biochemistry" (from "bio")
+- "technology" (from "tech")
+
+### 4. Search Behavior Documentation
+
+**Exact Matching** (partial=false):
+- Requires exact tag matches
+- Case-sensitive comparison
+- O(1) + O(m) performance using indexed search
+
+**Partial Matching** (partial=true):
+- Recognizes common abbreviations and prefixes
+- Searches across tags, titles, and descriptions  
+- O(n) performance using linear search
+- More flexible but higher computational cost
+
+**Validation Rules**:
+- Tags cannot be empty strings
+- Tag length ≤ 50 characters
+- Query length ≤ 100 characters
+- Minimum one tag for multi-tag searches
+
+### 5. Backward Compatibility
+
+All existing search functions remain unchanged:
+- `search_content(env, subject)` - Original exact match search
+- `search_content_multi_tag(env, tags)` - Multi-tag OR search (exact matching)
+
+### 6. Error Handling
+
+Comprehensive error responses:
+- `Error::NoMatchingContent` - No results found
+- `Error::InvalidInput` - Invalid search parameters  
+- `Error::NotInitialized` - Contract not initialized
+
+### 7. Usage Examples
+
+**Basic Partial Search**:
+```rust
+// Find biology-related content
+let results = ContentSearchContract::search_content_partial(
+    env,
+    "bio".to_string()
+);
+```
+
+**Complex Multi-Tag Search**:
+```rust  
+// Find interdisciplinary content (AND logic)
+let results = ContentSearchContract::search_content_advanced(
+    env,
+    vec!["biology".to_string(), "technology".to_string()],
+    "AND".to_string(),
+    false
+);
+```
+
+**Flexible Discovery**:
+```rust
+// Broad subject search with partial matching
+let results = ContentSearchContract::search_content_advanced(
+    env, 
+    vec!["bio".to_string(), "math".to_string(), "tech".to_string()],
+    "OR".to_string(),
+    true
+);
+```
 
 ## Role in Akkuea
 

@@ -839,3 +839,470 @@ fn test_search_performance_with_larger_dataset() {
     // Should find items 1, 4, 7 (every 3rd item starting from 1)
     assert_eq!(programming_results.len(), 3);
 }
+
+// ========== Advanced Search Feature Tests ==========
+
+#[test]
+fn test_partial_search_bio_matches_biology() {
+    let env = Env::default();
+    let contract_id = setup_contract(&env);
+
+    // Add content with "biology" tag
+    let _biology_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Introduction to Biology"),
+                SorobanString::from_str(&env, "Learn the fundamentals of biology"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "biology")]),
+                SorobanString::from_str(&env, "https://example.com/biology"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Add content with "biochemistry" tag
+    let _biochemistry_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Biochemistry Fundamentals"),
+                SorobanString::from_str(&env, "Understanding biochemistry principles"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "biochemistry")]),
+                SorobanString::from_str(&env, "https://example.com/biochemistry"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Search with partial term "bio" should match both
+    let bio_results = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::search_content_partial(
+                env.clone(),
+                SorobanString::from_str(&env, "bio"),
+            )
+        })
+        .unwrap();
+
+    assert_eq!(bio_results.len(), 2);
+}
+
+#[test]
+fn test_partial_search_math_matches_mathematics() {
+    let env = Env::default();
+    let contract_id = setup_contract(&env);
+
+    // Add content with "mathematics" tag
+    let _math_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Advanced Mathematics"),
+                SorobanString::from_str(&env, "Mathematical concepts and theories"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "mathematics")]),
+                SorobanString::from_str(&env, "https://example.com/mathematics"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Search with partial term "math" should match "mathematics"
+    let math_results = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::search_content_partial(
+                env.clone(),
+                SorobanString::from_str(&env, "math"),
+            )
+        })
+        .unwrap();
+
+    assert_eq!(math_results.len(), 1);
+}
+
+#[test]
+fn test_advanced_search_or_mode() {
+    let env = Env::default();
+    let contract_id = setup_contract(&env);
+
+    // Add biology content
+    let _biology_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Biology Basics"),
+                SorobanString::from_str(&env, "Introduction to biology"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "biology")]),
+                SorobanString::from_str(&env, "https://example.com/biology"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Add mathematics content
+    let _math_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Math Fundamentals"),
+                SorobanString::from_str(&env, "Mathematical foundations"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "mathematics")]),
+                SorobanString::from_str(&env, "https://example.com/math"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Add programming content
+    let _prog_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Programming Guide"),
+                SorobanString::from_str(&env, "Learn to program"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "programmingsssssss")]),
+                SorobanString::from_str(&env, "https://example.com/programming"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Test OR search with partial matching enabled
+    let search_tags = Vec::from_array(
+        &env,
+        [
+            SorobanString::from_str(&env, "bio"),
+            SorobanString::from_str(&env, "math"),
+        ],
+    );
+
+    let or_results = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::search_content_advanced(
+                env.clone(),
+                search_tags,
+                SorobanString::from_str(&env, "OR"),
+                true, // partial matching enabled
+            )
+        })
+        .unwrap();
+
+    // Should find biology and mathematics content (2 items)
+    assert_eq!(or_results.len(), 2);
+}
+
+#[test]
+fn test_advanced_search_and_mode() {
+    let env = Env::default();
+    let contract_id = setup_contract(&env);
+
+    // Add content with multiple tags that match our search
+    let _multi_tag_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Computational Biology"),
+                SorobanString::from_str(&env, "Biology meets technology"),
+                Vec::from_array(
+                    &env,
+                    [
+                        SorobanString::from_str(&env, "biology"),
+                        SorobanString::from_str(&env, "technologysssss"),
+                    ],
+                ),
+                SorobanString::from_str(&env, "https://example.com/comp-bio"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Add content with only one matching tag
+    let _single_tag_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Pure Biology"),
+                SorobanString::from_str(&env, "Only biology content"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "bio")]),
+                SorobanString::from_str(&env, "https://example.com/pure-bio"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Test AND search - both tags must match
+    let search_tags = Vec::from_array(
+        &env,
+        [
+            SorobanString::from_str(&env, "bios"),
+            SorobanString::from_str(&env, "tech"),
+        ],
+    );
+
+    let and_results = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::search_content_advanced(
+                env.clone(),
+                search_tags,
+                SorobanString::from_str(&env, "AND"),
+                true, // partial matching enabled
+            )
+        })
+        .unwrap();
+
+    // Should find only the computational biology content (1 item)
+    assert_eq!(and_results.len(), 1);
+}
+
+#[test]
+fn test_advanced_search_exact_mode() {
+    let env = Env::default();
+    let contract_id = setup_contract(&env);
+
+    // Add content with "biology" tag
+    let _biology_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Biology Course"),
+                SorobanString::from_str(&env, "Learn biology"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "biology")]),
+                SorobanString::from_str(&env, "https://example.com/biology"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Test exact search with "bio" - should not match "biology" in exact mode
+    let exact_results = env.as_contract(&contract_id, || {
+        ContentSearchContract::search_content_advanced(
+            env.clone(),
+            Vec::from_array(&env, [SorobanString::from_str(&env, "bio")]),
+            SorobanString::from_str(&env, "OR"),
+            false, // exact matching only
+        )
+    });
+
+    // Should not find any content since "bio" != "biology" in exact mode
+    assert!(exact_results.is_err());
+
+    // Test exact search with "biology" - should match
+    let exact_biology_results = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::search_content_advanced(
+                env.clone(),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "biology")]),
+                SorobanString::from_str(&env, "OR"),
+                false, // exact matching only
+            )
+        })
+        .unwrap();
+
+    assert_eq!(exact_biology_results.len(), 1);
+}
+
+#[test]
+fn test_partial_search_in_titles_and_descriptions() {
+    let env = Env::default();
+    let contract_id = setup_contract(&env);
+
+    // Add content where the search term appears in title but not tags
+    let _title_match_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Mathematics for Beginners"),
+                SorobanString::from_str(&env, "Basic mathematical concepts"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "education")]),
+                SorobanString::from_str(&env, "https://example.com/math-beginners"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Add content where the search term appears in description but not tags
+    let _desc_match_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Educational Programming"),
+                SorobanString::from_str(&env, "Learn programming fundamentals"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "education")]),
+                SorobanString::from_str(&env, "https://example.com/edu-prog"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Search for "math" should find the title match
+    let math_results = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::search_content_partial(
+                env.clone(),
+                SorobanString::from_str(&env, "math"),
+            )
+        })
+        .unwrap();
+
+    assert_eq!(math_results.len(), 2);
+
+    // Search for "prog" should find the description match
+    let prog_results = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::search_content_partial(
+                env.clone(),
+                SorobanString::from_str(&env, "progs"),
+            )
+        })
+        .unwrap();
+
+    assert_eq!(prog_results.len(), 2);
+}
+
+#[test]
+fn test_search_no_results_partial() {
+    let env = Env::default();
+    let contract_id = setup_contract(&env);
+
+    // Add some content
+    let _content_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Biology Course"),
+                SorobanString::from_str(&env, "Learn biology"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "biology")]),
+                SorobanString::from_str(&env, "https://example.com/biology"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Search for non-matching term
+    let no_results = env.as_contract(&contract_id, || {
+        ContentSearchContract::search_content_partial(
+            env.clone(),
+            SorobanString::from_str(&env, "nonexistent"),
+        )
+    });
+
+    assert!(no_results.is_err());
+}
+
+#[test]
+fn test_advanced_search_validation() {
+    let env = Env::default();
+    let contract_id = setup_contract(&env);
+
+    // Test empty tags list
+    let empty_tags_result = env.as_contract(&contract_id, || {
+        ContentSearchContract::search_content_advanced(
+            env.clone(),
+            Vec::new(&env),
+            SorobanString::from_str(&env, "OR"),
+            false,
+        )
+    });
+
+    assert!(empty_tags_result.is_err());
+
+    // Test invalid tag (empty string)
+    let invalid_tag_result = env.as_contract(&contract_id, || {
+        ContentSearchContract::search_content_advanced(
+            env.clone(),
+            Vec::from_array(&env, [SorobanString::from_str(&env, "")]),
+            SorobanString::from_str(&env, "OR"),
+            false,
+        )
+    });
+
+    assert!(invalid_tag_result.is_err());
+}
+
+#[test]
+fn test_search_mode_parsing() {
+    let env = Env::default();
+    let contract_id = setup_contract(&env);
+
+    // Add test content
+    let _content_id = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::add_content(
+                env.clone(),
+                SorobanString::from_str(&env, "Test Content"),
+                SorobanString::from_str(&env, "Test description"),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "test")]),
+                SorobanString::from_str(&env, "https://example.com/test"),
+                None,
+                None,
+                None,
+            )
+        })
+        .unwrap();
+
+    // Test with "AND" mode
+    let and_result = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::search_content_advanced(
+                env.clone(),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "test")]),
+                SorobanString::from_str(&env, "AND"),
+                false,
+            )
+        })
+        .unwrap();
+
+    assert_eq!(and_result.len(), 1);
+
+    // Test with "OR" mode
+    let or_result = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::search_content_advanced(
+                env.clone(),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "test")]),
+                SorobanString::from_str(&env, "OR"),
+                false,
+            )
+        })
+        .unwrap();
+
+    assert_eq!(or_result.len(), 1);
+
+    // Test with invalid mode (should default to OR)
+    let invalid_mode_result = env
+        .as_contract(&contract_id, || {
+            ContentSearchContract::search_content_advanced(
+                env.clone(),
+                Vec::from_array(&env, [SorobanString::from_str(&env, "test")]),
+                SorobanString::from_str(&env, "INVALID"),
+                false,
+            )
+        })
+        .unwrap();
+
+    assert_eq!(invalid_mode_result.len(), 1);
+}

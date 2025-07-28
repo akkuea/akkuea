@@ -1156,3 +1156,1233 @@ fn test_prevent_same_level_verification() {
     client.verify_content(&content_id, &verifier, &VerificationLevel::Expert);
     client.verify_content(&content_id, &verifier, &VerificationLevel::Expert); // Should panic
 }
+
+/// 
+/// VERSIONING TESTS
+/// 
+#[test]
+fn test_create_new_version_content() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    // Create original content
+    let creator = Address::generate(&env);
+    let original_title = String::from_str(&env, "Original Content");
+    let original_hash = BytesN::random(&env);
+    let original_tags = vec![&env, String::from_str(&env, "original")];
+    
+    let content_id = client.publish_content(&creator, &original_title, &original_hash, &original_tags);
+
+    // Create new version
+    let new_title = String::from_str(&env, "Updated Content");
+    let new_hash = BytesN::random(&env);
+    let new_tags = vec![&env, String::from_str(&env, "updated")];
+    let change_notes = String::from_str(&env, "Updated with new information");
+
+    let version = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &new_title,
+        &new_hash,
+        &new_tags,
+        &change_notes
+    );
+
+    assert_eq!(version, 1);
+
+    // Verify the main content was updated
+    let updated_content = client.get_content(&content_id);
+    assert_eq!(updated_content.title, new_title);
+    assert_eq!(updated_content.content_hash, new_hash);
+    assert_eq!(updated_content.subject_tags, new_tags);
+}
+
+#[test]
+fn test_create_multiple_versions() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    
+    // Create original content
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Version 0"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "v0")]
+    );
+
+    // Create version 1
+    let version1 = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Version 1"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "v1")],
+        &String::from_str(&env, "First update")
+    );
+    assert_eq!(version1, 1);
+
+    // Create version 2
+    let version2 = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Version 2"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "v2")],
+        &String::from_str(&env, "Second update")
+    );
+    assert_eq!(version2, 2);
+
+    // Verify current content is version 2
+    let current_content = client.get_content(&content_id);
+    assert_eq!(current_content.title, String::from_str(&env, "Version 2"));
+}
+
+#[test]
+fn test_get_content_at_version() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    
+    // Create original content (version 0)
+    let original_title = String::from_str(&env, "Original Title");
+    let original_hash = BytesN::random(&env);
+    let original_tags = vec![&env, String::from_str(&env, "original")];
+    
+    let content_id = client.publish_content(&creator, &original_title, &original_hash, &original_tags);
+
+    // Create version 1
+    let v1_title = String::from_str(&env, "Version 1 Title");
+    let v1_hash = BytesN::random(&env);
+    let v1_tags = vec![&env, String::from_str(&env, "v1")];
+    
+    client.create_new_version_content(
+        &content_id,
+        &creator,
+        &v1_title,
+        &v1_hash,
+        &v1_tags,
+        &String::from_str(&env, "First update")
+    );
+
+    // Get content at version 0 (original)
+    let content_v0 = client.get_content_at_version(&content_id, &0);
+    assert_eq!(content_v0.title, original_title);
+    assert_eq!(content_v0.content_hash, original_hash);
+    assert_eq!(content_v0.subject_tags, original_tags);
+
+    // Get content at version 1 (current)
+    let content_v1 = client.get_content_at_version(&content_id, &1);
+    assert_eq!(content_v1.title, v1_title);
+    assert_eq!(content_v1.content_hash, v1_hash);
+    assert_eq!(content_v1.subject_tags, v1_tags);
+}
+
+#[test]
+fn test_get_version_info() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    
+    // Create original content
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Original"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    // Create version 1
+    let change_notes = String::from_str(&env, "Added new examples and fixed typos");
+    let version = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Updated"),
+        &BytesN::random(&env),
+        &vec![&env],
+        &change_notes
+    );
+
+    // Get version info
+    let version_info = client.get_version_info(&content_id, &version);
+    
+    assert_eq!(version_info.version, 1);
+    assert_eq!(version_info.creator, creator);
+    assert_eq!(version_info.change_notes, change_notes);
+    assert_eq!(version_info.upvotes, 0);
+    assert_eq!(version_info.verification_level, VerificationLevel::None);
+}
+
+#[test]
+fn test_upvote_version() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    
+    // Create content and version
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Original"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    let version = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Updated"),
+        &BytesN::random(&env),
+        &vec![&env],
+        &String::from_str(&env, "Updates")
+    );
+
+    // Upvote the version
+    let voter1 = Address::generate(&env);
+    let voter2 = Address::generate(&env);
+
+    let upvotes1 = client.upvote_version(&content_id, &version, &voter1);
+    assert_eq!(upvotes1, 1);
+
+    let upvotes2 = client.upvote_version(&content_id, &version, &voter2);
+    assert_eq!(upvotes2, 2);
+
+    // Verify version info reflects upvotes
+    let version_info = client.get_version_info(&content_id, &version);
+    assert_eq!(version_info.upvotes, 2);
+}
+
+#[test]
+fn test_verify_version() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let verifier = Address::generate(&env);
+    
+    // Create content and version
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Original"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    let version = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Updated"),
+        &BytesN::random(&env),
+        &vec![&env],
+        &String::from_str(&env, "Updates")
+    );
+
+    // Verify the version
+    let verified_level = client.verify_version(&content_id, &version, &verifier, &VerificationLevel::Expert);
+    assert_eq!(verified_level, VerificationLevel::Expert);
+
+    // Check version info reflects verification
+    let version_info = client.get_version_info(&content_id, &version);
+    assert_eq!(version_info.verification_level, VerificationLevel::Expert);
+}
+
+#[test]
+fn test_get_version_diff() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    
+    // Create original content
+    let original_title = String::from_str(&env, "Original Title");
+    let original_hash = BytesN::random(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &original_title,
+        &original_hash,
+        &vec![&env, String::from_str(&env, "original")]
+    );
+
+    // Create version 1 - change title only
+    let v1_title = String::from_str(&env, "Updated Title");
+    client.create_new_version_content(
+        &content_id,
+        &creator,
+        &v1_title,
+        &original_hash, // Same hash
+        &vec![&env, String::from_str(&env, "original")],
+        &String::from_str(&env, "Title update")
+    );
+
+    // Create version 2 - change content only
+    let v2_hash = BytesN::random(&env);
+    client.create_new_version_content(
+        &content_id,
+        &creator,
+        &v1_title, // Same title as v1
+        &v2_hash, // New hash
+        &vec![&env, String::from_str(&env, "original")],
+        &String::from_str(&env, "Content update")
+    );
+
+    // Test version diffs
+    
+    // v0 to v1: title changed, content same
+    let diff_0_to_1 = client.get_version_diff(&content_id, &0, &1);
+    assert_eq!(diff_0_to_1.from_version, 0);
+    assert_eq!(diff_0_to_1.to_version, 1);
+    assert!(diff_0_to_1.title_changed);
+    assert!(!diff_0_to_1.content_changed);
+
+    // v1 to v2: title same, content changed
+    let diff_1_to_2 = client.get_version_diff(&content_id, &1, &2);
+    assert_eq!(diff_1_to_2.from_version, 1);
+    assert_eq!(diff_1_to_2.to_version, 2);
+    assert!(!diff_1_to_2.title_changed);
+    assert!(diff_1_to_2.content_changed);
+
+    // v0 to v2: both changed (spanning multiple versions)
+    let diff_0_to_2 = client.get_version_diff(&content_id, &0, &2);
+    assert_eq!(diff_0_to_2.from_version, 0);
+    assert_eq!(diff_0_to_2.to_version, 2);
+    assert!(diff_0_to_2.title_changed);
+    assert!(diff_0_to_2.content_changed);
+}
+
+#[test]
+fn test_version_independence() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let verifier = Address::generate(&env);
+    
+    // Create content and versions
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Original"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    let version1 = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Version 1"),
+        &BytesN::random(&env),
+        &vec![&env],
+        &String::from_str(&env, "First update")
+    );
+
+    let version2 = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Version 2"),
+        &BytesN::random(&env),
+        &vec![&env],
+        &String::from_str(&env, "Second update")
+    );
+
+    // Vote on version 1 only
+    let voter1 = Address::generate(&env);
+    let voter2 = Address::generate(&env);
+    client.upvote_version(&content_id, &version1, &voter1);
+    client.upvote_version(&content_id, &version1, &voter2);
+
+    // Verify version 2 only
+    client.verify_version(&content_id, &version2, &verifier, &VerificationLevel::Expert);
+
+    // Check that versions have independent stats
+    let v1_info = client.get_version_info(&content_id, &version1);
+    let v2_info = client.get_version_info(&content_id, &version2);
+
+    assert_eq!(v1_info.upvotes, 2);
+    assert_eq!(v1_info.verification_level, VerificationLevel::None);
+
+    assert_eq!(v2_info.upvotes, 0);
+    assert_eq!(v2_info.verification_level, VerificationLevel::Expert);
+}
+
+#[test]
+fn test_versioning_workflow() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let verifier = Address::generate(&env);
+    
+    // 1. Create original content
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Blockchain Basics"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "blockchain")]
+    );
+
+    // 2. Create version 1
+    let version1 = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Blockchain Fundamentals"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "blockchain"), String::from_str(&env, "advanced")],
+        &String::from_str(&env, "Added advanced topics")
+    );
+
+    // 3. Vote and verify version 1
+    let voter = Address::generate(&env);
+    client.upvote_version(&content_id, &version1, &voter);
+    client.verify_version(&content_id, &version1, &verifier, &VerificationLevel::Expert);
+
+    // 4. Create version 2
+    let version2 = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Complete Blockchain Guide"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "blockchain"), String::from_str(&env, "complete")],
+        &String::from_str(&env, "Complete rewrite")
+    );
+
+    // 5. Verify all versions exist and are correct
+    let original = client.get_content_at_version(&content_id, &0);
+    let v1_content = client.get_content_at_version(&content_id, &1);
+    let v2_content = client.get_content_at_version(&content_id, &2);
+    let current = client.get_content(&content_id);
+
+    assert_eq!(original.title, String::from_str(&env, "Blockchain Basics"));
+    assert_eq!(v1_content.title, String::from_str(&env, "Blockchain Fundamentals"));
+    assert_eq!(v2_content.title, String::from_str(&env, "Complete Blockchain Guide"));
+    assert_eq!(current.title, String::from_str(&env, "Complete Blockchain Guide"));
+
+    // 6. Check version info
+    let v1_info = client.get_version_info(&content_id, &version1);
+    let v2_info = client.get_version_info(&content_id, &version2);
+
+    assert_eq!(v1_info.upvotes, 1);
+    assert_eq!(v1_info.verification_level, VerificationLevel::Expert);
+    
+    assert_eq!(v2_info.upvotes, 0);
+    assert_eq!(v2_info.verification_level, VerificationLevel::None);
+}
+
+#[test]
+#[should_panic(expected = "only the creator can create a new version")]
+fn test_create_version_non_creator() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let non_creator = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Original Content"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    // Non-creator tries to create version
+    client.create_new_version_content(
+        &content_id,
+        &non_creator, // Wrong creator
+        &String::from_str(&env, "Unauthorized Update"),
+        &BytesN::random(&env),
+        &vec![&env],
+        &String::from_str(&env, "Unauthorized change")
+    );
+}
+
+#[test]
+#[should_panic(expected = "version does not exist")]
+fn test_get_content_at_nonexistent_version() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Content"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    // Try to get version that doesn't exist
+    client.get_content_at_version(&content_id, &999);
+}
+
+#[test]
+#[should_panic(expected = "already voted on this version")]
+fn test_duplicate_version_vote() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let voter = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Content"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    let version = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Updated"),
+        &BytesN::random(&env),
+        &vec![&env],
+        &String::from_str(&env, "Update")
+    );
+
+    // Vote once
+    client.upvote_version(&content_id, &version, &voter);
+    
+    // Try to vote again - should panic
+    client.upvote_version(&content_id, &version, &voter);
+}
+
+#[test]
+#[should_panic(expected = "cannot downgrade verification")]
+fn test_version_verification_downgrade() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let verifier = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Content"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    let version = client.create_new_version_content(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "Updated"),
+        &BytesN::random(&env),
+        &vec![&env],
+        &String::from_str(&env, "Update")
+    );
+
+    // Verify to Expert level
+    client.verify_version(&content_id, &version, &verifier, &VerificationLevel::Expert);
+    
+    // Try to downgrade to Peer - should panic
+    client.verify_version(&content_id, &version, &verifier, &VerificationLevel::Peer);
+}
+
+///
+/// COLLABORATIVE TESTS
+/// 
+#[test]
+fn test_grant_permission() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    // Create content
+    let creator = Address::generate(&env);
+    let collaborator = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Collaborative Content"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "collaboration")]
+    );
+
+    // Grant permission
+    let success = client.grant_permission(&content_id, &creator, &collaborator);
+    assert!(success);
+
+    // Verify permission was granted
+    let permission = client.get_collaborative_permission(&collaborator, &content_id);
+    assert_eq!(permission.collaborator, collaborator);
+    assert_eq!(permission.content_id, content_id);
+    assert_eq!(permission.granted_by, creator);
+}
+
+#[test]
+fn test_submit_for_review() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    // Setup: Create content and grant permission
+    let creator = Address::generate(&env);
+    let collaborator = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Original Content"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "original")]
+    );
+
+    client.grant_permission(&content_id, &creator, &collaborator);
+
+    // Submit for review
+    let new_content_hash = BytesN::random(&env);
+    let new_subject_tags = vec![&env, String::from_str(&env, "updated")];
+    let change_notes = String::from_str(&env, "Fixed typos and added examples");
+
+    let success = client.submit_for_review(
+        &content_id,
+        &collaborator,
+        &new_content_hash,
+        &new_subject_tags,
+        &change_notes
+    );
+    assert!(success);
+
+    // Verify submission was created
+    let submission = client.get_collaborative_submission(&collaborator, &content_id);
+    assert_eq!(submission.content_id, content_id);
+    assert_eq!(submission.collaborator, collaborator);
+    assert_eq!(submission.new_content_hash, new_content_hash);
+    assert_eq!(submission.new_subject_tags, new_subject_tags);
+    assert_eq!(submission.change_notes, change_notes);
+}
+
+#[test]
+fn test_review_submission_accept() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    // Setup: Create content, grant permission, and submit for review
+    let creator = Address::generate(&env);
+    let collaborator = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Original Content"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "original")]
+    );
+
+    client.grant_permission(&content_id, &creator, &collaborator);
+
+    let new_content_hash = BytesN::random(&env);
+    let new_subject_tags = vec![&env, String::from_str(&env, "updated")];
+    let change_notes = String::from_str(&env, "Improved content quality");
+
+    client.submit_for_review(
+        &content_id,
+        &collaborator,
+        &new_content_hash,
+        &new_subject_tags,
+        &change_notes
+    );
+
+    // Accept the submission
+    let feedback = String::from_str(&env, "Great improvements!");
+    let success = client.review_submission(
+        &content_id,
+        &collaborator,
+        &creator,
+        &true, // accept
+        &feedback
+    );
+    assert!(success);
+
+    // Verify submission was accepted and content was updated
+    let submission = client.get_collaborative_submission(&collaborator, &content_id);
+    assert_eq!(submission.reviewer, Some(creator));
+    assert_eq!(submission.review_feedback, Some(feedback));
+
+    // Verify content was updated to new version
+    let updated_content = client.get_content(&content_id);
+    assert_eq!(updated_content.title, String::from_str(&env, "Original Content")); // Title unchanged in this test
+    assert_eq!(updated_content.content_hash, new_content_hash);
+    assert_eq!(updated_content.subject_tags, new_subject_tags);
+}
+
+#[test]
+fn test_review_submission_reject() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    // Setup: Create content, grant permission, and submit for review
+    let creator = Address::generate(&env);
+    let collaborator = Address::generate(&env);
+    
+    let original_hash = BytesN::random(&env);
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Original Content"),
+        &original_hash,
+        &vec![&env, String::from_str(&env, "original")]
+    );
+
+    client.grant_permission(&content_id, &creator, &collaborator);
+
+    let new_content_hash = BytesN::random(&env);
+    let new_subject_tags = vec![&env, String::from_str(&env, "updated")];
+
+    client.submit_for_review(
+        &content_id,
+        &collaborator,
+        &new_content_hash,
+        &new_subject_tags,
+        &String::from_str(&env, "Some changes")
+    );
+
+    // Reject the submission
+    let feedback = String::from_str(&env, "Needs more work");
+    let success = client.review_submission(
+        &content_id,
+        &collaborator,
+        &creator,
+        &false, // reject
+        &feedback
+    );
+    assert!(success);
+
+    // Verify submission was rejected
+    let submission = client.get_collaborative_submission(&collaborator, &content_id);
+    assert_eq!(submission.reviewer, Some(creator));
+    assert_eq!(submission.review_feedback, Some(feedback));
+
+    // Verify content was NOT updated (remains original)
+    let content = client.get_content(&content_id);
+    assert_eq!(content.content_hash, original_hash); // Should remain original
+}
+
+#[test]
+fn test_get_user_contribution_history() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    // Setup
+    let creator = Address::generate(&env);
+    let collaborator = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Content for History Test"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    client.grant_permission(&content_id, &creator, &collaborator);
+
+    // Submit first contribution
+    client.submit_for_review(
+        &content_id,
+        &collaborator,
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "v1")],
+        &String::from_str(&env, "First contribution")
+    );
+
+    // Review first contribution (accept)
+    client.review_submission(
+        &content_id,
+        &collaborator,
+        &creator,
+        &true,
+        &String::from_str(&env, "Good work")
+    );
+
+    // Submit second contribution
+    client.submit_for_review(
+        &content_id,
+        &collaborator,
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "v2")],
+        &String::from_str(&env, "Second contribution")
+    );
+
+    // Review second contribution (reject)
+    client.review_submission(
+        &content_id,
+        &collaborator,
+        &creator,
+        &false,
+        &String::from_str(&env, "Needs improvement")
+    );
+
+    // Get contribution history
+    let history = client.get_user_contribution_history(&collaborator, &content_id);
+    
+    // Should have 2 contributions in history
+    assert_eq!(history.len(), 2);
+    
+    // Verify first contribution
+    let first_contribution = history.get(0).unwrap();
+    assert_eq!(first_contribution.change_notes, String::from_str(&env, "First contribution"));
+    assert_eq!(first_contribution.review_feedback, Some(String::from_str(&env, "Good work")));
+    
+    // Verify second contribution
+    let second_contribution = history.get(1).unwrap();
+    assert_eq!(second_contribution.change_notes, String::from_str(&env, "Second contribution"));
+    assert_eq!(second_contribution.review_feedback, Some(String::from_str(&env, "Needs improvement")));
+}
+
+#[test]
+fn test_collaborative_workflow_complete() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    // 1. Creator publishes content
+    let creator = Address::generate(&env);
+    let collaborator1 = Address::generate(&env);
+    let collaborator2 = Address::generate(&env);
+    
+    let original_hash = BytesN::random(&env);
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Educational Article"),
+        &original_hash,
+        &vec![&env, String::from_str(&env, "education")]
+    );
+
+    // 2. Creator grants permissions to collaborators
+    client.grant_permission(&content_id, &creator, &collaborator1);
+    client.grant_permission(&content_id, &creator, &collaborator2);
+
+    // 3. Collaborator1 submits improvement
+    let improved_hash = BytesN::random(&env);
+    client.submit_for_review(
+        &content_id,
+        &collaborator1,
+        &improved_hash,
+        &vec![&env, String::from_str(&env, "education"), String::from_str(&env, "improved")],
+        &String::from_str(&env, "Added examples and fixed grammar")
+    );
+
+    // 4. Creator accepts collaborator1's submission
+    client.review_submission(
+        &content_id,
+        &collaborator1,
+        &creator,
+        &true,
+        &String::from_str(&env, "Excellent improvements!")
+    );
+
+    // 5. Verify content was updated
+    let updated_content = client.get_content(&content_id);
+    assert_eq!(updated_content.content_hash, improved_hash);
+
+    // 6. Collaborator2 submits another improvement
+    let further_improved_hash = BytesN::random(&env);
+    client.submit_for_review(
+        &content_id,
+        &collaborator2,
+        &further_improved_hash,
+        &vec![&env, String::from_str(&env, "education"), String::from_str(&env, "advanced")],
+        &String::from_str(&env, "Added advanced concepts")
+    );
+
+    // 7. Creator rejects collaborator2's submission
+    client.review_submission(
+        &content_id,
+        &collaborator2,
+        &creator,
+        &false,
+        &String::from_str(&env, "Too advanced for target audience")
+    );
+
+    // 8. Verify content remains at collaborator1's version
+    let final_content = client.get_content(&content_id);
+    assert_eq!(final_content.content_hash, improved_hash); // Still collaborator1's version
+
+    // 9. Check contribution histories
+    let history1 = client.get_user_contribution_history(&collaborator1, &content_id);
+    let history2 = client.get_user_contribution_history(&collaborator2, &content_id);
+    
+    assert_eq!(history1.len(), 1); // One accepted contribution
+    assert_eq!(history2.len(), 1); // One rejected contribution
+}
+
+#[test]
+fn test_multiple_collaborators_same_content() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    // Setup
+    let creator = Address::generate(&env);
+    let collaborators = [
+        Address::generate(&env),
+        Address::generate(&env),
+        Address::generate(&env),
+    ];
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Multi-Collaborator Content"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "collaborative")]
+    );
+
+    // Grant permissions to all collaborators
+    for collaborator in &collaborators {
+        client.grant_permission(&content_id, &creator, collaborator);
+    }
+
+    // Each collaborator submits a different improvement
+    for (i, collaborator) in collaborators.iter().enumerate() {
+        let change_notes = match i {
+            0 => String::from_str(&env, "Added introduction"),
+            1 => String::from_str(&env, "Improved examples"),
+            2 => String::from_str(&env, "Added conclusion"),
+            _ => unreachable!()
+        };
+
+        client.submit_for_review(
+            &content_id,
+            collaborator,
+            &BytesN::random(&env),
+            &vec![&env, String::from_str(&env, "collaborative")],
+            &change_notes
+        );
+    }
+
+    // Creator reviews all submissions - accept first two, reject last one
+    for (i, collaborator) in collaborators.iter().enumerate() {
+        let accept = i < 2; // Accept first two, reject third
+        let feedback = if accept {
+            String::from_str(&env, "Great contribution!")
+        } else {
+            String::from_str(&env, "Overlaps with existing content")
+        };
+
+        client.review_submission(
+            &content_id,
+            collaborator,
+            &creator,
+            &accept,
+            &feedback
+        );
+    }
+
+    // Verify all collaborators have history entries
+    for collaborator in &collaborators {
+        let history = client.get_user_contribution_history(collaborator, &content_id);
+        assert_eq!(history.len(), 1);
+    }
+}
+
+#[test]
+#[should_panic(expected = "Only content creator can grant permissions")]
+fn test_grant_permission_non_creator() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let non_creator = Address::generate(&env);
+    let collaborator = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Content"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    // Non-creator tries to grant permission
+    client.grant_permission(&content_id, &non_creator, &collaborator);
+}
+
+#[test]
+#[should_panic(expected = "permission not found for user and content_id")]
+fn test_submit_without_permission() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let unauthorized_user = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Content"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    // Try to submit without permission
+    client.submit_for_review(
+        &content_id,
+        &unauthorized_user,
+        &BytesN::random(&env),
+        &vec![&env],
+        &String::from_str(&env, "Unauthorized change")
+    );
+}
+
+#[test]
+#[should_panic(expected = "Only content creator can review submissions")]
+fn test_review_submission_non_creator() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let collaborator = Address::generate(&env);
+    let non_creator = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Content"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    client.grant_permission(&content_id, &creator, &collaborator);
+    
+    client.submit_for_review(
+        &content_id,
+        &collaborator,
+        &BytesN::random(&env),
+        &vec![&env],
+        &String::from_str(&env, "Some changes")
+    );
+
+    // Non-creator tries to review
+    client.review_submission(
+        &content_id,
+        &collaborator,
+        &non_creator, // Wrong reviewer
+        &true,
+        &String::from_str(&env, "Unauthorized review")
+    );
+}
+
+#[test]
+#[should_panic(expected = "Submission must be pending to review")]
+fn test_review_already_reviewed_submission() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let collaborator = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Content"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    client.grant_permission(&content_id, &creator, &collaborator);
+    
+    client.submit_for_review(
+        &content_id,
+        &collaborator,
+        &BytesN::random(&env),
+        &vec![&env],
+        &String::from_str(&env, "Some changes")
+    );
+
+    // Review once (accept)
+    client.review_submission(
+        &content_id,
+        &collaborator,
+        &creator,
+        &true,
+        &String::from_str(&env, "Good work")
+    );
+
+    // Try to review again - should panic
+    client.review_submission(
+        &content_id,
+        &collaborator,
+        &creator,
+        &false,
+        &String::from_str(&env, "Changed my mind")
+    );
+}
+
+#[test]
+#[should_panic(expected = "permission not found for user and content_id")]
+fn test_get_nonexistent_permission() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let user = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Content"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    // Try to get permission that doesn't exist
+    client.get_collaborative_permission(&user, &content_id);
+}
+
+#[test]
+#[should_panic(expected = "submission not found for submitter and content_id")]
+fn test_get_nonexistent_submission() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+
+    env.mock_all_auths();
+
+    let creator = Address::generate(&env);
+    let user = Address::generate(&env);
+    
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Content"),
+        &BytesN::random(&env),
+        &vec![&env]
+    );
+
+    // Try to get submission that doesn't exist
+    client.get_collaborative_submission(&user, &content_id);
+}
+
+#[test]
+fn test_flag_and_get_flags() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+    env.mock_all_auths();
+    let creator = Address::generate(&env);
+    let flagger = Address::generate(&env);
+    let content_id = client.publish_content(&creator, &String::from_str(&env, "Flaggable Content"), &BytesN::random(&env), &vec![&env, String::from_str(&env, "test")]);
+    client.flag_content(&content_id, &flagger, &String::from_str(&env, "spam"));
+    let flags = client.get_flags(&content_id);
+    assert_eq!(flags.len(), 1);
+    assert_eq!(flags.get(0).unwrap().flagger, flagger);
+}
+
+#[test]
+fn test_moderate_and_get_history() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+    env.mock_all_auths();
+    let creator = Address::generate(&env);
+    let moderator = Address::generate(&env);
+    let content_id = client.publish_content(&creator, &String::from_str(&env, "Moderatable Content"), &BytesN::random(&env), &vec![&env, String::from_str(&env, "test")]);
+    client.flag_content(&content_id, &creator, &String::from_str(&env, "abuse"));
+    client.moderate_content(&content_id, &moderator, &crate::storage::ModerationStatus::Removed, &String::from_str(&env, "confirmed abuse"));
+    let history = client.get_moderation_history(&content_id);
+    assert_eq!(history.len(), 1);
+    assert_eq!(history.get(0).unwrap().moderator, moderator);
+    assert_eq!(history.get(0).unwrap().action, crate::storage::ModerationStatus::Removed);
+}
+
+#[test]
+fn test_create_and_resolve_dispute() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+    env.mock_all_auths();
+    let creator = Address::generate(&env);
+    let resolver = Address::generate(&env);
+    let content_id = client.publish_content(&creator, &String::from_str(&env, "Disputable Content"), &BytesN::random(&env), &vec![&env, String::from_str(&env, "test")]);
+    let dispute_id = client.create_dispute(&content_id, &creator, &String::from_str(&env, "unfair removal"));
+    let dispute = client.get_dispute(&dispute_id).unwrap();
+    assert_eq!(dispute.status, crate::storage::ModerationStatus::UnderDispute);
+    client.resolve_dispute(&dispute_id, &resolver, &true);
+    let dispute = client.get_dispute(&dispute_id).unwrap();
+    assert_eq!(dispute.status, crate::storage::ModerationStatus::Approved);
+    assert_eq!(dispute.resolver.unwrap(), resolver);
+}
+
+#[test]
+fn test_advanced_verification_and_delegation() {
+    let env = Env::default();
+    let contract_id = env.register(TokenizedEducationalContent, ());
+    let client = TokenizedEducationalContentClient::new(&env, &contract_id);
+    env.mock_all_auths();
+    let creator = Address::generate(&env);
+    let verifier = Address::generate(&env);
+    let delegatee = Address::generate(&env);
+    let content_id = client.publish_content(&creator, &String::from_str(&env, "Advanced Verification"), &BytesN::random(&env), &vec![&env, String::from_str(&env, "test")]);
+    // Delegate
+    client.delegate_verification(&verifier, &delegatee, &Some(100000));
+    // Advanced verification with delegation
+    let level = client.verify_content_advanced(&content_id, &delegatee, &VerificationLevel::Expert, &Some(verifier.clone()), &50, &Some(1000));
+    assert_eq!(level, VerificationLevel::Expert);
+    // Renew verification
+    client.renew_verification(&content_id, &delegatee, &2000);
+    // Revoke delegation
+    client.revoke_delegation(&verifier, &delegatee);
+}

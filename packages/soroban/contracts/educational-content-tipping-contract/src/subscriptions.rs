@@ -1,6 +1,4 @@
-
 use soroban_sdk::{contracttype, Address, Env, String}; // Needed for token transfer
-
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]

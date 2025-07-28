@@ -6,8 +6,6 @@ use soroban_sdk::{
     Address, Env, String, Vec,
 };
 
-extern crate alloc;
-
 use crate::{TippingRewardContract, TippingRewardContractClient};
 
 fn create_contract(e: &Env) -> TippingRewardContractClient {
@@ -525,10 +523,6 @@ fn test_create_and_cancel_subscription() {
     let interval = 3600; // 1 hour
 
     client.create_subscription(&subscriber, &educator, &amount, &token, &interval, &None);
-
-    // Verify subscription exists (by trying to get it, assuming we add a helper getter in lib.rs or test directly from storage)
-    // For now, we'll test indirectly by ensuring no panics and then attempting to cancel.
-    // A direct getter for subscription would be needed for a robust assertion.
 
     // Test cancellation
     client.cancel_subscription(&subscriber, &educator);

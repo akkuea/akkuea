@@ -12,11 +12,10 @@ mod subscriptions;
 mod test;
 mod types;
 
-use types::{EducatorStats, Tip, TipGoal, TipHistory};
-// use storage::{get_educator_stats, set_educator_stats, get_tip_history, set_tip_history, update_top_educators};
 use errors::TippingError;
 use events::{emit_educator_stats_updated, emit_tip_event};
 use storage::*;
+use types::{EducatorStats, Tip, TipGoal, TipHistory};
 
 #[contract]
 pub struct TippingRewardContract;

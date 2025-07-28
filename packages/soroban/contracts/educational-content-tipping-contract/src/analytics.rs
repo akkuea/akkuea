@@ -1,8 +1,8 @@
 // Analytics module for tipping trends and reporting
 // Implements analytics data collection, time-based reporting, and trend analysis
 
-use soroban_sdk::{Address, Env, contracttype, Vec, Map};
 use crate::storage;
+use soroban_sdk::{contracttype, Address, Env, Map, Vec};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -68,4 +68,4 @@ pub fn get_trend_report(env: &Env, educator: &Address, period_seconds: u64) -> V
         result.push_back((period * period_seconds, total));
     }
     result
-} 
+}

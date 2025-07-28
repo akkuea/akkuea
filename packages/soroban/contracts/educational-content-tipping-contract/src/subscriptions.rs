@@ -1,7 +1,6 @@
-// Subscriptions module for recurring tips
-// TODO: Implement recurring tip logic, scheduling, and processing
 
-use soroban_sdk::{Address, Env, String, contracttype, Vec};
+use soroban_sdk::{contracttype, Address, Env, String}; // Needed for token transfer
+
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -50,6 +49,6 @@ pub fn cancel_subscription(env: &Env, subscriber: Address, educator: Address) {
     crate::storage::remove_subscription(env, &subscriber, &educator);
 }
 
-pub fn process_due_subscriptions(env: &Env) {
-    // TODO: Process all subscriptions that are due for payment
-} 
+// pub fn process_due_subscriptions(env: &Env) {
+//     // TODO: Process all subscriptions that are due for payment
+// }

@@ -8,12 +8,12 @@ fn get_admin_key(env: &Env) -> Symbol {
     Symbol::new(env, "ADMIN")
 }
 
-fn get_educator_stats_key(env: &Env, educator: &Address) -> Symbol {
-    Symbol::new(env, "EDU_STATS")
+fn get_educator_stats_key(env: &Env, educator: &Address) -> (Symbol, Address) {
+    (Symbol::new(env, "EDU_STATS"), educator.clone())
 }
 
-fn get_tip_history_key(env: &Env, educator: &Address) -> Symbol {
-    Symbol::new(env, "TIP_HIST")
+fn get_tip_history_key(env: &Env, educator: &Address) -> (Symbol, Address) {
+    (Symbol::new(env, "TIP_HIST"), educator.clone())
 }
 
 fn get_top_educators_key(env: &Env) -> Symbol {
@@ -53,34 +53,47 @@ pub fn set_admin(env: &Env, admin: &Address) {
 
 // Educator stats management (existing)
 pub fn get_educator_stats(env: &Env, educator: &Address) -> Option<EducatorStats> {
-    env.storage().instance().get(&get_educator_stats_key(env, educator))
+    env.storage()
+        .instance()
+        .get(&get_educator_stats_key(env, educator))
 }
 
 pub fn set_educator_stats(env: &Env, educator: &Address, stats: &EducatorStats) {
-    env.storage().instance().set(&get_educator_stats_key(env, educator), stats);
+    env.storage()
+        .instance()
+        .set(&get_educator_stats_key(env, educator), stats);
 }
 
 // Tip history management (existing)
 pub fn get_tip_history(env: &Env, educator: &Address) -> Option<TipHistory> {
-    env.storage().instance().get(&get_tip_history_key(env, educator))
+    env.storage()
+        .persistent()
+        .get(&get_tip_history_key(env, educator))
 }
 
 pub fn set_tip_history(env: &Env, educator: &Address, history: &TipHistory) {
-    env.storage().instance().set(&get_tip_history_key(env, educator), history);
+    env.storage()
+        .persistent()
+        .set(&get_tip_history_key(env, educator), history);
 }
 
 // Top educators management (existing - FIXED)
 pub fn get_top_educators(env: &Env) -> Vec<(Address, EducatorStats)> {
-    env.storage().instance().get(&get_top_educators_key(env)).unwrap_or(Vec::new(env))
+    env.storage()
+        .instance()
+        .get(&get_top_educators_key(env))
+        .unwrap_or(Vec::new(env))
 }
 
 pub fn set_top_educators(env: &Env, educators: &Vec<(Address, EducatorStats)>) {
-    env.storage().instance().set(&get_top_educators_key(env), educators);
+    env.storage()
+        .instance()
+        .set(&get_top_educators_key(env), educators);
 }
 
 pub fn update_top_educators(env: &Env, educator: &Address, stats: &EducatorStats) {
     let mut top_educators = get_top_educators(env);
-    
+
     // Find if educator already exists and remove it
     for i in 0..top_educators.len() {
         let (addr, _) = top_educators.get(i).unwrap(); // FIXED: corrected syntax error
@@ -89,7 +102,7 @@ pub fn update_top_educators(env: &Env, educator: &Address, stats: &EducatorStats
             break;
         }
     }
-    
+
     // Find the correct position to insert based on total_amount
     let mut insert_idx = 0;
     for i in 0..top_educators.len() {
@@ -100,10 +113,10 @@ pub fn update_top_educators(env: &Env, educator: &Address, stats: &EducatorStats
         }
         insert_idx = i + 1;
     }
-    
+
     // Insert the educator at the correct position
     top_educators.insert(insert_idx, (educator.clone(), stats.clone()));
-    
+
     set_top_educators(env, &top_educators);
 }
 
@@ -186,4 +199,62 @@ pub fn remove_authorized_oracle(env: &Env, oracle: &Address) {
     }
     
     set_authorized_oracles(env, &oracles);
+}
+///////////////////////////////////////////////////////
+// Helper functions for composite keys
+fn get_subscription_key(env: &Env, subscriber: &Address, educator: &Address) -> (Address, Address) {
+    (subscriber.clone(), educator.clone())
+}
+
+fn get_analytics_key(env: &Env, educator: &Address) -> Address {
+    educator.clone()
+}
+
+fn get_tip_goal_key(_env: &Env, educator: &Address) -> (Address, &'static str) {
+    (educator.clone(), "TIP_GOAL")
+}
+
+pub fn set_subscription(
+    env: &Env,
+    subscriber: &Address,
+    educator: &Address,
+    subscription: &crate::subscriptions::Subscription,
+) {
+    let key = get_subscription_key(env, subscriber, educator);
+    env.storage().persistent().set(&key, subscription);
+}
+
+pub fn remove_subscription(env: &Env, subscriber: &Address, educator: &Address) {
+    let key = get_subscription_key(env, subscriber, educator);
+    env.storage().persistent().remove(&key);
+}
+
+// Analytics storage
+pub fn get_tip_analytics(env: &Env, educator: &Address) -> Option<crate::analytics::TipAnalytics> {
+    let key = get_analytics_key(env, educator);
+    env.storage().persistent().get(&key)
+}
+
+pub fn set_tip_analytics(
+    env: &Env,
+    educator: &Address,
+    analytics: &crate::analytics::TipAnalytics,
+) {
+    let key = get_analytics_key(env, educator);
+    env.storage().persistent().set(&key, analytics);
+}
+
+pub fn set_tip_goal(env: &Env, educator: &Address, goal: &crate::types::TipGoal) {
+    let key = get_tip_goal_key(env, educator);
+    env.storage().instance().set(&key, goal);
+}
+
+pub fn get_tip_goal(env: &Env, educator: &Address) -> Option<crate::types::TipGoal> {
+    let key = get_tip_goal_key(env, educator);
+    env.storage().instance().get(&key)
+}
+
+pub fn remove_tip_goal(env: &Env, educator: &Address) {
+    let key = get_tip_goal_key(env, educator);
+    env.storage().instance().remove(&key);
 }

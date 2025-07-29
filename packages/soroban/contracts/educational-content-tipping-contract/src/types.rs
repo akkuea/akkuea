@@ -1,4 +1,4 @@
-use soroban_sdk::{Address, contracttype, Vec, String};
+use soroban_sdk::{contracttype, Address, String, Vec};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -25,4 +25,12 @@ pub struct EducatorStats {
 pub struct TipHistory {
     pub tips: Vec<Tip>,
     pub last_updated: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TipGoal {
+    pub educator: Address,
+    pub goal_amount: i128,
+    pub achieved: bool,
 }

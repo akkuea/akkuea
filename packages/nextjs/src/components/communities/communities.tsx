@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import Image from 'next/image';
 import {
   Dialog,
   DialogContent,
@@ -233,9 +234,11 @@ export default function Communities() {
       <CardContent className="p-6">
         <div className="flex items-start gap-4">
           <div className="w-16 h-16 bg-gray-200 rounded-lg flex-shrink-0 flex items-center justify-center">
-            <img
+            <Image
               src={community.image || '/placeholder.svg'}
               alt={community.name}
+              width={64}
+              height={64}
               className="w-full h-full object-cover rounded-lg"
             />
           </div>
@@ -456,7 +459,7 @@ export default function Communities() {
         <TabsContent value="your-communities" className="space-y-4">
           {joinedCommunities.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">You haven't joined any communities yet.</p>
+              <p className="text-gray-500">You haven&apos;t joined any communities yet.</p>
               <Button
                 variant="outline"
                 className="mt-4 bg-transparent"

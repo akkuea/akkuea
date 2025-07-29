@@ -1,4 +1,4 @@
-import React from "react";
+import React from 'react';
 
 type Tab = {
   id: string | number;
@@ -21,8 +21,8 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, setActiveTab, 
           onClick={() => setActiveTab(tab.id)}
           className={`px-6 py-2 rounded-md font-medium transition-colors w-full justify-center flex items-center gap-2 ${
             activeTab === tab.id
-              ? "bg-[#59C9D0] hover:bg-[#4ab5bc] text-white dark:bg-teal-400"
-              : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+              ? 'bg-[#59C9D0] hover:bg-[#4ab5bc] text-white dark:bg-teal-400'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100'
           }`}
         >
           <span>{tab.icon}</span>

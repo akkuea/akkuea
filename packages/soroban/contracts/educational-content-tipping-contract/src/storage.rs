@@ -1,8 +1,9 @@
 use soroban_sdk::{Address, Env, Symbol, Vec};
-
 use crate::types::{EducatorStats, TipHistory};
+use crate::token::WhitelistedToken;
+use crate::price_feeds::{PriceData, ConversionRate};
 
-// Storage keys
+// Storage keys for existing functionality
 fn get_admin_key(env: &Env) -> Symbol {
     Symbol::new(env, "ADMIN")
 }
@@ -19,7 +20,29 @@ fn get_top_educators_key(env: &Env) -> Symbol {
     Symbol::new(env, "TOP_EDU")
 }
 
-// Admin management
+// Storage keys for token management
+fn get_token_whitelist_key(env: &Env, token: &Address) -> Symbol {
+    Symbol::new(env, "TOKEN_WL")
+}
+
+fn get_token_list_key(env: &Env) -> Symbol {
+    Symbol::new(env, "TOKEN_LST")
+}
+
+// Storage keys for price feeds
+fn get_price_data_key(env: &Env, token: &Address) -> Symbol {
+    Symbol::new(env, "PRICE")
+}
+
+fn get_conversion_rate_key(env: &Env, from_token: &Address, to_token: &Address) -> Symbol {
+    Symbol::new(env, "CONV_RATE")
+}
+
+fn get_oracle_list_key(env: &Env) -> Symbol {
+    Symbol::new(env, "ORACLES")
+}
+
+// Admin management (existing)
 pub fn get_admin(env: &Env) -> Option<Address> {
     env.storage().instance().get(&get_admin_key(env))
 }
@@ -28,7 +51,7 @@ pub fn set_admin(env: &Env, admin: &Address) {
     env.storage().instance().set(&get_admin_key(env), admin);
 }
 
-// Educator stats management
+// Educator stats management (existing)
 pub fn get_educator_stats(env: &Env, educator: &Address) -> Option<EducatorStats> {
     env.storage()
         .instance()
@@ -41,7 +64,7 @@ pub fn set_educator_stats(env: &Env, educator: &Address, stats: &EducatorStats) 
         .set(&get_educator_stats_key(env, educator), stats);
 }
 
-// Tip history management
+// Tip history management (existing)
 pub fn get_tip_history(env: &Env, educator: &Address) -> Option<TipHistory> {
     env.storage()
         .persistent()
@@ -54,7 +77,7 @@ pub fn set_tip_history(env: &Env, educator: &Address, history: &TipHistory) {
         .set(&get_tip_history_key(env, educator), history);
 }
 
-// Top educators management
+// Top educators management (existing - FIXED)
 pub fn get_top_educators(env: &Env) -> Vec<(Address, EducatorStats)> {
     env.storage()
         .instance()
@@ -73,7 +96,7 @@ pub fn update_top_educators(env: &Env, educator: &Address, stats: &EducatorStats
 
     // Find if educator already exists and remove it
     for i in 0..top_educators.len() {
-        let (addr, _) = top_educators.get(i).unwrap();
+        let (addr, _) = top_educators.get(i).unwrap(); // FIXED: corrected syntax error
         if addr == *educator {
             top_educators.remove(i);
             break;
@@ -97,6 +120,87 @@ pub fn update_top_educators(env: &Env, educator: &Address, stats: &EducatorStats
     set_top_educators(env, &top_educators);
 }
 
+// Token whitelist management (NEW)
+pub fn get_whitelisted_token(env: &Env, token: &Address) -> Option<WhitelistedToken> {
+    env.storage().persistent().get(&get_token_whitelist_key(env, token))
+}
+
+pub fn set_whitelisted_token(env: &Env, token: &Address, whitelisted_token: &WhitelistedToken) {
+    env.storage().persistent().set(&get_token_whitelist_key(env, token), whitelisted_token);
+}
+
+pub fn get_token_list(env: &Env) -> Vec<Address> {
+    env.storage().persistent().get(&get_token_list_key(env)).unwrap_or(Vec::new(env))
+}
+
+pub fn set_token_list(env: &Env, token_list: &Vec<Address>) {
+    env.storage().persistent().set(&get_token_list_key(env), token_list);
+}
+
+// Price data management (NEW)
+pub fn get_price_data(env: &Env, token: &Address) -> Option<PriceData> {
+    env.storage().persistent().get(&get_price_data_key(env, token))
+}
+
+pub fn set_price_data(env: &Env, token: &Address, price_data: &PriceData) {
+    env.storage().persistent().set(&get_price_data_key(env, token), price_data);
+}
+
+// Conversion rate caching (NEW)
+pub fn get_conversion_rate(env: &Env, from_token: &Address, to_token: &Address) -> Option<ConversionRate> {
+    env.storage().temporary().get(&get_conversion_rate_key(env, from_token, to_token))
+}
+
+pub fn set_conversion_rate(env: &Env, from_token: &Address, to_token: &Address, rate: &ConversionRate) {
+    env.storage().temporary().set(&get_conversion_rate_key(env, from_token, to_token), rate);
+}
+
+// Oracle management (NEW)
+pub fn get_authorized_oracles(env: &Env) -> Vec<Address> {
+    env.storage().persistent().get(&get_oracle_list_key(env)).unwrap_or(Vec::new(env))
+}
+
+pub fn set_authorized_oracles(env: &Env, oracles: &Vec<Address>) {
+    env.storage().persistent().set(&get_oracle_list_key(env), oracles);
+}
+
+pub fn is_authorized_oracle(env: &Env, oracle: &Address) -> bool {
+    let oracles = get_authorized_oracles(env);
+    for i in 0..oracles.len() {
+        if let Some(authorized_oracle) = oracles.get(i) {
+            if authorized_oracle == *oracle {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+pub fn add_authorized_oracle(env: &Env, oracle: &Address) {
+    let mut oracles = get_authorized_oracles(env);
+    
+    // Check if oracle already exists
+    if !is_authorized_oracle(env, oracle) {
+        oracles.push_back(oracle.clone());
+        set_authorized_oracles(env, &oracles);
+    }
+}
+
+pub fn remove_authorized_oracle(env: &Env, oracle: &Address) {
+    let mut oracles = get_authorized_oracles(env);
+    
+    for i in 0..oracles.len() {
+        if let Some(authorized_oracle) = oracles.get(i) {
+            if authorized_oracle == *oracle {
+                oracles.remove(i);
+                break;
+            }
+        }
+    }
+    
+    set_authorized_oracles(env, &oracles);
+}
+///////////////////////////////////////////////////////
 // Helper functions for composite keys
 fn get_subscription_key(env: &Env, subscriber: &Address, educator: &Address) -> (Address, Address) {
     (subscriber.clone(), educator.clone())

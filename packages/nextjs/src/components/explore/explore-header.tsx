@@ -1,5 +1,5 @@
-import React from "react";
-import { Search, Filter, Compass } from "lucide-react";
+import React from 'react';
+import { Search, Filter, Compass } from 'lucide-react';
 
 interface ExploreHeaderProps {
   searchQuery: string;
@@ -15,12 +15,12 @@ const ExploreHeader: React.FC<ExploreHeaderProps> = ({ searchQuery, setSearchQue
         </div>
         <h1
           className="text-2xl font-semibold text-gray-900 dark:text-gray-200"
-          style={{ fontFamily: "Manrope, sans-serif" }}
+          style={{ fontFamily: 'Manrope, sans-serif' }}
         >
           Explore
         </h1>
       </div>
-      
+
       <div className="flex gap-3 mb-6">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />

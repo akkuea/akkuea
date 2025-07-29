@@ -61,7 +61,7 @@ const ContentCard: React.FC<ContentCardProps> = ({ type, item }) => {
               </span>
             </div>
 
-            <div className='flex flex-row justify-between items-center w-full mt-4'>
+            <div className="flex flex-row justify-between items-center w-full mt-4">
               <div className="flex  items-center gap-3">
                 <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
                   <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />

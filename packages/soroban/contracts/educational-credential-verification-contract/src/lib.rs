@@ -1,16 +1,23 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, Address, Env, Map, String, Vec, symbol_short};
+use soroban_sdk::{contract, contractimpl, Address, Env, Map, String, Vec};
 
 mod datatype;
 mod interfaces;
 mod verification;
 mod nft;
+mod review;
+mod analytics;
+mod storage;
 #[cfg(test)]
 mod test;
 
-use datatype::{Educator, VerificationLevel, Review};
+use datatype::{AnalyticsData, Educator, VerificationLevel, Review, Dispute, ReviewerPerformance};
 use interfaces::EducatorVerificationInterface;
 use verification::VerificationSystem;
+use review::ReviewSystem;
+use analytics::AnalyticsSystem;
+use storage::{EDUCATORS, ADMIN, REVOKED, DISPUTES, DataKey};
+
 
 #[contract]
 pub struct EducatorVerificationContract;
@@ -22,7 +29,7 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         if VerificationSystem::has_administrator(&env) {
             panic!("already initialized");
         }
-        env.storage().instance().set(&symbol_short!("admin"), &admin);
+        env.storage().instance().set(&ADMIN, &admin);
     }
 
     fn register_educator(
@@ -44,18 +51,17 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
             specialty_areas,
             verification_level: VerificationLevel::Pending,
             reviews_count: 0,
-            rating: 0,
+            ratings: Map::new(&env),
         };
 
-        let key = symbol_short!("EDU");
-        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&key).unwrap_or(Map::new(&env));
+        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap_or(Map::new(&env));
         
         if educators.contains_key(educator_address.clone()) {
             panic!("educator already registered");
         }
 
         educators.set(educator_address.clone(), educator);
-        env.storage().persistent().set(&key, &educators);
+        env.storage().persistent().set(&EDUCATORS, &educators);
 
         educator_address
     }
@@ -67,21 +73,18 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         verification_level: VerificationLevel,
     ) {
         reviewer.require_auth();
-        if !verification::VerificationSystem::is_reviewer(&env, &reviewer) {
+        if !VerificationSystem::is_reviewer(&env, &reviewer) {
             panic!("not authorized reviewer");
         }
 
-        let key = symbol_short!("EDU");
-        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&key).unwrap_or(Map::new(&env));
-        
-        let mut educator = educators.get(educator_address.clone())
-            .expect("educator not found");
+        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap();
+        let mut educator = educators.get(educator_address.clone()).expect("educator not found");
 
         if educator.verification_status {
             panic!("educator already verified");
         }
 
-        if !verification::VerificationSystem::verify_credentials(&env, &educator.credentials, &reviewer) {
+        if !VerificationSystem::verify_credentials(&env, &educator.credentials, &reviewer) {
             panic!("invalid credentials");
         }
 
@@ -89,17 +92,15 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         educator.verification_level = verification_level.clone();
         educator.verification_timestamp = env.ledger().timestamp();
 
-        let nft_id = verification::VerificationSystem::mint_verification_nft(
-            &env,
-            &educator_address,
-            &verification_level,
-            &educator.specialty_areas
+        let nft_id = VerificationSystem::mint_verification_nft(
+            &env, &educator_address, &verification_level, &educator.specialty_areas
         );
-        
         educator.nft_token_id = Some(nft_id);
 
         educators.set(educator_address.clone(), educator);
-        env.storage().persistent().set(&key, &educators);
+        env.storage().persistent().set(&EDUCATORS, &educators);
+        
+        AnalyticsSystem::recalculate_all_analytics(&env);
     }
 
     fn add_reviewer(env: Env, admin: Address, reviewer: Address) {
@@ -107,7 +108,7 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         VerificationSystem::verify_admin(&env, &admin);
         VerificationSystem::add_reviewer(&env, &reviewer);
     }
-
+    
     fn remove_reviewer(env: Env, admin: Address, reviewer: Address) {
         admin.require_auth();
         VerificationSystem::verify_admin(&env, &admin);
@@ -115,15 +116,12 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
     }
 
     fn get_educator(env: Env, educator_address: Address) -> Option<Educator> {
-        let key = symbol_short!("EDU");
-        let educators: Map<Address, Educator> = env.storage().persistent().get(&key).unwrap_or(Map::new(&env));
+        let educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap_or(Map::new(&env));
         educators.get(educator_address)
     }
 
     fn get_verified_educators(env: Env) -> Vec<Address> {
-        let key = symbol_short!("EDU");
-        let educators: Map<Address, Educator> = env.storage().persistent().get(&key).unwrap_or(Map::new(&env));
-        
+        let educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap_or(Map::new(&env));
         let mut verified = Vec::new(&env);
         for (address, educator) in educators.iter() {
             if educator.verification_status {
@@ -135,31 +133,19 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
 
     fn update_educator_profile(env: Env, educator_address: Address, name: Option<String>, specialty_areas: Option<Vec<String>>) -> bool {
         educator_address.require_auth();
-        
-        let key = symbol_short!("EDU");
-        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&key).unwrap_or(Map::new(&env));
-        
+        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap();
         if let Some(mut educator) = educators.get(educator_address.clone()) {
-            if let Some(new_name) = name {
-                educator.name = new_name;
-            }
-            if let Some(new_specialties) = specialty_areas {
-                educator.specialty_areas = new_specialties;
-            }
+            if let Some(new_name) = name { educator.name = new_name; }
+            if let Some(new_specialties) = specialty_areas { educator.specialty_areas = new_specialties; }
             educators.set(educator_address, educator);
-            env.storage().persistent().set(&key, &educators);
+            env.storage().persistent().set(&EDUCATORS, &educators);
             true
-        } else {
-            false
-        }
+        } else { false }
     }
 
     fn add_credentials(env: Env, educator_address: Address, new_credentials: Vec<String>) -> bool {
         educator_address.require_auth();
-        
-        let key = symbol_short!("EDU");
-        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&key).unwrap_or(Map::new(&env));
-        
+        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap();
         if let Some(mut educator) = educators.get(educator_address.clone()) {
             let mut updated = false;
             for cred in new_credentials.iter() {
@@ -168,35 +154,26 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
                     updated = true;
                 }
             }
-            
             if updated {
                 educators.set(educator_address, educator);
-                env.storage().persistent().set(&key, &educators);
-                true
-            } else {
-                false
+                env.storage().persistent().set(&EDUCATORS, &educators);
             }
-        } else {
-            false
-        }
+            updated
+        } else { false }
     }
 
     fn revoke_verification(env: Env, admin: Address, educator_address: Address, reason: String) {
         admin.require_auth();
-        verification::VerificationSystem::verify_admin(&env, &admin);
-        
-        let key = symbol_short!("EDU");
-        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&key).unwrap_or(Map::new(&env));
-        
+        VerificationSystem::verify_admin(&env, &admin);
+        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap();
         if let Some(mut educator) = educators.get(educator_address.clone()) {
             if educator.verification_status {
                 educator.verification_status = false;
                 educator.verification_level = VerificationLevel::Pending;
                 
-                let revoke_key = symbol_short!("REVOKE");
-                let mut revocations: Map<Address, String> = env.storage().persistent().get(&revoke_key).unwrap_or(Map::new(&env));
+                let mut revocations: Map<Address, String> = env.storage().persistent().get(&REVOKED).unwrap_or(Map::new(&env));
                 revocations.set(educator_address.clone(), reason);
-                env.storage().persistent().set(&revoke_key, &revocations);
+                env.storage().persistent().set(&REVOKED, &revocations);
                 
                 if let Some(nft_id) = educator.nft_token_id.clone() {
                     nft::NFTImplementation::burn_nft(env.clone(), nft_id);
@@ -204,104 +181,79 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
                 }
                 
                 educators.set(educator_address, educator);
-                env.storage().persistent().set(&key, &educators);
-            } else {
-                panic!("educator not verified");
-            }
-        } else {
-            panic!("educator not found");
-        }
+                env.storage().persistent().set(&EDUCATORS, &educators);
+            } else { panic!("educator not verified"); }
+        } else { panic!("educator not found"); }
     }
 
     fn get_educators_by_specialty(env: Env, specialty: String) -> Vec<Address> {
-        let key = symbol_short!("EDU");
-        let educators: Map<Address, Educator> = env.storage().persistent().get(&key).unwrap_or(Map::new(&env));
-        
+        let educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap_or(Map::new(&env));
         let mut filtered_educators = Vec::new(&env);
-        
         for (address, educator) in educators.iter() {
             if educator.specialty_areas.contains(&specialty) {
                 filtered_educators.push_back(address);
             }
         }
-        
         filtered_educators
     }
 
     fn get_educator_reviews(env: Env, educator_address: Address) -> Vec<Review> {
-        let reviews_key = symbol_short!("revs");
-        let reviews_map: Map<Address, Vec<Review>> = env.storage().persistent()
-            .get(&reviews_key)
-            .unwrap_or_else(|| Map::new(&env));
-            
-        if let Some(reviews) = reviews_map.get(educator_address) {
-            reviews
-        } else {
-            Vec::new(&env)
-        }
-    }
-
-    fn submit_review(env: Env, reviewer: Address, educator_address: Address, rating: u32) {
-        reviewer.require_auth();
-        
-        if !verification::VerificationSystem::is_reviewer(&env, &reviewer) {
-            panic!("not authorized reviewer");
-        }
-        
-        let edu_key = symbol_short!("EDU");
-        let educators: Map<Address, Educator> = env.storage().persistent()
-            .get(&edu_key)
-            .unwrap_or_else(|| Map::new(&env));
-            
-        if !educators.contains_key(educator_address.clone()) {
-            panic!("educator not found");
-        }
-        
-        if rating < 1 || rating > 10 {
-            panic!("rating must be between 1 and 10");
-        }
-        
-        let review = Review {
-            reviewer: reviewer.clone(),
-            educator: educator_address.clone(),
-            rating,
-            timestamp: env.ledger().timestamp(),
-        };
-        
-        verification::VerificationSystem::store_review(&env, review);
-        
-        let mut educators_map = educators;
-        if let Some(mut educator) = educators_map.get(educator_address.clone()) {
-            educator.reviews_count += 1;
-            
-            let all_reviews = Self::get_educator_reviews(env.clone(), educator_address.clone());
-            let total_rating: u32 = all_reviews.iter().map(|r| r.rating).sum();
-            educator.rating = total_rating / educator.reviews_count;
-            
-            educator.verification_level = verification::VerificationSystem::calculate_verification_level(
-                &env, 
-                &educator_address
-            );
-            
-            educators_map.set(educator_address, educator);
-            env.storage().persistent().set(&edu_key, &educators_map);
-        }
+        let reviews_key = DataKey::Reviews(educator_address);
+        env.storage().persistent().get(&reviews_key).unwrap_or_else(|| Vec::new(&env))
     }
 
     fn add_verified_credential(env: Env, reviewer: Address, credential: String) {
         reviewer.require_auth();
-        
-        if !verification::VerificationSystem::is_reviewer(&env, &reviewer) {
+        if !VerificationSystem::is_reviewer(&env, &reviewer) {
             panic!("not authorized reviewer");
         }
-        
-        verification::VerificationSystem::add_verified_credential(&env, credential, &reviewer);
+        VerificationSystem::add_verified_credential(&env, credential, &reviewer);
     }
     
     fn add_authorized_institution(env: Env, admin: Address, institution_id: String) {
         admin.require_auth();
-        
-        verification::VerificationSystem::verify_admin(&env, &admin);
-        verification::VerificationSystem::add_authorized_institution(&env, &admin, institution_id);
+        VerificationSystem::verify_admin(&env, &admin);
+        VerificationSystem::add_authorized_institution(&env, &admin, institution_id);
     }
-} 
+
+    fn submit_review(
+        env: Env,
+        reviewer: Address,
+        educator_address: Address,
+        ratings: Map<String, u32>,
+        comment_hash: String,
+    ) {
+        ReviewSystem::submit_review(&env, reviewer, educator_address, ratings, comment_hash);
+    }
+
+    fn verify_review(env: Env, verifier: Address, educator_address: Address, review_id: u32) {
+        ReviewSystem::verify_review(&env, verifier, educator_address, review_id);
+    }
+
+    fn dispute_review(env: Env, educator: Address, review_id: u32, reason_hash: String) {
+        ReviewSystem::dispute_review(&env, educator, review_id, reason_hash);
+    }
+
+    fn resolve_dispute(env: Env, admin: Address, educator_address: Address, review_id: u32) {
+        ReviewSystem::resolve_dispute(&env, admin, educator_address, review_id);
+    }
+
+    fn get_disputes(env: Env) -> Vec<Dispute> {
+        env.storage().persistent().get(&DISPUTES).unwrap_or(Vec::new(&env))
+    }
+    
+    fn get_analytics(env: Env) -> AnalyticsData {
+        AnalyticsSystem::get_analytics(&env)
+    }
+
+    fn recalculate_analytics(env: Env, admin: Address) {
+        admin.require_auth();
+        VerificationSystem::verify_admin(&env, &admin);
+        AnalyticsSystem::recalculate_all_analytics(&env);
+    }
+
+    fn get_reviewer_performance(env: Env, reviewer: Address) -> Option<ReviewerPerformance> {
+        let analytics = AnalyticsSystem::get_analytics(&env);
+        analytics.reviewer_performance.get(reviewer)
+    }
+}

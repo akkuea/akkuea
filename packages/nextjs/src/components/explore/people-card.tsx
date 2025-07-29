@@ -1,5 +1,5 @@
-import React from "react";
-import { User } from "lucide-react";
+import React from 'react';
+import { User } from 'lucide-react';
 
 interface Person {
   name: string;
@@ -24,10 +24,12 @@ const PeopleCard: React.FC<PeopleCardProps> = ({ person }) => {
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{person.username}</p>
         <p className="text-sm text-cyan-600 dark:text-teal-300 font-medium">{person.specialty}</p>
       </div>
-      
+
       <div className="flex justify-center gap-6 text-sm text-gray-600 dark:text-gray-400 mb-4">
         <div className="text-center">
-          <div className="font-semibold text-gray-900 dark:text-gray-200">{person.followers.toLocaleString()}</div>
+          <div className="font-semibold text-gray-900 dark:text-gray-200">
+            {person.followers.toLocaleString()}
+          </div>
           <div>followers</div>
         </div>
         <div className="text-center">
@@ -35,7 +37,7 @@ const PeopleCard: React.FC<PeopleCardProps> = ({ person }) => {
           <div>posts</div>
         </div>
       </div>
-      
+
       <button className="w-full bg-[#59C9D0] dark:bg-teal-400 hover:bg-cyan-600 dark:hover:bg-teal-500 text-white font-medium py-2 px-4 rounded-lg transition-colors">
         Follow
       </button>

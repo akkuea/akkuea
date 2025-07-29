@@ -1,12 +1,9 @@
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import LeftSidebar from '@/components/learning-hub/left-sidebar';
 import RightSidebar from '@/components/learning-hub/right-sidebar';
-import { ThemeProvider } from '@/components/theme-provider'; // 👈 Ya hecho
+import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 import Navbar from '@/components/navbar/navbar';
-
-const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Learning Hub',
@@ -16,10 +13,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
-        <Navbar />
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <div className="min-h-screen bg-gray-50 dark:bg-black">
+      <body>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Navbar />
+          <div className="min-h-screen bg-background text-foreground">
             <LeftSidebar />
             <main
               className="mt-14 transition-all duration-300 ease-in-out 

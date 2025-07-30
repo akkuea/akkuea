@@ -219,7 +219,6 @@ export default function Communities() {
     setCommunities((prev) => [...prev, community]);
     setNewCommunity({ name: '', description: '', tags: '', visibility: 'public' });
     setIsCreateModalOpen(false);
-
     toast.success('Your new community has been created successfully!');
   };
 
@@ -350,7 +349,7 @@ export default function Communities() {
             <DialogHeader>
               <DialogTitle>Create Community</DialogTitle>
               <DialogDescription>
-                Create a new community to bring people together around shared interests.
+                {'Create a new community to bring people together around shared interests.'}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -445,7 +444,7 @@ export default function Communities() {
         <TabsContent value="discover" className="space-y-4">
           {filteredCommunities.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">No communities found matching your search.</p>
+              <p className="text-gray-500">{'No communities found matching your search.'}</p>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -459,7 +458,7 @@ export default function Communities() {
         <TabsContent value="your-communities" className="space-y-4">
           {joinedCommunities.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">You haven&apos;t joined any communities yet.</p>
+              <p className="text-gray-500">{"You haven't joined any communities yet."}</p>
               <Button
                 variant="outline"
                 className="mt-4 bg-transparent"
@@ -480,9 +479,9 @@ export default function Communities() {
         <TabsContent value="discussions" className="space-y-4">
           {joinedDiscussions.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">No discussions from your communities.</p>
+              <p className="text-gray-500">{'No discussions from your communities.'}</p>
               <p className="text-gray-400 text-sm mt-2">
-                Join communities to see their discussions here.
+                {'Join communities to see their discussions here.'}
               </p>
             </div>
           ) : (

@@ -32,6 +32,26 @@ export default {
           '4': 'hsl(var(--chart-4))',
           '5': 'hsl(var(--chart-5))',
         },
+        contribution: {
+          bg: 'hsl(var(--contribution-bg))',
+          text: 'hsl(var(--contribution-text))',
+          border: 'hsl(var(--contribution-border))',
+        },
+        community: {
+          bg: 'hsl(var(--community-bg))',
+          text: 'hsl(var(--community-text))',
+          border: 'hsl(var(--community-border))',
+        },
+        learning: {
+          bg: 'hsl(var(--learning-bg))',
+          text: 'hsl(var(--learning-text))',
+          border: 'hsl(var(--learning-border))',
+        },
+        impact: {
+          bg: 'hsl(var(--impact-bg))',
+          text: 'hsl(var(--impact-text))',
+          border: 'hsl(var(--impact-border))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

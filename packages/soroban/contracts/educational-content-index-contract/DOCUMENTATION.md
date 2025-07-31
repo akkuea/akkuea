@@ -12,7 +12,7 @@ The contract includes validation mechanisms to ensure that all indexed content m
 
 - Content indexing with metadata storage
 - **Advanced search functionality** with partial matching support
-- **Multi-tag search** with AND/OR logical operators  
+- **Multi-tag search** with AND/OR logical operators
 - **Partial matching** for flexible content discovery
 - **Basic fuzzy matching** for typo tolerance
 - Content validation for quality assurance
@@ -198,12 +198,14 @@ As of the latest implementation, the Content Search Contract has been optimized 
 ### Performance Improvements
 
 #### Before: Linear Search O(n)
+
 - **Algorithm**: Iterated through all content items for each search
 - **Complexity**: O(n) where n is the total number of content items
 - **Gas Cost**: Increased linearly with dataset size
 - **Scalability**: Poor performance with large content volumes
 
 #### After: Indexed Search O(1) + O(m)
+
 - **Algorithm**: Direct lookup using tag-to-content-ID mappings
 - **Complexity**: O(1) access + O(m) where m is the number of matching items
 - **Gas Cost**: Constant lookup time regardless of total dataset size
@@ -212,6 +214,7 @@ As of the latest implementation, the Content Search Contract has been optimized 
 ### Index Architecture
 
 #### Tag Index Structure
+
 ```
 Tag "blockchain" → [content_id_1, content_id_3, content_id_7, ...]
 Tag "programming" → [content_id_2, content_id_5, content_id_9, ...]
@@ -219,6 +222,7 @@ Tag "science" → [content_id_4, content_id_6, content_id_8, ...]
 ```
 
 #### Content-by-ID Storage
+
 ```
 Content ID 1 → Content { id: 1, title: "...", tags: ["blockchain", "crypto"], ... }
 Content ID 2 → Content { id: 2, title: "...", tags: ["programming", "rust"], ... }
@@ -227,17 +231,20 @@ Content ID 2 → Content { id: 2, title: "...", tags: ["programming", "rust"], .
 ### Implementation Details
 
 #### Automatic Index Maintenance
+
 - **Content Addition**: Automatically updates tag indices when new content is added
 - **Content Updates**: Removes old tag associations and adds new ones during updates
 - **Content Removal**: Cleans up tag indices when content is removed
 - **Index Integrity**: Prevents duplicate entries and handles edge cases
 
 #### Backward Compatibility
+
 - **Fallback Mechanism**: Falls back to linear search if indexed search returns no results
 - **Migration Support**: Provides `rebuild_search_indices()` function for migrating existing content
 - **API Compatibility**: All existing search functions maintain the same interface
 
 #### Key Generation Strategy
+
 ```rust
 // Tag keys based on tag length for efficient bucketing
 "blockchain" (10 chars) → "TAG_10"
@@ -252,6 +259,7 @@ Content ID 2 → "CNT_2"
 ### New Functions
 
 #### Enhanced Search Capabilities
+
 ```rust
 // Original single-tag search (now optimized)
 pub fn search_content(env: Env, subject: String) -> Result<Vec<Content>, Error>
@@ -271,21 +279,23 @@ pub fn rebuild_search_indices(env: Env) -> Result<(), Error>
 Based on test scenarios with varying dataset sizes:
 
 | Dataset Size | Linear Search (ms) | Indexed Search (ms) | Improvement |
-|--------------|-------------------|-------------------|-------------|
-| 10 items     | ~5ms              | ~1ms              | 5x faster   |
-| 100 items    | ~50ms             | ~1ms              | 50x faster  |
-| 1000 items   | ~500ms            | ~1ms              | 500x faster |
+| ------------ | ------------------ | ------------------- | ----------- |
+| 10 items     | ~5ms               | ~1ms                | 5x faster   |
+| 100 items    | ~50ms              | ~1ms                | 50x faster  |
+| 1000 items   | ~500ms             | ~1ms                | 500x faster |
 
-*Note: Actual performance may vary based on network conditions and gas optimization.*
+_Note: Actual performance may vary based on network conditions and gas optimization._
 
 ### Gas Efficiency
 
 #### Before Optimization
+
 - Search gas cost increased linearly with content volume
 - Became prohibitive for large datasets
 - Limited scalability for production use
 
 #### After Optimization
+
 - Constant search gas cost regardless of dataset size
 - Efficient even with thousands of content items
 - Production-ready scalability
@@ -302,12 +312,14 @@ For existing deployments, follow these steps to enable indexed search:
 ### Usage Examples
 
 #### Basic Indexed Search
+
 ```rust
 // Single tag search (automatically uses index)
 let results = client.search_content(&"blockchain");
 ```
 
 #### Multi-Tag Search
+
 ```rust
 // Search for content matching ANY of the provided tags
 let tags = vec!["blockchain", "crypto", "defi"];
@@ -315,6 +327,7 @@ let results = client.search_content_multi_tag(&tags);
 ```
 
 #### Index Rebuilding
+
 ```rust
 // Administrative function for migration
 client.rebuild_search_indices();
@@ -324,7 +337,7 @@ client.rebuild_search_indices();
 
 The indexed search architecture provides a foundation for additional optimizations:
 
-- **Enhanced Fuzzy Matching**: More sophisticated algorithms for typo tolerance  
+- **Enhanced Fuzzy Matching**: More sophisticated algorithms for typo tolerance
 - **Relevance Ranking**: Score-based result ordering
 - **Search Analytics**: Track popular tags and search patterns
 - **Caching Layers**: Further gas optimization through result caching
@@ -339,13 +352,15 @@ The indexed search architecture provides a foundation for additional optimizatio
 Enables flexible content discovery through partial term matching across tags, titles, and descriptions.
 
 **Supported Patterns**:
+
 - **Scientific Terms**: "bio" → "biology", "biochemistry"
-- **Academic Subjects**: "math" → "mathematics" 
+- **Academic Subjects**: "math" → "mathematics"
 - **Technical Terms**: "prog" → "programming", "tech" → "technology"
 
 **Search Scope**:
+
 - Primary: Content tags
-- Secondary: Content titles  
+- Secondary: Content titles
 - Tertiary: Content descriptions
 
 ### 2. Advanced Multi-Tag Search
@@ -355,32 +370,37 @@ Enables flexible content discovery through partial term matching across tags, ti
 Supports complex queries with multiple tags and logical operators.
 
 **Parameters**:
+
 - `tags`: Vector of search terms
-- `mode`: "AND" or "OR" logical operation  
+- `mode`: "AND" or "OR" logical operation
 - `partial`: Enable/disable partial matching
 
 **Search Modes**:
 
 #### OR Mode (Any tag matches)
+
 ```rust
 search_content_advanced(
     env,
     vec!["biology", "chemistry"],
-    "OR", 
+    "OR",
     false
 )
 ```
+
 Returns content containing ANY of the specified tags.
 
-#### AND Mode (All tags must match)  
+#### AND Mode (All tags must match)
+
 ```rust
 search_content_advanced(
     env,
     vec!["biology", "technology"],
     "AND",
-    false  
+    false
 )
 ```
+
 Returns content containing ALL specified tags.
 
 ### 3. Partial Matching in Advanced Search
@@ -397,23 +417,27 @@ search_content_advanced(
 ```
 
 Matches content with tags like:
+
 - "biology", "biochemistry" (from "bio")
 - "technology" (from "tech")
 
 ### 4. Search Behavior Documentation
 
 **Exact Matching** (partial=false):
+
 - Requires exact tag matches
 - Case-sensitive comparison
 - O(1) + O(m) performance using indexed search
 
 **Partial Matching** (partial=true):
+
 - Recognizes common abbreviations and prefixes
-- Searches across tags, titles, and descriptions  
+- Searches across tags, titles, and descriptions
 - O(n) performance using linear search
 - More flexible but higher computational cost
 
 **Validation Rules**:
+
 - Tags cannot be empty strings
 - Tag length ≤ 50 characters
 - Query length ≤ 100 characters
@@ -422,19 +446,22 @@ Matches content with tags like:
 ### 5. Backward Compatibility
 
 All existing search functions remain unchanged:
+
 - `search_content(env, subject)` - Original exact match search
 - `search_content_multi_tag(env, tags)` - Multi-tag OR search (exact matching)
 
 ### 6. Error Handling
 
 Comprehensive error responses:
+
 - `Error::NoMatchingContent` - No results found
-- `Error::InvalidInput` - Invalid search parameters  
+- `Error::InvalidInput` - Invalid search parameters
 - `Error::NotInitialized` - Contract not initialized
 
 ### 7. Usage Examples
 
 **Basic Partial Search**:
+
 ```rust
 // Find biology-related content
 let results = ContentSearchContract::search_content_partial(
@@ -444,7 +471,8 @@ let results = ContentSearchContract::search_content_partial(
 ```
 
 **Complex Multi-Tag Search**:
-```rust  
+
+```rust
 // Find interdisciplinary content (AND logic)
 let results = ContentSearchContract::search_content_advanced(
     env,
@@ -455,10 +483,11 @@ let results = ContentSearchContract::search_content_advanced(
 ```
 
 **Flexible Discovery**:
+
 ```rust
 // Broad subject search with partial matching
 let results = ContentSearchContract::search_content_advanced(
-    env, 
+    env,
     vec!["bio".to_string(), "math".to_string(), "tech".to_string()],
     "OR".to_string(),
     true

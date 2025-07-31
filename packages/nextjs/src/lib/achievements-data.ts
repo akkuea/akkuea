@@ -1,0 +1,63 @@
+import { Star, Users, Code, BookOpen, MessageCircle, Share2 } from 'lucide-react';
+import { Achievement } from '@/lib/types';
+
+export const achievements: Achievement[] = [
+  {
+    id: 1,
+    title: 'Star Contributor',
+    description: 'Publish more than 50 quality content pieces',
+    icon: Star,
+    category: 'Contribution',
+    progress: 100,
+    status: 'completed',
+    completedDate: 'March 15, 2023',
+  },
+  {
+    id: 2,
+    title: 'Outstanding Mentor',
+    description: 'Help more than 20 students with their questions',
+    icon: Users,
+    category: 'Community',
+    progress: 100,
+    status: 'completed',
+    completedDate: 'April 2, 2023',
+  },
+  {
+    id: 3,
+    title: 'Code Expert',
+    description: 'Share 30 code examples',
+    icon: Code,
+    category: 'Contribution',
+    progress: 75,
+    status: 'in-progress',
+    progressText: '23/30',
+  },
+  {
+    id: 4,
+    title: 'Avid Reader',
+    description: 'Read more than 100 articles',
+    icon: BookOpen,
+    category: 'Learning',
+    progress: 60,
+    status: 'in-progress',
+    progressText: '60/100',
+  },
+  {
+    id: 5,
+    title: 'Effective Communicator',
+    description: 'Receive 50 positive comments on your posts',
+    icon: MessageCircle,
+    category: 'Community',
+    progress: 0,
+    status: 'locked',
+  },
+  {
+    id: 6,
+    title: 'Educational Influencer',
+    description: 'Get 30 people to share your content',
+    icon: Share2,
+    category: 'Impact',
+    progress: 0,
+    status: 'locked',
+  },
+];

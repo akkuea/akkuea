@@ -20,6 +20,7 @@ The contract serves as a foundation for Akkuea's educational marketplace, ensuri
 ## Functionalities
 
 ### 1. Content Publishing
+
 - **Content Creation**: Publish educational materials with metadata
 - **Content Attribution**: Link content to creator addresses
 - **Content Categorization**: Tag content with subject categories
@@ -27,6 +28,7 @@ The contract serves as a foundation for Akkuea's educational marketplace, ensuri
 - **Timestamp Recording**: Track content creation time
 
 ### 2. Multi-Tier Content Verification
+
 - **Verification Levels**: Four-tier verification system (None, Peer, Expert, Institutional)
 - **Progressive Verification**: Cannot downgrade verification levels
 - **Quality Assurance**: Mark content as verified for different trust levels
@@ -34,6 +36,7 @@ The contract serves as a foundation for Akkuea's educational marketplace, ensuri
 - **Version-Specific Verification**: Each version can have its own verification level
 
 ### 3. Upvoting System
+
 - **Vote Tracking**: Count upvotes for educational content
 - **Version-Specific Voting**: Vote on specific versions of content
 - **Duplicate Protection**: Prevent users from voting multiple times
@@ -41,6 +44,7 @@ The contract serves as a foundation for Akkuea's educational marketplace, ensuri
 - **Community Endorsement**: Enable community-driven content evaluation
 
 ### 4. Content Versioning
+
 - **Version Creation**: Create new versions of existing content
 - **Version History**: Track all changes and versions of content
 - **Change Documentation**: Record notes explaining version changes
@@ -49,6 +53,7 @@ The contract serves as a foundation for Akkuea's educational marketplace, ensuri
 - **Content Snapshots**: Preserve historical states of content
 
 ### 5. Collaborative Workflows
+
 - **Permission Management**: Grant collaboration permissions to users
 - **Submission Process**: Submit content changes for review
 - **Review System**: Accept or reject collaborative submissions
@@ -56,6 +61,7 @@ The contract serves as a foundation for Akkuea's educational marketplace, ensuri
 - **Feedback System**: Provide feedback on submissions
 
 ### 6. Advanced Content Filtering
+
 - **Verification Filtering**: Retrieve content by verification level
 - **Popularity Filtering**: Find content with minimum upvote thresholds
 - **Quality Discovery**: Enable users to discover high-quality content efficiently
@@ -86,20 +92,26 @@ educational-content-management-contract/
 The contract emits the following events:
 
 ### Core Events
+
 1. `PUBLISH` - When new educational content is published
+
    - Data: content_id, creator, title, creation_timestamp
 
 2. `UPVOTE` - When content receives an upvote
+
    - Data: content_id, voter, new_upvote_count
 
 3. `VERIFY` - When content is verified
    - Data: content_id, verifier, verification_level
 
 ### Versioning Events
+
 4. `VERSION` - When a new version is created
+
    - Data: content_id, version_number, creator
 
 5. `V_UPVOTE` - When a specific version receives an upvote
+
    - Data: content_id, version, voter, new_upvote_count
 
 6. `V_VERIFY` - When a specific version is verified
@@ -108,7 +120,9 @@ The contract emits the following events:
 ## Data Structures
 
 ### Content
+
 Stores comprehensive information about educational content:
+
 - `id`: Unique identifier for the content
 - `creator`: Address of the content creator
 - `title`: Title of the educational content
@@ -119,14 +133,18 @@ Stores comprehensive information about educational content:
 - `verification_level`: Current verification level (None, Peer, Expert, Institutional)
 
 ### VerificationLevel
+
 Four-tier verification system:
+
 - `None` (0): No verification
 - `Peer` (1): Peer-reviewed content
 - `Expert` (2): Expert-verified content
 - `Institutional` (3): Institutionally verified content
 
 ### ContentVersion
+
 Metadata for content versions:
+
 - `version`: Version number
 - `creator`: Address of the version creator
 - `creation_date`: When the version was created
@@ -135,14 +153,18 @@ Metadata for content versions:
 - `verification_level`: Version-specific verification level
 
 ### VersionDiff
+
 Comparison between two versions:
+
 - `from_version`: Starting version number
 - `to_version`: Target version number
 - `title_changed`: Whether the title changed
 - `content_changed`: Whether the content hash changed
 
 ### CollaboratorPermission
+
 Permission structure for collaboration:
+
 - `collaborator`: Address of the collaborator
 - `content_id`: ID of the content
 - `permission_type`: Type of permission (Collaborator)
@@ -150,7 +172,9 @@ Permission structure for collaboration:
 - `granted_date`: When permission was granted
 
 ### CollaboratorSubmission
+
 Submission for collaborative review:
+
 - `content_id`: ID of the content
 - `collaborator`: Address of the submitter
 - `submission_date`: When submitted
@@ -167,12 +191,14 @@ Submission for collaborative review:
 ### Core Content Functions
 
 #### `publish_content(env: Env, creator: Address, title: String, content_hash: BytesN<32>, subject_tags: Vec<String>) -> u64`
+
 - Publishes new educational content with metadata
 - Returns the unique content ID
 - Requires authentication from the creator
 - Emits `PUBLISH` event
 
 #### `upvote_content(env: Env, content_id: u64, voter: Address) -> u32`
+
 - Upvotes educational content
 - Returns the new upvote count
 - Prevents duplicate votes from the same user
@@ -180,6 +206,7 @@ Submission for collaborative review:
 - Emits `UPVOTE` event
 
 #### `verify_content(env: Env, content_id: u64, verifier: Address, level: VerificationLevel) -> VerificationLevel`
+
 - Verifies content at a specific verification level
 - Cannot downgrade verification levels
 - Returns the new verification level
@@ -187,6 +214,7 @@ Submission for collaborative review:
 - Emits `VERIFY` event
 
 #### `get_content(env: Env, content_id: u64) -> Content`
+
 - Retrieves detailed information about educational content
 - Returns the complete content data structure
 - Panics if content does not exist
@@ -194,16 +222,19 @@ Submission for collaborative review:
 ### Content Filtering Functions
 
 #### `filter_by_verification(env: Env) -> Vec<Content>`
+
 - Retrieves only verified content (verification_level > None)
 - Returns vector of verified content items
 - View-only function
 
 #### `filter_by_verification_level(env: Env, level: VerificationLevel) -> Vec<Content>`
+
 - Retrieves content with specific verification level
 - Returns vector of content matching the exact verification level
 - View-only function
 
 #### `filter_by_min_upvotes(env: Env, min_upvotes: u32) -> Vec<Content>`
+
 - Retrieves content with upvotes >= minimum threshold
 - Returns vector of popular content
 - View-only function
@@ -211,6 +242,7 @@ Submission for collaborative review:
 ### Versioning Functions
 
 #### `create_new_version_content(env: Env, content_id: u64, creator: Address, title: String, content_hash: BytesN<32>, subject_tags: Vec<String>, change_notes: String) -> u32`
+
 - Creates a new version of existing content
 - Only the original creator can create versions
 - Returns the new version number
@@ -218,16 +250,19 @@ Submission for collaborative review:
 - Emits `VERSION` event
 
 #### `get_content_at_version(env: Env, content_id: u64, version: u32) -> Content`
+
 - Retrieves content as it existed at a specific version
 - Returns content snapshot for the specified version
 - Panics if version doesn't exist
 
 #### `get_version_info(env: Env, content_id: u64, version: u32) -> ContentVersion`
+
 - Gets metadata for a specific content version
 - Returns version-specific information
 - Panics if version doesn't exist
 
 #### `upvote_version(env: Env, content_id: u64, version: u32, voter: Address) -> u32`
+
 - Upvotes a specific version of content
 - Returns total upvotes for the version
 - Prevents duplicate votes
@@ -235,6 +270,7 @@ Submission for collaborative review:
 - Emits `V_UPVOTE` event
 
 #### `verify_version(env: Env, content_id: u64, version: u32, verifier: Address, level: VerificationLevel) -> VerificationLevel`
+
 - Verifies a specific version at given level
 - Cannot downgrade verification
 - Returns new verification level
@@ -242,6 +278,7 @@ Submission for collaborative review:
 - Emits `V_VERIFY` event
 
 #### `get_version_diff(env: Env, content_id: u64, from_version: u32, to_version: u32) -> VersionDiff`
+
 - Compares two versions and returns differences
 - Shows what changed between versions
 - View-only function
@@ -249,18 +286,21 @@ Submission for collaborative review:
 ### Collaboration Functions
 
 #### `grant_permission(env: Env, content_id: u64, owner: Address, collaborator: Address) -> bool`
+
 - Grants collaboration permission to a user
 - Only content creator can grant permissions
 - Returns true if successful
 - Requires authentication from owner
 
 #### `submit_for_review(env: Env, content_id: u64, submitter: Address, new_content_hash: BytesN<32>, new_subject_tags: Vec<String>, change_notes: String) -> bool`
+
 - Submits content update for review
 - Requires collaboration permission
 - Returns true if successful
 - Requires authentication from submitter
 
 #### `review_submission(env: Env, content_id: u64, submitter: Address, reviewer: Address, accept: bool, feedback: String) -> bool`
+
 - Reviews and accepts/rejects submission
 - Only content creator can review
 - If accepted, creates new version automatically
@@ -269,16 +309,19 @@ Submission for collaborative review:
 - Requires authentication from reviewer
 
 #### `get_collaborative_permission(env: Env, user: Address, content_id: u64) -> CollaboratorPermission`
+
 - Gets permission details for a user
 - Returns permission structure
 - Panics if permission doesn't exist
 
 #### `get_collaborative_submission(env: Env, submitter: Address, content_id: u64) -> CollaboratorSubmission`
+
 - Gets submission details
 - Returns submission structure
 - Panics if submission doesn't exist
 
 #### `get_user_contribution_history(env: Env, user: Address, content_id: u64) -> Vec<CollaboratorSubmission>`
+
 - Gets user's contribution history for specific content
 - Returns vector of historical contributions
 - Requires authentication from user
@@ -286,6 +329,7 @@ Submission for collaborative review:
 ## Usage Examples
 
 ### Basic Content Management
+
 ```rust
 // Publish content
 let content_id = client.publish_content(&creator, &title, &content_hash, &tags);
@@ -298,6 +342,7 @@ let verification_level = client.verify_content(&content_id, &verifier, &Verifica
 ```
 
 ### Versioning Workflow
+
 ```rust
 // Create new version
 let version = client.create_new_version_content(&content_id, &creator, &new_title, &new_hash, &new_tags, &"Updated content");
@@ -313,6 +358,7 @@ let version_upvotes = client.upvote_version(&content_id, &version, &voter);
 ```
 
 ### Collaboration Workflow
+
 ```rust
 // Grant permission
 client.grant_permission(&content_id, &owner, &collaborator);
@@ -328,6 +374,7 @@ let history = client.get_user_contribution_history(&collaborator, &content_id);
 ```
 
 ### Content Discovery
+
 ```rust
 // Get verified content
 let verified = client.filter_by_verification();
@@ -342,12 +389,14 @@ let popular = client.filter_by_min_upvotes(&10);
 ## Technical Details and Implementation Notes
 
 ### 1. Data Model
+
 - Enhanced `Content` struct with `VerificationLevel` enum
 - Separate storage for version snapshots and metadata
 - Collaborative permission and submission tracking
 - Comprehensive event emission for all operations
 
 ### 2. Storage Architecture
+
 - **Main Content**: Current state of each content item
 - **Version Snapshots**: Historical states preserved for each version
 - **Version Metadata**: Change notes, upvotes, and verification per version
@@ -355,18 +404,21 @@ let popular = client.filter_by_min_upvotes(&10);
 - **Vote Tracking**: Prevents duplicate votes on both content and versions
 
 ### 3. Security Model
+
 - **Authentication**: All state-changing operations require proper authentication
 - **Authorization**: Permission checks for collaborative operations
 - **Creator Control**: Only creators can manage versions and review submissions
 - **Vote Integrity**: Duplicate vote prevention across content and versions
 
 ### 4. Versioning System
+
 - **Immutable History**: Previous versions are preserved as snapshots
 - **Independent Metrics**: Each version has its own upvotes and verification
 - **Change Tracking**: Comprehensive diff system for version comparison
 - **Creator Control**: Only original creators can create new versions
 
 ### 5. Collaboration Framework
+
 - **Permission-Based**: Explicit permission required for collaboration
 - **Review Process**: All collaborative changes go through review
 - **History Tracking**: Complete audit trail of contributions
@@ -377,21 +429,25 @@ let popular = client.filter_by_min_upvotes(&10);
 The Enhanced Educational Content Management Contract plays a vital role in Akkuea's educational ecosystem by:
 
 ### 1. Content Quality Assurance
+
 - **Multi-tier Verification**: Supports different levels of content validation
 - **Version Control**: Enables iterative improvement of educational materials
 - **Community Review**: Facilitates peer review and expert validation
 
 ### 2. Collaborative Learning
+
 - **Controlled Collaboration**: Enables safe collaborative content creation
 - **Knowledge Evolution**: Supports continuous improvement of educational content
 - **Community Contribution**: Recognizes and tracks community contributions
 
 ### 3. Trust and Transparency
+
 - **Verification Levels**: Clear indication of content trustworthiness
 - **Attribution Tracking**: Complete history of who contributed what and when
 - **Immutable Records**: Permanent record of all content changes and reviews
 
 ### 4. Scalable Content Management
+
 - **Version Management**: Efficient handling of content evolution
 - **Discovery Systems**: Advanced filtering for finding quality content
 - **Collaboration Workflows**: Structured processes for content improvement

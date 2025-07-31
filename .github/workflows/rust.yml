@@ -51,4 +51,3 @@ jobs:
           source $HOME/.cargo/env
           cargo test --verbose
         working-directory: packages/soroban
-        

@@ -15,6 +15,19 @@
     --foreground: 224 18% 33%; /* #4A4F55 */
     --muted: 216 10% 47%; /* #6A6F77 */
     --radius: 0.5rem;
+
+    --contribution-bg: 145 63% 49%;
+    --contribution-text: 145 63% 49%;
+    --contribution-border: 145 63% 49%;
+    --community-bg: 262 88% 66%;
+    --community-text: 262 88% 66%;
+    --community-border: 262 88% 66%;
+    --learning-bg: 217 91% 60%;
+    --learning-text: 217 91% 60%;
+    --learning-border: 217 91% 60%;
+    --impact-bg: 329 84% 58%;
+    --impact-text: 329 84% 58%;
+    --impact-border: 329 84% 58%;
   }
 
   .dark {
@@ -27,6 +40,19 @@
     --foreground: 188 4% 92%; /* #E1E8EB */
     --muted: 204 9% 68%; /* #A3ADB1 */
     --radius: 0.5rem;
+
+    --contribution-bg: 145 63% 49%;
+    --contribution-text: 145 63% 49%;
+    --contribution-border: 145 63% 49%;
+    --community-bg: 262 88% 66%;
+    --community-text: 262 88% 66%;
+    --community-border: 262 88% 66%;
+    --learning-bg: 217 91% 60%;
+    --learning-text: 217 91% 60%;
+    --learning-border: 217 91% 60%;
+    --impact-bg: 329 84% 58%;
+    --impact-text: 329 84% 58%;
+    --impact-border: 329 84% 58%;
   }
 }
 

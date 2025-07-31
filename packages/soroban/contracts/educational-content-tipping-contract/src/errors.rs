@@ -3,6 +3,7 @@ use soroban_sdk::{contracttype, Error, xdr::{ScErrorType, ScErrorCode}};
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TippingError {
+    // Existing errors
     InvalidAmount,
     InsufficientBalance,
     Unauthorized,
@@ -10,6 +11,24 @@ pub enum TippingError {
     InvalidRecipient,
     ContractNotInitialized,
     StorageError,
+    
+    // New multi-token errors
+    TokenNotWhitelisted,
+    AmountTooSmall,
+    AmountTooLarge,
+    TokenAlreadyExists,
+    
+    // Price feed errors
+    PriceDataNotFound,
+    PriceDataStale,
+    LowPriceConfidence,
+    OracleNotAuthorized,
+    ConversionFailed,
+    
+    // Additional errors
+    InvalidInput,
+    TransferFailed,
+    DataNotFound,
 }
 
 impl From<TippingError> for Error {

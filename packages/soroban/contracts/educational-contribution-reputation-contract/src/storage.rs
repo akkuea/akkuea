@@ -255,3 +255,255 @@ pub fn cleanup_expired_probations(env: &Env) {
         }
     }
 }
+
+// Security-related storage functions
+
+/// Get next available import/export operation ID
+pub fn get_next_import_export_id(env: &Env) -> u64 {
+    env.storage()
+        .instance()
+        .get(&DataKey::NextImportExportId)
+        .unwrap_or(1u64)
+}
+
+/// Increment and return next import/export operation ID
+pub fn increment_import_export_id(env: &Env) -> u64 {
+    let next_id = get_next_import_export_id(env);
+    env.storage()
+        .instance()
+        .set(&DataKey::NextImportExportId, &(next_id + 1));
+    next_id
+}
+
+/// Store rate limit data
+pub fn store_rate_limit_data(env: &Env, rate_data: &RateLimitData) {
+    env.storage()
+        .instance()
+        .set(&DataKey::RateLimit(rate_data.key.clone()), rate_data);
+}
+
+/// Get rate limit data
+pub fn get_rate_limit_data(env: &Env, key: String) -> Option<RateLimitData> {
+    env.storage()
+        .instance()
+        .get(&DataKey::RateLimit(key))
+}
+
+/// Store circuit breaker state
+pub fn store_circuit_breaker_state(env: &Env, state: &CircuitBreakerState) {
+    env.storage()
+        .instance()
+        .set(&DataKey::CircuitBreaker(state.key.clone()), state);
+}
+
+/// Get circuit breaker state
+pub fn get_circuit_breaker_state(env: &Env, key: String) -> Option<CircuitBreakerState> {
+    env.storage()
+        .instance()
+        .get(&DataKey::CircuitBreaker(key))
+}
+
+// Integration-related storage functions
+
+/// Store external credential
+pub fn store_external_credential(env: &Env, credential: &ExternalCredential) {
+    env.storage()
+        .instance()
+        .set(&DataKey::ExternalCredential(credential.id.clone()), credential);
+}
+
+/// Get external credential
+pub fn get_external_credential(env: &Env, credential_id: String) -> Option<ExternalCredential> {
+    env.storage()
+        .instance()
+        .get(&DataKey::ExternalCredential(credential_id))
+}
+
+/// Store user's external credentials list
+pub fn store_user_external_credentials(env: &Env, user_id: u64, credentials: &Vec<String>) {
+    let key = DataKey::UserExternalCredentials(user_id);
+    env.storage().instance().set(&key, credentials);
+}
+
+/// Get user's external credentials list
+pub fn get_user_external_credentials(env: &Env, user_id: u64) -> Option<Vec<String>> {
+    let key = DataKey::UserExternalCredentials(user_id);
+    env.storage().instance().get(&key)
+}
+
+/// Store professional certification
+pub fn store_professional_certification(env: &Env, certification: &ProfessionalCertification) {
+    env.storage()
+        .instance()
+        .set(&DataKey::ProfessionalCert(certification.id.clone()), certification);
+}
+
+/// Get professional certification
+pub fn get_professional_certification(env: &Env, certification_id: String) -> Option<ProfessionalCertification> {
+    env.storage()
+        .instance()
+        .get(&DataKey::ProfessionalCert(certification_id))
+}
+
+/// Store user's professional certifications list
+pub fn store_user_professional_certifications(env: &Env, user_id: u64, certifications: &Vec<String>) {
+    let key = DataKey::UserProfessionalCerts(user_id);
+    env.storage().instance().set(&key, certifications);
+}
+
+/// Get user's professional certifications list
+pub fn get_user_professional_certifications(env: &Env, user_id: u64) -> Option<Vec<String>> {
+    let key = DataKey::UserProfessionalCerts(user_id);
+    env.storage().instance().get(&key)
+}
+
+/// Store system bridge configuration
+pub fn store_system_bridge(env: &Env, bridge: &SystemBridge) {
+    env.storage()
+        .instance()
+        .set(&DataKey::SystemBridge(bridge.id.clone()), bridge);
+}
+
+/// Get system bridge configuration
+pub fn get_system_bridge(env: &Env, bridge_id: String) -> Option<SystemBridge> {
+    env.storage()
+        .instance()
+        .get(&DataKey::SystemBridge(bridge_id))
+}
+
+/// Store import/export operation
+pub fn store_import_export_operation(env: &Env, operation: &ImportExportOperation) {
+    env.storage()
+        .instance()
+        .set(&DataKey::ImportExportLog(operation.id), operation);
+}
+
+/// Get import/export operation
+pub fn get_import_export_operation(env: &Env, operation_id: u64) -> Option<ImportExportOperation> {
+    env.storage()
+        .instance()
+        .get(&DataKey::ImportExportLog(operation_id))
+}
+
+/// Store credential mapping
+pub fn store_credential_mapping(env: &Env, mapping: &CredentialMapping) {
+    let key = DataKey::CredentialMapping(mapping.external_id.clone());
+    env.storage().instance().set(&key, mapping);
+}
+
+/// Get credential mapping
+pub fn get_credential_mapping(env: &Env, external_id: String) -> Option<CredentialMapping> {
+    let key = DataKey::CredentialMapping(external_id);
+    env.storage().instance().get(&key)
+}
+
+/// Check if external credential exists
+pub fn external_credential_exists(env: &Env, credential_id: String) -> bool {
+    env.storage()
+        .instance()
+        .has(&DataKey::ExternalCredential(credential_id))
+}
+
+/// Check if professional certification exists
+pub fn professional_certification_exists(env: &Env, certification_id: String) -> bool {
+    env.storage()
+        .instance()
+        .has(&DataKey::ProfessionalCert(certification_id))
+}
+
+/// Check if system bridge exists
+pub fn system_bridge_exists(env: &Env, bridge_id: String) -> bool {
+    env.storage()
+        .instance()
+        .has(&DataKey::SystemBridge(bridge_id))
+}
+
+/// Get all external credentials for analytics
+pub fn get_all_external_credential_ids(env: &Env) -> Vec<String> {
+    // This is a simplified implementation - in practice, you might want to maintain
+    // a separate index for performance
+    let credential_ids = Vec::new(env);
+    
+    // In a real implementation, you would iterate through stored keys
+    // For now, return empty vector as placeholder
+    credential_ids
+}
+
+/// Get all professional certifications for analytics
+pub fn get_all_professional_certification_ids(env: &Env) -> Vec<String> {
+    // This is a simplified implementation - in practice, you might want to maintain
+    // a separate index for performance
+    let certification_ids = Vec::new(env);
+    
+    // In a real implementation, you would iterate through stored keys
+    // For now, return empty vector as placeholder
+    certification_ids
+}
+
+/// Get all import/export operations for a user (optimized for gas)
+pub fn get_user_import_export_operations(env: &Env, user_id: u64) -> Vec<u64> {
+    // In a production environment, this would use an index for better performance
+    // For now, we'll limit the search to avoid excessive gas usage
+    let mut operation_ids = Vec::new(env);
+    let max_operation_id = get_next_import_export_id(env);
+    let search_limit = if max_operation_id > 100 { max_operation_id - 100 } else { 1 };
+    
+    // Search only recent operations to save gas
+    for operation_id in search_limit..max_operation_id {
+        if let Some(operation) = get_import_export_operation(env, operation_id) {
+            if operation.user_id == user_id {
+                operation_ids.push_back(operation_id);
+            }
+        }
+    }
+    
+    operation_ids
+}
+
+/// Clean up expired credentials (gas-optimized batch processing)
+pub fn cleanup_expired_credentials(env: &Env) {
+    cleanup_expired_credentials_batch(env, 10); // Process max 10 users per call to save gas
+}
+
+/// Clean up expired credentials for a limited batch of users
+pub fn cleanup_expired_credentials_batch(env: &Env, max_users: u32) {
+    let current_time = env.ledger().timestamp();
+    
+    // Get all user IDs but limit processing to save gas
+    let user_ids = get_all_user_ids(env);
+    let process_count = if user_ids.len() > max_users { max_users } else { user_ids.len() };
+    
+    for i in 0..process_count {
+        let user_id = user_ids.get(i).unwrap();
+        
+        // Process external credentials
+        if let Some(credential_ids) = get_user_external_credentials(env, user_id) {
+            for credential_id in credential_ids.iter() {
+                if let Some(mut credential) = get_external_credential(env, credential_id) {
+                    if let Some(expiry) = credential.expiry_date {
+                        if current_time > expiry && 
+                           !matches!(credential.verification_status, VerificationStatus::Expired) {
+                            credential.verification_status = VerificationStatus::Expired;
+                            store_external_credential(env, &credential);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Process professional certifications
+        if let Some(cert_ids) = get_user_professional_certifications(env, user_id) {
+            for cert_id in cert_ids.iter() {
+                if let Some(mut certification) = get_professional_certification(env, cert_id) {
+                    if let Some(expiry) = certification.expiry_date {
+                        if current_time > expiry && 
+                           !matches!(certification.verification_status, VerificationStatus::Expired) {
+                            certification.verification_status = VerificationStatus::Expired;
+                            store_professional_certification(env, &certification);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

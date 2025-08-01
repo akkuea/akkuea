@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Map, String};
+use soroban_sdk::{contracttype, Address, Map, String, Vec};
 
 #[contracttype]
 pub enum DataKey {
@@ -14,6 +14,20 @@ pub enum DataKey {
     ProbationStatus(u64),           // User ID -> Probation status
     ReputationHistory(u64, String), // (User ID, Subject) -> Historical reputation data
     Analytics(String),              // Analytics key -> Analytics data
+    // Security-related keys
+    RateLimit(String),              // Rate limit key -> Rate limit data
+    CircuitBreaker(String),         // Circuit breaker key -> Circuit breaker state
+    Admin(Address),                 // Admin address -> Admin status
+    Moderator(Address),             // Moderator address -> Moderator status
+    // Integration-related keys
+    ExternalCredential(String),     // External credential ID -> External credential data
+    ProfessionalCert(String),       // Professional certification ID -> Certification data
+    SystemBridge(String),           // System bridge ID -> Bridge configuration
+    ImportExportLog(u64),           // Log ID -> Import/export operation log
+    NextImportExportId,             // Counter for import/export operation IDs
+    UserExternalCredentials(u64),   // User ID -> List of external credential IDs
+    UserProfessionalCerts(u64),     // User ID -> List of professional certification IDs
+    CredentialMapping(String),      // External credential ID -> Internal mapping
 }
 
 #[contracttype]
@@ -125,4 +139,161 @@ pub struct PeerBenchmark {
     pub percentile: u32,
     pub rank: u32,
     pub total_peers: u32,
+}
+
+// Security-related types
+
+#[contracttype]
+#[derive(Clone)]
+pub struct RateLimitData {
+    pub key: String,
+    pub operations: Vec<u64>,  // Timestamps of operations
+    pub limit: u32,            // Max operations per window
+    pub window_start: u64,     // Start of current window
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct CircuitBreakerState {
+    pub key: String,
+    pub state: CircuitState,
+    pub failure_count: u32,
+    pub last_failure_time: u64,
+    pub last_success_time: u64,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub enum CircuitState {
+    Closed,    // Normal operation
+    Open,      // Failing, reject requests
+    HalfOpen,  // Testing if service recovered
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct SecurityAuditReport {
+    pub timestamp: u64,
+    pub total_users: u32,
+    pub verified_users: u32,
+    pub active_disputes: u32,
+    pub probation_users: u32,
+    pub security_violations: u32,
+    pub rate_limit_violations: u32,
+    pub circuit_breaker_trips: u32,
+    pub recommendations: Vec<String>,
+}
+
+// Integration-related types
+
+#[contracttype]
+#[derive(Clone)]
+pub struct ExternalCredential {
+    pub id: String,
+    pub user_id: u64,
+    pub provider: String,          // Academic institution, certification body, etc.
+    pub credential_type: String,   // Degree, certificate, etc.
+    pub subject_area: String,      // Field of study/expertise
+    pub issued_date: u64,
+    pub expiry_date: Option<u64>,
+    pub verification_status: VerificationStatus,
+    pub verification_data: String, // Hash or reference to verification proof
+    pub metadata: Map<String, String>, // Additional credential metadata
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct ProfessionalCertification {
+    pub id: String,
+    pub user_id: u64,
+    pub certification_body: String,
+    pub certification_name: String,
+    pub competency_areas: Vec<String>,
+    pub skill_level: u32,          // 1-1000 scale
+    pub issued_date: u64,
+    pub expiry_date: Option<u64>,
+    pub renewal_required: bool,
+    pub verification_status: VerificationStatus,
+    pub continuing_education_credits: u32,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub enum VerificationStatus {
+    Pending,
+    Verified,
+    Rejected,
+    Expired,
+    Revoked,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct SystemBridge {
+    pub id: String,
+    pub name: String,
+    pub bridge_type: BridgeType,
+    pub endpoint_url: String,
+    pub authentication_method: String,
+    pub supported_operations: Vec<String>,
+    pub rate_limit: u32,
+    pub active: bool,
+    pub last_sync: u64,
+    pub sync_interval: u64,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub enum BridgeType {
+    AcademicSystem,      // University/school systems
+    CertificationBody,   // Professional certification providers
+    LearningPlatform,    // Online learning platforms
+    CredentialWallet,    // Digital credential wallets
+    BlockchainNetwork,   // Other blockchain networks
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct ImportExportOperation {
+    pub id: u64,
+    pub operation_type: ImportExportType,
+    pub user_id: u64,
+    pub source_system: String,
+    pub target_system: String,
+    pub data_type: String,
+    pub status: OperationStatus,
+    pub initiated_at: u64,
+    pub completed_at: Option<u64>,
+    pub records_processed: u32,
+    pub errors: Vec<String>,
+    pub metadata: Map<String, String>,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub enum ImportExportType {
+    Import,
+    Export,
+    Sync,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub enum OperationStatus {
+    Pending,
+    InProgress,
+    Completed,
+    Failed,
+    PartiallyCompleted,
+}
+
+#[contracttype]
+#[derive(Clone)]
+pub struct CredentialMapping {
+    pub external_id: String,
+    pub internal_id: u64,
+    pub mapping_type: String,
+    pub confidence_score: u32,  // How confident we are in this mapping (0-100)
+    pub created_at: u64,
+    pub verified_by: Option<Address>,
 }

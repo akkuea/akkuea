@@ -5,8 +5,10 @@ mod analytics;
 mod credentials;
 mod error;
 mod expertise;
+mod integration;
 mod recovery;
 mod reputation;
+mod security;
 mod storage;
 mod test;
 mod types;
@@ -221,5 +223,161 @@ impl ContributorReputation {
 
     pub fn calculate_platform_analytics(env: Env) -> Result<Analytics, Error> {
         analytics::calculate_platform_analytics(env)
+    }
+
+    // Security functions
+
+    /// Perform a security audit of the platform
+    pub fn perform_security_audit(env: Env, caller: Address) -> Result<SecurityAuditReport, Error> {
+        caller.require_auth();
+        security::check_admin_access(&env, &caller)?;
+        security::perform_security_audit(&env)
+    }
+
+    /// Update rate limit for a specific user and operation
+    pub fn update_rate_limit(
+        env: Env,
+        caller: Address,
+        user_address: Address,
+        _operation: String,
+        new_limit: u32,
+    ) -> Result<(), Error> {
+        caller.require_auth();
+        security::check_admin_access(&env, &caller)?;
+        security::update_rate_limit(&env, &user_address, "operation", new_limit)
+    }
+
+    /// Check circuit breaker status for a service
+    pub fn check_circuit_breaker_status(env: Env, service: String) -> Result<CircuitBreakerState, Error> {
+        storage::get_circuit_breaker_state(&env, service)
+            .ok_or(Error::ServiceUnavailable)
+    }
+
+    /// Verify reputation invariants for a user
+    pub fn verify_reputation_invariants(
+        env: Env,
+        user_id: u64,
+        subject: String,
+    ) -> Result<(), Error> {
+        security::verify_reputation_invariants(&env, user_id, subject)
+    }
+
+    // Integration functions
+
+    /// Register an external credential
+    pub fn register_external_credential(
+        env: Env,
+        caller: Address,
+        user_id: u64,
+        credential_data: ExternalCredential,
+    ) -> Result<String, Error> {
+        integration::register_external_credential(&env, &caller, user_id, credential_data)
+    }
+
+    /// Verify an external credential
+    pub fn verify_external_credential(
+        env: Env,
+        caller: Address,
+        credential_id: String,
+        verification_data: String,
+    ) -> Result<(), Error> {
+        integration::verify_external_credential(&env, &caller, credential_id, verification_data)
+    }
+
+    /// Get user's external credentials
+    pub fn get_user_external_credentials(
+        env: Env,
+        user_id: u64,
+    ) -> Result<Vec<ExternalCredential>, Error> {
+        integration::get_user_external_credentials(&env, user_id)
+    }
+
+    /// Register a professional certification
+    pub fn register_professional_cert(
+        env: Env,
+        caller: Address,
+        user_id: u64,
+        certification: ProfessionalCertification,
+    ) -> Result<String, Error> {
+        integration::register_professional_certification(&env, &caller, user_id, certification)
+    }
+
+    /// Verify a professional certification
+    pub fn verify_professional_cert(
+        env: Env,
+        caller: Address,
+        certification_id: String,
+    ) -> Result<(), Error> {
+        integration::verify_professional_certification(&env, &caller, certification_id)
+    }
+
+    /// Configure a system bridge
+    pub fn configure_system_bridge(
+        env: Env,
+        caller: Address,
+        bridge_config: SystemBridge,
+    ) -> Result<String, Error> {
+        integration::configure_system_bridge(&env, &caller, bridge_config)
+    }
+
+    /// Sync data with external system
+    pub fn sync_with_external_system(
+        env: Env,
+        caller: Address,
+        bridge_id: String,
+        sync_type: ImportExportType,
+    ) -> Result<u64, Error> {
+        integration::sync_with_external_system(&env, &caller, bridge_id, sync_type)
+    }
+
+    /// Import user data from external system
+    pub fn import_user_data(
+        env: Env,
+        caller: Address,
+        user_id: u64,
+        source_system: String,
+        data_format: String,
+        data_content: String,
+    ) -> Result<u64, Error> {
+        integration::import_user_data(&env, &caller, user_id, source_system, data_format, data_content)
+    }
+
+    /// Export user data to external format
+    pub fn export_user_data(
+        env: Env,
+        caller: Address,
+        user_id: u64,
+        export_format: String,
+        include_sensitive: bool,
+    ) -> Result<String, Error> {
+        integration::export_user_data(&env, &caller, user_id, export_format, include_sensitive)
+    }
+
+    /// Get import/export operation details
+    pub fn get_import_export_operation(
+        env: Env,
+        operation_id: u64,
+    ) -> Result<ImportExportOperation, Error> {
+        storage::get_import_export_operation(&env, operation_id)
+            .ok_or(Error::ImportExportFailed)
+    }
+
+    /// Get user's import/export history
+    pub fn get_user_import_export_history(
+        env: Env,
+        user_id: u64,
+    ) -> Result<Vec<u64>, Error> {
+        Ok(storage::get_user_import_export_operations(&env, user_id))
+    }
+
+    /// Clean up expired credentials and probations
+    pub fn cleanup_expired_data(env: Env, caller: Address) -> Result<(), Error> {
+        caller.require_auth();
+        security::check_admin_access(&env, &caller)?;
+        
+        storage::cleanup_expired_probations(&env);
+        storage::cleanup_expired_credentials(&env);
+        
+        Ok(())
     }
 }

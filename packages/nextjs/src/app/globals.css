@@ -13,7 +13,11 @@
     --achievement: 43 100% 75%; /* #FFC75F */
     --destructive: 356 79% 47%; /* #D32F2F */
     --foreground: 224 18% 33%; /* #4A4F55 */
+    --card-foreground: 224 18% 33%; /* #4A4F55 */
     --muted: 216 10% 47%; /* #6A6F77 */
+    --border: 210 40% 89%; /* #DDE2E5 */
+    --input: 210 40% 89%; /* #DDE2E5 */
+    --ring: 168 72% 47%; /* #5EEAD4 */
     --radius: 0.5rem;
   }
 
@@ -25,7 +29,11 @@
     --achievement: 43 100% 75%; /* #FFC75F */
     --destructive: 4 74% 48%; /* #E74C3C */
     --foreground: 188 4% 92%; /* #E1E8EB */
+    --card-foreground: 188 4% 92%; /* #E1E8EB */
     --muted: 204 9% 68%; /* #A3ADB1 */
+    --border: 210 19% 25%; /* #2A3A3E */
+    --input: 210 19% 25%; /* #2A3A3E */
+    --ring: 176 73% 44%; /* #2AC1BC */
     --radius: 0.5rem;
   }
 }

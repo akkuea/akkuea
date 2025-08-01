@@ -25,9 +25,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users, Search, Plus, MessageCircle, TrendingUp, User } from 'lucide-react';
 import { toast } from 'sonner';
+import DiscussionItem from './DiscussionItem';
 
 // Mock data
 const allCommunities = [
@@ -244,20 +244,20 @@ export default function Communities() {
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <h3 className="font-semibold text-lg text-gray-900 mb-2">{community.name}</h3>
-                <p className="text-gray-600 text-sm mb-3 line-clamp-2">{community.description}</p>
+                <h3 className="font-semibold text-lg text-foreground mb-2">{community.name}</h3>
+                <p className="text-muted text-sm mb-3 line-clamp-2">{community.description}</p>
                 <div className="flex flex-wrap gap-1 mb-3">
                   {community.tags.map((tag, index) => (
                     <Badge
                       key={index}
                       variant="secondary"
-                      className="text-xs bg-cyan-50 text-cyan-700 hover:bg-cyan-100"
+                      className="text-xs bg-primary/10 text-primary hover:bg-primary/20"
                     >
                       {tag}
                     </Badge>
                   ))}
                 </div>
-                <div className="flex items-center gap-4 text-sm text-gray-500">
+                <div className="flex items-center gap-4 text-sm text-muted">
                   <span className="flex items-center gap-1">
                     <Users className="w-4 h-4" />
                     {community.members} members
@@ -271,7 +271,7 @@ export default function Communities() {
                     variant="outline"
                     size="sm"
                     onClick={() => handleLeaveCommunity(community.id)}
-                    className="text-red-600 border-red-200 hover:bg-red-50"
+                    className="text-destructive border-destructive/20 hover:bg-destructive/10"
                   >
                     Leave
                   </Button>
@@ -280,7 +280,7 @@ export default function Communities() {
                     size="sm"
                     onClick={() => handleJoinCommunity(community.id)}
                     disabled={community.joined}
-                    className="bg-cyan-500 hover:bg-cyan-600 text-white"
+                    className="bg-primary hover:bg-primary/80 text-white"
                   >
                     {community.joined ? 'Joined' : 'Join'}
                   </Button>
@@ -293,54 +293,18 @@ export default function Communities() {
     </Card>
   );
 
-  const DiscussionItem = ({ discussion }: { discussion: (typeof discussions)[0] }) => (
-    <Card className="hover:shadow-sm transition-shadow cursor-pointer">
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <Avatar className="w-8 h-8 flex-shrink-0">
-            <AvatarImage src={discussion.avatar || '/placeholder.svg'} alt={discussion.author} />
-            <AvatarFallback>
-              {discussion.author
-                .split(' ')
-                .map((n) => n[0])
-                .join('')}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              {discussion.unread && (
-                <div className="w-2 h-2 bg-cyan-500 rounded-full flex-shrink-0" />
-              )}
-              <h3 className="font-medium text-gray-900 line-clamp-1">{discussion.title}</h3>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-              <span className="font-medium text-gray-700">{discussion.author}</span>
-              <span>in</span>
-              <span className="font-medium text-cyan-600">{discussion.community}</span>
-              <span>•</span>
-              <span>{discussion.timestamp}</span>
-            </div>
-            <div className="flex items-center gap-1 text-sm text-gray-500">
-              <MessageCircle className="w-4 h-4" />
-              <span>{discussion.comments} comments</span>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
 
   return (
     <div className="max-w-6xl mx-auto p-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Users className="w-8 h-8 text-cyan-500" />
-          <h1 className="text-3xl font-bold text-gray-900">Communities</h1>
+          <Users className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-bold text-foreground">Communities</h1>
         </div>
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-cyan-500 hover:bg-cyan-600 text-white">
+            <Button className="bg-primary hover:bg-primary/80 text-white">
               <Plus className="w-4 h-4 mr-2" />
               Create Community
             </Button>
@@ -405,7 +369,7 @@ export default function Communities() {
               <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateCommunity} className="bg-cyan-500 hover:bg-cyan-600">
+              <Button onClick={handleCreateCommunity} className="bg-primary hover:bg-primary/80">
                 Create Community
               </Button>
             </DialogFooter>
@@ -415,7 +379,7 @@ export default function Communities() {
 
       {/* Search */}
       <div className="relative mb-6">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted w-4 h-4" />
         <Input
           placeholder="Search communities..."
           value={searchQuery}
@@ -444,7 +408,7 @@ export default function Communities() {
         <TabsContent value="discover" className="space-y-4">
           {filteredCommunities.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">{'No communities found matching your search.'}</p>
+              <p className="text-muted">{'No communities found matching your search.'}</p>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -458,7 +422,7 @@ export default function Communities() {
         <TabsContent value="your-communities" className="space-y-4">
           {joinedCommunities.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">{"You haven't joined any communities yet."}</p>
+              <p className="text-muted">{"You haven't joined any communities yet."}</p>
               <Button
                 variant="outline"
                 className="mt-4 bg-transparent"
@@ -479,8 +443,8 @@ export default function Communities() {
         <TabsContent value="discussions" className="space-y-4">
           {joinedDiscussions.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-gray-500">{'No discussions from your communities.'}</p>
-              <p className="text-gray-400 text-sm mt-2">
+              <p className="text-muted">{'No discussions from your communities.'}</p>
+              <p className="text-muted/70 text-sm mt-2">
                 {'Join communities to see their discussions here.'}
               </p>
             </div>

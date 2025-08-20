@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write \"src/**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"src/**/*.{ts,tsx,md}\"",
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "^1.4.1",

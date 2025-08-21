@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
-import LeftSidebar from '@/components/learning-hub/left-sidebar';
-import RightSidebar from '@/components/learning-hub/right-sidebar';
 import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
+
+import { SidebarsWrapper } from '@/components/layouts/sidebars-wrapper';
 import Navbar from '@/components/navbar/navbar';
 
 export const metadata: Metadata = {
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           <Navbar />
           <div className="min-h-screen bg-background text-foreground">
-            <LeftSidebar />
+            <SidebarsWrapper />
             <main
               className="mt-14 transition-all duration-300 ease-in-out 
               md:ml-64 md:mr-64 
@@ -30,7 +30,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             >
               <div className="max-w-4xl mx-auto">{children}</div>
             </main>
-            <RightSidebar />
           </div>
         </ThemeProvider>
       </body>

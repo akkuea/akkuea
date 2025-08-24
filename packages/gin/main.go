@@ -26,9 +26,22 @@ func main() {
 	router.GET("/ping", api.PingHandler)
 	router.GET("/health", api.HealthHandler)
 
-	// User endpoints
-	router.GET("/users", api.GetAllUsers)
-	router.POST("/users", api.CreateUser)
+	// Authentication endpoints (public)
+	router.POST("/auth/register", api.RegisterUser)
+	router.POST("/auth/login", api.LoginUser)
+
+	// Protected routes group
+	protected := router.Group("/")
+	protected.Use(middleware.JWTAuthMiddleware())
+	{
+		// User endpoints (protected)
+		protected.GET("/users", api.GetAllUsers)
+		protected.GET("/users/:id", api.GetUserByID)
+		protected.POST("/users", api.CreateUser)
+
+		// Current user endpoint
+		protected.GET("/auth/me", api.GetCurrentUser)
+	}
 
 	// Get port from config (env), default to 8080
 	port := config.GetPort()

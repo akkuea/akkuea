@@ -174,20 +174,40 @@ const Navbar = () => {
                 <User className="h-5 w-5 text-muted" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="font-semibold text-primary">
-                Jefferson Calderon
-                <div className="text-xs text-muted">@xJeffx23</div>
-              </DropdownMenuLabel>
+
+            <DropdownMenuContent
+              align="end"
+              className="w-64 rounded-2xl shadow-lg border border-border p-2 bg-background"
+            >
+              <div className="px-3 py-2 mb-2 rounded-xl cursor-pointer dark:hover:bg-gray-700 hover:bg-gray-200">
+                <DropdownMenuLabel className="font-semibold text-primary">
+                  Jefferson Calderon
+                  <div className="text-xs text-muted">@xJeffx23</div>
+                </DropdownMenuLabel>
+              </div>
+
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => router.push('/profile')} className="gap-2">
+
+              <DropdownMenuItem
+                onClick={() => router.push('/profile')}
+                className="gap-2 px-3 cursor-pointer  py-2 rounded-lg transition-colors dark:hover:bg-gray-700 hover:bg-gray-200 hover:text-accent-foreground"
+              >
                 <User className="h-4 w-4" /> My Profile
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => router.push('/settings')} className="gap-2">
+
+              <DropdownMenuItem
+                onClick={() => router.push('/settings')}
+                className="gap-2 px-3 cursor-pointer py-2 h rounded-lg transition-colors dark:hover:bg-gray-700 hover:bg-gray-200 hover:text-accent-foreground"
+              >
                 <Settings className="h-4 w-4" /> Settings
               </DropdownMenuItem>
+
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleDisconnect} className="text-destructive gap-2">
+
+              <DropdownMenuItem
+                onClick={handleDisconnect}
+                className="gap-2 px-3 py-2 cursor-pointer rounded-lg text-destructive font-medium hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/20"
+              >
                 <LogOut className="h-4 w-4" /> Log out
               </DropdownMenuItem>
             </DropdownMenuContent>

@@ -8,12 +8,16 @@
   :root {
     --background: 0 0% 96%; /* #F5F7F8 */
     --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 224 18% 33%; /* #4A4F55 */
     --primary: 168 72% 47%; /* #5EEAD4 */
     --secondary: 25 100% 59%; /* #FF8C42 */
     --achievement: 43 100% 75%; /* #FFC75F */
     --destructive: 356 79% 47%; /* #D32F2F */
     --foreground: 224 18% 33%; /* #4A4F55 */
     --muted: 216 10% 47%; /* #6A6F77 */
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217.2 91.2% 59.8%;
     --radius: 0.5rem;
 
     --contribution-bg: 145 63% 49%;
@@ -28,17 +32,31 @@
     --impact-bg: 329 84% 58%;
     --impact-text: 329 84% 58%;
     --impact-border: 329 84% 58%;
+    --sidebar-background: 0 0% 100%; /* Same as --card */
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-width: 20rem;
+    --sidebar-width-icon: 4rem;
   }
 
   .dark {
     --background: 210 21% 9%; /* #121A1E */
     --card: 210 19% 18%; /* #1E2A2E */
+    --card-foreground: 188 4% 92%; /* #E1E8EB */
     --primary: 176 73% 44%; /* #2AC1BC */
     --secondary: 25 100% 59%; /* #FF8C42 */
     --achievement: 43 100% 75%; /* #FFC75F */
     --destructive: 4 74% 48%; /* #E74C3C */
     --foreground: 188 4% 92%; /* #E1E8EB */
     --muted: 204 9% 68%; /* #A3ADB1 */
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 217.2 91.2% 59.8%;
     --radius: 0.5rem;
 
     --contribution-bg: 145 63% 49%;
@@ -53,6 +71,16 @@
     --impact-bg: 329 84% 58%;
     --impact-text: 329 84% 58%;
     --impact-border: 329 84% 58%;
+    --sidebar-background: 210 19% 18%; /* Same as --card */
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-width: 20rem;
+    --sidebar-width-icon: 4rem;
   }
 }
 
@@ -65,3 +93,4 @@
     font-family: 'Manrope', sans-serif;
   }
 }
+

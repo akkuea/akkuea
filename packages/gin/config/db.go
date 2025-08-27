@@ -16,7 +16,7 @@ var DB *gorm.DB
 
 func InitDB() {
 	var err error
-	
+
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=UTC",
 		getEnvWithDefault("DB_HOST", "localhost"),
@@ -54,25 +54,26 @@ func runMigrations() {
 	modelsToMigrate := []interface{}{
 		&models.User{},
 		&models.Resource{},
-		&models.Reward{},             
-		&models.MarketplaceRequest{},  
+		&models.Reward{},
+		&models.MarketplaceRequest{},
 	}
 
 	// run AutoMigrate for each model
 	for _, model := range modelsToMigrate {
 		modelName := fmt.Sprintf("%T", model)
 		log.Printf("Migrating model: %s", modelName)
-		
+
 		if err := DB.AutoMigrate(model); err != nil {
 			log.Fatalf("Failed to migrate model %s: %v", modelName, err)
 		}
-		
+
 		log.Printf("Successfully migrated: %s", modelName)
 	}
 
 	log.Println("All database migrations completed successfully")
-	
+
 	verifyForeignKeys()
+
 }
 
 // if foreign key constraints are properly created

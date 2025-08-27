@@ -1,0 +1,53 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: akkuea_postgres
+    environment:
+      POSTGRES_DB: akkuea
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d akkuea"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - akkuea_network
+
+  # Gin API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: akkuea_api
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: secret
+      DB_NAME: akkuea
+      DB_PORT: 5432
+      PORT: 8080
+      JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - akkuea_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  akkuea_network:
+    driver: bridge

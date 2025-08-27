@@ -1,0 +1,46 @@
+[package]
+name = "educational-nft"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+stellar-macros = "0.4.0"
+stellar-tokens = "0.4.0"
+stellar-access = "0.4.0"
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+
+# Optimization settings
+[profile.release]
+opt-level = 'z'  # Optimize for size
+overflow-checks = true
+debug = 0
+strip = true
+debug-assertions = false
+panic = 'abort'
+codegen-units = 1
+lto = true
+
+[profile.test]
+opt-level = 0
+debug = true
+debug-assertions = true
+overflow-checks = true
+lto = false
+panic = 'unwind'
+incremental = true
+codegen-units = 256
+rpath = false
+
+# Soroban snapshot configuration
+[package.metadata.soroban]
+generate-snapshots = false
+snapshot-dir = "test_snapshots"
+verbose-snapshots = false

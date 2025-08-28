@@ -1,49 +1,42 @@
-import { ISupportedWallet } from '@creit.tech/stellar-wallets-kit';
+import type { ISupportedWallet, StellarWalletsKit } from '@creit.tech/stellar-wallets-kit';
 import { useGlobalAuthenticationStore } from '../store/data';
-import { kit } from '@/components/auth/constant/walletKit';
+
+let walletKitInstance: StellarWalletsKit | null = null;
 
 export const useWallet = () => {
   const { connectWalletStore, disconnectWalletStore } = useGlobalAuthenticationStore();
 
   const connectWallet = async () => {
-    await kit.openModal({
+    const walletLib = await import('@creit.tech/stellar-wallets-kit');
+    if (!walletKitInstance) {
+      walletKitInstance = new walletLib.StellarWalletsKit({
+        network: walletLib.WalletNetwork.TESTNET,
+        selectedWalletId: walletLib.FREIGHTER_ID,
+        modules: walletLib.allowAllModules(),
+      });
+    }
+
+    await walletKitInstance.openModal({
       modalTitle: 'Connect to your favorite wallet',
       onWalletSelected: async (option: ISupportedWallet) => {
-        kit.setWallet(option.id);
-
-        const { address } = await kit.getAddress();
+        walletKitInstance!.setWallet(option.id);
+        const { address } = await walletKitInstance!.getAddress();
         const { name } = option;
-
         connectWalletStore(address, name);
       },
     });
   };
 
   const disconnectWallet = async () => {
-    await kit.disconnect();
-    disconnectWalletStore();
-  };
-
-  const handleConnect = async () => {
     try {
-      await connectWallet();
-    } catch (error) {
-      console.error('Error connecting wallet:', error);
-    }
-  };
-
-  const handleDisconnect = async () => {
-    try {
-      if (disconnectWallet) {
-        await disconnectWallet();
-      }
-    } catch (error) {
-      console.error('Error disconnecting wallet:', error);
+      await walletKitInstance?.disconnect?.();
+    } finally {
+      disconnectWalletStore();
     }
   };
 
   return {
-    handleConnect,
-    handleDisconnect,
+    handleConnect: connectWallet,
+    handleDisconnect: disconnectWallet,
   };
 };

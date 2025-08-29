@@ -35,7 +35,7 @@ func TestMain(m *testing.M) {
 
 func setupTestRouter() *gin.Engine {
 	router := gin.New()
-	
+
 	// Public authentication endpoints
 	router.POST("/auth/register", api.RegisterUser)
 	router.POST("/auth/login", api.LoginUser)
@@ -65,7 +65,7 @@ func setupTestRouter() *gin.Engine {
 			})
 		})
 	}
-	
+
 	return router
 }
 

@@ -38,7 +38,6 @@ type AuthResponse struct {
 	User  models.User `json:"user"`
 }
 
-
 // NewAuthService creates a new authentication service
 func NewAuthService() *AuthService {
 	return &AuthService{

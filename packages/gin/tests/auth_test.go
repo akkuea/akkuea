@@ -75,7 +75,7 @@ func (suite *AuthTestSuite) setupRoutes() {
 		protected.GET("/users", api.GetAllUsers)
 		protected.GET("/users/:id", api.GetUserByID)
 		protected.POST("/users", api.CreateUser)
-		
+
 		// Temporary protected route for testing
 		protected.GET("/protected", func(c *gin.Context) {
 			userRole, exists := c.Get("user_role")
@@ -85,8 +85,8 @@ func (suite *AuthTestSuite) setupRoutes() {
 			}
 
 			c.JSON(http.StatusOK, gin.H{
-				"message": "Access granted to protected route",
-				"role":    userRole,
+				"message":   "Access granted to protected route",
+				"role":      userRole,
 				"timestamp": time.Now().Unix(),
 			})
 		})

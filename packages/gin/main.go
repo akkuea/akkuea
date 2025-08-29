@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"net/http"
+	"time"
 
 	"gin/api"
 	"gin/config"
@@ -41,6 +43,27 @@ func main() {
 
 		// Current user endpoint
 		protected.GET("/auth/me", api.GetCurrentUser)
+
+		// Temporary protected route for testing authentication
+		protected.GET("/protected", func(c *gin.Context) {
+			userRole, exists := c.Get("user_role")
+			if !exists {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "User role not found"})
+				return
+			}
+
+			userEmail, _ := c.Get("user_email")
+			userID, _ := c.Get("user_id")
+
+			c.JSON(http.StatusOK, gin.H{
+				"message":   "Access granted to protected route",
+				"user_id":   userID,
+				"email":     userEmail,
+				"role":      userRole,
+				"timestamp": time.Now().Unix(),
+				"server":    "Akkuea Auth Test Server",
+			})
+		})
 	}
 
 	// Get port from config (env), default to 8080

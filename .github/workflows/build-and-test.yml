@@ -52,40 +52,48 @@ jobs:
 
     - name: Wait for PostgreSQL
       run: |
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client
-        echo "Starting PostgreSQL connection checks..."
+        echo "=== PostgreSQL Service Debugging ==="
+        sudo apt-get update -qq
+        sudo apt-get install -y postgresql-client netcat-openbsd
         
-        # Check if PostgreSQL container is running
-        echo "Checking docker containers..."
+        echo "1. Checking if PostgreSQL container is running..."
         docker ps
+        echo ""
         
-        # Check port availability
-        echo "Checking port 5432..."
-        netstat -tlnp | grep :5432 || echo "Port 5432 not found"
+        echo "2. Checking network connectivity and port 5432..."
+        netstat -tlnp | grep :5432 || echo "Port 5432 not found in netstat"
+        nc -zv localhost 5432 || echo "Cannot connect to localhost:5432"
+        echo ""
         
-        echo "Waiting for PostgreSQL to be ready..."
+        echo "3. Checking GitHub Actions services..."
+        # GitHub Actions services run in Docker network
+        docker network ls
+        echo ""
+        
+        echo "4. Testing PostgreSQL readiness..."
         for i in {1..60}; do
+          echo "Attempt $i/60: Testing PostgreSQL connection..."
           if pg_isready -h localhost -p 5432 -U postgres; then
-            echo "PostgreSQL is ready after $i attempts!"
+            echo "✅ PostgreSQL is ready after $i attempts!"
             break
           fi
-          echo "Attempt $i: PostgreSQL not ready yet, waiting..."
+          echo "❌ PostgreSQL not ready yet, waiting 2 seconds..."
           sleep 2
           if [ $i -eq 60 ]; then
-            echo "PostgreSQL failed to start after 120 seconds"
-            docker logs $(docker ps -q --filter "ancestor=postgres:15") || echo "No postgres container logs"
+            echo "💥 PostgreSQL failed to start after 120 seconds!"
+            echo "Docker container logs:"
+            docker logs $(docker ps -q --filter "ancestor=postgres:15") 2>/dev/null || echo "No postgres container found"
+            echo "All running containers:"
+            docker ps -a
             exit 1
           fi
         done
         
-        # Test database creation and connection
-        echo "Testing database connection..."
-        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d akkuea_test -c "SELECT version();" || echo "Direct connection test failed"
-        
-        # Create test database if it doesn't exist
-        echo "Ensuring test database exists..."
-        PGPASSWORD=postgres createdb -h localhost -p 5432 -U postgres akkuea_test 2>/dev/null || echo "Database might already exist"
+        echo "5. Testing database connection and creation..."
+        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d postgres -c "SELECT version();" || echo "Connection to default postgres db failed"
+        PGPASSWORD=postgres createdb -h localhost -p 5432 -U postgres akkuea_test 2>/dev/null || echo "Test database might already exist"
+        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d akkuea_test -c "SELECT 'Database akkuea_test is ready!';" || echo "Connection to test db failed"
+        echo "=== PostgreSQL Service Ready ==="
 
     - name: Run tests
       working-directory: ./packages/gin
@@ -140,7 +148,7 @@ jobs:
 
     - name: Install dependencies
       working-directory: ./packages/agent
-      run: npm ci
+      run: npm install
 
     - name: Build application
       working-directory: ./packages/agent
@@ -161,7 +169,7 @@ jobs:
 
     - name: Install dependencies
       working-directory: ./packages/assistant
-      run: npm ci
+      run: npm install
 
     - name: Build application
       working-directory: ./packages/assistant

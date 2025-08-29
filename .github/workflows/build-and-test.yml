@@ -11,22 +11,6 @@ jobs:
     name: Test Go Backend
     runs-on: ubuntu-latest
 
-    # PostgreSQL service for testing
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: akkuea_test
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5432:5432
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -49,27 +33,12 @@ jobs:
       run: go mod download
 
     - name: Setup PostgreSQL
-      run: |
-        # Install PostgreSQL client
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client
-        
-        # Wait for PostgreSQL to be ready
-        echo "Waiting for PostgreSQL..."
-        for i in {1..30}; do
-          if pg_isready -h localhost -p 5432 -U postgres; then
-            echo "PostgreSQL is ready!"
-            break
-          fi
-          echo "Waiting... attempt $i"
-          sleep 2
-        done
-        
-        # Create test database
-        PGPASSWORD=postgres createdb -h localhost -p 5432 -U postgres akkuea_test || echo "Database may already exist"
-        
-        # Test connection
-        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d akkuea_test -c "SELECT 1"
+      uses: harmon758/postgresql-action@v1
+      with:
+        postgresql version: '15'
+        postgresql db: akkuea_test
+        postgresql user: postgres
+        postgresql password: postgres
 
     - name: Run tests
       working-directory: ./packages/gin

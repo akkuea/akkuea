@@ -54,19 +54,38 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y postgresql-client
+        echo "Starting PostgreSQL connection checks..."
+        
+        # Check if PostgreSQL container is running
+        echo "Checking docker containers..."
+        docker ps
+        
+        # Check port availability
+        echo "Checking port 5432..."
+        netstat -tlnp | grep :5432 || echo "Port 5432 not found"
+        
         echo "Waiting for PostgreSQL to be ready..."
-        for i in {1..30}; do
+        for i in {1..60}; do
           if pg_isready -h localhost -p 5432 -U postgres; then
-            echo "PostgreSQL is ready!"
+            echo "PostgreSQL is ready after $i attempts!"
             break
           fi
           echo "Attempt $i: PostgreSQL not ready yet, waiting..."
           sleep 2
+          if [ $i -eq 60 ]; then
+            echo "PostgreSQL failed to start after 120 seconds"
+            docker logs $(docker ps -q --filter "ancestor=postgres:15") || echo "No postgres container logs"
+            exit 1
+          fi
         done
         
-        # Additional verification
+        # Test database creation and connection
         echo "Testing database connection..."
         PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d akkuea_test -c "SELECT version();" || echo "Direct connection test failed"
+        
+        # Create test database if it doesn't exist
+        echo "Ensuring test database exists..."
+        PGPASSWORD=postgres createdb -h localhost -p 5432 -U postgres akkuea_test 2>/dev/null || echo "Database might already exist"
 
     - name: Run tests
       working-directory: ./packages/gin
@@ -93,8 +112,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: 'packages/nextjs/package-lock.json'
 
     - name: Install dependencies
       working-directory: ./packages/nextjs
@@ -120,8 +137,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: 'packages/agent/package-lock.json'
 
     - name: Install dependencies
       working-directory: ./packages/agent
@@ -143,8 +158,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: 'packages/assistant/package-lock.json'
 
     - name: Install dependencies
       working-directory: ./packages/assistant
@@ -183,8 +196,6 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: 'packages/nextjs/package-lock.json'
 
     - name: Install Next.js dependencies
       working-directory: ./packages/nextjs

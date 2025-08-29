@@ -38,17 +38,17 @@ jobs:
         postgresql version: '15'
         postgresql db: akkuea_test
         postgresql user: postgres
-        postgresql password: postgres
+        postgresql password: secret
 
     - name: Run tests
       working-directory: ./packages/gin
       env:
         DB_HOST: localhost
         DB_USER: postgres
-        DB_PASSWORD: postgres
+        DB_PASSWORD: secret
         DB_NAME: akkuea_test
         DB_PORT: 5432
-        JWT_SECRET: test-jwt-secret-key-for-ci-cd-pipeline
+        JWT_SECRET: test-jwt-secret-key
         PORT: 8080
         GIN_MODE: test
       run: go test ./... -v

@@ -13,7 +13,6 @@ import (
 	"gin/api"
 	"gin/config"
 	"gin/middleware"
-	"gin/models"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"

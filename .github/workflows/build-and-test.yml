@@ -19,13 +19,11 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: akkuea_test
-          POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 10
-          --health-start-period 30s
+          --health-retries 5
         ports:
           - 5432:5432
 
@@ -50,50 +48,28 @@ jobs:
       working-directory: ./packages/gin
       run: go mod download
 
-    - name: Wait for PostgreSQL
+    - name: Setup PostgreSQL
       run: |
-        echo "=== PostgreSQL Service Debugging ==="
-        sudo apt-get update -qq >/dev/null 2>&1
-        sudo apt-get install -y postgresql-client netcat-openbsd >/dev/null 2>&1
+        # Install PostgreSQL client
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client
         
-        echo "Step 1: Checking Docker containers..."
-        docker ps -a
-        echo ""
-        
-        echo "Step 2: Testing port connectivity..."
-        for i in {1..30}; do
-          if nc -z localhost 5432; then
-            echo "✅ Port 5432 is open after $i attempts"
-            break
-          fi
-          echo "⏳ Attempt $i: Port 5432 not ready, waiting..."
-          sleep 2
-        done
-        
-        echo ""
-        echo "Step 3: Testing PostgreSQL readiness..."
+        # Wait for PostgreSQL to be ready
+        echo "Waiting for PostgreSQL..."
         for i in {1..30}; do
           if pg_isready -h localhost -p 5432 -U postgres; then
-            echo "✅ PostgreSQL is ready after $i attempts!"
+            echo "PostgreSQL is ready!"
             break
           fi
-          echo "⏳ Attempt $i: PostgreSQL not ready, waiting..."
+          echo "Waiting... attempt $i"
           sleep 2
         done
         
-        echo ""
-        echo "Step 4: Creating test database..."
-        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE akkuea_test;" 2>/dev/null || echo "Database might already exist"
+        # Create test database
+        PGPASSWORD=postgres createdb -h localhost -p 5432 -U postgres akkuea_test || echo "Database may already exist"
         
-        echo ""
-        echo "Step 5: Testing final connection..."
-        if PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d akkuea_test -c "SELECT 'Connection successful!' as status;"; then
-          echo "✅ PostgreSQL service is fully ready!"
-        else
-          echo "❌ PostgreSQL connection failed - showing debug info..."
-          docker logs $(docker ps -q --filter "ancestor=postgres:15") 2>/dev/null || echo "No postgres container found"
-          exit 1
-        fi
+        # Test connection
+        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d akkuea_test -c "SELECT 1"
 
     - name: Run tests
       working-directory: ./packages/gin

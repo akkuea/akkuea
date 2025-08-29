@@ -31,13 +31,13 @@ export default function ParsedJsonView({ data }: ParsedJsonViewProps) {
                 : 'border-2 border-gray-300 dark:border-gray-600'
             }
           >
-            {value.toString()}
+            {String(value)}
           </Badge>
         );
       case 'number':
-        return <span className="text-blue-500 font-semibold">{value}</span>;
+        return <span className="text-blue-500 font-semibold">{String(value)}</span>;
       case 'string':
-        return <span className="text-emerald-500">&quot;{value}&quot;</span>;
+        return <span className="text-emerald-500">&quot;{String(value)}&quot;</span>;
       default:
         return <span>{JSON.stringify(value)}</span>;
     }

@@ -68,14 +68,14 @@ const TreeNode = ({
 
     switch (type) {
       case 'string':
-        return <span className={color}>&quot;{val}&quot;</span>;
+        return <span className={color}>&quot;{String(val)}&quot;</span>;
       case 'boolean':
         return (
           <Badge
             variant={val ? 'default' : 'outline'}
-            className={getBadgeColor(val)}
+            className={getBadgeColor(val as boolean)}
           >
-            {val.toString()}
+            {String(val)}
           </Badge>
         );
       case 'null':
@@ -83,7 +83,7 @@ const TreeNode = ({
       case 'undefined':
         return <span className={color}>undefined</span>;
       default:
-        return <span className={color}>{val}</span>;
+        return <span className={color}>{String(val)}</span>;
     }
   };
 

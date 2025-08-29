@@ -6,13 +6,17 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
 
+type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+type JsonObject = { [key: string]: JsonValue };
+type JsonArray = JsonValue[];
+
 interface GraphicalJsonViewProps {
-  data: any;
+  data: JsonObject;
 }
 
 interface TreeNodeProps {
   name: string;
-  value: any;
+  value: JsonValue;
   depth?: number;
   isLast?: boolean;
   index?: number;
@@ -22,20 +26,19 @@ const TreeNode = ({
   name,
   value,
   depth = 0,
-  isLast = false,
   index = 0,
 }: TreeNodeProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const isObject = value !== null && typeof value === 'object';
   const isArray = Array.isArray(value);
 
-  const getValueType = (val: any) => {
+  const getValueType = (val: JsonValue) => {
     if (val === null) return 'null';
     if (val === undefined) return 'undefined';
     return typeof val;
   };
 
-  const getNodeColor = (val: any) => {
+  const getNodeColor = (val: JsonValue) => {
     const type = getValueType(val);
     switch (type) {
       case 'string':
@@ -59,13 +62,13 @@ const TreeNode = ({
       : 'border-2 border-gray-300 dark:border-gray-600';
   };
 
-  const renderValue = (val: any) => {
+  const renderValue = (val: JsonValue) => {
     const type = getValueType(val);
     const color = getNodeColor(val);
 
     switch (type) {
       case 'string':
-        return <span className={color}>"{val}"</span>;
+        return <span className={color}>&quot;{val}&quot;</span>;
       case 'boolean':
         return (
           <Badge
@@ -167,17 +170,17 @@ const TreeNode = ({
             className="border-l-2 border-teal-300 dark:border-teal-700 pl-4 ml-2"
           >
             {isArray
-              ? value.map((item: any, idx: number) => (
+              ? (value as JsonArray).map((item: JsonValue, idx: number) => (
                   <TreeNode
                     key={idx}
                     name={`[${idx}]`}
                     value={item}
                     depth={depth + 1}
-                    isLast={idx === value.length - 1}
+                    isLast={idx === (value as JsonArray).length - 1}
                     index={idx}
                   />
                 ))
-              : Object.entries(value).map(([key, val], idx, arr) => (
+              : Object.entries(value as JsonObject).map(([key, val], idx, arr) => (
                   <TreeNode
                     key={key}
                     name={key}

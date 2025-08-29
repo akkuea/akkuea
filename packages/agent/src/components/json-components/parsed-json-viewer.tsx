@@ -4,13 +4,17 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { motion } from 'framer-motion';
 
+type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+type JsonObject = { [key: string]: JsonValue };
+type JsonArray = JsonValue[];
+
 interface ParsedJsonViewProps {
-  data: any;
+  data: JsonObject;
 }
 
 export default function ParsedJsonView({ data }: ParsedJsonViewProps) {
   // Function to render different types of values
-  const renderValue = (value: any) => {
+  const renderValue = (value: JsonValue) => {
     if (value === null)
       return <span className="text-gray-500 italic">null</span>;
     if (value === undefined)
@@ -33,14 +37,14 @@ export default function ParsedJsonView({ data }: ParsedJsonViewProps) {
       case 'number':
         return <span className="text-blue-500 font-semibold">{value}</span>;
       case 'string':
-        return <span className="text-emerald-500">"{value}"</span>;
+        return <span className="text-emerald-500">&quot;{value}&quot;</span>;
       default:
         return <span>{JSON.stringify(value)}</span>;
     }
   };
 
   // Function to render a key-value pair
-  const renderKeyValue = (key: string, value: any, depth = 0, index = 0) => {
+  const renderKeyValue = (key: string, value: JsonValue, depth = 0, index = 0) => {
     const isObject = value !== null && typeof value === 'object';
 
     return (

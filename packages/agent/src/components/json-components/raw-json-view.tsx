@@ -5,8 +5,12 @@ import { Button } from '@/components/ui/button';
 import { CopyIcon, CheckIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+type JsonValue = string | number | boolean | null | JsonObject | JsonArray;
+type JsonObject = { [key: string]: JsonValue };
+type JsonArray = JsonValue[];
+
 interface RawJsonViewProps {
-  data: any;
+  data: JsonObject;
 }
 
 export default function RawJsonView({ data }: RawJsonViewProps) {

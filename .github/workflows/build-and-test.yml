@@ -2,7 +2,7 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, 'feature/**' ]
   pull_request:
     branches: [ main, develop ]
 
@@ -21,7 +21,7 @@ jobs:
           POSTGRES_DB: akkuea_test
           POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
-          --health-cmd "pg_isready -U postgres -d akkuea_test"
+          --health-cmd "pg_isready -U postgres"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -53,47 +53,47 @@ jobs:
     - name: Wait for PostgreSQL
       run: |
         echo "=== PostgreSQL Service Debugging ==="
-        sudo apt-get update -qq
-        sudo apt-get install -y postgresql-client netcat-openbsd
+        sudo apt-get update -qq >/dev/null 2>&1
+        sudo apt-get install -y postgresql-client netcat-openbsd >/dev/null 2>&1
         
-        echo "1. Checking if PostgreSQL container is running..."
-        docker ps
+        echo "Step 1: Checking Docker containers..."
+        docker ps -a
         echo ""
         
-        echo "2. Checking network connectivity and port 5432..."
-        netstat -tlnp | grep :5432 || echo "Port 5432 not found in netstat"
-        nc -zv localhost 5432 || echo "Cannot connect to localhost:5432"
-        echo ""
+        echo "Step 2: Testing port connectivity..."
+        for i in {1..30}; do
+          if nc -z localhost 5432; then
+            echo "✅ Port 5432 is open after $i attempts"
+            break
+          fi
+          echo "⏳ Attempt $i: Port 5432 not ready, waiting..."
+          sleep 2
+        done
         
-        echo "3. Checking GitHub Actions services..."
-        # GitHub Actions services run in Docker network
-        docker network ls
         echo ""
-        
-        echo "4. Testing PostgreSQL readiness..."
-        for i in {1..60}; do
-          echo "Attempt $i/60: Testing PostgreSQL connection..."
+        echo "Step 3: Testing PostgreSQL readiness..."
+        for i in {1..30}; do
           if pg_isready -h localhost -p 5432 -U postgres; then
             echo "✅ PostgreSQL is ready after $i attempts!"
             break
           fi
-          echo "❌ PostgreSQL not ready yet, waiting 2 seconds..."
+          echo "⏳ Attempt $i: PostgreSQL not ready, waiting..."
           sleep 2
-          if [ $i -eq 60 ]; then
-            echo "💥 PostgreSQL failed to start after 120 seconds!"
-            echo "Docker container logs:"
-            docker logs $(docker ps -q --filter "ancestor=postgres:15") 2>/dev/null || echo "No postgres container found"
-            echo "All running containers:"
-            docker ps -a
-            exit 1
-          fi
         done
         
-        echo "5. Testing database connection and creation..."
-        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d postgres -c "SELECT version();" || echo "Connection to default postgres db failed"
-        PGPASSWORD=postgres createdb -h localhost -p 5432 -U postgres akkuea_test 2>/dev/null || echo "Test database might already exist"
-        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d akkuea_test -c "SELECT 'Database akkuea_test is ready!';" || echo "Connection to test db failed"
-        echo "=== PostgreSQL Service Ready ==="
+        echo ""
+        echo "Step 4: Creating test database..."
+        PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE akkuea_test;" 2>/dev/null || echo "Database might already exist"
+        
+        echo ""
+        echo "Step 5: Testing final connection..."
+        if PGPASSWORD=postgres psql -h localhost -p 5432 -U postgres -d akkuea_test -c "SELECT 'Connection successful!' as status;"; then
+          echo "✅ PostgreSQL service is fully ready!"
+        else
+          echo "❌ PostgreSQL connection failed - showing debug info..."
+          docker logs $(docker ps -q --filter "ancestor=postgres:15") 2>/dev/null || echo "No postgres container found"
+          exit 1
+        fi
 
     - name: Run tests
       working-directory: ./packages/gin

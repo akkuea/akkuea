@@ -1,0 +1,182 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  test-go:
+    name: Test Go Backend
+    runs-on: ubuntu-latest
+
+    # PostgreSQL service for testing
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: akkuea_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Install dependencies
+      working-directory: ./packages/gin
+      run: go mod download
+
+    - name: Wait for PostgreSQL
+      run: |
+        until pg_isready -h localhost -p 5432 -U postgres; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+
+    - name: Run tests
+      working-directory: ./packages/gin
+      env:
+        DB_HOST: localhost
+        DB_USER: postgres
+        DB_PASSWORD: postgres
+        DB_NAME: akkuea_test
+        DB_PORT: 5432
+        JWT_SECRET: test-jwt-secret-key-for-ci-cd-pipeline
+        PORT: 8080
+        GIN_MODE: test
+      run: go test ./... -v
+
+  test-nextjs:
+    name: Test Next.js Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './packages/nextjs/package-lock.json'
+
+    - name: Install dependencies
+      working-directory: ./packages/nextjs
+      run: npm ci
+
+    - name: Run tests
+      working-directory: ./packages/nextjs
+      run: npm test
+
+    - name: Build application
+      working-directory: ./packages/nextjs
+      run: npm run build
+
+  test-agent:
+    name: Test Agent Package
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './packages/agent/package-lock.json'
+
+    - name: Install dependencies
+      working-directory: ./packages/agent
+      run: npm ci
+
+    - name: Build application
+      working-directory: ./packages/agent
+      run: npm run build
+
+  test-assistant:
+    name: Test Assistant Package
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './packages/assistant/package-lock.json'
+
+    - name: Install dependencies
+      working-directory: ./packages/assistant
+      run: npm ci
+
+    - name: Build application
+      working-directory: ./packages/assistant
+      run: npm run build
+
+  lint-and-format:
+    name: Lint and Format Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Run Go format check
+      working-directory: ./packages/gin
+      run: |
+        if [ -n "$(gofmt -l .)" ]; then
+          echo "Go code is not formatted. Please run 'go fmt ./...'"
+          exit 1
+        fi
+
+    - name: Run Go vet
+      working-directory: ./packages/gin
+      run: go vet ./...
+
+    - name: Set up Node.js for Next.js linting
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: './packages/nextjs/package-lock.json'
+
+    - name: Install Next.js dependencies
+      working-directory: ./packages/nextjs
+      run: npm ci
+
+    - name: Run Next.js linting
+      working-directory: ./packages/nextjs
+      run: npm run lint

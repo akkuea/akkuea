@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import LearningHubSidebar from '@/components/learning-hub/learning-hub-sidebar';
-import RightSidebar from '@/components/learning-hub/right-sidebar';
+import RightSidebar from '@/components/discovery/right-sidebar';
 import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 import Navbar from '@/components/navbar/navbar';
@@ -23,9 +23,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         >
           <SidebarProvider defaultOpen={true}>
             <Navbar />
-            <div className="grid grid-cols-[320px_1fr_256px] min-h-screen bg-background text-foreground">
+            <div className="flex min-h-screen bg-background text-foreground">
               <LearningHubSidebar />
-              <main className="flex justify-center mt-14 px-4 py-8 pl-[4em]">
+              <main className="flex-1 flex justify-center mt-14 px-4 py-8 pl-[4em] pr-[4.5rem]">
                 <div className="w-full max-w-5xl">{children}</div>
               </main>
               <RightSidebar />

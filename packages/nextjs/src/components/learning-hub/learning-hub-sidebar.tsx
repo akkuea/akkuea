@@ -41,7 +41,7 @@ export default function LearningHubSidebar() {
         icon: Home,
         label: 'Home',
         description: 'Your learning feed',
-        href: '/',
+        href: '/home',
       },
       {
         icon: Compass,

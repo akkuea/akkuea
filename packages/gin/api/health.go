@@ -9,15 +9,15 @@ import (
 )
 
 type HealthResponse struct {
-	Status      string            `json:"status"`
-	Database    string            `json:"database"`
-	Message     string            `json:"message"`
-	Migrations  map[string]bool   `json:"migrations,omitempty"`
+	Status     string          `json:"status"`
+	Database   string          `json:"database"`
+	Message    string          `json:"message"`
+	Migrations map[string]bool `json:"migrations,omitempty"`
 }
 
 func HealthHandler(c *gin.Context) {
 	db := config.GetDB()
-	
+
 	sqlDB, err := db.DB()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, HealthResponse{
@@ -39,12 +39,12 @@ func HealthHandler(c *gin.Context) {
 
 	// Check migration status directly here instead of calling external function
 	migrations := map[string]bool{
-		"users":                 db.Migrator().HasTable(&models.User{}),
-		"resources":             db.Migrator().HasTable(&models.Resource{}),
-		"rewards":               db.Migrator().HasTable(&models.Reward{}),
-		"marketplace_requests":  db.Migrator().HasTable(&models.MarketplaceRequest{}),
+		"users":                db.Migrator().HasTable(&models.User{}),
+		"resources":            db.Migrator().HasTable(&models.Resource{}),
+		"rewards":              db.Migrator().HasTable(&models.Reward{}),
+		"marketplace_requests": db.Migrator().HasTable(&models.MarketplaceRequest{}),
 	}
-	
+
 	// Check if all tables are migrated
 	allMigrated := true
 	for _, migrated := range migrations {

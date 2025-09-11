@@ -8,7 +8,7 @@ type Reward struct {
 	UserID      uint   `json:"user_id" gorm:"not null;index"`
 	TokenAmount int    `json:"token_amount" gorm:"not null"`
 	Reason      string `json:"reason" gorm:"size:200"`
-	
+
 	// Foreign key relationship
 	User User `json:"user" gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }

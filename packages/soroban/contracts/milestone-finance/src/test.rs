@@ -1,7 +1,10 @@
 #![cfg(test)]
 
 use super::*;
-use soroban_sdk::{testutils::Address as _, Env, Address, String, Vec};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    Address, Env, String, Vec,
+};
 
 #[test]
 fn test_initialize_user() {
@@ -324,4 +327,481 @@ fn test_reputation_overflow_protection() {
     let reputation = client.get_reputation(&user_address);
     assert_eq!(reputation.score, 100); // Capped at maximum
     assert_eq!(reputation.projects_completed, 10);
+}
+
+// ===== MILESTONE SYSTEM TESTS =====
+
+#[test]
+fn test_initialize_milestone_system() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    client.initialize_milestone_system();
+    // System should be initialized without errors
+}
+
+#[test]
+fn test_initialize_project_funding() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128; // 1 XLM in stroops
+
+    env.mock_all_auths();
+
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    let funding_info = client.get_project_funding_info(&project_id).unwrap();
+    assert_eq!(funding_info.project_id, project_id);
+    assert_eq!(funding_info.total_funding, total_funding);
+    assert_eq!(funding_info.released_funding, 0);
+    assert_eq!(funding_info.available_funding, total_funding);
+}
+
+#[test]
+fn test_create_milestone_without_dependencies() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128;
+    let funding_amount = 100000i128; // 0.1 XLM
+    let deadline = env.ledger().timestamp() + 86400; // 1 day from now
+    let dependencies = Vec::new(&env);
+
+    env.mock_all_auths();
+
+    // Initialize project funding first
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    // Create milestone
+    let milestone_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &dependencies,
+        &funding_amount,
+        &deadline,
+    );
+
+    assert_eq!(milestone_id, 1);
+
+    let milestone = client.get_milestone_details(&milestone_id).unwrap();
+    assert_eq!(milestone.milestone_id, milestone_id);
+    assert_eq!(milestone.project_id, project_id);
+    assert_eq!(milestone.funding_amount, funding_amount);
+    assert_eq!(milestone.deadline, deadline);
+    assert_eq!(milestone.status, MilestoneStatus::Active);
+    assert_eq!(milestone.completion_percentage, 0);
+}
+
+#[test]
+fn test_create_milestone_with_dependencies() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128;
+    let funding_amount = 100000i128;
+    let deadline = env.ledger().timestamp() + 86400;
+
+    env.mock_all_auths();
+
+    // Initialize project funding
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    // Create first milestone (no dependencies)
+    let milestone1_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &Vec::new(&env),
+        &funding_amount,
+        &deadline,
+    );
+
+    // Create second milestone with dependency on first
+    let mut dependencies = Vec::new(&env);
+    dependencies.push_back(milestone1_id);
+
+    let milestone2_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &dependencies,
+        &funding_amount,
+        &deadline,
+    );
+
+    let milestone2 = client.get_milestone_details(&milestone2_id).unwrap();
+    assert_eq!(milestone2.status, MilestoneStatus::Pending); // Should be pending until dependency is completed
+}
+
+#[test]
+fn test_verify_partial_completion() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let verifier_address = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128;
+    let funding_amount = 100000i128;
+    let deadline = env.ledger().timestamp() + 86400;
+
+    env.mock_all_auths();
+
+    // Initialize project funding
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    // Add admin as stakeholder first
+    client.add_stakeholder(&admin_address, &project_id, &admin_address);
+
+    // Add verifier as stakeholder
+    client.add_stakeholder(&admin_address, &project_id, &verifier_address);
+
+    // Create milestone
+    let milestone_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &Vec::new(&env),
+        &funding_amount,
+        &deadline,
+    );
+
+    // Verify partial completion (50%)
+    client.verify_partial_completion(&verifier_address, &milestone_id, &50);
+
+    let milestone = client.get_milestone_details(&milestone_id).unwrap();
+    assert_eq!(milestone.completion_percentage, 50);
+    assert_eq!(milestone.status, MilestoneStatus::PartiallyCompleted);
+
+    // Check that proportional funding was released
+    let funding_info = client.get_project_funding_info(&project_id).unwrap();
+    assert_eq!(funding_info.released_funding, 50000); // 50% of 100000
+    assert_eq!(funding_info.available_funding, 950000); // 1000000 - 50000
+}
+
+#[test]
+fn test_verify_milestone_completion() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let verifier_address = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128;
+    let funding_amount = 100000i128;
+    let deadline = env.ledger().timestamp() + 86400;
+
+    env.mock_all_auths();
+
+    // Initialize project funding
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    // Add admin as stakeholder first
+    client.add_stakeholder(&admin_address, &project_id, &admin_address);
+
+    // Add verifier as stakeholder
+    client.add_stakeholder(&admin_address, &project_id, &verifier_address);
+
+    // Create milestone
+    let milestone_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &Vec::new(&env),
+        &funding_amount,
+        &deadline,
+    );
+
+    // Verify full completion
+    client.verify_milestone(&verifier_address, &milestone_id);
+
+    let milestone = client.get_milestone_details(&milestone_id).unwrap();
+    assert_eq!(milestone.completion_percentage, 100);
+    assert_eq!(milestone.status, MilestoneStatus::Completed);
+
+    // Check that all funding was released
+    let funding_info = client.get_project_funding_info(&project_id).unwrap();
+    assert_eq!(funding_info.released_funding, 100000);
+    assert_eq!(funding_info.available_funding, 900000);
+}
+
+#[test]
+fn test_milestone_dependencies_activation() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let verifier_address = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128;
+    let funding_amount = 100000i128;
+    let deadline = env.ledger().timestamp() + 86400;
+
+    env.mock_all_auths();
+
+    // Initialize project funding
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    // Add admin as stakeholder first
+    client.add_stakeholder(&admin_address, &project_id, &admin_address);
+
+    // Add verifier as stakeholder
+    client.add_stakeholder(&admin_address, &project_id, &verifier_address);
+
+    // Create first milestone
+    let milestone1_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &Vec::new(&env),
+        &funding_amount,
+        &deadline,
+    );
+
+    // Create second milestone with dependency
+    let mut dependencies = Vec::new(&env);
+    dependencies.push_back(milestone1_id);
+
+    let milestone2_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &dependencies,
+        &funding_amount,
+        &deadline,
+    );
+
+    // Verify milestone2 is pending
+    let milestone2 = client.get_milestone_details(&milestone2_id).unwrap();
+    assert_eq!(milestone2.status, MilestoneStatus::Pending);
+
+    // Complete first milestone
+    client.verify_milestone(&verifier_address, &milestone1_id);
+
+    // Check that first milestone is completed
+    let milestone1_updated = client.get_milestone_details(&milestone1_id).unwrap();
+    assert_eq!(milestone1_updated.status, MilestoneStatus::Completed);
+
+    // Check that second milestone is now active (automatically activated when first milestone was completed)
+    let milestone2_updated = client.get_milestone_details(&milestone2_id).unwrap();
+    assert_eq!(milestone2_updated.status, MilestoneStatus::Active);
+}
+
+#[test]
+fn test_circular_dependency_detection() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128;
+    let funding_amount = 100000i128;
+    let deadline = env.ledger().timestamp() + 86400;
+
+    env.mock_all_auths();
+
+    // Initialize project funding
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    // Create first milestone
+    let _milestone1_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &Vec::new(&env),
+        &funding_amount,
+        &deadline,
+    );
+
+    // Try to create second milestone that depends on itself
+    let mut self_dependency = Vec::new(&env);
+    self_dependency.push_back(2u64); // This will be the ID of the milestone being created
+
+    let result = client.try_create_milestone(
+        &admin_address,
+        &project_id,
+        &self_dependency,
+        &funding_amount,
+        &deadline,
+    );
+    assert!(result.is_err()); // Should fail due to circular dependency
+}
+
+#[test]
+fn test_unauthorized_verification() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let unauthorized_address = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128;
+    let funding_amount = 100000i128;
+    let deadline = env.ledger().timestamp() + 86400;
+
+    env.mock_all_auths();
+
+    // Initialize project funding
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    // Create milestone
+    let milestone_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &Vec::new(&env),
+        &funding_amount,
+        &deadline,
+    );
+
+    // Try to verify with unauthorized address
+    let result = client.try_verify_partial_completion(&unauthorized_address, &milestone_id, &50);
+    assert!(result.is_err()); // Should fail due to unauthorized access
+}
+
+#[test]
+fn test_milestone_expiration() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128;
+    let funding_amount = 100000i128;
+    let deadline = env.ledger().timestamp() + 1; // Very short deadline
+
+    env.mock_all_auths();
+
+    // Initialize project funding
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    // Create milestone
+    let milestone_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &Vec::new(&env),
+        &funding_amount,
+        &deadline,
+    );
+
+    // Advance time past deadline
+    let mut ledger_info = env.ledger().get();
+    ledger_info.timestamp = env.ledger().timestamp() + 2;
+    env.ledger().set(ledger_info);
+
+    // Update expired milestones
+    client.update_expired_milestones(&project_id);
+
+    let milestone = client.get_milestone_details(&milestone_id).unwrap();
+    assert_eq!(milestone.status, MilestoneStatus::Expired);
+}
+
+#[test]
+fn test_multiple_stakeholders() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let stakeholder1 = Address::generate(&env);
+    let stakeholder2 = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128;
+    let funding_amount = 100000i128;
+    let deadline = env.ledger().timestamp() + 86400;
+
+    env.mock_all_auths();
+
+    // Initialize project funding
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    // Add admin as stakeholder first
+    client.add_stakeholder(&admin_address, &project_id, &admin_address);
+
+    // Add stakeholders
+    client.add_stakeholder(&admin_address, &project_id, &stakeholder1);
+    client.add_stakeholder(&admin_address, &project_id, &stakeholder2);
+
+    // Create milestone
+    let milestone_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &Vec::new(&env),
+        &funding_amount,
+        &deadline,
+    );
+
+    // Both stakeholders can verify
+    client.verify_partial_completion(&stakeholder1, &milestone_id, &50);
+    client.verify_milestone(&stakeholder2, &milestone_id);
+
+    let milestone = client.get_milestone_details(&milestone_id).unwrap();
+    assert_eq!(milestone.status, MilestoneStatus::Completed);
+
+    // Check verifications
+    let verifications = client.get_milestone_verifications(&milestone_id);
+    assert_eq!(verifications.len(), 2);
+}
+
+#[test]
+fn test_project_milestones_retrieval() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin_address = Address::generate(&env);
+    let project_id = 1u64;
+    let total_funding = 1000000i128;
+    let funding_amount = 100000i128;
+    let deadline = env.ledger().timestamp() + 86400;
+
+    env.mock_all_auths();
+
+    // Initialize project funding
+    client.initialize_project_funding(&admin_address, &project_id, &total_funding);
+
+    // Create multiple milestones
+    let milestone1_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &Vec::new(&env),
+        &funding_amount,
+        &deadline,
+    );
+
+    let milestone2_id = client.create_milestone(
+        &admin_address,
+        &project_id,
+        &Vec::new(&env),
+        &funding_amount,
+        &deadline,
+    );
+
+    // Get all project milestones
+    let milestones = client.get_project_milestones(&project_id);
+    assert_eq!(milestones.len(), 2);
+
+    // Check that both milestones are present
+    let mut found_milestone1 = false;
+    let mut found_milestone2 = false;
+    for i in 0..milestones.len() {
+        let milestone = milestones.get(i).unwrap();
+        if milestone.milestone_id == milestone1_id {
+            found_milestone1 = true;
+        }
+        if milestone.milestone_id == milestone2_id {
+            found_milestone2 = true;
+        }
+    }
+    assert!(found_milestone1);
+    assert!(found_milestone2);
 }

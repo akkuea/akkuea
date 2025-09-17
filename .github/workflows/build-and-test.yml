@@ -94,9 +94,16 @@ jobs:
     - name: Install dependencies
       working-directory: ./packages/nextjs
       run: |
+        echo "=== INSTALL DEPENDENCIES DEBUG ==="
+        echo "Current directory: $(pwd)"
+        echo "Package.json name:"
+        grep '"name"' package.json
+        echo ""
         rm -rf node_modules package-lock.json
         npm install --legacy-peer-deps --verbose
-        npm list @ai-sdk/react
+        echo ""
+        echo "Checking for @ai-sdk/react after install:"
+        npm list @ai-sdk/react 2>/dev/null || echo "No @ai-sdk/react found"
 
     - name: Run tests
       working-directory: ./packages/nextjs
@@ -105,11 +112,27 @@ jobs:
     - name: Build application
       working-directory: ./packages/nextjs
       run: |
+        echo "=== DEBUGGING CI BUILD ISSUE ==="
         echo "Current directory: $(pwd)"
         echo "Contents of current directory:"
         ls -la
+        echo ""
+        echo "Package.json contents:"
+        cat package.json | head -10
+        echo ""
         echo "Looking for chat-interface.tsx:"
         find . -name "chat-interface.tsx" -type f
+        echo ""
+        echo "Looking for components directory:"
+        find . -name "components" -type d
+        echo ""
+        echo "Checking if components is a symlink:"
+        ls -la components 2>/dev/null || echo "No components directory"
+        echo ""
+        echo "Checking node_modules for @ai-sdk/react:"
+        ls node_modules/@ai-sdk/ 2>/dev/null || echo "No @ai-sdk directory"
+        echo ""
+        echo "Running npm run build..."
         npm run build
 
   test-agent:

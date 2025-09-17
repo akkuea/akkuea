@@ -27,6 +27,7 @@ impl ReviewSystem {
             VerificationLevel::Basic => 1,
             VerificationLevel::Advanced => 2,
             VerificationLevel::Expert => 3,
+            VerificationLevel::Premium => 4,
         };
         if weight == 0 {
             panic!("pending educators cannot submit reviews");

@@ -524,6 +524,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "educational-nft-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "educational-project-funding-contract"
 version = "0.0.0"
 dependencies = [

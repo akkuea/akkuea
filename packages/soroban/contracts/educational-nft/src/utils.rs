@@ -1,4 +1,4 @@
-use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Bytes, Env, Symbol};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Bytes, Env, Symbol, String};
 
 /// Event symbols for Educational NFT operations
 ///
@@ -7,10 +7,14 @@ use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Bytes, Env
 /// - `transfer`: Emitted when an NFT is transferred between addresses
 /// - `fraction`: Emitted when an NFT is fractionalized
 /// - `frac_xfer`: Emitted when fractions of an NFT are transferred between owners
+/// - `meta_created`: Emitted when metadata is first created for an NFT
+/// - `meta_updated`: Emitted when metadata is updated with a new version
 pub const MINT_EVENT: Symbol = symbol_short!("mint");
 pub const TRANSFER_EVENT: Symbol = symbol_short!("transfer");
 pub const FRACTIONALIZE_EVENT: Symbol = symbol_short!("fraction");
 pub const FRACTION_TRANSFER_EVENT: Symbol = symbol_short!("frac_xfer");
+pub const METADATA_CREATED_EVENT: Symbol = symbol_short!("meta_new");
+pub const METADATA_UPDATED_EVENT: Symbol = symbol_short!("meta_upd");
 
 /// Event data structures for Educational NFT operations
 ///
@@ -52,6 +56,28 @@ pub struct FractionTransferEvent {
     pub from: Address,
     pub to: Address,
     pub amount: u32,
+}
+
+/// Data emitted when metadata is created for an NFT
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MetadataCreatedEvent {
+    pub token_id: u64,
+    pub creator: Address,
+    pub content_type: String,
+    pub ipfs_hash: Bytes,
+    pub version: u32,
+}
+
+/// Data emitted when metadata is updated for an NFT
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MetadataUpdatedEvent {
+    pub token_id: u64,
+    pub updater: Address,
+    pub old_version: u32,
+    pub new_version: u32,
+    pub new_ipfs_hash: Bytes,
 }
 
 /// Helper functions to emit events
@@ -107,6 +133,42 @@ pub fn emit_fraction_transfer_event(
     env.events().publish((FRACTION_TRANSFER_EVENT,), event_data);
 }
 
+pub fn emit_metadata_created_event(
+    env: &Env,
+    token_id: u64,
+    creator: &Address,
+    content_type: String,
+    ipfs_hash: &Bytes,
+    version: u32,
+) {
+    let event_data = MetadataCreatedEvent {
+        token_id,
+        creator: creator.clone(),
+        content_type,
+        ipfs_hash: ipfs_hash.clone(),
+        version,
+    };
+    env.events().publish((METADATA_CREATED_EVENT,), event_data);
+}
+
+pub fn emit_metadata_updated_event(
+    env: &Env,
+    token_id: u64,
+    updater: &Address,
+    old_version: u32,
+    new_version: u32,
+    new_ipfs_hash: &Bytes,
+) {
+    let event_data = MetadataUpdatedEvent {
+        token_id,
+        updater: updater.clone(),
+        old_version,
+        new_version,
+        new_ipfs_hash: new_ipfs_hash.clone(),
+    };
+    env.events().publish((METADATA_UPDATED_EVENT,), event_data);
+}
+
 /// Error codes for Educational NFT operations
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -138,6 +200,22 @@ pub enum NFTError {
     InsufficientFractionsForApprove = 12,
     /// Contract not properly initialized
     ContractNotInitialized = 13,
+    /// Invalid IPFS hash format
+    InvalidIPFSHash = 14,
+    /// Invalid Arweave hash format
+    InvalidArweaveHash = 15,
+    /// Unsupported hash type
+    UnsupportedHashType = 16,
+    /// Metadata not found
+    MetadataNotFound = 17,
+    /// Metadata version not found
+    MetadataVersionNotFound = 18,
+    /// Unauthorized metadata update
+    UnauthorizedMetadataUpdate = 19,
+    /// Invalid content type
+    InvalidContentType = 20,
+    /// Metadata already exists
+    MetadataAlreadyExists = 21,
 }
 
 impl NFTError {
@@ -157,6 +235,14 @@ impl NFTError {
             NFTError::InsufficientFractionsForTransfer => "InsufficientFractionsForTransfer",
             NFTError::InsufficientFractionsForApprove => "InsufficientFractionsForApprove",
             NFTError::ContractNotInitialized => "ContractNotInitialized",
+            NFTError::InvalidIPFSHash => "InvalidIPFSHash",
+            NFTError::InvalidArweaveHash => "InvalidArweaveHash",
+            NFTError::UnsupportedHashType => "UnsupportedHashType",
+            NFTError::MetadataNotFound => "MetadataNotFound",
+            NFTError::MetadataVersionNotFound => "MetadataVersionNotFound",
+            NFTError::UnauthorizedMetadataUpdate => "UnauthorizedMetadataUpdate",
+            NFTError::InvalidContentType => "InvalidContentType",
+            NFTError::MetadataAlreadyExists => "MetadataAlreadyExists",
         }
     }
 }

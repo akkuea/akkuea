@@ -1,7 +1,8 @@
-use soroban_sdk::{Address, Env, Vec, Map, String};
-use crate::datatype::{Educator, VerificationLevel,};
+use soroban_sdk::{Address, Env, Vec, Map, String, BytesN};
+use crate::datatype::{Educator, VerificationLevel, Credential};
 use crate::nft::NFTImplementation;
-use crate::storage::{ADMIN, REVIEWERS, VERIFIED_CREDS, SIGNATURES, AUTH_INST,};
+use crate::storage::{ADMIN, REVIEWERS, VERIFIED_CREDS, SIGNATURES, AUTH_INST, CREDENTIALS, EXPIRED_CREDENTIALS, CROSS_CHAIN_REGISTRY, CREDENTIAL_COUNTER};
+use crate::utils::Utils;
 
 pub struct VerificationSystem;
 
@@ -140,10 +141,186 @@ impl VerificationSystem {
         // Calculate the final average across all rated categories.
         let final_avg_rating = total_average_sum / rated_categories_count;
         
+        // Enhanced tiered verification with Premium level
         match final_avg_rating {
             0..=3 => VerificationLevel::Basic,
-            4..=7 => VerificationLevel::Advanced,
-            _ => VerificationLevel::Expert,
+            4..=6 => VerificationLevel::Advanced,
+            7..=8 => VerificationLevel::Expert,
+            _ => VerificationLevel::Premium,
         }
+    }
+
+    /// Create a new credential with tiered verification and W3C compliance
+    pub fn create_credential(
+        env: &Env,
+        issuer: &Address,
+        subject: &Address,
+        credential_hash: String,
+        tier: u32,
+        w3c_compliant: bool,
+    ) -> BytesN<32> {
+        issuer.require_auth();
+        
+        if !Self::is_reviewer(env, issuer) {
+            panic!("not authorized issuer");
+        }
+
+        if !Utils::validate_credential_hash(&credential_hash) {
+            panic!("invalid credential hash format");
+        }
+
+        if w3c_compliant && !Utils::validate_w3c_credential(&credential_hash) {
+            panic!("invalid W3C credential format");
+        }
+
+        let credential_id = Utils::generate_credential_id(env, &credential_hash, issuer);
+        let expiration = Utils::calculate_expiration_timestamp(env, tier);
+        
+        let credential = Credential {
+            id: credential_id.clone(),
+            tier,
+            expiration,
+            w3c_compliant,
+            issuer: issuer.clone(),
+            subject: subject.clone(),
+            credential_hash,
+            cross_chain_verified: false,
+            renewal_count: 0,
+        };
+
+        // Store the credential
+        env.storage().persistent().set(&credential_id, &credential);
+        
+        // Update credentials map
+        let mut credentials: Map<BytesN<32>, Credential> = env.storage().persistent()
+            .get(&CREDENTIALS).unwrap_or_else(|| Map::new(env));
+        credentials.set(credential_id.clone(), credential);
+        env.storage().persistent().set(&CREDENTIALS, &credentials);
+
+        // Increment credential counter
+        let counter: u32 = env.storage().persistent().get(&CREDENTIAL_COUNTER).unwrap_or(0);
+        env.storage().persistent().set(&CREDENTIAL_COUNTER, &(counter + 1));
+
+        credential_id
+    }
+
+    /// Renew an expired credential with updated expiration
+    pub fn renew_credential(
+        env: &Env,
+        issuer: &Address,
+        credential_id: BytesN<32>,
+    ) -> bool {
+        issuer.require_auth();
+        
+        if !Self::is_reviewer(env, issuer) {
+            panic!("not authorized issuer");
+        }
+
+        let mut credentials: Map<BytesN<32>, Credential> = env.storage().persistent()
+            .get(&CREDENTIALS).unwrap_or_else(|| Map::new(env));
+        
+        if let Some(mut credential) = credentials.get(credential_id.clone()) {
+            // Update expiration and renewal count
+            credential.expiration = Utils::calculate_expiration_timestamp(env, credential.tier);
+            credential.renewal_count += 1;
+            
+            // Store updated credential
+            credentials.set(credential_id.clone(), credential.clone());
+            env.storage().persistent().set(&CREDENTIALS, &credentials);
+            env.storage().persistent().set(&credential_id, &credential);
+            
+            // Remove from expired credentials if it was there
+            let mut expired: Vec<BytesN<32>> = env.storage().persistent()
+                .get(&EXPIRED_CREDENTIALS).unwrap_or_else(|| Vec::new(env));
+            let mut new_expired = Vec::new(env);
+            for exp_id in expired.iter() {
+                if exp_id != credential_id {
+                    new_expired.push_back(exp_id);
+                }
+            }
+            env.storage().persistent().set(&EXPIRED_CREDENTIALS, &new_expired);
+            
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Verify credentials across compatible blockchains
+    pub fn verify_cross_chain(
+        env: &Env,
+        verifier: &Address,
+        credential_id: BytesN<32>,
+        chain_id: u32,
+        verification_hash: String,
+    ) -> bool {
+        verifier.require_auth();
+        
+        if !Self::is_reviewer(env, verifier) {
+            panic!("not authorized verifier");
+        }
+
+        if !Utils::validate_cross_chain_data(chain_id, &verification_hash) {
+            panic!("invalid cross-chain verification data");
+        }
+
+        let mut credentials: Map<BytesN<32>, Credential> = env.storage().persistent()
+            .get(&CREDENTIALS).unwrap_or_else(|| Map::new(env));
+        
+        if let Some(mut credential) = credentials.get(credential_id.clone()) {
+            credential.cross_chain_verified = true;
+            
+            // Store updated credential
+            credentials.set(credential_id.clone(), credential.clone());
+            env.storage().persistent().set(&CREDENTIALS, &credentials);
+            env.storage().persistent().set(&credential_id, &credential);
+            
+            // Store cross-chain verification record
+            let mut cross_chain_registry: Map<BytesN<32>, (u32, String)> = env.storage().persistent()
+                .get(&CROSS_CHAIN_REGISTRY).unwrap_or_else(|| Map::new(env));
+            cross_chain_registry.set(credential_id, (chain_id, verification_hash));
+            env.storage().persistent().set(&CROSS_CHAIN_REGISTRY, &cross_chain_registry);
+            
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Get credential information including tier and expiration
+    pub fn get_credential_info(env: &Env, credential_id: BytesN<32>) -> Option<Credential> {
+        env.storage().persistent().get(&credential_id)
+    }
+
+    /// Check and mark expired credentials
+    pub fn check_expired_credentials(env: &Env) {
+        let credentials: Map<BytesN<32>, Credential> = env.storage().persistent()
+            .get(&CREDENTIALS).unwrap_or_else(|| Map::new(env));
+        
+        let mut expired: Vec<BytesN<32>> = env.storage().persistent()
+            .get(&EXPIRED_CREDENTIALS).unwrap_or_else(|| Vec::new(env));
+        
+        for (id, credential) in credentials.iter() {
+            if Utils::is_credential_expired(env, &credential) && !expired.contains(&id) {
+                expired.push_back(id);
+            }
+        }
+        
+        env.storage().persistent().set(&EXPIRED_CREDENTIALS, &expired);
+    }
+
+    /// Get all credentials for a subject
+    pub fn get_credentials_by_subject(env: &Env, subject: &Address) -> Vec<Credential> {
+        let credentials: Map<BytesN<32>, Credential> = env.storage().persistent()
+            .get(&CREDENTIALS).unwrap_or_else(|| Map::new(env));
+        
+        let mut subject_credentials = Vec::new(env);
+        for (_, credential) in credentials.iter() {
+            if credential.subject == *subject {
+                subject_credentials.push_back(credential);
+            }
+        }
+        
+        subject_credentials
     }
 }

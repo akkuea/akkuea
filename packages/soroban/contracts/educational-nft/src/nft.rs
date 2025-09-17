@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, panic_with_error, Address, Bytes, Env, Map, String};
+use soroban_sdk::{contracttype, panic_with_error, Address, Bytes, Env, Map, String, Vec};
 use stellar_tokens::non_fungible::{Base, ContractOverrides};
 
 use crate::utils::NFTError;
@@ -84,6 +84,12 @@ pub enum DataKey {
     CollectionTokens(u64),    // collection_id -> Vec<u64> of token IDs
     FractionalOwners(u64),    // token_id -> FractionalOwnership
     EducatorVerificationAddr, // Address of the educator verification contract
+    // Metadata storage keys
+    Metadata(u64),            // token_id -> NFTMetadata
+    MetadataHistory(u64),     // token_id -> MetadataHistory
+    CreatorMetadata(Address), // creator -> Vec<u64> (token_ids)
+    ContentTypeIndex(String), // content_type -> Vec<u64> (token_ids)
+    NextMetadataVersion(u64), // token_id -> u32 (next version number)
 }
 
 pub struct EducationalNFTStorage;
@@ -270,4 +276,79 @@ pub fn get_educator_verification_address_safe(e: &Env) -> Result<Address, NFTErr
         .instance()
         .get(&key)
         .ok_or(NFTError::ContractNotInitialized)
+}
+
+/// Metadata management functions
+use crate::metadata::{NFTMetadata, MetadataHistory, ContentType};
+
+/// Store NFT metadata
+pub fn store_nft_metadata(e: &Env, token_id: u64, metadata: &NFTMetadata) {
+    let key = DataKey::Metadata(token_id);
+    e.storage().instance().set(&key, metadata);
+}
+
+/// Get NFT metadata safely
+pub fn get_nft_metadata_safe(e: &Env, token_id: u64) -> Result<NFTMetadata, NFTError> {
+    let key = DataKey::Metadata(token_id);
+    e.storage()
+        .instance()
+        .get(&key)
+        .ok_or(NFTError::MetadataNotFound)
+}
+
+/// Store metadata history
+pub fn store_metadata_history(e: &Env, token_id: u64, history: &MetadataHistory) {
+    let key = DataKey::MetadataHistory(token_id);
+    e.storage().instance().set(&key, history);
+}
+
+/// Get metadata history safely
+pub fn get_metadata_history_safe(e: &Env, token_id: u64) -> Result<MetadataHistory, NFTError> {
+    let key = DataKey::MetadataHistory(token_id);
+    e.storage()
+        .instance()
+        .get(&key)
+        .ok_or(NFTError::MetadataNotFound)
+}
+
+/// Add token to creator's metadata index
+pub fn add_token_to_creator_index(e: &Env, creator: &Address, token_id: u64) {
+    let key = DataKey::CreatorMetadata(creator.clone());
+    let mut token_ids: Vec<u64> = e.storage().instance().get(&key).unwrap_or(Vec::new(e));
+    token_ids.push_back(token_id);
+    e.storage().instance().set(&key, &token_ids);
+}
+
+/// Get tokens by creator
+pub fn get_tokens_by_creator(e: &Env, creator: &Address) -> Vec<u64> {
+    let key = DataKey::CreatorMetadata(creator.clone());
+    e.storage().instance().get(&key).unwrap_or(Vec::new(e))
+}
+
+/// Add token to content type index
+pub fn add_token_to_content_type_index(e: &Env, content_type: &ContentType, token_id: u64) {
+    let content_type_str = String::from_str(e, content_type.as_string());
+    let key = DataKey::ContentTypeIndex(content_type_str);
+    let mut token_ids: Vec<u64> = e.storage().instance().get(&key).unwrap_or(Vec::new(e));
+    token_ids.push_back(token_id);
+    e.storage().instance().set(&key, &token_ids);
+}
+
+/// Get tokens by content type
+pub fn get_tokens_by_content_type(e: &Env, content_type: &ContentType) -> Vec<u64> {
+    let content_type_str = String::from_str(e, content_type.as_string());
+    let key = DataKey::ContentTypeIndex(content_type_str);
+    e.storage().instance().get(&key).unwrap_or(Vec::new(e))
+}
+
+/// Get next metadata version
+pub fn get_next_metadata_version(e: &Env, token_id: u64) -> u32 {
+    let key = DataKey::NextMetadataVersion(token_id);
+    e.storage().instance().get(&key).unwrap_or(1)
+}
+
+/// Set next metadata version
+pub fn set_next_metadata_version(e: &Env, token_id: u64, version: u32) {
+    let key = DataKey::NextMetadataVersion(token_id);
+    e.storage().instance().set(&key, &version);
 }

@@ -38,6 +38,21 @@ fn create_test_metadata(env: &Env) -> Bytes {
     )
 }
 
+fn create_test_ipfs_hash(env: &Env) -> Bytes {
+    // Simulate a valid IPFS hash (QmX... format, 34+ bytes)
+    Bytes::from_array(
+        env,
+        &[
+            0x12, 0x20, // multihash prefix for SHA-256
+            0x1a, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f, 0x7a, 0x8b,
+            0x9c, 0xad, 0xbe, 0xcf, 0xda, 0xeb, 0xfc, 0x0d,
+            0x1e, 0x2f, 0x3a, 0x4b, 0x5c, 0x6d, 0x7e, 0x8f,
+            0x9a, 0xab, 0xbc, 0xcd, 0xde, 0xef, 0xf0, 0x01,
+            0x12, 0x23,
+        ],
+    )
+}
+
 #[test]
 fn test_contract_initialization() {
     let (env, _owner, _, _, client) = setup_test_environment();
@@ -453,4 +468,494 @@ fn test_event_emissions() {
 
     // Note: NFT transfer test is disabled due to authorization complexity in the test environment.
     // Events are implicitly tested through successful operations above.
+}
+
+// METADATA MANAGEMENT TESTS
+
+#[test]
+fn test_store_metadata_success() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32; // Non-fractional NFT
+    let metadata_hash = create_test_metadata(&env);
+
+    // Mint NFT first
+    let token_id = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+
+    // Store metadata
+    let ipfs_hash = create_test_ipfs_hash(&env);
+    let content_type = String::from_str(&env, "Course");
+    let title = String::from_str(&env, "Introduction to Blockchain");
+    let description = String::from_str(&env, "A comprehensive course on blockchain technology");
+
+    client.store_metadata(
+        &educator,
+        &(token_id as u64),
+        &content_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+
+    // Verify metadata was stored
+    let metadata = client.get_metadata(&(token_id as u64), &None);
+    assert_eq!(metadata.token_id, token_id as u64);
+    assert_eq!(metadata.version, 1u32);
+    assert_eq!(metadata.creator, educator);
+    assert_eq!(metadata.ipfs_hash, ipfs_hash);
+    assert_eq!(metadata.title, title);
+    assert_eq!(metadata.description, description);
+    assert!(metadata.is_active);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #1)")] // TokenNotFound = 1
+fn test_store_metadata_nft_not_found() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let ipfs_hash = create_test_ipfs_hash(&env);
+    let content_type = String::from_str(&env, "Course");
+    let title = String::from_str(&env, "Test Course");
+    let description = String::from_str(&env, "Test Description");
+
+    // Try to store metadata for non-existent NFT
+    client.store_metadata(&educator, &999u64, &content_type, &ipfs_hash, &title, &description);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #21)")] // MetadataAlreadyExists = 21
+fn test_store_metadata_already_exists() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32;
+    let metadata_hash = create_test_metadata(&env);
+
+    // Mint NFT
+    let token_id = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+
+    let ipfs_hash = create_test_ipfs_hash(&env);
+    let content_type = String::from_str(&env, "Course");
+    let title = String::from_str(&env, "Test Course");
+    let description = String::from_str(&env, "Test Description");
+
+    // Store metadata first time
+    client.store_metadata(
+        &educator,
+        &(token_id as u64),
+        &content_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+
+    // Try to store metadata again - should fail
+    client.store_metadata(
+        &educator,
+        &(token_id as u64),
+        &content_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #14)")] // InvalidIPFSHash = 14
+fn test_store_metadata_invalid_ipfs_hash() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32;
+    let metadata_hash = create_test_metadata(&env);
+
+    // Mint NFT
+    let token_id = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+
+    // Create invalid IPFS hash (too short)
+    let invalid_hash = Bytes::from_array(&env, &[1, 2, 3]);
+    let content_type = String::from_str(&env, "Course");
+    let title = String::from_str(&env, "Test Course");
+    let description = String::from_str(&env, "Test Description");
+
+    // Try to store metadata with invalid hash
+    client.store_metadata(
+        &educator,
+        &(token_id as u64),
+        &content_type,
+        &invalid_hash,
+        &title,
+        &description,
+    );
+}
+
+#[test]
+fn test_update_metadata_success() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32;
+    let metadata_hash = create_test_metadata(&env);
+
+    // Mint NFT and store initial metadata
+    let token_id = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+
+    let initial_ipfs_hash = create_test_ipfs_hash(&env);
+    let content_type = String::from_str(&env, "Course");
+    let title = String::from_str(&env, "Original Course");
+    let description = String::from_str(&env, "Original Description");
+
+    client.store_metadata(
+        &educator,
+        &(token_id as u64),
+        &content_type,
+        &initial_ipfs_hash,
+        &title,
+        &description,
+    );
+
+    // Update metadata
+    let updated_ipfs_hash = Bytes::from_array(
+        &env,
+        &[
+            0x12, 0x20, // multihash prefix
+            0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
+            0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
+            0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87,
+            0x78, 0x69, 0x5a, 0x4b, 0x3c, 0x2d, 0x1e, 0x0f,
+            0xab, 0xcd,
+        ],
+    );
+    let change_notes = String::from_str(&env, "Updated course content with new materials");
+
+    client.update_metadata(&educator, &(token_id as u64), &updated_ipfs_hash, &change_notes);
+
+    // Verify metadata was updated
+    let updated_metadata = client.get_metadata(&(token_id as u64), &None);
+    assert_eq!(updated_metadata.version, 2u32);
+    assert_eq!(updated_metadata.ipfs_hash, updated_ipfs_hash);
+
+    // Verify history
+    let history = client.get_metadata_history(&(token_id as u64));
+    assert_eq!(history.current_version, 2u32);
+    assert_eq!(history.total_versions, 2u32);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #17)")] // MetadataNotFound = 17
+fn test_update_metadata_not_found() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let updated_ipfs_hash = create_test_ipfs_hash(&env);
+    let change_notes = String::from_str(&env, "Update notes");
+
+    // Try to update metadata for NFT without metadata
+    client.update_metadata(&educator, &999u64, &updated_ipfs_hash, &change_notes);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #19)")] // UnauthorizedMetadataUpdate = 19
+fn test_update_metadata_unauthorized() {
+    let (env, _owner, educator, user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32;
+    let metadata_hash = create_test_metadata(&env);
+
+    // Mint NFT and store metadata as educator
+    let token_id = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+
+    let ipfs_hash = create_test_ipfs_hash(&env);
+    let content_type = String::from_str(&env, "Course");
+    let title = String::from_str(&env, "Test Course");
+    let description = String::from_str(&env, "Test Description");
+
+    client.store_metadata(
+        &educator,
+        &(token_id as u64),
+        &content_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+
+    // Try to update as different user
+    let updated_ipfs_hash = create_test_ipfs_hash(&env);
+    let change_notes = String::from_str(&env, "Unauthorized update");
+
+    client.update_metadata(&user, &(token_id as u64), &updated_ipfs_hash, &change_notes);
+}
+
+#[test]
+fn test_get_metadata_specific_version() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32;
+    let metadata_hash = create_test_metadata(&env);
+
+    // Mint NFT and store initial metadata
+    let token_id = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+
+    let initial_ipfs_hash = create_test_ipfs_hash(&env);
+    let content_type = String::from_str(&env, "Course");
+    let title = String::from_str(&env, "Original Course");
+    let description = String::from_str(&env, "Original Description");
+
+    client.store_metadata(
+        &educator,
+        &(token_id as u64),
+        &content_type,
+        &initial_ipfs_hash,
+        &title,
+        &description,
+    );
+
+    // Update metadata twice
+    let updated_ipfs_hash1 = create_test_ipfs_hash(&env);
+    let change_notes1 = String::from_str(&env, "First update");
+    client.update_metadata(&educator, &(token_id as u64), &updated_ipfs_hash1, &change_notes1);
+
+    let updated_ipfs_hash2 = Bytes::from_array(
+        &env,
+        &[
+            0x12, 0x20,
+            0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11,
+            0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99,
+            0xa0, 0xb1, 0xc2, 0xd3, 0xe4, 0xf5, 0x06, 0x17,
+            0x28, 0x39, 0x4a, 0x5b, 0x6c, 0x7d, 0x8e, 0x9f,
+            0xef, 0xcd,
+        ],
+    );
+    let change_notes2 = String::from_str(&env, "Second update");
+    client.update_metadata(&educator, &(token_id as u64), &updated_ipfs_hash2, &change_notes2);
+
+    // Get specific versions
+    let version1_metadata = client.get_metadata(&(token_id as u64), &Some(1u32));
+    let version2_metadata = client.get_metadata(&(token_id as u64), &Some(2u32));
+    let current_metadata = client.get_metadata(&(token_id as u64), &None);
+
+    assert_eq!(version1_metadata.version, 1u32);
+    assert_eq!(version2_metadata.version, 2u32);
+    assert_eq!(current_metadata.version, 3u32);
+    assert_eq!(current_metadata.ipfs_hash, updated_ipfs_hash2);
+}
+
+#[test]
+fn test_get_tokens_by_creator() {
+    let (env, _owner, educator, user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32;
+    let metadata_hash = create_test_metadata(&env);
+
+    // Mint multiple NFTs
+    let token_id1 = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+    let token_id2 = client.mint_nft(&educator, &(collection_id + 1), &fractions, &metadata_hash);
+    let token_id3 = client.mint_nft(&user, &(collection_id + 2), &fractions, &metadata_hash);
+
+    // Store metadata for each
+    let ipfs_hash = create_test_ipfs_hash(&env);
+    let content_type = String::from_str(&env, "Course");
+    let title = String::from_str(&env, "Test Course");
+    let description = String::from_str(&env, "Test Description");
+
+    client.store_metadata(
+        &educator,
+        &(token_id1 as u64),
+        &content_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+    client.store_metadata(
+        &educator,
+        &(token_id2 as u64),
+        &content_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+    client.store_metadata(
+        &user,
+        &(token_id3 as u64),
+        &content_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+
+    // Get tokens by creator
+    let educator_tokens = client.get_tokens_by_creator(&educator);
+    let user_tokens = client.get_tokens_by_creator(&user);
+
+    assert_eq!(educator_tokens.len(), 2);
+    assert_eq!(user_tokens.len(), 1);
+    assert!(educator_tokens.contains(&(token_id1 as u64)));
+    assert!(educator_tokens.contains(&(token_id2 as u64)));
+    assert!(user_tokens.contains(&(token_id3 as u64)));
+}
+
+#[test]
+fn test_get_tokens_by_content_type() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32;
+    let metadata_hash = create_test_metadata(&env);
+
+    // Mint NFTs
+    let token_id1 = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+    let token_id2 = client.mint_nft(&educator, &(collection_id + 1), &fractions, &metadata_hash);
+    let token_id3 = client.mint_nft(&educator, &(collection_id + 2), &fractions, &metadata_hash);
+
+    // Store metadata with different content types
+    let ipfs_hash = create_test_ipfs_hash(&env);
+    let course_type = String::from_str(&env, "Course");
+    let certification_type = String::from_str(&env, "Certification");
+    let title = String::from_str(&env, "Test Content");
+    let description = String::from_str(&env, "Test Description");
+
+    client.store_metadata(
+        &educator,
+        &(token_id1 as u64),
+        &course_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+    client.store_metadata(
+        &educator,
+        &(token_id2 as u64),
+        &course_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+    client.store_metadata(
+        &educator,
+        &(token_id3 as u64),
+        &certification_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+
+    // Get tokens by content type
+    let course_tokens = client.get_tokens_by_content_type(&course_type);
+    let certification_tokens = client.get_tokens_by_content_type(&certification_type);
+
+    assert_eq!(course_tokens.len(), 2);
+    assert_eq!(certification_tokens.len(), 1);
+    assert!(course_tokens.contains(&(token_id1 as u64)));
+    assert!(course_tokens.contains(&(token_id2 as u64)));
+    assert!(certification_tokens.contains(&(token_id3 as u64)));
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #20)")] // InvalidContentType = 20
+fn test_invalid_content_type() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32;
+    let metadata_hash = create_test_metadata(&env);
+
+    let token_id = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+
+    let ipfs_hash = create_test_ipfs_hash(&env);
+    let invalid_content_type = String::from_str(&env, "InvalidType");
+    let title = String::from_str(&env, "Test Content");
+    let description = String::from_str(&env, "Test Description");
+
+    // Try to store metadata with invalid content type
+    client.store_metadata(
+        &educator,
+        &(token_id as u64),
+        &invalid_content_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+}
+
+#[test]
+fn test_metadata_versioning_complete_workflow() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32;
+    let metadata_hash = create_test_metadata(&env);
+
+    // Mint NFT
+    let token_id = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+
+    // Store initial metadata
+    let ipfs_hash1 = create_test_ipfs_hash(&env);
+    let content_type = String::from_str(&env, "Course");
+    let title = String::from_str(&env, "Blockchain Fundamentals");
+    let description = String::from_str(&env, "Learn the basics of blockchain technology");
+
+    client.store_metadata(
+        &educator,
+        &(token_id as u64),
+        &content_type,
+        &ipfs_hash1,
+        &title,
+        &description,
+    );
+
+    // Update metadata multiple times - using individual updates for no_std compatibility
+    let hash1 = Bytes::from_array(&env, &[0xaa; 34]);
+    let notes1 = String::from_str(&env, "Updated with more examples");
+    client.update_metadata(&educator, &(token_id as u64), &hash1, &notes1);
+    
+    let hash2 = Bytes::from_array(&env, &[0xbb; 34]);
+    let notes2 = String::from_str(&env, "Added practical exercises");
+    client.update_metadata(&educator, &(token_id as u64), &hash2, &notes2);
+    
+    let hash3 = Bytes::from_array(&env, &[0xcc; 34]);
+    let notes3 = String::from_str(&env, "Final version with assessments");
+    client.update_metadata(&educator, &(token_id as u64), &hash3, &notes3);
+
+    // Verify complete history
+    let history = client.get_metadata_history(&(token_id as u64));
+    assert_eq!(history.total_versions, 4u32);
+    assert_eq!(history.current_version, 4u32);
+
+    // Verify we can access all versions
+    for version in 1..=4u32 {
+        let version_metadata = client.get_metadata(&(token_id as u64), &Some(version));
+        assert_eq!(version_metadata.version, version);
+    }
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #18)")] // MetadataVersionNotFound = 18
+fn test_get_nonexistent_metadata_version() {
+    let (env, _owner, educator, _user, client) = setup_test_environment();
+
+    let collection_id = 1u64;
+    let fractions = 0u32;
+    let metadata_hash = create_test_metadata(&env);
+
+    let token_id = client.mint_nft(&educator, &collection_id, &fractions, &metadata_hash);
+
+    let ipfs_hash = create_test_ipfs_hash(&env);
+    let content_type = String::from_str(&env, "Course");
+    let title = String::from_str(&env, "Test Course");
+    let description = String::from_str(&env, "Test Description");
+
+    client.store_metadata(
+        &educator,
+        &(token_id as u64),
+        &content_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
+
+    // Try to get version that doesn't exist
+    client.get_metadata(&(token_id as u64), &Some(999u32));
 }

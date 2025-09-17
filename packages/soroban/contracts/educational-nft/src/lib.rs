@@ -2,15 +2,17 @@
 // Compatible with OpenZeppelin Stellar Soroban Contracts ^0.4.1
 #![no_std]
 
-use soroban_sdk::{contract, contractimpl, Address, Bytes, Env};
+use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String, Vec};
 use stellar_access::ownable::{self as ownable, Ownable};
 use stellar_macros::default_impl;
 use stellar_tokens::non_fungible::{Base, NonFungibleToken};
 
+mod metadata;
 mod mock_educator_verification_nft;
 mod nft;
 mod utils;
 
+pub use metadata::*;
 pub use nft::*;
 pub use utils::*;
 
@@ -142,6 +144,189 @@ impl EducationalNFTContract {
         owner: Address,
     ) -> Result<u32, utils::NFTError> {
         nft::get_fraction_balance(e, token_id as u64, &owner)
+    }
+
+    /// Store rich metadata for an NFT on IPFS/Arweave
+    pub fn store_metadata(
+        e: &Env,
+        caller: Address,
+        token_id: u64,
+        content_type: String,
+        ipfs_hash: Bytes,
+        title: String,
+        description: String,
+    ) -> Result<(), utils::NFTError> {
+        caller.require_auth();
+
+        // Check if NFT exists
+        let nft_data = nft::get_educational_nft_safe(e, token_id)?;
+
+        // Check authorization - only NFT owner can store metadata
+        if nft_data.owner != caller {
+            return Err(utils::NFTError::UnauthorizedMetadataUpdate);
+        }
+
+        // Check if metadata already exists
+        if nft::get_nft_metadata_safe(e, token_id).is_ok() {
+            return Err(utils::NFTError::MetadataAlreadyExists);
+        }
+
+        // Parse content type
+        let parsed_content_type = if content_type == String::from_str(e, "Course") {
+            metadata::ContentType::Course
+        } else if content_type == String::from_str(e, "Certification") {
+            metadata::ContentType::Certification
+        } else if content_type == String::from_str(e, "Workshop") {
+            metadata::ContentType::Workshop
+        } else if content_type == String::from_str(e, "Tutorial") {
+            metadata::ContentType::Tutorial
+        } else if content_type == String::from_str(e, "Assignment") {
+            metadata::ContentType::Assignment
+        } else if content_type == String::from_str(e, "Assessment") {
+            metadata::ContentType::Assessment
+        } else {
+            return Err(utils::NFTError::InvalidContentType);
+        };
+
+        // Create new metadata
+        let new_metadata = metadata::NFTMetadata::new(
+            e,
+            token_id,
+            parsed_content_type.clone(),
+            ipfs_hash.clone(),
+            caller.clone(),
+            title,
+            description,
+        )?;
+
+        // Store metadata
+        nft::store_nft_metadata(e, token_id, &new_metadata);
+
+        // Create and store metadata history
+        let history = metadata::MetadataHistory::new(e, token_id, &new_metadata);
+        nft::store_metadata_history(e, token_id, &history);
+
+        // Update indexes
+        nft::add_token_to_creator_index(e, &caller, token_id);
+        nft::add_token_to_content_type_index(e, &parsed_content_type, token_id);
+
+        // Emit event
+        utils::emit_metadata_created_event(
+            e,
+            token_id,
+            &caller,
+            String::from_str(e, parsed_content_type.as_string()),
+            &ipfs_hash,
+            new_metadata.version,
+        );
+
+        Ok(())
+    }
+
+    /// Update metadata with a new version, preserving history
+    pub fn update_metadata(
+        e: &Env,
+        caller: Address,
+        token_id: u64,
+        ipfs_hash: Bytes,
+        change_notes: String,
+    ) -> Result<(), utils::NFTError> {
+        caller.require_auth();
+
+        // Get existing metadata
+        let current_metadata = nft::get_nft_metadata_safe(e, token_id)?;
+
+        // Check authorization - only original creator can update
+        if current_metadata.creator != caller {
+            return Err(utils::NFTError::UnauthorizedMetadataUpdate);
+        }
+
+        // Create updated metadata
+        let updated_metadata = current_metadata.update_version(
+            e,
+            ipfs_hash.clone(),
+            caller.clone(),
+            change_notes.clone(),
+        )?;
+
+        // Store updated metadata
+        nft::store_nft_metadata(e, token_id, &updated_metadata);
+
+        // Update history
+        let mut history = nft::get_metadata_history_safe(e, token_id)?;
+        history.add_version(e, &updated_metadata, change_notes);
+        nft::store_metadata_history(e, token_id, &history);
+
+        // Emit event
+        utils::emit_metadata_updated_event(
+            e,
+            token_id,
+            &caller,
+            current_metadata.version,
+            updated_metadata.version,
+            &ipfs_hash,
+        );
+
+        Ok(())
+    }
+
+    /// Get metadata for a specific NFT and version
+    pub fn get_metadata(
+        e: &Env,
+        token_id: u64,
+        version: Option<u32>,
+    ) -> Result<metadata::NFTMetadata, utils::NFTError> {
+        if let Some(v) = version {
+            // Get specific version from history
+            let history = nft::get_metadata_history_safe(e, token_id)?;
+            let version_info = history.get_version(v)
+                .ok_or(utils::NFTError::MetadataVersionNotFound)?;
+            
+            // For now, we'll return the current metadata with the version info
+            // In a more complete implementation, we'd reconstruct the full metadata for that version
+            let mut metadata = nft::get_nft_metadata_safe(e, token_id)?;
+            metadata.version = version_info.version;
+            metadata.ipfs_hash = version_info.ipfs_hash;
+            metadata.updated_at = version_info.created_at;
+            Ok(metadata)
+        } else {
+            // Get current version
+            nft::get_nft_metadata_safe(e, token_id)
+        }
+    }
+
+    /// Get metadata history for an NFT
+    pub fn get_metadata_history(
+        e: &Env,
+        token_id: u64,
+    ) -> Result<metadata::MetadataHistory, utils::NFTError> {
+        nft::get_metadata_history_safe(e, token_id)
+    }
+
+    /// Get tokens by creator
+    pub fn get_tokens_by_creator(e: &Env, creator: Address) -> Vec<u64> {
+        nft::get_tokens_by_creator(e, &creator)
+    }
+
+    /// Get tokens by content type
+    pub fn get_tokens_by_content_type(e: &Env, content_type: String) -> Result<Vec<u64>, utils::NFTError> {
+        let parsed_content_type = if content_type == String::from_str(e, "Course") {
+            metadata::ContentType::Course
+        } else if content_type == String::from_str(e, "Certification") {
+            metadata::ContentType::Certification
+        } else if content_type == String::from_str(e, "Workshop") {
+            metadata::ContentType::Workshop
+        } else if content_type == String::from_str(e, "Tutorial") {
+            metadata::ContentType::Tutorial
+        } else if content_type == String::from_str(e, "Assignment") {
+            metadata::ContentType::Assignment
+        } else if content_type == String::from_str(e, "Assessment") {
+            metadata::ContentType::Assessment
+        } else {
+            return Err(utils::NFTError::InvalidContentType);
+        };
+
+        Ok(nft::get_tokens_by_content_type(e, &parsed_content_type))
     }
 }
 

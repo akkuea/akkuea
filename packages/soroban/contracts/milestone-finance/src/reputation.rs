@@ -1,6 +1,4 @@
-use soroban_sdk::{
-    contracttype, symbol_short, Address, Env, Map, String, Symbol,
-};
+use soroban_sdk::{contracttype, symbol_short, Address, Env, Map, String, Symbol};
 
 use crate::utils::*;
 
@@ -14,12 +12,12 @@ const NEXT_USER_ID_KEY: Symbol = symbol_short!("next_uid");
 #[contracttype]
 #[derive(Clone, Debug)]
 pub struct Reputation {
-    pub user: Address,              // Stellar address of the user
-    pub score: u32,                 // Reputation score (0-100)
-    pub projects_completed: u32,    // Number of successfully completed projects
-    pub milestones_missed: u32,     // Number of missed milestones
-    pub total_projects: u32,        // Total number of projects participated in
-    pub last_updated: u64,          // Timestamp of last reputation update
+    pub user: Address,           // Stellar address of the user
+    pub score: u32,              // Reputation score (0-100)
+    pub projects_completed: u32, // Number of successfully completed projects
+    pub milestones_missed: u32,  // Number of missed milestones
+    pub total_projects: u32,     // Total number of projects participated in
+    pub last_updated: u64,       // Timestamp of last reputation update
 }
 
 /// User profile with additional metadata
@@ -130,7 +128,11 @@ pub fn update_reputation(
 
     // Calculate new reputation score
     let new_score = if reputation_change >= 0 {
-        user_data.reputation.score.saturating_add(reputation_change as u32).min(100)
+        user_data
+            .reputation
+            .score
+            .saturating_add(reputation_change as u32)
+            .min(100)
     } else {
         let change_abs = reputation_change.unsigned_abs();
         if user_data.reputation.score < change_abs {
@@ -145,7 +147,8 @@ pub fn update_reputation(
     user_data.reputation.last_updated = env.ledger().timestamp();
 
     if success {
-        user_data.reputation.projects_completed = user_data.reputation.projects_completed.saturating_add(1);
+        user_data.reputation.projects_completed =
+            user_data.reputation.projects_completed.saturating_add(1);
     }
 
     // Store updated user
@@ -182,12 +185,7 @@ pub fn get_voting_power(env: Env, user: Address) -> u32 {
 }
 
 /// Apply reputation penalty for missed milestones
-pub fn penalize_missed_milestone(
-    env: Env,
-    _caller: Address,
-    user: Address,
-    _milestone_id: u64,
-) {
+pub fn penalize_missed_milestone(env: Env, _caller: Address, user: Address, _milestone_id: u64) {
     // Get current user data
     let mut users: Map<Address, User> = env
         .storage()
@@ -211,7 +209,8 @@ pub fn penalize_missed_milestone(
 
     // Update reputation data
     user_data.reputation.score = new_score;
-    user_data.reputation.milestones_missed = user_data.reputation.milestones_missed.saturating_add(1);
+    user_data.reputation.milestones_missed =
+        user_data.reputation.milestones_missed.saturating_add(1);
     user_data.reputation.last_updated = env.ledger().timestamp();
 
     // Store updated user
@@ -239,11 +238,7 @@ pub fn get_reputation(env: Env, user: Address) -> Reputation {
 }
 
 /// Vote for a project with reputation-based voting power
-pub fn vote_for_project(
-    env: Env,
-    voter: Address,
-    project_id: u64,
-) -> u32 {
+pub fn vote_for_project(env: Env, voter: Address, project_id: u64) -> u32 {
     // Get voter's voting power
     let voting_power = get_voting_power(env.clone(), voter.clone());
 
@@ -294,8 +289,12 @@ pub fn vote_for_project(
     project_votes.set(project_id, project_vote);
     project_voters.set(project_id, voters);
 
-    env.storage().instance().set(&PROJECT_VOTES_KEY, &project_votes);
-    env.storage().instance().set(&PROJECT_VOTERS_KEY, &project_voters);
+    env.storage()
+        .instance()
+        .set(&PROJECT_VOTES_KEY, &project_votes);
+    env.storage()
+        .instance()
+        .set(&PROJECT_VOTERS_KEY, &project_voters);
 
     // Emit voting event
     emit_voting_event(&env, voter, project_id, voting_power);
@@ -342,7 +341,13 @@ pub fn complete_milestone(
     creator: Address,
 ) {
     // Update creator reputation for successful milestone completion
-    update_reputation(env.clone(), caller.clone(), creator.clone(), project_id, true);
+    update_reputation(
+        env.clone(),
+        caller.clone(),
+        creator.clone(),
+        project_id,
+        true,
+    );
 
     // Emit milestone completion event
     emit_milestone_event(&env, project_id, milestone_id, creator, true);
@@ -366,8 +371,10 @@ pub fn get_reputation_stats(env: Env) -> ReputationStats {
     for (_, user) in users.iter() {
         total_users = total_users.saturating_add(1);
         total_reputation = total_reputation.saturating_add(user.reputation.score);
-        total_projects_completed = total_projects_completed.saturating_add(user.reputation.projects_completed);
-        total_milestones_missed = total_milestones_missed.saturating_add(user.reputation.milestones_missed);
+        total_projects_completed =
+            total_projects_completed.saturating_add(user.reputation.projects_completed);
+        total_milestones_missed =
+            total_milestones_missed.saturating_add(user.reputation.milestones_missed);
 
         if user.reputation.score > highest_reputation {
             highest_reputation = user.reputation.score;

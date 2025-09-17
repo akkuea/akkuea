@@ -1,11 +1,11 @@
 'use client';
 
 import { useGlobalAuthenticationStore } from '@/components/auth/store/data';
-import QuickPost from '@/components/quick-post/quick-post';
 import CreatePostModal from '@/components/floating-button/button';
 import Post from '@/components/post/page';
+import QuickPost from '@/components/quick-post/quick-post';
 
-export default function Home() {
+export default function LearningHubHome() {
   const address = useGlobalAuthenticationStore((state) => state.address);
 
   return (

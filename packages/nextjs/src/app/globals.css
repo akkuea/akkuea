@@ -19,6 +19,8 @@
     --input: 220 13% 91%;
     --ring: 217.2 91.2% 59.8%;
     --radius: 0.5rem;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 18% 33%;
 
     --contribution-bg: 145 63% 49%;
     --contribution-text: 145 63% 49%;
@@ -58,6 +60,8 @@
     --input: 240 3.7% 15.9%;
     --ring: 217.2 91.2% 59.8%;
     --radius: 0.5rem;
+    --popover: 210 19% 18%;
+    --popover-foreground: 188 4% 92%;
 
     --contribution-bg: 145 63% 49%;
     --contribution-text: 145 63% 49%;
@@ -94,3 +98,7 @@
   }
 }
 
+/* Hide the react-chrono timeline card pointers */
+span[class^='TriangleIconWrapper'] {
+  display: none !important;
+}

@@ -120,6 +120,15 @@ jobs:
         echo "Package.json contents:"
         cat package.json | head -10
         echo ""
+        echo "Checking npm which package.json is being used:"
+        npm config get prefix
+        echo ""
+        echo "Checking if there are multiple package.json files:"
+        find . -name "package.json" -type f
+        echo ""
+        echo "Checking npm cache:"
+        npm cache verify
+        echo ""
         echo "Looking for chat-interface.tsx:"
         find . -name "chat-interface.tsx" -type f
         echo ""
@@ -132,8 +141,11 @@ jobs:
         echo "Checking node_modules for @ai-sdk/react:"
         ls node_modules/@ai-sdk/ 2>/dev/null || echo "No @ai-sdk directory"
         echo ""
-        echo "Running npm run build..."
-        npm run build
+        echo "Running npm run build with explicit package.json:"
+        npm run build --package.json=./package.json
+        echo ""
+        echo "If that fails, trying with npx:"
+        npx next build
 
   test-agent:
     name: Test Agent Package

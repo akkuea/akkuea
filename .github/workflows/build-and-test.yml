@@ -93,7 +93,7 @@ jobs:
 
     - name: Install dependencies
       working-directory: ./packages/nextjs
-      run: npm ci
+      run: npm install --legacy-peer-deps
 
     - name: Run tests
       working-directory: ./packages/nextjs
@@ -118,7 +118,7 @@ jobs:
 
     - name: Install dependencies
       working-directory: ./packages/agent
-      run: npm install
+      run: npm install --legacy-peer-deps
 
     - name: Build application
       working-directory: ./packages/agent
@@ -139,7 +139,7 @@ jobs:
 
     - name: Install dependencies
       working-directory: ./packages/assistant
-      run: npm install
+      run: npm install --legacy-peer-deps
 
     - name: Build application
       working-directory: ./packages/assistant
@@ -177,7 +177,7 @@ jobs:
 
     - name: Install Next.js dependencies
       working-directory: ./packages/nextjs
-      run: npm ci
+      run: npm install --legacy-peer-deps
 
     - name: Run Next.js linting
       working-directory: ./packages/nextjs

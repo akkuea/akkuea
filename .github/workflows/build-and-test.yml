@@ -104,7 +104,13 @@ jobs:
 
     - name: Build application
       working-directory: ./packages/nextjs
-      run: npm run build
+      run: |
+        echo "Current directory: $(pwd)"
+        echo "Contents of current directory:"
+        ls -la
+        echo "Looking for chat-interface.tsx:"
+        find . -name "chat-interface.tsx" -type f
+        npm run build
 
   test-agent:
     name: Test Agent Package

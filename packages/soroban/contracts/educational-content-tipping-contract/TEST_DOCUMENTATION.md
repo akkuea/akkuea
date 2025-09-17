@@ -9,23 +9,19 @@ This document outlines the testing strategy and coverage for the Tipping Reward 
 The test suite focuses on several key security aspects:
 
 1. **Initialization Protection**
-
    - Tests verify that the contract cannot be re-initialized
    - Ensures proper initialization with admin address
 
 2. **Input Validation**
-
    - Tests validate that tip amounts are properly checked
    - Ensures negative or zero amounts are rejected
 
 3. **Data Integrity**
-
    - Verifies that educator statistics are correctly updated
    - Ensures tip history accurately reflects all transactions
    - Tests that top educator rankings maintain proper order
 
 4. **Authorization**
-
    - Tests that only authorized users can perform restricted operations
    - Verifies proper access control for administrative functions
 
@@ -46,7 +42,6 @@ The test suite focuses on several key security aspects:
 ### 2. Tip Management Tests
 
 - **Valid Tip Sending**
-
   - Tests sending tips with valid parameters
   - Verifies token transfer functionality (currently commented out in implementation)
   - Ensures tip records are properly created and stored
@@ -61,7 +56,6 @@ The test suite focuses on several key security aspects:
 ### 3. Educator Statistics Tests
 
 - **Statistics Tracking**
-
   - Tests that educator statistics are correctly initialized for new educators
   - Verifies that statistics are properly updated with each tip
   - Tests that total tip amounts are correctly calculated
@@ -76,7 +70,6 @@ The test suite focuses on several key security aspects:
 ### 4. Tip History Tests
 
 - **History Recording**
-
   - Tests that tip history is correctly initialized for new educators
   - Verifies that tips are properly added to history
   - Tests that all tip details are accurately recorded
@@ -90,7 +83,6 @@ The test suite focuses on several key security aspects:
 ### 5. Top Educator Ranking Tests
 
 - **Ranking Management**
-
   - Tests that top educators are correctly ranked by tip amount
   - Verifies that rankings are properly updated with each tip
   - Tests insertion and removal of educators from rankings
@@ -105,7 +97,6 @@ The test suite focuses on several key security aspects:
 ### 6. Edge Cases and Error Handling
 
 - **Error Conditions**
-
   - Tests handling of invalid inputs
   - Verifies appropriate error responses
   - Tests edge cases for all functions
@@ -117,18 +108,15 @@ The test suite focuses on several key security aspects:
 ## Areas for Improvement
 
 1. **Test Coverage Expansion**
-
    - Add more tests for error conditions
    - Implement tests for token transfer functionality
    - Add tests for concurrent operations
 
 2. **Integration Testing**
-
    - Implement tests that integrate with actual token contracts
    - Test interaction with other contracts in the Akkuea ecosystem
 
 3. **Performance Testing**
-
    - Add tests for gas consumption
    - Test with large numbers of tips and educators
    - Optimize storage patterns based on test results

@@ -9,21 +9,18 @@ This document outlines the testing strategy and coverage for the Tokenized Educa
 The test suite focuses on several key security aspects:
 
 1. **Authentication and Authorization**
-
    - Tests verify that only content creators can publish content
    - Ensures proper authentication for upvoting operations
    - Validates that verification requires proper authorization
    - Tests that unauthorized users cannot perform restricted operations
 
 2. **Input Validation**
-
    - Tests validate that content metadata meets required format and constraints
    - Ensures content hashes are properly validated
    - Verifies that subject tags meet format requirements
    - Tests edge cases for all input parameters
 
 3. **Data Integrity**
-
    - Verifies that content data is correctly stored and retrieved
    - Ensures upvote counts are accurately maintained
    - Tests that verification status is properly updated
@@ -40,14 +37,12 @@ The test suite focuses on several key security aspects:
 ### 1. Content Publishing Tests
 
 - **Basic Publishing**
-
   - Tests successful content publishing with valid parameters
   - Verifies content ID assignment and incrementation
   - Tests publishing with various metadata configurations
   - Ensures proper event emission for publishing operations
 
 - **Publishing Validation**
-
   - Tests validation of creator address
   - Verifies validation of title format and length
   - Tests validation of content hash format
@@ -62,14 +57,12 @@ The test suite focuses on several key security aspects:
 ### 2. Content Upvoting Tests
 
 - **Basic Upvoting**
-
   - Tests successful upvoting with valid parameters
   - Verifies upvote count incrementation
   - Tests upvoting for various content items
   - Ensures proper event emission for upvoting operations
 
 - **Duplicate Vote Prevention**
-
   - Tests rejection of duplicate votes from the same user
   - Verifies vote tracking is correctly maintained
   - Tests duplicate vote prevention across multiple operations
@@ -84,14 +77,12 @@ The test suite focuses on several key security aspects:
 ### 3. Content Verification Tests
 
 - **Basic Verification**
-
   - Tests successful content verification with valid parameters
   - Verifies verification status updates
   - Tests verification for various content items
   - Ensures proper event emission for verification operations
 
 - **Verification Validation**
-
   - Tests validation of verifier address
   - Verifies validation of content existence
   - Tests verification of already verified content
@@ -106,7 +97,6 @@ The test suite focuses on several key security aspects:
 ### 4. Content Retrieval Tests
 
 - **Basic Retrieval**
-
   - Tests successful content retrieval with valid content IDs
   - Verifies all content details are correctly returned
   - Tests retrieval of content with various metadata configurations
@@ -121,7 +111,6 @@ The test suite focuses on several key security aspects:
 ### 5. Integration Tests
 
 - **End-to-End Workflows**
-
   - Tests complete content lifecycle (publishing, upvoting, verification, retrieval)
   - Verifies interaction between different contract functions
   - Tests complex scenarios with multiple content items and operations
@@ -147,19 +136,16 @@ The contract includes 15 comprehensive tests that verify all aspects of function
 ## Areas for Improvement
 
 1. **Test Coverage Expansion**
-
    - Add more tests for edge cases in content metadata
    - Implement property-based testing for complex operations
    - Add stress tests with large numbers of content items
 
 2. **Authorization Testing**
-
    - Add more tests for authorization boundaries
    - Implement role-based access control tests
    - Test different authorization scenarios
 
 3. **Integration Testing**
-
    - Expand tests for integration with other Akkuea contracts
    - Test interaction with the educational-purchase-nft-contract
    - Implement cross-contract workflow testing

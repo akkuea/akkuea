@@ -35,16 +35,25 @@ export default function ParsedJsonView({ data }: ParsedJsonViewProps) {
           </Badge>
         );
       case 'number':
-        return <span className="text-blue-500 font-semibold">{String(value)}</span>;
+        return (
+          <span className="text-blue-500 font-semibold">{String(value)}</span>
+        );
       case 'string':
-        return <span className="text-emerald-500">&quot;{String(value)}&quot;</span>;
+        return (
+          <span className="text-emerald-500">&quot;{String(value)}&quot;</span>
+        );
       default:
         return <span>{JSON.stringify(value)}</span>;
     }
   };
 
   // Function to render a key-value pair
-  const renderKeyValue = (key: string, value: JsonValue, depth = 0, index = 0) => {
+  const renderKeyValue = (
+    key: string,
+    value: JsonValue,
+    depth = 0,
+    index = 0,
+  ) => {
     const isObject = value !== null && typeof value === 'object';
 
     return (

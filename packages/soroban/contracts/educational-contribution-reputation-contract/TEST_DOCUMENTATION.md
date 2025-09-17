@@ -9,21 +9,18 @@ This document outlines the testing strategy and coverage for the Contributor Rep
 The test suite focuses on several key security aspects:
 
 1. **Authentication and Authorization**
-
    - Tests verify that only authorized users can perform restricted operations
    - Ensures proper authentication for user profile updates
    - Validates that only authorized verifiers can verify expertise
    - Tests that only authorized issuers can issue credentials
 
 2. **Input Validation**
-
    - Tests validate that user inputs meet required format and constraints
    - Ensures reputation scores are within valid ranges
    - Verifies expertise levels are properly validated
    - Tests edge cases for all input parameters
 
 3. **Data Integrity**
-
    - Verifies that user data is correctly stored and retrieved
    - Ensures reputation scores are accurately calculated and updated
    - Tests that expertise claims and verifications maintain consistency
@@ -40,7 +37,6 @@ The test suite focuses on several key security aspects:
 ### 1. User Management Tests
 
 - **User Registration**
-
   - Tests successful user registration with valid parameters
   - Verifies unique user ID assignment
   - Tests registration with optional parameters (with and without bio)
@@ -48,7 +44,6 @@ The test suite focuses on several key security aspects:
   - Tests duplicate registration handling
 
 - **User Retrieval**
-
   - Tests retrieval of existing users
   - Verifies handling of non-existent user IDs
   - Tests retrieval of users with various profile completeness levels
@@ -63,7 +58,6 @@ The test suite focuses on several key security aspects:
 ### 2. Reputation System Tests
 
 - **Reputation Updates**
-
   - Tests reputation score initialization for new domains
   - Verifies score updates with positive and negative changes
   - Tests authorization requirements for reputation updates
@@ -71,7 +65,6 @@ The test suite focuses on several key security aspects:
   - Tests edge cases for score calculations
 
 - **Reputation Retrieval**
-
   - Tests retrieval of existing reputation scores
   - Verifies handling of non-existent reputation records
   - Tests retrieval across multiple domains for the same user
@@ -86,7 +79,6 @@ The test suite focuses on several key security aspects:
 ### 3. Expertise Management Tests
 
 - **Expertise Addition**
-
   - Tests adding expertise with valid parameters
   - Verifies level validation (1-5 range)
   - Tests authentication requirements for expertise claims
@@ -94,7 +86,6 @@ The test suite focuses on several key security aspects:
   - Tests adding multiple expertise domains for a user
 
 - **Expertise Verification**
-
   - Tests verification by authorized experts
   - Verifies authorization requirements for verifiers
   - Tests verification status updates
@@ -110,7 +101,6 @@ The test suite focuses on several key security aspects:
 ### 4. Credential System Tests
 
 - **Credential Issuance**
-
   - Tests issuing credentials with valid parameters
   - Verifies authorization requirements for issuers
   - Tests credential status updates
@@ -118,7 +108,6 @@ The test suite focuses on several key security aspects:
   - Tests issuing multiple credential types to a user
 
 - **Credential Revocation**
-
   - Tests revoking credentials with valid parameters
   - Verifies authorization requirements for revocation
   - Tests credential status updates after revocation
@@ -134,7 +123,6 @@ The test suite focuses on several key security aspects:
 ### 5. Integration Tests
 
 - **End-to-End Workflows**
-
   - Tests complete user lifecycle (registration, expertise addition, verification, credential issuance)
   - Verifies interaction between reputation and expertise systems
   - Tests credential issuance based on reputation thresholds
@@ -149,7 +137,6 @@ The test suite focuses on several key security aspects:
 ### 6. Performance Tests
 
 - **Storage Efficiency**
-
   - Tests storage usage patterns
   - Verifies efficient data retrieval
   - Tests with large numbers of users and domains
@@ -162,19 +149,16 @@ The test suite focuses on several key security aspects:
 ## Areas for Improvement
 
 1. **Test Coverage Expansion**
-
    - Add more tests for edge cases in reputation calculation
    - Implement property-based testing for complex algorithms
    - Add stress tests with large numbers of users and domains
 
 2. **Integration Testing**
-
    - Expand tests for integration with other Akkuea contracts
    - Test interaction with token contracts for credential issuance
    - Implement cross-contract workflow testing
 
 3. **Security Testing**
-
    - Add tests for potential attack vectors
    - Implement fuzzing for input validation
    - Test authorization boundaries more extensively

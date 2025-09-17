@@ -18,21 +18,18 @@ The contract creates a transparent and immutable record of educational purchases
 ## Functionalities
 
 1. **NFT Creation and Management**
-
    - **NFT Minting**: Create unique tokens for educational purchases
    - **Metadata Storage**: Store comprehensive purchase details
    - **Ownership Assignment**: Assign NFTs to purchasers
    - **Transaction Linking**: Connect NFTs to blockchain transactions
 
 2. **Purchase Verification**
-
    - **Transaction Verification**: Verify that purchases occurred on-chain
    - **Ownership Verification**: Confirm the current owner of educational content
    - **Purchase Details**: Access comprehensive purchase information
    - **Duplicate Prevention**: Ensure each transaction has only one NFT
 
 3. **Administrative Functions**
-
    - **Contract Initialization**: Set up the contract with administrative controls
    - **Access Control**: Restrict sensitive operations to authorized users
    - **System Monitoring**: Track the total number of NFTs in the system
@@ -66,11 +63,9 @@ educational-purchase-nft-contract/
 The contract emits the following events:
 
 1. `nft_minted` - When a new NFT is minted
-
    - Data: token_id, owner, transaction_id
 
 2. `nft_transferred` - When an NFT is transferred to a new owner
-
    - Data: token_id, from_address, to_address
 
 3. `metadata_updated` - When NFT metadata is updated
@@ -199,26 +194,22 @@ Stores the complete NFT information:
 ## Technical Details and Implementation Notes
 
 1. **Storage Model**
-
    - Uses persistent storage for NFT data
    - Uses instance storage for contract configuration
    - Implements mapping from transaction IDs to token IDs
    - Uses counter for sequential token ID assignment
 
 2. **Authentication**
-
    - Implements admin authentication for sensitive operations
    - Uses `require_auth` for ownership verification
    - Restricts minting operations to authorized addresses
 
 3. **Transaction Linking**
-
    - Uses 32-byte transaction identifiers (BytesN<32>)
    - Maintains a mapping between transactions and NFTs
    - Prevents duplicate NFTs for the same transaction
 
 4. **Metadata Management**
-
    - Stores comprehensive purchase details
    - Supports flexible additional attributes
    - Includes both structured and unstructured data

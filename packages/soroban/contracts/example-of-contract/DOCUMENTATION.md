@@ -18,19 +18,16 @@ The contract implements a simple greeting system with premium user features, dem
 ## Functionalities
 
 1. **Contract Initialization**
-
    - **Owner Assignment**: Set the contract owner during initialization
    - **Initial State Setup**: Configure default greeting and counters
    - **Storage Initialization**: Set up persistent storage structures
 
 2. **Greeting Management**
-
    - **Greeting Retrieval**: Get the current greeting message
    - **Greeting Updates**: Set a new greeting message
    - **Usage Tracking**: Count greeting updates globally and per user
 
 3. **Premium User System**
-
    - **Premium Status Assignment**: Mark users as premium based on contributions
    - **Status Verification**: Check if a user has premium status
    - **Premium Benefits**: Demonstrate conditional logic based on status
@@ -134,25 +131,21 @@ The contract uses the following storage keys:
 ## Technical Details and Implementation Notes
 
 1. **Storage Management**
-
    - Uses Soroban's persistent storage for maintaining state
    - Implements helper functions for generating consistent storage keys
    - Properly handles initialization and retrieval of stored values
 
 2. **Authentication**
-
    - Implements owner authentication for sensitive operations
    - Uses `require_auth()` to verify transaction signatures
    - Restricts withdrawal functionality to the contract owner
 
 3. **Counter Implementation**
-
    - Tracks global usage statistics with a total counter
    - Maintains per-user statistics with an address-to-count map
    - Properly increments counters during greeting updates
 
 4. **Event System**
-
    - Emits structured events for off-chain tracking
    - Includes relevant data in event payloads
    - Uses standardized event topics

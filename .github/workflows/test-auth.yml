@@ -2,9 +2,9 @@ name: Authentication Tests
 
 on:
   push:
-    branches: [ main, develop, 'feature/**' ]
+    branches: [main, develop, 'feature/**']
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test-auth:
@@ -27,34 +27,34 @@ jobs:
           - 5432:5432
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
 
-    - name: Install dependencies
-      working-directory: ./packages/gin
-      run: go mod download
+      - name: Install dependencies
+        working-directory: ./packages/gin
+        run: go mod download
 
-    - name: Test PostgreSQL Connection
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client
-        echo "Testing PostgreSQL connection..."
-        PGPASSWORD=secret psql -h localhost -U postgres -d akkuea_test -c "SELECT version();"
+      - name: Test PostgreSQL Connection
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+          echo "Testing PostgreSQL connection..."
+          PGPASSWORD=secret psql -h localhost -U postgres -d akkuea_test -c "SELECT version();"
 
-    - name: Run Authentication Tests
-      working-directory: ./packages/gin
-      run: go test ./tests -v
-      env:
-        DB_HOST: localhost
-        DB_USER: postgres
-        DB_PASSWORD: secret
-        DB_NAME: akkuea_test
-        DB_PORT: 5432
-        JWT_SECRET: test-jwt-secret-key
-        PORT: 8080
-        GIN_MODE: test
+      - name: Run Authentication Tests
+        working-directory: ./packages/gin
+        run: go test ./tests -v
+        env:
+          DB_HOST: localhost
+          DB_USER: postgres
+          DB_PASSWORD: secret
+          DB_NAME: akkuea_test
+          DB_PORT: 5432
+          JWT_SECRET: test-jwt-secret-key
+          PORT: 8080
+          GIN_MODE: test

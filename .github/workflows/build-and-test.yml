@@ -2,9 +2,9 @@ name: Build and Test
 
 on:
   push:
-    branches: [ main, develop, 'feature/**' ]
+    branches: [main, develop, 'feature/**']
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   test-go:
@@ -27,209 +27,209 @@ jobs:
           - 5432:5432
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
 
-    - name: Cache Go modules
-      uses: actions/cache@v3
-      with:
-        path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
-    - name: Install dependencies
-      working-directory: ./packages/gin
-      run: go mod download
+      - name: Install dependencies
+        working-directory: ./packages/gin
+        run: go mod download
 
-    - name: Wait for PostgreSQL
-      run: |
-        # Install PostgreSQL client and wait for service
-        sudo apt-get update
-        sudo apt-get install -y postgresql-client
-        
-        # Wait for PostgreSQL to be ready
-        for i in {1..30}; do
-          if pg_isready -h localhost -p 5432; then
-            echo "PostgreSQL is ready!"
-            break
-          fi
-          echo "Waiting for PostgreSQL... ($i/30)"
-          sleep 2
-        done
+      - name: Wait for PostgreSQL
+        run: |
+          # Install PostgreSQL client and wait for service
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
 
-    - name: Run tests
-      working-directory: ./packages/gin
-      env:
-        DB_HOST: localhost
-        DB_USER: postgres
-        DB_PASSWORD: secret
-        DB_NAME: akkuea_test
-        DB_PORT: 5432
-        JWT_SECRET: test-jwt-secret-key
-        PORT: 8080
-        GIN_MODE: test
-      run: |
-        echo "Skipping tests in main workflow - using dedicated auth workflow instead"
-        echo "Check the 'Authentication Tests' workflow for results"
+          # Wait for PostgreSQL to be ready
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 2
+          done
+
+      - name: Run tests
+        working-directory: ./packages/gin
+        env:
+          DB_HOST: localhost
+          DB_USER: postgres
+          DB_PASSWORD: secret
+          DB_NAME: akkuea_test
+          DB_PORT: 5432
+          JWT_SECRET: test-jwt-secret-key
+          PORT: 8080
+          GIN_MODE: test
+        run: |
+          echo "Skipping tests in main workflow - using dedicated auth workflow instead"
+          echo "Check the 'Authentication Tests' workflow for results"
 
   test-nextjs:
     name: Test Next.js Frontend
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install dependencies
-      working-directory: ./packages/nextjs
-      run: |
-        echo "=== INSTALL DEPENDENCIES DEBUG ==="
-        echo "Current directory: $(pwd)"
-        echo "Package.json name:"
-        grep '"name"' package.json
-        echo ""
-        rm -rf node_modules package-lock.json
-        npm install --legacy-peer-deps --verbose
-        echo ""
-        echo "Checking for @ai-sdk/react after install:"
-        npm list @ai-sdk/react 2>/dev/null || echo "No @ai-sdk/react found"
+      - name: Install dependencies
+        working-directory: ./packages/nextjs
+        run: |
+          echo "=== INSTALL DEPENDENCIES DEBUG ==="
+          echo "Current directory: $(pwd)"
+          echo "Package.json name:"
+          grep '"name"' package.json
+          echo ""
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps --verbose
+          echo ""
+          echo "Checking for @ai-sdk/react after install:"
+          npm list @ai-sdk/react 2>/dev/null || echo "No @ai-sdk/react found"
 
-    - name: Run tests
-      working-directory: ./packages/nextjs
-      run: npm test
+      - name: Run tests
+        working-directory: ./packages/nextjs
+        run: npm test
 
-    - name: Build application
-      working-directory: ./packages/nextjs
-      run: |
-        echo "=== DEBUGGING CI BUILD ISSUE ==="
-        echo "Current directory: $(pwd)"
-        echo "Contents of current directory:"
-        ls -la
-        echo ""
-        echo "Package.json contents:"
-        cat package.json | head -10
-        echo ""
-        echo "Checking npm which package.json is being used:"
-        npm config get prefix
-        echo ""
-        echo "Checking if there are multiple package.json files:"
-        find . -name "package.json" -type f
-        echo ""
-        echo "Checking npm cache:"
-        npm cache verify
-        echo ""
-        echo "Looking for chat-interface.tsx:"
-        find . -name "chat-interface.tsx" -type f
-        echo ""
-        echo "Looking for components directory:"
-        find . -name "components" -type d
-        echo ""
-        echo "Checking if components is a symlink:"
-        ls -la components 2>/dev/null || echo "No components directory"
-        echo ""
-        echo "Checking node_modules for @ai-sdk/react:"
-        ls node_modules/@ai-sdk/ 2>/dev/null || echo "No @ai-sdk directory"
-        echo ""
-        echo "Running npm run build with explicit package.json:"
-        npm run build --package.json=./package.json
-        echo ""
-        echo "If that fails, trying with npx:"
-        npx next build
+      - name: Build application
+        working-directory: ./packages/nextjs
+        run: |
+          echo "=== DEBUGGING CI BUILD ISSUE ==="
+          echo "Current directory: $(pwd)"
+          echo "Contents of current directory:"
+          ls -la
+          echo ""
+          echo "Package.json contents:"
+          cat package.json | head -10
+          echo ""
+          echo "Checking npm which package.json is being used:"
+          npm config get prefix
+          echo ""
+          echo "Checking if there are multiple package.json files:"
+          find . -name "package.json" -type f
+          echo ""
+          echo "Checking npm cache:"
+          npm cache verify
+          echo ""
+          echo "Looking for chat-interface.tsx:"
+          find . -name "chat-interface.tsx" -type f
+          echo ""
+          echo "Looking for components directory:"
+          find . -name "components" -type d
+          echo ""
+          echo "Checking if components is a symlink:"
+          ls -la components 2>/dev/null || echo "No components directory"
+          echo ""
+          echo "Checking node_modules for @ai-sdk/react:"
+          ls node_modules/@ai-sdk/ 2>/dev/null || echo "No @ai-sdk directory"
+          echo ""
+          echo "Running npm run build with explicit package.json:"
+          npm run build --package.json=./package.json
+          echo ""
+          echo "If that fails, trying with npx:"
+          npx next build
 
   test-agent:
     name: Test Agent Package
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install dependencies
-      working-directory: ./packages/agent
-      run: |
-        rm -rf node_modules package-lock.json
-        npm install --legacy-peer-deps
+      - name: Install dependencies
+        working-directory: ./packages/agent
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
 
-    - name: Build application
-      working-directory: ./packages/agent
-      run: npm run build
+      - name: Build application
+        working-directory: ./packages/agent
+        run: npm run build
 
   test-assistant:
     name: Test Assistant Package
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install dependencies
-      working-directory: ./packages/assistant
-      run: |
-        rm -rf node_modules package-lock.json
-        npm install --legacy-peer-deps
+      - name: Install dependencies
+        working-directory: ./packages/assistant
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps
 
-    - name: Build application
-      working-directory: ./packages/assistant
-      run: npm run build
+      - name: Build application
+        working-directory: ./packages/assistant
+        run: npm run build
 
   lint-and-format:
     name: Lint and Format Check
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: '1.21'
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
 
-    - name: Run Go format check
-      working-directory: ./packages/gin
-      run: |
-        if [ -n "$(gofmt -l .)" ]; then
-          echo "Go code is not formatted. Please run 'go fmt ./...'"
-          exit 1
-        fi
+      - name: Run Go format check
+        working-directory: ./packages/gin
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "Go code is not formatted. Please run 'go fmt ./...'"
+            exit 1
+          fi
 
-    - name: Run Go vet
-      working-directory: ./packages/gin
-      run: go vet ./...
+      - name: Run Go vet
+        working-directory: ./packages/gin
+        run: go vet ./...
 
-    - name: Set up Node.js for Next.js linting
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Set up Node.js for Next.js linting
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install Next.js dependencies
-      working-directory: ./packages/nextjs
-      run: |
-        rm -rf node_modules package-lock.json
-        npm install --legacy-peer-deps --verbose
-        npm list @ai-sdk/react
+      - name: Install Next.js dependencies
+        working-directory: ./packages/nextjs
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --legacy-peer-deps --verbose
+          npm list @ai-sdk/react
 
-    - name: Run Next.js linting
-      working-directory: ./packages/nextjs
-      run: npm run lint
+      - name: Run Next.js linting
+        working-directory: ./packages/nextjs
+        run: npm run lint

@@ -9,19 +9,16 @@ This document outlines the testing strategy and coverage for the Rating System C
 The test suite focuses on several key security aspects:
 
 1. **Authentication Checks**
-
    - Tests verify that only authorized users can initialize their own reputation
    - Ensures rating submissions require proper authentication
    - Validates that users cannot manipulate other users' reputation data
 
 2. **Input Validation**
-
    - Tests boundary conditions for rating scores (1-5 range)
    - Validates comment length and content restrictions
    - Ensures transaction IDs are properly formatted and unique
 
 3. **Anti-Manipulation Measures**
-
    - Verifies prevention of self-ratings
    - Tests duplicate rating detection and prevention
    - Ensures time-based restrictions between ratings are enforced
@@ -45,14 +42,12 @@ The test suite focuses on several key security aspects:
 ### 2. Rating Submission Tests
 
 - **Valid Rating Submission**
-
   - Tests successful rating submission with valid parameters
   - Verifies that rating data is correctly stored
   - Ensures rating history is updated
   - Tests that reputation is recalculated correctly
 
 - **Rating Validation**
-
   - Tests score range validation (1-5)
   - Verifies that scores outside the valid range are rejected
   - Tests comment validation
@@ -67,13 +62,11 @@ The test suite focuses on several key security aspects:
 ### 3. Reputation Calculation Tests
 
 - **Weighted Score Calculation**
-
   - Tests that dimension weights are correctly applied
   - Verifies that the weighted score formula works as expected
   - Tests with various score combinations
 
 - **Reputation Score Normalization**
-
   - Tests normalization to 0-100 scale
   - Verifies calculation with different numbers of ratings
   - Tests edge cases (0 ratings, all 1s, all 5s)
@@ -86,13 +79,11 @@ The test suite focuses on several key security aspects:
 ### 4. Query Tests
 
 - **Reputation Retrieval**
-
   - Tests retrieval of existing reputation data
   - Verifies default values for non-existent users
   - Tests after multiple rating submissions
 
 - **Rating History Retrieval**
-
   - Tests retrieval of user rating history
   - Verifies correct transaction IDs are returned
   - Tests with users having multiple ratings
@@ -105,13 +96,11 @@ The test suite focuses on several key security aspects:
 ### 5. Edge Cases and Error Handling
 
 - **Invalid Operations**
-
   - Tests with invalid transaction IDs
   - Verifies handling of non-existent users
   - Tests with malformed input data
 
 - **Boundary Conditions**
-
   - Tests with minimum and maximum valid scores
   - Verifies handling of reputation score at tier boundaries
   - Tests with empty comments
@@ -131,19 +120,16 @@ The test suite focuses on several key security aspects:
 ## Areas for Improvement
 
 1. **Test Coverage Expansion**
-
    - Add more tests for edge cases in reputation calculation
    - Expand tests for concurrent rating submissions
    - Add stress tests with large numbers of ratings
 
 2. **Simulation Testing**
-
    - Implement tests that simulate real-world usage patterns
    - Create tests for reputation evolution over time
    - Test with realistic distribution of rating scores
 
 3. **Fuzz Testing**
-
    - Implement property-based tests to discover edge cases
    - Test with randomly generated inputs to find unexpected behaviors
 

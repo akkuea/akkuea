@@ -19,6 +19,7 @@ milestone-finance/src/
 ## 📦 Key Data Structures
 
 ### Reputation
+
 ```rust
 struct Reputation {
     user: Address,         // Stellar address of the user
@@ -31,6 +32,7 @@ struct Reputation {
 ```
 
 ### User
+
 ```rust
 struct User {
     id: u64,
@@ -42,6 +44,7 @@ struct User {
 ```
 
 ### ProjectVote
+
 ```rust
 struct ProjectVote {
     project_id: u64,
@@ -56,21 +59,25 @@ struct ProjectVote {
 ### Core Reputation Functions
 
 #### `initialize_user(caller: Address, name: String) -> Result<u64, Error>`
+
 - Initializes a new user in the reputation system
 - Assigns initial neutral reputation score of 50
 - Returns unique user ID
 
 #### `update_reputation(caller: Address, user: Address, project_id: u64, success: bool) -> Result<(), Error>`
+
 - Updates reputation based on project or milestone outcomes
 - Success: +10 points, Failure: -5 points
 - Emits reputation update events
 
 #### `get_voting_power(user: Address) -> Result<u32, Error>`
+
 - Calculates voting power based on reputation score
 - Formula: `base_power + (reputation_score / 10)`
 - Base power: 1, Maximum voting power: 20
 
 #### `penalize_missed_milestone(caller: Address, user: Address, milestone_id: u64) -> Result<(), Error>`
+
 - Applies reputation penalty for missed milestones
 - Penalty: -15 points per missed milestone
 - Emits reputation update events
@@ -78,22 +85,26 @@ struct ProjectVote {
 ### Voting Functions
 
 #### `vote_for_project(voter: Address, project_id: u64) -> Result<u32, Error>`
+
 - Vote for a project with reputation-based voting power
 - Prevents duplicate votes
 - Auto-approves projects when total voting power reaches 100
 - Returns the voter's voting power
 
 #### `get_project_voting_power(project_id: u64) -> Result<u32, Error>`
+
 - Get total voting power for a specific project
 - Sum of all individual voter powers
 
 #### `get_project_voters(project_id: u64) -> Result<Map<Address, u32>, Error>`
+
 - Get all voters for a project with their individual voting power
 - Returns mapping of voter address to voting power
 
 ### Milestone Functions
 
 #### `complete_milestone(caller: Address, project_id: u64, milestone_id: u64, creator: Address) -> Result<(), Error>`
+
 - Complete a milestone and update creator reputation
 - Automatically applies success bonus to creator
 - Emits milestone completion events
@@ -101,12 +112,14 @@ struct ProjectVote {
 ### Analytics Functions
 
 #### `get_reputation_stats() -> Result<ReputationStats, Error>`
+
 - Get comprehensive reputation statistics for analytics
 - Includes total users, average reputation, completion rates, etc.
 
 ## 🎯 Reputation System Features
 
 ### Reputation Scoring
+
 - **Initial Score**: 50 (neutral)
 - **Success Bonus**: +10 points per successful project/milestone
 - **Failure Penalty**: -5 points per failed project
@@ -114,6 +127,7 @@ struct ProjectVote {
 - **Range**: 0-100 (capped)
 
 ### Voting Power Calculation
+
 - **Formula**: `1 + (reputation_score / 10)`
 - **Examples**:
   - Reputation 50 → Voting Power 6
@@ -121,6 +135,7 @@ struct ProjectVote {
   - Reputation 100 → Voting Power 11
 
 ### Project Approval
+
 - **Threshold**: 100 total voting power
 - **Auto-approval**: Projects are automatically approved when threshold is met
 - **Voter Tracking**: All voters and their individual voting power are tracked
@@ -128,16 +143,19 @@ struct ProjectVote {
 ## 🔒 Security Features
 
 ### Overflow/Underflow Protection
+
 - All arithmetic operations use `saturating_add` and `saturating_sub`
 - Reputation scores are validated to stay within 0-100 range
 - Voting power is capped at maximum of 20
 
 ### Authorization
+
 - All state-changing operations require proper authorization
 - Users can only update their own reputation through authorized calls
 - Admin functions require caller authentication
 
 ### Duplicate Vote Prevention
+
 - Users cannot vote multiple times for the same project
 - Voting records are permanently stored to prevent manipulation
 
@@ -146,16 +164,19 @@ struct ProjectVote {
 The contract emits comprehensive events for tracking and analytics:
 
 ### Reputation Events
+
 ```rust
 ("rep_update", user_address) -> (old_score, new_score, reason)
 ```
 
 ### Voting Events
+
 ```rust
 ("vote_cast", voter_address) -> (project_id, voting_power)
 ```
 
 ### Milestone Events
+
 ```rust
 ("milestone_complete", creator_address) -> (project_id, milestone_id, success)
 ```
@@ -175,6 +196,7 @@ The contract includes comprehensive tests covering:
 - Event emission verification
 
 Run tests with:
+
 ```bash
 cargo test
 ```
@@ -190,16 +212,19 @@ This contract is designed to integrate with existing contracts in the ecosystem:
 ## 📈 Use Cases
 
 ### For Project Creators
+
 1. **Build Reputation**: Complete projects successfully to increase reputation
 2. **Higher Voting Power**: Higher reputation gives more influence in voting
 3. **Track Performance**: Monitor completion rates and milestone adherence
 
 ### For Voters
+
 1. **Weighted Voting**: Reputation determines voting influence
 2. **Quality Decisions**: Higher reputation voters have more impact
 3. **Track Participation**: Monitor voting history and impact
 
 ### For Platform Administrators
+
 1. **Analytics**: Comprehensive reputation statistics
 2. **Quality Control**: Penalize missed milestones
 3. **Fair Funding**: Reputation-based voting ensures quality projects get funded
@@ -207,6 +232,7 @@ This contract is designed to integrate with existing contracts in the ecosystem:
 ## 🔧 Configuration
 
 ### Reputation Parameters
+
 - **Initial Score**: 50 (configurable)
 - **Success Bonus**: 10 points (configurable)
 - **Failure Penalty**: 5 points (configurable)
@@ -214,6 +240,7 @@ This contract is designed to integrate with existing contracts in the ecosystem:
 - **Max Score**: 100 (configurable)
 
 ### Voting Parameters
+
 - **Base Voting Power**: 1 (configurable)
 - **Reputation Multiplier**: 10 (configurable)
 - **Max Voting Power**: 20 (configurable)

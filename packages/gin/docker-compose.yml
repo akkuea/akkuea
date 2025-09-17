@@ -7,14 +7,14 @@ services:
       POSTGRES_DB: akkuea
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: secret
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --lc-collate=C --lc-ctype=C'
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init-scripts:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d akkuea"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d akkuea']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -36,7 +36,7 @@ services:
       PORT: 8080
       JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
     ports:
-      - "8080:8080"
+      - '8080:8080'
     depends_on:
       postgres:
         condition: service_healthy

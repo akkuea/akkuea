@@ -22,12 +22,7 @@ interface TreeNodeProps {
   index?: number;
 }
 
-const TreeNode = ({
-  name,
-  value,
-  depth = 0,
-  index = 0,
-}: TreeNodeProps) => {
+const TreeNode = ({ name, value, depth = 0, index = 0 }: TreeNodeProps) => {
   const [isOpen, setIsOpen] = useState(true);
   const isObject = value !== null && typeof value === 'object';
   const isArray = Array.isArray(value);
@@ -180,16 +175,18 @@ const TreeNode = ({
                     index={idx}
                   />
                 ))
-              : Object.entries(value as JsonObject).map(([key, val], idx, arr) => (
-                  <TreeNode
-                    key={key}
-                    name={key}
-                    value={val}
-                    depth={depth + 1}
-                    isLast={idx === arr.length - 1}
-                    index={idx}
-                  />
-                ))}
+              : Object.entries(value as JsonObject).map(
+                  ([key, val], idx, arr) => (
+                    <TreeNode
+                      key={key}
+                      name={key}
+                      value={val}
+                      depth={depth + 1}
+                      isLast={idx === arr.length - 1}
+                      index={idx}
+                    />
+                  ),
+                )}
           </motion.div>
         )}
       </AnimatePresence>

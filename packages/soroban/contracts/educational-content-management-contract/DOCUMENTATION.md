@@ -94,11 +94,9 @@ The contract emits the following events:
 ### Core Events
 
 1. `PUBLISH` - When new educational content is published
-
    - Data: content_id, creator, title, creation_timestamp
 
 2. `UPVOTE` - When content receives an upvote
-
    - Data: content_id, voter, new_upvote_count
 
 3. `VERIFY` - When content is verified
@@ -107,11 +105,9 @@ The contract emits the following events:
 ### Versioning Events
 
 4. `VERSION` - When a new version is created
-
    - Data: content_id, version_number, creator
 
 5. `V_UPVOTE` - When a specific version receives an upvote
-
    - Data: content_id, version, voter, new_upvote_count
 
 6. `V_VERIFY` - When a specific version is verified

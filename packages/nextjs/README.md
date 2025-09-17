@@ -85,6 +85,7 @@ bun run test:ui
 ### Testing Utilities
 
 The testing setup includes:
+
 - **Vitest**: Fast test runner with jsdom environment
 - **React Testing Library**: Component testing utilities
 - **jest-dom**: Extended DOM assertions
@@ -93,6 +94,7 @@ The testing setup includes:
 ### Mocking Dependencies
 
 Common Next.js modules are automatically mocked:
+
 - `next/navigation` - Router hooks and navigation functions
 - `next/image` - Image component
 - `next/link` - Link component

@@ -228,7 +228,6 @@ jobs:
         run: |
           rm -rf node_modules package-lock.json
           npm install --legacy-peer-deps --verbose
-          npm list @ai-sdk/react
 
       - name: Run Next.js linting
         working-directory: ./packages/nextjs

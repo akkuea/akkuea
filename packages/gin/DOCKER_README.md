@@ -5,6 +5,7 @@ This directory contains the Docker configuration for the Akkuea API, which inclu
 ## Architecture
 
 The Docker setup consists of:
+
 - **API Service**: Gin-based REST API (Go)
 - **Database**: PostgreSQL 15 with seeded data
 - **Networking**: Custom bridge network for service communication
@@ -14,6 +15,7 @@ The Docker setup consists of:
 The API uses the following database tables:
 
 ### Users Table
+
 - `id` (Primary Key)
 - `name` (VARCHAR 100, NOT NULL)
 - `role` (VARCHAR 20, NOT NULL) - Values: 'Educator', 'Student', 'Designer'
@@ -23,6 +25,7 @@ The API uses the following database tables:
 - `created_at`, `updated_at`, `deleted_at` (GORM timestamps)
 
 ### Resources Table
+
 - `id` (Primary Key)
 - `title` (VARCHAR 200, NOT NULL)
 - `content` (TEXT)
@@ -32,6 +35,7 @@ The API uses the following database tables:
 - `created_at`, `updated_at`, `deleted_at` (GORM timestamps)
 
 ### Rewards Table
+
 - `id` (Primary Key)
 - `user_id` (Foreign Key to users.id)
 - `token_amount` (INTEGER, NOT NULL)
@@ -39,6 +43,7 @@ The API uses the following database tables:
 - `created_at`, `updated_at`, `deleted_at` (GORM timestamps)
 
 ### Marketplace Requests Table
+
 - `id` (Primary Key)
 - `requester_id` (Foreign Key to users.id)
 - `designer_id` (Foreign Key to users.id, NULLABLE)
@@ -49,17 +54,20 @@ The API uses the following database tables:
 ## Quick Start
 
 ### Prerequisites
+
 - Docker
 - Docker Compose
 
 ### Running the Application
 
 1. **Start all services:**
+
    ```bash
    docker-compose up -d
    ```
 
 2. **View logs:**
+
    ```bash
    docker-compose logs -f
    ```
@@ -82,19 +90,23 @@ The API uses the following database tables:
 The API provides the following endpoints:
 
 ### Public Endpoints
+
 - `GET /ping` - Health check
 - `GET /health` - Detailed health status
 - `POST /auth/register` - User registration
 - `POST /auth/login` - User login
 
 ### Protected Endpoints (require JWT token)
+
 - `GET /users` - Get all users
 - `GET /users/:id` - Get specific user by ID
 - `POST /users` - Create a new user
 - `GET /auth/me` - Get current user information
 
 ### Authentication
+
 All protected endpoints require a valid JWT token in the Authorization header:
+
 ```
 Authorization: Bearer <your-jwt-token>
 ```
@@ -106,6 +118,7 @@ The database will be automatically initialized with the required tables when the
 ## Environment Variables
 
 ### API Service
+
 - `DB_HOST`: Database host (default: postgres)
 - `DB_USER`: Database username (default: postgres)
 - `DB_PASSWORD`: Database password (default: secret)
@@ -114,6 +127,7 @@ The database will be automatically initialized with the required tables when the
 - `PORT`: API port (default: 8080)
 
 ### Database Service
+
 - `POSTGRES_DB`: Database name (default: akkuea)
 - `POSTGRES_USER`: Database username (default: postgres)
 - `POSTGRES_PASSWORD`: Database password (default: secret)
@@ -121,12 +135,14 @@ The database will be automatically initialized with the required tables when the
 ## Development
 
 ### Rebuilding the API
+
 ```bash
 docker-compose build api
 docker-compose up -d
 ```
 
 ### Accessing the Database
+
 ```bash
 # Connect to PostgreSQL container
 docker exec -it akkuea_postgres psql -U postgres -d akkuea
@@ -140,11 +156,13 @@ docker exec -it akkuea_postgres psql -U postgres -d akkuea
 ```
 
 ### Viewing API Logs
+
 ```bash
 docker-compose logs -f api
 ```
 
 ### Viewing Database Logs
+
 ```bash
 docker-compose logs -f postgres
 ```

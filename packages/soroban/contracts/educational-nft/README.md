@@ -7,6 +7,7 @@ This project implements an Educational NFT contract for the Soroban smart contra
 ## Features
 
 ### Core Functionality
+
 - ✅ Soroban-native NFT implementation using `stellar_tokens::non_fungible` library
 - ✅ Educational NFT minting with educator verification
 - ✅ IPFS/Arweave metadata hash support
@@ -18,18 +19,21 @@ This project implements an Educational NFT contract for the Soroban smart contra
 ### Key Components
 
 #### 1. Contract Structure (`lib.rs`)
+
 - Main contract implementing `stellar_tokens::non_fungible::NonFungibleToken`
 - Uses `stellar_tokens::non_fungible::Base` for standard NFT functionality
 - Implements `stellar_access::ownable::Ownable` for ownership controls
 - Constructor-based initialization with educator verification contract address
 
 #### 2. Educational NFT Logic (`nft.rs`)
+
 - `EducationalNFT` struct with educational metadata and collection support
 - `FractionalOwnership` struct for managing shared ownership
 - Fractionalization logic with majority decision thresholds
 - Storage management using Soroban's instance storage with typed keys
 
 #### 3. Utilities (`utils.rs`)
+
 - Comprehensive event system for tracking all NFT operations
 - Event emission helpers for mint, transfer, fractionalization, and fraction transfers
 - Educational-specific error handling with `NFTError` enum
@@ -42,7 +46,9 @@ The contract implements a comprehensive event system to track all major NFT oper
 ### Event Types
 
 #### 1. Mint Event (`mint`)
+
 Emitted when a new educational NFT is minted.
+
 ```rust
 pub struct MintEvent {
     pub token_id: u64,
@@ -54,7 +60,9 @@ pub struct MintEvent {
 ```
 
 #### 2. Transfer Event (`transfer`)
+
 Emitted when an NFT is transferred between addresses.
+
 ```rust
 pub struct TransferEvent {
     pub token_id: u32,
@@ -64,7 +72,9 @@ pub struct TransferEvent {
 ```
 
 #### 3. Fractionalization Event (`fraction`)
+
 Emitted when an NFT is fractionalized into multiple ownership shares.
+
 ```rust
 pub struct FractionalizeEvent {
     pub token_id: u64,
@@ -74,7 +84,9 @@ pub struct FractionalizeEvent {
 ```
 
 #### 4. Fraction Transfer Event (`frac_xfer`)
+
 Emitted when fractions of an NFT are transferred between owners.
+
 ```rust
 pub struct FractionTransferEvent {
     pub token_id: u64,
@@ -87,12 +99,14 @@ pub struct FractionTransferEvent {
 ### Event Usage
 
 Events are automatically emitted by the contract functions:
+
 - `mint_nft()` emits a `MintEvent`
 - `transfer_nft()` and internal transfers emit `TransferEvent`
 - `fractionalize_nft()` emits a `FractionalizeEvent`
 - `transfer_fractions()` emits a `FractionTransferEvent`
 
 Off-chain applications can subscribe to these events to:
+
 - Track NFT ownership changes
 - Monitor fractionalization activities
 - Build analytics and reporting dashboards
@@ -101,6 +115,7 @@ Off-chain applications can subscribe to these events to:
 ## Data Structures
 
 ### EducationalNFT
+
 ```rust
 pub struct EducationalNFT {
     pub token_id: u64,        // Unique identifier for the NFT
@@ -112,6 +127,7 @@ pub struct EducationalNFT {
 ```
 
 ### FractionalOwnership
+
 ```rust
 pub struct FractionalOwnership {
     pub fraction_owners: Map<Address, u32>, // Map of owners to their fraction amounts
@@ -120,6 +136,7 @@ pub struct FractionalOwnership {
 ```
 
 ### Storage Keys (DataKey enum)
+
 ```rust
 pub enum DataKey {
     EducationalNFT(u64),      // token_id -> EducationalNFT data
@@ -131,27 +148,32 @@ pub enum DataKey {
 ## Key Functions
 
 ### Contract Initialization
+
 - `__constructor(owner, educator_contract_addr)` - Initialize contract with owner and educator verification contract
 
 ### Minting
+
 - `mint_nft(caller, collection_id, fractions, metadata_hash)` - Mint NFTs with educator verification
   - Requires caller to be a verified educator
   - Returns token ID on success
   - Emits mint event
 
 ### Transfers
+
 - `transfer_nft(caller, token_id, new_owner)` - Transfer NFT ownership
   - Works for both fractional and non-fractional NFTs
   - For fractional NFTs, requires majority ownership for decisions
   - Emits transfer event
 
 ### Fractionalization
+
 - `fractionalize_nft(caller, token_id)` - Convert NFT into fractional shares
   - Only owner can fractionalize
   - Creates fractional ownership structure with majority decision threshold
   - Emits fractionalize event
 
-### Fractional Ownership Management  
+### Fractional Ownership Management
+
 - `transfer_fractions(caller, token_id, to, amount)` - Transfer fractional ownership shares
   - Validates sufficient balance before transfer
   - Updates fractional ownership mapping
@@ -159,6 +181,7 @@ pub enum DataKey {
 - `get_fraction_balance(token_id, owner)` - Query fractional ownership balance
 
 ### Information Queries
+
 - `get_nft_info(token_id)` - Get complete NFT information
 - Standard NFT functions through `stellar_tokens` inheritance:
   - `owner_of()`, `balance_of()`, `name()`, `symbol()`, `token_uri()`
@@ -285,9 +308,8 @@ The contract includes a comprehensive test suite covering:
 - ✅ Educator verification integration
 
 Run tests with:
+
 ```bash
 cd mock-educator-verification-nft && stellar contract build && cd ..
 cargo test
 ```
-
-

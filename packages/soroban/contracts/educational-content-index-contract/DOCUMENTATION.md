@@ -23,14 +23,12 @@ The contract includes validation mechanisms to ensure that all indexed content m
 ## Functionalities
 
 1. **Content Indexing**
-
    - Add new educational content to the search index
    - Store comprehensive metadata about each content item
    - Assign unique identifiers to each content entry
    - Validate content metadata for completeness and quality
 
 2. **Advanced Search Functionality**
-
    - **Partial Matching Search**: Find content using abbreviated or partial terms (e.g., "bio" matches "biology", "biochemistry")
    - **Multi-Tag Search with Logical Operators**: Search using multiple tags with AND/OR logic
    - **Basic Fuzzy Matching**: Tolerance for minor variations in search terms
@@ -38,7 +36,6 @@ The contract includes validation mechanisms to ensure that all indexed content m
    - **Backward Compatibility**: All existing search methods remain unchanged
 
 3. **Subject-Based Search**
-
    - Search for content by specific subject tags
    - Return all content matching search criteria
    - Handle cases where no matching content is found
@@ -73,11 +70,9 @@ educational-content-index-contract/
 While the contract doesn't explicitly emit events in the examined code, it would be beneficial to implement events for the following actions:
 
 1. `content_added` - When new content is successfully added to the index
-
    - Data: content_id, title, subject_tags
 
 2. `content_updated` - When existing content is updated
-
    - Data: content_id, title, subject_tags
 
 3. `search_performed` - When a search is executed
@@ -154,32 +149,27 @@ While the contract doesn't explicitly emit events in the examined code, it would
 ## Technical Details and Implementation Notes
 
 1. **Data Model**
-
    - `Content`: Stores metadata about educational content
    - `ContentList`: Container for multiple content items
    - Simple key-value storage model for content indexing
 
 2. **Storage**
-
    - Uses instance storage for content data
    - Implements TTL extension (50 ledgers, 100 entries)
    - Auto-incrementing ID system for content identification
 
 3. **Validation**
-
    - Input validation for all user-provided data
    - Length constraints for text fields
    - Non-empty validation for required fields
    - Tag validation for proper formatting
 
 4. **Error Handling**
-
    - Structured error types with descriptive messages
    - Specific error codes for different failure scenarios
    - Custom error conversion for client-friendly messages
 
 5. **Search Algorithm**
-
    - Simple tag-based exact matching
    - Linear search through all content items
    - No partial matching or relevance ranking (potential improvement area)

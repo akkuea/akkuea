@@ -22,7 +22,6 @@ The contract includes several security and quality control mechanisms, including
 ## Functionalities
 
 1. **Review Submission and Management**
-
    - Submit detailed reviews with category ratings, text, and multimedia
    - Enforce purchase verification before review submission
    - Limit reviews to a specific time window after purchase
@@ -30,21 +29,18 @@ The contract includes several security and quality control mechanisms, including
    - Support interactive discussions through responses
 
 2. **Rating System**
-
    - Category-specific ratings for educational content
    - 5-star rating scale for standardized evaluation
    - Automatic calculation of rating summaries
    - Segmented ratings for different aspects of educational resources
 
 3. **Purchase Verification**
-
    - Record purchases through integration with payment contract
    - Verify purchase eligibility before allowing reviews
    - Link reviews to specific purchases for traceability
    - Prevent duplicate reviews for the same purchase
 
 4. **Dispute Resolution**
-
    - Flag problematic reviews through admin-initiated disputes
    - Track dispute evidence and resolution status
    - Resolve disputes with appropriate status updates
@@ -78,31 +74,24 @@ educational-review-contract/
 The contract emits several events to track important actions:
 
 1. `contract_initialized` - When the contract is initialized
-
    - Data: admin, payment_contract
 
 2. `product_owner_set` - When a product owner is assigned
-
    - Data: product_id, owner
 
 3. `purchase` - When a purchase is recorded
-
    - Data: "product_id", product_id
 
 4. `review_submitted` - When a review is successfully submitted
-
    - Data: user, (product_id, review_id, sum_ratings)
 
 5. `summary_retrieved` - When a review summary is retrieved
-
    - Data: product_id, total_ratings
 
 6. `response_added` - When a response is added to a review
-
    - Data: author, (product_id, review_id, response_text)
 
 7. `review_disputed` - When a review is marked as disputed
-
    - Data: product_id, review_id
 
 8. `dispute_resolved` - When a dispute is resolved
@@ -205,7 +194,6 @@ The contract emits several events to track important actions:
 ## Technical Details and Implementation Notes
 
 1. **Data Model**
-
    - `Review`: Core data structure containing ratings, text, multimedia, and responses
    - `CategoryRating`: Category-specific ratings with timestamps
    - `MediaAttachment`: Multimedia content references (IPFS links or URLs)
@@ -214,21 +202,18 @@ The contract emits several events to track important actions:
    - `ReviewSummary`: Aggregated rating data for products
 
 2. **Storage**
-
    - Uses persistent storage for all data
    - Structured key system for data organization
    - Separate storage for reviews, purchases, disputes, and summaries
    - Efficient lookup by product ID and review ID
 
 3. **Authorization**
-
    - Explicit authentication checks using `require_auth()`
    - Admin-only functions for sensitive operations
    - Payment contract authentication for purchase recording
    - User authentication for review submission and voting
 
 4. **Validation**
-
    - Purchase verification before review submission
    - Review window enforcement (30 days from purchase)
    - Text length validation (max 500 characters)
@@ -236,7 +221,6 @@ The contract emits several events to track important actions:
    - Rating validation (1-5 stars)
 
 5. **Error Handling**
-
    - Comprehensive error types for different failure scenarios
    - Descriptive error messages for client feedback
    - Proper error propagation throughout the contract

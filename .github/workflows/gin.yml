@@ -1,14 +1,15 @@
-name: Gin Backend CI
+name: Gin Backend CI (DISABLED - Using test-auth.yml instead)
 
 on:
-  push:
-    branches: ['main']
-    paths:
-      - 'packages/gin/**'
-  pull_request:
-    branches: ['main']
-    paths:
-      - 'packages/gin/**'
+  # Temporarily disabled to prevent conflicts with authentication testing
+  # push:
+  #   branches: ['main']
+  #   paths:
+  #     - 'packages/gin/**'
+  # pull_request:
+  #   branches: ['main']
+  #   paths:
+  #     - 'packages/gin/**'
 
 jobs:
   build-and-test:

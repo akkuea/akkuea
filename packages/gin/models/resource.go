@@ -9,7 +9,7 @@ type Resource struct {
 	Language  string `json:"language" gorm:"size:10"`
 	Format    string `json:"format" gorm:"size:50"` // pdf, video, audio, text, etc.
 	CreatorID uint   `json:"creator_id" gorm:"not null;index"`
-	
+
 	// Foreign key relationship
 	Creator User `json:"creator" gorm:"foreignKey:CreatorID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }

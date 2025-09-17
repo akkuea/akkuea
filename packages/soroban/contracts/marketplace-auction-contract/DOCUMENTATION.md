@@ -19,36 +19,30 @@ This contract serves as a marketplace component within the Akkuea ecosystem, all
 ## Functionalities
 
 1. **Auction Management**
-
    - Create auctions with detailed product information
    - Start, end, and cancel auctions based on specific conditions
    - Track auction status through its lifecycle
 
 2. **Bidding System**
-
    - Place bids with quantity specification
    - Automatic highest bid tracking
    - Bid history for each auction
 
 3. **Product Verification**
-
    - Authorized verifiers can authenticate products
    - Verification status tracking
 
 4. **Shipping Management**
-
    - Add shipping information including tracking numbers
    - Update shipping status (NotShipped, Shipped, InTransit, Delivered)
    - Calculate shipping costs based on destination
 
 5. **Dispute Resolution**
-
    - Open disputes with detailed reasons
    - Resolve disputes with outcomes for buyer or seller
    - Dispute status tracking
 
 6. **Administrative Functions**
-
    - Add product verifiers
    - Add dispute resolvers
    - Initialize contract with admin address
@@ -91,39 +85,30 @@ marketplace-auction-contract/
 The contract emits the following events:
 
 1. `auction_created` - When a new auction is created
-
    - Data: auction_id
 
 2. `auction_started` - When an auction transitions from Pending to Active
-
    - Data: auction_id
 
 3. `auction_ended` - When an auction reaches its end time
-
    - Data: auction_id
 
 4. `auction_cancelled` - When an auction is cancelled
-
    - Data: auction_id
 
 5. `bid_placed` - When a bid is placed
-
    - Data: auction_id, bidder, amount, quantity
 
 6. `product_verified` - When a product's authenticity is verified
-
    - Data: auction_id, is_authentic
 
 7. `product_shipped` - When shipping information is added
-
    - Data: auction_id, tracking_number
 
 8. `product_delivered` - When shipping status is updated to Delivered
-
    - Data: auction_id
 
 9. `dispute_opened` - When a dispute is opened
-
    - Data: auction_id, reason
 
 10. `dispute_resolved` - When a dispute is resolved
@@ -246,31 +231,26 @@ The contract emits the following events:
 ## Technical Details and Implementation Notes
 
 1. **Data Model**
-
    - The contract uses a flattened `Auction` structure for efficient storage
    - Helper methods are provided to work with complex nested data
    - Enums are used for status tracking (auction, shipping, dispute)
 
 2. **Storage**
-
    - Data is organized using a structured key system
    - Maps are used for efficient lookup of auctions and user relationships
    - Separate storage for admin, verifiers, and resolvers
 
 3. **Authorization**
-
    - Role-based access control for admin, verifiers, and resolvers
    - Operation-specific authorization (e.g., only seller can cancel auction)
    - Explicit authentication checks using `require_auth()`
 
 4. **Event System**
-
    - Comprehensive events for frontend integration
    - Events include relevant data for tracking state changes
    - Consistent event naming convention
 
 5. **Error Handling**
-
    - Explicit validation of inputs and state transitions
    - Clear error messages for debugging and user feedback
    - Panic-based error handling for contract safety

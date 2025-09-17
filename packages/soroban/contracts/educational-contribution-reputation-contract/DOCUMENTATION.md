@@ -18,14 +18,12 @@ The contract serves as a trust layer for the educational platform, ensuring that
 ## Functionalities
 
 1. **User Management**
-
    - **User Registration**: Create user profiles with unique identifiers
    - **User Verification**: Verify user identities through credential tokens
    - **User Retrieval**: Access user profile information
    - **Profile Updates**: Modify user profile information as needed
 
 2. **Advanced Reputation System**
-
    - **Weighted Scoring**: Advanced reputation calculation based on contribution type and domain specificity
    - **Time-Decay Factors**: Automatic reputation degradation over time to ensure active participation
    - **Domain-Specific Algorithms**: Specialized reputation formulas for technical vs. community contributions
@@ -34,7 +32,6 @@ The contract serves as a trust layer for the educational platform, ensuring that
    - **Score History**: Maintain detailed historical reputation data with algorithmic updates
 
 3. **Expertise Management**
-
    - **Expertise Areas**: Define and update a user's areas of expertise with proficiency levels
    - **Expertise Verification**: Allow verified experts to validate other users' knowledge
    - **Expertise Endorsement**: Enable peer endorsement of expertise claims
@@ -286,27 +283,23 @@ The contract emits the following events:
 ## Technical Details and Implementation Notes
 
 1. **Data Model**
-
    - `User`: Stores basic user information and profile data
    - `Reputation`: Maps users to domain-specific reputation scores
    - `Expertise`: Represents a user's claimed expertise in a domain
    - `Credential`: Represents a verification token issued to a user
 
 2. **Storage**
-
    - Uses instance storage for contract data
    - Implements key-based storage for users, reputations, expertise, and credentials
    - Uses symbolic keys for storage access
    - Maintains indices for efficient querying
 
 3. **Authentication**
-
    - Implements `require_auth` for user authentication
    - Uses role-based access control for administrative functions
    - Verifies transaction signatures for sensitive operations
 
 4. **Advanced Reputation Algorithm**
-
    - **Weighted Scoring**: Calculates reputation using contribution type and domain multipliers
      - Code contributions: 100% base weight
      - Mentoring contributions: 120% base weight (higher value for community building)
@@ -327,7 +320,6 @@ The contract emits the following events:
      - Provides stability while allowing for reputation growth
 
 5. **Multi-Tier Verification System**
-
    - **Four Verification Tiers**:
      - **Basic (Tier 1)**: Entry-level verification, 1-year validity
      - **Verified (Tier 2)**: Moderator-approved, 2-year validity
@@ -339,7 +331,6 @@ The contract emits the following events:
    - **Backward Compatibility**: Legacy verification functions remain supported
 
 6. **Credential Tokens**
-
    - Implements non-transferable tokens using Soroban token interface
    - Links tokens to user identities through cryptographic signatures
    - Provides verification mechanisms for credential authenticity

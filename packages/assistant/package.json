@@ -1,5 +1,5 @@
 {
-  "name": "my-v0-project",
+  "name": "@scaffold-stellar/assistant",
   "version": "0.1.0",
   "private": true,
   "scripts": {

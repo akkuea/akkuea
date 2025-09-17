@@ -16,7 +16,6 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
-    "@ai-sdk/react": "^1.0.0",
     "@creit.tech/stellar-wallets-kit": "^1.4.1",
     "@heroicons/react": "^2.1.1",
     "@prisma/client": "^5.9.1",

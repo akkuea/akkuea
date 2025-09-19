@@ -1,8 +1,9 @@
-import { Trophy, Award } from 'lucide-react';
+import { Award,Trophy } from 'lucide-react';
+
+import { AchievementList } from '@/components/achievements/AchievementList';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { achievements } from '@/lib/achievements-data';
-import { AchievementList } from '@/components/achievements/AchievementList';
 
 export default function Component() {
   const completedAchievements = achievements.filter((a) => a.status === 'completed');

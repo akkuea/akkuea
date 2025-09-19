@@ -1,5 +1,5 @@
+import { Heart, MessageCircle,User } from 'lucide-react';
 import type React from 'react';
-import { User, Heart, MessageCircle } from 'lucide-react';
 
 type ContentCardProps = {
   type: 'trending' | 'featured';

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { generateMessageId, getFormattedTime } from '@/lib/utils';
+
 import { MessagesState } from '@/app/Types/messages';
+import { generateMessageId, getFormattedTime } from '@/lib/utils';
 
 export const useMessages = create<MessagesState>()(
   devtools(

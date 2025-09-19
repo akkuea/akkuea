@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools, DevtoolsOptions, persist } from 'zustand/middleware';
+
 import { AuthenticationStore } from './@types/authentication.entity';
 import { useGlobalAuthenticationSlice } from './slices/authentication.slide';
 

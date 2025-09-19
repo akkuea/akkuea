@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, ReactNode,useContext, useState } from 'react';
 
 export type TabType = 'appearance' | 'notifications' | 'privacy' | 'account' | 'accessibility';
 

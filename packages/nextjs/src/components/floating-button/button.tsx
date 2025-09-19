@@ -1,6 +1,9 @@
 'use client';
+import { ImageIcon, PlusCircle, Video } from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
+
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,11 +11,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { PlusCircle, ImageIcon, Video } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function CreatePostModal() {
   const [isOpen, setIsOpen] = useState(false);

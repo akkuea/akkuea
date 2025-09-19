@@ -1,8 +1,10 @@
 'use client';
 
+import { useCallback,useEffect, useRef } from 'react';
+
 import { useMessages } from '@/store/messaging-store';
+
 import { MessageBubble } from './message-bubble';
-import { useEffect, useRef, useCallback } from 'react';
 
 export function MessageThread() {
   const { messages, selectedConversationId } = useMessages();

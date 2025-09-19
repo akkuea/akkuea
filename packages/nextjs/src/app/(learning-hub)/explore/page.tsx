@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import ExploreHeader from '@/components/explore/explore-header';
+
 import ContentCard from '@/components/explore/content-card';
+import EmptyState from '@/components/explore/empty-components';
+import ExploreHeader from '@/components/explore/explore-header';
 import PeopleCard from '@/components/explore/people-card';
 import PopularTopics from '@/components/explore/popular-topics';
-import EmptyState from '@/components/explore/empty-components';
 import TabNavigation from '@/components/explore/tab-navigation';
 
 const ExplorePage = () => {

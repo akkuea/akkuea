@@ -1,10 +1,12 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import { AlertCircle,FileText, Link, Play } from 'lucide-react';
 import Image from 'next/image';
+import React, { useCallback,useEffect, useState } from 'react';
+import { useInView } from 'react-intersection-observer';
+
 import { Card } from '@/components/ui/card';
 import Skeleton from '@/components/user-post/skeleton';
-import { useInView } from 'react-intersection-observer';
-import { Play, Link, FileText, AlertCircle } from 'lucide-react';
+
 import PostContentRenderer from './post-content-renderer';
 
 // Define the types of posts

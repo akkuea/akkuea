@@ -1,6 +1,7 @@
 'use client';
 
-import { MessageCircle, Github } from 'lucide-react';
+import { Github,MessageCircle } from 'lucide-react';
+
 import TwitterIcon from '../ui/twitter-icon';
 
 export default function CommunitySection() {

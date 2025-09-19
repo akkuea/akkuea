@@ -1,19 +1,19 @@
 'use client';
 
+import {
+  AtSign,
+  Bell,
+  Heart,
+  Info,
+  Mail,
+  MessageCircle,
+  MessageSquare,
+  Smartphone,
+  Users,
+  Volume2,
+} from 'lucide-react';
 import type React from 'react';
 import { useState } from 'react';
-import {
-  Bell,
-  Mail,
-  Smartphone,
-  Volume2,
-  MessageSquare,
-  Heart,
-  AtSign,
-  MessageCircle,
-  Info,
-  Users,
-} from 'lucide-react';
 
 interface NotificationSettingsState {
   enableNotifications: boolean;

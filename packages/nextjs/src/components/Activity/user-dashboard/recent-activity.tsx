@@ -1,4 +1,4 @@
-import { MessageSquare, Clock, ThumbsUp, FileText, Award, Users } from 'lucide-react';
+import { Award, Clock, FileText, MessageSquare, ThumbsUp, Users } from 'lucide-react';
 
 // Activity type definition
 interface Activity {

@@ -1,8 +1,8 @@
 import {
-  StellarWalletsKit,
-  WalletNetwork,
   allowAllModules,
   FREIGHTER_ID,
+  StellarWalletsKit,
+  WalletNetwork,
 } from '@creit.tech/stellar-wallets-kit';
 
 export const kit: StellarWalletsKit = new StellarWalletsKit({

@@ -1,10 +1,11 @@
 'use client';
 
-import { ConversationList } from '@/components/messages/conversation-list';
-import { MessageThread } from '@/components/messages/message-thread';
-import { MessageInput } from '@/components/messages/message-input';
-import { useState } from 'react';
 import { Menu } from 'lucide-react';
+import { useState } from 'react';
+
+import { ConversationList } from '@/components/messages/conversation-list';
+import { MessageInput } from '@/components/messages/message-input';
+import { MessageThread } from '@/components/messages/message-thread';
 
 export default function MessagesPage() {
   const [showSidebar, setShowSidebar] = useState(false);

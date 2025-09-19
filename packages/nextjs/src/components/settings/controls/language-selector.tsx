@@ -1,7 +1,8 @@
 'use client';
 import { Globe } from 'lucide-react';
-import { Label } from '@/components/ui/label';
+
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 interface Language {
   id: string;

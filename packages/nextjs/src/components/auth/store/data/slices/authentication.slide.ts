@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+
 import { AuthenticationStore } from '../@types/authentication.entity';
 
 const AUTHENTICATION_ACTIONS = {

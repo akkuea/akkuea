@@ -1,5 +1,6 @@
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
+
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface Comment {
   id: string;

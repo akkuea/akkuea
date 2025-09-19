@@ -1,0 +1,19 @@
+{
+  "name": "@akkuea/shared",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./lib/utils.ts",
+  "types": "./lib/utils.ts",
+  "scripts": {
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"gin/common"
 	"gin/config"
 	"gin/models"
 	"net/http"
@@ -8,33 +9,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type HealthResponse struct {
-	Status      string            `json:"status"`
-	Database    string            `json:"database"`
-	Message     string            `json:"message"`
-	Migrations  map[string]bool   `json:"migrations,omitempty"`
-}
-
 func HealthHandler(c *gin.Context) {
 	db := config.GetDB()
 	
 	sqlDB, err := db.DB()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, HealthResponse{
-			Status:   "error",
-			Database: "disconnected",
-			Message:  "Failed to get database instance",
-		})
+		common.JSONError(c, http.StatusInternalServerError, "database_error", "Failed to get database instance")
 		return
 	}
 
 	if err := sqlDB.Ping(); err != nil {
-		c.JSON(http.StatusInternalServerError, HealthResponse{
-			Status:   "error",
-			Database: "disconnected",
-			Message:  "Database ping failed",
-		})
-		return
+		common.JSONError(c, http.StatusInternalServerError, "database_error", "Database ping failed")
+		return	
 	}
 
 	// Check migration status directly here instead of calling external function
@@ -61,10 +47,10 @@ func HealthHandler(c *gin.Context) {
 		message = "Some database tables are not migrated"
 	}
 
-	c.JSON(http.StatusOK, HealthResponse{
-		Status:     status,
-		Database:   "connected",
-		Message:    message,
-		Migrations: migrations,
-	})
+	common.JSONSuccess(c, http.StatusOK, gin.H{
+		"status":     status,
+		"database":   "connected",
+		"message":    message,
+		"migrations": migrations,
+	}, message)
 }

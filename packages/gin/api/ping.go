@@ -1,6 +1,9 @@
 package api
 
 import (
+	"net/http"
+
+	"gin/common"
 	"gin/models"
 	"gin/services"
 
@@ -9,5 +12,5 @@ import (
 
 func PingHandler(c *gin.Context) {
 	response := models.PingResponse{Message: services.GetPingMessage()}
-	c.JSON(200, response)
+	common.JSONSuccess(c, http.StatusOK, response, "Ping successful")
 }

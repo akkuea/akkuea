@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@akkuea/shared": "workspace:*",
     "@ai-sdk/openai": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.2",
@@ -41,8 +42,6 @@
     "ai": "latest",
     "autoprefixer": "^10.4.20",
     "brace-expansion": "^4.0.1",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "cmdk": "1.0.4",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "8.5.1",
@@ -58,7 +57,6 @@
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
     "sonner": "^1.7.1",
-    "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^0.9.6",
     "ws": "latest",

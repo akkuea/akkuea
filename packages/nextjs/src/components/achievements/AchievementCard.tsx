@@ -39,14 +39,10 @@ export const AchievementCard = ({ achievement }: { achievement: Achievement }) =
         <div className="flex flex-col gap-1 mt-4">
           <div className="flex justify-between">
             {achievement.status === 'completed' && (
-              <p className="text-foreground text-sm">
-                Completed on {achievement.completedDate}
-              </p>
+              <p className="text-foreground text-sm">Completed on {achievement.completedDate}</p>
             )}
             {achievement.status === 'in-progress' && (
-              <p className="text-foreground text-sm">
-                In progress - {achievement.progressText}
-              </p>
+              <p className="text-foreground text-sm">In progress - {achievement.progressText}</p>
             )}
             {achievement.status !== 'locked' && (
               <span className="text-foreground font-semibold text-sm">{achievement.progress}%</span>

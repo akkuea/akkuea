@@ -30,13 +30,7 @@ export default defineConfig({
       'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
       'src/**/__tests__/**/*.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
     ],
-    exclude: [
-      'node_modules/',
-      'dist/',
-      '.next/',
-      'build/',
-      'coverage/',
-    ],
+    exclude: ['node_modules/', 'dist/', '.next/', 'build/', 'coverage/'],
   },
   resolve: {
     alias: {

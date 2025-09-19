@@ -1,6 +1,6 @@
+import type { ConversationItemProps } from '@/app/Types/messages';
 import { cn } from '@/lib/utils';
 import { useMessages } from '@/store/messaging-store';
-import type { ConversationItemProps } from '@/app/Types/messages';
 
 import { Avatar } from './Avatar';
 

@@ -1,8 +1,9 @@
 'use client';
 import { Edit } from 'lucide-react';
+import Link from 'next/link';
+
 import UserActivityDashboard from '@/components/Activity/user-activity';
 import PublicationMain from '@/components/publication/publication-main';
-import Link from 'next/link';
 
 const ProfilePage = () => {
   return (

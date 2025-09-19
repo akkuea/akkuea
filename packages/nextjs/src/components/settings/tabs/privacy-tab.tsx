@@ -1,6 +1,7 @@
 'use client';
+import { Download,FileText, Lock } from 'lucide-react';
 import { useState } from 'react';
-import { Lock, FileText, Download } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 

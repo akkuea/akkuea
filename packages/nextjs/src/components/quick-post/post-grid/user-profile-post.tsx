@@ -1,7 +1,7 @@
 'use client';
-import React, { useState, useEffect } from 'react';
+import { ExternalLink,FileText, Link as LinkIcon, Play } from 'lucide-react';
 import Image from 'next/image';
-import { Play, Link as LinkIcon, FileText, ExternalLink } from 'lucide-react';
+import React, { useEffect,useState } from 'react';
 
 // Define the types of posts
 type ContentType = 'image' | 'text' | 'video' | 'link' | 'mixed';

@@ -1,14 +1,14 @@
 'use client';
 
-import type React from 'react';
-
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type React from 'react';
+import { useState } from 'react';
+
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { ActionButtons } from './action-buttons';
 import { ProfileAvatar } from './profile-avatar';
 import { ProfileForm } from './profile-form';
 import { RoleSelector } from './role-selector';
-import { ActionButtons } from './action-buttons';
 
 const roles = [
   { id: 'teacher', label: 'Teacher' },

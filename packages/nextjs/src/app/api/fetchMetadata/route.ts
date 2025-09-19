@@ -1,5 +1,5 @@
+import { load } from 'cheerio';
 import { NextRequest, NextResponse } from 'next/server';
-import * as cheerio from 'cheerio';
 
 export async function GET(req: NextRequest) {
   try {
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     }
 
     const html = await response.text();
-    const $ = cheerio.load(html);
+    const $ = load(html);
 
     const title = $('meta[property="og:title"]').attr('content') || $('title').text();
     const description =

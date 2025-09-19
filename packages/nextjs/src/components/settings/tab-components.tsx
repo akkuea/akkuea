@@ -1,7 +1,8 @@
 'use client';
 import type React from 'react';
 import type { ReactNode } from 'react';
-import { useTab, type TabType } from '@/contexts/TabContext';
+
+import { type TabType,useTab } from '@/contexts/TabContext';
 
 interface TabNavProps {
   children: ReactNode;

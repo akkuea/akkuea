@@ -1,8 +1,9 @@
-import React from 'react';
+import { ExternalLink, FileText,Link as LinkIcon, Play } from 'lucide-react';
 import Image from 'next/image';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import React from 'react';
+
 import { Card } from '@/components/ui/card';
-import { ExternalLink, Play, Link as LinkIcon, FileText } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 type ContentType = 'image' | 'text' | 'video' | 'link' | 'mixed';
 

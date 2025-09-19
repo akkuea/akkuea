@@ -1,5 +1,6 @@
-import { AvatarProps } from '@/app/Types/messages';
 import Image from 'next/image';
+
+import { AvatarProps } from '@/app/Types/messages';
 
 export function Avatar({ name, imageUrl, size = 'md' }: AvatarProps) {
   const sizeClasses = {

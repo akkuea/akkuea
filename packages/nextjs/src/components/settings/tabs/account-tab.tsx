@@ -1,9 +1,11 @@
 'use client';
 
-import { LogOutIcon, RefreshCcw, User, WalletIcon, CheckCircle2 } from 'lucide-react';
-import { Input } from '../../ui/input';
-import { Button } from '../../ui/button';
+import { CheckCircle2,LogOutIcon, RefreshCcw, User, WalletIcon } from 'lucide-react';
+
 import { formatAddress } from '@/lib/utils';
+
+import { Button } from '../../ui/button';
+import { Input } from '../../ui/input';
 
 /**
  * Props for the AccountTab component.

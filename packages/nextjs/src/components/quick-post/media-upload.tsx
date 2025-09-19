@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { Paperclip } from 'lucide-react';
 import Image from 'next/image';
+import { useState } from 'react';
 
 interface MediaUploadProps {
   onUpload: (files: File[]) => void;

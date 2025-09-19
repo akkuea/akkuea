@@ -1,4 +1,5 @@
-import { Star, Users, Code, BookOpen, MessageCircle, Share2 } from 'lucide-react';
+import { BookOpen, Code, MessageCircle, Share2,Star, Users } from 'lucide-react';
+
 import { Achievement } from '@/lib/types';
 
 export const achievements: Achievement[] = [

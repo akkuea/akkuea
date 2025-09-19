@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { Calendar } from 'lucide-react';
-import TabNavigation from './user-dashboard/tab-navigation';
-import TabContent from './user-dashboard/tab-content';
+import { useState } from 'react';
+
 import { generateHeatmapData } from '@/lib/utils';
+
+import TabContent from './user-dashboard/tab-content';
+import TabNavigation from './user-dashboard/tab-navigation';
 
 // Activity type definition
 interface Activity {

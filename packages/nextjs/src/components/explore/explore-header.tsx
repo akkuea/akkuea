@@ -1,7 +1,7 @@
 'use client';
 
+import { Compass,Filter, Search } from 'lucide-react';
 import type React from 'react';
-import { Search, Filter, Compass } from 'lucide-react';
 
 interface ExploreHeaderProps {
   searchQuery: string;

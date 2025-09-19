@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
-import { Switch } from '@/components/ui/switch';
 import { Eye } from 'lucide-react';
+import { useState } from 'react';
+
+import { Switch } from '@/components/ui/switch';
 
 const AccessibilityTab = () => {
   // Estado para el tamaño de fuente

@@ -1,7 +1,8 @@
 'use client';
-import { useState } from 'react';
-import { Sun, Moon, Monitor, Palette } from 'lucide-react';
+import { Monitor, Moon, Palette,Sun } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { useState } from 'react';
+
 import {
   Select,
   SelectContent,

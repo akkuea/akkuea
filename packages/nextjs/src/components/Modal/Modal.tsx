@@ -1,8 +1,10 @@
 'use client';
 
-import React from 'react';
-import { useModalStore } from '@/store/useModalStore';
 import { X } from 'lucide-react';
+import React from 'react';
+
+import { useModalStore } from '@/store/useModalStore';
+
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../ui/dialog';
 

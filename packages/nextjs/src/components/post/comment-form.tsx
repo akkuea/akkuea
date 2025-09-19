@@ -1,11 +1,11 @@
 'use client';
 
 import type React from 'react';
-
 import { useState } from 'react';
+
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 interface CommentFormProps {
   onSubmit: (comment: string) => void;

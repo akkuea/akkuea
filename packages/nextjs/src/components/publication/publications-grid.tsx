@@ -1,6 +1,7 @@
 import React from 'react';
-import { PublicationCard } from './publication-card';
+
 import { Publication } from '../types/index';
+import { PublicationCard } from './publication-card';
 
 interface PublicationsGridProps {
   publications: Publication[];

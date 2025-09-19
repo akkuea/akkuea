@@ -52,6 +52,7 @@
     "react-dom": "^18.2.0",
     "react-intersection-observer": "^9.16.0",
     "react-query": "^3.39.3",
+    "react-rating": "^2.0.5",
     "redis": "^4.6.13",
     "sonner": "^2.0.1",
     "tailwind-merge": "^3.0.1",

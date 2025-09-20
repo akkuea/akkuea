@@ -41,6 +41,7 @@ The contract serves as a trust layer for the educational platform, ensuring that
    - **Expertise Levels**: Categorize expertise into different proficiency levels
 
 4. **Multi-Tier Verification System**
+
    - **Verification Tiers**: Four-level verification system (Basic, Verified, Expert, Authority)
    - **Tier-Specific Requirements**: Progressive requirements for higher verification levels
    - **Expiration and Renewal**: Time-bound verification with renewal processes
@@ -84,27 +85,35 @@ educational-contribution-reputation-contract/
 The contract emits the following events:
 
 1. `user_registered` - When a new user is registered
+
    - Data: user_id, registration_timestamp
 
 2. `reputation_updated` - When a user's reputation score changes
+
    - Data: user_id, domain, old_score, new_score, update_timestamp
 
 3. `reputation_updated_advanced` - When reputation is updated using advanced algorithms
+
    - Data: user_id, domain, weighted_score, contribution_type, algorithm_version
 
 4. `expertise_verified` - When a user's expertise is verified
+
    - Data: user_id, domain, level, verifier_id, verification_timestamp
 
 5. `user_verified_tier` - When a user achieves a specific verification tier
+
    - Data: user_id, tier, verified_by, verification_timestamp, expires_at
 
 6. `verification_renewed` - When a user's verification is renewed
+
    - Data: user_id, tier, renewed_by, renewal_timestamp, new_expires_at
 
 7. `verification_delegated` - When verification authority is delegated
+
    - Data: delegator, delegate, user_id, max_tier, expires_at
 
 8. `credential_issued` - When a credential token is issued
+
    - Data: user_id, credential_type, issuer_id, issuance_timestamp
 
 9. `credential_revoked` - When a credential token is revoked

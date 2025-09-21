@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import LanguageSwitcher from '@/components/navbar/language-switcher';
 
 export default function HeaderLanding() {
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -55,6 +56,7 @@ export default function HeaderLanding() {
         </ul>
       </div>
       <div className="flex items-center gap-4">
+        <LanguageSwitcher />
         {/* Theme Toggle */}
         {mounted && (
           <TooltipProvider>

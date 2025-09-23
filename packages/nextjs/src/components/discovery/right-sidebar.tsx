@@ -94,7 +94,7 @@ export default function RightSidebar() {
     if (savedState) {
       setIsCollapsed(JSON.parse(savedState));
     }
-    
+
     // Simulate API data fetch
     const fetchData = async () => {
       setRecommendations(mockRecommendations);
@@ -128,10 +128,7 @@ export default function RightSidebar() {
       className={`fixed right-0 top-14 h-[calc(100vh-3.5rem)] bg-sidebar text-sidebar-foreground border-l border-sidebar-border shadow-lg transition-all duration-300 ease-in-out z-40 
         ${isCollapsed ? 'w-16' : 'w-[280px] md:w-[280px] max-md:w-[90vw] max-md:max-w-[320px]'}
         transform md:translate-x-0
-        ${isCollapsed ? 
-          'translate-x-0 max-md:translate-x-full' : 
-          'translate-x-0'
-        }
+        ${isCollapsed ? 'translate-x-0 max-md:translate-x-full' : 'translate-x-0'}
       `}
     >
       {/* Toggle Button */}
@@ -195,7 +192,7 @@ export default function RightSidebar() {
               Discovery
             </h2>
           </div>
-          
+
           <div
             ref={contentRef}
             className="flex-1 overflow-y-auto p-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
@@ -243,8 +240,8 @@ export default function RightSidebar() {
                     </Card>
                   ))}
                 </div>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="w-full text-sm text-primary hover:text-primary/80 font-medium justify-start p-0"
                 >
                   See more recommendations →
@@ -283,8 +280,8 @@ export default function RightSidebar() {
                     </Card>
                   ))}
                 </div>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="w-full text-sm text-primary hover:text-primary/80 font-medium justify-start p-0"
                 >
                   See more trending topics →

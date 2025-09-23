@@ -106,7 +106,7 @@ const Navbar = () => {
     <nav className="fixed top-0 right-0 left-0 border-b border-border bg-background text-foreground z-50">
       <div className="h-14 flex items-center justify-between px-4">
         {/* Logo */}
-        <Link href="/" className="flex items-center">
+        <Link href={address ? "/home" : "/"} className="flex items-center">
           <AkkueaLogo className="h-8 w-auto" />
         </Link>
 

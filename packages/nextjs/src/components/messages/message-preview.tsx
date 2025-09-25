@@ -1,4 +1,5 @@
 import { useMessages } from '@/store/messaging-store';
+
 import { Avatar } from './Avatar';
 
 export function MessagePreview() {

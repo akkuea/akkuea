@@ -1,14 +1,17 @@
 'use client';
-import { cn } from '@/lib/utils';
-import { ArrowUpRight, Monitor, Moon, Sun, XIcon, Menu } from 'lucide-react';
+
 import Link from 'next/link';
+import { useRef, useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
-import { useLayoutEffect, useRef, useState, useCallback, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import './HeaderLanding.css';
+import { useLayoutEffect, useCallback } from 'react';
+import { ArrowUpRight } from 'lucide-react';
+import { Menu, XIcon, Monitor, Moon, Sun } from 'lucide-react';
+
 
 interface NavLink {
   label: string;
@@ -57,6 +60,8 @@ const navItems: NavItem[] = [
   },
 ];
 
+import { cn } from '@/lib/utils';
+
 export default function HeaderLanding() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
@@ -66,6 +71,7 @@ export default function HeaderLanding() {
   const pathname = usePathname();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+
 
   useEffect(() => setMounted(true), []);
 

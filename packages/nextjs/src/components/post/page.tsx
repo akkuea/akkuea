@@ -1,9 +1,11 @@
 'use client';
 
-import Post from './post';
 import { Toaster } from 'sonner';
-import { useModalStore } from '@/store/useModalStore';
+
 import { usePostsStore } from '@/store/postsStore';
+import { useModalStore } from '@/store/useModalStore';
+
+import Post from './post';
 
 export default function Page() {
   const { onOpen } = useModalStore();

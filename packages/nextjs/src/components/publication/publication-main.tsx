@@ -1,10 +1,11 @@
-import firstImage4 from '../../../public/Background(1).png';
+// pages/index.tsx or your desired page
+import React from 'react';
+
 import firstImage3 from '../../../public/Background.png';
+import firstImage4 from '../../../public/Background(1).png';
 import firstImage2 from '../../../public/Body.png';
 import firstImage6 from '../../../public/Body(1).png';
 import firstImage1 from '../../../public/Effective.png';
-// pages/index.tsx or your desired page
-import React from 'react';
 import { PublicationsSection } from '../publication/publications-section';
 import { Publication } from '../types';
 

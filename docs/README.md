@@ -11,29 +11,29 @@ Welcome to the comprehensive documentation for Akkuea, the educational social pl
 
 ---
 
-
-
-
 ## 📚 Documentation Structure
 
 ### Core Documentation
 
 #### [📋 Documentation Index](index.md)
+
 Complete navigation hub for all documentation sections with quick access links and overview information.
 
 #### [🏗️ Platform Features](features/README.md)
+
 Comprehensive overview of Akkuea's social networking capabilities, content interaction systems, and community features.
 
 #### [📖 Educational Resources](educational-resources/README.md)
+
 Detailed documentation of the content creation, sharing, and discovery systems that power educational collaboration.
 
 #### [🛒 Marketplace](marketplace/README.md)
+
 Complete guide to the designer-educator marketplace, including project workflows, payment systems, and quality assurance.
 
 #### [🤖 AI Agents](ai-agents/README.md)
+
 Documentation for native AI agent creation, training, and management systems that enable specialized educational assistance.
-
-
 
 ---
 
@@ -72,7 +72,6 @@ Issue 301
 <!-- Make the changes from issue number 301 here. Thank you for contributing to Akkuea! -->
 
 ---
-
 
 
 ## 📊 Documentation Statistics

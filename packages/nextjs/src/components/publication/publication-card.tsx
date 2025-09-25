@@ -1,8 +1,9 @@
-import React from 'react';
-import Image from 'next/image';
-import { CategoryTag } from './category-tag';
-import { Publication } from '../types/index';
 import { ArrowRight } from 'lucide-react';
+import Image from 'next/image';
+import React from 'react';
+
+import { Publication } from '../types/index';
+import { CategoryTag } from './category-tag';
 
 interface PublicationCardProps {
   publication: Publication;

@@ -1,7 +1,9 @@
-import type { Metadata } from 'next';
-import { ThemeProvider } from '@/components/theme-provider';
 import './globals.css';
 import { Toaster } from 'sonner';
+
+import type { Metadata } from 'next';
+
+import { ThemeProvider } from '@/components/theme-provider';
 
 export const metadata: Metadata = {
   title: 'Learning Hub',

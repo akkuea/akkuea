@@ -1,11 +1,12 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
-import TextInput from '@/components/quick-post/text-input';
+
 import LinkPreview from '@/components/quick-post/link-preview';
 import PostButton from '@/components/quick-post/post-button';
+import TextInput from '@/components/quick-post/text-input';
 import { Card } from '@/components/ui/card';
-import Image from 'next/image';
 
 const QuickPost = () => {
   const [text, setText] = useState('');

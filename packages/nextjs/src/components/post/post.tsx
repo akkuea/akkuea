@@ -1,20 +1,22 @@
 'use client';
 
+import { Download, Eye, Flag, MessageCircle, Share2 } from 'lucide-react';
+import Image from 'next/image';
 import type React from 'react';
 import { useState } from 'react';
-import Image from 'next/image';
-import { Download, Eye, Flag, MessageCircle, Share2 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { toast } from 'sonner';
+
 import { useLocalStorage } from '@/components/auth/store/storage';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { useModalStore } from '@/store/useModalStore';
+
+import { Comment, PostProps } from '../auth/store/data/post-types';
 import { CommentForm } from './comment-form';
 import { CommentsSection } from './comments-section';
 import { ReportDialog } from './report-dialog';
-import { toast } from 'sonner';
-import { Comment, PostProps } from '../auth/store/data/post-types';
-import { useModalStore } from '@/store/useModalStore';
 
 export default function Post({ id, author, content, categories = [], modal }: PostProps) {
   const isOpen = useModalStore((state) => state.isOpen);

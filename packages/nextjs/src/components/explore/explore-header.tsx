@@ -2,6 +2,7 @@
 
 import type React from 'react';
 import { Search, Filter, Compass } from 'lucide-react';
+import ReactTooltip from 'react-tooltip'; // ✅ v4 tooltip import
 
 interface ExploreHeaderProps {
   searchQuery: string;
@@ -33,11 +34,15 @@ const ExploreHeader: React.FC<ExploreHeaderProps> = ({ searchQuery, setSearchQue
             className="w-full pl-10 pr-4 py-3 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none bg-card text-foreground transition-colors duration-300"
           />
         </div>
-        <button className="bg-primary hover:bg-primary/80 text-white px-4 py-3 rounded-lg flex items-center gap-2 font-medium transition-colors">
+        <button
+          data-tip="Filter content"
+          className="bg-primary hover:bg-primary/80 text-white px-4 py-3 rounded-lg flex items-center gap-2 font-medium transition-colors"
+        >
           <Filter className="w-5 h-5" />
           Filters
         </button>
       </div>
+      <ReactTooltip place="bottom" effect="solid" /> {/* ✅ global tooltip */}
     </div>
   );
 };

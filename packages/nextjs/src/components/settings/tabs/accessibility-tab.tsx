@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Switch } from '@/components/ui/switch';
 import { Eye } from 'lucide-react';
+import ReactTooltip from 'react-tooltip';
 
 const AccessibilityTab = () => {
   // Estado para el tamaño de fuente
@@ -44,6 +45,7 @@ const AccessibilityTab = () => {
             <span className="font-semibold text-foreground text-sm">Font Size</span>
             <div className="flex items-center gap-2">
               <button
+                data-tip="Decrease font size"
                 className="w-8 h-8 flex items-center justify-center rounded-full border border-border bg-card shadow-sm text-foreground hover:bg-muted transition-colors"
                 onClick={() => handleFontSizeChange(fontSize - 1)}
                 aria-label="Disminuir tamaño de fuente"
@@ -55,6 +57,7 @@ const AccessibilityTab = () => {
                 {fontSize}px
               </span>
               <button
+                data-tip="Increase font size"
                 className="w-8 h-8 flex items-center justify-center rounded-full border border-border bg-card shadow-sm text-foreground hover:bg-muted transition-colors"
                 onClick={() => handleFontSizeChange(fontSize + 1)}
                 aria-label="Aumentar tamaño de fuente"
@@ -144,7 +147,7 @@ const AccessibilityTab = () => {
         </div>
       </div>
 
-      {/* Aquí irán las siguientes secciones */}
+      <ReactTooltip place="top" effect="solid" />
     </div>
   );
 };

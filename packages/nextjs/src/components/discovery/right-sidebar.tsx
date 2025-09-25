@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ReactTooltip from 'react-tooltip';
 
 // Types for API response data
 interface RecommendationItem {
@@ -94,7 +95,7 @@ export default function RightSidebar() {
     if (savedState) {
       setIsCollapsed(JSON.parse(savedState));
     }
-    
+
     // Simulate API data fetch
     const fetchData = async () => {
       setRecommendations(mockRecommendations);
@@ -128,10 +129,7 @@ export default function RightSidebar() {
       className={`fixed right-0 top-14 h-[calc(100vh-3.5rem)] bg-sidebar text-sidebar-foreground border-l border-sidebar-border shadow-lg transition-all duration-300 ease-in-out z-40 
         ${isCollapsed ? 'w-16' : 'w-[280px] md:w-[280px] max-md:w-[90vw] max-md:max-w-[320px]'}
         transform md:translate-x-0
-        ${isCollapsed ? 
-          'translate-x-0 max-md:translate-x-full' : 
-          'translate-x-0'
-        }
+        ${isCollapsed ? 'translate-x-0 max-md:translate-x-full' : 'translate-x-0'}
       `}
     >
       {/* Toggle Button */}
@@ -141,6 +139,7 @@ export default function RightSidebar() {
         size="icon"
         className="absolute -left-3 top-1/2 -translate-y-1/2 bg-sidebar rounded-full p-1.5 shadow-lg z-50 hover:bg-sidebar-accent transition-colors border-sidebar-border h-8 w-8"
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        data-tip={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'} // ✅ Tooltip
       >
         {isCollapsed ? (
           <ChevronLeft className="text-sidebar-foreground" size={16} />
@@ -163,6 +162,7 @@ export default function RightSidebar() {
                 <div
                   onClick={() => scrollToTab('recommendations')}
                   className="bg-primary rounded-[8px] h-8 w-8 flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
+                  data-tip="See Recommendations"
                 >
                   <Sparkles className="w-5 h-5 text-white" />
                 </div>
@@ -176,6 +176,7 @@ export default function RightSidebar() {
                 <div
                   onClick={() => scrollToTab('trending')}
                   className="bg-primary rounded-[8px] h-8 w-8 flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
+                  data-tip="See Trending"
                 >
                   <Flame className="w-5 h-5 text-white" />
                 </div>
@@ -195,18 +196,22 @@ export default function RightSidebar() {
               Discovery
             </h2>
           </div>
-          
+
           <div
             ref={contentRef}
             className="flex-1 overflow-y-auto p-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             <Tabs defaultValue="recommendations" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4 bg-gray-200 dark:bg-gray-800 rounded-lg p-1">
-                <TabsTrigger value="recommendations" className="text-xs">
+                <TabsTrigger
+                  value="recommendations"
+                  className="text-xs"
+                  data-tip="Recommended for you"
+                >
                   <Sparkles className="w-4 h-4 mr-1" />
                   For You
                 </TabsTrigger>
-                <TabsTrigger value="trending" className="text-xs">
+                <TabsTrigger value="trending" className="text-xs" data-tip="See what’s trending">
                   <Flame className="w-4 h-4 mr-1" />
                   Trending
                 </TabsTrigger>
@@ -221,31 +226,48 @@ export default function RightSidebar() {
                     >
                       <CardHeader className="pb-2">
                         <div className="flex justify-between items-center mb-2">
-                          <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
+                          <Badge
+                            variant="secondary"
+                            className="text-[10px] px-2 py-0.5"
+                            data-tip="Item type"
+                          >
                             {item.type}
                           </Badge>
-                          <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] px-2 py-0.5"
+                            data-tip="Relevance match"
+                          >
                             {item.relevance}% match
                           </Badge>
                         </div>
-                        <CardTitle className="text-sm font-medium text-card-foreground group-hover:text-primary transition-colors leading-tight">
+                        <CardTitle
+                          className="text-sm font-medium text-card-foreground group-hover:text-primary transition-colors leading-tight"
+                          data-tip="View item details"
+                        >
                           {item.title}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="pt-0 pb-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">
+                          <div
+                            className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center"
+                            data-tip="Author"
+                          >
                             <User size={12} className="text-muted-foreground" />
                           </div>
-                          <span className="text-xs text-muted-foreground">{item.author}</span>
+                          <span className="text-xs text-muted-foreground" data-tip="Item author">
+                            {item.author}
+                          </span>
                         </div>
                       </CardContent>
                     </Card>
                   ))}
                 </div>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="w-full text-sm text-primary hover:text-primary/80 font-medium justify-start p-0"
+                  data-tip="See all recommendations"
                 >
                   See more recommendations →
                 </Button>
@@ -283,15 +305,18 @@ export default function RightSidebar() {
                     </Card>
                   ))}
                 </div>
-                <Button 
-                  variant="ghost" 
+                <Button
+                  variant="ghost"
                   className="w-full text-sm text-primary hover:text-primary/80 font-medium justify-start p-0"
+                  data-tip="See all trending topics"
                 >
                   See more trending topics →
                 </Button>
               </TabsContent>
             </Tabs>
           </div>
+
+          <ReactTooltip place="bottom" effect="solid" />
         </div>
       )}
     </aside>

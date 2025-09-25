@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ReactTooltip from 'react-tooltip'; // ✅ tooltip import
 
 export default function CreatePostModal() {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,7 +36,10 @@ export default function CreatePostModal() {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="fixed bottom-6 right-6 rounded-full bg-primary hover:bg-primary/80 text-white shadow-lg">
+        <Button
+          data-tip="Create a new post"
+          className="fixed bottom-6 right-6 rounded-full bg-primary hover:bg-primary/80 text-white shadow-lg"
+        >
           <PlusCircle className="w-6 h-6 mr-2" />
           Create Post
         </Button>
@@ -114,12 +118,17 @@ export default function CreatePostModal() {
                 </div>
               </>
             )}
-            <Button type="submit" className="w-full bg-primary hover:bg-primary/80 text-white">
+            <Button
+              type="submit"
+              data-tip="Submit your post"
+              className="w-full bg-primary hover:bg-primary/80 text-white"
+            >
               Post
             </Button>
           </form>
         </Tabs>
       </DialogContent>
+      <ReactTooltip place="bottom" effect="solid" /> {/* ✅ tooltip */}
     </Dialog>
   );
 }

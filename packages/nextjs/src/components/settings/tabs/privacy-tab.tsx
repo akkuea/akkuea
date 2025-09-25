@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Lock, FileText, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import ReactTooltip from 'react-tooltip';
 
 export interface FilterOption {
   id: string;
@@ -43,7 +44,11 @@ export function PrivacyTab() {
             <h3 className="font-medium text-foreground">Private Profile</h3>
             <p className="text-sm text-muted">Only approved followers can see your posts</p>
           </div>
-          <Switch checked={privateProfile} onCheckedChange={setPrivateProfile} />
+          <Switch
+            checked={privateProfile}
+            onCheckedChange={setPrivateProfile}
+            data-tip="Toggle private profile"
+          />
         </div>
 
         {/* Online Status */}
@@ -52,7 +57,11 @@ export function PrivacyTab() {
             <h3 className="font-medium text-foreground">Show Online Status</h3>
             <p className="text-sm text-muted">Let others see when you&apos;re active</p>
           </div>
-          <Switch checked={showOnlineStatus} onCheckedChange={setShowOnlineStatus} />
+          <Switch
+            checked={showOnlineStatus}
+            onCheckedChange={setShowOnlineStatus}
+            data-tip="Toggle online status visibility"
+          />
         </div>
 
         {/* Content Filtering */}
@@ -61,7 +70,11 @@ export function PrivacyTab() {
           <p className="text-sm text-muted mb-4">Control what type of content you see</p>
           <div className="space-y-3">
             {filterOptions.map((option) => (
-              <label key={option.id} className="flex items-center">
+              <label
+                key={option.id}
+                className="flex items-center"
+                data-tip={`Select ${option.label}`}
+              >
                 <input
                   type="radio"
                   name="filtering"
@@ -85,7 +98,11 @@ export function PrivacyTab() {
               <p className="text-sm text-muted">View our privacy policy</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleViewPrivacyPolicy}>
+          <Button
+            variant="outline"
+            onClick={handleViewPrivacyPolicy}
+            data-tip="View privacy policy"
+          >
             View
           </Button>
         </div>
@@ -99,7 +116,7 @@ export function PrivacyTab() {
               <p className="text-sm text-muted">Get a copy of your data</p>
             </div>
           </div>
-          <Button variant="outline" onClick={handleDownloadData}>
+          <Button variant="outline" onClick={handleDownloadData} data-tip="Download your data">
             Download
           </Button>
         </div>
@@ -112,11 +129,18 @@ export function PrivacyTab() {
               Permanently delete your account and all data
             </p>
           </div>
-          <Button variant="destructive" onClick={() => {}}>
+          <Button
+            variant="destructive"
+            onClick={() => {}}
+            data-tip="Permanently delete your account"
+          >
             Delete
           </Button>
         </div>
       </div>
+
+      {/* Global Tooltip */}
+      <ReactTooltip place="top" type="dark" effect="solid" />
     </div>
   );
 }

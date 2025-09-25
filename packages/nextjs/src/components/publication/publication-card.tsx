@@ -3,6 +3,7 @@ import Image from 'next/image';
 import { CategoryTag } from './category-tag';
 import { Publication } from '../types/index';
 import { ArrowRight } from 'lucide-react';
+import ReactTooltip from 'react-tooltip';
 
 interface PublicationCardProps {
   publication: Publication;
@@ -90,10 +91,14 @@ export const PublicationCard: React.FC<PublicationCardProps> = ({ publication })
               {publication.author.name}
             </span>
           </div>
-          <button className="text-[#00CED1] dark:text-[#00CED1] border border-[#00CED1] p-2 rounded-lg shadow text-base font-medium flex items-center hover:bg-[#00CED1]/10 dark:hover:bg-[#00CED1]/20 transition-colors">
+          <button
+            className="text-[#00CED1] dark:text-[#00CED1] border border-[#00CED1] p-2 rounded-lg shadow text-base font-medium flex items-center hover:bg-[#00CED1]/10 dark:hover:bg-[#00CED1]/20 transition-colors"
+            data-tip="View details" // ✅ tooltip text
+          >
             View
             <ArrowRight className="text-base ml-2" />
           </button>
+          <ReactTooltip place="top" effect="solid" />
         </div>
       </div>
     </div>

@@ -1,3 +1,5 @@
+import ReactTooltip from 'react-tooltip';
+
 export interface ActionButtonProps {
   onClick: () => void;
   label: string;
@@ -6,15 +8,19 @@ export interface ActionButtonProps {
 
 export function ActionButton({ onClick, label, isDanger = false }: ActionButtonProps) {
   return (
-    <button
-      onClick={onClick}
-      className={
-        isDanger
-          ? 'px-4 py-2 rounded bg-destructive/10 hover:bg-destructive/20 text-destructive'
-          : 'px-4 py-2 rounded bg-muted hover:bg-muted/80 text-foreground'
-      }
-    >
-      {label}
-    </button>
+    <>
+      <button
+        onClick={onClick}
+        data-tip={label}
+        className={
+          isDanger
+            ? 'px-4 py-2 rounded bg-destructive/10 hover:bg-destructive/20 text-destructive'
+            : 'px-4 py-2 rounded bg-muted hover:bg-muted/80 text-foreground'
+        }
+      >
+        {label}
+      </button>
+      <ReactTooltip place="top" effect="solid" />
+    </>
   );
 }

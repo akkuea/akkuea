@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import ReactTooltip from 'react-tooltip';
 
 export const ThemeSection = () => {
   const { theme, setTheme } = useTheme();
@@ -25,6 +26,7 @@ export const ThemeSection = () => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 ml-0 sm:ml-7">
         <div
+          data-tip="Light theme"
           className={`relative border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:border-primary ${
             theme === 'light' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border'
           }`}
@@ -43,6 +45,7 @@ export const ThemeSection = () => {
         </div>
 
         <div
+          data-tip="Dark theme"
           className={`relative border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:border-primary ${
             theme === 'dark' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border'
           }`}
@@ -61,6 +64,7 @@ export const ThemeSection = () => {
         </div>
 
         <div
+          data-tip="System theme"
           className={`relative border rounded-lg p-3 sm:p-4 cursor-pointer transition-all hover:border-primary ${
             theme === 'system' ? 'border-primary bg-primary/5 shadow-sm' : 'border-border'
           }`}
@@ -78,6 +82,8 @@ export const ThemeSection = () => {
           </div>
         </div>
       </div>
+
+      <ReactTooltip place="top" effect="solid" />
     </div>
   );
 };
@@ -149,7 +155,11 @@ export const LanguageSection = () => {
         </p>
         <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
           {languages.map((lang) => (
-            <div key={lang.id} className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/20">
+            <div
+              key={lang.id}
+              className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/20"
+              data-tip={`Toggle ${lang.name}`}
+            >
               <div className="relative" onClick={() => toggleContentLanguage(lang.name)}>
                 <div
                   className={`w-8 sm:w-10 h-5 rounded-full transition-colors ${
@@ -174,6 +184,8 @@ export const LanguageSection = () => {
           </div>
         )}
       </div>
+
+      <ReactTooltip place="top" effect="solid" />
     </div>
   );
 };

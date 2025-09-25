@@ -1,4 +1,5 @@
 import { MessageSquare, Clock, ThumbsUp, FileText, Award, Users } from 'lucide-react';
+import ReactTooltip from 'react-tooltip';
 
 // Activity type definition
 interface Activity {
@@ -46,12 +47,19 @@ const RecentActivity = ({ activities }: RecentActivityProps) => {
             </div>
           ))}
         </div>
+
         <div className="mt-4 text-right">
-          <button className="text-sm text-primary hover:text-primary/80 transition-colors">
+          <button
+            className="text-sm text-primary hover:text-primary/80 transition-colors"
+            data-tip="See the complete activity history"
+          >
             View all activity history
           </button>
         </div>
       </div>
+
+      {/* ReactTooltip Component */}
+      <ReactTooltip place="top" type="dark" effect="solid" />
     </div>
   );
 };

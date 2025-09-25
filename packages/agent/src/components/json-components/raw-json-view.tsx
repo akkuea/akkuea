@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { CopyIcon, CheckIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
+import ReactToolTip from 'react-tooltip';
 
 interface RawJsonViewProps {
   data: any;
@@ -35,6 +36,7 @@ export default function RawJsonView({ data }: RawJsonViewProps) {
         <Button
           size="sm"
           variant="outline"
+          data-tip={copied ? 'Copied!' : 'Copy'} // <-- added tooltip
           className="absolute right-3 top-3 h-8 w-8 p-0 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm shadow-md border-2 border-purple-200 dark:border-purple-800 rounded-full z-10"
           onClick={copyToClipboard}
         >
@@ -50,6 +52,7 @@ export default function RawJsonView({ data }: RawJsonViewProps) {
             <CopyIcon className="h-4 w-4" />
           )}
         </Button>
+        <ReactToolTip place="top" type="dark" /> {/* <-- global tooltip */}
       </motion.div>
 
       <div className="bg-gray-50 dark:bg-gray-900 p-5 rounded-xl overflow-auto max-h-[500px] text-sm font-mono shadow-inner border border-purple-100 dark:border-purple-900/50">

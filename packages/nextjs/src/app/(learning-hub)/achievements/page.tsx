@@ -3,6 +3,7 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { achievements } from '@/lib/achievements-data';
 import { AchievementList } from '@/components/achievements/AchievementList';
+import ReactTooltip from "react-tooltip"
 
 export default function Component() {
   const completedAchievements = achievements.filter((a) => a.status === 'completed');
@@ -57,24 +58,28 @@ export default function Component() {
             <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 bg-background">
               <TabsTrigger
                 value="all"
+                data-tip="View all achievements"
                 className="text-foreground data-[state=active]:bg-primary data-[state=active]:text-card"
               >
                 All
               </TabsTrigger>
               <TabsTrigger
                 value="completed"
+                data-tip="See only completed achievements"
                 className=" text-foreground data-[state=active]:bg-primary data-[state=active]:text-card"
               >
                 Completed
               </TabsTrigger>
               <TabsTrigger
                 value="in-progress"
+                data-tip="View achievements currently in progress"
                 className="text-foreground data-[state=active]:bg-primary data-[state=active]:text-card"
               >
                 In progress
               </TabsTrigger>
               <TabsTrigger
                 value="locked"
+                data-tip="See achievements you haven’t unlocked yet"
                 className="text-foreground data-[state=active]:bg-primary data-[state=active]:text-card"
               >
                 Locked
@@ -97,6 +102,9 @@ export default function Component() {
               <AchievementList achievements={lockedAchievements} />
             </TabsContent>
           </Tabs>
+
+          {/* Tooltip components */}
+            <ReactTooltip place="top" effect="solid" />
         </div>
       </div>
     </>

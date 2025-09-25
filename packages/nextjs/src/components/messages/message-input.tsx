@@ -5,6 +5,7 @@ import { Send } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import MediaUpload from '@/components/quick-post/media-upload';
+import ReactTooltip from 'react-tooltip'; // ✅ v4 tooltip
 
 interface LinkPreview {
   url: string;
@@ -80,8 +81,6 @@ export const MessageInput = () => {
   };
 
   const handleMediaUpload = (files: File[]) => {
-    // Here you would typically upload the file to your storage
-    // For now, we'll just create an object URL
     if (files.length > 0) {
       setMediaUrl(URL.createObjectURL(files[0]));
     }
@@ -96,7 +95,6 @@ export const MessageInput = () => {
           setNewMessage(e.target.value);
           handleTyping();
 
-          // Check for links in the message
           const urlRegex = /(https?:\/\/[^\s]+)/g;
           const urls = e.target.value.match(urlRegex);
           if (urls && (!linkPreview || linkPreview.url !== urls[0])) {
@@ -107,9 +105,15 @@ export const MessageInput = () => {
         placeholder="Type a message..."
         className="flex-1"
       />
-      <Button onClick={handleSendMessage} disabled={!newMessage.trim() && !mediaUrl} size="icon">
+      <Button
+        onClick={handleSendMessage}
+        disabled={!newMessage.trim() && !mediaUrl}
+        size="icon"
+        data-tip="Send Message" // ✅ v4 tooltip
+      >
         <Send className="h-4 w-4" />
       </Button>
+      <ReactTooltip place="top" effect="solid" /> {/* ✅ global tooltip style */}
     </div>
   );
 };

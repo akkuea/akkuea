@@ -2,6 +2,7 @@
 
 import { MessageCircle, Github } from 'lucide-react';
 import TwitterIcon from '../ui/twitter-icon';
+import ReactTooltip from 'react-tooltip';
 
 export default function CommunitySection() {
   const communityLinks = [
@@ -24,7 +25,7 @@ export default function CommunitySection() {
       title: 'Explore our GitHub',
       description: 'Contribute to our open source development',
       icon: <Github className="w-8 h-8 text-primary" />,
-      link: ' https://github.com/akkuea/akkuea',
+      link: 'https://github.com/akkuea/akkuea',
     },
   ];
 
@@ -48,7 +49,8 @@ export default function CommunitySection() {
               href={platform.link}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-white rounded-2xl py-12 px-2 cursor-pointer transition-all duration-300  hover:shadow-lg hover:scale-105 group"
+              data-tip={platform.title} // <-- Tooltip v4
+              className="bg-white rounded-2xl py-12 px-2 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-105 group"
             >
               <div className="flex justify-center mb-6">
                 <div className="p-3 bg-[#F0FDFA] rounded-full shadow-sm group-hover:shadow-md transition-shadow">
@@ -64,6 +66,7 @@ export default function CommunitySection() {
           ))}
         </div>
       </div>
+      <ReactTooltip place="bottom" effect="solid" /> {/* <-- Tooltip v4 */}
     </section>
   );
 }

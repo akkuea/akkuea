@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { User } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import ReactTooltip from 'react-tooltip';
 
 export const ProfileAvatar = () => {
   const [imageUrl, setImageUrl] = useState<string>('/placeholder-user.jpg');
@@ -34,9 +35,15 @@ export const ProfileAvatar = () => {
         accept="image/*"
         className="hidden"
       />
-      <Button type="button" variant="outline" onClick={handleButtonClick}>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={handleButtonClick}
+        data-tip="Change your profile picture"
+      >
         Change Profile Picture
       </Button>
+      <ReactTooltip place="bottom" effect="solid" />
     </div>
   );
 };

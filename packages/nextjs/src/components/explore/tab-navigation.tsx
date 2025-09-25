@@ -1,6 +1,7 @@
 'use client';
 
 import type React from 'react';
+import ReactTooltip from 'react-tooltip'; // ✅ v4 tooltip import
 
 type Tab = {
   id: string | number;
@@ -21,6 +22,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, setActiveTab, 
         <button
           key={tab.id}
           onClick={() => setActiveTab(tab.id)}
+          data-tip={`Go to ${tab.label}`} // ✅ tooltip text
           className={`px-6 py-2 rounded-md font-medium transition-colors w-full justify-center flex items-center gap-2 ${
             activeTab === tab.id
               ? 'bg-primary hover:bg-primary/80 text-white'
@@ -31,6 +33,7 @@ const TabNavigation: React.FC<TabNavigationProps> = ({ activeTab, setActiveTab, 
           {tab.label}
         </button>
       ))}
+      <ReactTooltip place="bottom" effect="solid" /> {/* ✅ global tooltip */}
     </div>
   );
 };

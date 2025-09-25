@@ -5,6 +5,7 @@ import { useModalStore } from '@/store/useModalStore';
 import { X } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogOverlay, DialogPortal } from '../ui/dialog';
+import ReactTooltip from 'react-tooltip'; // ✅ v4 tooltip import
 
 export const Modal = () => {
   const { isOpen, view, onClose } = useModalStore();
@@ -18,11 +19,13 @@ export const Modal = () => {
             variant="ghost"
             className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100"
             onClick={() => onClose?.()}
+            data-tip="Close modal"
           >
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </Button>
           {view}
+          <ReactTooltip place="top" effect="solid" /> {/* ✅ global tooltip */}
         </DialogContent>
       </DialogPortal>
     </Dialog>

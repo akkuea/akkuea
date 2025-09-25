@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import ReactTooltip from 'react-tooltip';
 
 interface ReportDialogProps {
   open: boolean;
@@ -49,7 +50,7 @@ export function ReportDialog({ open, onOpenChange, onSubmit }: ReportDialogProps
           <RadioGroup value={reason} onValueChange={setReason}>
             {REPORT_REASONS.map((r) => (
               <div key={r} className="flex items-center space-x-2">
-                <RadioGroupItem value={r} id={r} />
+                <RadioGroupItem value={r} id={r} data-tip={`Report reason: ${r}`} />
                 <Label htmlFor={r}>{r}</Label>
               </div>
             ))}
@@ -61,14 +62,16 @@ export function ReportDialog({ open, onOpenChange, onSubmit }: ReportDialogProps
               value={details}
               onChange={(e) => setDetails(e.target.value)}
               placeholder="Please provide any additional context..."
+              data-tip="Add more context about your report"
             />
           </div>
           <DialogFooter>
-            <Button type="submit" variant="destructive">
+            <Button type="submit" variant="destructive" data-tip="Submit your report">
               Submit Report
             </Button>
           </DialogFooter>
         </form>
+        <ReactTooltip place="top" effect="solid" />
       </DialogContent>
     </Dialog>
   );

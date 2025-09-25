@@ -2,6 +2,7 @@
 
 import type React from 'react';
 import { useState } from 'react';
+import ReactTooltip from 'react-tooltip';
 import {
   Bell,
   Mail,
@@ -54,6 +55,7 @@ const NotificationsTab = () => {
   interface ToggleProps {
     enabled: boolean;
     onChange: () => void;
+    tooltip?: string;
   }
 
   interface SettingItemProps {
@@ -64,9 +66,10 @@ const NotificationsTab = () => {
     iconColor?: string;
   }
 
-  const Toggle: React.FC<ToggleProps> = ({ enabled, onChange }) => (
+  const Toggle: React.FC<ToggleProps> = ({ enabled, onChange, tooltip }) => (
     <div
       onClick={onChange}
+      data-tip={tooltip}
       className={`relative w-10 h-5 rounded-full transition-colors duration-300 ease-in-out cursor-pointer ${
         enabled ? 'bg-primary' : 'bg-muted'
       }`}
@@ -96,7 +99,11 @@ const NotificationsTab = () => {
           <p className="text-sm text-muted">{description}</p>
         </div>
       </div>
-      <Toggle enabled={settings[settingKey]} onChange={() => toggleSetting(settingKey)} />
+      <Toggle
+        enabled={settings[settingKey]}
+        onChange={() => toggleSetting(settingKey)}
+        data-tip={`Toggle ${title}`}
+      />
     </div>
   );
 
@@ -227,6 +234,8 @@ const NotificationsTab = () => {
           </div>
         </div>
       </div>
+      {/* Global tooltip */}
+      <ReactTooltip place="top" effect="solid" />
     </div>
   );
 };

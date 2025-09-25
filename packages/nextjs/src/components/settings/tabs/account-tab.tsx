@@ -4,6 +4,7 @@ import { LogOutIcon, RefreshCcw, User, WalletIcon, CheckCircle2 } from 'lucide-r
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { formatAddress } from '@/lib/utils';
+import ReactTooltip from 'react-tooltip';
 
 /**
  * Props for the AccountTab component.
@@ -51,6 +52,7 @@ export function AccountTab({ email, isEmailVerified, username, onVerifyEmail }: 
               className="bg-card border-border rounded-r-none"
             />
             <Button
+              data-tip={isEmailVerified ? 'Email already verified' : 'Verify email'}
               type="button"
               onClick={onVerifyEmail}
               disabled={isEmailVerified}
@@ -107,17 +109,27 @@ export function AccountTab({ email, isEmailVerified, username, onVerifyEmail }: 
             <p className="text-xs text-muted">Stellar wallet connected successfully</p>
           </div>
           <div className="flex gap-2 items-center">
-            <Button variant="outline" className="bg-transparent border border-border">
+            <Button
+              data-tip="Change connected wallet"
+              variant="outline"
+              className="bg-transparent border border-border"
+            >
               <RefreshCcw />
               Change Wallet
             </Button>
-            <Button variant="destructive" className="bg-destructive hover:bg-destructive/80">
+            <Button
+              data-tip="Disconnect wallet"
+              variant="destructive"
+              className="bg-destructive hover:bg-destructive/80"
+            >
               <LogOutIcon />
               Disconnect
             </Button>
           </div>
         </div>
       </div>
+
+      <ReactTooltip place="top" effect="solid" />
     </div>
   );
 }

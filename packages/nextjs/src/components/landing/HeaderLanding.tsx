@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Menu, XIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import ReactTooltip from 'react-tooltip';
 
 export default function HeaderLanding() {
   const [isNavOpen, setIsNavOpen] = useState(false);
@@ -22,6 +23,8 @@ export default function HeaderLanding() {
     };
   }, []);
 
+  const navItems = ['Home', 'About', 'Benefits', 'Roadmap', 'Community', 'Open Source'];
+
   return (
     <nav
       className="flex justify-between items-center px-4 md:px-20 py-5 bg-card fixed inset-x-0 z-50 text-[#0A0A0A]"
@@ -37,17 +40,17 @@ export default function HeaderLanding() {
         )}
       >
         <ul className="flex flex-col md:flex-row justify-center items-center space-y-7 py-16 md:py-0 md:space-y-0 md:space-x-7 *:cursor-pointer">
-          <li>Home</li>
-          <li>About</li>
-          <li>Benefits</li>
-          <li>Roadmap</li>
-          <li>Community</li>
-          <li>Open Source</li>
+          {navItems.map((item) => (
+            <li key={item} data-tip={item}>
+              {item}
+            </li>
+          ))}
         </ul>
       </div>
       <button className="md:hidden" onClick={() => setIsNavOpen(!isNavOpen)}>
         {isNavOpen ? <XIcon /> : <Menu />}
       </button>
+      <ReactTooltip place="bottom" effect="solid" /> {/* Tooltip v4 */}
     </nav>
   );
 }

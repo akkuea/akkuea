@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
+import ReactTooltip from 'react-tooltip';
 
 interface ActionButtonsProps {
   onCancel: () => void;
@@ -15,6 +16,7 @@ export const ActionButtons = ({ onCancel, isSubmitting = false }: ActionButtonsP
         variant="outline"
         onClick={onCancel}
         className="text-muted bg-transparent"
+        data-tip="Cancel changes"
       >
         Cancel
       </Button>
@@ -22,9 +24,11 @@ export const ActionButtons = ({ onCancel, isSubmitting = false }: ActionButtonsP
         type="submit"
         className="bg-primary hover:bg-primary/80 text-white font-medium px-6 py-2 rounded-md"
         disabled={isSubmitting}
+        data-tip={isSubmitting ? 'Saving...' : 'Save your changes'}
       >
         {isSubmitting ? 'Saving...' : 'Save Changes'}
       </Button>
+      <ReactTooltip place="bottom" effect="solid" />
     </div>
   );
 };

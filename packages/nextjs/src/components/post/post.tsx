@@ -15,6 +15,7 @@ import { ReportDialog } from './report-dialog';
 import { toast } from 'sonner';
 import { Comment, PostProps } from '../auth/store/data/post-types';
 import { useModalStore } from '@/store/useModalStore';
+import ReactTooltip from 'react-tooltip';
 
 export default function Post({ id, author, content, categories = [], modal }: PostProps) {
   const isOpen = useModalStore((state) => state.isOpen);
@@ -167,7 +168,13 @@ export default function Post({ id, author, content, categories = [], modal }: Po
 
         <div className="flex gap-2">
           {!isOpen && (
-            <Button variant="ghost" size="icon" className="ml-auto" onClick={modal}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto"
+              onClick={modal}
+              data-tip="View content"
+            >
               <Eye className="h-4 w-4" />
             </Button>
           )}
@@ -176,6 +183,7 @@ export default function Post({ id, author, content, categories = [], modal }: Po
             size="icon"
             className="ml-auto"
             onClick={() => setReportDialogOpen(true)}
+            data-tip="Report this post"
           >
             <Flag className="h-4 w-4" />
           </Button>
@@ -219,17 +227,30 @@ export default function Post({ id, author, content, categories = [], modal }: Po
               size="sm"
               className="text-[#008B8B]"
               onClick={() => setShowComments(!showComments)}
+              data-tip="Show or hide comments"
             >
               <MessageCircle className="h-4 w-4 mr-1" />
               Comment {comments.length > 0 && `(${comments.length})`}
             </Button>
-            <Button variant="ghost" size="sm" className="text-[#008B8B]" onClick={handleShare}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[#008B8B]"
+              onClick={handleShare}
+              data-tip="Share this post"
+            >
               <Share2 className="h-4 w-4 mr-1" />
               Share
             </Button>
           </div>
           {content.media?.[0]?.downloadUrl && (
-            <Button variant="ghost" size="sm" className="text-[#008B8B]" onClick={handleDownload}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-[#008B8B]"
+              onClick={handleDownload}
+              data-tip="Download file"
+            >
               <Download className="h-4 w-4 mr-1" />
               Download
             </Button>
@@ -247,6 +268,7 @@ export default function Post({ id, author, content, categories = [], modal }: Po
         onOpenChange={setReportDialogOpen}
         onSubmit={handleReport}
       />
+      <ReactTooltip place="top" effect="solid" />
     </Card>
   );
 }

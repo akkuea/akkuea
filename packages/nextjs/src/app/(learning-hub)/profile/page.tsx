@@ -3,6 +3,8 @@ import { Edit } from 'lucide-react';
 import UserActivityDashboard from '@/components/Activity/user-activity';
 import PublicationMain from '@/components/publication/publication-main';
 import Link from 'next/link';
+import ReactTooltip from "react-tooltip"
+import 'react-tooltip/dist/react-tooltip.css';
 
 const ProfilePage = () => {
   return (
@@ -33,10 +35,12 @@ const ProfilePage = () => {
               <Link
                 href="/edit-profile"
                 className="px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-card/50 transition-all duration-200 hover:shadow-sm flex items-center gap-2 text-foreground"
+                data-tip="Edit your profile information"
               >
                 <Edit size={16} />
                 Edit Profile
               </Link>
+              <ReactTooltip place="top" effect="solid" />
             </div>
             <p className="text-foreground leading-relaxed mb-4 md:w-1/2">
               I am a crack designer, I like software engineering and also mixing as a DJ. Passionate

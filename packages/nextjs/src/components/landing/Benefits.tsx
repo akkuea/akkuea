@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import ReactTooltip from 'react-tooltip'; // ✅ tooltip import
 
 const Benefits = () => {
   const benefits = [
@@ -67,15 +68,22 @@ const Benefits = () => {
 
           {/* Buttons */}
           <div className="flex gap-4 items-center">
-            <button className="rounded-[10px] py-2.5 px-6 bg-[#5EEAD4] text-white text-sm font-medium">
+            <button
+              data-tip="Start using Akkuea now"
+              className="rounded-[10px] py-2.5 px-6 bg-[#5EEAD4] text-white text-sm font-medium"
+            >
               Get Started
             </button>
-            <button className="rounded-[10px] py-2.5 px-6 text-[#5EEAD4] border-[1px] border-[#5EEAD4] bg-white text-sm font-medium">
+            <button
+              data-tip="Learn more about Akkuea"
+              className="rounded-[10px] py-2.5 px-6 text-[#5EEAD4] border-[1px] border-[#5EEAD4] bg-white text-sm font-medium"
+            >
               Read More
             </button>
           </div>
         </div>
       </div>
+      <ReactTooltip place="bottom" effect="solid" /> {/* ✅ tooltip */}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import type React from 'react';
 import { User } from 'lucide-react';
+import ReactTooltip from 'react-tooltip'; // ✅ v4 tooltip import
 
 interface Person {
   name: string;
@@ -34,9 +35,13 @@ const PeopleCard: React.FC<PeopleCardProps> = ({ person }) => {
           <div>posts</div>
         </div>
       </div>
-      <button className="w-full bg-primary hover:bg-primary/80 text-white font-medium py-2 px-4 rounded-lg transition-colors">
+      <button
+        data-tip="Follow this user"
+        className="w-full bg-primary hover:bg-primary/80 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+      >
         Follow
       </button>
+      <ReactTooltip place="bottom" effect="solid" /> {/* ✅ global tooltip */}
     </div>
   );
 };

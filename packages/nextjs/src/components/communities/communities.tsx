@@ -28,6 +28,7 @@ import {
 import { Users, Search, Plus, MessageCircle, TrendingUp, User } from 'lucide-react';
 import { toast } from 'sonner';
 import DiscussionItem from './DiscussionItem';
+import ReactTooltip from "react-tooltip"
 
 // Mock data
 const allCommunities = [
@@ -164,19 +165,19 @@ export default function Communities() {
   });
 
   const filteredCommunities = communities.filter(
-    (community) =>
+    (community: any) =>
       community.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      community.tags.some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+      community.tags.some((tag:any) => tag.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const joinedCommunities = communities.filter((community) => community.joined);
+  const joinedCommunities = communities.filter((community:any) => community.joined);
   const joinedDiscussions = discussions.filter((discussion) =>
-    joinedCommunities.some((community) => community.name === discussion.community)
+    joinedCommunities.some((community:any) => community.name === discussion.community)
   );
 
   const handleJoinCommunity = (communityId: number) => {
-    setCommunities((prev) =>
-      prev.map((community) =>
+    setCommunities((prev:any) =>
+      prev.map((community:any) =>
         community.id === communityId
           ? { ...community, joined: true, members: community.members + 1 }
           : community
@@ -186,8 +187,8 @@ export default function Communities() {
   };
 
   const handleLeaveCommunity = (communityId: number) => {
-    setCommunities((prev) =>
-      prev.map((community) =>
+    setCommunities((prev : any) =>
+      prev.map((community : any) =>
         community.id === communityId
           ? { ...community, joined: false, members: community.members - 1 }
           : community
@@ -208,7 +209,7 @@ export default function Communities() {
       description: newCommunity.description,
       tags: newCommunity.tags
         .split(',')
-        .map((tag) => tag.trim())
+        .map((tag : any) => tag.trim())
         .filter(Boolean),
       members: 1,
       posts: 0,
@@ -216,7 +217,7 @@ export default function Communities() {
       image: `/placeholder.svg?height=80&width=80&text=${newCommunity.name.substring(0, 2).toUpperCase()}`,
     };
 
-    setCommunities((prev) => [...prev, community]);
+    setCommunities((prev : any) => [...prev, community]);
     setNewCommunity({ name: '', description: '', tags: '', visibility: 'public' });
     setIsCreateModalOpen(false);
     toast.success('Your new community has been created successfully!');
@@ -250,7 +251,6 @@ export default function Communities() {
                   {community.tags.map((tag, index) => (
                     <Badge
                       key={index}
-                      variant="secondary"
                       className="text-xs bg-primary/10 text-primary hover:bg-primary/20"
                     >
                       {tag}
@@ -268,8 +268,7 @@ export default function Communities() {
               <div className="flex-shrink-0">
                 {showLeaveButton ? (
                   <Button
-                    variant="outline"
-                    size="sm"
+                    data-tip="Leave this community"
                     onClick={() => handleLeaveCommunity(community.id)}
                     className="text-destructive border-destructive/20 hover:bg-destructive/10"
                   >
@@ -277,7 +276,7 @@ export default function Communities() {
                   </Button>
                 ) : (
                   <Button
-                    size="sm"
+                    data-tip={community.joined ? 'You already joined' : 'Join this community'}
                     onClick={() => handleJoinCommunity(community.id)}
                     disabled={community.joined}
                     className="bg-primary hover:bg-primary/80 text-white"
@@ -303,12 +302,15 @@ export default function Communities() {
         </div>
         <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-primary hover:bg-primary/80 text-white">
+            <Button
+              className="bg-primary hover:bg-primary/80 text-white"
+              data-tip="Start a new community"
+            >
               <Plus className="w-4 h-4 mr-2" />
               Create Community
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Create Community</DialogTitle>
               <DialogDescription>
@@ -350,7 +352,7 @@ export default function Communities() {
                 <Label htmlFor="visibility">Visibility</Label>
                 <Select
                   value={newCommunity.visibility}
-                  onValueChange={(value) =>
+                  onValueChange={(value : any) =>
                     setNewCommunity((prev) => ({ ...prev, visibility: value }))
                   }
                 >
@@ -365,12 +367,17 @@ export default function Communities() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+              <Button data-tip="Close the dialog" onClick={() => setIsCreateModalOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateCommunity} className="bg-primary hover:bg-primary/80">
+              <Button
+                data-tip="Create a new community"
+                className="bg-primary hover:bg-primary/80"
+                onClick={handleCreateCommunity}
+              >
                 Create Community
               </Button>
+              <ReactTooltip place="top" effect="solid" />
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -389,30 +396,34 @@ export default function Communities() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-6 bg-muted/20 rounded-lg">
-          <TabsTrigger
-            value="discover"
-            className="flex items-center gap-2 justify-center rounded-md  text-sm font-medium transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-          >
-            <TrendingUp className="w-4 h-4" />
-            Discover
-          </TabsTrigger>
-          <TabsTrigger
-            value="your-communities"
-            className="flex items-center gap-2 justify-center rounded-md  text-sm font-medium transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-          >
-            <User className="w-4 h-4" />
-            Your Communities
-          </TabsTrigger>
-          <TabsTrigger
-            value="discussions"
-            className="flex items-center gap-2 justify-center rounded-md  text-sm font-medium transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-          >
-            <MessageCircle className="w-4 h-4" />
-            Discussions
-          </TabsTrigger>
-        </TabsList>
+       <TabsList className="grid w-full grid-cols-3 mb-6 bg-muted/20 rounded-lg">
+            <TabsTrigger
+              value="discover"
+              className="flex items-center gap-2 justify-center rounded-md text-sm font-medium transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              data-tip="See trending communities"
+            >
+              <TrendingUp className="w-4 h-4" />
+              Discover
+            </TabsTrigger>
 
+            <TabsTrigger
+              value="your-communities"
+              className="flex items-center gap-2 justify-center rounded-md text-sm font-medium transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              data-tip="View your joined communities"
+            >
+              <User className="w-4 h-4" />
+              Your Communities
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="discussions"
+              className="flex items-center gap-2 justify-center rounded-md text-sm font-medium transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              data-tip="Check discussions"
+            >
+              <MessageCircle className="w-4 h-4" />
+              Discussions
+            </TabsTrigger>
+          </TabsList>
         <TabsContent value="discover" className="space-y-4">
           {filteredCommunities.length === 0 ? (
             <div className="text-center py-12">
@@ -432,9 +443,9 @@ export default function Communities() {
             <div className="text-center py-12">
               <p className="text-muted">{"You haven't joined any communities yet."}</p>
               <Button
-                variant="outline"
                 className="mt-4 bg-transparent"
                 onClick={() => setActiveTab('discover')}
+                data-tip="Discover communities you can join"
               >
                 Discover Communities
               </Button>
@@ -465,6 +476,8 @@ export default function Communities() {
           )}
         </TabsContent>
       </Tabs>
+      {/* Tooltips */}
+      <ReactTooltip place="top" effect="solid" />
     </div>
   );
 }

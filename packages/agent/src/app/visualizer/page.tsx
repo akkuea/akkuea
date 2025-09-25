@@ -17,6 +17,7 @@ import { FileJson, FileText, GitBranchPlus, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import ParsedJsonView from '@/components/json-components/parsed-json-viewer';
 import GraphicalJsonView from '@/components/json-components/graphical-json-viewer';
+import ReactToolTip from 'react-tooltip';
 
 // Sample JSON files for demonstration
 const sampleFiles = {
@@ -111,6 +112,7 @@ export default function VisualizerPage() {
               <Button
                 variant="ghost"
                 size="sm"
+                data-tip="Go back to homepage" // <-- added tooltip
                 className="flex items-center gap-1"
               >
                 <ArrowLeft className="h-4 w-4" /> Back to Home
@@ -157,6 +159,7 @@ export default function VisualizerPage() {
                 <Button
                   key={option.id}
                   variant={activeView === option.id ? 'default' : 'ghost'}
+                  data-tip={option.label} // <-- added tooltip
                   className={`relative flex items-center gap-2 px-4 py-2 rounded-lg ${
                     activeView === option.id
                       ? `bg-gradient-to-r ${option.color} text-white`
@@ -176,6 +179,7 @@ export default function VisualizerPage() {
                   )}
                 </Button>
               ))}
+              <ReactToolTip place="top" type="dark" />{' '}
             </div>
           </div>
 

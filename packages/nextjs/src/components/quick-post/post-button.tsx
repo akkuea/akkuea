@@ -1,4 +1,5 @@
 import { Paperclip } from 'lucide-react';
+import ReactTooltip from 'react-tooltip';
 
 interface PostButtonProps {
   onClick: () => void;
@@ -21,10 +22,11 @@ const PostButton: React.FC<PostButtonProps> = ({ onClick, disabled, onUpload }) 
         className={`bg-[#59C9D0] text-white px-4 py-2 rounded-md font-medium ${
           disabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#45AAB1]'
         }`}
+        data-tip="Click to post your content"
       >
         Post
       </button>
-      <label className="cursor-pointer text-gray-500 hover:text-gray-700">
+      <label className="cursor-pointer text-gray-500 hover:text-gray-700" data-tip="Attach images">
         <input
           type="file"
           accept="image/*"
@@ -34,6 +36,7 @@ const PostButton: React.FC<PostButtonProps> = ({ onClick, disabled, onUpload }) 
         />
         <Paperclip className="w-5 h-5" />
       </label>
+      <ReactTooltip place="top" effect="solid" />
     </div>
   );
 };

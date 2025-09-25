@@ -27,6 +27,7 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
+import ReactTooltip from 'react-tooltip';
 
 export default function LearningHubSidebar() {
   const pathname = usePathname();
@@ -99,9 +100,9 @@ export default function LearningHubSidebar() {
     >
       <button
         onClick={toggleSidebar}
-        className="absolute -right-3 top-1/2 -translate-y-1/2 bg-card rounded-full p-1.5 shadow-lg z-[60] hover:bg-muted/50 "
-        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className="absolute -right-3 top-1/2 -translate-y-1/2 bg-card rounded-full p-1.5 shadow-lg z-[60] hover:bg-muted/50"
         style={{ right: '-12px' }}
+        data-tip={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
       >
         {isCollapsed ? (
           <ChevronRight className="text-muted-foreground" size={16} />
@@ -242,6 +243,7 @@ export default function LearningHubSidebar() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarRail />
+      <ReactTooltip place="top" effect="solid" />
     </Sidebar>
   );
 }

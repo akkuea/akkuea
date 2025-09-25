@@ -5,6 +5,8 @@ import { MessageThread } from '@/components/messages/message-thread';
 import { MessageInput } from '@/components/messages/message-input';
 import { useState } from 'react';
 import { Menu } from 'lucide-react';
+import ReactTooltip from "react-tooltip"
+import 'react-tooltip/dist/react-tooltip.css';
 
 export default function MessagesPage() {
   const [showSidebar, setShowSidebar] = useState(false);
@@ -15,9 +17,11 @@ export default function MessagesPage() {
       <button
         className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-md shadow-md"
         onClick={() => setShowSidebar(!showSidebar)}
+        data-tip={showSidebar ? "Close conversations" : "Open conversations"}
       >
         <Menu className="h-6 w-6" />
       </button>
+      <ReactTooltip place="top" effect="solid" />
 
       {/* Conversation list sidebar */}
       <div

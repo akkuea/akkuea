@@ -3,6 +3,7 @@ import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import ReactTooltip from 'react-tooltip';
 
 export function ThemeSwitcher() {
   const [mounted, setMounted] = useState(false);
@@ -37,7 +38,9 @@ export function ThemeSwitcher() {
           checked={resolvedTheme === 'dark'}
           onCheckedChange={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
           className="data-[state=checked]:bg-primary"
+          data-tip="Toggle Theme"
         />
+        <ReactTooltip place="top" effect="solid" />
       </div>
       <p className="text-sm text-muted pl-8">Toggle between light and dark theme</p>
     </div>

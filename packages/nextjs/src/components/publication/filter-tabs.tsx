@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactTooltip from 'react-tooltip'; // ✅ v4 tooltip import
 
 interface FilterTab {
   id: string;
@@ -24,10 +25,12 @@ export const FilterTabs: React.FC<FilterTabsProps> = ({ tabs, activeTab, onTabCh
               : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
           }`}
           onClick={() => onTabChange(tab.id)}
+          data-tip={`Switch to ${tab.label} tab`} // ✅ tooltip text
         >
           {tab.label} {tab.count > 0 && <span>{tab.count}</span>}
         </button>
       ))}
+      <ReactTooltip place="top" effect="solid" /> {/* ✅ global tooltip */}
     </div>
   );
 };

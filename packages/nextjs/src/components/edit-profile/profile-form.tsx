@@ -2,6 +2,7 @@
 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import ReactTooltip from 'react-tooltip';
 
 interface ProfileFormProps {
   name: string;
@@ -31,6 +32,7 @@ export const ProfileForm = ({
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           className="mt-1"
+          data-tip="Enter your full name"
         />
       </div>
       <div>
@@ -42,6 +44,7 @@ export const ProfileForm = ({
           value={username}
           onChange={(e) => onUsernameChange(e.target.value)}
           className="mt-1"
+          data-tip="Choose a unique username"
         />
       </div>
       <div>
@@ -54,8 +57,11 @@ export const ProfileForm = ({
           onChange={(e) => onBioChange(e.target.value)}
           className="mt-1"
           rows={4}
+          data-tip="Write a short bio about yourself"
         />
       </div>
+
+      <ReactTooltip place="bottom" effect="solid" />
     </>
   );
 };

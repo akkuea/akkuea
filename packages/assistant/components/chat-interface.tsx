@@ -5,6 +5,7 @@ import { useChat } from '@ai-sdk/react';
 import { Send, Bot, User, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import ReactToolTip from 'react-tooltip';
 
 export default function ChatInterface() {
   const { messages, input, handleInputChange, handleSubmit, isLoading } =
@@ -132,11 +133,13 @@ export default function ChatInterface() {
             size="icon"
             className="rounded-full bg-teal-500 hover:bg-teal-600 h-12 w-12"
             disabled={isLoading || !input.trim()}
+            data-tip="Send message" // <-- added tooltip
           >
             <Send className="h-5 w-5" />
             <span className="sr-only">Send message</span>
           </Button>
         </form>
+        <ReactToolTip place="top" type="dark" /> {/* <-- global tooltip */}
       </div>
     </div>
   );

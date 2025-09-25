@@ -1,5 +1,6 @@
 import { AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ReactTooltip from 'react-tooltip';
 
 export interface DeleteAccountModalProps {
   isDarkMode: boolean;
@@ -32,6 +33,7 @@ export function DeleteAccountModal({ isDarkMode, onCancel, onConfirm }: DeleteAc
           </div>
           <button
             onClick={onCancel}
+            data-tip="Close"
             className={
               isDarkMode ? 'text-gray-200 hover:text-red-400' : 'text-gray-800 hover:text-red-600'
             }
@@ -58,13 +60,14 @@ export function DeleteAccountModal({ isDarkMode, onCancel, onConfirm }: DeleteAc
         </div>
 
         <div className="flex justify-end space-x-3">
-          <Button variant="outline" onClick={onCancel}>
+          <Button data-tip="Cancel deletion" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onConfirm}>
+          <Button data-tip="Delete account permanently" variant="destructive" onClick={onConfirm}>
             Confirm Delete
           </Button>
         </div>
+        <ReactTooltip place="top" effect="solid" />
       </div>
     </div>
   );

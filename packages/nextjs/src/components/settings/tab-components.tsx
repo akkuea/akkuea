@@ -2,6 +2,7 @@
 import type React from 'react';
 import type { ReactNode } from 'react';
 import { useTab, type TabType } from '@/contexts/TabContext';
+import ReactTooltip from 'react-tooltip';
 
 interface TabNavProps {
   children: ReactNode;
@@ -11,6 +12,8 @@ export const TabNav: React.FC<TabNavProps> = ({ children }) => {
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-start sm:justify-center gap-2 sm:gap-1 p-2 sm:p-4 bg-card border-b border-border rounded-t-lg overflow-x-auto">
       {children}
+      {/* Global tooltip */}
+      <ReactTooltip place="top" type="dark" effect="solid" />
     </div>
   );
 };
@@ -33,6 +36,7 @@ export const TabItem: React.FC<TabItemProps> = ({ icon, label, value }) => {
       onClick={() => setActiveTab(value)}
       role="tab"
       aria-selected={isActive}
+      data-tip={`Switch to ${label} tab`} // Tooltip added here
     >
       {icon}
       <span className="whitespace-nowrap">{label}</span>

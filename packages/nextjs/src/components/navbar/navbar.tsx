@@ -22,6 +22,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import ReactTooltip from 'react-tooltip';
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,6 +119,7 @@ const Navbar = () => {
             size="icon"
             variant="ghost"
             className="absolute left-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+            data-tip="Search posts"
           >
             <Search className="h-4 w-4 text-muted" />
             <span className="sr-only">Buscar</span>
@@ -164,7 +166,7 @@ const Navbar = () => {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-full">
+              <Button variant="ghost" size="icon" className="rounded-full" data-tip="User menu">
                 <User className="h-5 w-5 text-muted" />
               </Button>
             </DropdownMenuTrigger>
@@ -211,6 +213,7 @@ const Navbar = () => {
             <Button
               onClick={handleDisconnect}
               className="bg-primary hover:bg-primary/80 text-white font-medium px-4 py-2 rounded-full transition-colors duration-200 text-sm shadow-sm hover:shadow-md"
+              data-tip="Disconnect wallet"
             >
               Disconnect
             </Button>
@@ -218,12 +221,14 @@ const Navbar = () => {
             <Button
               onClick={handleConnect}
               className="bg-primary hover:bg-primary/80 text-white font-medium px-4 py-2 rounded-full transition-colors duration-200 text-sm shadow-sm hover:shadow-md"
+              data-tip="Connect wallet"
             >
               Connect
             </Button>
           )}
         </div>
       </div>
+      <ReactTooltip place="top" effect="solid" /> {/* ✅ global tooltip */}
     </nav>
   );
 };

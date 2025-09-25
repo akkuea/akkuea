@@ -10,6 +10,7 @@ import {
   Zap,
 } from 'lucide-react';
 import Link from 'next/link';
+import ReactToolTip from 'react-tooltip'; // <-- import at the top
 
 export default function Home() {
   return (
@@ -60,10 +61,13 @@ export default function Home() {
                   <Link href="/visualizer" className="relative block">
                     <Button
                       size="lg"
+                      data-tip="Start your journey" // <-- added tooltip
                       className="bg-gradient-to-r from-[#7CC635] to-purple-600 hover:from-[#7CC635]/90 hover:to-purple-600/90 text-white rounded-full px-10 py-7 text-lg font-medium flex items-center gap-3 shadow-lg border border-white/10"
                     >
                       Get Started <ArrowRight className="h-5 w-5" />
                     </Button>
+                    <ReactToolTip place="top" type="dark" />{' '}
+                    {/* <-- global tooltip */}
                   </Link>
                 </div>
               </div>

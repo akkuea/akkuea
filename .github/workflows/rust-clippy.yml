@@ -1,0 +1,47 @@
+name: rust-clippy analyze
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+    - cron: '22 13 * * 3'
+
+jobs:
+  rust-clippy-analyze:
+    name: Run rust-clippy analyzing
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/soroban
+    permissions:
+      contents: read
+      security-events: write
+      # actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+
+      - name: Install required cargo tools
+        run: cargo install clippy-sarif sarif-fmt
+
+      - name: Run rust-clippy
+        run: |
+          cargo clippy \
+            --all-features \
+            --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+        continue-on-error: true
+
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: packages/soroban/rust-clippy/rust-clippy-results.sarif
+          wait-for-processing: true

@@ -64,3 +64,4 @@ packages/nextjs/bun.lock
 
 # Stellar-specific files
 .stellar/
+node_modules/

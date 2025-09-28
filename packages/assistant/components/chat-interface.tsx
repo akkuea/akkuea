@@ -1,30 +1,31 @@
-"use client"
+'use client';
 
-import { useState, useRef, useEffect } from "react"
-import { useChat } from "@ai-sdk/react"
-import { Send, Bot, User, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { useState, useRef, useEffect } from 'react';
+import { useChat } from '@ai-sdk/react';
+import { Send, Bot, User, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export default function ChatInterface() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({api:"/api/chat"})
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [isMounted, setIsMounted] = useState(false)
+  const { messages, input, handleInputChange, handleSubmit, isLoading } =
+    useChat({ api: '/api/chat' });
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages])
+  }, [messages]);
 
   // Prevent hydration issues
   useEffect(() => {
-    setIsMounted(true)
-  }, [])
+    setIsMounted(true);
+  }, []);
 
   if (!isMounted) {
-    return null
+    return null;
   }
 
   return (
@@ -44,9 +45,12 @@ export default function ChatInterface() {
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-8 space-y-4">
             <Bot className="h-12 w-12 text-teal-400" />
-            <h2 className="text-2xl font-bold tracking-tight">Welcome to Akkuea AI Chat Assistant</h2>
+            <h2 className="text-2xl font-bold tracking-tight">
+              Welcome to Akkuea AI Chat Assistant
+            </h2>
             <p className="text-zinc-400 max-w-sm">
-              Start a conversation with the AI assistant. Ask questions, get information, or just chat.
+              Start a conversation with the AI assistant. Ask questions, get
+              information, or just chat.
             </p>
           </div>
         ) : (
@@ -55,31 +59,37 @@ export default function ChatInterface() {
               <div
                 key={message.id}
                 className={cn(
-                  "flex w-full",
-                  message.role === "user" ? "justify-end" : "justify-start"
+                  'flex w-full',
+                  message.role === 'user' ? 'justify-end' : 'justify-start',
                 )}
               >
-                <div className={cn(
-                  "flex items-start gap-3 max-w-md",
-                  message.role === "user" ? "flex-row-reverse" : "flex-row"
-                )}>
+                <div
+                  className={cn(
+                    'flex items-start gap-3 max-w-md',
+                    message.role === 'user' ? 'flex-row-reverse' : 'flex-row',
+                  )}
+                >
                   {/* Avatar */}
                   <div
                     className={cn(
-                      "flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full text-black",
-                      message.role === "user" ? "bg-teal-400" : "bg-zinc-400"
+                      'flex h-8 w-8 shrink-0 select-none items-center justify-center rounded-full text-black',
+                      message.role === 'user' ? 'bg-teal-400' : 'bg-zinc-400',
                     )}
                   >
-                    {message.role === "user" ? <User className="h-5 w-5" /> : <Bot className="h-5 w-5" />}
+                    {message.role === 'user' ? (
+                      <User className="h-5 w-5" />
+                    ) : (
+                      <Bot className="h-5 w-5" />
+                    )}
                   </div>
 
                   {/* Message */}
                   <div
                     className={cn(
-                      "rounded-lg px-4 py-3 shadow-md",
-                      message.role === "user"
-                        ? "bg-zinc-900 border-r-2 border-teal-400"
-                        : "bg-zinc-800 border-l-2 border-zinc-600"
+                      'rounded-lg px-4 py-3 shadow-md',
+                      message.role === 'user'
+                        ? 'bg-zinc-900 border-r-2 border-teal-400'
+                        : 'bg-zinc-800 border-l-2 border-zinc-600',
                     )}
                   >
                     {message.content}
@@ -106,7 +116,10 @@ export default function ChatInterface() {
 
       {/* Input area */}
       <div className="border-t border-zinc-800 bg-black p-4">
-        <form onSubmit={handleSubmit} className="container flex gap-2 items-center max-w-2xl mx-auto">
+        <form
+          onSubmit={handleSubmit}
+          className="container flex gap-2 items-center max-w-2xl mx-auto"
+        >
           <input
             type="text"
             value={input}
@@ -126,5 +139,5 @@ export default function ChatInterface() {
         </form>
       </div>
     </div>
-  )
+  );
 }

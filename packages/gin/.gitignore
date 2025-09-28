@@ -1,0 +1,12 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+.glide/
+vendor/
+
+*.code-workspace
+.env 

@@ -1,0 +1,52 @@
+name: Gin Backend CI
+
+on:
+  push:
+    branches: ['main']
+    paths:
+      - 'packages/gin/**'
+  pull_request:
+    branches: ['main']
+    paths:
+      - 'packages/gin/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('packages/gin/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        run: go mod download
+        working-directory: packages/gin
+
+      - name: Run build
+        run: go build ./...
+        working-directory: packages/gin
+
+      - name: Run tests
+        run: go test ./... -v
+        working-directory: packages/gin
+
+      - name: Run linter
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: packages/gin

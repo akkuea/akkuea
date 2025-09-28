@@ -1,0 +1,50 @@
+name: Github Actions workflow for Vitest with Bun
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun in CI Environment
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install root dependencies
+        run: bun install
+
+      - name: Install nextjs dependencies
+        run: bun install
+        working-directory: packages/nextjs
+
+      - name: Run tests with coverage
+        run: bun vitest run --coverage --reporter=default
+        working-directory: packages/nextjs
+
+      - name: Display coverage summary
+        if: always()
+        run: |
+          if [ -f coverage/lcov-report/index.html ]; then
+            echo "Coverage report generated."
+          fi
+          if [ -f coverage/coverage-summary.json ]; then
+            cat coverage/coverage-summary.json
+          fi
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            ./node_modules
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-

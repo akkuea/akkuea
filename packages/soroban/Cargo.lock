@@ -15,13 +15,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "akkuea-funding-contract"
-version = "0.0.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
 name = "android-tzdata"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -164,13 +157,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "auction"
-version = "0.0.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -260,27 +246,6 @@ name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
-
-[[package]]
-name = "content-search-contract"
-version = "0.0.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
-name = "contract1"
-version = "0.0.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
-name = "contributor-reputation-contract"
-version = "0.0.0"
-dependencies = [
- "soroban-sdk",
-]
 
 [[package]]
 name = "core-foundation-sys"
@@ -507,7 +472,80 @@ dependencies = [
 ]
 
 [[package]]
-name = "educator-verification-nft"
+name = "educational-content-index-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "educational-content-management-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "educational-content-tipping-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "educational-contribution-reputation-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "educational-credential-verification-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "educational-incentive-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "educational-nft"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+ "stellar-access",
+ "stellar-macros",
+ "stellar-tokens",
+]
+
+[[package]]
+name = "educational-nft-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "educational-project-funding-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "educational-purchase-nft-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "educational-review-contract"
 version = "0.0.0"
 dependencies = [
  "soroban-sdk",
@@ -538,6 +576,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "equipment-rental"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -554,6 +599,13 @@ name = "ethnum"
 version = "1.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca81e6b4777c89fd810c25a4be2b1bd93ea034fbe58e6a75216a34c6b82c539b"
+
+[[package]]
+name = "example-of-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
 
 [[package]]
 name = "ff"
@@ -632,13 +684,6 @@ name = "hashbrown"
 version = "0.15.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "84b26c544d002229e640969970a2e74021aadf6e2f96372b9c58eff97de08eb3"
-
-[[package]]
-name = "hello-world"
-version = "0.0.0"
-dependencies = [
- "soroban-sdk",
-]
 
 [[package]]
 name = "hex"
@@ -787,10 +832,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13dc2df351e3202783a1fe0d44375f7295ffb4049267b0f3018346dc122a1d94"
 
 [[package]]
+name = "marketplace-auction-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
+
+[[package]]
+name = "milestone-finance"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+]
 
 [[package]]
 name = "num-bigint"
@@ -869,6 +928,13 @@ checksum = "f950b2377845cebe5cf8b5165cb3cc1a5e0fa5cfa3e1f7f55707d8fd82e0a7b7"
 dependencies = [
  "der",
  "spki",
+]
+
+[[package]]
+name = "platform-user-reputation-contract"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
 ]
 
 [[package]]
@@ -955,20 +1021,6 @@ dependencies = [
 
 [[package]]
 name = "rating-system"
-version = "0.1.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
-name = "review-system"
-version = "0.0.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
-name = "reward-system"
 version = "0.0.0"
 dependencies = [
  "soroban-sdk",
@@ -1341,6 +1393,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
+name = "stellar-access"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0d96a0919d00daec5fa7931f4e8bc1d16383e996c5b34d17522961e72cc8605"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "stellar-macros"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64fca0c7dec6c2ff634d0bf078bd632fd1616e4ced6be4ab1487bae689c5ebf2"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.101",
+]
+
+[[package]]
 name = "stellar-strkey"
 version = "0.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1349,6 +1421,15 @@ dependencies = [
  "crate-git-revision",
  "data-encoding",
  "thiserror",
+]
+
+[[package]]
+name = "stellar-tokens"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "68e41ef20c8d4f3c0b21b83a15c8e4c7e99462af020fc0f0dcd1d548a07812ea"
+dependencies = [
+ "soroban-sdk",
 ]
 
 [[package]]
@@ -1453,20 +1534,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tipping-rewards"
-version = "0.0.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
-name = "tokenized-educational-contract"
-version = "0.0.0"
-dependencies = [
- "soroban-sdk",
-]
-
-[[package]]
 name = "typenum"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1477,13 +1544,6 @@ name = "unicode-ident"
 version = "1.0.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a5f39404a5da50712a4c1eecf25e90dd62b613502b7e925fd4e4d19b5c96512"
-
-[[package]]
-name = "user-reputation-contract"
-version = "0.0.0"
-dependencies = [
- "soroban-sdk",
-]
 
 [[package]]
 name = "version_check"

@@ -96,6 +96,7 @@ The root `README.md` provides an overview of the Akkuea project, its mission, fe
 ### User Interface Components
 
 UI components are mainly located in:
+
 - `packages/assistant/components/`
 - `packages/nextjs/src/components/`
 
@@ -104,6 +105,7 @@ These folders contain reusable React components, UI primitives (e.g., `ui/`), an
 ### Database Schema
 
 Database-related code and schema definitions are primarily found in:
+
 - `packages/gin/akkuea/` (Go backend, may define models and migrations)
 - `packages/soroban/contracts/` (Smart contracts for blockchain-based data)
 
@@ -112,6 +114,7 @@ Each contract folder may contain schema definitions, logic, and documentation fo
 ### Hooks, Utils, and Libraries (lib)
 
 Custom React hooks and utility functions are organized in:
+
 - `packages/assistant/hooks/` and `packages/assistant/lib/`
 - `packages/nextjs/src/hooks/` and `packages/nextjs/src/lib/`
 

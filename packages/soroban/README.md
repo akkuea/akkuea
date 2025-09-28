@@ -1,4 +1,4 @@
-<h1 align="center"> Soroban Smart Contracts 🌌 </h1>
+<h1 align="center">🌌 Soroban Smart Contracts 🌌 </h1>
 
 > Smart contract module for the Akkuea project, built on **Stellar Soroban**.
 

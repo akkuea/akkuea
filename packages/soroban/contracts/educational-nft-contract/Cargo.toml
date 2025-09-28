@@ -1,0 +1,44 @@
+[package]
+name = "educational-nft-contract"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
+[dependencies]
+soroban-sdk = { workspace = true }
+
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+
+# Optimization settings
+[profile.release]
+opt-level = 'z'  # Optimize for size
+overflow-checks = true
+debug = 0
+strip = true
+debug-assertions = false
+panic = 'abort'
+codegen-units = 1
+lto = true
+
+[profile.test]
+opt-level = 0
+debug = true
+debug-assertions = true
+overflow-checks = true
+lto = false
+panic = 'unwind'
+incremental = true
+codegen-units = 256
+rpath = false
+
+# Soroban snapshot configuration
+# Snapshots are WASM binary representations of contract state used in testing
+[package.metadata.soroban]
+generate-snapshots = false  # Only creates snapshots when explicitly requested
+snapshot-dir = "test_snapshots"  # Directory for test snapshots
+verbose-snapshots = false  # Reduces output noise during testing

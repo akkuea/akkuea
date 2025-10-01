@@ -1,11 +1,15 @@
 [package]
-name = "rating-system"
+name = "review-system"
 version = "0.0.0"
 edition = "2021"
 publish = false
 
+[lib]
+crate-type = ["lib", "cdylib"]
+doctest = false
+
 [dependencies]
-soroban-sdk.workspace = true
+soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
@@ -26,14 +30,11 @@ opt-level = 0
 debug = true
 debug-assertions = true
 overflow-checks = true
+lto = false
 panic = 'unwind'
 incremental = true
 codegen-units = 256
 rpath = false
-
-[lib]
-crate-type = ["cdylib", "lib"]
-doctest = false
 
 # Soroban snapshot configuration
 # Snapshots are WASM binary representations of contract state used in testing
@@ -41,6 +42,3 @@ doctest = false
 generate-snapshots = false  # Only creates snapshots when explicitly requested
 snapshot-dir = "test_snapshots"  # Directory for test snapshots
 verbose-snapshots = false  # Reduces output noise during testing
-
-[features]
-testutils = ["soroban-sdk/testutils"]

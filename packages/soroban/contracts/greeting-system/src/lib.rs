@@ -1,13 +1,16 @@
 #![no_std]
 extern crate alloc;
 use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, Address, Env, String};
 
 mod batch;
 mod datatype;
 mod error;
 mod events;
 mod interface;
+mod rewards;
 mod storage;
+mod user;
 mod utils;
 
 pub use batch::*;
@@ -15,6 +18,7 @@ pub use datatype::*;
 pub use error::*;
 pub use events::*;
 pub use interface::*;
+pub use rewards::*;
 pub use storage::*;
 pub use utils::*;
 
@@ -29,11 +33,7 @@ impl GreetingSystem {
     // ==================== Premium Tier Functions ====================
 
     /// Assign a premium tier to a user based on their contribution
-    pub fn assign_premium_tier(
-        env: Env,
-        user: Address,
-        contribution: i128,
-    ) -> Result<(), Error> {
+    pub fn assign_premium_tier(env: Env, user: Address, contribution: i128) -> Result<(), Error> {
         verify_user_authorization(&env, &user)?;
         validate_contribution(contribution)?;
 
@@ -151,6 +151,64 @@ impl GreetingSystem {
         creator: Address,
     ) -> Result<(), Error> {
         batch::create_greeting(&env, greeting_id, text, creator)
+    /// Issues tokens for a popular greeting via tipping contract and records reward
+    pub fn issue_greeting_reward(
+        env: Env,
+        greeting_id: u64,
+        token_amount: i128,
+        creator: Address,
+        token: Address,
+        tipping_contract: Address,
+    ) -> Result<GreetingReward, Error> {
+        rewards::issue_greeting_reward(
+            env,
+            greeting_id,
+            token_amount,
+            creator,
+            token,
+            tipping_contract,
+        )
+    }
+
+    /// Verifies if a greeting meets reward criteria
+    pub fn check_reward_eligibility(env: Env, greeting_id: u64) -> Result<bool, Error> {
+        rewards::check_reward_eligibility(env, greeting_id)
+    }
+
+    /// Get stored reward by greeting id
+    pub fn get_greeting_reward(env: Env, greeting_id: u64) -> Option<GreetingReward> {
+        rewards::get_reward(env, greeting_id)
+    }
+}
+
+#[contractimpl]
+impl crate::UserRegistryTrait for GreetingSystem {
+    /// Registers a user with profile details
+    fn register_user(
+        env: Env,
+        user: Address,
+        name: String,
+        preferences: String,
+    ) -> Result<(), Error> {
+        user::register(&env, &user, &name, &preferences)
+    }
+
+    /// Retrieves a user profile by address
+    fn get_user_profile(env: Env, user: Address) -> Result<UserProfile, Error> {
+        user::get_profile(&env, &user)
+    }
+}
+
+#[contractimpl]
+impl crate::ConfigTrait for GreetingSystem {
+    fn set_reputation_contract(env: Env, contract: Address) -> Result<(), Error> {
+        // Require admin auth: here we keep it simple and require the contract address itself to auth.
+        contract.require_auth();
+        crate::storage::set_reputation_contract(&env, &contract)
+    }
+
+    fn get_reputation_contract(env: Env) -> Option<Address> {
+        crate::storage::get_reputation_contract(&env)
     }
 }
 

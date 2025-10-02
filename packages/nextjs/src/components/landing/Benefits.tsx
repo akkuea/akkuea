@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from "next/link";
 
 const Benefits = () => {
   const benefits = [
@@ -70,9 +71,12 @@ const Benefits = () => {
 
           {/* Buttons */}
           <div className="flex gap-4 items-center">
-            <button className="rounded-[10px] py-2.5 px-6 bg-[#5EEAD4] dark:bg-primary text-white dark:text-primary-foreground text-sm font-medium hover:bg-[#4DD4C1] dark:hover:bg-primary/90 transition-colors">
-              Get Started
-            </button>
+            <Link href="/home">
+              <button className="rounded-[10px] py-2.5 px-6 bg-[#5EEAD4] dark:bg-primary text-white dark:text-primary-foreground text-sm font-medium hover:bg-[#4DD4C1] dark:hover:bg-primary/90 transition-colors">
+                Get Started
+              </button>
+            </Link>
+
             <button className="rounded-[10px] py-2.5 px-6 text-[#5EEAD4] dark:text-primary border-[1px] border-[#5EEAD4] dark:border-primary bg-white dark:bg-background text-sm font-medium hover:bg-[#F0FDFA] dark:hover:bg-primary/10 transition-colors">
               Read More
             </button>

@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"gin/common"
 	"gin/config"
@@ -14,10 +15,12 @@ import (
 )
 
 type ResourceRequest struct {
-	Title    string `json:"title" binding:"required"`
-	Content  string `json:"content" binding:"required"`
-	Language string `json:"language"`
-	Format   string `json:"format"`
+    Title    string `json:"title" binding:"required"`
+    Content  string `json:"content" binding:"required"`
+    Theme    string `json:"theme"`
+    Level    string `json:"level"`
+    Language string `json:"language"`
+    Format   string `json:"format"`
 }
 
 type ResourcesResponse struct {
@@ -30,46 +33,106 @@ type ResourcesResponse struct {
 
 // GET /resources?status=Approved|Pending|Rejected
 func ListResources(c *gin.Context) {
-	db := config.GetDB()
+    db := config.GetDB()
 
-	status := c.Query("status")
-	// pagination params
-	limit := 50
-	offset := 0
-	if v := c.Query("limit"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 200 {
-			limit = n
-		}
-	}
-	if v := c.Query("offset"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
-			offset = n
-		}
-	}
+    // Validate allowed query params to catch invalid filters
+    allowed := map[string]bool{
+        "status":  true,
+        "limit":   true,
+        "offset":  true,
+        "theme":   true,
+        "level":   true,
+        "language": true,
+        "format":  true,
+    }
+    for key := range c.Request.URL.Query() {
+        if !allowed[key] {
+            common.JSONError(c, http.StatusBadRequest, "invalid_query_parameter", "Unsupported query parameter: "+key)
+            return
+        }
+    }
 
-	var resources []models.Resource
-	tx := db.Model(&models.Resource{})
-	if status != "" {
-		tx = tx.Where("status = ?", status)
-	}
-	// total count
-	var total int64
-	if err := tx.Count(&total).Error; err != nil {
-		common.JSONError(c, http.StatusInternalServerError, "database_error", "Failed to count resources")
-		return
-	}
-	// page
-	if err := tx.Order("created_at DESC").Limit(limit).Offset(offset).Find(&resources).Error; err != nil {
-		common.JSONError(c, http.StatusInternalServerError, "database_error", "Failed to list resources")
-		return
-	}
+    // Extract filters (case-insensitive)
+    status := strings.TrimSpace(c.Query("status"))
+    theme := strings.TrimSpace(c.Query("theme"))
+    level := strings.TrimSpace(c.Query("level"))
+    language := strings.TrimSpace(c.Query("language"))
+    format := strings.TrimSpace(c.Query("format"))
 
-	common.JSONSuccess(c, http.StatusOK, ResourcesResponse{
-		Data:   resources,
-		Count:  total,
-		Limit:  limit,
-		Offset: offset,
-	}, "Resources retrieved successfully")
+    // Validate non-empty for named filters if provided
+    if c.Query("theme") != "" && theme == "" {
+        common.JSONError(c, http.StatusBadRequest, "invalid_filter", "theme cannot be empty")
+        return
+    }
+    if c.Query("level") != "" && level == "" {
+        common.JSONError(c, http.StatusBadRequest, "invalid_filter", "level cannot be empty")
+        return
+    }
+    if c.Query("language") != "" && language == "" {
+        common.JSONError(c, http.StatusBadRequest, "invalid_filter", "language cannot be empty")
+        return
+    }
+    if c.Query("format") != "" && format == "" {
+        common.JSONError(c, http.StatusBadRequest, "invalid_filter", "format cannot be empty")
+        return
+    }
+
+    // pagination params
+    limit := 50
+    offset := 0
+    if v := c.Query("limit"); v != "" {
+        if n, err := strconv.Atoi(v); err == nil && n > 0 && n <= 200 {
+            limit = n
+        } else {
+            common.JSONError(c, http.StatusBadRequest, "invalid_pagination", "limit must be between 1 and 200")
+            return
+        }
+    }
+    if v := c.Query("offset"); v != "" {
+        if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+            offset = n
+        } else {
+            common.JSONError(c, http.StatusBadRequest, "invalid_pagination", "offset must be 0 or greater")
+            return
+        }
+    }
+
+    var resources []models.Resource
+    tx := db.Model(&models.Resource{})
+    if status != "" {
+        tx = tx.Where("status = ?", status)
+    }
+    if theme != "" {
+        tx = tx.Where("LOWER(theme) = LOWER(?)", theme)
+    }
+    if level != "" {
+        tx = tx.Where("LOWER(level) = LOWER(?)", level)
+    }
+    if language != "" {
+        tx = tx.Where("LOWER(language) = LOWER(?)", language)
+    }
+    if format != "" {
+        tx = tx.Where("LOWER(format) = LOWER(?)", format)
+    }
+
+    // total count
+    var total int64
+    if err := tx.Count(&total).Error; err != nil {
+        common.JSONError(c, http.StatusInternalServerError, "database_error", "Failed to count resources")
+        return
+    }
+    // page
+    if err := tx.Order("created_at DESC").Limit(limit).Offset(offset).Find(&resources).Error; err != nil {
+        common.JSONError(c, http.StatusInternalServerError, "database_error", "Failed to list resources")
+        return
+    }
+
+    common.JSONSuccess(c, http.StatusOK, ResourcesResponse{
+        Data:   resources,
+        Count:  total,
+        Limit:  limit,
+        Offset: offset,
+    }, "Resources retrieved successfully")
 }
 
 // GET /resources/:id

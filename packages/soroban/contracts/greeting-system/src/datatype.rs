@@ -53,8 +53,39 @@ pub struct TierAssignmentEvent {
     pub timestamp: u64,
 }
 
+/// Represents a single greeting.
+#[contracttype]
+#[derive(Clone)]
+pub struct Greeting {
+    pub id: u64,
+    pub text: soroban_sdk::String,
+    pub creator: Address,
+    pub updated_at: u64,
+}
+
+/// Status of a batch operation.
+#[contracttype]
+#[derive(Clone)]
+pub enum OperationStatus {
+    Pending,
+    Completed,
+    Failed(soroban_sdk::String), // Reason for failure
+}
+
+/// Batch update record for auditing.
+#[contracttype]
+#[derive(Clone)]
+pub struct BatchUpdate {
+    pub batch_id: u64,
+    pub greeting_ids: soroban_sdk::Vec<u64>,
+    pub updates: soroban_sdk::Vec<soroban_sdk::String>,
+    pub status: OperationStatus,
+    pub processed_by: Address,
+    pub processed_at: u64,
+}
+
 impl TierLevel {
-    /// Convert tier level to string representation
+    /// Convert tier level to soroban_sdk::String representation
     pub fn to_str(&self) -> &str {
         match self {
             TierLevel::None => "None",

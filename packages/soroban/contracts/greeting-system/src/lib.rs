@@ -1,6 +1,8 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, Address, Env};
+extern crate alloc;
+use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
 
+mod batch;
 mod datatype;
 mod error;
 mod events;
@@ -8,6 +10,7 @@ mod interface;
 mod storage;
 mod utils;
 
+pub use batch::*;
 pub use datatype::*;
 pub use error::*;
 pub use events::*;
@@ -15,11 +18,16 @@ pub use interface::*;
 pub use storage::*;
 pub use utils::*;
 
+// Move the storage use to top level (impl no fit hold use statements)
+// But since pub use storage::*, the fns like has_premium_tier dey direct in scope—no need extra use
+
 #[contract]
 pub struct GreetingSystem;
 
 #[contractimpl]
 impl GreetingSystem {
+    // ==================== Premium Tier Functions ====================
+
     /// Assign a premium tier to a user based on their contribution
     pub fn assign_premium_tier(
         env: Env,
@@ -116,6 +124,33 @@ impl GreetingSystem {
     pub fn get_total_contribution(env: Env, user: Address) -> Result<i128, Error> {
         let tier = load_premium_tier(&env, &user)?;
         Ok(tier.contribution)
+    }
+
+    // ==================== Batch Operation Functions ====================
+    
+    /// Batch update multiple greetings in a single transaction
+    pub fn batch_update_greetings(
+        env: Env,
+        user: Address,
+        greeting_ids: Vec<u64>,
+        updates: Vec<String>,
+    ) -> Result<u64, Error> {
+        batch::batch_update_greetings(&env, user, greeting_ids, updates)
+    }
+
+    /// Get the status of a batch update operation
+    pub fn get_batch_status(env: Env, batch_id: u64) -> Result<BatchUpdate, Error> {
+        batch::get_batch_status(&env, batch_id)
+    }
+
+    /// Create a new greeting (helper function)
+    pub fn create_greeting(
+        env: Env,
+        greeting_id: u64,
+        text: String,
+        creator: Address,
+    ) -> Result<(), Error> {
+        batch::create_greeting(&env, greeting_id, text, creator)
     }
 }
 

@@ -1,6 +1,7 @@
-use soroban_sdk::{symbol_short, Address, Env, String, Symbol};
+use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol};
 
-use crate::{Error, TierAssignmentEvent, TierLevel, TierUpgradeEvent};
+use crate::error::Error;
+use crate::datatype::{TierAssignmentEvent, TierUpgradeEvent, TierLevel, OperationStatus};
 
 /// Event symbol for tier assignment
 pub const TIER_ASSIGNED: Symbol = symbol_short!("TIER_ASGN");
@@ -68,5 +69,25 @@ pub fn emit_tier_downgraded(
         ),
     );
     
+    Ok(())
+}
+
+/// Event for batch update initiation/completion.
+#[contracttype]
+#[derive(Clone)]
+pub struct BatchUpdateEvent {
+    pub batch_id: u64,
+    pub num_greetings: u32,
+    pub status: OperationStatus,
+    pub processed_by: Address,
+}
+
+/// Emit batch update event.
+pub fn emit_batch_update(env: &Env, event: &BatchUpdateEvent) -> Result<(), crate::Error> {
+    // Fix: Use two symbols for topics (no b""—change to symbol_short!)
+    env.events().publish(
+        (symbol_short!("batch_upd"), symbol_short!("update")),
+        event.clone(),
+    );
     Ok(())
 }

@@ -16,6 +16,12 @@ pub const GREETING_REWARD: Symbol = symbol_short!("GRT_RWD");
 /// Event symbol for user registration
 pub const USER_REGISTERED: Symbol = symbol_short!("USR_REG");
 
+/// Event symbol for greeting flagged
+pub const GREETING_FLAGGED: Symbol = symbol_short!("GRT_FLG");
+
+/// Event symbol for flag resolved
+pub const FLAG_RESOLVED: Symbol = symbol_short!("FLG_RES");
+
 /// Emit a tier assignment event
 pub fn emit_tier_assigned(env: &Env, event: &TierAssignmentEvent) -> Result<(), Error> {
     let tier_str = event.tier.to_str();
@@ -99,6 +105,34 @@ pub fn emit_user_registered(env: &Env, profile: &UserProfile) -> Result<(), Erro
             profile.name.clone(),
             profile.preferences.clone(),
             profile.registered_at,
+        ),
+    );
+    Ok(())
+}
+
+/// Emit a greeting flagged event
+pub fn emit_greeting_flagged(env: &Env, flag: &crate::ContentFlag) -> Result<(), Error> {
+    env.events().publish(
+        (GREETING_FLAGGED, symbol_short!("flagged")),
+        (
+            flag.greeting_id,
+            flag.flagged_by.clone(),
+            flag.reason.clone(),
+            flag.flagged_at,
+        ),
+    );
+    Ok(())
+}
+
+/// Emit a flag resolved event
+pub fn emit_flag_resolved(env: &Env, greeting_id: u64, resolved_by: &Address, approved: bool, timestamp: u64) -> Result<(), Error> {
+    env.events().publish(
+        (FLAG_RESOLVED, symbol_short!("resolved")),
+        (
+            greeting_id,
+            resolved_by.clone(),
+            approved,
+            timestamp,
         ),
     );
     Ok(())

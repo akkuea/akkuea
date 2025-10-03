@@ -5,6 +5,7 @@ mod datatype;
 mod error;
 mod events;
 mod interface;
+mod moderation;
 mod rewards;
 mod storage;
 mod user;
@@ -144,6 +145,39 @@ impl GreetingSystem {
     /// Get stored reward by greeting id
     pub fn get_greeting_reward(env: Env, greeting_id: u64) -> Option<GreetingReward> {
         rewards::get_reward(env, greeting_id)
+    }
+
+    /// Flags a greeting for inappropriate content
+    pub fn filter_greeting(env: Env, greeting_id: u64, reason: String, flagged_by: Address) -> Result<(), Error> {
+        moderation::filter_greeting(env, greeting_id, reason, flagged_by)
+    }
+
+    /// Resolves a flagged greeting
+    pub fn resolve_flag(env: Env, greeting_id: u64, approve: bool, resolved_by: Address) -> Result<(), Error> {
+        moderation::resolve_flag(env, greeting_id, approve, resolved_by)
+    }
+
+    /// Get the flag status of a greeting
+    pub fn get_flag_status(env: Env, greeting_id: u64) -> Option<ContentFlag> {
+        moderation::get_flag_status(env, greeting_id)
+    }
+
+    /// Add a moderator
+    pub fn add_moderator(env: Env, moderator: Address) -> Result<(), Error> {
+        moderator.require_auth();
+        // For simplicity, allow any user to add moderators; in production, restrict to admins
+        crate::storage::add_moderator(&env, &moderator)
+    }
+
+    /// Remove a moderator
+    pub fn remove_moderator(env: Env, moderator: Address) -> Result<(), Error> {
+        moderator.require_auth();
+        crate::storage::remove_moderator(&env, &moderator)
+    }
+
+    /// Check if an address is a moderator
+    pub fn is_moderator(env: Env, address: Address) -> bool {
+        crate::storage::is_moderator(&env, &address)
     }
 }
 

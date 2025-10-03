@@ -47,7 +47,7 @@ pub fn batch_update_greetings(
     })?;
 
     // Process updates.
-    let mut success_count = 0u32;
+    let mut _success_count  = 0u32;
     let len = greeting_ids.len();
     for i in 0..len {
         let gid = greeting_ids.get(i).unwrap();  
@@ -68,7 +68,7 @@ pub fn batch_update_greetings(
             })?;
             return Err(e); // Fail the tx.
         }
-        success_count += 1;
+        _success_count  += 1;
     }
 
     // All good: mark completed.

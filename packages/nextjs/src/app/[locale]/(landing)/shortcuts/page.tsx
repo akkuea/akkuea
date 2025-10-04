@@ -1,10 +1,11 @@
 'use client';
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import KeyboardShortcuts from '@/components/Modal/KeyboardShortcuts';
-import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { Keyboard } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
+
+import KeyboardShortcuts from '@/components/Modal/KeyboardShortcuts';
+import { Button } from '@/components/ui/button';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 
 const ShortcutPage = () => {
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);

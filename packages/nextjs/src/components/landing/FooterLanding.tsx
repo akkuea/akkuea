@@ -14,6 +14,7 @@
 'use client';
 
 import React from 'react';
+
 import { NavItem, SocialIcon } from '../footer/index';
 
 // Smooth scroll handler for navigation links

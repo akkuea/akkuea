@@ -1,6 +1,7 @@
-import { useMessages } from '@/store/messaging-store';
-import { ConversationItem } from './conversation-item';
 import { ConversationListProps } from '@/app/Types/messages';
+import { useMessages } from '@/store/messaging-store';
+
+import { ConversationItem } from './conversation-item';
 
 export function ConversationList({ onSelectConversation }: ConversationListProps) {
   const { conversations, selectConversation } = useMessages();

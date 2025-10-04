@@ -1,20 +1,21 @@
 'use client';
 
 import {
-  Home,
-  Compass,
-  Users,
-  Bookmark,
-  GraduationCap,
   Award,
-  Sparkles,
-  Lightbulb,
   BarChartIcon as ChartColumn,
+  Bookmark,
   ChevronLeft,
   ChevronRight,
+  Compass,
+  GraduationCap,
+  Home,
+  Lightbulb,
+  Sparkles,
+  Users,
 } from 'lucide-react';
-import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+
 import {
   Sidebar,
   SidebarContent,

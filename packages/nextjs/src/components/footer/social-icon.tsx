@@ -7,8 +7,9 @@
  * - 44px minimum touch targets for accessibility
  */
 
+import { Github,MessageCircle } from 'lucide-react';
 import React from 'react';
-import { MessageCircle, Github } from 'lucide-react';
+
 import TwitterIcon from '../ui/twitter-icon';
 
 type SocialPlatform = 'github' | 'telegram' | 'x';

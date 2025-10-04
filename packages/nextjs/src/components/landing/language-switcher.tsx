@@ -1,7 +1,7 @@
 'use client';
 
-import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import { ChangeEvent } from 'react';
 
 export default function LanguageSwitcher() {

@@ -1,28 +1,30 @@
 'use client';
-import type React from 'react';
-import { useState, useEffect, useRef } from 'react';
-import { Search, MessageCircle, User } from 'lucide-react';
-import { Input } from '@/components/ui/input';
+import { MessageCircle, Search, User } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
+import { Monitor, Moon, Sun } from 'lucide-react';
 import Link from 'next/link';
-import AkkueaLogo from '@/components/logo/akkuea-logo';
-import { useMessages } from '@/store/messaging-store';
-import { MessagePreview } from '@/components/messages/message-preview';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useRouter } from 'next/navigation';
+import { useTheme } from 'next-themes';
+import type React from 'react';
+import { useEffect, useRef, useState } from 'react';
+
 import { useWallet } from '@/components/auth/hooks/useWallet.hook';
 import { useGlobalAuthenticationStore } from '@/components/auth/store/data';
+import AkkueaLogo from '@/components/logo/akkuea-logo';
+import { MessagePreview } from '@/components/messages/message-preview';
 import { Button } from '@/components/ui/button';
-import { usePostsStore } from '@/store/postsStore';
-import { useRouter } from 'next/navigation';
-import { LogOut, Settings, Sun, Moon, Monitor } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuTrigger,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useMessages } from '@/store/messaging-store';
+import { usePostsStore } from '@/store/postsStore';
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');

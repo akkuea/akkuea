@@ -1,5 +1,5 @@
-import type React from 'react';
 import { User } from 'lucide-react';
+import type React from 'react';
 
 interface Person {
   name: string;

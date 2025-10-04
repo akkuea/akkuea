@@ -1,11 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import ExploreHeader from '@/components/explore/explore-header';
+import { useMemo,useState } from 'react';
+
 import ContentCard from '@/components/explore/content-card';
+import EmptyState from '@/components/explore/empty-components';
+import ExploreHeader from '@/components/explore/explore-header';
 import PeopleCard from '@/components/explore/people-card';
 import PopularTopics from '@/components/explore/popular-topics';
-import EmptyState from '@/components/explore/empty-components';
 import TabNavigation from '@/components/explore/tab-navigation';
 import { Pagination, PaginationInfo } from '@/components/pagination';
 import { usePagination } from '@/hooks/usePagination';

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+
 import { PostProps } from '@/components/auth/store/data/post-types';
 
 // Interface for the posts store

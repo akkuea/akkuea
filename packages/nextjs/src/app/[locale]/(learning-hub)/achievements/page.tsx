@@ -1,12 +1,13 @@
 'use client';
-import { Trophy, Award } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { achievements } from '@/lib/achievements-data';
+import { Award,Trophy } from 'lucide-react';
+import { useState } from 'react';
+
 import { AchievementList } from '@/components/achievements/AchievementList';
 import { Pagination, PaginationInfo } from '@/components/pagination';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePagination } from '@/hooks/usePagination';
-import { useState } from 'react';
+import { achievements } from '@/lib/achievements-data';
 
 export default function Component() {
   // Fixed page size - no user selection needed

@@ -1,4 +1,5 @@
 import React from 'react';
+
 import UserProfilePostsGrid from './post-grid/user-profile-post';
 
 const UserProfileHeader = () => (

@@ -1,5 +1,5 @@
-import HeaderLanding from '@/components/landing/HeaderLanding';
 import { FooterLanding } from '@/components/landing/FooterLanding';
+import HeaderLanding from '@/components/landing/HeaderLanding';
 
 export default function LandingLayout({ children }: { children: React.ReactNode }) {
   return (

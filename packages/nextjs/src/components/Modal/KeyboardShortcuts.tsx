@@ -1,13 +1,14 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { Keyboard } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   defaultShortcuts,
   formatShortcut,
   getShortcutKeys,
   type ShortcutAction,
 } from '@/utils/shortcuts';
-import { Keyboard } from 'lucide-react';
 
 interface KeyboardShortcutsProps {
   isOpen: boolean;

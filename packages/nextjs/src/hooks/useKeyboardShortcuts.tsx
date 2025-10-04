@@ -1,6 +1,7 @@
 import { useHotkeys } from 'react-hotkeys-hook';
-import { defaultShortcuts, getShortcutKeys, type ShortcutAction } from '@/utils/shortcuts';
 import { toast } from 'sonner';
+
+import { defaultShortcuts, getShortcutKeys, type ShortcutAction } from '@/utils/shortcuts';
 
 interface UseKeyboardShortcutsProps {
   onHelp: () => void;

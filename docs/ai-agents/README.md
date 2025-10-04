@@ -36,8 +36,6 @@ graph TB
     E --> E3[Adaptive Content]
 ```
 
----
-
 ### Agent Types & Specializations
 
 #### Academic Subject Specialists
@@ -111,7 +109,6 @@ Issue 320
 | **Communication Style**  | Formal, Conversational, Educational, Inspiring | Personality traits       |
 | **Interaction Modes**    | Text, Voice, Visual, Interactive               | Multi-modal capabilities |
 
----
 
 #### Step 3: Knowledge Base Integration
 
@@ -152,43 +149,8 @@ graph LR
 
 ---
 
+#### Sample Interactions
 
-## Specialized Agent Examples
-
-### Dr. RepGen: Genetic Improvement Specialist
-
-#### Agent Profile
-**Expertise**: Disease resistance in reptiles, genetic improvement protocols, breeding program optimization
-
-**Knowledge Base Components**:
-- Reptilian genetics and genomics
-- Disease pathology and resistance mechanisms  
-- Breeding program design and management
-- Conservation genetics principles
-- Statistical analysis for genetic research
-
-**Interaction Capabilities**:
-```mermaid
-mindmap
-  root)Dr. RepGen(
-    Research Support
-      Literature Review
-      Hypothesis Generation
-      Methodology Design
-      Data Analysis
-    Educational Content
-      Concept Explanation
-      Case Studies
-      Visual Demonstrations
-      Assessment Creation
-    Practical Guidance
-      Breeding Protocols
-      Health Monitoring
-      Record Keeping
-      Problem Solving
-```
-
----
 
 #### Sample Interactions
 
@@ -251,28 +213,6 @@ Section 2: Companion Planting Wisdom
 
 
 
----
-
-## Agent Management & Governance
-
-### Quality Assurance Framework
-
-#### Agent Validation Process
-```mermaid
-sequenceDiagram
-    participant U as User/Creator
-    participant S as System
-    participant E as Expert Panel
-    participant C as Community
-    
-    U->>S: Submit Agent Configuration
-    S->>S: Automated Testing
-    S->>E: Expert Review
-    E->>S: Validation Results
-    S->>C: Community Testing
-    C->>S: Feedback & Ratings
-    S->>U: Agent Approval/Revisions
-```
 ---
 
 #### Continuous Monitoring
@@ -392,7 +332,6 @@ graph LR
 ```
 
 ---
-
 Issue 336
 
 <!-- Make the changes from issue number 336 here. Thank you for contributing to Akkuea! -->

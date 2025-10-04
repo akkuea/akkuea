@@ -1,14 +1,18 @@
 'use client';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { cn } from '@/lib/utils';
+
+import './HeaderLanding.css';
+import './HeaderLanding.css';
+
 import { gsap } from 'gsap';
 import { ArrowUpRight, Monitor, Moon, Sun } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTheme } from 'next-themes';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import './HeaderLanding.css';
+
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 interface NavLink {
   label: string;
@@ -57,6 +61,8 @@ const navItems: NavItem[] = [
   },
 ];
 
+import { cn } from '@/lib/utils';
+
 export default function HeaderLanding() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
@@ -66,6 +72,7 @@ export default function HeaderLanding() {
   const pathname = usePathname();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+
 
   useEffect(() => setMounted(true), []);
 
@@ -142,7 +149,7 @@ export default function HeaderLanding() {
       tl?.kill();
       tlRef.current = null;
     };
-  }, [createTimeline, navItems]);
+  }, [createTimeline]);
 
   useLayoutEffect(() => {
     const handleResize = () => {

@@ -134,3 +134,23 @@ pub struct UserProfile {
     pub preferences: String,
     pub registered_at: u64,
 }
+
+/// Status of a content flag
+#[contracttype]
+#[derive(Debug, Clone, PartialEq)]
+pub enum FlagStatus {
+    Pending,  // Awaiting review
+    Approved, // Flagged content approved (removed)
+    Rejected, // Flagged content rejected (kept)
+}
+
+/// Content flag for inappropriate greetings
+#[contracttype]
+#[derive(Debug, Clone)]
+pub struct ContentFlag {
+    pub greeting_id: u64,      // Associated greeting ID
+    pub reason: String,        // Reason for flagging (e.g., inappropriate content)
+    pub flagged_by: Address,   // Stellar address of the flagger (moderator or automated)
+    pub status: FlagStatus,    // Current status of the flag
+    pub flagged_at: u64,       // Timestamp when flagged
+}

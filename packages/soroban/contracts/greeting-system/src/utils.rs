@@ -78,6 +78,34 @@ pub fn validate_preferences(preferences: &String) -> Result<(), Error> {
     Ok(())
 }
 
+/// Check if a greeting text contains inappropriate content
+/// Uses simple keyword-based filtering for gas efficiency
+/// Note: Case-sensitive for simplicity; in production, use more advanced filtering
+pub fn is_inappropriate_content(text: &String) -> bool {
+    // For simplicity, check for common inappropriate words
+    // In real implementation, this could be more sophisticated
+    let inappropriate_words = [
+        "inappropriate", "offensive", "hate", "spam", "abuse",
+        "INAPPROPRIATE", "OFFENSIVE", "HATE", "SPAM", "ABUSE"
+    ];
+
+    for word in inappropriate_words.iter() {
+        if text.contains(word) {
+            return true;
+        }
+    }
+    false
+}
+
+/// Validate flag reason
+pub fn validate_flag_reason(reason: &String) -> Result<(), Error> {
+    let len = reason.len() as u32;
+    if len == 0 || len > 256 {
+        return Err(Error::InvalidPreferences); // Reuse error, or add new
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

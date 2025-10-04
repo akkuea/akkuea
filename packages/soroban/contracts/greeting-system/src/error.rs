@@ -51,4 +51,16 @@ pub enum Error {
 
     /// Cross-contract call failed
     ExternalCallFailed = 16,
+
+    /// Flag not found for the greeting
+    FlagNotFound = 17,
+
+    /// Greeting is already flagged
+    AlreadyFlagged = 18,
+
+    /// Unauthorized moderator
+    UnauthorizedModerator = 19,
+
+    /// Invalid flag status
+    InvalidFlagStatus = 20,
 }

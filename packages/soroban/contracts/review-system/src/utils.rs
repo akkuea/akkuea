@@ -278,6 +278,101 @@ pub struct ResponseStats {
     pub total_not_helpful_votes: u32,
 }
 
+/// Credibility scoring utilities
+impl ReviewSystemContract {
+    /// Calculate base credibility score for gas efficiency
+    pub(crate) fn calculate_base_credibility(review_count: u32, helpful_votes: u32) -> u32 {
+        // Optimized calculation to minimize gas usage
+        let base_score = 50u32;
+        
+        // Review frequency bonus (max 25 points, efficient calculation)
+        let review_bonus = (review_count.min(25)) as u32;
+        
+        // Helpfulness ratio bonus (max 25 points)
+        let helpfulness_bonus = if review_count > 0 {
+            let ratio = (helpful_votes * 25) / review_count.max(1);
+            ratio.min(25)
+        } else {
+            0
+        };
+        
+        (base_score + review_bonus + helpfulness_bonus).min(100)
+    }
+
+    /// Validate credibility score range
+    pub(crate) fn validate_credibility_score(score: u32) -> Result<u32, ResponseError> {
+        if score > 100 {
+            Err(ResponseError::InvalidResponseId) // Reusing error for validation
+        } else {
+            Ok(score)
+        }
+    }
+
+    /// Calculate helpfulness ratio for scoring
+    pub(crate) fn calculate_helpfulness_ratio(helpful_votes: u32, total_reviews: u32) -> u32 {
+        if total_reviews == 0 {
+            return 0;
+        }
+        
+        // Return percentage (0-100)
+        (helpful_votes * 100) / total_reviews
+    }
+
+    /// Determine credibility tier based on score
+    pub(crate) fn get_credibility_tier(score: u32) -> CredibilityTier {
+        match score {
+            0..=30 => CredibilityTier::Novice,
+            31..=60 => CredibilityTier::Intermediate,
+            61..=80 => CredibilityTier::Expert,
+            81..=100 => CredibilityTier::Master,
+            _ => CredibilityTier::Novice,
+        }
+    }
+
+    /// Update reviewer credibility when they receive a helpful vote
+    pub(crate) fn update_reviewer_credibility_on_vote(env: &Env, reviewer: &Address) {
+        let profile_key = DataKey::ReviewerProfile(reviewer.clone());
+        let mut profile: crate::reputation::ReviewerProfile = env
+            .storage()
+            .persistent()
+            .get(&profile_key)
+            .unwrap_or(crate::reputation::ReviewerProfile {
+                reviewer: reviewer.clone(),
+                credibility_score: 50, // Default starting score
+                review_count: 0,
+                helpful_votes: 0,
+            });
+
+        // Increment helpful votes
+        profile.helpful_votes += 1;
+
+        // Recalculate credibility score
+        profile.credibility_score = Self::calculate_base_credibility(
+            profile.review_count, 
+            profile.helpful_votes
+        );
+
+        // Store updated profile
+        env.storage().persistent().set(&profile_key, &profile);
+
+        // Emit credibility update event
+        env.events().publish(
+            (Symbol::new(env, "credibility_auto_updated"), reviewer.clone()),
+            (profile.credibility_score, profile.helpful_votes),
+        );
+    }
+}
+
+/// Credibility tiers for reviewers
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum CredibilityTier {
+    Novice,      // 0-30 points
+    Intermediate, // 31-60 points
+    Expert,      // 61-80 points
+    Master,      // 81-100 points
+}
+
 /// Statistics about the reward system
 #[contracttype]
 #[derive(Clone)]

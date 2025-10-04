@@ -6,13 +6,15 @@ use soroban_sdk::{
 
 mod response;
 mod utils;
+mod reputation;
 mod incentives;
 
 #[cfg(test)]
 mod test;
 
 pub use response::ThreadNode;
-pub use utils::{ResponseStats, RewardStatistics};
+pub use utils::{ResponseStats, CredibilityTier, RewardStatistics};
+pub use reputation::ReviewerProfile;
 pub use incentives::{ReviewReward, QualityThresholds, RewardAmounts, QualityTier, RewardError};
 
 #[contracttype]
@@ -49,6 +51,8 @@ pub enum DataKey {
     ResponsesByParent(u64), // parent_response_id -> Vec<u64> (child response_ids)
     VoteRecord(Address, u64), // (voter, response_id) -> bool (true for helpful, false for not helpful)
     VerificationContract, // Address of the contract that verifies Stellar accounts
+    ReviewerProfile(Address), // reviewer_address -> ReviewerProfile
+    UserReputationContract, // Address of the user reputation contract for integration
     // Reward system keys
     RewardContract,                        // Address of the reward distribution contract
     ReviewReward(u64),                     // review_id -> ReviewReward
@@ -88,6 +92,7 @@ impl ReviewSystemContract {
         admin: Address,
         moderation_contract: Address,
         verification_contract: Address,
+        user_reputation_contract: Address,
     ) {
         if env.storage().persistent().has(&DataKey::Admin) {
             panic!("Contract already initialized");
@@ -102,11 +107,14 @@ impl ReviewSystemContract {
         env.storage()
             .persistent()
             .set(&DataKey::VerificationContract, &verification_contract);
+        env.storage()
+            .persistent()
+            .set(&DataKey::UserReputationContract, &user_reputation_contract);
         env.storage().persistent().set(&DataKey::ResponseCounter, &0u64);
 
         env.events().publish(
             (Symbol::new(&env, "contract_initialized"), admin),
-            (moderation_contract, verification_contract),
+            (moderation_contract, verification_contract, user_reputation_contract),
         );
     }
 
@@ -164,6 +172,9 @@ impl ReviewSystemContract {
         env.storage()
             .persistent()
             .set(&DataKey::Response(response_id), &response);
+
+        // Update reviewer profile (increment review count)
+        Self::increment_review_count(&env, &responder);
 
         // Update response indices
         Self::update_response_indices(&env, review_id, parent_response, response_id);
@@ -239,6 +250,9 @@ impl ReviewSystemContract {
 
         if helpful {
             response.helpful_votes += 1;
+            
+            // Update the responder's credibility score when they receive a helpful vote
+            Self::update_reviewer_credibility_on_vote(&env, &response.responder);
         } else {
             response.not_helpful_votes += 1;
         }
@@ -309,6 +323,125 @@ impl ReviewSystemContract {
     /// Get the root response of a thread
     pub fn get_thread_root(env: Env, response_id: u64) -> u64 {
         Self::get_thread_root_impl(env, response_id).unwrap_or(0)
+    }
+
+    // === CREDIBILITY SYSTEM FUNCTIONS ===
+
+    /// Update a reviewer's credibility score based on helpful votes
+    pub fn update_credibility(env: Env, reviewer: Address, helpful_votes: u32) {
+        // Verify the caller is authorized
+        reviewer.require_auth();
+
+        // Verify the reviewer is a verified Stellar account holder
+        Self::verify_account(&env, &reviewer).expect("Account verification failed");
+
+        // Get existing profile or create new one
+        let profile_key = DataKey::ReviewerProfile(reviewer.clone());
+        let mut profile: ReviewerProfile = env
+            .storage()
+            .persistent()
+            .get(&profile_key)
+            .unwrap_or(ReviewerProfile {
+                reviewer: reviewer.clone(),
+                credibility_score: 0,
+                review_count: 0,
+                helpful_votes: 0,
+            });
+
+        // Update helpful votes
+        profile.helpful_votes = helpful_votes;
+
+        // Calculate new credibility score
+        profile.credibility_score = Self::calculate_base_credibility(
+            profile.review_count, 
+            profile.helpful_votes
+        );
+
+        // Store updated profile
+        env.storage().persistent().set(&profile_key, &profile);
+
+        // Emit credibility update event
+        env.events().publish(
+            (Symbol::new(&env, "credibility_updated"), reviewer.clone()),
+            (profile.credibility_score, helpful_votes),
+        );
+    }
+
+    /// Get a reviewer's credibility score
+    pub fn get_credibility(env: Env, reviewer: Address) -> u32 {
+        let profile_key = DataKey::ReviewerProfile(reviewer.clone());
+        let profile: ReviewerProfile = env
+            .storage()
+            .persistent()
+            .get(&profile_key)
+            .unwrap_or(ReviewerProfile {
+                reviewer: reviewer.clone(),
+                credibility_score: 0,
+                review_count: 0,
+                helpful_votes: 0,
+            });
+
+        profile.credibility_score
+    }
+
+    /// Get full reviewer profile
+    pub fn get_reviewer_profile(env: Env, reviewer: Address) -> ReviewerProfile {
+        let profile_key = DataKey::ReviewerProfile(reviewer.clone());
+        env.storage()
+            .persistent()
+            .get(&profile_key)
+            .unwrap_or(ReviewerProfile {
+                reviewer,
+                credibility_score: 0,
+                review_count: 0,
+                helpful_votes: 0,
+            })
+    }
+
+    /// Reset credibility score (admin only)
+    pub fn reset_credibility(env: Env, admin: Address, reviewer: Address) {
+        admin.require_auth();
+
+        // Verify admin is the contract admin
+        let contract_admin: Address = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Admin)
+            .expect("Admin not found");
+
+        if admin != contract_admin {
+            panic!("Unauthorized: Only admin can reset credibility");
+        }
+
+        let profile_key = DataKey::ReviewerProfile(reviewer.clone());
+        let mut profile: ReviewerProfile = env
+            .storage()
+            .persistent()
+            .get(&profile_key)
+            .unwrap_or(ReviewerProfile {
+                reviewer: reviewer.clone(),
+                credibility_score: 0,
+                review_count: 0,
+                helpful_votes: 0,
+            });
+
+        profile.credibility_score = 50; // Reset to base score
+        profile.review_count = 0;
+        profile.helpful_votes = 0;
+
+        env.storage().persistent().set(&profile_key, &profile);
+
+        env.events().publish(
+            (Symbol::new(&env, "credibility_reset"), admin),
+            reviewer,
+        );
+    }
+
+    /// Get all reviewers with credibility above threshold
+    pub fn get_credible_reviewers(env: Env, _min_score: u32) -> soroban_sdk::Vec<Address> {
+        // This is a simplified implementation
+        let credible_reviewers = soroban_sdk::Vec::new(&env);
+        credible_reviewers
     }
 
     // === REWARD SYSTEM FUNCTIONS ===

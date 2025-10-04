@@ -4,10 +4,17 @@ use soroban_sdk::{contract, contractimpl, Address, Env, Map, String, Vec};
 mod milestone;
 mod reputation;
 mod utils;
+mod voting;
 
 pub use milestone::*;
-pub use reputation::*;
+pub use reputation::{
+    initialize_user, update_reputation, get_voting_power, penalize_missed_milestone,
+    get_reputation, vote_for_project, get_project_voting_power,
+    get_project_voters as get_reputation_project_voters, // Rename to avoid conflict
+    complete_milestone, get_reputation_stats, Reputation, User, ProjectVote, ReputationStats
+};
 pub use utils::*;
+pub use voting::*;
 
 #[cfg(test)]
 mod test;
@@ -390,5 +397,64 @@ impl MilestoneFinance {
     /// Manually activate dependent milestones for a project
     pub fn activate_dependent_milestones(env: Env, project_id: u64) {
         milestone::activate_dependent_milestones(&env, project_id);
+    }
+
+    // ===== VOTING SYSTEM FUNCTIONS =====
+
+    /// Create a new voting period for a project with category-based thresholds
+    pub fn create_voting_period(
+        env: Env,
+        admin: Address,
+        project_id: u64,
+        start_time: u64,
+        end_time: u64,
+        category: ProjectCategory,
+    ) {
+        voting::create_voting_period(env, admin, project_id, start_time, end_time, category);
+    }
+
+    /// Cast a vote on a project using quadratic voting with reputation-based weights
+    pub fn cast_vote(env: Env, voter: Address, project_id: u64, weight: u32) -> Result<u32, Error> {
+        voting::cast_vote(env, voter, project_id, weight)
+    }
+
+    /// Close a voting period and determine project approval status
+    pub fn close_voting_period(env: Env, admin: Address, project_id: u64) -> bool {
+        voting::close_voting_period(env, admin, project_id)
+    }
+
+    /// Get current voting status for a project
+    pub fn get_voting_status(env: Env, project_id: u64) -> VotingStatus {
+        voting::get_voting_status(env, project_id)
+    }
+
+    /// Get voting period details for a project
+    pub fn get_voting_period_details(env: Env, project_id: u64) -> VotingPeriod {
+        voting::get_voting_period(env, project_id)
+    }
+
+    /// Get vote record for a specific voter and project
+    pub fn get_voter_vote(env: Env, project_id: u64, voter: Address) -> Option<Vote> {
+        voting::get_vote(env, project_id, voter)
+    }
+
+    /// Get list of all voters for a project
+    pub fn get_voting_project_voters(env: Env, project_id: u64) -> Vec<Address> {
+        voting::get_project_voters(env, project_id)
+    }
+
+    /// Get total votes accumulated for a project
+    pub fn get_voting_total_votes(env: Env, project_id: u64) -> u32 {
+        voting::get_total_votes(env, project_id)
+    }
+
+    /// Check if a voter has already voted for a project
+    pub fn has_voter_voted(env: Env, project_id: u64, voter: Address) -> bool {
+        voting::has_voted(env, project_id, voter)
+    }
+
+    /// Get maximum vote weight a voter can afford based on their voting power
+    pub fn get_voter_max_weight(env: Env, voter: Address) -> u32 {
+        voting::get_max_vote_weight(env, voter)
     }
 }

@@ -805,3 +805,513 @@ fn test_project_milestones_retrieval() {
     assert!(found_milestone1);
     assert!(found_milestone2);
 }
+
+// ===== VOTING SYSTEM TESTS =====
+
+#[test]
+fn test_create_voting_period_stem() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp() + 100;
+    let end_time = env.ledger().timestamp() + 1000;
+
+    env.mock_all_auths();
+
+    // Create voting period for STEM project
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::STEM);
+
+    let period = client.get_voting_period_details(&project_id);
+    assert_eq!(period.project_id, project_id);
+    assert_eq!(period.start_time, start_time);
+    assert_eq!(period.end_time, end_time);
+    assert_eq!(period.threshold, 1000); // STEM threshold
+    assert_eq!(period.category, ProjectCategory::STEM);
+}
+
+#[test]
+fn test_create_voting_period_all_categories() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let start_time = env.ledger().timestamp() + 100;
+    let end_time = env.ledger().timestamp() + 1000;
+
+    env.mock_all_auths();
+
+    // Test STEM category
+    client.create_voting_period(&admin, &1, &start_time, &end_time, &ProjectCategory::STEM);
+    assert_eq!(client.get_voting_period_details(&1).threshold, 1000);
+
+    // Test Arts category
+    client.create_voting_period(&admin, &2, &start_time, &end_time, &ProjectCategory::ARTS);
+    assert_eq!(client.get_voting_period_details(&2).threshold, 800);
+
+    // Test Community category
+    client.create_voting_period(&admin, &3, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    assert_eq!(client.get_voting_period_details(&3).threshold, 500);
+
+    // Test Research category
+    client.create_voting_period(&admin, &4, &start_time, &end_time, &ProjectCategory::RESEARCH);
+    assert_eq!(client.get_voting_period_details(&4).threshold, 1200);
+}
+
+#[test]
+fn test_cast_vote_basic() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let project_id = 1u64;
+    let voter_name = String::from_str(&env, "Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+
+    // Update reputation to meet minimum requirement (10)
+    client.update_reputation(&admin, &voter, &1, &true);
+
+    // Create voting period
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Cast vote with weight 2 (cost = 4, voting_power should be >= 4)
+    let final_weight = client.cast_vote(&voter, &project_id, &2);
+
+    // Final weight with 60 reputation gets 10% bonus: 2 * 110 / 100 = 2
+    assert_eq!(final_weight, 2);
+    // Check voting status
+    let status = client.get_voting_status(&project_id);
+    assert_eq!(status.total_votes, final_weight);
+    assert_eq!(status.unique_voters, 1);
+    assert!(status.is_active);
+    assert!(!status.is_approved);
+}
+
+#[test]
+fn test_cast_vote_with_high_reputation() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "High Rep Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+
+    // Update reputation multiple times to get high score
+    for _ in 0..5 {
+        client.update_reputation(&admin, &voter, &1, &true);
+    }
+
+    // Reputation should be 50 + (5 * 10) = 100 (capped at 100)
+    let reputation = client.get_reputation(&voter);
+    assert_eq!(reputation.score, 100);
+
+    // Create voting period
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Cast vote with weight 3
+    let final_weight = client.cast_vote(&voter, &project_id, &3);
+
+    // With reputation 100, voting power is 1 + 100/10 = 11
+    // Weight 3 costs 9, which is affordable
+    // Final weight with 100 reputation gets 20% bonus: 3 * 120 / 100 = 3
+    assert_eq!(final_weight, 3);
+}
+
+#[test]
+#[should_panic]
+fn test_vote_before_period_starts() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+    client.update_reputation(&admin, &voter, &1, &true);
+
+    // Create voting period that starts in the future
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp() + 1000;
+    let end_time = env.ledger().timestamp() + 2000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Try to vote before start time
+    client.cast_vote(&voter, &project_id, &2);
+}
+
+#[test]
+#[should_panic]
+fn test_vote_after_period_ends() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+    client.update_reputation(&admin, &voter, &1, &true);
+
+    // Create voting period
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 100;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Move time forward past end time
+    env.ledger().with_mut(|li| li.timestamp = end_time + 1);
+
+    // Try to vote after end time
+    client.cast_vote(&voter, &project_id, &2);
+}
+
+#[test]
+#[should_panic]
+fn test_cannot_vote_twice() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+    client.update_reputation(&admin, &voter, &1, &true);
+
+    // Create voting period
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Cast first vote
+    client.cast_vote(&voter, &project_id, &2);
+
+    // Try to vote again
+    client.cast_vote(&voter, &project_id, &1);
+}
+
+#[test]
+#[should_panic]
+fn test_insufficient_reputation() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "Low Rep Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter with low reputation (50 default)
+    client.initialize_user(&voter, &voter_name);
+
+    // Decrease reputation below minimum (10)
+    for _ in 0..9 {
+        client.update_reputation(&admin, &voter, &1, &false);
+    }
+
+    // Create voting period
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Try to vote with insufficient reputation
+    client.cast_vote(&voter, &project_id, &1);
+}
+
+#[test]
+#[should_panic]
+fn test_insufficient_voting_power() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+    client.update_reputation(&admin, &voter, &1, &true);
+
+    // Voting power with reputation 60 is 1 + 60/10 = 7
+    // Weight 10 costs 100, which exceeds voting power of 7
+
+    // Create voting period
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Try to vote with weight that costs more than voting power
+    client.cast_vote(&voter, &project_id, &10);
+}
+
+
+#[test]
+fn test_close_voting_period_approved() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let project_id = 1u64;
+
+    env.mock_all_auths();
+
+    // Create many voters with high reputation
+    let mut voters = Vec::new(&env);
+    for i in 0..200 {
+        let voter = Address::generate(&env);
+        let name = String::from_str(&env, "Voter");
+        client.initialize_user(&voter, &name);
+
+        // Give high reputation
+        for _ in 0..5 {
+            client.update_reputation(&admin, &voter, &i, &true);
+        }
+
+        voters.push_back(voter);
+    }
+
+    // Create voting period with Community threshold (500)
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Have voters cast votes
+    for i in 0..voters.len() {
+        let voter = voters.get(i).unwrap();
+        client.cast_vote(&voter, &project_id, &3);
+    }
+
+    // Move time past end time
+    env.ledger().with_mut(|li| li.timestamp = end_time + 1);
+
+    // Close voting period
+    let is_approved = client.close_voting_period(&admin, &project_id);
+    assert!(is_approved);
+
+    // Check final status
+    let status = client.get_voting_status(&project_id);
+    assert!(!status.is_active);
+    assert!(status.is_approved);
+}
+
+#[test]
+fn test_close_voting_period_rejected() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+    client.update_reputation(&admin, &voter, &1, &true);
+
+    // Create voting period with STEM threshold (1000)
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::STEM);
+
+    // Cast single vote (insufficient for approval)
+    client.cast_vote(&voter, &project_id, &2);
+
+    // Move time past end time
+    env.ledger().with_mut(|li| li.timestamp = end_time + 1);
+
+    // Close voting period
+    let is_approved = client.close_voting_period(&admin, &project_id);
+    assert!(!is_approved);
+
+    // Check final status
+    let status = client.get_voting_status(&project_id);
+    assert!(!status.is_active);
+    assert!(!status.is_approved);
+}
+
+#[test]
+#[should_panic(expected = "Voting period is still active")]
+fn test_cannot_close_active_period() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+
+    env.mock_all_auths();
+
+    // Create voting period
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Try to close while still active
+    client.close_voting_period(&admin, &project_id);
+}
+
+#[test]
+fn test_get_vote_record() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+    client.update_reputation(&admin, &voter, &1, &true);
+
+    // Create voting period
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Cast vote
+    let final_weight = client.cast_vote(&voter, &project_id, &2);
+
+    // Get vote record
+    let vote = client.get_voter_vote(&project_id, &voter);
+    assert!(vote.is_some());
+
+    let vote = vote.unwrap();
+    assert_eq!(vote.project_id, project_id);
+    assert_eq!(vote.voter, voter);
+    assert_eq!(vote.weight, final_weight);
+}
+
+#[test]
+fn test_has_voted() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+    client.update_reputation(&admin, &voter, &1, &true);
+
+    // Create voting period
+    let project_id = 1u64;
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+
+    // Check before voting
+    assert!(!client.has_voter_voted(&project_id, &voter));
+
+    // Cast vote
+    client.cast_vote(&voter, &project_id, &2);
+
+    // Check after voting
+    assert!(client.has_voter_voted(&project_id, &voter));
+}
+
+#[test]
+fn test_get_max_vote_weight() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+    client.update_reputation(&admin, &voter, &1, &true);
+
+    // With reputation 60, voting power is 1 + 60/10 = 7
+    // Max weight = sqrt(7) = 2
+    let max_weight = client.get_voter_max_weight(&voter);
+    assert_eq!(max_weight, 2);
+}
+
+#[test]
+fn test_voting_with_different_categories() {
+    let env = Env::default();
+    let contract_id = env.register(MilestoneFinance, ());
+    let client = MilestoneFinanceClient::new(&env, &contract_id);
+
+    let admin = Address::generate(&env);
+    let voter = Address::generate(&env);
+    let voter_name = String::from_str(&env, "Voter");
+
+    env.mock_all_auths();
+
+    // Initialize voter
+    client.initialize_user(&voter, &voter_name);
+    client.update_reputation(&admin, &voter, &1, &true);
+
+    // Create voting periods for different categories
+    let start_time = env.ledger().timestamp();
+    let end_time = env.ledger().timestamp() + 1000;
+
+    client.create_voting_period(&admin, &1, &start_time, &end_time, &ProjectCategory::STEM);
+    client.create_voting_period(&admin, &2, &start_time, &end_time, &ProjectCategory::ARTS);
+
+    // Same voter can vote on different projects
+    client.cast_vote(&voter, &1, &2);
+    client.cast_vote(&voter, &2, &2);
+
+    // Check both votes recorded
+    assert!(client.has_voter_voted(&1, &voter));
+    assert!(client.has_voter_voted(&2, &voter));
+}

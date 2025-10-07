@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -43,6 +43,8 @@ const allCommunities = [
     posts: 324,
     joined: false,
     image: '/placeholder.svg?height=80&width=80&text=WP',
+    // default to public if not specified
+    visibility: 'public' as const,
   },
   {
     id: 2,
@@ -54,6 +56,7 @@ const allCommunities = [
     posts: 198,
     joined: false,
     image: '/placeholder.svg?height=80&width=80&text=DS',
+    visibility: 'public' as const,
   },
   {
     id: 3,
@@ -65,6 +68,7 @@ const allCommunities = [
     posts: 156,
     joined: true,
     image: '/placeholder.svg?height=80&width=80&text=UX',
+    visibility: 'public' as const,
   },
   {
     id: 4,
@@ -76,6 +80,7 @@ const allCommunities = [
     posts: 203,
     joined: true,
     image: '/placeholder.svg?height=80&width=80&text=MD',
+    visibility: 'public' as const,
   },
   {
     id: 5,
@@ -87,6 +92,7 @@ const allCommunities = [
     posts: 89,
     joined: false,
     image: '/placeholder.svg?height=80&width=80&text=DC',
+    visibility: 'public' as const,
   },
   {
     id: 6,
@@ -97,6 +103,7 @@ const allCommunities = [
     posts: 267,
     joined: false,
     image: '/placeholder.svg?height=80&width=80&text=AI',
+    visibility: 'public' as const,
   },
 ];
 
@@ -165,6 +172,43 @@ export default function Communities() {
     visibility: 'public',
   });
 
+  // Load user-created communities from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem('akkuea.userCommunities') : null;
+      if (stored) {
+        const parsed: Array<any> = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // ensure no id collisions: offset ids by current max id
+          const maxId = communities.reduce((m, c) => Math.max(m, Number(c.id) || 0), 0);
+          const normalized = parsed.map((c, idx) => ({
+            ...c,
+            id: (Number(c.id) && Number(c.id) > maxId) ? Number(c.id) : maxId + idx + 1,
+            joined: true,
+            visibility: c.visibility || 'public',
+          }));
+          setCommunities((prev) => [...prev, ...normalized]);
+        }
+      }
+    } catch (_) {
+      // ignore malformed storage
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist only user-created communities (those without being in the initial seed by id range heuristic)
+  useEffect(() => {
+    try {
+      const seedIds = new Set(allCommunities.map((c) => c.id));
+      const created = communities.filter((c) => !seedIds.has(c.id));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('akkuea.userCommunities', JSON.stringify(created));
+      }
+    } catch (_) {
+      // ignore storage errors
+    }
+  }, [communities]);
+
   // Pagination state
   // Fixed page size - no user selection needed
   const pageSize = 5;
@@ -188,11 +232,14 @@ export default function Communities() {
     if (!searchQuery.trim()) return communities;
 
     const query = searchQuery.toLowerCase().trim();
-    return communities.filter(
-      (community) =>
+    return communities.filter((community) => {
+      const matches =
         community.name.toLowerCase().includes(query) ||
-        community.tags.some((tag) => tag.toLowerCase().includes(query))
-    );
+        community.tags.some((tag) => tag.toLowerCase().includes(query));
+      // Only show public communities in Discover; private ones remain accessible in My Communities if joined/created
+      const isPublic = (community as any).visibility ? (community as any).visibility === 'public' : true;
+      return matches && isPublic;
+    });
   }, [communities, searchQuery]);
 
   const filteredJoinedCommunities = useMemo(() => {
@@ -451,11 +498,11 @@ export default function Communities() {
             Discover
           </TabsTrigger>
           <TabsTrigger
-            value="your-communities"
+            value="my-communities"
             className="flex items-center gap-2 justify-center rounded-md  text-sm font-medium transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
           >
             <User className="w-4 h-4" />
-            Your Communities
+            My Communities
           </TabsTrigger>
           <TabsTrigger
             value="discussions"
@@ -499,7 +546,7 @@ export default function Communities() {
           )}
         </TabsContent>
 
-        <TabsContent value="your-communities" className="space-y-4">
+        <TabsContent value="my-communities" className="space-y-4">
           {joinedPagination.isEmpty ? (
             <div className="text-center py-12">
               <p className="text-muted">{"You haven't joined any communities yet."}</p>

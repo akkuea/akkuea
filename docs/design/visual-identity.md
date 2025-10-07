@@ -95,7 +95,15 @@ Issue 545
 
 ---
 
-Issue 546
+#### Color-Blind Accessibility
+```mermaid
+pie title Color Accessibility Testing
+    "Protanopia Tested" : 25
+    "Deuteranopia Tested" : 25
+    "Tritanopia Tested" : 25
+    "Monochrome Tested" : 25
+
+ ```
 
 ---
 

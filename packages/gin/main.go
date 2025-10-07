@@ -38,10 +38,11 @@ func main() {
 		protected.GET("/users", api.GetAllUsers)
 		protected.GET("/users/:id", api.GetUserByID)
 		protected.POST("/users", api.CreateUser)
+		protected.PUT("/resources/:id", api.UpdateResource)
 
 		// Current user endpoint
 		protected.GET("/auth/me", api.GetCurrentUser)
-		
+
 		// Temporary protected route for testing (Task #165)
 		protected.GET("/protected", func(c *gin.Context) {
 			c.JSON(200, gin.H{

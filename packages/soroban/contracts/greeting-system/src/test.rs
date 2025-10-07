@@ -296,8 +296,8 @@ fn test_register_user_duplicate_fails() {
     let prefs = String::from_str(&env, "casual");
 
     client.register_user(&user, &name, &prefs);
-    let err = client.try_register_user(&user, &name, &prefs);
-    assert!(err.is_err());
+    let result = client.try_register_user(&user, &name, &prefs);
+    assert!(result.is_err());
 }
 
 #[test]

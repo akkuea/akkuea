@@ -152,6 +152,45 @@ impl GreetingSystem {
     ) -> Result<(), Error> {
         batch::create_greeting(&env, greeting_id, text, creator)
     }
+
+    // ==================== User Profile Functions ====================
+
+    /// Register a new user profile
+    pub fn register_user(
+        env: Env,
+        user: Address,
+        name: String,
+        preferences: String,
+    ) -> Result<(), Error> {
+        verify_user_authorization(&env, &user)?;
+
+        // Optional: Add validation for name/preferences if needed
+        if name.is_empty() {
+            return Err(Error::InvalidName);
+        }
+        if preferences.is_empty() {
+            return Err(Error::InvalidPreferences);
+        }
+
+        if has_user_profile(&env, &user) {
+            return Err(Error::UserAlreadyRegistered);
+        }
+
+        let profile = UserProfile {
+            user: user.clone(),
+            name,
+            preferences,
+        };
+
+        save_user_profile(&env, &profile)?;
+
+        Ok(())
+    }
+
+    /// Get a user's profile
+    pub fn get_user_profile(env: Env, user: Address) -> Result<UserProfile, Error> {
+        load_user_profile(&env, &user)
+    }
 } 
 
 

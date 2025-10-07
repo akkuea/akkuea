@@ -28,6 +28,12 @@ pub enum Error {
     /// User already has a tier assigned
     TierAlreadyExists = 8,
 
+    /// User not found
+    UserNotFound = 18,
+
+    /// User already registered
+    UserAlreadyRegistered = 19,
+
     /// Batch size exceeds the maximum allowed limit
     BatchTooLarge = 9,
 
@@ -70,6 +76,8 @@ impl fmt::Display for Error {
             Error::InvalidTierLevel => f.write_str("Invalid tier level"),
             Error::ZeroContribution => f.write_str("Zero contribution not allowed"),
             Error::TierAlreadyExists => f.write_str("User already has a tier assigned"),
+            Error::UserNotFound => f.write_str("User profile not found"),
+            Error::UserAlreadyRegistered => f.write_str("User is already registered"),
             Error::BatchTooLarge => f.write_str("Batch size exceeds the maximum allowed limit"),
             Error::InvalidUpdateLength => f.write_str("Mismatch between number of greeting IDs and updates"),
             Error::UnauthorizedGreeting => f.write_str("Greeting not found or user not authorized to update it"),

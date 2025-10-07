@@ -9,7 +9,6 @@ pub enum TierLevel {
     Pro,        // 500-1999 XLM
     Elite,      // 2000+ XLM
 }
-
 /// Premium tier data structure
 #[contracttype]
 #[derive(Debug, Clone)]
@@ -82,6 +81,15 @@ pub struct BatchUpdate {
     pub status: OperationStatus,
     pub processed_by: Address,
     pub processed_at: u64,
+}
+
+/// User profile data structure
+#[contracttype]
+#[derive(Debug, Clone)]
+pub struct UserProfile {
+    pub user: Address,
+    pub name: soroban_sdk::String,
+    pub preferences: soroban_sdk::String,
 }
 
 impl TierLevel {

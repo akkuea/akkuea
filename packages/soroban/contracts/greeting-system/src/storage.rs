@@ -1,7 +1,7 @@
 use soroban_sdk::{contracttype, Address, Env};
 
 use crate::{Error, PremiumTier};
-use crate::datatype::{Greeting, BatchUpdate};
+use crate::datatype::{Greeting, BatchUpdate, UserProfile};
 
 /// Storage keys for the premium tier system and greetings/batches
 #[contracttype]
@@ -11,6 +11,7 @@ pub enum StorageKey {
     Greeting(u64),
     Batch(u64),
     BatchCounter,
+    UserProfile(Address),  // Add this variant
 }
 
 /// Save a premium tier to storage
@@ -84,4 +85,26 @@ pub fn next_batch_id(env: &Env) -> u64 {
     counter += 1;
     env.storage().persistent().set(&counter_key, &counter);
     counter
+}
+
+/// Check if a user has a profile
+pub fn has_user_profile(env: &Env, user: &Address) -> bool {
+    let key = StorageKey::UserProfile(user.clone());
+    env.storage().persistent().has(&key)
+}
+
+/// Save a user profile to storage
+pub fn save_user_profile(env: &Env, profile: &UserProfile) -> Result<(), Error> {
+    let key = StorageKey::UserProfile(profile.user.clone());
+    env.storage().persistent().set(&key, profile);
+    Ok(())
+}
+
+/// Load a user profile from storage
+pub fn load_user_profile(env: &Env, user: &Address) -> Result<UserProfile, Error> {
+    let key = StorageKey::UserProfile(user.clone());
+    env.storage()
+        .persistent()
+        .get(&key)
+        .ok_or(Error::UserNotFound)
 }

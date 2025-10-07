@@ -134,9 +134,12 @@ Issue 554
 Issue 555
 
 ---
-
-Issue 556
-
+#### Cultural Sensitivity Review
+- [ ] Cultural experts have reviewed cultural elements
+- [ ] Community permissions are documented
+- [ ] Cultural context is appropriate
+- [ ] No appropriation or misrepresentation
+- [ ] Educational value is clear
 ---
 
 Issue 557

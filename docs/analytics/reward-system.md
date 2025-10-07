@@ -117,7 +117,17 @@ pie title Quality Score Components
 
 ---
 
-Issue 397
+
+
+#### Quality Tier System
+| Tier | Quality Score | Multiplier | Requirements |
+|------|---------------|------------|--------------|
+| **Bronze** | 1.0 - 2.4 | 1.0x | Basic standards met |
+| **Silver** | 2.5 - 3.4 | 1.5x | Above average quality |
+| **Gold** | 3.5 - 4.4 | 2.0x | High quality, expert-reviewed |
+| **Platinum** | 4.5 - 5.0 | 3.0x | Exceptional quality, community recognition |
+
+
 
 ---
 

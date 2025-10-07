@@ -79,7 +79,16 @@ Issue 541
 
 ---
 
-Issue 542
+### Form Design
+
+#### Input Field Standards
+| State | Border | Background | Text Color | Notes |
+|-------|--------|------------|------------|-------|
+| **Default** | 1px solid `#CCCCCC` | `#FFFFFF` | `#000000` | Clean, accessible |
+| **Focus** | 2px solid `#008B8B` | `#FFFFFF` | `#000000` | Clear focus indicator |
+| **Error** | 2px solid `#DC2626` | `#FEF2F2` | `#000000` | High contrast error state |
+| **Success** | 2px solid `#059669` | `#F0FDF4` | `#000000` | Positive feedback |
+| **Disabled** | 1px solid `#E5E5E5` | `#F9F9F9` | `#999999` | Clear disabled state |
 
 ---
 

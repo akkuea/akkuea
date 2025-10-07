@@ -101,7 +101,19 @@ pie title Quality Score Components
 
 ---
 
-Issue 396
+
+
+#### Quality Scoring Matrix
+| Metric | Weight | Measurement Method | Score Range |
+|--------|--------|-------------------|-------------|
+| **Educational Value** | 40% | Learning outcome assessment | 1-5 |
+| **Accuracy & Reliability** | 25% | Expert review + fact-checking | 1-5 |
+| **Presentation Quality** | 15% | Technical quality + design | 1-5 |
+| **Cultural Sensitivity** | 10% | Cultural expert review | 1-5 |
+| **Innovation Factor** | 10% | Uniqueness + creativity assessment | 1-5 |
+
+
+
 
 ---
 

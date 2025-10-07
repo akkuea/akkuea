@@ -83,7 +83,21 @@ flowchart TD
 
 ---
 
-Issue 395
+
+
+### Quality Multipliers
+
+#### Content Quality Assessment
+```mermaid
+pie title Quality Score Components
+    "Educational Value (40%)" : 40
+    "Accuracy & Reliability (25%)" : 25
+    "Presentation Quality (15%)" : 15
+    "Cultural Sensitivity (10%)" : 10
+    "Innovation Factor (10%)" : 10
+```
+
+
 
 ---
 

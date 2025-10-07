@@ -67,7 +67,13 @@ Issue 538
 
 ---
 
-Issue 539
+#### Button Specifications
+| Type | Background | Text Color | Border | Hover State |
+|------|------------|------------|--------|-------------|
+| **Primary** | `#000000` | `#FFFFFF` | None | Background: `#333333` |
+| **Secondary** | `#FFFFFF` | `#000000` | 1px solid `#000000` | Background: `#F5F5F5` |
+| **Accent** | `#008B8B` | `#FFFFFF` | None | Background: `#20B2AA` |
+| **Text** | Transparent | `#000000` | None | Text decoration: underline |
 
 ---
 

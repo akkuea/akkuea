@@ -107,7 +107,23 @@ Issue 548
 
 ---
 
-Issue 549
+## Cultural Design Integration
+
+### Traditional Motifs
+
+#### Appropriate Use Guidelines
+```mermaid
+flowchart TD
+    A[Cultural Design Element] --> B{Permission Obtained?}
+    B -->|Yes| C[Community Consultation]
+    B -->|No| D[Seek Permission First]
+    D --> B
+    C --> E{Culturally Appropriate?}
+    E -->|Yes| F[Implement with Attribution]
+    E -->|No| G[Modify or Remove]
+    G --> C
+    F --> H[Monitor Community Feedback]
+```
 
 ---
 

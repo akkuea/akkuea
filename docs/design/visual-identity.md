@@ -22,7 +22,27 @@ Issue 532
 
 ---
 
-Issue 533
+#### Component Architecture
+```scss
+// Component base class
+.akkuea-component {
+  font-family: var(--font-family-primary);
+  color: var(--color-black);
+  
+  // Cultural sensitivity indicator
+  &[data-cultural-content="true"] {
+    border-left: 4px solid var(--color-turquoise);
+    padding-left: var(--spacing-md);
+  }
+  
+  // Accessibility enhancements
+  &:focus-visible {
+    outline: 2px solid var(--color-turquoise);
+    outline-offset: 2px;
+  }
+}
+```
+
 
 ---
 

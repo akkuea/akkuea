@@ -46,7 +46,13 @@ Issue 532
 
 ---
 
-Issue 534
+#### Logo Usage Guidelines
+| Context | Logo Version | Size | Colors |
+|---------|-------------|------|--------|
+| **Primary** | Full logo with wordmark | Min 120px wide | Black on white |
+| **Reversed** | Full logo with wordmark | Min 120px wide | White on black |
+| **Compact** | Symbol only | Min 32px | Black or turquoise |
+| **Monochrome** | Black and white only | Any size | Pure black/white |
 
 ---
 

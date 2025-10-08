@@ -22,6 +22,17 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules
+            packages/nextjs/node_modules
+          key: ${{ runner.os }}-vitest-bun-${{ hashFiles('**/bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-vitest-bun-
+
       - name: Install root dependencies
         run: bun install
 
@@ -43,12 +54,4 @@ jobs:
             cat coverage/coverage-summary.json
           fi
 
-      - name: Cache Bun dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.bun/install/cache
-            ./node_modules
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
+      # Cache step moved earlier and bun.lockb hash fixed

@@ -31,8 +31,21 @@ import DiscussionItem from './DiscussionItem';
 import { Pagination, PaginationInfo } from '@/components/pagination';
 import { usePagination } from '@/hooks/usePagination';
 
+// Types
+interface Community {
+  id: number;
+  name: string;
+  description: string;
+  tags: string[];
+  members: number;
+  posts: number;
+  joined: boolean;
+  image?: string;
+  visibility: 'public' | 'private';
+}
+
 // Mock data
-const allCommunities = [
+const allCommunities: Community[] = [
   {
     id: 1,
     name: 'Web Programming',
@@ -162,7 +175,7 @@ const discussions = [
 
 export default function Communities() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [communities, setCommunities] = useState(allCommunities);
+  const [communities, setCommunities] = useState<Community[]>(allCommunities);
   const [activeTab, setActiveTab] = useState('discover');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newCommunity, setNewCommunity] = useState({
@@ -177,11 +190,11 @@ export default function Communities() {
     try {
       const stored = typeof window !== 'undefined' ? localStorage.getItem('akkuea.userCommunities') : null;
       if (stored) {
-        const parsed: Array<any> = JSON.parse(stored);
+        const parsed = JSON.parse(stored) as Community[];
         if (Array.isArray(parsed) && parsed.length > 0) {
           // ensure no id collisions: offset ids by current max id
           const maxId = communities.reduce((m, c) => Math.max(m, Number(c.id) || 0), 0);
-          const normalized = parsed.map((c, idx) => ({
+          const normalized: Community[] = parsed.map((c, idx) => ({
             ...c,
             id: (Number(c.id) && Number(c.id) > maxId) ? Number(c.id) : maxId + idx + 1,
             joined: true,
@@ -190,7 +203,7 @@ export default function Communities() {
           setCommunities((prev) => [...prev, ...normalized]);
         }
       }
-    } catch (_) {
+    } catch {
       // ignore malformed storage
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,7 +217,7 @@ export default function Communities() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('akkuea.userCommunities', JSON.stringify(created));
       }
-    } catch (_) {
+    } catch {
       // ignore storage errors
     }
   }, [communities]);
@@ -237,7 +250,7 @@ export default function Communities() {
         community.name.toLowerCase().includes(query) ||
         community.tags.some((tag) => tag.toLowerCase().includes(query));
       // Only show public communities in Discover; private ones remain accessible in My Communities if joined/created
-      const isPublic = (community as any).visibility ? (community as any).visibility === 'public' : true;
+      const isPublic = community.visibility ? community.visibility === 'public' : true;
       return matches && isPublic;
     });
   }, [communities, searchQuery]);
@@ -300,7 +313,7 @@ export default function Communities() {
       return;
     }
 
-    const community = {
+    const community: Community = {
       id: communities.length + 1,
       name: newCommunity.name,
       description: newCommunity.description,
@@ -312,6 +325,7 @@ export default function Communities() {
       posts: 0,
       joined: true,
       image: `/placeholder.svg?height=80&width=80&text=${newCommunity.name.substring(0, 2).toUpperCase()}`,
+      visibility: (newCommunity.visibility as 'public' | 'private') ?? 'public',
     };
 
     setCommunities((prev) => [...prev, community]);

@@ -111,7 +111,16 @@ Issue 544
 
 ---
 
-Issue 545
+## Accessibility Standards
+
+### Color Accessibility
+
+#### Contrast Requirements
+| Text Size | AA Standard | AAA Standard | Akkuea Standard |
+|-----------|-------------|--------------|-----------------|
+| **Normal Text** | 4.5:1 | 7:1 | 7:1 (AAA) |
+| **Large Text** | 3:1 | 4.5:1 | 4.5:1 (AAA) |
+| **UI Components** | 3:1 | N/A | 4.5:1 (Enhanced) |
 
 ---
 

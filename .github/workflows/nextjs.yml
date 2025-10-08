@@ -34,7 +34,7 @@ jobs:
             ${{ runner.os }}-nextjs-bun-
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
         working-directory: packages/nextjs
 
       - name: Lint code

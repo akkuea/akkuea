@@ -34,10 +34,10 @@ jobs:
             ${{ runner.os }}-vitest-bun-
 
       - name: Install root dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
 
       - name: Install nextjs dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
         working-directory: packages/nextjs
 
       - name: Run tests with coverage

@@ -83,7 +83,23 @@ Issue 537
 
 ---
 
-Issue 538
+## Component Library
+
+### Button System
+
+#### Button Variants
+```mermaid
+graph TD
+    A[Button System] --> B[Primary Buttons]
+    A --> C[Secondary Buttons]
+    A --> D[Text Buttons]
+    A --> E[Icon Buttons]
+    
+    B --> B1[Black background, white text]
+    C --> C1[White background, black border]
+    D --> D1[No background, underline on hover]
+    E --> E1[Turquoise accent, minimal style]
+```
 
 ---
 

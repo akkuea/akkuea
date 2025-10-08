@@ -149,7 +149,14 @@ graph LR
 
 ---
 
-Issue 541
+#### Card Design Specifications
+| Element | Styling | Purpose |
+|---------|---------|---------|
+| **Container** | White background, subtle shadow | Clean separation |
+| **Cultural Badge** | Turquoise accent | Highlight cultural content |
+| **Typography** | Inter font family | Consistency with brand |
+| **Spacing** | 16px padding, 8px gaps | Readable hierarchy |
+| **Interaction** | Subtle hover elevation | Clear affordance |
 
 ---
 

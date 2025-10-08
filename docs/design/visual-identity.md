@@ -56,7 +56,11 @@ Issue 532
 
 ---
 
-Issue 535
+#### Logo Spacing
+- Minimum clear space: 1/2 the height of the logo
+- Never place on busy backgrounds
+- Maintain aspect ratio always
+- Do not add effects or modify colors
 
 ---
 

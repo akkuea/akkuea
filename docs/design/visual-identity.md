@@ -131,7 +131,13 @@ Issue 549
 
 ---
 
-Issue 550
+#### Cultural Element Categories
+| Category | Usage | Permission Level | Examples |
+|----------|-------|------------------|----------|
+| **Public Cultural Symbols** | General use allowed | Community acknowledgment | Geometric patterns, public ceremonies |
+| **Traditional Patterns** | Respectful adaptation | Explicit permission | Textile designs, architectural elements |
+| **Sacred Elements** | Restricted/prohibited | Elder council approval | Ceremonial symbols, spiritual imagery |
+| **Contemporary Cultural** | Educational context | Artist/creator permission | Modern indigenous art, cultural fusion |
 
 ---
 

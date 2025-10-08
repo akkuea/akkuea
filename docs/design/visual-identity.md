@@ -91,7 +91,27 @@ Issue 539
 
 ---
 
-Issue 540
+### Card Components
+
+#### Educational Content Cards
+```mermaid
+graph LR
+    A[Content Card] --> B[Header Section]
+    A --> C[Content Area]
+    A --> D[Action Area]
+    
+    B --> B1[Title]
+    B --> B2[Creator Info]
+    B --> B3[Cultural Badge]
+    
+    C --> C1[Description]
+    C --> C2[Learning Objectives]
+    C --> C3[Preview Image]
+    
+    D --> D1[Download Button]
+    D --> D2[Rating Display]
+    D --> D3[Share Options]
+```
 
 ---
 

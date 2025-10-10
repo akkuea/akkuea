@@ -59,7 +59,19 @@ pub enum Error {
     InvalidPreferences = 16,
 
     /// Invalid name provided
-    InvalidName = 17,  // Add this
+    InvalidName = 17,
+    
+    /// Greeting not found
+    GreetingNotFound = 20,
+
+    /// User already liked this greeting
+    AlreadyLiked = 21,
+
+    /// Comment text is empty
+    EmptyComment = 22,
+
+    /// Comment text too long
+    CommentTooLong = 23,
 }
 
 // Add Display impl for to_string() to work (required for String::from_str(&e.to_string()))
@@ -87,6 +99,10 @@ impl fmt::Display for Error {
             Error::BatchNotFound => f.write_str("Batch not found"),
             Error::InvalidPreferences => f.write_str("Invalid user preferences"),  // Add this line
             Error::InvalidName => f.write_str("Invalid name provided"),  // And this line
+            Error::GreetingNotFound => f.write_str("Greeting not found"),
+            Error::AlreadyLiked => f.write_str("User already liked this greeting"),
+            Error::EmptyComment => f.write_str("Comment text is empty"),
+            Error::CommentTooLong => f.write_str("Comment text too long"),
         }
     }
 }

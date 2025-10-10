@@ -8,9 +8,9 @@ mod error;
 mod events;
 mod interactions;
 mod interface;
+mod roles;
 mod storage;
 mod utils;
-mod roles;
 
 pub use batch::*;
 pub use datatype::*;
@@ -18,9 +18,9 @@ pub use error::*;
 pub use events::*;
 pub use interactions::*;
 pub use interface::*;
+pub use roles::*;
 pub use storage::*;
 pub use utils::*;
-pub use roles::*;
 
 // Move the storage use to top level (impl no fit hold use statements)
 // But since pub use storage::*, the fns like has_premium_tier dey direct in scope—no need extra use
@@ -33,11 +33,7 @@ impl GreetingSystem {
     // ==================== Premium Tier Functions ====================
 
     /// Assign a premium tier to a user based on their contribution
-    pub fn assign_premium_tier(
-        env: Env,
-        user: Address,
-        contribution: i128,
-    ) -> Result<(), Error> {
+    pub fn assign_premium_tier(env: Env, user: Address, contribution: i128) -> Result<(), Error> {
         verify_user_authorization(&env, &user)?;
         validate_contribution(contribution)?;
 
@@ -131,7 +127,7 @@ impl GreetingSystem {
     }
 
     // ==================== Batch Operation Functions ====================
-    
+
     /// Batch update multiple greetings in a single transaction
     pub fn batch_update_greetings(
         env: Env,
@@ -250,7 +246,7 @@ impl GreetingSystem {
     /// Check if caller is admin (helper for other functions)
     pub fn is_admin(env: Env, user: Address) -> bool {
         roles::has_role(&env, &user, &Role::Admin)
-    
+    }
     // ==================== Interaction Functions ====================
 
     /// Like a greeting
@@ -282,8 +278,7 @@ impl GreetingSystem {
     pub fn get_comments_count(env: Env, greeting_id: u64) -> Result<u32, Error> {
         interactions::get_comments_count(&env, greeting_id)
     }
-} 
-
+}
 
 #[cfg(test)]
 mod test;

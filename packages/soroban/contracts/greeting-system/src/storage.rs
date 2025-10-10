@@ -1,7 +1,7 @@
 use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol};
 
+use crate::datatype::{BatchUpdate, Greeting, Interaction, UserProfile};
 use crate::{Error, PremiumTier};
-use crate::datatype::{Greeting, BatchUpdate, UserProfile, Interaction};
 
 /// Storage keys for the premium tier system and greetings/batches
 #[contracttype]
@@ -11,8 +11,8 @@ pub enum StorageKey {
     Greeting(u64),
     Batch(u64),
     BatchCounter,
-    UserProfile(Address),  // Add this variant
-    Interaction(u64),  // Interaction data keyed by greeting_id
+    UserProfile(Address), // Add this variant
+    Interaction(u64),     // Interaction data keyed by greeting_id
 }
 
 /// Save a premium tier to storage
@@ -79,10 +79,7 @@ pub fn write_batch(env: &Env, batch: &BatchUpdate) -> Result<(), Error> {
 /// Get the next available batch ID (auto-increments)
 pub fn next_batch_id(env: &Env) -> u64 {
     let counter_key = StorageKey::BatchCounter;
-    let mut counter: u64 = env.storage()
-        .persistent()
-        .get(&counter_key)
-        .unwrap_or(0);
+    let mut counter: u64 = env.storage().persistent().get(&counter_key).unwrap_or(0);
     counter += 1;
     env.storage().persistent().set(&counter_key, &counter);
     counter

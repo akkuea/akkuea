@@ -1,8 +1,8 @@
-use soroban_sdk::{contracttype, Address, Env, String};
 use crate::error::Error;
 use crate::events::emit_role_changed;
-use crate::storage::{get_role_key, get_owner_key};
+use crate::storage::{get_owner_key, get_role_key};
 use crate::utils::get_current_timestamp;
+use soroban_sdk::{contracttype, Address, Env, String};
 
 /// User roles in the system
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -41,7 +41,6 @@ impl Role {
     }
 }
 
-
 /// Role change event data
 #[derive(Clone)]
 #[contracttype]
@@ -65,10 +64,7 @@ pub fn require_admin(env: &Env, caller: &Address) -> Result<(), Error> {
 /// Get a user's role (internal helper)
 pub fn get_role_internal(env: &Env, user: &Address) -> Role {
     let key = get_role_key(user);
-    env.storage()
-        .persistent()
-        .get(&key)
-        .unwrap_or(Role::None)
+    env.storage().persistent().get(&key).unwrap_or(Role::None)
 }
 
 /// Set a user's role (internal helper)

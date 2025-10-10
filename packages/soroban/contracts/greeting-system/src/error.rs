@@ -67,6 +67,19 @@ pub enum Error {
     CannotRevokeOwnerRole = 202,
     ContractAlreadyInitialized = 203,
     ContractNotInitialized = 204,
+    InvalidName = 17,
+    
+    /// Greeting not found
+    GreetingNotFound = 20,
+
+    /// User already liked this greeting
+    AlreadyLiked = 21,
+
+    /// Comment text is empty
+    EmptyComment = 22,
+
+    /// Comment text too long
+    CommentTooLong = 23,
 }
 
 // Add Display impl for to_string() to work (required for String::from_str(&e.to_string()))
@@ -99,6 +112,10 @@ impl fmt::Display for Error {
             Error::CannotRevokeOwnerRole => f.write_str("Cannot revoke the owner role"),
             Error::ContractAlreadyInitialized => f.write_str("Contract already initialized"),
             Error::ContractNotInitialized => f.write_str("Contract not initialized"),
+            Error::GreetingNotFound => f.write_str("Greeting not found"),
+            Error::AlreadyLiked => f.write_str("User already liked this greeting"),
+            Error::EmptyComment => f.write_str("Comment text is empty"),
+            Error::CommentTooLong => f.write_str("Comment text too long"),
         }
     }
 }

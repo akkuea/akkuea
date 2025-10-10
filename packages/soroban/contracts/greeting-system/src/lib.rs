@@ -6,6 +6,7 @@ mod batch;
 mod datatype;
 mod error;
 mod events;
+mod interactions;
 mod interface;
 mod storage;
 mod utils;
@@ -15,6 +16,7 @@ pub use batch::*;
 pub use datatype::*;
 pub use error::*;
 pub use events::*;
+pub use interactions::*;
 pub use interface::*;
 pub use storage::*;
 pub use utils::*;
@@ -248,6 +250,37 @@ impl GreetingSystem {
     /// Check if caller is admin (helper for other functions)
     pub fn is_admin(env: Env, user: Address) -> bool {
         roles::has_role(&env, &user, &Role::Admin)
+    
+    // ==================== Interaction Functions ====================
+
+    /// Like a greeting
+    pub fn like_greeting(env: Env, user: Address, greeting_id: u64) -> Result<(), Error> {
+        interactions::like_greeting(&env, user, greeting_id)
+    }
+
+    /// Add a comment to a greeting
+    pub fn add_comment(
+        env: Env,
+        user: Address,
+        greeting_id: u64,
+        text: String,
+    ) -> Result<(), Error> {
+        interactions::add_comment(&env, user, greeting_id, text)
+    }
+
+    /// Get interaction data for a greeting
+    pub fn get_interaction(env: Env, greeting_id: u64) -> Result<Interaction, Error> {
+        interactions::get_interaction(&env, greeting_id)
+    }
+
+    /// Get the number of likes for a greeting
+    pub fn get_likes_count(env: Env, greeting_id: u64) -> Result<u32, Error> {
+        interactions::get_likes_count(&env, greeting_id)
+    }
+
+    /// Get the number of comments for a greeting
+    pub fn get_comments_count(env: Env, greeting_id: u64) -> Result<u32, Error> {
+        interactions::get_comments_count(&env, greeting_id)
     }
 } 
 

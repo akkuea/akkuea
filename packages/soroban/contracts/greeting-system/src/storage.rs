@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Env};
+use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol};
 
 use crate::{Error, PremiumTier};
 use crate::datatype::{Greeting, BatchUpdate, UserProfile};
@@ -107,4 +107,14 @@ pub fn load_user_profile(env: &Env, user: &Address) -> Result<UserProfile, Error
         .persistent()
         .get(&key)
         .ok_or(Error::UserNotFound)
+}
+
+/// Storage key for contract owner
+pub fn get_owner_key() -> Symbol {
+    symbol_short!("OWNER")
+}
+
+/// Storage key for user roles
+pub fn get_role_key(user: &Address) -> (Symbol, Address) {
+    (symbol_short!("ROLE"), user.clone())
 }

@@ -60,6 +60,13 @@ pub enum Error {
 
     /// Invalid name provided
     InvalidName = 17,  // Add this
+
+    // Role-related errors
+    InvalidRole = 200,
+    UnauthorizedRole = 201,
+    CannotRevokeOwnerRole = 202,
+    ContractAlreadyInitialized = 203,
+    ContractNotInitialized = 204,
 }
 
 // Add Display impl for to_string() to work (required for String::from_str(&e.to_string()))
@@ -87,6 +94,11 @@ impl fmt::Display for Error {
             Error::BatchNotFound => f.write_str("Batch not found"),
             Error::InvalidPreferences => f.write_str("Invalid user preferences"),  // Add this line
             Error::InvalidName => f.write_str("Invalid name provided"),  // And this line
+            Error::InvalidRole => f.write_str("Invalid role specified"),
+            Error::UnauthorizedRole => f.write_str("Unauthorized role operation"),
+            Error::CannotRevokeOwnerRole => f.write_str("Cannot revoke the owner role"),
+            Error::ContractAlreadyInitialized => f.write_str("Contract already initialized"),
+            Error::ContractNotInitialized => f.write_str("Contract not initialized"),
         }
     }
 }

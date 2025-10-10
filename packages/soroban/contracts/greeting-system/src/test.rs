@@ -4,6 +4,12 @@ use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
 use crate::{xlm_to_stroops, GreetingSystem, GreetingSystemClient, TierLevel};
 
+use crate::Error;
+use crate::verify_user_authorization;
+use crate::roles;
+use crate::Role;
+
+
 fn create_test_env<'a>() -> (Env, GreetingSystemClient<'a>, Address) {
     let env = Env::default();
     let contract_id = env.register(GreetingSystem, ());
@@ -317,5 +323,159 @@ fn test_stress_register_many_users() {
             let profile = client.get_user_profile(&u);
             assert_eq!(profile.user, u);
         }
+    }
+}
+
+// ==================== Role Management Tests ====================
+
+#[cfg(test)]
+mod role_tests {
+    use super::*;
+    use soroban_sdk::{testutils::Address as _, Address, Env, String};
+
+    #[test]
+    fn test_initialize_roles_and_get_owner() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        env.mock_all_auths();
+
+        client.initialize_roles(&owner);
+
+        let stored_owner = client.get_contract_owner();
+        assert_eq!(stored_owner, owner);
+
+        let role = client.get_role(&owner);
+        assert_eq!(role, String::from_str(&env, "admin"));
+    }
+
+    #[test]
+    fn test_assign_role() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let user = Address::generate(&env);
+
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
+        client.assign_role(&owner, &user, &String::from_str(&env, "moderator"));
+
+        let role = client.get_role(&user);
+        assert_eq!(role, String::from_str(&env, "moderator"));
+    }
+
+    #[test]
+    fn test_has_role() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let user = Address::generate(&env);
+
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
+        client.assign_role(&owner, &user, &String::from_str(&env, "user"));
+
+        assert!(client.has_role(&user, &String::from_str(&env, "user")));
+        assert!(!client.has_role(&user, &String::from_str(&env, "admin")));
+    }
+
+    #[test]
+    fn test_revoke_role() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let user = Address::generate(&env);
+
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
+        client.assign_role(&owner, &user, &String::from_str(&env, "moderator"));
+        client.revoke_role(&owner, &user);
+
+        let role_after = client.get_role(&user);
+        assert_eq!(role_after, String::from_str(&env, "none"));
+    }
+
+    // Non-admin should panic when trying to assign a role (#201)
+    #[test]
+    #[should_panic(expected = "#201")]
+    fn test_non_admin_cannot_assign_role() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let user1 = Address::generate(&env);
+        let user2 = Address::generate(&env);
+
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
+        client.assign_role(&owner, &user1, &String::from_str(&env, "user"));
+
+        // user1 is not admin — should panic
+        client.assign_role(&user1, &user2, &String::from_str(&env, "moderator"));
+    }
+
+    // Should panic when owner tries to revoke their own role (#202)
+    #[test]
+    #[should_panic(expected = "#202")]
+    fn test_cannot_revoke_owner_role() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        env.mock_all_auths();
+
+        client.initialize_roles(&owner);
+
+        // Should panic when revoking owner
+        client.revoke_role(&owner, &owner);
+    }
+
+    #[test]
+    fn test_is_admin() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let user = Address::generate(&env);
+
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
+
+        assert!(client.is_admin(&owner));
+        assert!(!client.is_admin(&user));
+    }
+
+    #[test]
+    fn test_multiple_role_assignments() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
+
+        let owner = Address::generate(&env);
+        let user1 = Address::generate(&env);
+        let user2 = Address::generate(&env);
+        let user3 = Address::generate(&env);
+
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
+
+        client.assign_role(&owner, &user1, &String::from_str(&env, "admin"));
+        client.assign_role(&owner, &user2, &String::from_str(&env, "moderator"));
+        client.assign_role(&owner, &user3, &String::from_str(&env, "user"));
+
+        assert_eq!(client.get_role(&user1), String::from_str(&env, "admin"));
+        assert_eq!(client.get_role(&user2), String::from_str(&env, "moderator"));
+        assert_eq!(client.get_role(&user3), String::from_str(&env, "user"));
     }
 }

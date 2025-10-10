@@ -9,6 +9,7 @@ mod events;
 mod interface;
 mod storage;
 mod utils;
+mod roles;
 
 pub use batch::*;
 pub use datatype::*;
@@ -17,6 +18,7 @@ pub use events::*;
 pub use interface::*;
 pub use storage::*;
 pub use utils::*;
+pub use roles::*;
 
 // Move the storage use to top level (impl no fit hold use statements)
 // But since pub use storage::*, the fns like has_premium_tier dey direct in scope—no need extra use
@@ -190,6 +192,62 @@ impl GreetingSystem {
     /// Get a user's profile
     pub fn get_user_profile(env: Env, user: Address) -> Result<UserProfile, Error> {
         load_user_profile(&env, &user)
+    }
+
+    /// Initialize the contract with an owner who becomes the first admin
+    pub fn initialize_roles(env: Env, owner: Address) -> Result<(), Error> {
+        verify_user_authorization(&env, &owner)?;
+        roles::initialize_owner(&env, &owner)
+    }
+
+    /// Assign a role to a user (Admin only)
+    pub fn assign_role(
+        env: Env,
+        caller: Address,
+        user: Address,
+        role: String,
+    ) -> Result<(), Error> {
+        verify_user_authorization(&env, &caller)?;
+        roles::require_admin(&env, &caller)?;
+
+        let role_enum = Role::from_string(&env, &role)?;
+        roles::set_role_internal(&env, &user, role_enum, &caller)
+    }
+
+    /// Get the role of a user
+    pub fn get_role(env: Env, user: Address) -> String {
+        let role = roles::get_role_internal(&env, &user);
+        role.to_string(&env)
+    }
+
+    /// Remove a role from a user (set to None) - Admin only
+    pub fn revoke_role(env: Env, caller: Address, user: Address) -> Result<(), Error> {
+        verify_user_authorization(&env, &caller)?;
+        roles::require_admin(&env, &caller)?;
+
+        // Prevent owner from revoking their own admin role
+        let owner = roles::get_owner(&env)?;
+        if user == owner {
+            return Err(Error::CannotRevokeOwnerRole);
+        }
+
+        roles::set_role_internal(&env, &user, Role::None, &caller)
+    }
+
+    /// Check if a user has a specific role
+    pub fn has_role(env: Env, user: Address, role: String) -> Result<bool, Error> {
+        let role_enum = Role::from_string(&env, &role)?;
+        Ok(roles::has_role(&env, &user, &role_enum))
+    }
+
+    /// Get the contract owner
+    pub fn get_contract_owner(env: Env) -> Result<Address, Error> {
+        roles::get_owner(&env)
+    }
+
+    /// Check if caller is admin (helper for other functions)
+    pub fn is_admin(env: Env, user: Address) -> bool {
+        roles::has_role(&env, &user, &Role::Admin)
     }
 } 
 

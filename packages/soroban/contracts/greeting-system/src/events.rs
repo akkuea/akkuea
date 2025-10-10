@@ -1,5 +1,6 @@
 use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol};
 
+use crate::roles::RoleChangeEvent;
 use crate::error::Error;
 use crate::datatype::{TierAssignmentEvent, TierUpgradeEvent, TierLevel, OperationStatus};
 
@@ -87,6 +88,15 @@ pub fn emit_batch_update(env: &Env, event: &BatchUpdateEvent) -> Result<(), crat
     // Fix: Use two symbols for topics (no b""—change to symbol_short!)
     env.events().publish(
         (symbol_short!("batch_upd"), symbol_short!("update")),
+        event.clone(),
+    );
+    Ok(())
+}
+
+/// Emit role changed event
+pub fn emit_role_changed(env: &Env, event: &RoleChangeEvent) -> Result<(), Error> {
+    env.events().publish(
+        (symbol_short!("role_chg"), event.user.clone()),
         event.clone(),
     );
     Ok(())

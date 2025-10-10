@@ -14,7 +14,25 @@ Issue 530
 
 ---
 
-Issue 531
+### Typography
+
+#### Font Hierarchy
+```mermaid
+graph TD
+    A[Akkuea Typography] --> B[Primary Font: Inter]
+    A --> C[Monospace: JetBrains Mono]
+    A --> D[Display: Inter Black]
+    
+    B --> B1[Body Text: Inter Regular]
+    B --> B2[Emphasis: Inter Medium]
+    B --> B3[Strong: Inter SemiBold]
+    
+    C --> C1[Code: JetBrains Mono Regular]
+    C --> C2[Code Headers: JetBrains Mono Bold]
+    
+    D --> D1[Page Titles: Inter Black]
+    D --> D2[Section Headers: Inter Bold]
+```
 
 ---
 

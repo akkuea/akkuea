@@ -11,8 +11,8 @@ const categoryStyles: { [key: string]: string } = {
 
 const iconBgStyles: { [key: string]: string } = {
   completed: 'bg-primary',
-  'in-progress': 'bg-primary/30',
-  locked: 'bg-primary/30',
+  'in-progress': 'bg-primary',
+  locked: 'bg-primary',
 };
 
 export const AchievementCard = ({ achievement }: { achievement: Achievement }) => {

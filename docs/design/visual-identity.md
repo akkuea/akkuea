@@ -18,7 +18,18 @@ Issue 531
 
 ---
 
-Issue 532
+#### Type Scale
+| Element | Font | Size | Weight | Line Height | Use Case |
+|---------|------|------|--------|-------------|----------|
+| **Display Title** | Inter | 48px | Black (900) | 1.1 | Page headlines |
+| **H1** | Inter | 36px | Bold (700) | 1.2 | Primary headings |
+| **H2** | Inter | 28px | SemiBold (600) | 1.3 | Section headings |
+| **H3** | Inter | 22px | Medium (500) | 1.4 | Subsection headings |
+| **Body Large** | Inter | 18px | Regular (400) | 1.6 | Important body text |
+| **Body** | Inter | 16px | Regular (400) | 1.6 | Standard body text |
+| **Body Small** | Inter | 14px | Regular (400) | 1.5 | Secondary text |
+| **Caption** | Inter | 12px | Medium (500) | 1.4 | Labels, captions |
+| **Code** | JetBrains Mono | 14px | Regular (400) | 1.5 | Code snippets |
 
 ---
 

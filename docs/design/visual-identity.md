@@ -22,6 +22,29 @@ Issue 532
 
 ---
 
+
+### Logo & Branding
+
+#### Logo Specifications
+```mermaid
+graph LR
+    A[Akkuea Logo] --> B[Symbol: Stylized Hawk]
+    A --> C[Wordmark: Akkuea]
+    A --> D[Tagline: Empowering Education]
+    
+    B --> B1[Geometric Design]
+    B --> B2[Cultural Inspiration]
+    B --> B3[Educational Elements]
+    
+    C --> C1[Inter Black Font]
+    C --> C2[Tracking: 0.02em]
+    
+    D --> D1[Inter Medium]
+    D --> D2[Size: 60% of wordmark]
+```
+
+---
+
 #### Component Architecture
 ```scss
 // Component base class

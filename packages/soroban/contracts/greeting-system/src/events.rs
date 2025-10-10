@@ -91,3 +91,44 @@ pub fn emit_batch_update(env: &Env, event: &BatchUpdateEvent) -> Result<(), crat
     );
     Ok(())
 }
+
+
+/// Event symbol for greeting liked
+pub const GREETING_LIKED: Symbol = symbol_short!("LIKE");
+
+/// Event symbol for comment added
+pub const COMMENT_ADDED: Symbol = symbol_short!("COMMENT");
+
+/// Emit a greeting liked event
+pub fn emit_greeting_liked(
+    env: &Env,
+    user: &Address,
+    greeting_id: u64,
+    total_likes: u32,
+) -> Result<(), Error> {
+    env.events().publish(
+        (GREETING_LIKED, symbol_short!("liked")),
+        (user.clone(), greeting_id, total_likes),
+    );
+    Ok(())
+}
+
+/// Emit a comment added event
+pub fn emit_comment_added(
+    env: &Env,
+    user: &Address,
+    greeting_id: u64,
+    comment_text: &String,
+    timestamp: u64,
+) -> Result<(), Error> {
+    env.events().publish(
+        (COMMENT_ADDED, symbol_short!("added")),
+        (
+            user.clone(),
+            greeting_id,
+            comment_text.clone(),
+            timestamp,
+        ),
+    );
+    Ok(())
+}

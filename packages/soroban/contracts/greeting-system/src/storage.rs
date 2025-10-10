@@ -1,7 +1,7 @@
 use soroban_sdk::{contracttype, Address, Env};
 
 use crate::{Error, PremiumTier};
-use crate::datatype::{Greeting, BatchUpdate, UserProfile};
+use crate::datatype::{Greeting, BatchUpdate, UserProfile, Interaction};
 
 /// Storage keys for the premium tier system and greetings/batches
 #[contracttype]
@@ -12,6 +12,7 @@ pub enum StorageKey {
     Batch(u64),
     BatchCounter,
     UserProfile(Address),  // Add this variant
+    Interaction(u64),  // Interaction data keyed by greeting_id
 }
 
 /// Save a premium tier to storage
@@ -107,4 +108,26 @@ pub fn load_user_profile(env: &Env, user: &Address) -> Result<UserProfile, Error
         .persistent()
         .get(&key)
         .ok_or(Error::UserNotFound)
+}
+
+/// Check if an interaction exists for a greeting
+pub fn has_interaction(env: &Env, greeting_id: u64) -> bool {
+    let key = StorageKey::Interaction(greeting_id);
+    env.storage().persistent().has(&key)
+}
+
+/// Save interaction data to storage
+pub fn save_interaction(env: &Env, interaction: &Interaction) -> Result<(), Error> {
+    let key = StorageKey::Interaction(interaction.greeting_id);
+    env.storage().persistent().set(&key, interaction);
+    Ok(())
+}
+
+/// Load interaction data from storage
+pub fn load_interaction(env: &Env, greeting_id: u64) -> Result<Interaction, Error> {
+    let key = StorageKey::Interaction(greeting_id);
+    env.storage()
+        .persistent()
+        .get(&key)
+        .ok_or(Error::GreetingNotFound)
 }

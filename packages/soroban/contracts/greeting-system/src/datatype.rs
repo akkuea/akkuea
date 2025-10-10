@@ -92,6 +92,25 @@ pub struct UserProfile {
     pub preferences: soroban_sdk::String,
 }
 
+/// Interaction data for likes and comments
+#[contracttype]
+#[derive(Debug, Clone)]
+pub struct Interaction {
+    pub greeting_id: u64,                      // Greeting ID
+    pub likes: u32,                            // Like count
+    pub liked_by: soroban_sdk::Vec<Address>,   // Users who liked
+    pub comments: soroban_sdk::Vec<Comment>,   // List of comments
+}
+
+/// Comment data structure
+#[contracttype]
+#[derive(Debug, Clone)]
+pub struct Comment {
+    pub author: Address,                       // Comment author
+    pub text: soroban_sdk::String,            // Comment text
+    pub timestamp: u64,                        // Comment creation time
+}
+
 impl TierLevel {
     /// Convert tier level to soroban_sdk::String representation
     pub fn to_str(&self) -> &str {

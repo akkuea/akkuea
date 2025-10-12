@@ -1,7 +1,8 @@
 use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol};
 
+use crate::datatype::{OperationStatus, TierAssignmentEvent, TierLevel, TierUpgradeEvent};
 use crate::error::Error;
-use crate::datatype::{TierAssignmentEvent, TierUpgradeEvent, TierLevel, OperationStatus};
+use crate::roles::RoleChangeEvent;
 
 /// Event symbol for tier assignment
 pub const TIER_ASSIGNED: Symbol = symbol_short!("TIER_ASGN");
@@ -15,7 +16,7 @@ pub const TIER_DOWNGRADED: Symbol = symbol_short!("TIER_DWN");
 /// Emit a tier assignment event
 pub fn emit_tier_assigned(env: &Env, event: &TierAssignmentEvent) -> Result<(), Error> {
     let tier_str = event.tier.to_str();
-    
+
     env.events().publish(
         (TIER_ASSIGNED, symbol_short!("assigned")),
         (
@@ -25,7 +26,7 @@ pub fn emit_tier_assigned(env: &Env, event: &TierAssignmentEvent) -> Result<(), 
             event.timestamp,
         ),
     );
-    
+
     Ok(())
 }
 
@@ -33,7 +34,7 @@ pub fn emit_tier_assigned(env: &Env, event: &TierAssignmentEvent) -> Result<(), 
 pub fn emit_tier_upgraded(env: &Env, event: &TierUpgradeEvent) -> Result<(), Error> {
     let old_tier_str = event.old_tier.to_str();
     let new_tier_str = event.new_tier.to_str();
-    
+
     env.events().publish(
         (TIER_UPGRADED, symbol_short!("upgraded")),
         (
@@ -44,7 +45,7 @@ pub fn emit_tier_upgraded(env: &Env, event: &TierUpgradeEvent) -> Result<(), Err
             event.timestamp,
         ),
     );
-    
+
     Ok(())
 }
 
@@ -58,7 +59,7 @@ pub fn emit_tier_downgraded(
 ) -> Result<(), Error> {
     let old_tier_str = old_tier.to_str();
     let new_tier_str = new_tier.to_str();
-    
+
     env.events().publish(
         (TIER_DOWNGRADED, symbol_short!("downgrade")),
         (
@@ -68,7 +69,7 @@ pub fn emit_tier_downgraded(
             timestamp,
         ),
     );
-    
+
     Ok(())
 }
 
@@ -92,6 +93,14 @@ pub fn emit_batch_update(env: &Env, event: &BatchUpdateEvent) -> Result<(), crat
     Ok(())
 }
 
+/// Emit role changed event
+pub fn emit_role_changed(env: &Env, event: &RoleChangeEvent) -> Result<(), Error> {
+    env.events().publish(
+        (symbol_short!("role_chg"), event.user.clone()),
+        event.clone(),
+    );
+    Ok(())
+}
 
 /// Event symbol for greeting liked
 pub const GREETING_LIKED: Symbol = symbol_short!("LIKE");
@@ -123,12 +132,7 @@ pub fn emit_comment_added(
 ) -> Result<(), Error> {
     env.events().publish(
         (COMMENT_ADDED, symbol_short!("added")),
-        (
-            user.clone(),
-            greeting_id,
-            comment_text.clone(),
-            timestamp,
-        ),
+        (user.clone(), greeting_id, comment_text.clone(), timestamp),
     );
     Ok(())
 }

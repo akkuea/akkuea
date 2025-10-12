@@ -8,6 +8,7 @@ mod error;
 mod events;
 mod interactions;
 mod interface;
+mod roles;
 mod storage;
 mod utils;
 
@@ -17,6 +18,7 @@ pub use error::*;
 pub use events::*;
 pub use interactions::*;
 pub use interface::*;
+pub use roles::*;
 pub use storage::*;
 pub use utils::*;
 
@@ -31,11 +33,7 @@ impl GreetingSystem {
     // ==================== Premium Tier Functions ====================
 
     /// Assign a premium tier to a user based on their contribution
-    pub fn assign_premium_tier(
-        env: Env,
-        user: Address,
-        contribution: i128,
-    ) -> Result<(), Error> {
+    pub fn assign_premium_tier(env: Env, user: Address, contribution: i128) -> Result<(), Error> {
         verify_user_authorization(&env, &user)?;
         validate_contribution(contribution)?;
 
@@ -129,7 +127,7 @@ impl GreetingSystem {
     }
 
     // ==================== Batch Operation Functions ====================
-    
+
     /// Batch update multiple greetings in a single transaction
     pub fn batch_update_greetings(
         env: Env,
@@ -193,7 +191,62 @@ impl GreetingSystem {
     pub fn get_user_profile(env: Env, user: Address) -> Result<UserProfile, Error> {
         load_user_profile(&env, &user)
     }
-    
+
+    /// Initialize the contract with an owner who becomes the first admin
+    pub fn initialize_roles(env: Env, owner: Address) -> Result<(), Error> {
+        verify_user_authorization(&env, &owner)?;
+        roles::initialize_owner(&env, &owner)
+    }
+
+    /// Assign a role to a user (Admin only)
+    pub fn assign_role(
+        env: Env,
+        caller: Address,
+        user: Address,
+        role: String,
+    ) -> Result<(), Error> {
+        verify_user_authorization(&env, &caller)?;
+        roles::require_admin(&env, &caller)?;
+
+        let role_enum = Role::from_string(&env, &role)?;
+        roles::set_role_internal(&env, &user, role_enum, &caller)
+    }
+
+    /// Get the role of a user
+    pub fn get_role(env: Env, user: Address) -> String {
+        let role = roles::get_role_internal(&env, &user);
+        role.to_string(&env)
+    }
+
+    /// Remove a role from a user (set to None) - Admin only
+    pub fn revoke_role(env: Env, caller: Address, user: Address) -> Result<(), Error> {
+        verify_user_authorization(&env, &caller)?;
+        roles::require_admin(&env, &caller)?;
+
+        // Prevent owner from revoking their own admin role
+        let owner = roles::get_owner(&env)?;
+        if user == owner {
+            return Err(Error::CannotRevokeOwnerRole);
+        }
+
+        roles::set_role_internal(&env, &user, Role::None, &caller)
+    }
+
+    /// Check if a user has a specific role
+    pub fn has_role(env: Env, user: Address, role: String) -> Result<bool, Error> {
+        let role_enum = Role::from_string(&env, &role)?;
+        Ok(roles::has_role(&env, &user, &role_enum))
+    }
+
+    /// Get the contract owner
+    pub fn get_contract_owner(env: Env) -> Result<Address, Error> {
+        roles::get_owner(&env)
+    }
+
+    /// Check if caller is admin (helper for other functions)
+    pub fn is_admin(env: Env, user: Address) -> bool {
+        roles::has_role(&env, &user, &Role::Admin)
+    }
     // ==================== Interaction Functions ====================
 
     /// Like a greeting
@@ -225,8 +278,7 @@ impl GreetingSystem {
     pub fn get_comments_count(env: Env, greeting_id: u64) -> Result<u32, Error> {
         interactions::get_comments_count(&env, greeting_id)
     }
-} 
-
+}
 
 #[cfg(test)]
 mod test;

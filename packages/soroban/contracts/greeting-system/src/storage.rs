@@ -1,7 +1,7 @@
-use soroban_sdk::{contracttype, Address, Env};
+use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol};
 
+use crate::datatype::{BatchUpdate, Greeting, Interaction, UserProfile};
 use crate::{Error, PremiumTier};
-use crate::datatype::{Greeting, BatchUpdate, UserProfile, Interaction};
 
 /// Storage keys for the premium tier system and greetings/batches
 #[contracttype]
@@ -11,8 +11,8 @@ pub enum StorageKey {
     Greeting(u64),
     Batch(u64),
     BatchCounter,
-    UserProfile(Address),  // Add this variant
-    Interaction(u64),  // Interaction data keyed by greeting_id
+    UserProfile(Address), // Add this variant
+    Interaction(u64),     // Interaction data keyed by greeting_id
 }
 
 /// Save a premium tier to storage
@@ -79,10 +79,7 @@ pub fn write_batch(env: &Env, batch: &BatchUpdate) -> Result<(), Error> {
 /// Get the next available batch ID (auto-increments)
 pub fn next_batch_id(env: &Env) -> u64 {
     let counter_key = StorageKey::BatchCounter;
-    let mut counter: u64 = env.storage()
-        .persistent()
-        .get(&counter_key)
-        .unwrap_or(0);
+    let mut counter: u64 = env.storage().persistent().get(&counter_key).unwrap_or(0);
     counter += 1;
     env.storage().persistent().set(&counter_key, &counter);
     counter
@@ -110,6 +107,15 @@ pub fn load_user_profile(env: &Env, user: &Address) -> Result<UserProfile, Error
         .ok_or(Error::UserNotFound)
 }
 
+/// Storage key for contract owner
+pub fn get_owner_key() -> Symbol {
+    symbol_short!("OWNER")
+}
+
+/// Storage key for user roles
+pub fn get_role_key(user: &Address) -> (Symbol, Address) {
+    (symbol_short!("ROLE"), user.clone())
+}
 /// Check if an interaction exists for a greeting
 pub fn has_interaction(env: &Env, greeting_id: u64) -> bool {
     let key = StorageKey::Interaction(greeting_id);

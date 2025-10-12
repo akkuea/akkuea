@@ -4,6 +4,11 @@ use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
 use crate::{xlm_to_stroops, GreetingSystem, GreetingSystemClient, TierLevel};
 
+use crate::roles;
+use crate::verify_user_authorization;
+use crate::Error;
+use crate::Role;
+
 fn create_test_env<'a>() -> (Env, GreetingSystemClient<'a>, Address) {
     let env = Env::default();
     let contract_id = env.register(GreetingSystem, ());
@@ -320,274 +325,427 @@ fn test_stress_register_many_users() {
     }
 }
 
+// ==================== Role Management Tests ====================
 
-// ==================== Interaction Tests ====================
+#[cfg(test)]
+mod role_tests {
+    use super::*;
+    use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
-#[test]
-fn test_like_greeting_success() {
-    let (env, client, user) = create_test_env();
-    env.mock_all_auths();
+    #[test]
+    fn test_initialize_roles_and_get_owner() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
 
-    // Create a greeting first
-    let greeting_id = 1u64;
-    let text = String::from_str(&env, "Hello, World!");
-    client.create_greeting(&greeting_id, &text, &user);
+        let owner = Address::generate(&env);
+        env.mock_all_auths();
 
-    // Like the greeting
-    client.like_greeting(&user, &greeting_id);
+        client.initialize_roles(&owner);
 
-    // Verify the like was recorded
-    let interaction = client.get_interaction(&greeting_id);
-    assert_eq!(interaction.likes, 1);
-    assert_eq!(interaction.liked_by.len(), 1);
-    assert_eq!(interaction.liked_by.get(0).unwrap(), user);
-}
+        let stored_owner = client.get_contract_owner();
+        assert_eq!(stored_owner, owner);
 
-#[test]
-#[should_panic(expected = "Error(Contract, #21)")] 
-fn test_like_greeting_duplicate_fails() {
-    let (env, client, user) = create_test_env();
-    env.mock_all_auths();
+        let role = client.get_role(&owner);
+        assert_eq!(role, String::from_str(&env, "admin"));
+    }
 
-    // Create a greeting
-    let greeting_id = 1u64;
-    let text = String::from_str(&env, "Hello!");
-    client.create_greeting(&greeting_id, &text, &user);
+    #[test]
+    fn test_assign_role() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
 
-    // First like should succeed
-    client.like_greeting(&user, &greeting_id);
+        let owner = Address::generate(&env);
+        let user = Address::generate(&env);
 
-    // Second like by same user should fail
-    client.like_greeting(&user, &greeting_id);
-}
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
+        client.assign_role(&owner, &user, &String::from_str(&env, "moderator"));
 
-#[test]
-fn test_like_greeting_multiple_users() {
-    let (env, client, user1) = create_test_env();
-    env.mock_all_auths();
+        let role = client.get_role(&user);
+        assert_eq!(role, String::from_str(&env, "moderator"));
+    }
 
-    let user2 = Address::generate(&env);
-    let user3 = Address::generate(&env);
+    #[test]
+    fn test_has_role() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
 
-    // Create a greeting
-    let greeting_id = 1u64;
-    let text = String::from_str(&env, "Popular greeting!");
-    client.create_greeting(&greeting_id, &text, &user1);
+        let owner = Address::generate(&env);
+        let user = Address::generate(&env);
 
-    // Multiple users like the greeting
-    client.like_greeting(&user1, &greeting_id);
-    client.like_greeting(&user2, &greeting_id);
-    client.like_greeting(&user3, &greeting_id);
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
+        client.assign_role(&owner, &user, &String::from_str(&env, "user"));
 
-    // Verify all likes were recorded
-    let interaction = client.get_interaction(&greeting_id);
-    assert_eq!(interaction.likes, 3);
-    assert_eq!(interaction.liked_by.len(), 3);
-}
+        assert!(client.has_role(&user, &String::from_str(&env, "user")));
+        assert!(!client.has_role(&user, &String::from_str(&env, "admin")));
+    }
 
-#[test]
-#[should_panic(expected = "Error(Contract, #11)")] 
-fn test_like_greeting_not_found() {
-    let (env, client, user) = create_test_env();
-    env.mock_all_auths();
+    #[test]
+    fn test_revoke_role() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
 
-    // Try to like non-existent greeting
-    let greeting_id = 999u64;
-    client.like_greeting(&user, &greeting_id);
-}
+        let owner = Address::generate(&env);
+        let user = Address::generate(&env);
 
-#[test]
-fn test_add_comment_success() {
-    let (env, client, user) = create_test_env();
-    env.mock_all_auths();
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
+        client.assign_role(&owner, &user, &String::from_str(&env, "moderator"));
+        client.revoke_role(&owner, &user);
 
-    // Create a greeting
-    let greeting_id = 1u64;
-    let greeting_text = String::from_str(&env, "Test greeting");
-    client.create_greeting(&greeting_id, &greeting_text, &user);
+        let role_after = client.get_role(&user);
+        assert_eq!(role_after, String::from_str(&env, "none"));
+    }
 
-    // Add a comment
-    let comment_text = String::from_str(&env, "Nice greeting!");
-    client.add_comment(&user, &greeting_id, &comment_text);
+    // Non-admin should panic when trying to assign a role (#201)
+    #[test]
+    #[should_panic(expected = "#201")]
+    fn test_non_admin_cannot_assign_role() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
 
-    // Verify the comment was added
-    let interaction = client.get_interaction(&greeting_id);
-    assert_eq!(interaction.comments.len(), 1);
+        let owner = Address::generate(&env);
+        let user1 = Address::generate(&env);
+        let user2 = Address::generate(&env);
 
-    let comment = interaction.comments.get(0).unwrap();
-    assert_eq!(comment.author, user);
-    assert_eq!(comment.text, comment_text);
-}
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
+        client.assign_role(&owner, &user1, &String::from_str(&env, "user"));
 
-#[test]
-#[should_panic(expected = "Error(Contract, #22)")] 
-fn test_add_comment_empty_fails() {
-    let (env, client, user) = create_test_env();
-    env.mock_all_auths();
+        // user1 is not admin — should panic
+        client.assign_role(&user1, &user2, &String::from_str(&env, "moderator"));
+    }
 
-    // Create a greeting
-    let greeting_id = 1u64;
-    let text = String::from_str(&env, "Test");
-    client.create_greeting(&greeting_id, &text, &user);
+    // Should panic when owner tries to revoke their own role (#202)
+    #[test]
+    #[should_panic(expected = "#202")]
+    fn test_cannot_revoke_owner_role() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
 
-    // Try to add empty comment
-    let empty_comment = String::from_str(&env, "");
-    client.add_comment(&user, &greeting_id, &empty_comment);
-}
+        let owner = Address::generate(&env);
+        env.mock_all_auths();
 
-#[test]
-#[should_panic(expected = "Error(Contract, #23)")] 
-fn test_add_comment_too_long_fails() {
-    let (env, client, user) = create_test_env();
-    env.mock_all_auths();
+        client.initialize_roles(&owner);
 
-    // Create a greeting
-    let greeting_id = 1u64;
-    let text = String::from_str(&env, "Test");
-    client.create_greeting(&greeting_id, &text, &user);
+        // Should panic when revoking owner
+        client.revoke_role(&owner, &owner);
+    }
 
-    // Create a comment longer than 500 characters
-    let long_text = "a".repeat(501);
-    let long_comment = String::from_str(&env, &long_text);
-    let result = client.add_comment(&user, &greeting_id, &long_comment);
-}
+    #[test]
+    fn test_is_admin() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
 
-#[test]
-fn test_add_comment_multiple() {
-    let (env, client, user1) = create_test_env();
-    env.mock_all_auths();
+        let owner = Address::generate(&env);
+        let user = Address::generate(&env);
 
-    let user2 = Address::generate(&env);
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
 
-    // Create a greeting
-    let greeting_id = 1u64;
-    let text = String::from_str(&env, "Discuss this!");
-    client.create_greeting(&greeting_id, &text, &user1);
+        assert!(client.is_admin(&owner));
+        assert!(!client.is_admin(&user));
+    }
 
-    // Add multiple comments
-    let comment1 = String::from_str(&env, "First comment");
-    let comment2 = String::from_str(&env, "Second comment");
-    let comment3 = String::from_str(&env, "Third comment");
+    #[test]
+    fn test_multiple_role_assignments() {
+        let env = Env::default();
+        let contract_id = env.register(crate::GreetingSystem, ());
+        let client = crate::GreetingSystemClient::new(&env, &contract_id);
 
-    client.add_comment(&user1, &greeting_id, &comment1);
-    client.add_comment(&user2, &greeting_id, &comment2);
-    client.add_comment(&user1, &greeting_id, &comment3);
+        let owner = Address::generate(&env);
+        let user1 = Address::generate(&env);
+        let user2 = Address::generate(&env);
+        let user3 = Address::generate(&env);
 
-    // Verify all comments were added
-    let interaction = client.get_interaction(&greeting_id);
-    assert_eq!(interaction.comments.len(), 3);
-    assert_eq!(interaction.comments.get(0).unwrap().text, comment1);
-    assert_eq!(interaction.comments.get(1).unwrap().text, comment2);
-    assert_eq!(interaction.comments.get(2).unwrap().text, comment3);
-}
+        env.mock_all_auths();
+        client.initialize_roles(&owner);
 
-#[test]
-#[should_panic(expected = "Error(Contract, #11)")] 
-fn test_add_comment_not_found() {
-    let (env, client, user) = create_test_env();
-    env.mock_all_auths();
+        client.assign_role(&owner, &user1, &String::from_str(&env, "admin"));
+        client.assign_role(&owner, &user2, &String::from_str(&env, "moderator"));
+        client.assign_role(&owner, &user3, &String::from_str(&env, "user"));
 
-    // Try to comment on non-existent greeting
-    let greeting_id = 999u64;
-    let comment = String::from_str(&env, "Comment");
-    let result = client.add_comment(&user, &greeting_id, &comment);
-}
+        assert_eq!(client.get_role(&user1), String::from_str(&env, "admin"));
+        assert_eq!(client.get_role(&user2), String::from_str(&env, "moderator"));
+        assert_eq!(client.get_role(&user3), String::from_str(&env, "user"));
+    }
 
-#[test]
-fn test_get_interaction_empty() {
-    let (env, client, user) = create_test_env();
-    env.mock_all_auths();
+    // ==================== Interaction Tests ====================
 
-    // Create a greeting with no interactions
-    let greeting_id = 1u64;
-    let text = String::from_str(&env, "No interactions yet");
-    client.create_greeting(&greeting_id, &text, &user);
+    #[test]
+    fn test_like_greeting_success() {
+        let (env, client, user) = create_test_env();
+        env.mock_all_auths();
 
-    // Get interaction should return empty interaction
-    let interaction = client.get_interaction(&greeting_id);
-    assert_eq!(interaction.greeting_id, greeting_id);
-    assert_eq!(interaction.likes, 0);
-    assert_eq!(interaction.liked_by.len(), 0);
-    assert_eq!(interaction.comments.len(), 0);
-}
+        // Create a greeting first
+        let greeting_id = 1u64;
+        let text = String::from_str(&env, "Hello, World!");
+        client.create_greeting(&greeting_id, &text, &user);
 
-#[test]
-fn test_get_likes_count() {
-    let (env, client, user1) = create_test_env();
-    env.mock_all_auths();
+        // Like the greeting
+        client.like_greeting(&user, &greeting_id);
 
-    let user2 = Address::generate(&env);
+        // Verify the like was recorded
+        let interaction = client.get_interaction(&greeting_id);
+        assert_eq!(interaction.likes, 1);
+        assert_eq!(interaction.liked_by.len(), 1);
+        assert_eq!(interaction.liked_by.get(0).unwrap(), user);
+    }
 
-    // Create a greeting
-    let greeting_id = 1u64;
-    let text = String::from_str(&env, "Like this!");
-    client.create_greeting(&greeting_id, &text, &user1);
+    #[test]
+    #[should_panic(expected = "Error(Contract, #21)")]
+    fn test_like_greeting_duplicate_fails() {
+        let (env, client, user) = create_test_env();
+        env.mock_all_auths();
 
-    // Initially no likes
-    let count = client.get_likes_count(&greeting_id);
-    assert_eq!(count, 0);
+        // Create a greeting
+        let greeting_id = 1u64;
+        let text = String::from_str(&env, "Hello!");
+        client.create_greeting(&greeting_id, &text, &user);
 
-    // Add likes
-    client.like_greeting(&user1, &greeting_id);
-    client.like_greeting(&user2, &greeting_id);
+        // First like should succeed
+        client.like_greeting(&user, &greeting_id);
 
-    // Verify count
-    let count = client.get_likes_count(&greeting_id);
-    assert_eq!(count, 2);
-}
+        // Second like by same user should fail
+        client.like_greeting(&user, &greeting_id);
+    }
 
-#[test]
-fn test_get_comments_count() {
-    let (env, client, user) = create_test_env();
-    env.mock_all_auths();
+    #[test]
+    fn test_like_greeting_multiple_users() {
+        let (env, client, user1) = create_test_env();
+        env.mock_all_auths();
 
-    // Create a greeting
-    let greeting_id = 1u64;
-    let text = String::from_str(&env, "Comment here");
-    client.create_greeting(&greeting_id, &text, &user);
+        let user2 = Address::generate(&env);
+        let user3 = Address::generate(&env);
 
-    // Initially no comments
-    let count = client.get_comments_count(&greeting_id);
-    assert_eq!(count, 0);
+        // Create a greeting
+        let greeting_id = 1u64;
+        let text = String::from_str(&env, "Popular greeting!");
+        client.create_greeting(&greeting_id, &text, &user1);
 
-    // Add comments
-    let comment1 = String::from_str(&env, "First");
-    let comment2 = String::from_str(&env, "Second");
-    client.add_comment(&user, &greeting_id, &comment1);
-    client.add_comment(&user, &greeting_id, &comment2);
+        // Multiple users like the greeting
+        client.like_greeting(&user1, &greeting_id);
+        client.like_greeting(&user2, &greeting_id);
+        client.like_greeting(&user3, &greeting_id);
 
-    // Verify count
-    let count = client.get_comments_count(&greeting_id);
-    assert_eq!(count, 2);
-}
+        // Verify all likes were recorded
+        let interaction = client.get_interaction(&greeting_id);
+        assert_eq!(interaction.likes, 3);
+        assert_eq!(interaction.liked_by.len(), 3);
+    }
 
-#[test]
-fn test_likes_and_comments_combined() {
-    let (env, client, user1) = create_test_env();
-    env.mock_all_auths();
+    #[test]
+    #[should_panic(expected = "Error(Contract, #11)")]
+    fn test_like_greeting_not_found() {
+        let (env, client, user) = create_test_env();
+        env.mock_all_auths();
 
-    let user2 = Address::generate(&env);
+        // Try to like non-existent greeting
+        let greeting_id = 999u64;
+        client.like_greeting(&user, &greeting_id);
+    }
 
-    // Create a greeting
-    let greeting_id = 1u64;
-    let text = String::from_str(&env, "Engage with this!");
-    client.create_greeting(&greeting_id, &text, &user1);
+    #[test]
+    fn test_add_comment_success() {
+        let (env, client, user) = create_test_env();
+        env.mock_all_auths();
 
-    // Add likes and comments
-    client.like_greeting(&user1, &greeting_id);
-    client.like_greeting(&user2, &greeting_id);
+        // Create a greeting
+        let greeting_id = 1u64;
+        let greeting_text = String::from_str(&env, "Test greeting");
+        client.create_greeting(&greeting_id, &greeting_text, &user);
 
-    let comment1 = String::from_str(&env, "Great!");
-    let comment2 = String::from_str(&env, "Awesome!");
-    client.add_comment(&user1, &greeting_id, &comment1);
-    client.add_comment(&user2, &greeting_id, &comment2);
+        // Add a comment
+        let comment_text = String::from_str(&env, "Nice greeting!");
+        client.add_comment(&user, &greeting_id, &comment_text);
 
-    // Verify both likes and comments
-    let interaction = client.get_interaction(&greeting_id);
-    assert_eq!(interaction.likes, 2);
-    assert_eq!(interaction.comments.len(), 2);
+        // Verify the comment was added
+        let interaction = client.get_interaction(&greeting_id);
+        assert_eq!(interaction.comments.len(), 1);
 
-    // Verify counts
-    assert_eq!(client.get_likes_count(&greeting_id), 2);
-    assert_eq!(client.get_comments_count(&greeting_id), 2);
+        let comment = interaction.comments.get(0).unwrap();
+        assert_eq!(comment.author, user);
+        assert_eq!(comment.text, comment_text);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #22)")]
+    fn test_add_comment_empty_fails() {
+        let (env, client, user) = create_test_env();
+        env.mock_all_auths();
+
+        // Create a greeting
+        let greeting_id = 1u64;
+        let text = String::from_str(&env, "Test");
+        client.create_greeting(&greeting_id, &text, &user);
+
+        // Try to add empty comment
+        let empty_comment = String::from_str(&env, "");
+        client.add_comment(&user, &greeting_id, &empty_comment);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #23)")]
+    fn test_add_comment_too_long_fails() {
+        let (env, client, user) = create_test_env();
+        env.mock_all_auths();
+
+        // Create a greeting
+        let greeting_id = 1u64;
+        let text = String::from_str(&env, "Test");
+        client.create_greeting(&greeting_id, &text, &user);
+
+        // Create a comment longer than 500 characters
+        let long_text = "a".repeat(501);
+        let long_comment = String::from_str(&env, &long_text);
+        let result = client.add_comment(&user, &greeting_id, &long_comment);
+    }
+
+    #[test]
+    fn test_add_comment_multiple() {
+        let (env, client, user1) = create_test_env();
+        env.mock_all_auths();
+
+        let user2 = Address::generate(&env);
+
+        // Create a greeting
+        let greeting_id = 1u64;
+        let text = String::from_str(&env, "Discuss this!");
+        client.create_greeting(&greeting_id, &text, &user1);
+
+        // Add multiple comments
+        let comment1 = String::from_str(&env, "First comment");
+        let comment2 = String::from_str(&env, "Second comment");
+        let comment3 = String::from_str(&env, "Third comment");
+
+        client.add_comment(&user1, &greeting_id, &comment1);
+        client.add_comment(&user2, &greeting_id, &comment2);
+        client.add_comment(&user1, &greeting_id, &comment3);
+
+        // Verify all comments were added
+        let interaction = client.get_interaction(&greeting_id);
+        assert_eq!(interaction.comments.len(), 3);
+        assert_eq!(interaction.comments.get(0).unwrap().text, comment1);
+        assert_eq!(interaction.comments.get(1).unwrap().text, comment2);
+        assert_eq!(interaction.comments.get(2).unwrap().text, comment3);
+    }
+
+    #[test]
+    #[should_panic(expected = "Error(Contract, #11)")]
+    fn test_add_comment_not_found() {
+        let (env, client, user) = create_test_env();
+        env.mock_all_auths();
+
+        // Try to comment on non-existent greeting
+        let greeting_id = 999u64;
+        let comment = String::from_str(&env, "Comment");
+        let result = client.add_comment(&user, &greeting_id, &comment);
+    }
+
+    #[test]
+    fn test_get_interaction_empty() {
+        let (env, client, user) = create_test_env();
+        env.mock_all_auths();
+
+        // Create a greeting with no interactions
+        let greeting_id = 1u64;
+        let text = String::from_str(&env, "No interactions yet");
+        client.create_greeting(&greeting_id, &text, &user);
+
+        // Get interaction should return empty interaction
+        let interaction = client.get_interaction(&greeting_id);
+        assert_eq!(interaction.greeting_id, greeting_id);
+        assert_eq!(interaction.likes, 0);
+        assert_eq!(interaction.liked_by.len(), 0);
+        assert_eq!(interaction.comments.len(), 0);
+    }
+
+    #[test]
+    fn test_get_likes_count() {
+        let (env, client, user1) = create_test_env();
+        env.mock_all_auths();
+
+        let user2 = Address::generate(&env);
+
+        // Create a greeting
+        let greeting_id = 1u64;
+        let text = String::from_str(&env, "Like this!");
+        client.create_greeting(&greeting_id, &text, &user1);
+
+        // Initially no likes
+        let count = client.get_likes_count(&greeting_id);
+        assert_eq!(count, 0);
+
+        // Add likes
+        client.like_greeting(&user1, &greeting_id);
+        client.like_greeting(&user2, &greeting_id);
+
+        // Verify count
+        let count = client.get_likes_count(&greeting_id);
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn test_get_comments_count() {
+        let (env, client, user) = create_test_env();
+        env.mock_all_auths();
+
+        // Create a greeting
+        let greeting_id = 1u64;
+        let text = String::from_str(&env, "Comment here");
+        client.create_greeting(&greeting_id, &text, &user);
+
+        // Initially no comments
+        let count = client.get_comments_count(&greeting_id);
+        assert_eq!(count, 0);
+
+        // Add comments
+        let comment1 = String::from_str(&env, "First");
+        let comment2 = String::from_str(&env, "Second");
+        client.add_comment(&user, &greeting_id, &comment1);
+        client.add_comment(&user, &greeting_id, &comment2);
+
+        // Verify count
+        let count = client.get_comments_count(&greeting_id);
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn test_likes_and_comments_combined() {
+        let (env, client, user1) = create_test_env();
+        env.mock_all_auths();
+
+        let user2 = Address::generate(&env);
+
+        // Create a greeting
+        let greeting_id = 1u64;
+        let text = String::from_str(&env, "Engage with this!");
+        client.create_greeting(&greeting_id, &text, &user1);
+
+        // Add likes and comments
+        client.like_greeting(&user1, &greeting_id);
+        client.like_greeting(&user2, &greeting_id);
+
+        let comment1 = String::from_str(&env, "Great!");
+        let comment2 = String::from_str(&env, "Awesome!");
+        client.add_comment(&user1, &greeting_id, &comment1);
+        client.add_comment(&user2, &greeting_id, &comment2);
+
+        // Verify both likes and comments
+        let interaction = client.get_interaction(&greeting_id);
+        assert_eq!(interaction.likes, 2);
+        assert_eq!(interaction.comments.len(), 2);
+
+        // Verify counts
+        assert_eq!(client.get_likes_count(&greeting_id), 2);
+        assert_eq!(client.get_comments_count(&greeting_id), 2);
+    }
 }

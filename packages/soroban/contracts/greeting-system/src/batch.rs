@@ -1,10 +1,10 @@
-use soroban_sdk::{Env, Vec, Address, String};
-use alloc::string::ToString;
-use crate::Error;
-use crate::utils;
-use crate::storage;
 use crate::datatype::{BatchUpdate, Greeting, OperationStatus};
 use crate::events::{emit_batch_update, BatchUpdateEvent};
+use crate::storage;
+use crate::utils;
+use crate::Error;
+use alloc::string::ToString;
+use soroban_sdk::{Address, Env, String, Vec};
 
 /// Maximum batch size to prevent gas exhaustion (tune based on testing).
 const MAX_BATCH_SIZE: u32 = 100;
@@ -39,36 +39,40 @@ pub fn batch_update_greetings(
     storage::write_batch(env, &batch)?;
 
     // Emit pending event.
-    emit_batch_update(env, &BatchUpdateEvent {
-        batch_id,
-        num_greetings,
-        status: OperationStatus::Pending,
-        processed_by: user.clone(),
-    })?;
+    emit_batch_update(
+        env,
+        &BatchUpdateEvent {
+            batch_id,
+            num_greetings,
+            status: OperationStatus::Pending,
+            processed_by: user.clone(),
+        },
+    )?;
 
     // Process updates.
-    let mut _success_count  = 0u32;
+    let mut _success_count = 0u32;
     let len = greeting_ids.len();
     for i in 0..len {
-        let gid = greeting_ids.get(i).unwrap();  
-        let update = updates.get(i).unwrap().clone();  // Clone String
+        let gid = greeting_ids.get(i).unwrap();
+        let update = updates.get(i).unwrap().clone(); // Clone String
 
         if let Err(e) = process_single_update(env, &user, gid, update) {
             // On first failure, mark batch failed and emit.
-            batch.status = OperationStatus::Failed(
-                String::from_str(env, &e.to_string())
-            );
+            batch.status = OperationStatus::Failed(String::from_str(env, &e.to_string()));
             batch.processed_at = utils::get_current_timestamp(env); // Update timestamp.
             storage::write_batch(env, &batch)?;
-            emit_batch_update(env, &BatchUpdateEvent {
-                batch_id,
-                num_greetings,
-                status: batch.status.clone(),
-                processed_by: user.clone(),
-            })?;
+            emit_batch_update(
+                env,
+                &BatchUpdateEvent {
+                    batch_id,
+                    num_greetings,
+                    status: batch.status.clone(),
+                    processed_by: user.clone(),
+                },
+            )?;
             return Err(e); // Fail the tx.
         }
-        _success_count  += 1;
+        _success_count += 1;
     }
 
     // All good: mark completed.
@@ -76,12 +80,15 @@ pub fn batch_update_greetings(
     batch.processed_at = utils::get_current_timestamp(env);
     storage::write_batch(env, &batch)?;
 
-    emit_batch_update(env, &BatchUpdateEvent {
-        batch_id,
-        num_greetings,
-        status: OperationStatus::Completed,
-        processed_by: user,
-    })?;
+    emit_batch_update(
+        env,
+        &BatchUpdateEvent {
+            batch_id,
+            num_greetings,
+            status: OperationStatus::Completed,
+            processed_by: user,
+        },
+    )?;
 
     Ok(batch_id)
 }
@@ -126,9 +133,9 @@ fn validate_batch_inputs(greeting_ids: &Vec<u64>, updates: &Vec<String>) -> Resu
     // Manual duplicate check (since we can't use BTreeSet).
     let len = greeting_ids.len();
     for i in 0..len {
-        let gid_i = greeting_ids.get(i).unwrap();  // Fix: * for u64
+        let gid_i = greeting_ids.get(i).unwrap(); // Fix: * for u64
         for j in (i + 1)..len {
-            let gid_j = greeting_ids.get(j).unwrap();  // Fix: *
+            let gid_j = greeting_ids.get(j).unwrap(); // Fix: *
             if gid_i == gid_j {
                 return Err(Error::DuplicateGreetingIds);
             }
@@ -153,7 +160,7 @@ fn process_single_update(
     new_text: String,
 ) -> Result<(), Error> {
     let mut greeting = storage::read_greeting(env, id).map_err(|_| Error::UnauthorizedGreeting)?;
-    
+
     // Auth check: User must be creator (extend for admin).
     if greeting.creator != *user {
         return Err(Error::UnauthorizedGreeting);
@@ -162,6 +169,5 @@ fn process_single_update(
     // Apply update.
     greeting.text = new_text;
     greeting.updated_at = utils::get_current_timestamp(env);
-    storage::write_greeting(env, &greeting)
-        .map_err(|_| Error::StorageError)
+    storage::write_greeting(env, &greeting).map_err(|_| Error::StorageError)
 }

@@ -1,10 +1,15 @@
 extern crate std;
 
 use crate::{
-    governance::{Proposal, Vote, ProposalType, ProposalStatus, VoterEligibility, GovernanceConfig},
+    governance::{
+        GovernanceConfig, Proposal, ProposalStatus, ProposalType, Vote, VoterEligibility,
+    },
     EducationalNFTContract, EducationalNFTContractClient, MockEducatorVerificationNft,
 };
-use soroban_sdk::{testutils::{Address as _, Ledger}, Address, Bytes, Env, String, Vec};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    Address, Bytes, Env, String, Vec,
+};
 
 fn setup_governance_test_environment() -> (
     Env,
@@ -34,7 +39,7 @@ fn setup_governance_test_environment() -> (
     let collection_id = 1u64;
     let fractions = 100u32;
     let metadata_hash = Bytes::from_array(&env, &[1; 32]);
-    
+
     let token_id = client.mint_nft(&proposer, &collection_id, &fractions, &metadata_hash);
 
     client.initialize_governance(&owner);
@@ -44,10 +49,11 @@ fn setup_governance_test_environment() -> (
 
 #[test]
 fn test_initialize_governance() {
-    let (env, owner, _educator, _proposer, _voter, client, _token_id) = setup_governance_test_environment();
+    let (env, owner, _educator, _proposer, _voter, client, _token_id) =
+        setup_governance_test_environment();
 
     let config = client.get_governance_config();
-    
+
     assert_eq!(config.min_proposal_duration, 100);
     assert_eq!(config.max_proposal_duration, 604800);
     assert_eq!(config.min_quorum_percentage, 10);
@@ -59,10 +65,14 @@ fn test_initialize_governance() {
 
 #[test]
 fn test_create_proposal() {
-    let (env, _owner, _educator, proposer, _voter, client, _token_id) = setup_governance_test_environment();
+    let (env, _owner, _educator, proposer, _voter, client, _token_id) =
+        setup_governance_test_environment();
 
     let title = String::from_str(&env, "Add new metadata field");
-    let description = String::from_str(&env, "Proposal to add 'difficulty_level' field to NFT metadata");
+    let description = String::from_str(
+        &env,
+        "Proposal to add 'difficulty_level' field to NFT metadata",
+    );
     let vote_end = env.ledger().timestamp() + 172800;
 
     let proposal_id = client.create_proposal(
@@ -91,10 +101,14 @@ fn test_create_proposal() {
 
 #[test]
 fn test_create_royalty_adjustment_proposal() {
-    let (env, _owner, _educator, proposer, _voter, client, _token_id) = setup_governance_test_environment();
+    let (env, _owner, _educator, proposer, _voter, client, _token_id) =
+        setup_governance_test_environment();
 
     let title = String::from_str(&env, "Adjust platform royalty rate");
-    let description = String::from_str(&env, "Proposal to reduce default royalty rate from 5% to 3%");
+    let description = String::from_str(
+        &env,
+        "Proposal to reduce default royalty rate from 5% to 3%",
+    );
     let vote_end = env.ledger().timestamp() + 172800;
 
     let proposal_id = client.create_proposal(
@@ -111,7 +125,8 @@ fn test_create_royalty_adjustment_proposal() {
 
 #[test]
 fn test_vote_on_proposal() {
-    let (env, _owner, _educator, proposer, voter, client, _token_id) = setup_governance_test_environment();
+    let (env, _owner, _educator, proposer, voter, client, _token_id) =
+        setup_governance_test_environment();
 
     let title = String::from_str(&env, "Test Proposal");
     let description = String::from_str(&env, "Test proposal for voting");
@@ -146,7 +161,8 @@ fn test_vote_on_proposal() {
 
 #[test]
 fn test_multiple_votes() {
-    let (env, _owner, _educator, proposer, _voter, client, _token_id) = setup_governance_test_environment();
+    let (env, _owner, _educator, proposer, _voter, client, _token_id) =
+        setup_governance_test_environment();
 
     let voter1 = Address::generate(&env);
     let voter2 = Address::generate(&env);
@@ -180,7 +196,8 @@ fn test_multiple_votes() {
 
 #[test]
 fn test_finalize_proposal_approved() {
-    let (env, _owner, _educator, proposer, voter, client, _token_id) = setup_governance_test_environment();
+    let (env, _owner, _educator, proposer, voter, client, _token_id) =
+        setup_governance_test_environment();
 
     client.mint_nft(&voter, &1u64, &100u32, &Bytes::from_array(&env, &[2; 32]));
 
@@ -210,7 +227,8 @@ fn test_finalize_proposal_approved() {
 
 #[test]
 fn test_finalize_proposal_rejected() {
-    let (env, _owner, _educator, proposer, voter, client, _token_id) = setup_governance_test_environment();
+    let (env, _owner, _educator, proposer, voter, client, _token_id) =
+        setup_governance_test_environment();
 
     client.mint_nft(&voter, &1u64, &100u32, &Bytes::from_array(&env, &[2; 32]));
 
@@ -240,7 +258,8 @@ fn test_finalize_proposal_rejected() {
 
 #[test]
 fn test_voter_eligibility() {
-    let (env, _owner, _educator, _proposer, voter, client, _token_id) = setup_governance_test_environment();
+    let (env, _owner, _educator, _proposer, voter, client, _token_id) =
+        setup_governance_test_environment();
 
     client.mint_nft(&voter, &1u64, &100u32, &Bytes::from_array(&env, &[2; 32]));
     client.update_reputation_boost(&_owner, &voter, &150u32, &3u32);
@@ -256,7 +275,8 @@ fn test_voter_eligibility() {
 
 #[test]
 fn test_governance_config_update() {
-    let (env, owner, _educator, _proposer, _voter, client, _token_id) = setup_governance_test_environment();
+    let (env, owner, _educator, _proposer, _voter, client, _token_id) =
+        setup_governance_test_environment();
 
     let mut new_config = client.get_governance_config();
     new_config.min_quorum_percentage = 2000;
@@ -273,7 +293,8 @@ fn test_governance_config_update() {
 
 #[test]
 fn test_governance_error_conditions() {
-    let (env, _owner, _educator, proposer, voter, client, _token_id) = setup_governance_test_environment();
+    let (env, _owner, _educator, proposer, voter, client, _token_id) =
+        setup_governance_test_environment();
 
     let title = String::from_str(&env, "Test Proposal");
     let description = String::from_str(&env, "Test proposal");
@@ -318,7 +339,8 @@ fn test_governance_error_conditions() {
 
 #[test]
 fn test_proposal_types() {
-    let (env, _owner, _educator, proposer, _voter, client, _token_id) = setup_governance_test_environment();
+    let (env, _owner, _educator, proposer, _voter, client, _token_id) =
+        setup_governance_test_environment();
 
     let vote_end = env.ledger().timestamp() + 172800;
 
@@ -350,20 +372,40 @@ fn test_proposal_types() {
     let royalty_proposal = client.get_proposal(&royalty_id).unwrap();
     let curation_proposal = client.get_proposal(&curation_id).unwrap();
 
-    assert_eq!(feature_proposal.proposal_type, ProposalType::FeatureEnhancement);
-    assert_eq!(royalty_proposal.proposal_type, ProposalType::RoyaltyAdjustment);
-    assert_eq!(curation_proposal.proposal_type, ProposalType::ContentCuration);
+    assert_eq!(
+        feature_proposal.proposal_type,
+        ProposalType::FeatureEnhancement
+    );
+    assert_eq!(
+        royalty_proposal.proposal_type,
+        ProposalType::RoyaltyAdjustment
+    );
+    assert_eq!(
+        curation_proposal.proposal_type,
+        ProposalType::ContentCuration
+    );
 }
 
 #[test]
 fn test_weighted_voting_with_reputation() {
-    let (env, _owner, _educator, proposer, _voter, client, _token_id) = setup_governance_test_environment();
+    let (env, _owner, _educator, proposer, _voter, client, _token_id) =
+        setup_governance_test_environment();
 
     let high_rep_voter = Address::generate(&env);
     let low_rep_voter = Address::generate(&env);
 
-    client.mint_nft(&high_rep_voter, &1u64, &100u32, &Bytes::from_array(&env, &[2; 32]));
-    client.mint_nft(&low_rep_voter, &1u64, &100u32, &Bytes::from_array(&env, &[3; 32]));
+    client.mint_nft(
+        &high_rep_voter,
+        &1u64,
+        &100u32,
+        &Bytes::from_array(&env, &[2; 32]),
+    );
+    client.mint_nft(
+        &low_rep_voter,
+        &1u64,
+        &100u32,
+        &Bytes::from_array(&env, &[3; 32]),
+    );
 
     client.update_reputation_boost(&_owner, &high_rep_voter, &500u32, &5u32);
     client.update_reputation_boost(&_owner, &low_rep_voter, &100u32, &1u32);
@@ -389,14 +431,14 @@ fn test_weighted_voting_with_reputation() {
     client.vote_on_proposal(&low_rep_voter, &proposal_id, &false);
 
     let proposal = client.get_proposal(&proposal_id).unwrap();
-    
+
     assert!(proposal.yes_votes > proposal.no_votes);
 }
 
 #[test]
 fn test_data_structures() {
     let env = Env::default();
-    
+
     let proposer = Address::generate(&env);
     let voter = Address::generate(&env);
     let timestamp = env.ledger().timestamp();
@@ -417,7 +459,7 @@ fn test_data_structures() {
         created_at: timestamp,
         executed_at: None,
     };
-    
+
     assert_eq!(proposal.proposal_id, 1);
     assert_eq!(proposal.creator, proposer);
     assert_eq!(proposal.status, ProposalStatus::Pending);
@@ -429,7 +471,7 @@ fn test_data_structures() {
         voting_power: 10,
         timestamp,
     };
-    
+
     assert_eq!(vote.proposal_id, 1);
     assert_eq!(vote.voter, voter);
     assert_eq!(vote.vote, true);
@@ -442,7 +484,7 @@ fn test_data_structures() {
         voting_power: 15,
         is_verified: true,
     };
-    
+
     assert_eq!(eligibility.address, voter);
     assert_eq!(eligibility.nft_count, 5);
     assert_eq!(eligibility.reputation_score, 250);
@@ -452,7 +494,8 @@ fn test_data_structures() {
 
 #[test]
 fn test_governance_integration() {
-    let (env, owner, _educator, proposer, voter, client, _token_id) = setup_governance_test_environment();
+    let (env, owner, _educator, proposer, voter, client, _token_id) =
+        setup_governance_test_environment();
 
     client.mint_nft(&voter, &1u64, &100u32, &Bytes::from_array(&env, &[2; 32]));
     client.update_reputation_boost(&owner, &voter, &200u32, &3u32);

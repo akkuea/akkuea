@@ -7,21 +7,21 @@ use stellar_access::ownable::{self as ownable, Ownable};
 use stellar_macros::default_impl;
 use stellar_tokens::non_fungible::{Base, NonFungibleToken};
 
+mod batch;
 mod governance;
-mod metadata;
 mod marketplace;
+mod metadata;
 mod mock_educator_verification_nft;
 mod nft;
 mod social;
-mod batch;
 mod utils;
 
+pub use batch::*;
 pub use governance::*;
-pub use metadata::*;
 pub use marketplace::*;
+pub use metadata::*;
 pub use nft::*;
 pub use social::*;
-pub use batch::*;
 pub use utils::*;
 
 pub use mock_educator_verification_nft::MockEducatorVerificationNft;
@@ -287,9 +287,10 @@ impl EducationalNFTContract {
         if let Some(v) = version {
             // Get specific version from history
             let history = nft::get_metadata_history_safe(e, token_id)?;
-            let version_info = history.get_version(v)
+            let version_info = history
+                .get_version(v)
                 .ok_or(utils::NFTError::MetadataVersionNotFound)?;
-            
+
             // For now, we'll return the current metadata with the version info
             // In a more complete implementation, we'd reconstruct the full metadata for that version
             let mut metadata = nft::get_nft_metadata_safe(e, token_id)?;
@@ -317,7 +318,10 @@ impl EducationalNFTContract {
     }
 
     /// Get tokens by content type
-    pub fn get_tokens_by_content_type(e: &Env, content_type: String) -> Result<Vec<u64>, utils::NFTError> {
+    pub fn get_tokens_by_content_type(
+        e: &Env,
+        content_type: String,
+    ) -> Result<Vec<u64>, utils::NFTError> {
         let parsed_content_type = if content_type == String::from_str(e, "Course") {
             metadata::ContentType::Course
         } else if content_type == String::from_str(e, "Certification") {
@@ -401,12 +405,19 @@ impl EducationalNFTContract {
     }
 
     /// Get collaborative group information
-    pub fn get_collaborative_group_info(e: &Env, group_id: u64) -> Option<social::CollaborativeGroup> {
+    pub fn get_collaborative_group_info(
+        e: &Env,
+        group_id: u64,
+    ) -> Option<social::CollaborativeGroup> {
         social::get_collaborative_group(e, group_id)
     }
 
     /// Get educational journey showcase
-    pub fn get_educational_journey(e: &Env, user: Address, collection_id: u64) -> Option<social::EducationalJourney> {
+    pub fn get_educational_journey(
+        e: &Env,
+        user: Address,
+        collection_id: u64,
+    ) -> Option<social::EducationalJourney> {
         social::get_educational_journey(e, &user, collection_id)
     }
 
@@ -474,7 +485,7 @@ impl EducationalNFTContract {
     ) -> Result<Vec<(u64, EducationalNFT)>, NFTError> {
         batch::batch_query_ownership(e, token_ids)
     }
-     
+
     // ========================================
     // MARKETPLACE FEATURES
     // ========================================
@@ -515,21 +526,13 @@ impl EducationalNFTContract {
     }
 
     /// Settle an auction and transfer NFT to highest bidder
-    pub fn settle_auction(
-        e: &Env,
-        caller: Address,
-        token_id: u64,
-    ) -> Result<(), utils::NFTError> {
+    pub fn settle_auction(e: &Env, caller: Address, token_id: u64) -> Result<(), utils::NFTError> {
         caller.require_auth();
         marketplace::settle_auction(e, &caller, token_id)
     }
 
     /// Cancel a listing
-    pub fn cancel_listing(
-        e: &Env,
-        caller: Address,
-        token_id: u64,
-    ) -> Result<(), utils::NFTError> {
+    pub fn cancel_listing(e: &Env, caller: Address, token_id: u64) -> Result<(), utils::NFTError> {
         caller.require_auth();
         marketplace::cancel_listing(e, &caller, token_id)
     }

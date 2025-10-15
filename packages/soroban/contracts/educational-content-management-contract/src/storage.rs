@@ -30,7 +30,7 @@ pub struct ContentVersion {
     pub creator: Address,
     pub creation_date: u64,
     pub change_notes: String,
-    pub upvotes: u32, // Version-specific upvotes
+    pub upvotes: u32,                          // Version-specific upvotes
     pub verification_level: VerificationLevel, // Version-specific verification level
 }
 
@@ -47,7 +47,7 @@ pub struct VersionDiff {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PermissionType {
     Collaborator = 0, // Can submit content for review
-    // Reviewer = 1,
+                      // Reviewer = 1,
 }
 
 #[contracttype]
@@ -90,23 +90,23 @@ pub enum DataKey {
     UserVotes(Address, u64),
 
     // Versioning keys
-    VersionSnapshot(u64, u32),              // content_id, version -> Content
-    ContentHistory(u64, u32),               // content_id, version -> ContentVersion
-    VersionCount(u64),                      // content_id -> total versions  
-    VersionVotes(Address, u64, u32),        // voter, content_id, version
+    VersionSnapshot(u64, u32),       // content_id, version -> Content
+    ContentHistory(u64, u32),        // content_id, version -> ContentVersion
+    VersionCount(u64),               // content_id -> total versions
+    VersionVotes(Address, u64, u32), // voter, content_id, version
 
     // Collaborative keys
-    CollaboratorPermission(Address, u64),   // collaborator, content_id -> CollaboratorPermission
-    CollaboratorSubmission(Address, u64),   // collaborator, content_id -> CollaboratorSubmission
+    CollaboratorPermission(Address, u64), // collaborator, content_id -> CollaboratorPermission
+    CollaboratorSubmission(Address, u64), // collaborator, content_id -> CollaboratorSubmission
     UserContentContributions(Address, u64), // collaborator, content_id -> Vec<CollaboratorSubmission>
-    
+
     // Analytics keys
-    ContentAnalytics(u64),                    // content_id -> ContentAnalytics
-    TimeBasedMetrics(u64, u64, TimePeriod),   // content_id, timestamp, period -> TimeBasedMetrics
-    CategoryAnalytics(String),                // category -> CategoryAnalytics
-    TrendingContent(u64, TrendingPeriod),     // content_id, period -> TrendingContent
-    TrendingSnapshot(TrendingPeriod, u64),    // period, timestamp -> TrendingSnapshot
-    AnalyticsCounter,                         // u64
+    ContentAnalytics(u64),                  // content_id -> ContentAnalytics
+    TimeBasedMetrics(u64, u64, TimePeriod), // content_id, timestamp, period -> TimeBasedMetrics
+    CategoryAnalytics(String),              // category -> CategoryAnalytics
+    TrendingContent(u64, TrendingPeriod),   // content_id, period -> TrendingContent
+    TrendingSnapshot(TrendingPeriod, u64),  // period, timestamp -> TrendingSnapshot
+    AnalyticsCounter,                       // u64
 }
 
 // --- Advanced Verification and Moderation Additions ---
@@ -174,10 +174,10 @@ pub struct Dispute {
 pub enum AdvDataKey {
     VerificationRecord(u64), // content_id -> Vec<VerificationRecord>
     Delegation(Address),     // delegator -> Vec<Delegation>
-    Flag(u64),              // content_id -> Vec<Flag>
-    Moderation(u64),        // content_id -> Vec<ModerationAction>
-    Dispute(u64),           // dispute_id -> Dispute
-    DisputeCounter,         // u64
+    Flag(u64),               // content_id -> Vec<Flag>
+    Moderation(u64),         // content_id -> Vec<ModerationAction>
+    Dispute(u64),            // dispute_id -> Dispute
+    DisputeCounter,          // u64
 }
 
 /// ANALYTICS STORAGE STRUCTURES
@@ -218,7 +218,7 @@ pub struct CategoryAnalytics {
     pub total_content: u32,
     pub total_views: u64,
     pub total_upvotes: u32,
-    pub average_rating: u32,  // 0-50000 (scaled to avoid decimals, 50000 = 5.0)
+    pub average_rating: u32, // 0-50000 (scaled to avoid decimals, 50000 = 5.0)
     pub trending_content_count: u32,
     pub last_updated: u64,
 }
@@ -267,9 +267,10 @@ pub fn save_content(env: &Env, content: &Content) {
 // Retrieve content from contract storage
 pub fn get_content(env: &Env, content_id: u64) -> Content {
     let key = DataKey::Content(content_id);
-    env.storage().instance().get(&key).unwrap_or_else(|| {
-        panic!("content with ID {} not found", content_id)
-    })
+    env.storage()
+        .instance()
+        .get(&key)
+        .unwrap_or_else(|| panic!("content with ID {} not found", content_id))
 }
 
 // Record a user's vote for a specific content
@@ -338,9 +339,10 @@ pub fn save_version_snapshot(env: &Env, content_id: u64, version: u32, content: 
 // Get content snapshot for a version
 pub fn get_version_snapshot(env: &Env, content_id: u64, version: u32) -> Content {
     let key = DataKey::VersionSnapshot(content_id, version);
-    env.storage().instance().get(&key).unwrap_or_else(|| {
-        panic!("version snapshot not found")
-    })
+    env.storage()
+        .instance()
+        .get(&key)
+        .unwrap_or_else(|| panic!("version snapshot not found"))
 }
 
 // Save version info/metadata
@@ -352,9 +354,10 @@ pub fn save_version_info(env: &Env, content_id: u64, version: u32, version_info:
 // Get version info/metadata
 pub fn get_version_info(env: &Env, content_id: u64, version: u32) -> ContentVersion {
     let key = DataKey::ContentHistory(content_id, version);
-    env.storage().instance().get(&key).unwrap_or_else(|| {
-        panic!("version info not found")
-    })
+    env.storage()
+        .instance()
+        .get(&key)
+        .unwrap_or_else(|| panic!("version info not found"))
 }
 
 // Get version count for content
@@ -370,7 +373,12 @@ pub fn save_version_count(env: &Env, content_id: u64, count: u32) {
 }
 
 // Check if user voted on specific version
-pub fn has_user_voted_on_version(env: &Env, voter: &Address, content_id: u64, version: u32) -> bool {
+pub fn has_user_voted_on_version(
+    env: &Env,
+    voter: &Address,
+    content_id: u64,
+    version: u32,
+) -> bool {
     let key = DataKey::VersionVotes(voter.clone(), content_id, version);
     env.storage().instance().has(&key)
 }
@@ -385,45 +393,81 @@ pub fn record_version_vote(env: &Env, voter: Address, content_id: u64, version: 
 /// COLLABORATIVE STORAGE FUNCTIONS
 ///
 /// Save user permission for content
-pub fn save_collaborative_permission(env: &Env, user: Address, content_id: u64, permission: &CollaboratorPermission) {
+pub fn save_collaborative_permission(
+    env: &Env,
+    user: Address,
+    content_id: u64,
+    permission: &CollaboratorPermission,
+) {
     let key = DataKey::CollaboratorPermission(user, content_id);
     env.storage().instance().set(&key, permission);
 }
 
 /// Get user permission for content
-pub fn get_collaborative_permission(env: &Env, user: &Address, content_id: u64) -> CollaboratorPermission {
+pub fn get_collaborative_permission(
+    env: &Env,
+    user: &Address,
+    content_id: u64,
+) -> CollaboratorPermission {
     let key = DataKey::CollaboratorPermission(user.clone(), content_id);
-    env.storage().instance().get(&key).unwrap_or_else(|| {
-        panic!("permission not found for user and content_id")
-    })
+    env.storage()
+        .instance()
+        .get(&key)
+        .unwrap_or_else(|| panic!("permission not found for user and content_id"))
 }
 
 /// Save collaborator submission
-pub fn save_collaborative_submission(env: &Env, submitter: Address, content_id: u64, submission: &CollaboratorSubmission) {
+pub fn save_collaborative_submission(
+    env: &Env,
+    submitter: Address,
+    content_id: u64,
+    submission: &CollaboratorSubmission,
+) {
     let key = DataKey::CollaboratorSubmission(submitter, content_id);
     env.storage().instance().set(&key, submission);
 }
 
 /// Get collaborator submission
-pub fn get_collaborative_submission(env: &Env, submitter: &Address, content_id: u64) -> CollaboratorSubmission {
+pub fn get_collaborative_submission(
+    env: &Env,
+    submitter: &Address,
+    content_id: u64,
+) -> CollaboratorSubmission {
     let key = DataKey::CollaboratorSubmission(submitter.clone(), content_id);
-    env.storage().instance().get(&key).unwrap_or_else(|| {
-        panic!("submission not found for submitter and content_id")
-    })
+    env.storage()
+        .instance()
+        .get(&key)
+        .unwrap_or_else(|| panic!("submission not found for submitter and content_id"))
 }
 
 /// Save contribution to user history
-pub fn save_contribution_to_history(env: &Env, user: &Address, content_id: u64, submission: &CollaboratorSubmission) {
+pub fn save_contribution_to_history(
+    env: &Env,
+    user: &Address,
+    content_id: u64,
+    submission: &CollaboratorSubmission,
+) {
     let key = DataKey::UserContentContributions(user.clone(), content_id);
-    let mut history: Vec<CollaboratorSubmission> = env.storage().instance().get(&key).unwrap_or_else(|| Vec::new(env));
+    let mut history: Vec<CollaboratorSubmission> = env
+        .storage()
+        .instance()
+        .get(&key)
+        .unwrap_or_else(|| Vec::new(env));
     history.push_back(submission.clone());
     env.storage().instance().set(&key, &history);
 }
 
 /// Get all contribution history for a user on specific content
-pub fn get_user_content_contribution_history(env: &Env, user: &Address, content_id: u64) -> Vec<CollaboratorSubmission> {
+pub fn get_user_content_contribution_history(
+    env: &Env,
+    user: &Address,
+    content_id: u64,
+) -> Vec<CollaboratorSubmission> {
     let key = DataKey::UserContentContributions(user.clone(), content_id);
-    env.storage().instance().get(&key).unwrap_or_else(|| Vec::new(env))
+    env.storage()
+        .instance()
+        .get(&key)
+        .unwrap_or_else(|| Vec::new(env))
 }
 
 ///
@@ -449,7 +493,12 @@ pub fn save_time_based_metrics(env: &Env, metrics: &TimeBasedMetrics) {
 }
 
 /// Get time-based metrics for a content item
-pub fn get_time_based_metrics(env: &Env, content_id: u64, timestamp: u64, period: TimePeriod) -> Option<TimeBasedMetrics> {
+pub fn get_time_based_metrics(
+    env: &Env,
+    content_id: u64,
+    timestamp: u64,
+    period: TimePeriod,
+) -> Option<TimeBasedMetrics> {
     let key = DataKey::TimeBasedMetrics(content_id, timestamp, period);
     env.storage().instance().get(&key)
 }
@@ -473,7 +522,11 @@ pub fn save_trending_content(env: &Env, trending: &TrendingContent) {
 }
 
 /// Get trending content data
-pub fn get_trending_content(env: &Env, content_id: u64, period: TrendingPeriod) -> Option<TrendingContent> {
+pub fn get_trending_content(
+    env: &Env,
+    content_id: u64,
+    period: TrendingPeriod,
+) -> Option<TrendingContent> {
     let key = DataKey::TrendingContent(content_id, period);
     env.storage().instance().get(&key)
 }
@@ -485,7 +538,11 @@ pub fn save_trending_snapshot(env: &Env, snapshot: &TrendingSnapshot) {
 }
 
 /// Get trending snapshot
-pub fn get_trending_snapshot(env: &Env, period: TrendingPeriod, timestamp: u64) -> Option<TrendingSnapshot> {
+pub fn get_trending_snapshot(
+    env: &Env,
+    period: TrendingPeriod,
+    timestamp: u64,
+) -> Option<TrendingSnapshot> {
     let key = DataKey::TrendingSnapshot(period, timestamp);
     env.storage().instance().get(&key)
 }

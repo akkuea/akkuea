@@ -1,7 +1,7 @@
-use soroban_sdk::{Address, Env, Vec, String, contracttype, Map};
-use crate::storage;
 use crate::errors::TippingError;
+use crate::storage;
 use crate::utils::Utils;
+use soroban_sdk::{contracttype, Address, Env, Map, String, Vec};
 
 #[contracttype]
 #[derive(Clone, Debug, PartialEq)]
@@ -32,7 +32,7 @@ pub struct TimeBasedReport {
 #[derive(Clone, Debug, PartialEq)]
 pub struct TippingTrend {
     pub educator: Address,
-    pub trend_type: String, // "growth", "decline", "stable"
+    pub trend_type: String,      // "growth", "decline", "stable"
     pub percentage_change: i128, // percentage with 2 decimal places
     pub period_days: u32,
     pub current_amount: i128,
@@ -65,13 +65,13 @@ impl AnalyticsManager {
         period_end: u64,
     ) -> Result<(), TippingError> {
         let current_time = env.ledger().timestamp();
-        
+
         if period_end > current_time {
             return Err(TippingError::InvalidInput);
         }
 
         let analytics = Self::calculate_period_analytics(env, period_start, period_end)?;
-        
+
         // Store analytics record with timestamp as key
         storage::set_analytics_record(env, &period_start, &analytics);
 
@@ -93,9 +93,11 @@ impl AnalyticsManager {
         for i in 0..all_tips.len() {
             if let Some(tip) = all_tips.get(i) {
                 total_tips += tip.amount;
-                
+
                 // Calculate USD value if possible
-                if let Ok(usd_val) = crate::price_feeds::PriceFeed::calculate_usd_value(env, &tip.token, tip.amount) {
+                if let Ok(usd_val) =
+                    crate::price_feeds::PriceFeed::calculate_usd_value(env, &tip.token, tip.amount)
+                {
                     total_usd_value += usd_val;
                 }
 
@@ -141,10 +143,10 @@ impl AnalyticsManager {
         Utils::validate_time_period(&period_type)?;
 
         let analytics = Self::calculate_period_analytics(env, start_time, end_time)?;
-        
+
         // Get top educators for the period
         let top_educators = Self::get_top_educators_for_period(env, start_time, end_time, 5);
-        
+
         // Get top tokens for the period
         let top_tokens = Self::get_top_tokens_for_period(env, start_time, end_time, 5);
 
@@ -187,11 +189,15 @@ impl AnalyticsManager {
 
         // Simple bubble sort for top educators
         Utils::sort_by_amount(&mut result);
-        
+
         // Return top N educators
         let mut top_educators = Vec::new(env);
-        let actual_limit = if limit < result.len() as u32 { limit } else { result.len() as u32 };
-        
+        let actual_limit = if limit < result.len() as u32 {
+            limit
+        } else {
+            result.len() as u32
+        };
+
         for i in 0..actual_limit {
             if let Some(item) = result.get(i) {
                 top_educators.push_back(item);
@@ -224,10 +230,14 @@ impl AnalyticsManager {
         }
 
         Utils::sort_by_amount(&mut result);
-        
+
         let mut top_tokens = Vec::new(env);
-        let actual_limit = if limit < result.len() as u32 { limit } else { result.len() as u32 };
-        
+        let actual_limit = if limit < result.len() as u32 {
+            limit
+        } else {
+            result.len() as u32
+        };
+
         for i in 0..actual_limit {
             if let Some(item) = result.get(i) {
                 top_tokens.push_back(item);
@@ -245,28 +255,32 @@ impl AnalyticsManager {
     ) -> Result<TippingTrend, TippingError> {
         let current_time = env.ledger().timestamp();
         let period_seconds = period_days as u64 * 86400; // days to seconds
-        
+
         // Current period
         let current_start = current_time - period_seconds;
         let current_analytics = Self::calculate_period_analytics(env, current_start, current_time)?;
-        
+
         // Previous period
         let previous_start = current_start - period_seconds;
         let previous_end = current_start;
-        let previous_analytics = Self::calculate_period_analytics(env, previous_start, previous_end)?;
+        let previous_analytics =
+            Self::calculate_period_analytics(env, previous_start, previous_end)?;
 
         // Calculate percentage change
         let percentage_change = if previous_analytics.total_tips > 0 {
-            ((current_analytics.total_tips - previous_analytics.total_tips) * 10000) / previous_analytics.total_tips
+            ((current_analytics.total_tips - previous_analytics.total_tips) * 10000)
+                / previous_analytics.total_tips
         } else if current_analytics.total_tips > 0 {
             10000 // 100% growth from zero
         } else {
             0
         };
 
-        let trend_type = if percentage_change > 500 { // > 5%
+        let trend_type = if percentage_change > 500 {
+            // > 5%
             String::from_str(env, "growth")
-        } else if percentage_change < -500 { // < -5%
+        } else if percentage_change < -500 {
+            // < -5%
             String::from_str(env, "decline")
         } else {
             String::from_str(env, "stable")
@@ -292,11 +306,11 @@ impl AnalyticsManager {
         let thirty_days_ago = current_time - (30 * 86400);
 
         // Get all-time stats
-        let educator_stats = storage::get_educator_stats(env, &educator)
-            .unwrap();
+        let educator_stats = storage::get_educator_stats(env, &educator).unwrap();
 
         // Get tips from last 30 days
-        let recent_tips = storage::get_educator_tips_in_period(env, &educator, thirty_days_ago, current_time);
+        let recent_tips =
+            storage::get_educator_tips_in_period(env, &educator, thirty_days_ago, current_time);
         let mut tips_last_30_days = 0i128;
         let mut unique_supporters = Vec::new(env);
         let mut supporter_totals = Map::new(env);
@@ -327,9 +341,10 @@ impl AnalyticsManager {
 
         // Calculate growth rate
         let sixty_days_ago = current_time - (60 * 86400);
-        let previous_month_tips = storage::get_educator_tips_in_period(env, &educator, sixty_days_ago, thirty_days_ago);
+        let previous_month_tips =
+            storage::get_educator_tips_in_period(env, &educator, sixty_days_ago, thirty_days_ago);
         let mut previous_month_total = 0i128;
-        
+
         for i in 0..previous_month_tips.len() {
             if let Some(tip) = previous_month_tips.get(i) {
                 previous_month_total += tip.amount;
@@ -353,7 +368,11 @@ impl AnalyticsManager {
 
         // Limit to top 5 supporters
         let mut limited_supporters = Vec::new(env);
-        let limit = if top_supporters.len() < 5 { top_supporters.len() } else { 5 };
+        let limit = if top_supporters.len() < 5 {
+            top_supporters.len()
+        } else {
+            5
+        };
         for i in 0..limit {
             if let Some(supporter) = top_supporters.get(i) {
                 limited_supporters.push_back(supporter);

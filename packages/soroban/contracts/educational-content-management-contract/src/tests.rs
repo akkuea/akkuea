@@ -1,7 +1,7 @@
 use crate::{TokenizedEducationalContent, TokenizedEducationalContentClient, VerificationLevel};
 use soroban_sdk::{
     testutils::{Address as AddressTrait, BytesN as _},
-    Address, BytesN, Env, String, vec,
+    vec, Address, BytesN, Env, String,
 };
 
 #[test]
@@ -24,7 +24,7 @@ fn test_publish_content() {
 
     // Publish content
     let content_id = client.publish_content(&creator, &title, &content_hash, &subject_tags);
-    
+
     // Get content and verify
     let content = client.get_content(&content_id);
     assert_eq!(content.id, content_id);
@@ -43,10 +43,10 @@ fn test_multiple_content_publish() {
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
 
     let creator = Address::generate(&env);
-    
+
     // Configure authentication for the creator
     env.mock_all_auths();
-    
+
     // Publish first content
     let title1 = String::from_str(&env, "Introduction to Smart Contracts");
     let content_hash1 = BytesN::random(&env);
@@ -56,7 +56,7 @@ fn test_multiple_content_publish() {
         String::from_str(&env, "beginner"),
     ];
     let content_id1 = client.publish_content(&creator, &title1, &content_hash1, &subject_tags1);
-    
+
     // Publish second content
     let title2 = String::from_str(&env, "Advanced Smart Contract Development");
     let content_hash2 = BytesN::random(&env);
@@ -66,14 +66,14 @@ fn test_multiple_content_publish() {
         String::from_str(&env, "advanced"),
     ];
     let content_id2 = client.publish_content(&creator, &title2, &content_hash2, &subject_tags2);
-    
+
     // Verify IDs are sequential
     assert_eq!(content_id2, content_id1 + 1);
-    
+
     // Verify both contents can be retrieved
     let content1 = client.get_content(&content_id1);
     let content2 = client.get_content(&content_id2);
-    
+
     assert_eq!(content1.title, title1);
     assert_eq!(content2.title, title2);
 }
@@ -88,13 +88,13 @@ fn test_publish_empty_tags() {
     let title = String::from_str(&env, "Content with no tags");
     let content_hash = BytesN::random(&env);
     let subject_tags = vec![&env]; // Empty tags vector
-    
+
     // Configure authentication for the creator
     env.mock_all_auths();
-    
+
     // Publish content with empty tags
     let content_id = client.publish_content(&creator, &title, &content_hash, &subject_tags);
-    
+
     // Verify content was published with empty tags
     let content = client.get_content(&content_id);
     assert_eq!(content.subject_tags, subject_tags);
@@ -113,10 +113,7 @@ fn test_upvote_content() {
     let creator = Address::generate(&env);
     let title = String::from_str(&env, "Blockchain Basics");
     let content_hash = BytesN::random(&env);
-    let subject_tags = vec![
-        &env,
-        String::from_str(&env, "blockchain"),
-    ];
+    let subject_tags = vec![&env, String::from_str(&env, "blockchain")];
     let content_id = client.publish_content(&creator, &title, &content_hash, &subject_tags);
 
     // Upvote content
@@ -161,7 +158,7 @@ fn test_multiple_upvotes() {
         let upvotes = client.upvote_content(&content_id, &voter);
         assert_eq!(upvotes, i + 1);
     }
-    
+
     // Verify final upvote count
     let content = client.get_content(&content_id);
     assert_eq!(content.upvotes, expected_upvotes);
@@ -181,16 +178,13 @@ fn test_duplicate_upvote() {
     let creator = Address::generate(&env);
     let title = String::from_str(&env, "Smart Contracts 101");
     let content_hash = BytesN::random(&env);
-    let subject_tags = vec![
-        &env,
-        String::from_str(&env, "smart contracts"),
-    ];
+    let subject_tags = vec![&env, String::from_str(&env, "smart contracts")];
     let content_id = client.publish_content(&creator, &title, &content_hash, &subject_tags);
 
     // Upvote content
     let voter = Address::generate(&env);
     client.upvote_content(&content_id, &voter);
-    
+
     // Try to upvote again - should panic
     client.upvote_content(&content_id, &voter);
 }
@@ -239,7 +233,7 @@ fn test_verify_content() {
     let verified_level = client.verify_content(&content_id, &verifier, &VerificationLevel::Peer);
     assert_eq!(verified_level, VerificationLevel::Peer);
 
-     // Check that the content is now verified to the correct level
+    // Check that the content is now verified to the correct level
     let content = client.get_content(&content_id);
     assert_eq!(content.verification_level, VerificationLevel::Peer);
 }
@@ -257,10 +251,7 @@ fn test_multiple_verifications() {
     let creator = Address::generate(&env);
     let title = String::from_str(&env, "Cryptocurrency Fundamentals");
     let content_hash = BytesN::random(&env);
-    let subject_tags = vec![
-        &env,
-        String::from_str(&env, "cryptocurrency"),
-    ];
+    let subject_tags = vec![&env, String::from_str(&env, "cryptocurrency")];
     let content_id = client.publish_content(&creator, &title, &content_hash, &subject_tags);
 
     // First verification (to Peer)
@@ -270,7 +261,8 @@ fn test_multiple_verifications() {
 
     // Second verification (upgrade to Expert)
     let verifier2 = Address::generate(&env);
-    let verified_level2 = client.verify_content(&content_id, &verifier2, &VerificationLevel::Expert);
+    let verified_level2 =
+        client.verify_content(&content_id, &verifier2, &VerificationLevel::Expert);
     assert_eq!(verified_level2, VerificationLevel::Expert);
 
     // The content should now have the highest verification level submitted
@@ -306,13 +298,10 @@ fn test_creator_can_verify_own_content() {
     let creator = Address::generate(&env);
     let title = String::from_str(&env, "Self-verified Content");
     let content_hash = BytesN::random(&env);
-    let subject_tags = vec![
-        &env,
-        String::from_str(&env, "self-verified"),
-    ];
+    let subject_tags = vec![&env, String::from_str(&env, "self-verified")];
     let content_id = client.publish_content(&creator, &title, &content_hash, &subject_tags);
 
-     // MODIFIED: Call verify_content with a specific level
+    // MODIFIED: Call verify_content with a specific level
     client.verify_content(&content_id, &creator, &VerificationLevel::Peer);
 
     let content = client.get_content(&content_id);
@@ -333,7 +322,7 @@ fn test_content_with_long_title_and_many_tags() {
     let creator = Address::generate(&env);
     let long_title = String::from_str(&env, "This is a very long title for educational content that tests the storage and retrieval of lengthy metadata strings in the Soroban smart contract platform");
     let content_hash = BytesN::random(&env);
-    
+
     // Create many tags
     let mut subject_tags = vec![&env];
     for i in 1..20 {
@@ -349,7 +338,7 @@ fn test_content_with_long_title_and_many_tags() {
                 7 => String::from_str(&env, "tag07"),
                 8 => String::from_str(&env, "tag08"),
                 9 => String::from_str(&env, "tag09"),
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         } else {
             match i {
@@ -363,16 +352,16 @@ fn test_content_with_long_title_and_many_tags() {
                 17 => String::from_str(&env, "tag17"),
                 18 => String::from_str(&env, "tag18"),
                 19 => String::from_str(&env, "tag19"),
-                _ => unreachable!()
+                _ => unreachable!(),
             }
         };
-        
+
         subject_tags.push_back(full_tag);
     }
-    
+
     // Publish content with long title and many tags
     let content_id = client.publish_content(&creator, &long_title, &content_hash, &subject_tags);
-    
+
     // Verify content was stored correctly
     let content = client.get_content(&content_id);
     assert_eq!(content.title, long_title);
@@ -392,7 +381,7 @@ fn test_multiple_content_and_popularity_tracking() {
     // Create 5 different content entries
     let creator = Address::generate(&env);
     let mut content_ids = vec![&env];
-    
+
     for i in 0..5 {
         // Replace concatenation with static strings
         let title = match i {
@@ -401,65 +390,62 @@ fn test_multiple_content_and_popularity_tracking() {
             2 => String::from_str(&env, "Educational Content 2"),
             3 => String::from_str(&env, "Educational Content 3"),
             4 => String::from_str(&env, "Educational Content 4"),
-            _ => unreachable!()
+            _ => unreachable!(),
         };
-        
+
         let content_hash = BytesN::random(&env);
-        let subject_tags = vec![
-            &env,
-            String::from_str(&env, "education"),
-        ];
-        
+        let subject_tags = vec![&env, String::from_str(&env, "education")];
+
         let content_id = client.publish_content(&creator, &title, &content_hash, &subject_tags);
         content_ids.push_back(content_id);
     }
-    
+
     // Different voting patterns for each content:
     // Content 0: 5 votes
     // Content 1: 3 votes
     // Content 2: 0 votes
     // Content 3: 10 votes
     // Content 4: 1 vote
-    
+
     // Create a pool of voters
     let mut voters = vec![&env];
     for _ in 0..15 {
         voters.push_back(Address::generate(&env));
     }
-    
+
     // Content 0: 5 votes (voters 0-4)
     for i in 0..5 {
         client.upvote_content(&content_ids.get(0).unwrap(), &voters.get(i).unwrap());
     }
-    
+
     // Content 1: 3 votes (voters 5-7)
     for i in 5..8 {
         client.upvote_content(&content_ids.get(1).unwrap(), &voters.get(i).unwrap());
     }
-    
+
     // Content 2: 0 votes (skip)
-    
+
     // Content 3: 10 votes (voters 0-9)
     for i in 0..10 {
         client.upvote_content(&content_ids.get(3).unwrap(), &voters.get(i).unwrap());
     }
-    
+
     // Content 4: 1 vote (voter 10)
     client.upvote_content(&content_ids.get(4).unwrap(), &voters.get(10).unwrap());
-    
+
     // Verify vote counts
     let content0 = client.get_content(&content_ids.get(0).unwrap());
     let content1 = client.get_content(&content_ids.get(1).unwrap());
     let content2 = client.get_content(&content_ids.get(2).unwrap());
     let content3 = client.get_content(&content_ids.get(3).unwrap());
     let content4 = client.get_content(&content_ids.get(4).unwrap());
-    
+
     assert_eq!(content0.upvotes, 5);
     assert_eq!(content1.upvotes, 3);
     assert_eq!(content2.upvotes, 0);
     assert_eq!(content3.upvotes, 10);
     assert_eq!(content4.upvotes, 1);
-    
+
     // The most popular content should be content3
     assert!(content3.upvotes > content0.upvotes);
     assert!(content3.upvotes > content1.upvotes);
@@ -485,60 +471,62 @@ fn test_verify_before_and_after_upvotes() {
         String::from_str(&env, "testing"),
         String::from_str(&env, "verification"),
     ];
-    
+
     let content_id = client.publish_content(&creator, &title, &content_hash, &subject_tags);
-    
+
     // Scenario 1: Verify first, then upvote
     let verifier = Address::generate(&env);
     client.verify_content(&content_id, &verifier, &VerificationLevel::Expert);
-    
+
     // Check content is verified
     let content = client.get_content(&content_id);
     assert_eq!(content.verification_level, VerificationLevel::Expert);
     assert_eq!(content.upvotes, 0);
-    
-    
+
     // Now add some upvotes
     let voters = [
         Address::generate(&env),
         Address::generate(&env),
         Address::generate(&env),
     ];
-    
+
     for voter in &voters {
         client.upvote_content(&content_id, voter);
     }
-    
+
     // Verify upvotes were added and verification status maintained
     let content_after_votes = client.get_content(&content_id);
-    assert_eq!(content_after_votes.verification_level, VerificationLevel::Expert);
+    assert_eq!(
+        content_after_votes.verification_level,
+        VerificationLevel::Expert
+    );
     assert_eq!(content_after_votes.upvotes, 3);
-    
+
     // Scenario 2: New content - upvote first, then verify
     let title2 = String::from_str(&env, "Upvotes before Verification");
     let content_hash2 = BytesN::random(&env);
     let content_id2 = client.publish_content(&creator, &title2, &content_hash2, &subject_tags);
-    
+
     // Add upvotes first
-    let voters2 = [
-        Address::generate(&env),
-        Address::generate(&env),
-    ];
-    
+    let voters2 = [Address::generate(&env), Address::generate(&env)];
+
     for voter in &voters2 {
         client.upvote_content(&content_id2, voter);
     }
-    
+
     // Check content has upvotes but is not verified
     let content2 = client.get_content(&content_id2);
     assert_eq!(content2.verification_level, VerificationLevel::None);
     assert_eq!(content2.upvotes, 2);
-    
+
     // Now verify the content
     client.verify_content(&content_id2, &verifier, &VerificationLevel::Peer);
-    
+
     let content2_after_verify = client.get_content(&content_id2);
-    assert_eq!(content2_after_verify.verification_level, VerificationLevel::Peer);
+    assert_eq!(
+        content2_after_verify.verification_level,
+        VerificationLevel::Peer
+    );
     assert_eq!(content2_after_verify.upvotes, 2);
 }
 
@@ -554,31 +542,31 @@ fn test_complex_workflow() {
     // 1. Create several content entries
     let creator1 = Address::generate(&env);
     let creator2 = Address::generate(&env);
-    
+
     // Content 1
     let content_id1 = client.publish_content(
-        &creator1, 
-        &String::from_str(&env, "Solidity Security"), 
+        &creator1,
+        &String::from_str(&env, "Solidity Security"),
         &BytesN::random(&env),
         &vec![
             &env,
             String::from_str(&env, "solidity"),
             String::from_str(&env, "security"),
-        ]
+        ],
     );
-    
+
     // Content 2
     let content_id2 = client.publish_content(
-        &creator2, 
-        &String::from_str(&env, "Rust for Blockchain"), 
+        &creator2,
+        &String::from_str(&env, "Rust for Blockchain"),
         &BytesN::random(&env),
         &vec![
             &env,
             String::from_str(&env, "rust"),
             String::from_str(&env, "blockchain"),
-        ]
+        ],
     );
-    
+
     // 2. Upvote both contents
     let voters = [
         Address::generate(&env),
@@ -587,31 +575,34 @@ fn test_complex_workflow() {
         Address::generate(&env),
         Address::generate(&env),
     ];
-    
+
     // Vote for content 1 (3 votes)
     client.upvote_content(&content_id1, &voters[0]);
     client.upvote_content(&content_id1, &voters[1]);
     client.upvote_content(&content_id1, &voters[2]);
-    
+
     // Vote for content 2 (2 votes)
     client.upvote_content(&content_id2, &voters[3]);
     client.upvote_content(&content_id2, &voters[4]);
-    
+
     // 3. Verify only content 2
     let verifier = Address::generate(&env);
-     client.verify_content(&content_id2, &verifier, &VerificationLevel::Institutional);
-    
+    client.verify_content(&content_id2, &verifier, &VerificationLevel::Institutional);
+
     // 4. Retrieve and check both contents
     let content1 = client.get_content(&content_id1);
     let content2 = client.get_content(&content_id2);
-    
+
     // Content 1 should have 3 upvotes and not be verified
     assert_eq!(content1.upvotes, 3);
     assert_eq!(content1.verification_level, VerificationLevel::None);
-    
+
     // Content 2 should have 2 upvotes and be verified
     assert_eq!(content2.upvotes, 2);
-    assert_eq!(content2.verification_level, VerificationLevel::Institutional);
+    assert_eq!(
+        content2.verification_level,
+        VerificationLevel::Institutional
+    );
 }
 
 #[test]
@@ -658,7 +649,7 @@ fn test_filter_by_verification_mixed_content() {
         &creator,
         &String::from_str(&env, "Verified Content 1"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "verified")]
+        &vec![&env, String::from_str(&env, "verified")],
     );
     client.verify_content(&content_id1, &verifier, &VerificationLevel::Peer);
 
@@ -667,7 +658,7 @@ fn test_filter_by_verification_mixed_content() {
         &creator,
         &String::from_str(&env, "Unverified Content"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "unverified")]
+        &vec![&env, String::from_str(&env, "unverified")],
     );
 
     // Content 3: Verified
@@ -675,9 +666,9 @@ fn test_filter_by_verification_mixed_content() {
         &creator,
         &String::from_str(&env, "Verified Content 2"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "verified")]
+        &vec![&env, String::from_str(&env, "verified")],
     );
-   client.verify_content(&content_id3, &verifier, &VerificationLevel::Institutional);
+    client.verify_content(&content_id3, &verifier, &VerificationLevel::Institutional);
 
     // Filter by verification
     let verified_content = client.filter_by_verification();
@@ -733,7 +724,7 @@ fn test_filter_by_min_upvotes_empty_results() {
         &creator,
         &String::from_str(&env, "Low Upvote Content"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "test")]
+        &vec![&env, String::from_str(&env, "test")],
     );
 
     // Add only 2 upvotes
@@ -764,7 +755,7 @@ fn test_filter_by_min_upvotes_various_thresholds() {
         &creator,
         &String::from_str(&env, "No Upvotes"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "zero")]
+        &vec![&env, String::from_str(&env, "zero")],
     );
 
     // Content 2: 3 upvotes
@@ -772,7 +763,7 @@ fn test_filter_by_min_upvotes_various_thresholds() {
         &creator,
         &String::from_str(&env, "Three Upvotes"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "three")]
+        &vec![&env, String::from_str(&env, "three")],
     );
     for _ in 0..3 {
         let voter = Address::generate(&env);
@@ -784,7 +775,7 @@ fn test_filter_by_min_upvotes_various_thresholds() {
         &creator,
         &String::from_str(&env, "Seven Upvotes"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "seven")]
+        &vec![&env, String::from_str(&env, "seven")],
     );
     for _ in 0..7 {
         let voter = Address::generate(&env);
@@ -796,7 +787,7 @@ fn test_filter_by_min_upvotes_various_thresholds() {
         &creator,
         &String::from_str(&env, "Ten Upvotes"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "ten")]
+        &vec![&env, String::from_str(&env, "ten")],
     );
     for _ in 0..10 {
         let voter = Address::generate(&env);
@@ -846,9 +837,9 @@ fn test_filter_combinations_verified_and_popular() {
         &creator,
         &String::from_str(&env, "Verified and Popular"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "best")]
+        &vec![&env, String::from_str(&env, "best")],
     );
-     client.verify_content(&content_id1, &verifier, &VerificationLevel::Institutional);
+    client.verify_content(&content_id1, &verifier, &VerificationLevel::Institutional);
     for _ in 0..10 {
         let voter = Address::generate(&env);
         client.upvote_content(&content_id1, &voter);
@@ -859,7 +850,7 @@ fn test_filter_combinations_verified_and_popular() {
         &creator,
         &String::from_str(&env, "Verified but Unpopular"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "verified")]
+        &vec![&env, String::from_str(&env, "verified")],
     );
     client.verify_content(&content_id2, &verifier, &VerificationLevel::Peer);
     for _ in 0..2 {
@@ -872,7 +863,7 @@ fn test_filter_combinations_verified_and_popular() {
         &creator,
         &String::from_str(&env, "Popular but Unverified"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "popular")]
+        &vec![&env, String::from_str(&env, "popular")],
     );
     for _ in 0..8 {
         let voter = Address::generate(&env);
@@ -884,7 +875,7 @@ fn test_filter_combinations_verified_and_popular() {
         &creator,
         &String::from_str(&env, "Neither Verified nor Popular"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "basic")]
+        &vec![&env, String::from_str(&env, "basic")],
     );
     let voter = Address::generate(&env);
     client.upvote_content(&content_id4, &voter);
@@ -981,14 +972,14 @@ fn test_filters_with_large_dataset() {
             17 => String::from_str(&env, "Content 17"),
             18 => String::from_str(&env, "Content 18"),
             19 => String::from_str(&env, "Content 19"),
-            _ => unreachable!()
+            _ => unreachable!(),
         };
 
         let content_id = client.publish_content(
             &creator,
             &title,
             &BytesN::random(&env),
-            &vec![&env, String::from_str(&env, "test")]
+            &vec![&env, String::from_str(&env, "test")],
         );
         content_ids.push_back(content_id);
 
@@ -1046,7 +1037,6 @@ fn test_filters_with_large_dataset() {
     }
 }
 
-
 #[test]
 fn test_filter_by_verification_level() {
     let env = Env::default();
@@ -1059,18 +1049,38 @@ fn test_filter_by_verification_level() {
     let verifier = Address::generate(&env);
 
     // Content 1: Peer verified
-    let content_id1 = client.publish_content(&creator, &String::from_str(&env, "Peer Verified"), &BytesN::random(&env), &vec![&env]);
+    let content_id1 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Peer Verified"),
+        &BytesN::random(&env),
+        &vec![&env],
+    );
     client.verify_content(&content_id1, &verifier, &VerificationLevel::Peer);
 
     // Content 2: Not verified
-    let content_id2 = client.publish_content(&creator, &String::from_str(&env, "Unverified"), &BytesN::random(&env), &vec![&env]);
+    let content_id2 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Unverified"),
+        &BytesN::random(&env),
+        &vec![&env],
+    );
 
     // Content 3: Institutional verified
-    let content_id3 = client.publish_content(&creator, &String::from_str(&env, "Inst Verified"), &BytesN::random(&env), &vec![&env]);
+    let content_id3 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Inst Verified"),
+        &BytesN::random(&env),
+        &vec![&env],
+    );
     client.verify_content(&content_id3, &verifier, &VerificationLevel::Institutional);
-    
+
     // Content 4: Another Peer verified
-    let content_id4 = client.publish_content(&creator, &String::from_str(&env, "Peer Verified 2"), &BytesN::random(&env), &vec![&env]);
+    let content_id4 = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Peer Verified 2"),
+        &BytesN::random(&env),
+        &vec![&env],
+    );
     client.verify_content(&content_id4, &verifier, &VerificationLevel::Peer);
 
     // Filter by Peer - should return 2 items
@@ -1092,7 +1102,6 @@ fn test_filter_by_verification_level() {
     assert_eq!(none_verified.get(0).unwrap().id, content_id2);
 }
 
-
 #[test]
 fn test_verification_tier_upgrade() {
     let env = Env::default();
@@ -1103,24 +1112,41 @@ fn test_verification_tier_upgrade() {
     env.mock_all_auths();
     let creator = Address::generate(&env);
     let verifier = Address::generate(&env);
-    let content_id = client.publish_content(&creator, &String::from_str(&env, "Tiered Verification"), &BytesN::random(&env), &vec![&env]);
-    
-    assert_eq!(client.get_content(&content_id).verification_level, VerificationLevel::None);
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Tiered Verification"),
+        &BytesN::random(&env),
+        &vec![&env],
+    );
+
+    assert_eq!(
+        client.get_content(&content_id).verification_level,
+        VerificationLevel::None
+    );
 
     // 1. Verify to Peer
     let level = client.verify_content(&content_id, &verifier, &VerificationLevel::Peer);
     assert_eq!(level, VerificationLevel::Peer);
-    assert_eq!(client.get_content(&content_id).verification_level, VerificationLevel::Peer);
+    assert_eq!(
+        client.get_content(&content_id).verification_level,
+        VerificationLevel::Peer
+    );
 
     // 2. Upgrade to Expert
     let level = client.verify_content(&content_id, &verifier, &VerificationLevel::Expert);
     assert_eq!(level, VerificationLevel::Expert);
-    assert_eq!(client.get_content(&content_id).verification_level, VerificationLevel::Expert);
+    assert_eq!(
+        client.get_content(&content_id).verification_level,
+        VerificationLevel::Expert
+    );
 
     // 3. Upgrade to Institutional
     let level = client.verify_content(&content_id, &verifier, &VerificationLevel::Institutional);
     assert_eq!(level, VerificationLevel::Institutional);
-    assert_eq!(client.get_content(&content_id).verification_level, VerificationLevel::Institutional);
+    assert_eq!(
+        client.get_content(&content_id).verification_level,
+        VerificationLevel::Institutional
+    );
 }
 
 #[test]
@@ -1134,7 +1160,12 @@ fn test_prevent_verification_downgrade() {
     env.mock_all_auths();
     let creator = Address::generate(&env);
     let verifier = Address::generate(&env);
-    let content_id = client.publish_content(&creator, &String::from_str(&env, "Test Downgrade"), &BytesN::random(&env), &vec![&env]);
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Downgrade"),
+        &BytesN::random(&env),
+        &vec![&env],
+    );
 
     client.verify_content(&content_id, &verifier, &VerificationLevel::Institutional);
     client.verify_content(&content_id, &verifier, &VerificationLevel::Peer); // Should panic
@@ -1151,15 +1182,20 @@ fn test_prevent_same_level_verification() {
     env.mock_all_auths();
     let creator = Address::generate(&env);
     let verifier = Address::generate(&env);
-    let content_id = client.publish_content(&creator, &String::from_str(&env, "Test Same Level"), &BytesN::random(&env), &vec![&env]);
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Test Same Level"),
+        &BytesN::random(&env),
+        &vec![&env],
+    );
 
     client.verify_content(&content_id, &verifier, &VerificationLevel::Expert);
     client.verify_content(&content_id, &verifier, &VerificationLevel::Expert); // Should panic
 }
 
-/// 
+///
 /// VERSIONING TESTS
-/// 
+///
 #[test]
 fn test_create_new_version_content() {
     let env = Env::default();
@@ -1173,8 +1209,9 @@ fn test_create_new_version_content() {
     let original_title = String::from_str(&env, "Original Content");
     let original_hash = BytesN::random(&env);
     let original_tags = vec![&env, String::from_str(&env, "original")];
-    
-    let content_id = client.publish_content(&creator, &original_title, &original_hash, &original_tags);
+
+    let content_id =
+        client.publish_content(&creator, &original_title, &original_hash, &original_tags);
 
     // Create new version
     let new_title = String::from_str(&env, "Updated Content");
@@ -1188,7 +1225,7 @@ fn test_create_new_version_content() {
         &new_title,
         &new_hash,
         &new_tags,
-        &change_notes
+        &change_notes,
     );
 
     assert_eq!(version, 1);
@@ -1209,13 +1246,13 @@ fn test_create_multiple_versions() {
     env.mock_all_auths();
 
     let creator = Address::generate(&env);
-    
+
     // Create original content
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Version 0"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "v0")]
+        &vec![&env, String::from_str(&env, "v0")],
     );
 
     // Create version 1
@@ -1225,7 +1262,7 @@ fn test_create_multiple_versions() {
         &String::from_str(&env, "Version 1"),
         &BytesN::random(&env),
         &vec![&env, String::from_str(&env, "v1")],
-        &String::from_str(&env, "First update")
+        &String::from_str(&env, "First update"),
     );
     assert_eq!(version1, 1);
 
@@ -1236,7 +1273,7 @@ fn test_create_multiple_versions() {
         &String::from_str(&env, "Version 2"),
         &BytesN::random(&env),
         &vec![&env, String::from_str(&env, "v2")],
-        &String::from_str(&env, "Second update")
+        &String::from_str(&env, "Second update"),
     );
     assert_eq!(version2, 2);
 
@@ -1254,26 +1291,27 @@ fn test_get_content_at_version() {
     env.mock_all_auths();
 
     let creator = Address::generate(&env);
-    
+
     // Create original content (version 0)
     let original_title = String::from_str(&env, "Original Title");
     let original_hash = BytesN::random(&env);
     let original_tags = vec![&env, String::from_str(&env, "original")];
-    
-    let content_id = client.publish_content(&creator, &original_title, &original_hash, &original_tags);
+
+    let content_id =
+        client.publish_content(&creator, &original_title, &original_hash, &original_tags);
 
     // Create version 1
     let v1_title = String::from_str(&env, "Version 1 Title");
     let v1_hash = BytesN::random(&env);
     let v1_tags = vec![&env, String::from_str(&env, "v1")];
-    
+
     client.create_new_version_content(
         &content_id,
         &creator,
         &v1_title,
         &v1_hash,
         &v1_tags,
-        &String::from_str(&env, "First update")
+        &String::from_str(&env, "First update"),
     );
 
     // Get content at version 0 (original)
@@ -1298,13 +1336,13 @@ fn test_get_version_info() {
     env.mock_all_auths();
 
     let creator = Address::generate(&env);
-    
+
     // Create original content
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Original"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     // Create version 1
@@ -1315,12 +1353,12 @@ fn test_get_version_info() {
         &String::from_str(&env, "Updated"),
         &BytesN::random(&env),
         &vec![&env],
-        &change_notes
+        &change_notes,
     );
 
     // Get version info
     let version_info = client.get_version_info(&content_id, &version);
-    
+
     assert_eq!(version_info.version, 1);
     assert_eq!(version_info.creator, creator);
     assert_eq!(version_info.change_notes, change_notes);
@@ -1337,13 +1375,13 @@ fn test_upvote_version() {
     env.mock_all_auths();
 
     let creator = Address::generate(&env);
-    
+
     // Create content and version
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Original"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     let version = client.create_new_version_content(
@@ -1352,7 +1390,7 @@ fn test_upvote_version() {
         &String::from_str(&env, "Updated"),
         &BytesN::random(&env),
         &vec![&env],
-        &String::from_str(&env, "Updates")
+        &String::from_str(&env, "Updates"),
     );
 
     // Upvote the version
@@ -1380,13 +1418,13 @@ fn test_verify_version() {
 
     let creator = Address::generate(&env);
     let verifier = Address::generate(&env);
-    
+
     // Create content and version
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Original"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     let version = client.create_new_version_content(
@@ -1395,11 +1433,12 @@ fn test_verify_version() {
         &String::from_str(&env, "Updated"),
         &BytesN::random(&env),
         &vec![&env],
-        &String::from_str(&env, "Updates")
+        &String::from_str(&env, "Updates"),
     );
 
     // Verify the version
-    let verified_level = client.verify_version(&content_id, &version, &verifier, &VerificationLevel::Expert);
+    let verified_level =
+        client.verify_version(&content_id, &version, &verifier, &VerificationLevel::Expert);
     assert_eq!(verified_level, VerificationLevel::Expert);
 
     // Check version info reflects verification
@@ -1416,16 +1455,16 @@ fn test_get_version_diff() {
     env.mock_all_auths();
 
     let creator = Address::generate(&env);
-    
+
     // Create original content
     let original_title = String::from_str(&env, "Original Title");
     let original_hash = BytesN::random(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &original_title,
         &original_hash,
-        &vec![&env, String::from_str(&env, "original")]
+        &vec![&env, String::from_str(&env, "original")],
     );
 
     // Create version 1 - change title only
@@ -1436,7 +1475,7 @@ fn test_get_version_diff() {
         &v1_title,
         &original_hash, // Same hash
         &vec![&env, String::from_str(&env, "original")],
-        &String::from_str(&env, "Title update")
+        &String::from_str(&env, "Title update"),
     );
 
     // Create version 2 - change content only
@@ -1445,13 +1484,13 @@ fn test_get_version_diff() {
         &content_id,
         &creator,
         &v1_title, // Same title as v1
-        &v2_hash, // New hash
+        &v2_hash,  // New hash
         &vec![&env, String::from_str(&env, "original")],
-        &String::from_str(&env, "Content update")
+        &String::from_str(&env, "Content update"),
     );
 
     // Test version diffs
-    
+
     // v0 to v1: title changed, content same
     let diff_0_to_1 = client.get_version_diff(&content_id, &0, &1);
     assert_eq!(diff_0_to_1.from_version, 0);
@@ -1484,13 +1523,13 @@ fn test_version_independence() {
 
     let creator = Address::generate(&env);
     let verifier = Address::generate(&env);
-    
+
     // Create content and versions
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Original"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     let version1 = client.create_new_version_content(
@@ -1499,7 +1538,7 @@ fn test_version_independence() {
         &String::from_str(&env, "Version 1"),
         &BytesN::random(&env),
         &vec![&env],
-        &String::from_str(&env, "First update")
+        &String::from_str(&env, "First update"),
     );
 
     let version2 = client.create_new_version_content(
@@ -1508,7 +1547,7 @@ fn test_version_independence() {
         &String::from_str(&env, "Version 2"),
         &BytesN::random(&env),
         &vec![&env],
-        &String::from_str(&env, "Second update")
+        &String::from_str(&env, "Second update"),
     );
 
     // Vote on version 1 only
@@ -1518,7 +1557,12 @@ fn test_version_independence() {
     client.upvote_version(&content_id, &version1, &voter2);
 
     // Verify version 2 only
-    client.verify_version(&content_id, &version2, &verifier, &VerificationLevel::Expert);
+    client.verify_version(
+        &content_id,
+        &version2,
+        &verifier,
+        &VerificationLevel::Expert,
+    );
 
     // Check that versions have independent stats
     let v1_info = client.get_version_info(&content_id, &version1);
@@ -1541,13 +1585,13 @@ fn test_versioning_workflow() {
 
     let creator = Address::generate(&env);
     let verifier = Address::generate(&env);
-    
+
     // 1. Create original content
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Blockchain Basics"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "blockchain")]
+        &vec![&env, String::from_str(&env, "blockchain")],
     );
 
     // 2. Create version 1
@@ -1556,14 +1600,23 @@ fn test_versioning_workflow() {
         &creator,
         &String::from_str(&env, "Blockchain Fundamentals"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "blockchain"), String::from_str(&env, "advanced")],
-        &String::from_str(&env, "Added advanced topics")
+        &vec![
+            &env,
+            String::from_str(&env, "blockchain"),
+            String::from_str(&env, "advanced"),
+        ],
+        &String::from_str(&env, "Added advanced topics"),
     );
 
     // 3. Vote and verify version 1
     let voter = Address::generate(&env);
     client.upvote_version(&content_id, &version1, &voter);
-    client.verify_version(&content_id, &version1, &verifier, &VerificationLevel::Expert);
+    client.verify_version(
+        &content_id,
+        &version1,
+        &verifier,
+        &VerificationLevel::Expert,
+    );
 
     // 4. Create version 2
     let version2 = client.create_new_version_content(
@@ -1571,8 +1624,12 @@ fn test_versioning_workflow() {
         &creator,
         &String::from_str(&env, "Complete Blockchain Guide"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "blockchain"), String::from_str(&env, "complete")],
-        &String::from_str(&env, "Complete rewrite")
+        &vec![
+            &env,
+            String::from_str(&env, "blockchain"),
+            String::from_str(&env, "complete"),
+        ],
+        &String::from_str(&env, "Complete rewrite"),
     );
 
     // 5. Verify all versions exist and are correct
@@ -1582,9 +1639,18 @@ fn test_versioning_workflow() {
     let current = client.get_content(&content_id);
 
     assert_eq!(original.title, String::from_str(&env, "Blockchain Basics"));
-    assert_eq!(v1_content.title, String::from_str(&env, "Blockchain Fundamentals"));
-    assert_eq!(v2_content.title, String::from_str(&env, "Complete Blockchain Guide"));
-    assert_eq!(current.title, String::from_str(&env, "Complete Blockchain Guide"));
+    assert_eq!(
+        v1_content.title,
+        String::from_str(&env, "Blockchain Fundamentals")
+    );
+    assert_eq!(
+        v2_content.title,
+        String::from_str(&env, "Complete Blockchain Guide")
+    );
+    assert_eq!(
+        current.title,
+        String::from_str(&env, "Complete Blockchain Guide")
+    );
 
     // 6. Check version info
     let v1_info = client.get_version_info(&content_id, &version1);
@@ -1592,7 +1658,7 @@ fn test_versioning_workflow() {
 
     assert_eq!(v1_info.upvotes, 1);
     assert_eq!(v1_info.verification_level, VerificationLevel::Expert);
-    
+
     assert_eq!(v2_info.upvotes, 0);
     assert_eq!(v2_info.verification_level, VerificationLevel::None);
 }
@@ -1608,12 +1674,12 @@ fn test_create_version_non_creator() {
 
     let creator = Address::generate(&env);
     let non_creator = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Original Content"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     // Non-creator tries to create version
@@ -1623,7 +1689,7 @@ fn test_create_version_non_creator() {
         &String::from_str(&env, "Unauthorized Update"),
         &BytesN::random(&env),
         &vec![&env],
-        &String::from_str(&env, "Unauthorized change")
+        &String::from_str(&env, "Unauthorized change"),
     );
 }
 
@@ -1641,7 +1707,7 @@ fn test_get_content_at_nonexistent_version() {
         &creator,
         &String::from_str(&env, "Test Content"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     // Try to get version that doesn't exist
@@ -1659,12 +1725,12 @@ fn test_duplicate_version_vote() {
 
     let creator = Address::generate(&env);
     let voter = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Test Content"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     let version = client.create_new_version_content(
@@ -1673,12 +1739,12 @@ fn test_duplicate_version_vote() {
         &String::from_str(&env, "Updated"),
         &BytesN::random(&env),
         &vec![&env],
-        &String::from_str(&env, "Update")
+        &String::from_str(&env, "Update"),
     );
 
     // Vote once
     client.upvote_version(&content_id, &version, &voter);
-    
+
     // Try to vote again - should panic
     client.upvote_version(&content_id, &version, &voter);
 }
@@ -1694,12 +1760,12 @@ fn test_version_verification_downgrade() {
 
     let creator = Address::generate(&env);
     let verifier = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Test Content"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     let version = client.create_new_version_content(
@@ -1708,19 +1774,19 @@ fn test_version_verification_downgrade() {
         &String::from_str(&env, "Updated"),
         &BytesN::random(&env),
         &vec![&env],
-        &String::from_str(&env, "Update")
+        &String::from_str(&env, "Update"),
     );
 
     // Verify to Expert level
     client.verify_version(&content_id, &version, &verifier, &VerificationLevel::Expert);
-    
+
     // Try to downgrade to Peer - should panic
     client.verify_version(&content_id, &version, &verifier, &VerificationLevel::Peer);
 }
 
 ///
 /// COLLABORATIVE TESTS
-/// 
+///
 #[test]
 fn test_grant_permission() {
     let env = Env::default();
@@ -1732,12 +1798,12 @@ fn test_grant_permission() {
     // Create content
     let creator = Address::generate(&env);
     let collaborator = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Collaborative Content"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "collaboration")]
+        &vec![&env, String::from_str(&env, "collaboration")],
     );
 
     // Grant permission
@@ -1762,12 +1828,12 @@ fn test_submit_for_review() {
     // Setup: Create content and grant permission
     let creator = Address::generate(&env);
     let collaborator = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Original Content"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "original")]
+        &vec![&env, String::from_str(&env, "original")],
     );
 
     client.grant_permission(&content_id, &creator, &collaborator);
@@ -1782,7 +1848,7 @@ fn test_submit_for_review() {
         &collaborator,
         &new_content_hash,
         &new_subject_tags,
-        &change_notes
+        &change_notes,
     );
     assert!(success);
 
@@ -1806,12 +1872,12 @@ fn test_review_submission_accept() {
     // Setup: Create content, grant permission, and submit for review
     let creator = Address::generate(&env);
     let collaborator = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Original Content"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "original")]
+        &vec![&env, String::from_str(&env, "original")],
     );
 
     client.grant_permission(&content_id, &creator, &collaborator);
@@ -1825,7 +1891,7 @@ fn test_review_submission_accept() {
         &collaborator,
         &new_content_hash,
         &new_subject_tags,
-        &change_notes
+        &change_notes,
     );
 
     // Accept the submission
@@ -1835,7 +1901,7 @@ fn test_review_submission_accept() {
         &collaborator,
         &creator,
         &true, // accept
-        &feedback
+        &feedback,
     );
     assert!(success);
 
@@ -1846,7 +1912,10 @@ fn test_review_submission_accept() {
 
     // Verify content was updated to new version
     let updated_content = client.get_content(&content_id);
-    assert_eq!(updated_content.title, String::from_str(&env, "Original Content")); // Title unchanged in this test
+    assert_eq!(
+        updated_content.title,
+        String::from_str(&env, "Original Content")
+    ); // Title unchanged in this test
     assert_eq!(updated_content.content_hash, new_content_hash);
     assert_eq!(updated_content.subject_tags, new_subject_tags);
 }
@@ -1862,13 +1931,13 @@ fn test_review_submission_reject() {
     // Setup: Create content, grant permission, and submit for review
     let creator = Address::generate(&env);
     let collaborator = Address::generate(&env);
-    
+
     let original_hash = BytesN::random(&env);
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Original Content"),
         &original_hash,
-        &vec![&env, String::from_str(&env, "original")]
+        &vec![&env, String::from_str(&env, "original")],
     );
 
     client.grant_permission(&content_id, &creator, &collaborator);
@@ -1881,7 +1950,7 @@ fn test_review_submission_reject() {
         &collaborator,
         &new_content_hash,
         &new_subject_tags,
-        &String::from_str(&env, "Some changes")
+        &String::from_str(&env, "Some changes"),
     );
 
     // Reject the submission
@@ -1891,7 +1960,7 @@ fn test_review_submission_reject() {
         &collaborator,
         &creator,
         &false, // reject
-        &feedback
+        &feedback,
     );
     assert!(success);
 
@@ -1916,12 +1985,12 @@ fn test_get_user_contribution_history() {
     // Setup
     let creator = Address::generate(&env);
     let collaborator = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Content for History Test"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     client.grant_permission(&content_id, &creator, &collaborator);
@@ -1932,7 +2001,7 @@ fn test_get_user_contribution_history() {
         &collaborator,
         &BytesN::random(&env),
         &vec![&env, String::from_str(&env, "v1")],
-        &String::from_str(&env, "First contribution")
+        &String::from_str(&env, "First contribution"),
     );
 
     // Review first contribution (accept)
@@ -1941,7 +2010,7 @@ fn test_get_user_contribution_history() {
         &collaborator,
         &creator,
         &true,
-        &String::from_str(&env, "Good work")
+        &String::from_str(&env, "Good work"),
     );
 
     // Submit second contribution
@@ -1950,7 +2019,7 @@ fn test_get_user_contribution_history() {
         &collaborator,
         &BytesN::random(&env),
         &vec![&env, String::from_str(&env, "v2")],
-        &String::from_str(&env, "Second contribution")
+        &String::from_str(&env, "Second contribution"),
     );
 
     // Review second contribution (reject)
@@ -1959,24 +2028,36 @@ fn test_get_user_contribution_history() {
         &collaborator,
         &creator,
         &false,
-        &String::from_str(&env, "Needs improvement")
+        &String::from_str(&env, "Needs improvement"),
     );
 
     // Get contribution history
     let history = client.get_user_contribution_history(&collaborator, &content_id);
-    
+
     // Should have 2 contributions in history
     assert_eq!(history.len(), 2);
-    
+
     // Verify first contribution
     let first_contribution = history.get(0).unwrap();
-    assert_eq!(first_contribution.change_notes, String::from_str(&env, "First contribution"));
-    assert_eq!(first_contribution.review_feedback, Some(String::from_str(&env, "Good work")));
-    
+    assert_eq!(
+        first_contribution.change_notes,
+        String::from_str(&env, "First contribution")
+    );
+    assert_eq!(
+        first_contribution.review_feedback,
+        Some(String::from_str(&env, "Good work"))
+    );
+
     // Verify second contribution
     let second_contribution = history.get(1).unwrap();
-    assert_eq!(second_contribution.change_notes, String::from_str(&env, "Second contribution"));
-    assert_eq!(second_contribution.review_feedback, Some(String::from_str(&env, "Needs improvement")));
+    assert_eq!(
+        second_contribution.change_notes,
+        String::from_str(&env, "Second contribution")
+    );
+    assert_eq!(
+        second_contribution.review_feedback,
+        Some(String::from_str(&env, "Needs improvement"))
+    );
 }
 
 #[test]
@@ -1991,13 +2072,13 @@ fn test_collaborative_workflow_complete() {
     let creator = Address::generate(&env);
     let collaborator1 = Address::generate(&env);
     let collaborator2 = Address::generate(&env);
-    
+
     let original_hash = BytesN::random(&env);
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Educational Article"),
         &original_hash,
-        &vec![&env, String::from_str(&env, "education")]
+        &vec![&env, String::from_str(&env, "education")],
     );
 
     // 2. Creator grants permissions to collaborators
@@ -2010,8 +2091,12 @@ fn test_collaborative_workflow_complete() {
         &content_id,
         &collaborator1,
         &improved_hash,
-        &vec![&env, String::from_str(&env, "education"), String::from_str(&env, "improved")],
-        &String::from_str(&env, "Added examples and fixed grammar")
+        &vec![
+            &env,
+            String::from_str(&env, "education"),
+            String::from_str(&env, "improved"),
+        ],
+        &String::from_str(&env, "Added examples and fixed grammar"),
     );
 
     // 4. Creator accepts collaborator1's submission
@@ -2020,7 +2105,7 @@ fn test_collaborative_workflow_complete() {
         &collaborator1,
         &creator,
         &true,
-        &String::from_str(&env, "Excellent improvements!")
+        &String::from_str(&env, "Excellent improvements!"),
     );
 
     // 5. Verify content was updated
@@ -2033,8 +2118,12 @@ fn test_collaborative_workflow_complete() {
         &content_id,
         &collaborator2,
         &further_improved_hash,
-        &vec![&env, String::from_str(&env, "education"), String::from_str(&env, "advanced")],
-        &String::from_str(&env, "Added advanced concepts")
+        &vec![
+            &env,
+            String::from_str(&env, "education"),
+            String::from_str(&env, "advanced"),
+        ],
+        &String::from_str(&env, "Added advanced concepts"),
     );
 
     // 7. Creator rejects collaborator2's submission
@@ -2043,7 +2132,7 @@ fn test_collaborative_workflow_complete() {
         &collaborator2,
         &creator,
         &false,
-        &String::from_str(&env, "Too advanced for target audience")
+        &String::from_str(&env, "Too advanced for target audience"),
     );
 
     // 8. Verify content remains at collaborator1's version
@@ -2053,7 +2142,7 @@ fn test_collaborative_workflow_complete() {
     // 9. Check contribution histories
     let history1 = client.get_user_contribution_history(&collaborator1, &content_id);
     let history2 = client.get_user_contribution_history(&collaborator2, &content_id);
-    
+
     assert_eq!(history1.len(), 1); // One accepted contribution
     assert_eq!(history2.len(), 1); // One rejected contribution
 }
@@ -2073,12 +2162,12 @@ fn test_multiple_collaborators_same_content() {
         Address::generate(&env),
         Address::generate(&env),
     ];
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Multi-Collaborator Content"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "collaborative")]
+        &vec![&env, String::from_str(&env, "collaborative")],
     );
 
     // Grant permissions to all collaborators
@@ -2092,7 +2181,7 @@ fn test_multiple_collaborators_same_content() {
             0 => String::from_str(&env, "Added introduction"),
             1 => String::from_str(&env, "Improved examples"),
             2 => String::from_str(&env, "Added conclusion"),
-            _ => unreachable!()
+            _ => unreachable!(),
         };
 
         client.submit_for_review(
@@ -2100,7 +2189,7 @@ fn test_multiple_collaborators_same_content() {
             collaborator,
             &BytesN::random(&env),
             &vec![&env, String::from_str(&env, "collaborative")],
-            &change_notes
+            &change_notes,
         );
     }
 
@@ -2113,13 +2202,7 @@ fn test_multiple_collaborators_same_content() {
             String::from_str(&env, "Overlaps with existing content")
         };
 
-        client.review_submission(
-            &content_id,
-            collaborator,
-            &creator,
-            &accept,
-            &feedback
-        );
+        client.review_submission(&content_id, collaborator, &creator, &accept, &feedback);
     }
 
     // Verify all collaborators have history entries
@@ -2141,12 +2224,12 @@ fn test_grant_permission_non_creator() {
     let creator = Address::generate(&env);
     let non_creator = Address::generate(&env);
     let collaborator = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Test Content"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     // Non-creator tries to grant permission
@@ -2164,12 +2247,12 @@ fn test_submit_without_permission() {
 
     let creator = Address::generate(&env);
     let unauthorized_user = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Test Content"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     // Try to submit without permission
@@ -2178,7 +2261,7 @@ fn test_submit_without_permission() {
         &unauthorized_user,
         &BytesN::random(&env),
         &vec![&env],
-        &String::from_str(&env, "Unauthorized change")
+        &String::from_str(&env, "Unauthorized change"),
     );
 }
 
@@ -2194,22 +2277,22 @@ fn test_review_submission_non_creator() {
     let creator = Address::generate(&env);
     let collaborator = Address::generate(&env);
     let non_creator = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Test Content"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     client.grant_permission(&content_id, &creator, &collaborator);
-    
+
     client.submit_for_review(
         &content_id,
         &collaborator,
         &BytesN::random(&env),
         &vec![&env],
-        &String::from_str(&env, "Some changes")
+        &String::from_str(&env, "Some changes"),
     );
 
     // Non-creator tries to review
@@ -2218,7 +2301,7 @@ fn test_review_submission_non_creator() {
         &collaborator,
         &non_creator, // Wrong reviewer
         &true,
-        &String::from_str(&env, "Unauthorized review")
+        &String::from_str(&env, "Unauthorized review"),
     );
 }
 
@@ -2233,22 +2316,22 @@ fn test_review_already_reviewed_submission() {
 
     let creator = Address::generate(&env);
     let collaborator = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Test Content"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     client.grant_permission(&content_id, &creator, &collaborator);
-    
+
     client.submit_for_review(
         &content_id,
         &collaborator,
         &BytesN::random(&env),
         &vec![&env],
-        &String::from_str(&env, "Some changes")
+        &String::from_str(&env, "Some changes"),
     );
 
     // Review once (accept)
@@ -2257,7 +2340,7 @@ fn test_review_already_reviewed_submission() {
         &collaborator,
         &creator,
         &true,
-        &String::from_str(&env, "Good work")
+        &String::from_str(&env, "Good work"),
     );
 
     // Try to review again - should panic
@@ -2266,7 +2349,7 @@ fn test_review_already_reviewed_submission() {
         &collaborator,
         &creator,
         &false,
-        &String::from_str(&env, "Changed my mind")
+        &String::from_str(&env, "Changed my mind"),
     );
 }
 
@@ -2281,12 +2364,12 @@ fn test_get_nonexistent_permission() {
 
     let creator = Address::generate(&env);
     let user = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Test Content"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     // Try to get permission that doesn't exist
@@ -2304,12 +2387,12 @@ fn test_get_nonexistent_submission() {
 
     let creator = Address::generate(&env);
     let user = Address::generate(&env);
-    
+
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Test Content"),
         &BytesN::random(&env),
-        &vec![&env]
+        &vec![&env],
     );
 
     // Try to get submission that doesn't exist
@@ -2324,7 +2407,12 @@ fn test_flag_and_get_flags() {
     env.mock_all_auths();
     let creator = Address::generate(&env);
     let flagger = Address::generate(&env);
-    let content_id = client.publish_content(&creator, &String::from_str(&env, "Flaggable Content"), &BytesN::random(&env), &vec![&env, String::from_str(&env, "test")]);
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Flaggable Content"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "test")],
+    );
     client.flag_content(&content_id, &flagger, &String::from_str(&env, "spam"));
     let flags = client.get_flags(&content_id);
     assert_eq!(flags.len(), 1);
@@ -2339,13 +2427,26 @@ fn test_moderate_and_get_history() {
     env.mock_all_auths();
     let creator = Address::generate(&env);
     let moderator = Address::generate(&env);
-    let content_id = client.publish_content(&creator, &String::from_str(&env, "Moderatable Content"), &BytesN::random(&env), &vec![&env, String::from_str(&env, "test")]);
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Moderatable Content"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "test")],
+    );
     client.flag_content(&content_id, &creator, &String::from_str(&env, "abuse"));
-    client.moderate_content(&content_id, &moderator, &crate::storage::ModerationStatus::Removed, &String::from_str(&env, "confirmed abuse"));
+    client.moderate_content(
+        &content_id,
+        &moderator,
+        &crate::storage::ModerationStatus::Removed,
+        &String::from_str(&env, "confirmed abuse"),
+    );
     let history = client.get_moderation_history(&content_id);
     assert_eq!(history.len(), 1);
     assert_eq!(history.get(0).unwrap().moderator, moderator);
-    assert_eq!(history.get(0).unwrap().action, crate::storage::ModerationStatus::Removed);
+    assert_eq!(
+        history.get(0).unwrap().action,
+        crate::storage::ModerationStatus::Removed
+    );
 }
 
 #[test]
@@ -2356,10 +2457,22 @@ fn test_create_and_resolve_dispute() {
     env.mock_all_auths();
     let creator = Address::generate(&env);
     let resolver = Address::generate(&env);
-    let content_id = client.publish_content(&creator, &String::from_str(&env, "Disputable Content"), &BytesN::random(&env), &vec![&env, String::from_str(&env, "test")]);
-    let dispute_id = client.create_dispute(&content_id, &creator, &String::from_str(&env, "unfair removal"));
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Disputable Content"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "test")],
+    );
+    let dispute_id = client.create_dispute(
+        &content_id,
+        &creator,
+        &String::from_str(&env, "unfair removal"),
+    );
     let dispute = client.get_dispute(&dispute_id).unwrap();
-    assert_eq!(dispute.status, crate::storage::ModerationStatus::UnderDispute);
+    assert_eq!(
+        dispute.status,
+        crate::storage::ModerationStatus::UnderDispute
+    );
     client.resolve_dispute(&dispute_id, &resolver, &true);
     let dispute = client.get_dispute(&dispute_id).unwrap();
     assert_eq!(dispute.status, crate::storage::ModerationStatus::Approved);
@@ -2375,11 +2488,23 @@ fn test_advanced_verification_and_delegation() {
     let creator = Address::generate(&env);
     let verifier = Address::generate(&env);
     let delegatee = Address::generate(&env);
-    let content_id = client.publish_content(&creator, &String::from_str(&env, "Advanced Verification"), &BytesN::random(&env), &vec![&env, String::from_str(&env, "test")]);
+    let content_id = client.publish_content(
+        &creator,
+        &String::from_str(&env, "Advanced Verification"),
+        &BytesN::random(&env),
+        &vec![&env, String::from_str(&env, "test")],
+    );
     // Delegate
     client.delegate_verification(&verifier, &delegatee, &Some(100000));
     // Advanced verification with delegation
-    let level = client.verify_content_advanced(&content_id, &delegatee, &VerificationLevel::Expert, &Some(verifier.clone()), &50, &Some(1000));
+    let level = client.verify_content_advanced(
+        &content_id,
+        &delegatee,
+        &VerificationLevel::Expert,
+        &Some(verifier.clone()),
+        &50,
+        &Some(1000),
+    );
     assert_eq!(level, VerificationLevel::Expert);
     // Renew verification
     client.renew_verification(&content_id, &delegatee, &2000);
@@ -2397,20 +2522,20 @@ fn test_record_content_view() {
     let contract_id = env.register(TokenizedEducationalContent, ());
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
     env.mock_all_auths();
-    
+
     let creator = Address::generate(&env);
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Test Content for Analytics"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "analytics")]
+        &vec![&env, String::from_str(&env, "analytics")],
     );
-    
+
     // Record multiple views
     client.record_content_view(&content_id);
     client.record_content_view(&content_id);
     client.record_content_view(&content_id);
-    
+
     // Get analytics and verify
     let analytics = client.get_content_analytics(&content_id);
     assert_eq!(analytics.content_id, content_id);
@@ -2426,28 +2551,28 @@ fn test_record_content_upvotes_and_downvotes() {
     let contract_id = env.register(TokenizedEducationalContent, ());
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
     env.mock_all_auths();
-    
+
     let creator = Address::generate(&env);
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Content for Voting Analytics"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "voting")]
+        &vec![&env, String::from_str(&env, "voting")],
     );
-    
+
     // Record views first
     client.record_content_view(&content_id);
     client.record_content_view(&content_id);
     client.record_content_view(&content_id);
     client.record_content_view(&content_id);
     client.record_content_view(&content_id);
-    
+
     // Record upvotes and downvotes
     client.record_content_upvote(&content_id);
     client.record_content_upvote(&content_id);
     client.record_content_upvote(&content_id);
     client.record_content_downvote(&content_id);
-    
+
     // Get analytics and verify
     let analytics = client.get_content_analytics(&content_id);
     assert_eq!(analytics.total_views, 5);
@@ -2463,22 +2588,22 @@ fn test_update_category_analytics() {
     let contract_id = env.register(TokenizedEducationalContent, ());
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
     env.mock_all_auths();
-    
+
     let creator = Address::generate(&env);
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Category Analytics Test"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "blockchain")]
+        &vec![&env, String::from_str(&env, "blockchain")],
     );
-    
+
     // Record some activity
     client.record_content_view(&content_id);
     client.record_content_upvote(&content_id);
-    
+
     // Update category analytics
     client.update_category_analytics(&content_id);
-    
+
     // Note: Category analytics retrieval would need to be implemented
     // For now, we just verify the function doesn't panic
 }
@@ -2493,23 +2618,24 @@ fn test_calculate_trending_score() {
     let contract_id = env.register(TokenizedEducationalContent, ());
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
     env.mock_all_auths();
-    
+
     let creator = Address::generate(&env);
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Trending Content Test"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "trending")]
+        &vec![&env, String::from_str(&env, "trending")],
     );
-    
+
     // Record activity to generate analytics
     client.record_content_view(&content_id);
     client.record_content_upvote(&content_id);
     client.record_content_upvote(&content_id);
-    
+
     // Calculate trending score for daily period
-    let trending_score = client.calculate_trending_score(&content_id, &crate::storage::TrendingPeriod::Daily);
-    
+    let trending_score =
+        client.calculate_trending_score(&content_id, &crate::storage::TrendingPeriod::Daily);
+
     // Verify trending score is calculated (should be > 0 due to activity)
     assert!(trending_score > 0);
 }
@@ -2520,22 +2646,22 @@ fn test_update_trending_content() {
     let contract_id = env.register(TokenizedEducationalContent, ());
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
     env.mock_all_auths();
-    
+
     let creator = Address::generate(&env);
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Update Trending Test"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "trending")]
+        &vec![&env, String::from_str(&env, "trending")],
     );
-    
+
     // Record some activity
     client.record_content_view(&content_id);
     client.record_content_upvote(&content_id);
-    
+
     // Update trending content for daily period
     client.update_trending_content(&content_id, &crate::storage::TrendingPeriod::Daily);
-    
+
     // Note: Trending content retrieval would need to be implemented
     // For now, we just verify the function doesn't panic
 }
@@ -2546,22 +2672,22 @@ fn test_create_trending_snapshot() {
     let contract_id = env.register(TokenizedEducationalContent, ());
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
     env.mock_all_auths();
-    
+
     let creator = Address::generate(&env);
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Snapshot Test Content"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "snapshot")]
+        &vec![&env, String::from_str(&env, "snapshot")],
     );
-    
+
     // Record activity
     client.record_content_view(&content_id);
     client.record_content_upvote(&content_id);
-    
+
     // Create trending snapshot for daily period
     let snapshot = client.create_trending_snapshot(&crate::storage::TrendingPeriod::Daily);
-    
+
     // Verify snapshot was created
     assert_eq!(snapshot.period, crate::storage::TrendingPeriod::Daily);
     // Note: timestamp might be 0 in test environment, which is acceptable
@@ -2574,22 +2700,22 @@ fn test_update_all_trending_content() {
     let contract_id = env.register(TokenizedEducationalContent, ());
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
     env.mock_all_auths();
-    
+
     let creator = Address::generate(&env);
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "All Trending Update Test"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "trending")]
+        &vec![&env, String::from_str(&env, "trending")],
     );
-    
+
     // Record activity
     client.record_content_view(&content_id);
     client.record_content_upvote(&content_id);
-    
+
     // Update all trending content
     client.update_all_trending_content(&content_id);
-    
+
     // Note: This function should update trending for all periods
     // For now, we just verify the function doesn't panic
 }
@@ -2604,47 +2730,48 @@ fn test_analytics_and_trending_integration() {
     let contract_id = env.register(TokenizedEducationalContent, ());
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
     env.mock_all_auths();
-    
+
     let creator = Address::generate(&env);
     let content_id = client.publish_content(
         &creator,
         &String::from_str(&env, "Integration Test Content"),
         &BytesN::random(&env),
-        &vec![&env, String::from_str(&env, "integration")]
+        &vec![&env, String::from_str(&env, "integration")],
     );
-    
+
     // Simulate content becoming popular
     for _ in 0..10 {
         client.record_content_view(&content_id);
     }
-    
+
     for _ in 0..8 {
         client.record_content_upvote(&content_id);
     }
-    
+
     for _ in 0..2 {
         client.record_content_downvote(&content_id);
     }
-    
+
     // Get analytics
     let analytics = client.get_content_analytics(&content_id);
     assert_eq!(analytics.total_views, 10);
     assert_eq!(analytics.total_upvotes, 8);
     assert_eq!(analytics.total_downvotes, 2);
     assert_eq!(analytics.engagement_rate, 10000); // (8+2)/10 * 10000 = 10000
-    
+
     // Calculate trending score
-    let trending_score = client.calculate_trending_score(&content_id, &crate::storage::TrendingPeriod::Daily);
+    let trending_score =
+        client.calculate_trending_score(&content_id, &crate::storage::TrendingPeriod::Daily);
     assert!(trending_score > 0);
-    
+
     // Update trending content
     client.update_trending_content(&content_id, &crate::storage::TrendingPeriod::Daily);
-    
+
     // Create snapshot
     let snapshot = client.create_trending_snapshot(&crate::storage::TrendingPeriod::Daily);
     assert_eq!(snapshot.period, crate::storage::TrendingPeriod::Daily);
     // Note: timestamp might be 0 in test environment, which is acceptable
-    
+
     // Update category analytics
     client.update_category_analytics(&content_id);
 }
@@ -2656,7 +2783,7 @@ fn test_analytics_nonexistent_content() {
     let contract_id = env.register(TokenizedEducationalContent, ());
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
     env.mock_all_auths();
-    
+
     // Try to record view for non-existent content
     client.record_content_view(&999);
 }
@@ -2668,7 +2795,7 @@ fn test_trending_nonexistent_content() {
     let contract_id = env.register(TokenizedEducationalContent, ());
     let client = TokenizedEducationalContentClient::new(&env, &contract_id);
     env.mock_all_auths();
-    
+
     // Try to calculate trending score for non-existent content
     client.calculate_trending_score(&999, &crate::storage::TrendingPeriod::Daily);
 }

@@ -19,24 +19,24 @@ pub enum Error {
     InvalidTimeRange = 14,       // Invalid time range for analytics
     InsufficientData = 15,       // Insufficient data for analytics
     // Security-related errors
-    SecurityViolation = 16,      // Security policy violation detected
-    RateLimitExceeded = 17,      // Rate limit exceeded for operation
-    ServiceUnavailable = 18,     // Service unavailable due to circuit breaker
-    AccessDenied = 19,           // Access denied for operation
-    InvalidPermission = 20,      // Invalid permission level
+    SecurityViolation = 16,  // Security policy violation detected
+    RateLimitExceeded = 17,  // Rate limit exceeded for operation
+    ServiceUnavailable = 18, // Service unavailable due to circuit breaker
+    AccessDenied = 19,       // Access denied for operation
+    InvalidPermission = 20,  // Invalid permission level
     // Integration-related errors
-    ExternalSystemError = 21,    // Error communicating with external system
-    CredentialNotFound = 22,     // External credential not found
-    VerificationFailed = 23,     // Credential verification failed
-    BridgeNotConfigured = 24,    // System bridge not properly configured
-    ImportExportFailed = 25,     // Import/export operation failed
-    MappingNotFound = 26,        // Credential mapping not found
-    InvalidCredential = 27,      // Invalid credential format or data
-    ExpirationDatePassed = 28,   // Credential has expired
-    SyncError = 29,              // Synchronization error with external system
-    UnsupportedOperation = 30,   // Operation not supported by bridge
+    ExternalSystemError = 21,  // Error communicating with external system
+    CredentialNotFound = 22,   // External credential not found
+    VerificationFailed = 23,   // Credential verification failed
+    BridgeNotConfigured = 24,  // System bridge not properly configured
+    ImportExportFailed = 25,   // Import/export operation failed
+    MappingNotFound = 26,      // Credential mapping not found
+    InvalidCredential = 27,    // Invalid credential format or data
+    ExpirationDatePassed = 28, // Credential has expired
+    SyncError = 29,            // Synchronization error with external system
+    UnsupportedOperation = 30, // Operation not supported by bridge
 
     // Verification tier errors
-    RenewalNotDue = 32,          // Verification renewal not yet due
-    InsufficientExpertise = 35,  // User doesn't have sufficient expertise areas
+    RenewalNotDue = 32,         // Verification renewal not yet due
+    InsufficientExpertise = 35, // User doesn't have sufficient expertise areas
 }

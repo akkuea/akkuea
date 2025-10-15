@@ -1,9 +1,9 @@
 #![no_std]
 
+mod analytics;
 mod error;
 mod events;
 mod storage;
-mod analytics;
 mod utils;
 
 #[cfg(test)]
@@ -90,8 +90,8 @@ impl ReviewSystemContract {
             return Err(ContractError::NotInitialized);
         }
 
-        let review = ReviewStorage::get_review(&env, review_id)
-            .ok_or(ContractError::ReviewNotFound)?;
+        let review =
+            ReviewStorage::get_review(&env, review_id).ok_or(ContractError::ReviewNotFound)?;
 
         Ok(review.sentiment)
     }

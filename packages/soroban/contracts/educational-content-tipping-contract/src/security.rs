@@ -1,8 +1,8 @@
-use soroban_sdk::{Address, BytesN, Env, String, Vec};
 use crate::errors::TippingError;
 use crate::storage;
+use crate::types::{FraudAlert, MultiSigOperation, SecurityConfig, TimeLockedWithdrawal};
 use crate::utils::Utils;
-use crate::types::{SecurityConfig, MultiSigOperation, TimeLockedWithdrawal, FraudAlert};
+use soroban_sdk::{Address, BytesN, Env, String, Vec};
 
 pub struct SecurityManager;
 
@@ -30,7 +30,8 @@ impl SecurityManager {
             return Err(TippingError::InvalidInput);
         }
 
-        if time_lock_duration < 3600 { // Minimum 1 hour
+        if time_lock_duration < 3600 {
+            // Minimum 1 hour
             return Err(TippingError::InvalidInput);
         }
 
@@ -60,7 +61,8 @@ impl SecurityManager {
     ) -> Result<BytesN<32>, TippingError> {
         initiator.require_auth();
 
-        let config = storage::get_security_config(env).ok_or(TippingError::ContractNotInitialized)?;
+        let config =
+            storage::get_security_config(env).ok_or(TippingError::ContractNotInitialized)?;
         let operation_id = Utils::generate_id(env);
         let current_time = env.ledger().timestamp();
 
@@ -167,7 +169,8 @@ impl SecurityManager {
     ) -> Result<BytesN<32>, TippingError> {
         initiator.require_auth();
 
-        let config = storage::get_security_config(env).ok_or(TippingError::ContractNotInitialized)?;
+        let config =
+            storage::get_security_config(env).ok_or(TippingError::ContractNotInitialized)?;
 
         // Validate amount
         if amount <= 0 {
@@ -295,8 +298,8 @@ impl SecurityManager {
             return Err(TippingError::Unauthorized);
         }
 
-        let mut alert = storage::get_fraud_alert(env, &alert_id)
-            .ok_or(TippingError::DataNotFound)?;
+        let mut alert =
+            storage::get_fraud_alert(env, &alert_id).ok_or(TippingError::DataNotFound)?;
 
         alert.resolved = true;
         storage::set_fraud_alert(env, &alert_id, &alert);
@@ -309,7 +312,8 @@ impl SecurityManager {
         env: &Env,
         address: Address,
     ) -> Result<Vec<String>, TippingError> {
-        let config = storage::get_security_config(env).ok_or(TippingError::ContractNotInitialized)?;
+        let config =
+            storage::get_security_config(env).ok_or(TippingError::ContractNotInitialized)?;
         let current_time = env.ledger().timestamp();
         let window_start = current_time - config.suspicious_pattern_window;
 
@@ -344,12 +348,18 @@ impl SecurityManager {
     }
 
     /// Get multi-sig operation details
-    pub fn get_multi_sig_operation(env: &Env, operation_id: BytesN<32>) -> Option<MultiSigOperation> {
+    pub fn get_multi_sig_operation(
+        env: &Env,
+        operation_id: BytesN<32>,
+    ) -> Option<MultiSigOperation> {
         storage::get_multi_sig_operation(env, &operation_id)
     }
 
     /// Get time-locked withdrawal details
-    pub fn get_time_locked_withdrawal(env: &Env, withdrawal_id: BytesN<32>) -> Option<TimeLockedWithdrawal> {
+    pub fn get_time_locked_withdrawal(
+        env: &Env,
+        withdrawal_id: BytesN<32>,
+    ) -> Option<TimeLockedWithdrawal> {
         storage::get_time_locked_withdrawal(env, &withdrawal_id)
     }
 }

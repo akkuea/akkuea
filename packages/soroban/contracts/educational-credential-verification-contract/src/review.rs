@@ -1,8 +1,8 @@
-use soroban_sdk::{Address, Env, Map, String, Vec};
-use crate::datatype::{Dispute, DisputeStatus, Educator, Review, VerificationLevel};
-use crate::storage::{DataKey, EDUCATORS, DISPUTES};
-use crate::verification::VerificationSystem;
 use crate::analytics;
+use crate::datatype::{Dispute, DisputeStatus, Educator, Review, VerificationLevel};
+use crate::storage::{DataKey, DISPUTES, EDUCATORS};
+use crate::verification::VerificationSystem;
+use soroban_sdk::{Address, Env, Map, String, Vec};
 
 pub struct ReviewSystem;
 
@@ -18,8 +18,12 @@ impl ReviewSystem {
         reviewer_address.require_auth();
 
         let educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap();
-        let reviewer = educators.get(reviewer_address.clone()).expect("reviewer not found");
-        let mut educator = educators.get(educator_address.clone()).expect("educator not found");
+        let reviewer = educators
+            .get(reviewer_address.clone())
+            .expect("reviewer not found");
+        let mut educator = educators
+            .get(educator_address.clone())
+            .expect("educator not found");
 
         // Determine the weight of the review based on the reviewer's verification level.
         let weight = match reviewer.verification_level {
@@ -34,8 +38,15 @@ impl ReviewSystem {
         }
 
         let review_counter_key = DataKey::ReviewCounter(educator_address.clone());
-        let review_id: u32 = env.storage().persistent().get(&review_counter_key).unwrap_or(0) + 1;
-        env.storage().persistent().set(&review_counter_key, &review_id);
+        let review_id: u32 = env
+            .storage()
+            .persistent()
+            .get(&review_counter_key)
+            .unwrap_or(0)
+            + 1;
+        env.storage()
+            .persistent()
+            .set(&review_counter_key, &review_id);
 
         let review = Review {
             review_id,
@@ -49,20 +60,28 @@ impl ReviewSystem {
         };
 
         let reviews_key = DataKey::Reviews(educator_address.clone());
-        let mut reviews: Vec<Review> = env.storage().persistent().get(&reviews_key).unwrap_or(Vec::new(env));
+        let mut reviews: Vec<Review> = env
+            .storage()
+            .persistent()
+            .get(&reviews_key)
+            .unwrap_or(Vec::new(env));
         reviews.push_back(review);
         env.storage().persistent().set(&reviews_key, &reviews);
 
         // Calculate the new weighted average rating.
         educator.reviews_count += 1;
         for (category, new_rating) in ratings.iter() {
-            let (current_score, current_weight) = educator.ratings.get(category.clone()).unwrap_or((0, 0));
+            let (current_score, current_weight) =
+                educator.ratings.get(category.clone()).unwrap_or((0, 0));
             let new_total_score = current_score + (new_rating * weight);
             let new_total_weight = current_weight + weight;
-            educator.ratings.set(category.clone(), (new_total_score, new_total_weight));
+            educator
+                .ratings
+                .set(category.clone(), (new_total_score, new_total_weight));
         }
-        
-        educator.verification_level = VerificationSystem::calculate_verification_level(&env, &educators, &educator_address);
+
+        educator.verification_level =
+            VerificationSystem::calculate_verification_level(&env, &educators, &educator_address);
 
         let mut educators_map = educators;
         educators_map.set(educator_address.clone(), educator);
@@ -79,8 +98,12 @@ impl ReviewSystem {
         }
 
         let reviews_key = DataKey::Reviews(educator_address.clone());
-        let mut reviews: Vec<Review> = env.storage().persistent().get(&reviews_key).expect("no reviews found");
-        
+        let mut reviews: Vec<Review> = env
+            .storage()
+            .persistent()
+            .get(&reviews_key)
+            .expect("no reviews found");
+
         // Find the index of the review to modify.
         let index = reviews.iter().position(|r| r.review_id == review_id);
 
@@ -101,8 +124,12 @@ impl ReviewSystem {
         educator.require_auth();
 
         let reviews_key = DataKey::Reviews(educator.clone());
-        let mut reviews: Vec<Review> = env.storage().persistent().get(&reviews_key).expect("no reviews found");
-        
+        let mut reviews: Vec<Review> = env
+            .storage()
+            .persistent()
+            .get(&reviews_key)
+            .expect("no reviews found");
+
         let mut reviewer_address: Option<Address> = None;
         let index = reviews.iter().position(|r| r.review_id == review_id);
 
@@ -114,13 +141,22 @@ impl ReviewSystem {
         } else {
             panic!("review not found");
         }
-        
+
         env.storage().persistent().set(&reviews_key, &reviews);
 
-        let mut disputes: Vec<Dispute> = env.storage().persistent().get(&DISPUTES).unwrap_or(Vec::new(env));
-        disputes.push_back(Dispute { review_id, educator, reason_hash, status: DisputeStatus::Active });
+        let mut disputes: Vec<Dispute> = env
+            .storage()
+            .persistent()
+            .get(&DISPUTES)
+            .unwrap_or(Vec::new(env));
+        disputes.push_back(Dispute {
+            review_id,
+            educator,
+            reason_hash,
+            status: DisputeStatus::Active,
+        });
         env.storage().persistent().set(&DISPUTES, &disputes);
-        
+
         analytics::AnalyticsSystem::update_dispute_analytics(env, &reviewer_address.unwrap());
     }
 
@@ -130,7 +166,11 @@ impl ReviewSystem {
         VerificationSystem::verify_admin(env, &admin);
 
         let reviews_key = DataKey::Reviews(educator_address.clone());
-        let mut reviews: Vec<Review> = env.storage().persistent().get(&reviews_key).expect("no reviews found");
+        let mut reviews: Vec<Review> = env
+            .storage()
+            .persistent()
+            .get(&reviews_key)
+            .expect("no reviews found");
 
         let index = reviews.iter().position(|r| r.review_id == review_id);
 

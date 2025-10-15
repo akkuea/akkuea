@@ -1,5 +1,5 @@
-use soroban_sdk::{Address, Env, Symbol, BytesN};
 use crate::types::Tip;
+use soroban_sdk::{Address, BytesN, Env, Symbol};
 
 pub fn emit_tip_event(env: &Env, tip: &Tip) {
     let topics = (Symbol::new(env, "tip"), tip.from.clone(), tip.to.clone());
@@ -12,7 +12,12 @@ pub fn emit_tip_event(env: &Env, tip: &Tip) {
     env.events().publish(topics, data);
 }
 
-pub fn emit_educator_stats_updated(env: &Env, educator: &Address, total_tips: i128, tip_count: u32) {
+pub fn emit_educator_stats_updated(
+    env: &Env,
+    educator: &Address,
+    total_tips: i128,
+    tip_count: u32,
+) {
     let topics = (Symbol::new(env, "educator_stats_updated"), educator.clone());
     let data = (total_tips, tip_count);
     env.events().publish(topics, data);
@@ -27,7 +32,11 @@ pub fn emit_subscription_created(
     amount: i128,
     period: u64,
 ) {
-    let topics = (Symbol::new(env, "subscription_created"), subscriber.clone(), educator.clone());
+    let topics = (
+        Symbol::new(env, "subscription_created"),
+        subscriber.clone(),
+        educator.clone(),
+    );
     let data = (subscription_id.clone(), amount, period);
     env.events().publish(topics, data);
 }
@@ -39,7 +48,11 @@ pub fn emit_subscription_executed(
     educator: &Address,
     amount: i128,
 ) {
-    let topics = (Symbol::new(env, "subscription_executed"), subscriber.clone(), educator.clone());
+    let topics = (
+        Symbol::new(env, "subscription_executed"),
+        subscriber.clone(),
+        educator.clone(),
+    );
     let data = (subscription_id.clone(), amount);
     env.events().publish(topics, data);
 }
@@ -50,7 +63,11 @@ pub fn emit_subscription_cancelled(
     subscriber: &Address,
     educator: &Address,
 ) {
-    let topics = (Symbol::new(env, "subscription_cancelled"), subscriber.clone(), educator.clone());
+    let topics = (
+        Symbol::new(env, "subscription_cancelled"),
+        subscriber.clone(),
+        educator.clone(),
+    );
     let data = subscription_id.clone();
     env.events().publish(topics, data);
 }
@@ -100,7 +117,11 @@ pub fn emit_conditional_tip_created(
     condition_type: &str,
     condition_value: i128,
 ) {
-    let topics = (Symbol::new(env, "conditional_tip_created"), from.clone(), to.clone());
+    let topics = (
+        Symbol::new(env, "conditional_tip_created"),
+        from.clone(),
+        to.clone(),
+    );
     let data = (tip_id.clone(), amount, condition_value);
     env.events().publish(topics, data);
 }
@@ -113,7 +134,11 @@ pub fn emit_conditional_tip_executed(
     amount: i128,
     final_metric_value: i128,
 ) {
-    let topics = (Symbol::new(env, "conditional_tip_executed"), from.clone(), to.clone());
+    let topics = (
+        Symbol::new(env, "conditional_tip_executed"),
+        from.clone(),
+        to.clone(),
+    );
     let data = (tip_id.clone(), amount, final_metric_value);
     env.events().publish(topics, data);
 }
@@ -138,7 +163,10 @@ pub fn emit_trend_analysis_completed(
     percentage_change: i128,
     period_days: u32,
 ) {
-    let topics = (Symbol::new(env, "trend_analysis_completed"), educator.clone());
+    let topics = (
+        Symbol::new(env, "trend_analysis_completed"),
+        educator.clone(),
+    );
     let data = (percentage_change, period_days);
     env.events().publish(topics, data);
 }

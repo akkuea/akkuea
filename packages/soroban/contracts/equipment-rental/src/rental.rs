@@ -1,6 +1,6 @@
+use crate::payment::{get_equipment_price, get_payment_by_rental_id, refund_payment};
+use crate::utils::{generate_rental_id, validate_duration};
 use soroban_sdk::{contracttype, symbol_short, Address, Env, Symbol, Vec};
-use crate::utils::{validate_duration, generate_rental_id};
-use crate::payment::{get_payment_by_rental_id, get_equipment_price, refund_payment};
 
 pub const RENTAL_KEY: Symbol = symbol_short!("rentals");
 pub const RENTAL_KEY_CANCEL: Symbol = symbol_short!("rentalcan");
@@ -12,10 +12,10 @@ pub const RENTAL_CANCEL: Symbol = symbol_short!("r_cancel");
 #[contracttype]
 #[derive(Clone, Debug, PartialEq)]
 pub enum RentalStatus {
-    Pending,    // Rental created, awaiting payment
-    Active,     // Payment processed, rental active
-    Completed,  // Rental duration ended
-    Cancelled,  // Rental cancelled before start
+    Pending,   // Rental created, awaiting payment
+    Active,    // Payment processed, rental active
+    Completed, // Rental duration ended
+    Cancelled, // Rental cancelled before start
 }
 
 #[contracttype]
@@ -32,10 +32,10 @@ pub struct Rental {
 #[contracttype]
 #[derive(Clone)]
 pub struct Cancellation {
-    pub rental_id: u64,        // Associated rental ID
-    pub canceller: Address,    // Stellar address of the canceller
-    pub refund_amount: i128,   // Refund amount in XLM (Stroops)
-    pub timestamp: u64,        // Cancellation timestamp
+    pub rental_id: u64,      // Associated rental ID
+    pub canceller: Address,  // Stellar address of the canceller
+    pub refund_amount: i128, // Refund amount in XLM (Stroops)
+    pub timestamp: u64,      // Cancellation timestamp
 }
 
 pub fn create_rental(env: &Env, renter: Address, equipment_id: u64, duration: u64) -> u64 {
@@ -48,12 +48,13 @@ pub fn create_rental(env: &Env, renter: Address, equipment_id: u64, duration: u6
     validate_duration(&env, duration);
 
     if check_availability(&env, equipment_id) == false {
-        env.events().publish((RENTAL_FAILED, equipment_id), "equipment_unavailable");
+        env.events()
+            .publish((RENTAL_FAILED, equipment_id), "equipment_unavailable");
         panic!("Equipment not available");
     }
 
     let rental_id = generate_rental_id(&env);
-    
+
     let rental = Rental {
         rental_id,
         equipment_id,
@@ -64,7 +65,10 @@ pub fn create_rental(env: &Env, renter: Address, equipment_id: u64, duration: u6
     };
 
     save_rental(&env, &rental);
-    env.events().publish((RENTAL_CREATED, rental_id), (equipment_id, renter, duration));
+    env.events().publish(
+        (RENTAL_CREATED, rental_id),
+        (equipment_id, renter, duration),
+    );
     rental_id
 }
 
@@ -88,13 +92,18 @@ pub fn cancel_rental(env: &Env, renter: Address, rental_id: u64) {
         rental_id,
         canceller: rental.renter.clone(),
         refund_amount: amount_to_refund as i128,
-        timestamp: current_time
+        timestamp: current_time,
     };
 
-    env.storage().persistent().set(&RENTAL_KEY_CANCEL, &cancellation);
+    env.storage()
+        .persistent()
+        .set(&RENTAL_KEY_CANCEL, &cancellation);
     refund_payment(env.clone(), rental_id, amount_to_refund.into());
 
-    env.events().publish((RENTAL_CANCEL, rental_id), (rental.equipment_id, rental.renter, amount_to_refund));
+    env.events().publish(
+        (RENTAL_CANCEL, rental_id),
+        (rental.equipment_id, rental.renter, amount_to_refund),
+    );
 }
 
 pub fn validate_cancellation(env: &Env, rental_id: u64, caller: Address) -> Option<Rental> {
@@ -113,15 +122,22 @@ pub fn validate_cancellation(env: &Env, rental_id: u64, caller: Address) -> Opti
     rental
 }
 
-
 pub fn save_rental(env: &Env, rental: &Rental) {
-    let mut rentals: Vec<Rental> = env.storage().persistent().get(&RENTAL_KEY).unwrap_or(Vec::new(&env));
+    let mut rentals: Vec<Rental> = env
+        .storage()
+        .persistent()
+        .get(&RENTAL_KEY)
+        .unwrap_or(Vec::new(&env));
     rentals.push_back(rental.clone());
     env.storage().persistent().set(&RENTAL_KEY, &rentals);
 }
 
 pub fn get_rentals_by_equipment_id(env: &Env, equipment_id: u64) -> Vec<Rental> {
-    let rentals: Vec<Rental> = env.storage().persistent().get(&RENTAL_KEY).unwrap_or(Vec::new(&env));
+    let rentals: Vec<Rental> = env
+        .storage()
+        .persistent()
+        .get(&RENTAL_KEY)
+        .unwrap_or(Vec::new(&env));
     let mut result = Vec::new(&env);
     for rental in rentals.iter() {
         if rental.equipment_id == equipment_id {
@@ -140,9 +156,15 @@ pub fn get_rental_by_rental_id(env: &Env, rental_id: u64) -> Option<Rental> {
 }
 
 pub fn update_rental_status(env: &Env, rental_id: u64, rental_status: RentalStatus) -> bool {
-    let mut rentals: Vec<Rental> = env.storage().persistent().get(&RENTAL_KEY).unwrap_or(Vec::new(&env));
+    let mut rentals: Vec<Rental> = env
+        .storage()
+        .persistent()
+        .get(&RENTAL_KEY)
+        .unwrap_or(Vec::new(&env));
     if let Some(index) = rentals.iter().position(|r| r.rental_id == rental_id) {
-        let mut rental = rentals.get_unchecked((index as usize).try_into().unwrap()).clone();
+        let mut rental = rentals
+            .get_unchecked((index as usize).try_into().unwrap())
+            .clone();
         rental.status = rental_status;
         rentals.set(index as u32, rental);
         env.storage().persistent().set(&RENTAL_KEY, &rentals);

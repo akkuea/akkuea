@@ -1,5 +1,5 @@
-use soroban_sdk::{Address, BytesN, Env, String, Vec, symbol_short};
-use crate::storage::{Content, get_next_content_id, save_content, VerificationLevel};
+use crate::storage::{get_next_content_id, save_content, Content, VerificationLevel};
+use soroban_sdk::{symbol_short, Address, BytesN, Env, String, Vec};
 
 // Publish new educational content
 pub fn publish_content(
@@ -11,7 +11,7 @@ pub fn publish_content(
 ) -> u64 {
     // Get the next content ID
     let id = get_next_content_id(env);
-    
+
     // Get current ledger timestamp for creation date
     let creation_date = env.ledger().timestamp();
 
@@ -31,16 +31,10 @@ pub fn publish_content(
     save_content(env, &content);
 
     // Emit content published event
-    env.events()
-        .publish(
-            (symbol_short!("PUBLISH"),),
-            (
-                id,
-                creator,
-                title,
-                content_hash,
-            ),
-        );
+    env.events().publish(
+        (symbol_short!("PUBLISH"),),
+        (id, creator, title, content_hash),
+    );
 
     // Return the content ID
     id

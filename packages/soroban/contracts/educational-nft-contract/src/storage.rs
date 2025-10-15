@@ -24,7 +24,10 @@ pub fn is_admin(env: &Env, address: &Address) -> bool {
 
 // Educator management
 pub fn get_educators(env: &Env) -> Vec<Address> {
-    env.storage().instance().get(&EDUCATORS_KEY).unwrap_or(Vec::new(env))
+    env.storage()
+        .instance()
+        .get(&EDUCATORS_KEY)
+        .unwrap_or(Vec::new(env))
 }
 
 pub fn add_educator(env: &Env, educator: &Address) {
@@ -38,13 +41,13 @@ pub fn add_educator(env: &Env, educator: &Address) {
 pub fn remove_educator(env: &Env, educator: &Address) {
     let educators = get_educators(env);
     let mut new_educators = Vec::new(env);
-    
+
     for addr in educators.iter() {
         if addr != *educator {
             new_educators.push_back(addr);
         }
     }
-    
+
     env.storage().instance().set(&EDUCATORS_KEY, &new_educators);
 }
 

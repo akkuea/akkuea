@@ -53,7 +53,7 @@ pub trait VerificationOperations {
 
     /// Checks if a user has a verified purchase for a product
     fn has_verified_purchase(env: Env, user: Address, product_id: u64)
-    -> Result<bool, ReviewError>;
+        -> Result<bool, ReviewError>;
 
     /// Marks a review as disputed (admin only)
     fn dispute_review(env: Env, product_id: u64, review_id: u32) -> Result<u32, ReviewError>;

@@ -1,4 +1,8 @@
-use soroban_sdk::{contracttype, Error, xdr::{ScErrorType, ScErrorCode}};
+use soroban_sdk::{
+    contracttype,
+    xdr::{ScErrorCode, ScErrorType},
+    Error,
+};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -54,19 +58,13 @@ pub enum TippingError {
 
 impl From<TippingError> for Error {
     fn from(_e: TippingError) -> Self {
-        Error::from_type_and_code(
-            ScErrorType::Contract,
-            ScErrorCode::InvalidInput
-        )
+        Error::from_type_and_code(ScErrorType::Contract, ScErrorCode::InvalidInput)
     }
 }
 
 impl From<&TippingError> for Error {
     fn from(_e: &TippingError) -> Self {
-        Error::from_type_and_code(
-            ScErrorType::Contract,
-            ScErrorCode::InvalidInput
-        )
+        Error::from_type_and_code(ScErrorType::Contract, ScErrorCode::InvalidInput)
     }
 }
 

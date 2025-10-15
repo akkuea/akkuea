@@ -1,7 +1,7 @@
 extern crate std;
 
 use crate::{EducationalNFTContract, EducationalNFTContractClient, MockEducatorVerificationNft};
-use soroban_sdk::{testutils::Address as _, Address, Bytes, Env, String, vec, log};
+use soroban_sdk::{log, testutils::Address as _, vec, Address, Bytes, Env, String};
 
 fn setup_test_environment() -> (
     Env,
@@ -44,11 +44,9 @@ fn create_test_ipfs_hash(env: &Env) -> Bytes {
         env,
         &[
             0x12, 0x20, // multihash prefix for SHA-256
-            0x1a, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f, 0x7a, 0x8b,
-            0x9c, 0xad, 0xbe, 0xcf, 0xda, 0xeb, 0xfc, 0x0d,
-            0x1e, 0x2f, 0x3a, 0x4b, 0x5c, 0x6d, 0x7e, 0x8f,
-            0x9a, 0xab, 0xbc, 0xcd, 0xde, 0xef, 0xf0, 0x01,
-            0x12, 0x23,
+            0x1a, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f, 0x7a, 0x8b, 0x9c, 0xad, 0xbe, 0xcf, 0xda, 0xeb,
+            0xfc, 0x0d, 0x1e, 0x2f, 0x3a, 0x4b, 0x5c, 0x6d, 0x7e, 0x8f, 0x9a, 0xab, 0xbc, 0xcd,
+            0xde, 0xef, 0xf0, 0x01, 0x12, 0x23,
         ],
     )
 }
@@ -520,7 +518,14 @@ fn test_store_metadata_nft_not_found() {
     let description = String::from_str(&env, "Test Description");
 
     // Try to store metadata for non-existent NFT
-    client.store_metadata(&educator, &999u64, &content_type, &ipfs_hash, &title, &description);
+    client.store_metadata(
+        &educator,
+        &999u64,
+        &content_type,
+        &ipfs_hash,
+        &title,
+        &description,
+    );
 }
 
 #[test]
@@ -620,16 +625,19 @@ fn test_update_metadata_success() {
         &env,
         &[
             0x12, 0x20, // multihash prefix
-            0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
-            0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
-            0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87,
-            0x78, 0x69, 0x5a, 0x4b, 0x3c, 0x2d, 0x1e, 0x0f,
-            0xab, 0xcd,
+            0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88, 0x77, 0x66, 0x55, 0x44, 0x33, 0x22,
+            0x11, 0x00, 0xf0, 0xe1, 0xd2, 0xc3, 0xb4, 0xa5, 0x96, 0x87, 0x78, 0x69, 0x5a, 0x4b,
+            0x3c, 0x2d, 0x1e, 0x0f, 0xab, 0xcd,
         ],
     );
     let change_notes = String::from_str(&env, "Updated course content with new materials");
 
-    client.update_metadata(&educator, &(token_id as u64), &updated_ipfs_hash, &change_notes);
+    client.update_metadata(
+        &educator,
+        &(token_id as u64),
+        &updated_ipfs_hash,
+        &change_notes,
+    );
 
     // Verify metadata was updated
     let updated_metadata = client.get_metadata(&(token_id as u64), &None);
@@ -715,21 +723,28 @@ fn test_get_metadata_specific_version() {
     // Update metadata twice
     let updated_ipfs_hash1 = create_test_ipfs_hash(&env);
     let change_notes1 = String::from_str(&env, "First update");
-    client.update_metadata(&educator, &(token_id as u64), &updated_ipfs_hash1, &change_notes1);
+    client.update_metadata(
+        &educator,
+        &(token_id as u64),
+        &updated_ipfs_hash1,
+        &change_notes1,
+    );
 
     let updated_ipfs_hash2 = Bytes::from_array(
         &env,
         &[
-            0x12, 0x20,
-            0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11,
-            0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99,
-            0xa0, 0xb1, 0xc2, 0xd3, 0xe4, 0xf5, 0x06, 0x17,
-            0x28, 0x39, 0x4a, 0x5b, 0x6c, 0x7d, 0x8e, 0x9f,
-            0xef, 0xcd,
+            0x12, 0x20, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55,
+            0x66, 0x77, 0x88, 0x99, 0xa0, 0xb1, 0xc2, 0xd3, 0xe4, 0xf5, 0x06, 0x17, 0x28, 0x39,
+            0x4a, 0x5b, 0x6c, 0x7d, 0x8e, 0x9f, 0xef, 0xcd,
         ],
     );
     let change_notes2 = String::from_str(&env, "Second update");
-    client.update_metadata(&educator, &(token_id as u64), &updated_ipfs_hash2, &change_notes2);
+    client.update_metadata(
+        &educator,
+        &(token_id as u64),
+        &updated_ipfs_hash2,
+        &change_notes2,
+    );
 
     // Get specific versions
     let version1_metadata = client.get_metadata(&(token_id as u64), &Some(1u32));
@@ -910,11 +925,11 @@ fn test_metadata_versioning_complete_workflow() {
     let hash1 = Bytes::from_array(&env, &[0xaa; 34]);
     let notes1 = String::from_str(&env, "Updated with more examples");
     client.update_metadata(&educator, &(token_id as u64), &hash1, &notes1);
-    
+
     let hash2 = Bytes::from_array(&env, &[0xbb; 34]);
     let notes2 = String::from_str(&env, "Added practical exercises");
     client.update_metadata(&educator, &(token_id as u64), &hash2, &notes2);
-    
+
     let hash3 = Bytes::from_array(&env, &[0xcc; 34]);
     let notes3 = String::from_str(&env, "Final version with assessments");
     client.update_metadata(&educator, &(token_id as u64), &hash3, &notes3);
@@ -968,7 +983,13 @@ fn test_batch_mint_nfts_success() {
     let fractions = 100u32;
     let owners = vec![&env, educator.clone(), second_educator.clone()];
     let metadata_hashes = vec![&env, create_test_metadata(&env), create_test_metadata(&env)];
-    let token_ids = client.batch_mint_nfts(&educator, &owners, &collection_id, &fractions, &metadata_hashes);
+    let token_ids = client.batch_mint_nfts(
+        &educator,
+        &owners,
+        &collection_id,
+        &fractions,
+        &metadata_hashes,
+    );
     log!(&env, "token_ids: {}", token_ids);
     log!(&env, "owners: {}", owners);
     assert_eq!(token_ids.len(), 2);
@@ -1001,16 +1022,31 @@ fn test_batch_transfer_nft_success() {
     let user2 = Address::generate(&env);
 
     // Mint three NFTs
-    let token_id1 = client.mint_nft(&educator, &collection_ids.get(0).unwrap(), &fractions, &metadata_hash);
-    let token_id2 = client.mint_nft(&educator, &collection_ids.get(1).unwrap(), &fractions, &metadata_hash);
-    let token_id3 = client.mint_nft(&educator, &collection_ids.get(2).unwrap(), &fractions, &metadata_hash);
+    let token_id1 = client.mint_nft(
+        &educator,
+        &collection_ids.get(0).unwrap(),
+        &fractions,
+        &metadata_hash,
+    );
+    let token_id2 = client.mint_nft(
+        &educator,
+        &collection_ids.get(1).unwrap(),
+        &fractions,
+        &metadata_hash,
+    );
+    let token_id3 = client.mint_nft(
+        &educator,
+        &collection_ids.get(2).unwrap(),
+        &fractions,
+        &metadata_hash,
+    );
 
     // Verify NFT was minted successfully
     let nft_info = client.get_nft_info(&token_id1);
     assert_eq!(nft_info.owner, educator);
     assert_eq!(client.owner_of(&token_id1), educator);
 
-     // Verify NFT was minted successfully
+    // Verify NFT was minted successfully
     let nft_info = client.get_nft_info(&token_id1);
     assert_eq!(nft_info.owner, educator);
     assert_eq!(client.owner_of(&token_id1), educator);
@@ -1064,7 +1100,6 @@ fn test_batch_transfer_nft_success() {
     );
 }
 
-
 #[test]
 #[should_panic(expected = "Error(Contract, #7)")]
 fn test_batch_transfer_nft_not_owner() {
@@ -1084,7 +1119,6 @@ fn test_batch_transfer_nft_not_owner() {
     client.batch_transfer_nfts(&educator, &token_ids, &recipients);
 }
 
-
 #[test]
 fn test_batch_query_ownership() {
     let (env, _owner, educator, user, client) = setup_test_environment();
@@ -1094,16 +1128,31 @@ fn test_batch_query_ownership() {
     let user2 = Address::generate(&env);
 
     // Mint three NFTs
-    let token_id1 = client.mint_nft(&educator, &collection_ids.get(0).unwrap(), &fractions, &metadata_hash);
-    let token_id2 = client.mint_nft(&educator, &collection_ids.get(1).unwrap(), &fractions, &metadata_hash);
-    let token_id3 = client.mint_nft(&educator, &collection_ids.get(2).unwrap(), &fractions, &metadata_hash);
+    let token_id1 = client.mint_nft(
+        &educator,
+        &collection_ids.get(0).unwrap(),
+        &fractions,
+        &metadata_hash,
+    );
+    let token_id2 = client.mint_nft(
+        &educator,
+        &collection_ids.get(1).unwrap(),
+        &fractions,
+        &metadata_hash,
+    );
+    let token_id3 = client.mint_nft(
+        &educator,
+        &collection_ids.get(2).unwrap(),
+        &fractions,
+        &metadata_hash,
+    );
 
     // Verify NFT was minted successfully
     let nft_info = client.get_nft_info(&token_id1);
     assert_eq!(nft_info.owner, educator);
     assert_eq!(client.owner_of(&token_id1), educator);
 
-     // Verify NFT was minted successfully
+    // Verify NFT was minted successfully
     let nft_info = client.get_nft_info(&token_id1);
     assert_eq!(nft_info.owner, educator);
     assert_eq!(client.owner_of(&token_id1), educator);

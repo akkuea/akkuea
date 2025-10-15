@@ -2,9 +2,9 @@
 
 mod error;
 mod events;
-mod storage;
-mod lms;
 mod integration;
+mod lms;
+mod storage;
 
 #[cfg(test)]
 mod test;
@@ -108,11 +108,7 @@ impl LearningManagementContract {
     }
 
     /// Add a learning platform
-    pub fn add_platform(
-        env: Env,
-        admin: Address,
-        platform: Address,
-    ) -> Result<(), ContractError> {
+    pub fn add_platform(env: Env, admin: Address, platform: Address) -> Result<(), ContractError> {
         admin.require_auth();
         lms::add_platform(&env, &admin, &platform)
     }
@@ -152,7 +148,13 @@ impl LearningManagementContract {
         milestone_id: u64,
     ) -> Result<(), ContractError> {
         platform.require_auth();
-        integration::link_progress_with_milestone(&env, token_id, project_id, milestone_id, &platform)
+        integration::link_progress_with_milestone(
+            &env,
+            token_id,
+            project_id,
+            milestone_id,
+            &platform,
+        )
     }
 
     /// Get milestone info for a learning progress

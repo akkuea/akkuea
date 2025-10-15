@@ -5,9 +5,7 @@ use soroban_sdk::{
     Address, Env, String, Vec,
 };
 
-use crate::{
-    TippingRewardContract, TippingRewardContractClient,
-};
+use crate::{TippingRewardContract, TippingRewardContractClient};
 
 fn create_contract(e: &Env) -> TippingRewardContractClient {
     let contract_id = e.register(TippingRewardContract, ());
@@ -92,11 +90,11 @@ fn test_get_top_educators() {
     let top_educators = client.get_top_educators(&2);
 
     assert_eq!(top_educators.len(), 2);
-    
+
     // Verify amounts are in descending order
     let (_, stats1) = top_educators.get(0).unwrap();
     let (_, stats2) = top_educators.get(1).unwrap();
-    
+
     assert_eq!(stats1.total_amount, 200);
     assert_eq!(stats2.total_amount, 150);
     assert_eq!(stats1.tip_count, 1);
@@ -105,10 +103,10 @@ fn test_get_top_educators() {
     // Verify the addresses are either recipient2 or recipient3
     let (addr1, _) = top_educators.get(0).unwrap();
     let (addr2, _) = top_educators.get(1).unwrap();
-    
+
     assert!(
-        (addr1 == recipient2 && addr2 == recipient3) ||
-        (addr1 == recipient3 && addr2 == recipient2)
+        (addr1 == recipient2 && addr2 == recipient3)
+            || (addr1 == recipient3 && addr2 == recipient2)
     );
 }
 
@@ -142,7 +140,7 @@ fn test_multiple_tips_same_educator() {
 
     // Send first tip
     client.send_tip(&sender, &recipient, &100, &token, &None);
-    
+
     // Send second tip
     client.send_tip(&sender, &recipient, &200, &token, &None);
 
@@ -154,10 +152,10 @@ fn test_multiple_tips_same_educator() {
     // Verify tip history has both tips
     let history = client.get_tip_history(&recipient).unwrap();
     assert_eq!(history.tips.len(), 2);
-    
+
     let first_tip = history.tips.get(0).unwrap();
     assert_eq!(first_tip.amount, 100);
-    
+
     let second_tip = history.tips.get(1).unwrap();
     assert_eq!(second_tip.amount, 200);
 }
@@ -188,7 +186,7 @@ fn test_get_top_educators_with_limit_larger_than_educators() {
 
     let top_educators = client.get_top_educators(&5);
     assert_eq!(top_educators.len(), 1);
-    
+
     let (addr, stats) = top_educators.get(0).unwrap();
     assert_eq!(addr, recipient);
     assert_eq!(stats.total_amount, 100);
@@ -240,11 +238,11 @@ fn test_multiple_tokens() {
     // Verify tip history has both tips with correct tokens
     let history = client.get_tip_history(&recipient).unwrap();
     assert_eq!(history.tips.len(), 2);
-    
+
     let first_tip = history.tips.get(0).unwrap();
     assert_eq!(first_tip.token, token1);
     assert_eq!(first_tip.amount, 100);
-    
+
     let second_tip = history.tips.get(1).unwrap();
     assert_eq!(second_tip.token, token2);
     assert_eq!(second_tip.amount, 200);
@@ -270,11 +268,11 @@ fn test_multiple_senders() {
     // Verify tip history has both tips with correct senders
     let history = client.get_tip_history(&recipient).unwrap();
     assert_eq!(history.tips.len(), 2);
-    
+
     let first_tip = history.tips.get(0).unwrap();
     assert_eq!(first_tip.from, sender1);
     assert_eq!(first_tip.amount, 100);
-    
+
     let second_tip = history.tips.get(1).unwrap();
     assert_eq!(second_tip.from, sender2);
     assert_eq!(second_tip.amount, 200);
@@ -295,20 +293,21 @@ fn test_tip_timestamps() {
 
     // Send first tip
     client.send_tip(&sender, &recipient, &100, &token, &None);
-    
+
     // Advance time
-    e.ledger().with_mut(|l| l.timestamp = initial_timestamp + 1000);
-    
+    e.ledger()
+        .with_mut(|l| l.timestamp = initial_timestamp + 1000);
+
     // Send second tip
     client.send_tip(&sender, &recipient, &200, &token, &None);
 
     // Verify timestamps in history
     let history = client.get_tip_history(&recipient).unwrap();
     assert_eq!(history.tips.len(), 2);
-    
+
     let first_tip = history.tips.get(0).unwrap();
     assert_eq!(first_tip.timestamp, initial_timestamp);
-    
+
     let second_tip = history.tips.get(1).unwrap();
     assert_eq!(second_tip.timestamp, initial_timestamp + 1000);
 
@@ -359,7 +358,7 @@ fn test_update_existing_educator() {
 
     // Send initial tip
     client.send_tip(&sender, &recipient, &100, &token, &None);
-    
+
     // Send higher tip to same recipient
     client.send_tip(&sender, &recipient, &300, &token, &None);
 
@@ -396,7 +395,7 @@ fn test_tied_amounts() {
     // Verify top educators
     let top_educators = client.get_top_educators(&2);
     assert_eq!(top_educators.len(), 2);
-    
+
     // Both should have the same amount
     let (_, stats1) = top_educators.get(0).unwrap();
     let (_, stats2) = top_educators.get(1).unwrap();
@@ -427,7 +426,7 @@ fn test_update_lower_amount() {
     // Verify top educators order
     let top_educators = client.get_top_educators(&2);
     assert_eq!(top_educators.len(), 2);
-    
+
     // Second recipient should now be first
     let (addr1, stats1) = top_educators.get(0).unwrap();
     let (addr2, stats2) = top_educators.get(1).unwrap();
@@ -463,7 +462,7 @@ fn test_multiple_updates_same_educator() {
     // Verify tip history has all tips
     let history = client.get_tip_history(&recipient).unwrap();
     assert_eq!(history.tips.len(), 4);
-    
+
     // Verify amounts in history
     assert_eq!(history.tips.get(0).unwrap().amount, 100);
     assert_eq!(history.tips.get(1).unwrap().amount, 200);
@@ -526,8 +525,9 @@ fn test_create_subscription() {
     let amount = 100;
     let period = 86400; // 1 day
 
-    let subscription_id = client.create_subscription(&subscriber, &educator, &amount, &token, &period);
-    
+    let subscription_id =
+        client.create_subscription(&subscriber, &educator, &amount, &token, &period);
+
     // Verify subscription was created
     let subscription = client.get_subscription_info(&subscription_id).unwrap();
     assert_eq!(subscription.educator, educator);
@@ -571,15 +571,16 @@ fn test_execute_subscription_payment() {
     let amount = 100;
     let period = 86400;
 
-    let subscription_id = client.create_subscription(&subscriber, &educator, &amount, &token, &period);
-    
+    let subscription_id =
+        client.create_subscription(&subscriber, &educator, &amount, &token, &period);
+
     // Advance time to make payment ready
     let current_time = e.ledger().timestamp();
     e.ledger().with_mut(|l| l.timestamp = current_time + period);
-    
+
     // Execute payment
     client.execute_subscription_payment(&subscription_id);
-    
+
     // Verify subscription was updated
     let subscription = client.get_subscription_info(&subscription_id).unwrap();
     assert_eq!(subscription.execution_count, 1);
@@ -598,10 +599,10 @@ fn test_cancel_subscription() {
     client.initialize(&admin);
 
     let subscription_id = client.create_subscription(&subscriber, &educator, &100, &token, &86400);
-    
+
     // Cancel subscription
     client.cancel_subscription(&subscriber, &subscription_id);
-    
+
     // Verify subscription is inactive
     let subscription = client.get_subscription_info(&subscription_id).unwrap();
     assert!(!subscription.is_active);
@@ -622,7 +623,7 @@ fn test_get_subscriber_subscriptions() {
     // Create multiple subscriptions
     client.create_subscription(&subscriber, &educator1, &100, &token, &86400);
     client.create_subscription(&subscriber, &educator2, &200, &token, &86400);
-    
+
     // Get all subscriptions for subscriber
     let subscriptions = client.get_subscriber_subscriptions(&subscriber);
     assert_eq!(subscriptions.len(), 2);
@@ -644,8 +645,9 @@ fn test_create_tip_goal() {
     let target_amount = 1000;
     let deadline = e.ledger().timestamp() + 86400 * 30; // 30 days
 
-    let goal_id = client.create_tip_goal(&educator, &title, &description, &target_amount, &deadline);
-    
+    let goal_id =
+        client.create_tip_goal(&educator, &title, &description, &target_amount, &deadline);
+
     // Verify goal was created
     let goal = client.get_goal_status(&goal_id).unwrap();
     assert_eq!(goal.educator, educator);
@@ -671,10 +673,10 @@ fn test_contribute_to_goal() {
     let deadline = e.ledger().timestamp() + 86400 * 30;
 
     let goal_id = client.create_tip_goal(&educator, &title, &description, &1000, &deadline);
-    
+
     // Contribute to goal
     client.contribute_to_goal(&contributor, &goal_id, &200, &token);
-    
+
     // Verify contribution
     let goal = client.get_goal_status(&goal_id).unwrap();
     assert_eq!(goal.current_amount, 200);
@@ -699,11 +701,11 @@ fn test_goal_multiple_contributors() {
     let deadline = e.ledger().timestamp() + 86400 * 30;
 
     let goal_id = client.create_tip_goal(&educator, &title, &description, &1000, &deadline);
-    
+
     // Multiple contributions
     client.contribute_to_goal(&contributor1, &goal_id, &300, &token);
     client.contribute_to_goal(&contributor2, &goal_id, &400, &token);
-    
+
     // Verify total and contributors
     let goal = client.get_goal_status(&goal_id).unwrap();
     assert_eq!(goal.current_amount, 700);
@@ -727,8 +729,15 @@ fn test_create_conditional_tip() {
     let condition_type = String::from_str(&e, "views");
     let condition_value = 1000;
 
-    let tip_id = client.create_conditional_tip(&from, &to, &amount, &token, &condition_type, &condition_value);
-    
+    let tip_id = client.create_conditional_tip(
+        &from,
+        &to,
+        &amount,
+        &token,
+        &condition_type,
+        &condition_value,
+    );
+
     // Verify conditional tip was created
     let conditional_tip = client.get_conditional_tip_info(&tip_id).unwrap();
     assert_eq!(conditional_tip.from, from);
@@ -752,10 +761,10 @@ fn test_execute_conditional_tip_success() {
 
     let condition_type = String::from_str(&e, "views");
     let tip_id = client.create_conditional_tip(&from, &to, &500, &token, &condition_type, &1000);
-    
+
     // Execute with condition met
     client.execute_conditional_tip(&tip_id, &1500);
-    
+
     // Verify tip was executed
     let conditional_tip = client.get_conditional_tip_info(&tip_id).unwrap();
     assert!(conditional_tip.is_executed);
@@ -775,10 +784,10 @@ fn test_execute_conditional_tip_not_met() {
 
     let condition_type = String::from_str(&e, "views");
     let tip_id = client.create_conditional_tip(&from, &to, &500, &token, &condition_type, &1000);
-    
+
     // Execute with condition not met
     client.execute_conditional_tip(&tip_id, &800);
-    
+
     // Verify tip was not executed
     let conditional_tip = client.get_conditional_tip_info(&tip_id).unwrap();
     assert!(!conditional_tip.is_executed);
@@ -825,7 +834,7 @@ fn test_generate_time_report() {
     client.initialize(&admin);
 
     let start_time = e.ledger().timestamp();
-    
+
     // Send tips
     client.send_tip(&sender, &educator, &100, &token, &None);
     client.send_tip(&sender, &educator, &200, &token, &None);
@@ -833,7 +842,7 @@ fn test_generate_time_report() {
     let end_time = e.ledger().timestamp() + 3600;
     e.ledger().with_mut(|l| l.timestamp = end_time);
 
-    // Generate report 
+    // Generate report
     let period_type = String::from_str(&e, "daily");
     match client.try_generate_time_report(&period_type, &start_time, &end_time) {
         Ok(report) => {
@@ -841,7 +850,7 @@ fn test_generate_time_report() {
             assert_eq!(report.period_type, period_type);
             assert_eq!(report.start_time, start_time);
             assert_eq!(report.end_time, end_time);
-        },
+        }
         Err(_) => {
             // If the method fails, just verify we can call it without panicking
             assert!(true);
@@ -862,25 +871,26 @@ fn test_analyze_trends() {
 
     // Send tips in current period
     client.send_tip(&sender, &educator, &300, &token, &None);
-    
+
     // Advance time and send more tips
     let current_time = e.ledger().timestamp();
-    e.ledger().with_mut(|l| l.timestamp = current_time + 86400 * 15); // 15 days later
-    
+    e.ledger()
+        .with_mut(|l| l.timestamp = current_time + 86400 * 15); // 15 days later
+
     client.send_tip(&sender, &educator, &500, &token, &None);
 
     // Analyze trends
-   match client.try_analyze_trends(&educator, &30) {
-    Ok(trend) => {
-        let trend = trend.unwrap();
-        assert_eq!(trend.educator, educator);
-        assert_eq!(trend.period_days, 30);
-    },
-    Err(_) => {
-        // If the method fails, just verify we can call it without panicking
-        assert!(true);
+    match client.try_analyze_trends(&educator, &30) {
+        Ok(trend) => {
+            let trend = trend.unwrap();
+            assert_eq!(trend.educator, educator);
+            assert_eq!(trend.period_days, 30);
+        }
+        Err(_) => {
+            // If the method fails, just verify we can call it without panicking
+            assert!(true);
+        }
     }
-}
 }
 
 #[test]
@@ -901,16 +911,16 @@ fn test_get_educator_analytics() {
 
     // Get comprehensive analytics
     match client.try_get_educator_analytics(&educator) {
-    Ok(analytics) => {
-        let analytics = analytics.unwrap();
-        assert_eq!(analytics.educator, educator);
-        assert!(analytics.unique_supporters >= 1);
-    },
-    Err(_) => {
-        // If the method fails, just verify we can call it without panicking
-        assert!(true);
+        Ok(analytics) => {
+            let analytics = analytics.unwrap();
+            assert_eq!(analytics.educator, educator);
+            assert!(analytics.unique_supporters >= 1);
+        }
+        Err(_) => {
+            // If the method fails, just verify we can call it without panicking
+            assert!(true);
+        }
     }
-}
 }
 
 #[test]
@@ -925,19 +935,19 @@ fn test_get_analytics_history() {
     client.initialize(&admin);
 
     let start_time = e.ledger().timestamp();
-    
+
     // Send tips and record analytics at different intervals
     client.send_tip(&sender, &educator, &100, &token, &None);
     client.record_analytics(&start_time, &start_time);
 
     let mid_time = start_time + 3600;
     e.ledger().with_mut(|l| l.timestamp = mid_time);
-    
+
     client.send_tip(&sender, &educator, &200, &token, &None);
     client.record_analytics(&mid_time, &mid_time);
 
     let end_time = start_time + 7200;
-    
+
     // Get analytics history
     let history = client.get_analytics_history(&start_time, &end_time, &3600);
     assert!(history.len() >= 1);
@@ -958,7 +968,7 @@ fn test_subscription_execution_before_time() {
     client.initialize(&admin);
 
     let subscription_id = client.create_subscription(&subscriber, &educator, &100, &token, &86400);
-    
+
     // Try to execute immediately (should fail)
     client.execute_subscription_payment(&subscription_id);
 }
@@ -980,10 +990,10 @@ fn test_contribute_to_expired_goal() {
     let description = String::from_str(&e, "Goal Description");
 
     let goal_id = client.create_tip_goal(&educator, &title, &description, &1000, &deadline);
-    
+
     // Advance time past deadline
     e.ledger().with_mut(|l| l.timestamp = deadline + 1);
-    
+
     // Try to contribute (should fail)
     client.contribute_to_goal(&contributor, &goal_id, &200, &token);
 }
@@ -1002,10 +1012,10 @@ fn test_execute_already_executed_conditional_tip() {
 
     let condition_type = String::from_str(&e, "views");
     let tip_id = client.create_conditional_tip(&from, &to, &500, &token, &condition_type, &1000);
-    
+
     // Execute once
     client.execute_conditional_tip(&tip_id, &1500);
-    
+
     // Try to execute again (should fail)
     client.execute_conditional_tip(&tip_id, &2000);
 }
@@ -1024,13 +1034,13 @@ fn test_cancel_subscription_wrong_subscriber() {
     client.initialize(&admin);
 
     let subscription_id = client.create_subscription(&subscriber, &educator, &100, &token, &86400);
-    
+
     // Try to cancel with wrong subscriber (should fail)
     client.cancel_subscription(&wrong_subscriber, &subscription_id);
 }
 
 #[test]
-#[should_panic] 
+#[should_panic]
 fn test_create_goal_with_past_deadline() {
     let e = Env::default();
     let admin = Address::generate(&e);
@@ -1062,26 +1072,27 @@ fn test_full_subscription_workflow() {
 
     // Create subscription
     let subscription_id = client.create_subscription(&subscriber, &educator, &100, &token, &86400);
-    
+
     // Verify it appears in subscriber's list
     let subscriptions = client.get_subscriber_subscriptions(&subscriber);
     assert_eq!(subscriptions.len(), 1);
     assert_eq!(subscriptions.get(0).unwrap().id, subscription_id);
-    
+
     // Execute multiple payments
     let current_time = e.ledger().timestamp();
     for i in 1..=3 {
-        e.ledger().with_mut(|l| l.timestamp = current_time + (86400 * i));
+        e.ledger()
+            .with_mut(|l| l.timestamp = current_time + (86400 * i));
         client.execute_subscription_payment(&subscription_id);
     }
-    
+
     // Verify execution count
     let subscription = client.get_subscription_info(&subscription_id).unwrap();
     assert_eq!(subscription.execution_count, 3);
-    
+
     // Cancel subscription
     client.cancel_subscription(&subscriber, &subscription_id);
-    
+
     // Verify it's inactive
     let subscription = client.get_subscription_info(&subscription_id).unwrap();
     assert!(!subscription.is_active);
@@ -1106,13 +1117,14 @@ fn test_goal_completion_workflow() {
     let deadline = e.ledger().timestamp() + 86400 * 30;
 
     // Create goal
-    let goal_id = client.create_tip_goal(&educator, &title, &description, &target_amount, &deadline);
-    
+    let goal_id =
+        client.create_tip_goal(&educator, &title, &description, &target_amount, &deadline);
+
     // Multiple contributors
     client.contribute_to_goal(&contributor1, &goal_id, &300, &token);
     client.contribute_to_goal(&contributor2, &goal_id, &400, &token);
     client.contribute_to_goal(&contributor3, &goal_id, &300, &token);
-    
+
     // Verify goal status
     let goal = client.get_goal_status(&goal_id).unwrap();
     assert_eq!(goal.current_amount, 1000);
@@ -1134,56 +1146,56 @@ fn test_analytics_comprehensive_workflow() {
     client.initialize(&admin);
 
     let start_time = e.ledger().timestamp();
-    
+
     // Send tips over time
     client.send_tip(&sender1, &educator1, &100, &token, &None);
     client.send_tip(&sender2, &educator1, &200, &token, &None);
     client.send_tip(&sender1, &educator2, &150, &token, &None);
-    
+
     // Record analytics
     client.record_analytics(&start_time, &start_time);
-    
+
     // Advance time and send more tips
     let mid_time = start_time + 86400; // 1 day later
     e.ledger().with_mut(|l| l.timestamp = mid_time);
-    
+
     client.send_tip(&sender1, &educator1, &300, &token, &None);
     client.send_tip(&sender2, &educator2, &250, &token, &None);
-    
+
     client.record_analytics(&mid_time, &mid_time);
-    
+
     // Generate time report
     let period_type = String::from_str(&e, "daily");
     match client.try_generate_time_report(&period_type, &start_time, &mid_time) {
         Ok(report) => {
             assert!(report.unwrap().tip_count >= 3);
-        },
+        }
         Err(_) => {
             assert!(true);
         }
     }
-    
+
     // Analyze trends for educator
     match client.try_analyze_trends(&educator1, &30) {
         Ok(trend) => {
             assert_eq!(trend.unwrap().educator, educator1);
-        },
+        }
         Err(_) => {
             assert!(true);
         }
     }
-    
+
     // Get comprehensive analytics
     match client.try_get_educator_analytics(&educator1) {
-    Ok(analytics) => {
-        let analytics = analytics.unwrap();
-        assert_eq!(analytics.educator, educator1);
-        assert!(analytics.unique_supporters >= 1);
-    },
-    Err(_) => {
-        assert!(true);
+        Ok(analytics) => {
+            let analytics = analytics.unwrap();
+            assert_eq!(analytics.educator, educator1);
+            assert!(analytics.unique_supporters >= 1);
+        }
+        Err(_) => {
+            assert!(true);
+        }
     }
-}
 }
 
 // ===== BASIC MULTI-TOKEN TESTS (SIMPLIFIED) =====
@@ -1192,26 +1204,26 @@ fn test_analytics_comprehensive_workflow() {
 fn test_basic_multi_token_functionality() {
     let e = Env::default();
     let client = create_contract(&e);
-    
+
     let admin = Address::generate(&e);
     let token1 = Address::generate(&e);
-    
+
     // Initialize contract
     client.initialize(&admin);
-    
+
     // Test basic functionality with fake tokens
     let sender = Address::generate(&e);
     let educator = Address::generate(&e);
-    
+
     // Send tips with different tokens (will work with basic implementation)
     let result1 = client.try_send_tip(&sender, &educator, &100, &token1, &None);
     assert!(result1.is_ok());
-    
+
     // Verify basic token operations work
     let whitelisted_tokens = client.get_whitelisted_tokens();
     // Should start empty since no tokens are whitelisted yet
     assert_eq!(whitelisted_tokens.len(), 0);
-    
+
     // Check if token is whitelisted (should be false)
     let is_whitelisted = client.is_token_whitelisted(&token1);
     assert!(!is_whitelisted);

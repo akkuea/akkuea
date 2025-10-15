@@ -1,14 +1,18 @@
-use soroban_sdk::{Env, String, BytesN, Address};
 use crate::datatype::{Credential, VerificationLevel};
+use soroban_sdk::{Address, BytesN, Env, String};
 
 pub struct Utils;
 
 impl Utils {
     /// Generate a unique credential ID using timestamp and hash
-    pub fn generate_credential_id(env: &Env, credential_hash: &String, issuer: &Address) -> BytesN<32> {
+    pub fn generate_credential_id(
+        env: &Env,
+        credential_hash: &String,
+        issuer: &Address,
+    ) -> BytesN<32> {
         let timestamp = env.ledger().timestamp();
         let mut bytes = [0u8; 32];
-        
+
         // Use timestamp for first 8 bytes
         bytes[0] = (timestamp >> 56) as u8;
         bytes[1] = (timestamp >> 48) as u8;
@@ -18,20 +22,20 @@ impl Utils {
         bytes[5] = (timestamp >> 16) as u8;
         bytes[6] = (timestamp >> 8) as u8;
         bytes[7] = timestamp as u8;
-        
+
         // Use credential hash for next 16 bytes (simplified)
         // Note: Soroban String doesn't have direct to_string or as_bytes methods
         // We'll use a simpler approach with length-based hashing
         let hash_len = credential_hash.len();
         bytes[8] = (hash_len >> 8) as u8;
         bytes[9] = hash_len as u8;
-        
+
         // Use issuer address for last 8 bytes (simplified)
         // Since Soroban String doesn't have as_bytes(), we'll use a simple approach
         let issuer_len = issuer.to_string().len();
         bytes[24] = (issuer_len >> 8) as u8;
         bytes[25] = issuer_len as u8;
-        
+
         BytesN::from_array(env, &bytes)
     }
 
@@ -39,7 +43,7 @@ impl Utils {
     pub fn generate_nft_id(env: &Env, owner: &Address, template_id: u32) -> BytesN<32> {
         let timestamp = env.ledger().timestamp();
         let mut bytes = [0u8; 32];
-        
+
         // Use timestamp for first 8 bytes
         bytes[0] = (timestamp >> 56) as u8;
         bytes[1] = (timestamp >> 48) as u8;
@@ -49,18 +53,18 @@ impl Utils {
         bytes[5] = (timestamp >> 16) as u8;
         bytes[6] = (timestamp >> 8) as u8;
         bytes[7] = timestamp as u8;
-        
+
         // Use template ID for next 4 bytes
         bytes[8] = (template_id >> 24) as u8;
         bytes[9] = (template_id >> 16) as u8;
         bytes[10] = (template_id >> 8) as u8;
         bytes[11] = template_id as u8;
-        
+
         // Use owner address for remaining bytes (simplified)
         let owner_len = owner.to_string().len();
         bytes[12] = (owner_len >> 8) as u8;
         bytes[13] = owner_len as u8;
-        
+
         BytesN::from_array(env, &bytes)
     }
 
@@ -126,13 +130,13 @@ impl Utils {
     pub fn calculate_expiration_timestamp(env: &Env, tier: u32) -> u64 {
         let current_time = env.ledger().timestamp();
         let seconds_per_year = 365 * 24 * 60 * 60; // One year in seconds
-        
+
         match tier {
-            1 => current_time + seconds_per_year,         // Basic: 1 year
-            2 => current_time + (2 * seconds_per_year),   // Advanced: 2 years
-            3 => current_time + (3 * seconds_per_year),   // Expert: 3 years
-            4 => current_time + (5 * seconds_per_year),   // Premium: 5 years
-            _ => current_time + (seconds_per_year / 2),   // Default: 6 months
+            1 => current_time + seconds_per_year,       // Basic: 1 year
+            2 => current_time + (2 * seconds_per_year), // Advanced: 2 years
+            3 => current_time + (3 * seconds_per_year), // Expert: 3 years
+            4 => current_time + (5 * seconds_per_year), // Premium: 5 years
+            _ => current_time + (seconds_per_year / 2), // Default: 6 months
         }
     }
 
@@ -150,19 +154,18 @@ impl Utils {
         required_tier: u32,
     ) -> BytesN<32> {
         let mut bytes = [0u8; 32];
-        
+
         // Add required tier bytes
         bytes[0] = (required_tier >> 24) as u8;
         bytes[1] = (required_tier >> 16) as u8;
         bytes[2] = (required_tier >> 8) as u8;
         bytes[3] = required_tier as u8;
-        
+
         // Add criteria hash bytes (simplified)
         let criteria_len = criteria.len();
         bytes[4] = (criteria_len >> 8) as u8;
         bytes[5] = criteria_len as u8;
-        
+
         BytesN::from_array(env, &bytes)
     }
 }
-

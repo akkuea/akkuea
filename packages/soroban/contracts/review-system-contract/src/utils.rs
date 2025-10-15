@@ -1,5 +1,5 @@
-use soroban_sdk::String;
 use crate::error::ContractError;
+use soroban_sdk::String;
 
 const MIN_REVIEW_LENGTH: u32 = 5;
 const MAX_REVIEW_LENGTH: u32 = 1000;

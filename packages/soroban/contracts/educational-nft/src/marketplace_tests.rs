@@ -1,10 +1,13 @@
 extern crate std;
 
 use crate::{
-    marketplace::{Listing, Bid, Sale, PriceHistory},
+    marketplace::{Bid, Listing, PriceHistory, Sale},
     EducationalNFTContract, EducationalNFTContractClient, MockEducatorVerificationNft,
 };
-use soroban_sdk::{testutils::{Address as _, Ledger}, Address, Bytes, Env, String, Vec};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    Address, Bytes, Env, String, Vec,
+};
 
 fn setup_marketplace_test_environment() -> (
     Env,
@@ -34,7 +37,7 @@ fn setup_marketplace_test_environment() -> (
     let collection_id = 1u64;
     let fractions = 100u32;
     let metadata_hash = Bytes::from_array(&env, &[1; 32]);
-    
+
     let token_id = client.mint_nft(&seller, &collection_id, &fractions, &metadata_hash);
 
     (env, owner, educator, seller, buyer, client, token_id)
@@ -42,7 +45,8 @@ fn setup_marketplace_test_environment() -> (
 
 #[test]
 fn test_list_nft_for_sale() {
-    let (env, _owner, _educator, seller, _buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, _buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let price = 1000i128;
     let auction_end = 0u64;
@@ -70,7 +74,8 @@ fn test_list_nft_for_sale() {
 
 #[test]
 fn test_list_nft_for_auction() {
-    let (env, _owner, _educator, seller, _buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, _buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let price = 1000i128;
     let auction_end = env.ledger().timestamp() + 3600;
@@ -94,7 +99,8 @@ fn test_list_nft_for_auction() {
 
 #[test]
 fn test_buy_nft_direct_sale() {
-    let (env, _owner, _educator, seller, buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let price = 1000i128;
     let auction_end = 0u64;
@@ -108,11 +114,7 @@ fn test_buy_nft_direct_sale() {
         &royalty_rate,
     );
 
-    client.buy_nft(
-        &buyer,
-        &(token_id as u64),
-        &price,
-    );
+    client.buy_nft(&buyer, &(token_id as u64), &price);
 
     let listing = client.get_listing(&(token_id as u64));
     assert!(listing.is_none());
@@ -130,7 +132,8 @@ fn test_buy_nft_direct_sale() {
 
 #[test]
 fn test_place_bid_on_auction() {
-    let (env, _owner, _educator, seller, buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let price = 1000i128;
     let auction_end = env.ledger().timestamp() + 3600;
@@ -145,11 +148,7 @@ fn test_place_bid_on_auction() {
     );
 
     let bid_amount = 1500i128;
-    client.place_bid(
-        &buyer,
-        &(token_id as u64),
-        &bid_amount,
-    );
+    client.place_bid(&buyer, &(token_id as u64), &bid_amount);
 
     let bids = client.get_bids(&(token_id as u64));
     assert!(!bids.is_empty());
@@ -166,7 +165,8 @@ fn test_place_bid_on_auction() {
 
 #[test]
 fn test_multiple_bids() {
-    let (env, _owner, _educator, seller, _buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, _buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let bidder1 = Address::generate(&env);
     let bidder2 = Address::generate(&env);
@@ -200,7 +200,8 @@ fn test_multiple_bids() {
 
 #[test]
 fn test_settle_auction() {
-    let (env, _owner, _educator, seller, buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let price = 1000i128;
     let auction_end = env.ledger().timestamp() + 100;
@@ -215,20 +216,13 @@ fn test_settle_auction() {
     );
 
     let bid_amount = 1500i128;
-    client.place_bid(
-        &buyer,
-        &(token_id as u64),
-        &bid_amount,
-    );
+    client.place_bid(&buyer, &(token_id as u64), &bid_amount);
 
     env.ledger().with_mut(|li| {
         li.timestamp = auction_end + 1;
     });
 
-    client.settle_auction(
-        &seller,
-        &(token_id as u64),
-    );
+    client.settle_auction(&seller, &(token_id as u64));
 
     let listing = client.get_listing(&(token_id as u64));
     assert!(listing.is_none());
@@ -243,7 +237,8 @@ fn test_settle_auction() {
 
 #[test]
 fn test_cancel_listing() {
-    let (env, _owner, _educator, seller, _buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, _buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let price = 1000i128;
     let auction_end = 0u64;
@@ -260,10 +255,7 @@ fn test_cancel_listing() {
     let listing = client.get_listing(&(token_id as u64));
     assert!(listing.is_some());
 
-    client.cancel_listing(
-        &seller,
-        &(token_id as u64),
-    );
+    client.cancel_listing(&seller, &(token_id as u64));
 
     let listing = client.get_listing(&(token_id as u64));
     assert!(listing.is_none());
@@ -271,10 +263,11 @@ fn test_cancel_listing() {
 
 #[test]
 fn test_price_history_tracking() {
-    let (env, _owner, _educator, seller, buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let price1 = 1000i128;
-    
+
     client.list_nft(&seller, &(token_id as u64), &price1, &0u64, &500u32);
     client.buy_nft(&buyer, &(token_id as u64), &price1);
 
@@ -292,28 +285,19 @@ fn test_price_history_tracking() {
 
 #[test]
 fn test_royalty_calculation() {
-    let (env, _owner, _educator, seller, buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let price = 2000i128;
     let royalty_rate = 1000u32;
 
-    client.list_nft(
-        &seller,
-        &(token_id as u64),
-        &price,
-        &0u64,
-        &royalty_rate,
-    );
+    client.list_nft(&seller, &(token_id as u64), &price, &0u64, &royalty_rate);
 
-    client.buy_nft(
-        &buyer,
-        &(token_id as u64),
-        &price,
-    );
+    client.buy_nft(&buyer, &(token_id as u64), &price);
 
     let sales_history = client.get_sales_history(&(token_id as u64));
     let sale = &sales_history.get(0).unwrap();
-    
+
     let expected_royalty = (price * royalty_rate as i128) / 10000;
     assert_eq!(sale.royalty_paid, expected_royalty);
     assert_eq!(sale.royalty_paid, 200i128);
@@ -321,7 +305,8 @@ fn test_royalty_calculation() {
 
 #[test]
 fn test_marketplace_error_conditions() {
-    let (env, _owner, _educator, seller, buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let invalid_token = 999u64;
     let result = client.try_list_nft(&seller, &invalid_token, &1000i128, &0u64, &500u32);
@@ -332,7 +317,7 @@ fn test_marketplace_error_conditions() {
     assert!(result.is_err());
 
     client.list_nft(&seller, &(token_id as u64), &1000i128, &0u64, &500u32);
-    
+
     let result = client.try_buy_nft(&buyer, &(token_id as u64), &500i128);
     assert!(result.is_err());
 
@@ -342,10 +327,17 @@ fn test_marketplace_error_conditions() {
 
 #[test]
 fn test_auction_error_conditions() {
-    let (env, _owner, _educator, seller, buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     let auction_end = env.ledger().timestamp() + 3600;
-    client.list_nft(&seller, &(token_id as u64), &1000i128, &auction_end, &500u32);
+    client.list_nft(
+        &seller,
+        &(token_id as u64),
+        &1000i128,
+        &auction_end,
+        &500u32,
+    );
 
     let result = client.try_buy_nft(&buyer, &(token_id as u64), &1500i128);
     assert!(result.is_err());
@@ -354,7 +346,7 @@ fn test_auction_error_conditions() {
     assert!(result.is_err());
 
     client.place_bid(&buyer, &(token_id as u64), &1500i128);
-    
+
     let result = client.try_place_bid(&buyer, &(token_id as u64), &1200i128);
     assert!(result.is_err());
 
@@ -364,22 +356,23 @@ fn test_auction_error_conditions() {
 
 #[test]
 fn test_marketplace_integration() {
-    let (env, _owner, _educator, seller, buyer, client, token_id) = setup_marketplace_test_environment();
+    let (env, _owner, _educator, seller, buyer, client, token_id) =
+        setup_marketplace_test_environment();
 
     client.list_nft(&seller, &(token_id as u64), &1000i128, &0u64, &500u32);
-    
+
     let active_listings = client.get_active_listings();
-    
+
     let seller_listings = client.get_listings_by_seller(&seller);
-    
+
     client.buy_nft(&buyer, &(token_id as u64), &1000i128);
-    
+
     let sales_history = client.get_sales_history(&(token_id as u64));
     assert!(!sales_history.is_empty());
-    
+
     let price_history = client.get_price_history(&(token_id as u64));
     assert!(price_history.is_some());
-    
+
     let average_price = client.get_average_price(&(token_id as u64));
     assert!(average_price.is_some());
     assert_eq!(average_price.unwrap(), 1000i128);
@@ -388,7 +381,7 @@ fn test_marketplace_integration() {
 #[test]
 fn test_data_structures() {
     let env = Env::default();
-    
+
     let seller = Address::generate(&env);
     let buyer = Address::generate(&env);
     let token_id = 1u64;
@@ -403,7 +396,7 @@ fn test_data_structures() {
         is_active: true,
         created_at: timestamp,
     };
-    
+
     assert_eq!(listing.token_id, token_id);
     assert_eq!(listing.seller, seller);
     assert!(listing.is_active);
@@ -414,7 +407,7 @@ fn test_data_structures() {
         amount: 1500i128,
         timestamp,
     };
-    
+
     assert_eq!(bid.token_id, token_id);
     assert_eq!(bid.bidder, buyer);
     assert_eq!(bid.amount, 1500i128);
@@ -428,7 +421,7 @@ fn test_data_structures() {
         royalty_recipient: seller.clone(),
         timestamp,
     };
-    
+
     assert_eq!(sale.token_id, token_id);
     assert_eq!(sale.seller, seller);
     assert_eq!(sale.buyer, buyer);
@@ -437,7 +430,7 @@ fn test_data_structures() {
     let mut prices = Vec::new(&env);
     prices.push_back(1000i128);
     prices.push_back(1200i128);
-    
+
     let mut timestamps = Vec::new(&env);
     timestamps.push_back(timestamp);
     timestamps.push_back(timestamp + 100);
@@ -448,7 +441,7 @@ fn test_data_structures() {
         timestamps,
         last_updated: timestamp + 100,
     };
-    
+
     assert_eq!(price_history.token_id, token_id);
     assert_eq!(price_history.prices.len(), 2);
     assert_eq!(price_history.timestamps.len(), 2);

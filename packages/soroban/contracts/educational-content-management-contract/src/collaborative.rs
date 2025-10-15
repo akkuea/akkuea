@@ -2,7 +2,9 @@ use soroban_sdk::{Address, BytesN, Env, String, Vec};
 
 use crate::{
     storage::{
-        get_collaborative_permission, get_collaborative_submission, get_content, save_collaborative_permission, save_collaborative_submission, save_contribution_to_history, CollaboratorPermission, CollaboratorSubmission, Content, PermissionType, ReviewStatus
+        get_collaborative_permission, get_collaborative_submission, get_content,
+        save_collaborative_permission, save_collaborative_submission, save_contribution_to_history,
+        CollaboratorPermission, CollaboratorSubmission, Content, PermissionType, ReviewStatus,
     },
     versioning,
 };

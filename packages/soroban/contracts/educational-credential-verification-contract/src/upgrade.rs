@@ -1,8 +1,6 @@
-use soroban_sdk::{Address, Env, Vec, String, BytesN};
-use crate::datatype::{
-    ContractVersion, MigrationState, MigrationStatus, PauseState
-};
-use crate::storage::{ADMIN, DataKey};
+use crate::datatype::{ContractVersion, MigrationState, MigrationStatus, PauseState};
+use crate::storage::{DataKey, ADMIN};
+use soroban_sdk::{Address, BytesN, Env, String, Vec};
 
 pub struct UpgradeSystem;
 
@@ -25,7 +23,7 @@ impl UpgradeSystem {
         implementation_address: Address,
     ) -> BytesN<32> {
         Self::verify_admin(env, admin);
-        
+
         let version_id = Self::generate_version_id(env, &version_string);
         let version = ContractVersion {
             version_id: version_id.clone(),
@@ -38,10 +36,10 @@ impl UpgradeSystem {
 
         let version_key = String::from_str(env, "CONTRACT_VERSION");
         env.storage().persistent().set(&version_key, &version);
-        
+
         // Add to version history and deactivate previous versions
         Self::add_to_version_history(env, &version);
-        
+
         version_id
     }
 
@@ -54,27 +52,35 @@ impl UpgradeSystem {
     /// Get version history
     pub fn get_version_history(env: &Env) -> Vec<ContractVersion> {
         let history_key = String::from_str(env, "VERSION_HISTORY");
-        env.storage().persistent().get(&history_key).unwrap_or_else(|| Vec::new(&env))
+        env.storage()
+            .persistent()
+            .get(&history_key)
+            .unwrap_or_else(|| Vec::new(&env))
     }
 
     /// Add version to history and deactivate previous versions
     fn add_to_version_history(env: &Env, new_version: &ContractVersion) {
         let history_key = String::from_str(env, "VERSION_HISTORY");
-        let history: Vec<ContractVersion> = env.storage().persistent()
-            .get(&history_key).unwrap_or_else(|| Vec::new(&env));
-        
+        let history: Vec<ContractVersion> = env
+            .storage()
+            .persistent()
+            .get(&history_key)
+            .unwrap_or_else(|| Vec::new(&env));
+
         // Create new history with deactivated previous versions
         let mut updated_history = Vec::new(&env);
         for version in history.iter() {
             let mut v = version.clone();
-            v.active = false;  // Deactivate previous versions
+            v.active = false; // Deactivate previous versions
             updated_history.push_back(v);
         }
-        
+
         // Add new version to history
         updated_history.push_back(new_version.clone());
-        
-        env.storage().persistent().set(&history_key, &updated_history);
+
+        env.storage()
+            .persistent()
+            .set(&history_key, &updated_history);
     }
 
     // --- Upgrade Functions ---
@@ -87,34 +93,34 @@ impl UpgradeSystem {
         new_version: String,
     ) -> bool {
         Self::verify_admin(env, admin);
-        
+
         // Pause contract during upgrade
-        Self::pause_contract(env, admin, String::from_str(env, "Contract upgrade in progress"));
-        
+        Self::pause_contract(
+            env,
+            admin,
+            String::from_str(env, "Contract upgrade in progress"),
+        );
+
         // Create new version record
         Self::set_version(env, admin, new_version.clone(), new_implementation);
-        
+
         // Initialize migration state
         Self::initialize_migration(env, admin, new_version.clone());
-        
+
         // Log upgrade event (simplified for Soroban)
         let log_key = String::from_str(env, "UPGRADE_LOG");
         env.storage().persistent().set(&log_key, &new_version);
-        
+
         true
     }
 
     /// Set implementation address (proxy pattern)
-    pub fn set_implementation(
-        env: &Env,
-        admin: &Address,
-        implementation: Address,
-    ) -> bool {
+    pub fn set_implementation(env: &Env, admin: &Address, implementation: Address) -> bool {
         Self::verify_admin(env, admin);
-        
+
         let impl_key = String::from_str(env, "IMPLEMENTATION");
         env.storage().persistent().set(&impl_key, &implementation);
-        
+
         true
     }
 
@@ -127,13 +133,9 @@ impl UpgradeSystem {
     // --- Pause/Emergency Stop Functions ---
 
     /// Pause contract operations
-    pub fn pause_contract(
-        env: &Env,
-        admin: &Address,
-        reason: String,
-    ) -> bool {
+    pub fn pause_contract(env: &Env, admin: &Address, reason: String) -> bool {
         Self::verify_admin(env, admin);
-        
+
         let pause_state = PauseState {
             is_paused: true,
             paused_at: env.ledger().timestamp(),
@@ -144,18 +146,17 @@ impl UpgradeSystem {
 
         let pause_key = String::from_str(env, "PAUSE_STATE");
         env.storage().persistent().set(&pause_key, &pause_state);
-        
+
         true
     }
 
     /// Unpause contract operations
-    pub fn unpause_contract(
-        env: &Env,
-        admin: &Address,
-    ) -> bool {
+    pub fn unpause_contract(env: &Env, admin: &Address) -> bool {
         Self::verify_admin(env, admin);
-        
-        let mut pause_state: PauseState = env.storage().persistent()
+
+        let mut pause_state: PauseState = env
+            .storage()
+            .persistent()
             .get(&String::from_str(env, "PAUSE_STATE"))
             .unwrap_or(PauseState {
                 is_paused: false,
@@ -164,21 +165,20 @@ impl UpgradeSystem {
                 reason: String::from_str(env, ""),
                 functions_paused: Vec::new(&env),
             });
-        
+
         pause_state.is_paused = false;
-        
+
         let pause_key = String::from_str(env, "PAUSE_STATE");
         env.storage().persistent().set(&pause_key, &pause_state);
-        
+
         true
     }
 
     /// Check if contract is paused
     pub fn is_contract_paused(env: &Env) -> bool {
         let pause_key = String::from_str(env, "PAUSE_STATE");
-        let pause_state: Option<PauseState> = env.storage().persistent()
-            .get(&pause_key);
-            
+        let pause_state: Option<PauseState> = env.storage().persistent().get(&pause_key);
+
         match pause_state {
             Some(state) => state.is_paused,
             None => false, // Contract is not paused by default
@@ -186,28 +186,20 @@ impl UpgradeSystem {
     }
 
     /// Emergency stop (immediate pause)
-    pub fn emergency_stop(
-        env: &Env,
-        admin: &Address,
-        reason: String,
-    ) -> bool {
+    pub fn emergency_stop(env: &Env, admin: &Address, reason: String) -> bool {
         Self::pause_contract(env, admin, reason)
     }
 
     // --- Data Migration Functions ---
 
     /// Initialize data migration process
-    pub fn initialize_migration(
-        env: &Env,
-        admin: &Address,
-        to_version: String,
-    ) -> BytesN<32> {
+    pub fn initialize_migration(env: &Env, admin: &Address, to_version: String) -> BytesN<32> {
         Self::verify_admin(env, admin);
-        
+
         let current_version = Self::get_version_info(env)
             .map(|v| v.version_string)
             .unwrap_or_else(|| String::from_str(env, "0.0.0"));
-        
+
         let migration_id = Self::generate_migration_id(env, &to_version);
         let migration_state = MigrationState {
             migration_id: migration_id.clone(),
@@ -223,129 +215,126 @@ impl UpgradeSystem {
         };
 
         let migration_key = String::from_str(env, "MIGRATION_STATE");
-        env.storage().persistent().set(&migration_key, &migration_state);
-        
+        env.storage()
+            .persistent()
+            .set(&migration_key, &migration_state);
+
         migration_id
     }
 
     /// Migrate educators data
-    pub fn migrate_educators(
-        env: &Env,
-        admin: &Address,
-        batch_size: u32,
-    ) -> u32 {
+    pub fn migrate_educators(env: &Env, admin: &Address, batch_size: u32) -> u32 {
         Self::verify_admin(env, admin);
-        
+
         let mut migrated_count = 0u32;
         let educators_key = String::from_str(env, "EDUCATORS_TO_MIGRATE");
-        
+
         // Get educators that need migration (this would be populated during upgrade preparation)
-        let educators_to_migrate: Vec<Address> = env.storage().persistent()
-            .get(&educators_key).unwrap_or_else(|| Vec::new(&env));
-        
+        let educators_to_migrate: Vec<Address> = env
+            .storage()
+            .persistent()
+            .get(&educators_key)
+            .unwrap_or_else(|| Vec::new(&env));
+
         // Process in batches
         for (index, educator_addr) in educators_to_migrate.iter().enumerate() {
             if index as u32 >= batch_size {
                 break;
             }
-            
+
             // Migrate educator data (example - would need actual migration logic)
             if Self::migrate_single_educator(env, &educator_addr) {
                 migrated_count += 1;
             }
         }
-        
+
         // Update migration progress
         Self::update_migration_progress(env, migrated_count, "educators");
-        
+
         migrated_count
     }
 
     /// Migrate credentials data
-    pub fn migrate_credentials(
-        env: &Env,
-        admin: &Address,
-        batch_size: u32,
-    ) -> u32 {
+    pub fn migrate_credentials(env: &Env, admin: &Address, batch_size: u32) -> u32 {
         Self::verify_admin(env, admin);
-        
+
         let mut migrated_count = 0u32;
         let credentials_key = String::from_str(env, "CREDENTIALS_TO_MIGRATE");
-        
+
         // Get credentials that need migration
-        let credentials_to_migrate: Vec<BytesN<32>> = env.storage().persistent()
-            .get(&credentials_key).unwrap_or_else(|| Vec::new(&env));
-        
+        let credentials_to_migrate: Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&credentials_key)
+            .unwrap_or_else(|| Vec::new(&env));
+
         // Process in batches
         for (index, credential_id) in credentials_to_migrate.iter().enumerate() {
             if index as u32 >= batch_size {
                 break;
             }
-            
+
             if Self::migrate_single_credential(env, &credential_id) {
                 migrated_count += 1;
             }
         }
-        
+
         Self::update_migration_progress(env, migrated_count, "credentials");
-        
+
         migrated_count
     }
 
     /// Migrate NFTs data
-    pub fn migrate_nfts(
-        env: &Env,
-        admin: &Address,
-        batch_size: u32,
-    ) -> u32 {
+    pub fn migrate_nfts(env: &Env, admin: &Address, batch_size: u32) -> u32 {
         Self::verify_admin(env, admin);
-        
+
         let mut migrated_count = 0u32;
         let nfts_key = String::from_str(env, "NFTS_TO_MIGRATE");
-        
-        let nfts_to_migrate: Vec<BytesN<32>> = env.storage().persistent()
-            .get(&nfts_key).unwrap_or_else(|| Vec::new(&env));
-        
+
+        let nfts_to_migrate: Vec<BytesN<32>> = env
+            .storage()
+            .persistent()
+            .get(&nfts_key)
+            .unwrap_or_else(|| Vec::new(&env));
+
         for (index, nft_id) in nfts_to_migrate.iter().enumerate() {
             if index as u32 >= batch_size {
                 break;
             }
-            
+
             if Self::migrate_single_nft(env, &nft_id) {
                 migrated_count += 1;
             }
         }
-        
+
         Self::update_migration_progress(env, migrated_count, "nfts");
-        
+
         migrated_count
     }
 
     /// Complete migration process
-    pub fn complete_migration(
-        env: &Env,
-        admin: &Address,
-        migration_id: BytesN<32>,
-    ) -> bool {
+    pub fn complete_migration(env: &Env, admin: &Address, migration_id: BytesN<32>) -> bool {
         Self::verify_admin(env, admin);
-        
+
         let migration_key = String::from_str(env, "MIGRATION_STATE");
-        let mut migration_state: MigrationState = env.storage().persistent()
-            .get(&migration_key).unwrap();
-        
+        let mut migration_state: MigrationState =
+            env.storage().persistent().get(&migration_key).unwrap();
+
         if migration_state.migration_id != migration_id {
             panic!("invalid migration id");
         }
-        
+
         migration_state.status = MigrationStatus::Completed;
         migration_state.completed_at = Some(env.ledger().timestamp());
         migration_state.progress = 100;
-        
-        env.storage().persistent().set(&migration_key, &migration_state);
-        
+
+        env.storage()
+            .persistent()
+            .set(&migration_key, &migration_state);
+
         // Unpause contract if it was paused for migration
         Self::unpause_contract(env, admin);
-        
+
         true
     }
 
@@ -358,44 +347,52 @@ impl UpgradeSystem {
         new_function: String,
     ) -> bool {
         // Simplified adapter storage
-        env.storage().persistent().set(&DataKey::CompatibilityAdapter(old_function), &new_function);
-        
+        env.storage()
+            .persistent()
+            .set(&DataKey::CompatibilityAdapter(old_function), &new_function);
+
         true
     }
 
     /// Check if function is deprecated
     pub fn is_function_deprecated(env: &Env, function_name: String) -> bool {
-        env.storage().persistent().has(&DataKey::CompatibilityAdapter(function_name))
+        env.storage()
+            .persistent()
+            .has(&DataKey::CompatibilityAdapter(function_name))
     }
 
     /// Get deprecation warning for function
     pub fn get_deprecation_warning(env: &Env, function_name: String) -> Option<String> {
-        env.storage().persistent().get(&DataKey::CompatibilityAdapter(function_name)).unwrap_or(None)
+        env.storage()
+            .persistent()
+            .get(&DataKey::CompatibilityAdapter(function_name))
+            .unwrap_or(None)
     }
 
     // --- Rollback Functions ---
 
     /// Rollback to previous version
-    pub fn rollback_to_previous_version(
-        env: &Env,
-        admin: &Address,
-    ) -> bool {
+    pub fn rollback_to_previous_version(env: &Env, admin: &Address) -> bool {
         Self::verify_admin(env, admin);
-        
+
         let history = Self::get_version_history(env);
         if history.len() < 2 {
             panic!("no previous version to rollback to");
         }
-        
+
         // Get the second most recent version (previous)
         let previous_version = history.get(history.len() - 2).unwrap();
-        
+
         // Set previous version as active
         Self::set_implementation(env, admin, previous_version.implementation_address.clone());
-        
+
         // Pause current operations and initiate rollback
-        Self::pause_contract(env, admin, String::from_str(env, "Rolling back to previous version"));
-        
+        Self::pause_contract(
+            env,
+            admin,
+            String::from_str(env, "Rolling back to previous version"),
+        );
+
         true
     }
 
@@ -428,7 +425,7 @@ impl UpgradeSystem {
     fn generate_version_id(env: &Env, version_string: &String) -> BytesN<32> {
         let timestamp = env.ledger().timestamp();
         let mut bytes = [0u8; 32];
-        
+
         // Use timestamp for first 8 bytes
         bytes[0] = (timestamp >> 56) as u8;
         bytes[1] = (timestamp >> 48) as u8;
@@ -438,12 +435,12 @@ impl UpgradeSystem {
         bytes[5] = (timestamp >> 16) as u8;
         bytes[6] = (timestamp >> 8) as u8;
         bytes[7] = timestamp as u8;
-        
+
         // Use version string length for uniqueness
         let version_len = version_string.len();
         bytes[8] = (version_len >> 8) as u8;
         bytes[9] = version_len as u8;
-        
+
         BytesN::from_array(env, &bytes)
     }
 
@@ -453,17 +450,13 @@ impl UpgradeSystem {
     }
 
     /// Validate data integrity after migration
-    pub fn validate_migration_integrity(
-        env: &Env,
-        admin: &Address,
-        data_type: String,
-    ) -> bool {
+    pub fn validate_migration_integrity(env: &Env, admin: &Address, data_type: String) -> bool {
         Self::verify_admin(env, admin);
-        
+
         // Implement data integrity checks based on data type
         // This would include checksums, count validation, etc.
         // Simplified for Soroban String handling
-        
+
         if data_type == String::from_str(env, "educators") {
             Self::validate_educators_integrity(env)
         } else if data_type == String::from_str(env, "credentials") {

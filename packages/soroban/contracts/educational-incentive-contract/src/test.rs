@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::{Address as _}, Address, Env};
+use soroban_sdk::{testutils::Address as _, Address, Env};
 
 use crate::{RewardSystem, RewardSystemClient, RewardType};
 
@@ -29,8 +29,6 @@ fn test_distribute_rewards() {
     // Test collaboration reward
     client.distribute_rewards(&user2, &RewardType::Collaboration, &75);
     assert_eq!(client.get_balance(&user2), 275);
-
-    
 }
 
 #[test]

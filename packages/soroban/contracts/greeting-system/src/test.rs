@@ -1,6 +1,6 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::Address as _, Address, Env, String};
+use soroban_sdk::{testutils::Address as _, Address, Bytes, Env, String};
 
 use crate::{xlm_to_stroops, GreetingSystem, GreetingSystemClient, TierLevel};
 
@@ -747,5 +747,26 @@ mod role_tests {
         // Verify counts
         assert_eq!(client.get_likes_count(&greeting_id), 2);
         assert_eq!(client.get_comments_count(&greeting_id), 2);
+    }
+
+    #[test]
+    fn test_create_and_get_multimedia_greeting() {
+        let env = Env::default();
+        let creator = Address::random(&env);
+        let media_hash = Bytes::from_slice(&env, b"Qm1234567890abcdef");
+
+        // Create greeting
+        let result = GreetingSystem::create_multimedia_greeting(
+            env.clone(),
+            1,
+            String::from_str(&env, "Hello multimedia!"),
+            media_hash.clone(),
+            creator.clone(),
+        );
+        assert!(result.is_ok());
+
+        // Retrieve media
+        let retrieved = GreetingSystem::get_greeting_media(env.clone(), 1);
+        assert_eq!(retrieved.unwrap(), media_hash);
     }
 }

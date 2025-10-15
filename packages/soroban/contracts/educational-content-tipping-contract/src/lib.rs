@@ -1,36 +1,38 @@
 #![no_std]
 
-use soroban_sdk::{
-    contract, contractimpl, Address, Env, Vec, String, BytesN,
-};
+use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, String, Vec};
 
-mod types;
-mod storage;
+mod analytics;
 mod errors;
 mod events;
-mod token;
-mod price_feeds;
-mod subscriptions;
-mod analytics;
-mod utils;
-mod security;
 mod governance;
+mod price_feeds;
+mod security;
+mod storage;
+mod subscriptions;
 mod test;
+mod token;
+mod types;
+mod utils;
 
-use types::{
-    Tip, EducatorStats, TipHistory,
-    SecurityConfig, MultiSigOperation, TimeLockedWithdrawal, FraudAlert,
-    Proposal, Vote, GovernanceConfig, FeeConfig, ProposalType, VoteType
+use analytics::{
+    AnalyticsManager, AnalyticsRecord, EducatorAnalytics, TimeBasedReport, TippingTrend,
 };
-use storage::{get_educator_stats, set_educator_stats, get_tip_history, set_tip_history, update_top_educators, add_tip_to_all_tips};
 use errors::TippingError;
-use events::{emit_tip_event, emit_educator_stats_updated};
-use token::{TokenManager, WhitelistedToken};
-use price_feeds::{PriceFeed, PriceData, ConversionRate};
-use subscriptions::{SubscriptionManager, Subscription, TipGoal, ConditionalTip};
-use analytics::{AnalyticsManager, AnalyticsRecord, TimeBasedReport, TippingTrend, EducatorAnalytics};
-use security::SecurityManager;
+use events::{emit_educator_stats_updated, emit_tip_event};
 use governance::GovernanceManager;
+use price_feeds::{ConversionRate, PriceData, PriceFeed};
+use security::SecurityManager;
+use storage::{
+    add_tip_to_all_tips, get_educator_stats, get_tip_history, set_educator_stats, set_tip_history,
+    update_top_educators,
+};
+use subscriptions::{ConditionalTip, Subscription, SubscriptionManager, TipGoal};
+use token::{TokenManager, WhitelistedToken};
+use types::{
+    EducatorStats, FeeConfig, FraudAlert, GovernanceConfig, MultiSigOperation, Proposal,
+    ProposalType, SecurityConfig, TimeLockedWithdrawal, Tip, TipHistory, Vote, VoteType,
+};
 
 #[contract]
 pub struct TippingRewardContract;
@@ -131,13 +133,14 @@ impl TippingRewardContract {
     ) -> Result<(), TippingError> {
         // Both tokens must be whitelisted for conversion
         TokenManager::validate_tip_amount(env, &from_token, amount)?;
-        
+
         if !TokenManager::is_token_whitelisted(env, &to_token) {
             return Err(TippingError::TokenNotWhitelisted);
         }
 
         // Convert amount to target token
-        let converted_amount = PriceFeed::convert_token_amount(env, &from_token, &to_token, amount)?;
+        let converted_amount =
+            PriceFeed::convert_token_amount(env, &from_token, &to_token, amount)?;
 
         // Validate converted amount meets requirements for target token
         TokenManager::validate_tip_amount(env, &to_token, converted_amount)?;
@@ -211,7 +214,7 @@ impl TippingRewardContract {
     }
 
     // QUERY FUNCTIONS
-    
+
     /// Get educator statistics
     pub fn get_educator_stats(env: &Env, educator: Address) -> Option<EducatorStats> {
         get_educator_stats(env, &educator)
@@ -226,7 +229,7 @@ impl TippingRewardContract {
     pub fn get_top_educators(env: &Env, limit: u32) -> Vec<(Address, EducatorStats)> {
         let top_educators = storage::get_top_educators(env);
         let mut result = Vec::new(env);
-        
+
         let mut educators_vec = Vec::new(env);
         for (address, stats) in top_educators.iter() {
             educators_vec.push_back((address, stats));
@@ -237,7 +240,7 @@ impl TippingRewardContract {
         } else {
             educators_vec.len() as u32
         };
-        
+
         for i in 0..actual_limit {
             if let Some((address, stats)) = educators_vec.get(i) {
                 result.push_back((address.clone(), stats.clone()));
@@ -279,18 +282,12 @@ impl TippingRewardContract {
     }
 
     /// Get subscription information
-    pub fn get_subscription_info(
-        env: &Env,
-        subscription_id: BytesN<32>,
-    ) -> Option<Subscription> {
+    pub fn get_subscription_info(env: &Env, subscription_id: BytesN<32>) -> Option<Subscription> {
         SubscriptionManager::get_subscription_info(env, subscription_id)
     }
 
     /// Get all subscriptions for a subscriber
-    pub fn get_subscriber_subscriptions(
-        env: &Env,
-        subscriber: Address,
-    ) -> Vec<Subscription> {
+    pub fn get_subscriber_subscriptions(env: &Env, subscriber: Address) -> Vec<Subscription> {
         SubscriptionManager::get_subscriber_subscriptions(env, subscriber)
     }
 
@@ -305,7 +302,14 @@ impl TippingRewardContract {
         target_amount: i128,
         deadline: u64,
     ) -> Result<BytesN<32>, TippingError> {
-        SubscriptionManager::create_tip_goal(env, educator, title, description, target_amount, deadline)
+        SubscriptionManager::create_tip_goal(
+            env,
+            educator,
+            title,
+            description,
+            target_amount,
+            deadline,
+        )
     }
 
     /// Contribute to a tip goal
@@ -336,7 +340,15 @@ impl TippingRewardContract {
         condition_type: String,
         condition_value: i128,
     ) -> Result<BytesN<32>, TippingError> {
-        SubscriptionManager::create_conditional_tip(env, from, to, amount, token, condition_type, condition_value)
+        SubscriptionManager::create_conditional_tip(
+            env,
+            from,
+            to,
+            amount,
+            token,
+            condition_type,
+            condition_value,
+        )
     }
 
     /// Execute conditional tip based on current metrics
@@ -407,7 +419,7 @@ impl TippingRewardContract {
     }
 
     // TOKEN MANAGEMENT FUNCTIONS
-    
+
     /// Add a token to the whitelist (admin only)
     pub fn add_whitelisted_token(
         env: &Env,
@@ -418,7 +430,15 @@ impl TippingRewardContract {
         min_tip_amount: i128,
         max_tip_amount: i128,
     ) -> Result<(), TippingError> {
-        TokenManager::add_token(env, &admin, token, symbol, decimals, min_tip_amount, max_tip_amount)
+        TokenManager::add_token(
+            env,
+            &admin,
+            token,
+            symbol,
+            decimals,
+            min_tip_amount,
+            max_tip_amount,
+        )
     }
 
     /// Remove a token from the whitelist (admin only)
@@ -467,7 +487,14 @@ impl TippingRewardContract {
         confidence: u32,
         oracle_source: String,
     ) -> Result<(), TippingError> {
-        PriceFeed::update_price(env, &oracle, &token, price_in_usd, confidence, oracle_source)
+        PriceFeed::update_price(
+            env,
+            &oracle,
+            &token,
+            price_in_usd,
+            confidence,
+            oracle_source,
+        )
     }
 
     /// Get price data for a token
@@ -518,20 +545,12 @@ impl TippingRewardContract {
     }
 
     /// Add authorized oracle (admin only)
-    pub fn add_oracle(
-        env: &Env,
-        admin: Address,
-        oracle: Address,
-    ) -> Result<(), TippingError> {
+    pub fn add_oracle(env: &Env, admin: Address, oracle: Address) -> Result<(), TippingError> {
         PriceFeed::add_oracle(env, &admin, &oracle)
     }
 
     /// Remove authorized oracle (admin only)
-    pub fn remove_oracle(
-        env: &Env,
-        admin: Address,
-        oracle: Address,
-    ) -> Result<(), TippingError> {
+    pub fn remove_oracle(env: &Env, admin: Address, oracle: Address) -> Result<(), TippingError> {
         PriceFeed::remove_oracle(env, &admin, &oracle)
     }
 
@@ -559,7 +578,7 @@ impl TippingRewardContract {
             time_lock_duration,
             fraud_alert_threshold,
             max_daily_tip_amount,
-            suspicious_pattern_window
+            suspicious_pattern_window,
         )
     }
 
@@ -575,7 +594,12 @@ impl TippingRewardContract {
         operation_type: String,
         execution_data: Option<String>,
     ) -> Result<BytesN<32>, TippingError> {
-        SecurityManager::initiate_multi_sig_operation(env, initiator, operation_type, execution_data)
+        SecurityManager::initiate_multi_sig_operation(
+            env,
+            initiator,
+            operation_type,
+            execution_data,
+        )
     }
 
     /// Approve a multi-signature operation
@@ -635,7 +659,14 @@ impl TippingRewardContract {
         details: String,
         severity: u32,
     ) -> Result<BytesN<32>, TippingError> {
-        SecurityManager::flag_suspicious_activity(env, reporter, target_address, alert_type, details, severity)
+        SecurityManager::flag_suspicious_activity(
+            env,
+            reporter,
+            target_address,
+            alert_type,
+            details,
+            severity,
+        )
     }
 
     /// Resolve a fraud alert
@@ -661,12 +692,18 @@ impl TippingRewardContract {
     }
 
     /// Get multi-sig operation details
-    pub fn get_multi_sig_operation(env: &Env, operation_id: BytesN<32>) -> Option<MultiSigOperation> {
+    pub fn get_multi_sig_operation(
+        env: &Env,
+        operation_id: BytesN<32>,
+    ) -> Option<MultiSigOperation> {
         SecurityManager::get_multi_sig_operation(env, operation_id)
     }
 
     /// Get time-locked withdrawal details
-    pub fn get_time_locked_withdrawal(env: &Env, withdrawal_id: BytesN<32>) -> Option<TimeLockedWithdrawal> {
+    pub fn get_time_locked_withdrawal(
+        env: &Env,
+        withdrawal_id: BytesN<32>,
+    ) -> Option<TimeLockedWithdrawal> {
         SecurityManager::get_time_locked_withdrawal(env, withdrawal_id)
     }
 
@@ -718,7 +755,13 @@ impl TippingRewardContract {
         proposal_type: ProposalType,
         execution_data: Option<String>,
     ) -> Result<BytesN<32>, TippingError> {
-        GovernanceManager::create_proposal(env, proposer, description, proposal_type, execution_data)
+        GovernanceManager::create_proposal(
+            env,
+            proposer,
+            description,
+            proposal_type,
+            execution_data,
+        )
     }
 
     /// Vote on a proposal
@@ -772,6 +815,12 @@ impl TippingRewardContract {
         premium_fee_percentage: u32,
         withdrawal_fee: i128,
     ) -> Result<BytesN<32>, TippingError> {
-        GovernanceManager::adjust_fees(env, proposer, base_fee_percentage, premium_fee_percentage, withdrawal_fee)
+        GovernanceManager::adjust_fees(
+            env,
+            proposer,
+            base_fee_percentage,
+            premium_fee_percentage,
+            withdrawal_fee,
+        )
     }
 }

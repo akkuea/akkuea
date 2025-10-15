@@ -1,4 +1,4 @@
-use soroban_sdk::{Address, Env, Symbol, contracttype, String, IntoVal};
+use soroban_sdk::{contracttype, Address, Env, IntoVal, String, Symbol};
 
 use crate::{DataKey, ResponseError, ReviewSystemContract};
 
@@ -99,7 +99,10 @@ impl ReviewSystemContract {
     }
 
     /// Calculate the depth of a response in the thread
-    pub(crate) fn get_response_depth_impl(env: Env, response_id: u64) -> Result<u32, ResponseError> {
+    pub(crate) fn get_response_depth_impl(
+        env: Env,
+        response_id: u64,
+    ) -> Result<u32, ResponseError> {
         let mut depth = 0u32;
         let mut current_id = response_id;
 
@@ -284,10 +287,10 @@ impl ReviewSystemContract {
     pub(crate) fn calculate_base_credibility(review_count: u32, helpful_votes: u32) -> u32 {
         // Optimized calculation to minimize gas usage
         let base_score = 50u32;
-        
+
         // Review frequency bonus (max 25 points, efficient calculation)
         let review_bonus = (review_count.min(25)) as u32;
-        
+
         // Helpfulness ratio bonus (max 25 points)
         let helpfulness_bonus = if review_count > 0 {
             let ratio = (helpful_votes * 25) / review_count.max(1);
@@ -295,7 +298,7 @@ impl ReviewSystemContract {
         } else {
             0
         };
-        
+
         (base_score + review_bonus + helpfulness_bonus).min(100)
     }
 
@@ -313,7 +316,7 @@ impl ReviewSystemContract {
         if total_reviews == 0 {
             return 0;
         }
-        
+
         // Return percentage (0-100)
         (helpful_votes * 100) / total_reviews
     }
@@ -332,32 +335,32 @@ impl ReviewSystemContract {
     /// Update reviewer credibility when they receive a helpful vote
     pub(crate) fn update_reviewer_credibility_on_vote(env: &Env, reviewer: &Address) {
         let profile_key = DataKey::ReviewerProfile(reviewer.clone());
-        let mut profile: crate::reputation::ReviewerProfile = env
-            .storage()
-            .persistent()
-            .get(&profile_key)
-            .unwrap_or(crate::reputation::ReviewerProfile {
-                reviewer: reviewer.clone(),
-                credibility_score: 50, // Default starting score
-                review_count: 0,
-                helpful_votes: 0,
-            });
+        let mut profile: crate::reputation::ReviewerProfile =
+            env.storage().persistent().get(&profile_key).unwrap_or(
+                crate::reputation::ReviewerProfile {
+                    reviewer: reviewer.clone(),
+                    credibility_score: 50, // Default starting score
+                    review_count: 0,
+                    helpful_votes: 0,
+                },
+            );
 
         // Increment helpful votes
         profile.helpful_votes += 1;
 
         // Recalculate credibility score
-        profile.credibility_score = Self::calculate_base_credibility(
-            profile.review_count, 
-            profile.helpful_votes
-        );
+        profile.credibility_score =
+            Self::calculate_base_credibility(profile.review_count, profile.helpful_votes);
 
         // Store updated profile
         env.storage().persistent().set(&profile_key, &profile);
 
         // Emit credibility update event
         env.events().publish(
-            (Symbol::new(env, "credibility_auto_updated"), reviewer.clone()),
+            (
+                Symbol::new(env, "credibility_auto_updated"),
+                reviewer.clone(),
+            ),
             (profile.credibility_score, profile.helpful_votes),
         );
     }
@@ -367,10 +370,10 @@ impl ReviewSystemContract {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum CredibilityTier {
-    Novice,      // 0-30 points
+    Novice,       // 0-30 points
     Intermediate, // 31-60 points
-    Expert,      // 61-80 points
-    Master,      // 81-100 points
+    Expert,       // 61-80 points
+    Master,       // 81-100 points
 }
 
 /// Statistics about the reward system

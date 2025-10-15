@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol, Map, contractclient};
+use soroban_sdk::{contractclient, contracttype, symbol_short, Address, Env, Map, String, Symbol};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -14,7 +14,12 @@ pub struct ModerationFlag {
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ReputationTier { New, Low, Medium, High }
+pub enum ReputationTier {
+    New,
+    Low,
+    Medium,
+    High,
+}
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -37,9 +42,13 @@ pub const INSTANCE_BUMP_AMOUNT: u32 = 7 * DAY_IN_LEDGERS;
 pub const INSTANCE_LIFETIME_THRESHOLD: u32 = INSTANCE_BUMP_AMOUNT - DAY_IN_LEDGERS;
 
 pub(crate) fn get_vote_weight(voter: &Address, env: &Env) -> u32 {
-    let reputation_contract_id: Address = env.storage().persistent().get(&REPUTATION_CONTRACT).unwrap();
+    let reputation_contract_id: Address = env
+        .storage()
+        .persistent()
+        .get(&REPUTATION_CONTRACT)
+        .unwrap();
     let client = ReputationContractClient::new(env, &reputation_contract_id);
     let reputation = client.get_user_reputation(voter);
-    
+
     1 + (reputation.reputation_score / 20)
 }

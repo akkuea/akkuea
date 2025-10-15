@@ -1,32 +1,32 @@
-use soroban_sdk::{contracttype, Address, Map, String, Vec, BytesN};
+use soroban_sdk::{contracttype, Address, BytesN, Map, String, Vec};
 
 /// Enhanced Credential structure with tiered verification and W3C compliance
 #[contracttype]
 #[derive(Clone)]
 pub struct Credential {
-    pub id: BytesN<32>,           // Unique credential identifier
-    pub tier: u32,                // Verification tier (1=basic, 2=advanced, 3=premium)
-    pub expiration: u64,          // Timestamp for credential expiration
-    pub w3c_compliant: bool,      // Indicates W3C verifiable credential compliance
-    pub issuer: Address,          // Credential issuer
-    pub subject: Address,         // Credential subject
-    pub credential_hash: String,  // Hash of credential data
+    pub id: BytesN<32>,             // Unique credential identifier
+    pub tier: u32,                  // Verification tier (1=basic, 2=advanced, 3=premium)
+    pub expiration: u64,            // Timestamp for credential expiration
+    pub w3c_compliant: bool,        // Indicates W3C verifiable credential compliance
+    pub issuer: Address,            // Credential issuer
+    pub subject: Address,           // Credential subject
+    pub credential_hash: String,    // Hash of credential data
     pub cross_chain_verified: bool, // Cross-chain verification status
-    pub renewal_count: u32,       // Number of times renewed
+    pub renewal_count: u32,         // Number of times renewed
 }
 
 /// Enhanced NFT structure with dynamic metadata and templates
 #[contracttype]
 #[derive(Clone)]
 pub struct NFT {
-    pub id: BytesN<32>,           // Unique NFT identifier
-    pub metadata: Map<String, String>,  // Dynamic metadata key-value pairs
-    pub template_id: u32,         // Visual template for rendering
-    pub is_badge: bool,           // Indicates if NFT is an achievement badge
-    pub owner: Address,           // Current owner
-    pub creation_timestamp: u64,  // When NFT was created
-    pub last_update: u64,         // Last metadata update timestamp
-    pub upgrade_level: u32,       // Current upgrade level
+    pub id: BytesN<32>,                // Unique NFT identifier
+    pub metadata: Map<String, String>, // Dynamic metadata key-value pairs
+    pub template_id: u32,              // Visual template for rendering
+    pub is_badge: bool,                // Indicates if NFT is an achievement badge
+    pub owner: Address,                // Current owner
+    pub creation_timestamp: u64,       // When NFT was created
+    pub last_update: u64,              // Last metadata update timestamp
+    pub upgrade_level: u32,            // Current upgrade level
 }
 
 /// Visual template for NFT rendering
@@ -77,10 +77,10 @@ pub struct Educator {
 #[derive(Clone, PartialEq, Debug)]
 pub enum VerificationLevel {
     Pending,
-    Basic,      // Tier 1
-    Advanced,   // Tier 2
-    Expert,     // Tier 3
-    Premium,    // Tier 3+ with additional requirements
+    Basic,    // Tier 1
+    Advanced, // Tier 2
+    Expert,   // Tier 3
+    Premium,  // Tier 3+ with additional requirements
 }
 
 /// Verification request data structure

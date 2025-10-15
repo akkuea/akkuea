@@ -1,22 +1,21 @@
 #![no_std]
 use soroban_sdk::{contract, contractimpl, Address, Env, Vec};
 
-mod rental;
 mod payment;
+mod rental;
 mod utils;
 
 #[cfg(test)]
 mod test;
 
+use payment::Payment;
 use rental::{Rental, MAX_DURATION};
-use payment::{Payment};
 
 #[contract]
 pub struct EquipmentRentalContract;
 
 #[contractimpl]
 impl EquipmentRentalContract {
-
     pub fn initialize(env: Env, max_duration: u64) {
         env.storage().persistent().set(&MAX_DURATION, &max_duration);
     }
@@ -28,7 +27,6 @@ impl EquipmentRentalContract {
     pub fn cancel_rental(env: &Env, renter: Address, rental_id: u64) {
         rental::cancel_rental(env, renter, rental_id)
     }
-
 
     pub fn check_availability(env: &Env, equipment_id: u64) -> bool {
         rental::check_availability(&env, equipment_id)
@@ -52,19 +50,17 @@ impl EquipmentRentalContract {
 
     pub fn set_equipment_price(env: &Env, equipment_id: u64, price_per_hour: i128) {
         payment::set_equipment_price(env, equipment_id, price_per_hour)
-
     }
 
     pub fn get_equipment_price(env: &Env, equipment_id: u64) -> i128 {
         payment::get_equipment_price(env, equipment_id)
     }
 
-    pub fn get_payment_by_rental_id(env: &Env, rental_id: u64) -> Option<Payment>{
+    pub fn get_payment_by_rental_id(env: &Env, rental_id: u64) -> Option<Payment> {
         payment::get_payment_by_rental_id(env, rental_id)
     }
 
     pub fn refund_payment(env: Env, rental_id: u64, amount: i128) -> bool {
         payment::refund_payment(env, rental_id, amount)
     }
-
 }

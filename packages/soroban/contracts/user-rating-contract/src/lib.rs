@@ -1,10 +1,10 @@
 #![no_std]
-mod contract;
 mod constants;
+mod contract;
 mod rating;
 mod reputation;
 mod storage;
-mod types;
 mod test;
+mod types;
 
 pub use crate::contract::RatingSystem;

@@ -1,7 +1,7 @@
 #![cfg(test)]
 use super::*;
 use soroban_sdk::{
-    testutils::{Address as _, Ledger, LedgerInfo,},
+    testutils::{Address as _, Ledger, LedgerInfo},
     Address, Env, Symbol, Vec as SorobanVec,
 };
 
@@ -46,7 +46,7 @@ fn test_register_user_success() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust", "blockchain"]);
     let timestamp = 1746000000u64;
@@ -65,7 +65,7 @@ fn test_register_user_success() {
     assert_eq!(profile.contributions, 0);
     assert_eq!(profile.registered_at, timestamp);
     assert_eq!(profile.expertise, expertise);
- }
+}
 
 #[test]
 #[should_panic(expected = "User already registered")]
@@ -74,13 +74,13 @@ fn test_register_duplicate_user_fails() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
 
     // Register user first time
     client.register(&user, &expertise);
-    
+
     // Attempt to register same user again - should panic
     client.register(&user, &expertise);
 }
@@ -91,7 +91,7 @@ fn test_register_user_with_empty_expertise() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let empty_expertise = SorobanVec::new(&env);
 
@@ -112,14 +112,14 @@ fn test_update_reputation_positive_delta() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
     let reason = Symbol::new(&env, "good_answer");
 
     // Register user first
     client.register(&user, &expertise);
-    
+
     // Update reputation with positive delta
     client.update_reputation(&user, &50, &reason);
 
@@ -134,7 +134,7 @@ fn test_update_reputation_negative_delta() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
     let reason = Symbol::new(&env, "penalty");
@@ -142,21 +142,20 @@ fn test_update_reputation_negative_delta() {
     // Register user and give initial reputation
     client.register(&user, &expertise);
     client.update_reputation(&user, &100, &Symbol::new(&env, "initial"));
-    
+
     // Update reputation with negative delta
     client.update_reputation(&user, &-30, &reason);
 
     // Verify reputation was updated correctly
     let profile = client.get_user(&user);
     assert_eq!(profile.reputation, 70);
-    
+
     // Attempt underflow
     client.update_reputation(&user, &-200, &reason);
 
     // Verify reputation was updated correctly and handling underflow
     let profile = client.get_user(&user);
     assert_eq!(profile.reputation, 0);
-    
 }
 
 #[test]
@@ -165,14 +164,14 @@ fn test_update_reputation_zero_delta() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
     let reason = Symbol::new(&env, "neutral");
 
     // Register user
     client.register(&user, &expertise);
-    
+
     // Update reputation with zero delta
     client.update_reputation(&user, &0, &reason);
 
@@ -188,7 +187,7 @@ fn test_update_reputation_unregistered_user_fails() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let reason = Symbol::new(&env, "test");
 
@@ -204,7 +203,7 @@ fn test_is_registered_returns_correct_status() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let registered_user = Address::generate(&env);
     let unregistered_user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
@@ -214,7 +213,7 @@ fn test_is_registered_returns_correct_status() {
 
     // Test registered user
     assert!(client.is_registered(&registered_user));
-    
+
     // Test unregistered user
     assert!(!client.is_registered(&unregistered_user));
 }
@@ -226,7 +225,7 @@ fn test_get_user_profile_unregistered_user_fails() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
 
     // Attempt to get profile for unregistered user
@@ -239,7 +238,7 @@ fn test_get_user_profile_returns_complete_data() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust", "solidity"]);
     let timestamp = 1746000000u64;
@@ -266,14 +265,14 @@ fn test_update_expertise_success() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let initial_expertise = create_expertise_vec(&env, &["rust"]);
     let new_expertise = create_expertise_vec(&env, &["python", "javascript"]);
 
     // Register user with initial expertise
     client.register(&user, &initial_expertise);
-    
+
     // Update expertise
     client.update_expertise(&user, &new_expertise);
 
@@ -288,14 +287,14 @@ fn test_add_expertise_success() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let initial_expertise = create_expertise_vec(&env, &["rust"]);
     let new_tag = Symbol::new(&env, "blockchain");
 
     // Register user
     client.register(&user, &initial_expertise);
-    
+
     // Add new expertise
     client.add_expertise(&user, &new_tag);
 
@@ -311,7 +310,7 @@ fn test_remove_expertise_success() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let tag_to_remove = Symbol::new(&env, "rust");
     let tag_to_keep = Symbol::new(&env, "blockchain");
@@ -319,7 +318,7 @@ fn test_remove_expertise_success() {
 
     // Register user with multiple expertise tags
     client.register(&user, &expertise);
-    
+
     // Remove one expertise tag
     client.remove_expertise(&user, &tag_to_remove);
 
@@ -338,14 +337,14 @@ fn test_reset_reputation_success() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
 
     // Register user and give reputation
     client.register(&user, &expertise);
     client.update_reputation(&user, &100, &Symbol::new(&env, "test"));
-    
+
     // Reset reputation
     client.reset_reputation(&user);
 
@@ -360,14 +359,14 @@ fn test_remove_user_success() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
 
     // Register user
     client.register(&user, &expertise);
     assert!(client.is_registered(&user));
-    
+
     // Remove user
     client.remove_user(&user);
 
@@ -381,7 +380,7 @@ fn test_get_user_count() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let expertise = create_expertise_vec(&env, &["rust"]);
 
     // Initially no users
@@ -408,7 +407,7 @@ fn test_get_all_users() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user1 = Address::generate(&env);
     let user2 = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
@@ -430,7 +429,7 @@ fn test_get_recent_users() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let expertise = create_expertise_vec(&env, &["rust"]);
     let base_time = 1746000000u64;
 
@@ -458,7 +457,7 @@ fn test_reset_all_reputations() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user1 = Address::generate(&env);
     let user2 = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
@@ -483,7 +482,7 @@ fn test_remove_all_users() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user1 = Address::generate(&env);
     let user2 = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
@@ -510,7 +509,7 @@ fn test_multiple_reputation_updates_accumulate() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
 
@@ -533,7 +532,7 @@ fn test_reputation_underflow_prevention() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
 
@@ -556,14 +555,14 @@ fn test_add_duplicate_expertise_ignored() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let tag = Symbol::new(&env, "rust");
     let expertise = soroban_sdk::vec![&env, tag.clone()];
 
     // Register user with expertise
     client.register(&user, &expertise);
-    
+
     // Try to add same expertise again
     client.add_expertise(&user, &tag);
 
@@ -578,7 +577,7 @@ fn test_remove_nonexistent_expertise_ignored() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let existing_tag = Symbol::new(&env, "rust");
     let nonexistent_tag = Symbol::new(&env, "python");
@@ -586,7 +585,7 @@ fn test_remove_nonexistent_expertise_ignored() {
 
     // Register user with one expertise
     client.register(&user, &expertise);
-    
+
     // Try to remove nonexistent expertise
     client.remove_expertise(&user, &nonexistent_tag);
 
@@ -604,7 +603,7 @@ fn test_reputation_non_transferability() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user1 = Address::generate(&env);
     let user2 = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
@@ -612,7 +611,7 @@ fn test_reputation_non_transferability() {
     // Register both users
     client.register(&user1, &expertise);
     client.register(&user2, &expertise);
-    
+
     // Give reputation to user1
     client.update_reputation(&user1, &100, &Symbol::new(&env, "test"));
 
@@ -631,22 +630,22 @@ fn test_reputation_modification_only_through_contract() {
     env.mock_all_auths();
     let contract_id = register_contract(&env);
     let client = create_client(&env, &contract_id);
-    
+
     let user = Address::generate(&env);
     let expertise = create_expertise_vec(&env, &["rust"]);
 
     // Register user
     client.register(&user, &expertise);
-    
+
     // Reputation can only be modified through contract functions
     // Direct storage manipulation is not possible from outside the contract
     // This test verifies the architectural constraint
-    
+
     let initial_reputation = client.get_user(&user).reputation;
-    
+
     // Only way to change reputation is through contract functions
     client.update_reputation(&user, &50, &Symbol::new(&env, "test"));
-    
+
     let updated_reputation = client.get_user(&user).reputation;
     assert_eq!(updated_reputation, initial_reputation + 50);
 }

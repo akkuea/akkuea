@@ -4,7 +4,10 @@ use crate::{
     datatype::{SecurityConfig, VerificationLevel},
     EducatorVerificationContract, EducatorVerificationContractClient,
 };
-use soroban_sdk::{testutils::{Address as _, Ledger}, vec, Address, Env, IntoVal, Map, String, Vec};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    vec, Address, Env, IntoVal, Map, String, Vec,
+};
 
 fn setup_security_test() -> (
     Env,
@@ -35,7 +38,7 @@ fn setup_security_test() -> (
 #[test]
 fn test_configure_security() {
     let (_, client, admin, _, _, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 3,
         time_lock_duration: 86400, // 24 hours
@@ -46,7 +49,7 @@ fn test_configure_security() {
 
     client.configure_security(&admin, &config);
     let retrieved_config = client.get_security_config();
-    
+
     assert_eq!(retrieved_config.multi_sig_threshold, 3);
     assert_eq!(retrieved_config.time_lock_duration, 86400);
     assert_eq!(retrieved_config.reputation_stake, 200);
@@ -58,7 +61,7 @@ fn test_configure_security() {
 #[should_panic(expected = "not authorized")]
 fn test_configure_security_unauthorized() {
     let (_, client, _, user1, _, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,
@@ -76,7 +79,7 @@ fn test_configure_security_unauthorized() {
 #[test]
 fn test_multisig_proposal_creation() {
     let (env, client, admin, user1, user2, _) = setup_security_test();
-    
+
     // Configure security with threshold of 2
     let config = SecurityConfig {
         multi_sig_threshold: 2,
@@ -92,7 +95,7 @@ fn test_multisig_proposal_creation() {
     let data = vec![&env, String::from_str(&env, "verification_data")];
 
     let proposal_id = client.create_multisig_proposal(&user2, &operation, &target, &data);
-    
+
     // Proposal should be created successfully
     assert!(!proposal_id.to_array().iter().all(|&b| b == 0));
 }
@@ -100,7 +103,7 @@ fn test_multisig_proposal_creation() {
 #[test]
 fn test_multisig_approval_and_execution() {
     let (env, client, admin, user1, user2, user3) = setup_security_test();
-    
+
     // Configure security with threshold of 2
     let config = SecurityConfig {
         multi_sig_threshold: 2,
@@ -116,11 +119,11 @@ fn test_multisig_approval_and_execution() {
     let data = vec![&env, String::from_str(&env, "test_data")];
 
     let proposal_id = client.create_multisig_proposal(&user2, &operation, &target, &data);
-    
+
     // First approval
     let can_execute = client.approve_proposal(&user3, &proposal_id);
     assert!(can_execute); // Should be true as we now have enough signatures (threshold = 2)
-    
+
     // Execute the proposal
     let executed = client.execute_multisig_operation(&admin, &proposal_id);
     assert!(executed);
@@ -130,7 +133,7 @@ fn test_multisig_approval_and_execution() {
 #[should_panic(expected = "already approved by this address")]
 fn test_multisig_duplicate_approval() {
     let (env, client, admin, user1, user2, user3) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 3,
         time_lock_duration: 3600,
@@ -145,10 +148,10 @@ fn test_multisig_duplicate_approval() {
     let data = vec![&env, String::from_str(&env, "test_data")];
 
     let proposal_id = client.create_multisig_proposal(&user2, &operation, &target, &data);
-    
+
     // First approval
     client.approve_proposal(&user3, &proposal_id);
-    
+
     // Second approval from same address should fail
     client.approve_proposal(&user3, &proposal_id);
 }
@@ -158,7 +161,7 @@ fn test_multisig_duplicate_approval() {
 #[test]
 fn test_time_locked_operation_creation() {
     let (env, client, admin, user1, user2, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600, // 1 hour
@@ -173,7 +176,7 @@ fn test_time_locked_operation_creation() {
     let data = vec![&env, String::from_str(&env, "revocation_reason")];
 
     let operation_id = client.schedule_time_locked_operation(&user2, &operation, &target, &data);
-    
+
     // Operation should be scheduled successfully
     assert!(!operation_id.to_array().iter().all(|&b| b == 0));
 }
@@ -182,7 +185,7 @@ fn test_time_locked_operation_creation() {
 #[should_panic(expected = "time lock not yet expired")]
 fn test_time_locked_operation_early_execution() {
     let (env, client, admin, user1, user2, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600, // 1 hour
@@ -197,7 +200,7 @@ fn test_time_locked_operation_early_execution() {
     let data = vec![&env, String::from_str(&env, "test_data")];
 
     let operation_id = client.schedule_time_locked_operation(&user2, &operation, &target, &data);
-    
+
     // Try to execute immediately (should fail)
     client.execute_time_locked_operation(&user2, &operation_id);
 }
@@ -205,7 +208,7 @@ fn test_time_locked_operation_early_execution() {
 #[test]
 fn test_time_locked_operation_execution_after_delay() {
     let (mut env, client, admin, user1, user2, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600, // 1 hour
@@ -220,12 +223,12 @@ fn test_time_locked_operation_execution_after_delay() {
     let data = vec![&env, String::from_str(&env, "test_data")];
 
     let operation_id = client.schedule_time_locked_operation(&user2, &operation, &target, &data);
-    
+
     // Advance time by more than the time lock duration
     env.ledger().with_mut(|ledger| {
         ledger.timestamp = 7200; // 2 hours later
     });
-    
+
     // Now execution should succeed
     let executed = client.execute_time_locked_operation(&user2, &operation_id);
     assert!(executed);
@@ -234,7 +237,7 @@ fn test_time_locked_operation_execution_after_delay() {
 #[test]
 fn test_cancel_time_locked_operation() {
     let (env, client, admin, user1, user2, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,
@@ -249,7 +252,7 @@ fn test_cancel_time_locked_operation() {
     let data = vec![&env, String::from_str(&env, "test_data")];
 
     let operation_id = client.schedule_time_locked_operation(&user2, &operation, &target, &data);
-    
+
     // Admin can cancel the operation
     let cancelled = client.cancel_time_locked_operation(&admin, &operation_id);
     assert!(cancelled);
@@ -260,7 +263,7 @@ fn test_cancel_time_locked_operation() {
 #[test]
 fn test_flag_fraudulent_activity() {
     let (env, client, admin, user1, user2, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,
@@ -274,7 +277,7 @@ fn test_flag_fraudulent_activity() {
     let evidence_hash = String::from_str(&env, "evidence_hash_123");
 
     let fraud_id = client.flag_fraudulent_activity(&user2, &user1, &fraud_type, &evidence_hash);
-    
+
     // Fraud report should be created successfully
     assert!(!fraud_id.to_array().iter().all(|&b| b == 0));
 }
@@ -283,7 +286,7 @@ fn test_flag_fraudulent_activity() {
 #[should_panic(expected = "fraud detection disabled")]
 fn test_flag_fraudulent_activity_disabled() {
     let (env, client, admin, user1, user2, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,
@@ -305,7 +308,7 @@ fn test_flag_fraudulent_activity_disabled() {
 #[test]
 fn test_stake_reputation() {
     let (_, client, admin, user1, _, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,
@@ -320,7 +323,7 @@ fn test_stake_reputation() {
 
     let success = client.stake_reputation(&user1, &stake_amount, &lock_duration);
     assert!(success);
-    
+
     // Check that stake was recorded
     let stake = client.get_active_stake(&user1);
     assert!(stake.is_some());
@@ -331,7 +334,7 @@ fn test_stake_reputation() {
 #[should_panic(expected = "insufficient stake amount")]
 fn test_stake_reputation_insufficient_amount() {
     let (_, client, admin, user1, _, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,
@@ -351,7 +354,7 @@ fn test_stake_reputation_insufficient_amount() {
 #[test]
 fn test_slash_stake() {
     let (env, client, admin, user1, _, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,
@@ -368,10 +371,10 @@ fn test_slash_stake() {
 
     // Now slash some of it
     let slash_amount = 50u64;
-    
+
     let success = client.slash_stake(&admin, &user1, &slash_amount);
     assert!(success);
-    
+
     // Check that stake was slashed
     let stake = client.get_active_stake(&user1);
     assert!(stake.is_some());
@@ -382,7 +385,7 @@ fn test_slash_stake() {
 #[should_panic(expected = "stake still locked")]
 fn test_withdraw_stake_while_locked() {
     let (_, client, admin, user1, _, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,
@@ -404,7 +407,7 @@ fn test_withdraw_stake_while_locked() {
 #[test]
 fn test_withdraw_stake_after_lock_expires() {
     let (mut env, client, admin, user1, _, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,
@@ -427,7 +430,7 @@ fn test_withdraw_stake_after_lock_expires() {
     // Now withdrawal should succeed
     let withdrawn_amount = client.withdraw_stake(&user1);
     assert_eq!(withdrawn_amount, 200);
-    
+
     // Stake should no longer exist
     let stake = client.get_active_stake(&user1);
     assert!(stake.is_none());
@@ -438,7 +441,7 @@ fn test_withdraw_stake_after_lock_expires() {
 #[test]
 fn test_account_suspension_after_high_fraud_score() {
     let (env, client, admin, user1, user2, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,
@@ -453,7 +456,7 @@ fn test_account_suspension_after_high_fraud_score() {
     let evidence_hash = String::from_str(&env, "evidence_hash_123");
 
     client.flag_fraudulent_activity(&user2, &user1, &fraud_type, &evidence_hash);
-    
+
     // Note: In a real implementation, high fraud scores would trigger automatic suspension
     // For this test, we would check if the account is suspended
     // let is_suspended = client.is_account_suspended(&user1);
@@ -465,7 +468,7 @@ fn test_account_suspension_after_high_fraud_score() {
 #[test]
 fn test_security_integration_multisig_with_fraud_check() {
     let (env, client, admin, user1, user2, user3) = setup_security_test();
-    
+
     // Configure comprehensive security
     let config = SecurityConfig {
         multi_sig_threshold: 2,
@@ -487,14 +490,14 @@ fn test_security_integration_multisig_with_fraud_check() {
     let data = vec![&env, String::from_str(&env, "verification_data")];
 
     let proposal_id = client.create_multisig_proposal(&user2, &operation, &target, &data);
-    
+
     // Get approval
     client.approve_proposal(&user3, &proposal_id);
-    
+
     // Execute proposal
     let executed = client.execute_multisig_operation(&admin, &proposal_id);
     assert!(executed);
-    
+
     // Verify no fraudulent activity was detected
     let is_suspended = client.is_account_suspended(&user1);
     assert!(!is_suspended);
@@ -506,7 +509,7 @@ fn test_security_integration_multisig_with_fraud_check() {
 #[should_panic(expected = "contract is paused")]
 fn test_operations_blocked_when_paused() {
     let (env, client, admin, user1, _, _) = setup_security_test();
-    
+
     let config = SecurityConfig {
         multi_sig_threshold: 2,
         time_lock_duration: 3600,

@@ -3,10 +3,13 @@
 mod moderation;
 mod utils;
 
-use soroban_sdk::{contract, contractimpl, Address, Env, String, Map, Symbol};
 use core::option::Option;
-use moderation::{flag_review_impl, vote_moderation_impl, get_flag_impl};
-use utils::{ModerationFlag, MODERATION_FLAGS, ADMIN, REPUTATION_CONTRACT, INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT};
+use moderation::{flag_review_impl, get_flag_impl, vote_moderation_impl};
+use soroban_sdk::{contract, contractimpl, Address, Env, Map, String, Symbol};
+use utils::{
+    ModerationFlag, ADMIN, INSTANCE_BUMP_AMOUNT, INSTANCE_LIFETIME_THRESHOLD, MODERATION_FLAGS,
+    REPUTATION_CONTRACT,
+};
 
 #[contract]
 pub struct CommunityModeration;
@@ -18,13 +21,29 @@ impl CommunityModeration {
             panic!("Already initialized");
         }
         env.storage().persistent().set(&ADMIN, &admin);
-        env.storage().persistent().extend_ttl(&ADMIN, INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
+        env.storage().persistent().extend_ttl(
+            &ADMIN,
+            INSTANCE_LIFETIME_THRESHOLD,
+            INSTANCE_BUMP_AMOUNT,
+        );
 
-        env.storage().persistent().set(&REPUTATION_CONTRACT, &reputation_contract);
-        env.storage().persistent().extend_ttl(&REPUTATION_CONTRACT, INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
+        env.storage()
+            .persistent()
+            .set(&REPUTATION_CONTRACT, &reputation_contract);
+        env.storage().persistent().extend_ttl(
+            &REPUTATION_CONTRACT,
+            INSTANCE_LIFETIME_THRESHOLD,
+            INSTANCE_BUMP_AMOUNT,
+        );
 
-        env.storage().persistent().set(&MODERATION_FLAGS, &Map::<u64, ModerationFlag>::new(&env));
-        env.storage().persistent().extend_ttl(&MODERATION_FLAGS, INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
+        env.storage()
+            .persistent()
+            .set(&MODERATION_FLAGS, &Map::<u64, ModerationFlag>::new(&env));
+        env.storage().persistent().extend_ttl(
+            &MODERATION_FLAGS,
+            INSTANCE_LIFETIME_THRESHOLD,
+            INSTANCE_BUMP_AMOUNT,
+        );
     }
 
     pub fn flag_review(env: Env, flagger: Address, review_id: u64, reason: String) {
@@ -43,8 +62,11 @@ impl CommunityModeration {
         let admin: Address = env.storage().persistent().get(&ADMIN).unwrap();
         admin.require_auth();
 
-        let mut flags: Map<u64, ModerationFlag> = env.storage().persistent().get(&MODERATION_FLAGS).unwrap();
-        let mut flag = flags.get(review_id).unwrap_or_else(|| panic!("Flag not found"));
+        let mut flags: Map<u64, ModerationFlag> =
+            env.storage().persistent().get(&MODERATION_FLAGS).unwrap();
+        let mut flag = flags
+            .get(review_id)
+            .unwrap_or_else(|| panic!("Flag not found"));
 
         if flag.resolved {
             panic!("Moderation already resolved");

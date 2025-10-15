@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, symbol_short, Address, Symbol, BytesN, String};
+use soroban_sdk::{contracttype, symbol_short, Address, BytesN, String, Symbol};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]

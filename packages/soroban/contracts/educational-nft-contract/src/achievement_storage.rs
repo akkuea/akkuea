@@ -18,8 +18,8 @@ pub struct Achievement {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StorageKey {
-    Achievement(u64),           // token_id -> Achievement
-    UserAchievements(Address),  // user -> Vec<token_id>
+    Achievement(u64),              // token_id -> Achievement
+    UserAchievements(Address),     // user -> Vec<token_id>
     EducatorAchievements(Address), // educator -> Vec<token_id>
 }
 
@@ -37,7 +37,10 @@ pub fn set_achievement(env: &Env, achievement: &Achievement) {
 // User achievements storage
 pub fn get_user_achievements(env: &Env, user: &Address) -> Vec<u64> {
     let key = StorageKey::UserAchievements(user.clone());
-    env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env))
 }
 
 pub fn add_user_achievement(env: &Env, user: &Address, token_id: u64) {
@@ -52,7 +55,10 @@ pub fn add_user_achievement(env: &Env, user: &Address, token_id: u64) {
 // Educator achievements storage
 pub fn get_educator_achievements(env: &Env, educator: &Address) -> Vec<u64> {
     let key = StorageKey::EducatorAchievements(educator.clone());
-    env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env))
 }
 
 pub fn add_educator_achievement(env: &Env, educator: &Address, token_id: u64) {

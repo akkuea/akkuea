@@ -19,18 +19,47 @@ pub fn calculate_sentiment(text: &String) -> i32 {
 
     // Positive keywords - add 15 points each
     let positive_words: [&[u8]; 19] = [
-        b"good", b"great", b"excellent", b"amazing", b"wonderful", b"fantastic",
-        b"love", b"best", b"awesome", b"perfect", b"helpful", b"useful",
-        b"clear", b"easy", b"outstanding", b"brilliant", b"informative",
-        b"engaging", b"valuable",
+        b"good",
+        b"great",
+        b"excellent",
+        b"amazing",
+        b"wonderful",
+        b"fantastic",
+        b"love",
+        b"best",
+        b"awesome",
+        b"perfect",
+        b"helpful",
+        b"useful",
+        b"clear",
+        b"easy",
+        b"outstanding",
+        b"brilliant",
+        b"informative",
+        b"engaging",
+        b"valuable",
     ];
 
     // Negative keywords - subtract 15 points each
     let negative_words: [&[u8]; 18] = [
-        b"bad", b"terrible", b"awful", b"poor", b"worst", b"hate",
-        b"useless", b"unclear", b"difficult", b"confusing", b"boring",
-        b"waste", b"disappointing", b"frustrating", b"inadequate",
-        b"misleading", b"incomplete", b"unhelpful",
+        b"bad",
+        b"terrible",
+        b"awful",
+        b"poor",
+        b"worst",
+        b"hate",
+        b"useless",
+        b"unclear",
+        b"difficult",
+        b"confusing",
+        b"boring",
+        b"waste",
+        b"disappointing",
+        b"frustrating",
+        b"inadequate",
+        b"misleading",
+        b"incomplete",
+        b"unhelpful",
     ];
 
     // Count positive matches

@@ -121,16 +121,20 @@ pub fn apply_time_decay(env: &Env, user_id: u64, subject: String) -> Result<u32,
         latest_score
     } else {
         // Limit decay periods to prevent extreme calculations (max ~2 years of decay)
-        let safe_decay_periods = if decay_periods > 24 { 24 } else { decay_periods };
-        
+        let safe_decay_periods = if decay_periods > 24 {
+            24
+        } else {
+            decay_periods
+        };
+
         // Calculate (95^periods / 100^periods) using integer arithmetic
         // We calculate numerator and denominator separately to maintain precision
         let decay_factor_num = TIME_DECAY_FACTOR_PERCENT.pow(safe_decay_periods as u32);
         let decay_factor_den = PERCENTAGE_BASE.pow(safe_decay_periods as u32);
-        
+
         // Apply decay: score * (95^periods / 100^periods)
         let result = (latest_score as u64 * decay_factor_num as u64) / decay_factor_den as u64;
-        
+
         // Ensure minimum score of 1 if original was non-zero
         if result == 0 && latest_score > 0 {
             1
@@ -288,11 +292,9 @@ pub fn parse_domain_type(env: &Env, domain: String) -> DomainType {
         || domain == blockchain_str
     {
         DomainType::Technical
-    }
-    else if domain == mentoring_str || domain == leadership_str {
+    } else if domain == mentoring_str || domain == leadership_str {
         DomainType::Community
-    }
-    else {
+    } else {
         DomainType::General
     }
 }

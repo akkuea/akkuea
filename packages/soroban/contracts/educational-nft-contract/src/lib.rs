@@ -1,19 +1,17 @@
 #![no_std]
 
+mod achievement;
+mod achievement_storage;
 mod error;
 mod events;
 mod storage;
-mod achievement_storage;
-mod achievement;
 mod test;
 
-use soroban_sdk::{
-    contract, contractimpl, Address, Env, Vec,
-};
+use soroban_sdk::{contract, contractimpl, Address, Env, Vec};
 
+pub use achievement_storage::*;
 pub use error::*;
 pub use events::*;
-pub use achievement_storage::*;
 
 #[contract]
 pub struct EducationalNFTContract;
@@ -65,19 +63,12 @@ impl EducationalNFTContract {
     }
 
     /// Verify certification status
-    pub fn verify_certification(
-        env: Env,
-        token_id: u64,
-    ) -> Result<bool, ContractError> {
+    pub fn verify_certification(env: Env, token_id: u64) -> Result<bool, ContractError> {
         achievement::verify_certification(&env, token_id)
     }
 
     /// Add an authorized educator
-    pub fn add_educator(
-        env: Env,
-        admin: Address,
-        educator: Address,
-    ) -> Result<(), ContractError> {
+    pub fn add_educator(env: Env, admin: Address, educator: Address) -> Result<(), ContractError> {
         admin.require_auth();
         achievement::add_educator(&env, &admin, &educator)
     }
@@ -93,10 +84,7 @@ impl EducationalNFTContract {
     }
 
     /// Get achievement details
-    pub fn get_achievement(
-        env: Env,
-        token_id: u64,
-    ) -> Result<Achievement, ContractError> {
+    pub fn get_achievement(env: Env, token_id: u64) -> Result<Achievement, ContractError> {
         achievement::get_achievement(&env, token_id)
     }
 

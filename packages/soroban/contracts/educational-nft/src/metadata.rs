@@ -94,7 +94,7 @@ impl MetadataHistory {
             created_at: new_metadata.updated_at,
             change_notes,
         };
-        
+
         self.versions.set(new_version, version_entry);
         self.current_version = new_version;
         self.total_versions += 1;
@@ -108,7 +108,7 @@ impl MetadataHistory {
 /// IPFS/Arweave hash validation utilities
 pub mod validation {
     use soroban_sdk::Bytes;
-    
+
     use crate::utils::NFTError;
 
     /// Validates IPFS hash format (simplified validation)
@@ -117,7 +117,7 @@ pub mod validation {
         if ipfs_hash.len() < 32 {
             return Err(NFTError::InvalidIPFSHash);
         }
-        
+
         // Additional validation could be added here for specific hash formats
         Ok(())
     }
@@ -128,7 +128,7 @@ pub mod validation {
         if ar_hash.len() != 43 {
             return Err(NFTError::InvalidArweaveHash);
         }
-        
+
         Ok(())
     }
 
@@ -146,11 +146,11 @@ pub mod validation {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum MetadataKey {
-    Metadata(u64),              // token_id -> NFTMetadata
-    MetadataHistory(u64),       // token_id -> MetadataHistory
-    CreatorMetadata(Address),   // creator -> Vec<u64> (token_ids)
+    Metadata(u64),                 // token_id -> NFTMetadata
+    MetadataHistory(u64),          // token_id -> MetadataHistory
+    CreatorMetadata(Address),      // creator -> Vec<u64> (token_ids)
     ContentTypeIndex(ContentType), // content_type -> Vec<u64> (token_ids)
-    NextMetadataVersion(u64),   // token_id -> u32 (next version number)
+    NextMetadataVersion(u64),      // token_id -> u32 (next version number)
 }
 
 /// Core metadata management functions
@@ -166,10 +166,10 @@ impl NFTMetadata {
     ) -> Result<Self, NFTError> {
         // Validate IPFS hash
         validation::validate_ipfs_hash(&ipfs_hash)?;
-        
+
         let current_time = env.ledger().timestamp();
         let tags = Map::new(env);
-        
+
         Ok(Self {
             token_id,
             version: 1,
@@ -194,9 +194,9 @@ impl NFTMetadata {
     ) -> Result<Self, NFTError> {
         // Validate new IPFS hash
         validation::validate_ipfs_hash(&new_ipfs_hash)?;
-        
+
         let current_time = env.ledger().timestamp();
-        
+
         Ok(Self {
             token_id: self.token_id,
             version: self.version + 1,

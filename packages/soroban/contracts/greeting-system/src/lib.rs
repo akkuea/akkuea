@@ -1,6 +1,6 @@
 #![no_std]
 extern crate alloc;
-use soroban_sdk::{contract, contractimpl, Address, Bytes, BytesN, Env, Env, IntoVal, String, Vec};
+use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String, Vec};
 
 mod batch;
 mod datatype;
@@ -17,7 +17,6 @@ pub use batch::*;
 pub use datatype::*;
 pub use error::*;
 pub use events::*;
-pub use greeting::*;
 pub use interactions::*;
 pub use interface::*;
 pub use roles::*;

@@ -1,10 +1,10 @@
 use crate::{
-    events::emit_multimedia_greeting_created, has_user_profile, storage::*,
-    verify_user_authorization, Error, Interaction,
+    events::emit_multimedia_greeting_created, has_user_profile, verify_user_authorization, Error,
 };
-use soroban_sdk::{Address, Bytes, Env, String, Vec};
+use soroban_sdk::{contracttype, Address, Bytes, Env, String};
 
-#[derive(Clone)]
+#[contracttype]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Greeting {
     pub greeting_id: u64,
     pub creator: Address,
@@ -25,7 +25,7 @@ pub fn create_multimedia_greeting(
     verify_user_authorization(env, &creator)?;
 
     if !has_user_profile(env, &creator) {
-        return Err(Error::UserNotRegistered);
+        return Err(Error::UserNotFound);
     }
 
     if text.is_empty() {
@@ -62,15 +62,18 @@ pub fn get_greeting_media(env: &Env, greeting_id: u64) -> Result<Bytes, Error> {
 // ==================== Storage Helpers ====================
 
 pub fn save_multimedia_greeting(env: &Env, greeting: &Greeting) -> Result<(), Error> {
-    let key = format!("multimedia_greeting_{}", greeting.greeting_id);
-    env.storage().persistent().set(&key, greeting);
+    let key = (greeting.greeting_id,);
+    // specify key and value types explicitly: key is (u64,) and value is Greeting
+    env.storage()
+        .persistent()
+        .set::<(u64,), Greeting>(&key, greeting);
     Ok(())
 }
 
 pub fn load_multimedia_greeting(env: &Env, greeting_id: u64) -> Result<Greeting, Error> {
-    let key = format!("multimedia_greeting_{}", greeting_id);
+    let key = (greeting_id,);
     env.storage()
         .persistent()
-        .get::<Greeting>(&key)
+        .get::<(u64,), Greeting>(&key)
         .ok_or(Error::GreetingNotFound)
 }

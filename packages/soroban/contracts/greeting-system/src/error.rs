@@ -79,6 +79,15 @@ pub enum Error {
 
     /// Comment text too long
     CommentTooLong = 23,
+
+    /// Invalid greeting content (empty or malformed)
+    InvalidGreeting = 24,
+
+    /// Media hash is invalid or too short
+    InvalidMediaHash = 25,
+
+    /// Multimedia not found for the greeting
+    MediaNotFound = 26,
 }
 
 // Add Display impl for to_string() to work (required for String::from_str(&e.to_string()))
@@ -123,6 +132,9 @@ impl fmt::Display for Error {
             Error::AlreadyLiked => f.write_str("User already liked this greeting"),
             Error::EmptyComment => f.write_str("Comment text is empty"),
             Error::CommentTooLong => f.write_str("Comment text too long"),
+            Error::InvalidGreeting => f.write_str("Invalid greeting provided"),
+            Error::InvalidMediaHash => f.write_str("Invalid or too-short media hash"),
+            Error::MediaNotFound => f.write_str("Multimedia not found for greeting"),
         }
     }
 }

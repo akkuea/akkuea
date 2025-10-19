@@ -128,7 +128,6 @@ pub fn has_role(env: &Env, user: &Address, role: &Role) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::{testutils::Address as _, Env};
 
     #[test]
     fn test_role_from_string() {

@@ -746,22 +746,23 @@ mod role_tests {
 
     #[test]
     fn test_create_and_get_multimedia_greeting() {
-        let env = Env::default();
-        let creator = Address::generate(&env);
+            // Use helper to create env + registered contract + client and a test user
+            let (env, client, creator) = create_test_env();
+            env.mock_all_auths();
+
         let media_hash = Bytes::from_slice(&env, b"Qm1234567890abcdef");
+        let text = String::from_str(&env, "Hello multimedia!");
 
-        // Create greeting
-        let result = GreetingSystem::create_multimedia_greeting(
-            env.clone(),
-            1,
-            String::from_str(&env, "Hello multimedia!"),
-            media_hash.clone(),
-            creator.clone(),
-        );
-        assert!(result.is_ok());
+        // Register the creator as a user so create_multimedia_greeting succeeds
+        let name = String::from_str(&env, "Creator");
+        let prefs = String::from_str(&env, "p");
+        client.register_user(&creator, &name, &prefs);
 
-        // Retrieve media
-        let retrieved = GreetingSystem::get_greeting_media(env.clone(), 1);
-        assert_eq!(retrieved.unwrap(), media_hash);
+        // Create greeting via client (executes contract in proper context)
+        client.create_multimedia_greeting(&1u64, &text, &media_hash, &creator);
+
+        // Retrieve media via client
+        let retrieved = client.get_greeting_media(&1u64);
+        assert_eq!(retrieved, media_hash);
     }
 }

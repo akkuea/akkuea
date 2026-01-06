@@ -171,11 +171,7 @@ export default function Post({ id, author, content, categories = [], modal }: Po
               <Eye className="h-4 w-4" />
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setReportDialogOpen(true)}
-          >
+          <Button variant="ghost" size="icon" onClick={() => setReportDialogOpen(true)}>
             <Flag className="h-4 w-4" />
           </Button>
         </div>

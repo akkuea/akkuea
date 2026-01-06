@@ -8,7 +8,7 @@ import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useParams } from "next/navigation";
+import { useParams } from 'next/navigation';
 import './HeaderLanding.css';
 
 interface NavLink {

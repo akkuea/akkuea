@@ -7,24 +7,27 @@ const AboutSection = () => {
   const features = [
     {
       title: 'Decentralized & Fair',
-      description: 'Powered by Stellar blockchain to ensure transparency, security, and fair rewards for educators.',
-      icon: Blocks
+      description:
+        'Powered by Stellar blockchain to ensure transparency, security, and fair rewards for educators.',
+      icon: Blocks,
     },
     {
       title: 'AI-Powered Knowledge',
-      description: 'Intelligent indexing and personalized recommendations make learning efficient and accessible.',
-      icon: Brain
+      description:
+        'Intelligent indexing and personalized recommendations make learning efficient and accessible.',
+      icon: Brain,
     },
     {
       title: 'Global Access',
       description: 'Breaking barriers: open resources for everyone, everywhere.',
-      icon: Globe
+      icon: Globe,
     },
     {
       title: 'Community-Driven',
-      description: 'Learners, creators, and validators work together to build a collective future of education.',
-      icon: Users
-    }
+      description:
+        'Learners, creators, and validators work together to build a collective future of education.',
+      icon: Users,
+    },
   ];
 
   return (
@@ -35,18 +38,16 @@ const AboutSection = () => {
           {/* Left copy block */}
           <div className="flex flex-col gap-6">
             <h2 className="text-4xl font-bold text-about-text dark:text-foreground leading-tight">
-              We Are{' '}
-              <span className="text-transparent bg-clip-text bg-primary">
-                Akkuea
-              </span>{' '}
-              — The Future of Decentralized Education.
+              We Are <span className="text-transparent bg-clip-text bg-primary">Akkuea</span> — The
+              Future of Decentralized Education.
             </h2>
 
             <p className="text-lg font-normal text-about-textWord dark:text-muted leading-relaxed">
-              Akkuea is a decentralized educational platform built on Stellar, designed
-              to organize global knowledge with the power of AI and community
-              collaboration. Our mission is to empower educators, reward contributions
-              fairly, and give learners access to trusted, verified, and open resources.            </p>
+              Akkuea is a decentralized educational platform built on Stellar, designed to organize
+              global knowledge with the power of AI and community collaboration. Our mission is to
+              empower educators, reward contributions fairly, and give learners access to trusted,
+              verified, and open resources.{' '}
+            </p>
 
             <div className="pt-1">
               <button className="px-8 py-3 text-sm bg-[#5EEAD4] dark:bg-primary text-white dark:text-primary-foreground font-medium rounded-lg hover:bg-[#4DD4C1] dark:hover:bg-primary/90 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
@@ -74,18 +75,15 @@ const AboutSection = () => {
             {/* Copy block */}
             <div className="flex flex-col gap-6">
               <h2 className="text-4xl font-bold text-about-text dark:text-foreground leading-tight">
-                We Are{' '}
-                <span className="text-transparent bg-clip-text bg-primary">
-                  Akkuea
-                </span>{' '}
-                — The Future of Decentralized Education.
+                We Are <span className="text-transparent bg-clip-text bg-primary">Akkuea</span> —
+                The Future of Decentralized Education.
               </h2>
 
               <p className="text-lg font-normal text-about-textWord dark:text-muted leading-relaxed">
-                Akkuea is a decentralized educational platform built on Stellar, designed
-                to organize global knowledge with the power of AI and community
-                collaboration. Our mission is to empower educators, reward contributions
-                fairly, and give learners access to trusted, verified, and open resources.
+                Akkuea is a decentralized educational platform built on Stellar, designed to
+                organize global knowledge with the power of AI and community collaboration. Our
+                mission is to empower educators, reward contributions fairly, and give learners
+                access to trusted, verified, and open resources.
               </p>
 
               <div className="pt-1">
@@ -115,18 +113,15 @@ const AboutSection = () => {
             {/* Copy block */}
             <div className="flex flex-col gap-6">
               <h2 className="text-3xl font-bold text-about-text dark:text-foreground leading-tight">
-                We Are{' '}
-                <span className="text-transparent bg-clip-text bg-primary">
-                  Akkuea
-                </span>{' '}
-                — The Future of Decentralized Education.
+                We Are <span className="text-transparent bg-clip-text bg-primary">Akkuea</span> —
+                The Future of Decentralized Education.
               </h2>
 
               <p className="text-base font-normal text-about-textWord dark:text-muted leading-relaxed">
-                Akkuea is a decentralized educational platform built on Stellar, designed
-                to organize global knowledge with the power of AI and community
-                collaboration. Our mission is to empower educators, reward contributions
-                fairly, and give learners access to trusted, verified, and open resources.
+                Akkuea is a decentralized educational platform built on Stellar, designed to
+                organize global knowledge with the power of AI and community collaboration. Our
+                mission is to empower educators, reward contributions fairly, and give learners
+                access to trusted, verified, and open resources.
               </p>
 
               <div className="pt-1">

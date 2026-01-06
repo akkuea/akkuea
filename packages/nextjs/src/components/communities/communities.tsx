@@ -188,7 +188,8 @@ export default function Communities() {
   // Load user-created communities from localStorage on mount
   useEffect(() => {
     try {
-      const stored = typeof window !== 'undefined' ? localStorage.getItem('akkuea.userCommunities') : null;
+      const stored =
+        typeof window !== 'undefined' ? localStorage.getItem('akkuea.userCommunities') : null;
       if (stored) {
         const parsed = JSON.parse(stored) as Community[];
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -196,7 +197,7 @@ export default function Communities() {
           const maxId = communities.reduce((m, c) => Math.max(m, Number(c.id) || 0), 0);
           const normalized: Community[] = parsed.map((c, idx) => ({
             ...c,
-            id: (Number(c.id) && Number(c.id) > maxId) ? Number(c.id) : maxId + idx + 1,
+            id: Number(c.id) && Number(c.id) > maxId ? Number(c.id) : maxId + idx + 1,
             joined: true,
             visibility: c.visibility || 'public',
           }));

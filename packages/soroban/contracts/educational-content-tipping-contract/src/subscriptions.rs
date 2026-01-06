@@ -1,9 +1,11 @@
-use soroban_sdk::{Address, Env, Vec, String, contracttype, BytesN};
-use crate::storage;
 use crate::errors::TippingError;
-use crate::utils::Utils;
+use crate::events::{
+    emit_goal_created, emit_goal_updated, emit_subscription_created, emit_tip_event,
+};
+use crate::storage;
 use crate::types::Tip;
-use crate::events::{emit_tip_event, emit_subscription_created, emit_goal_created, emit_goal_updated};
+use crate::utils::Utils;
+use soroban_sdk::{contracttype, Address, BytesN, Env, String, Vec};
 
 #[contracttype]
 #[derive(Clone, Debug, PartialEq)]
@@ -65,7 +67,7 @@ impl SubscriptionManager {
     ) -> Result<BytesN<32>, TippingError> {
         Utils::validate_amount(amount)?;
         Utils::validate_address(&educator)?;
-        
+
         if period < 86400 {
             return Err(TippingError::InvalidInput); // Minimum 1 day period
         }
@@ -88,7 +90,7 @@ impl SubscriptionManager {
         };
 
         storage::set_subscription(env, &subscription_id, &subscription);
-        
+
         // Add to subscriber's subscriptions list
         let mut subscriber_subs = storage::get_subscriber_subscriptions(env, &subscriber);
         subscriber_subs.push_back(subscription_id.clone());
@@ -99,8 +101,15 @@ impl SubscriptionManager {
         educator_subs.push_back(subscription_id.clone());
         storage::set_educator_subscriptions(env, &educator, &educator_subs);
 
-        emit_subscription_created(env, &subscription_id, &subscriber, &educator, amount, period);
-        
+        emit_subscription_created(
+            env,
+            &subscription_id,
+            &subscriber,
+            &educator,
+            amount,
+            period,
+        );
+
         Ok(subscription_id)
     }
 
@@ -109,8 +118,8 @@ impl SubscriptionManager {
         env: &Env,
         subscription_id: BytesN<32>,
     ) -> Result<(), TippingError> {
-        let mut subscription = storage::get_subscription(env, &subscription_id)
-            .ok_or(TippingError::DataNotFound)?;
+        let mut subscription =
+            storage::get_subscription(env, &subscription_id).ok_or(TippingError::DataNotFound)?;
 
         if !subscription.is_active {
             return Err(TippingError::InvalidInput);
@@ -150,8 +159,8 @@ impl SubscriptionManager {
         subscriber: Address,
         subscription_id: BytesN<32>,
     ) -> Result<(), TippingError> {
-        let mut subscription = storage::get_subscription(env, &subscription_id)
-            .ok_or(TippingError::DataNotFound)?;
+        let mut subscription =
+            storage::get_subscription(env, &subscription_id).ok_or(TippingError::DataNotFound)?;
 
         if subscription.subscriber != subscriber {
             return Err(TippingError::Unauthorized);
@@ -164,18 +173,12 @@ impl SubscriptionManager {
     }
 
     /// Get subscription info
-    pub fn get_subscription_info(
-        env: &Env,
-        subscription_id: BytesN<32>,
-    ) -> Option<Subscription> {
+    pub fn get_subscription_info(env: &Env, subscription_id: BytesN<32>) -> Option<Subscription> {
         storage::get_subscription(env, &subscription_id)
     }
 
     /// Get all subscriptions for a subscriber
-    pub fn get_subscriber_subscriptions(
-        env: &Env,
-        subscriber: Address,
-    ) -> Vec<Subscription> {
+    pub fn get_subscriber_subscriptions(env: &Env, subscriber: Address) -> Vec<Subscription> {
         let subscription_ids = storage::get_subscriber_subscriptions(env, &subscriber);
         let mut result = Vec::new(env);
 
@@ -242,8 +245,8 @@ impl SubscriptionManager {
         amount: i128,
         token: Address,
     ) -> Result<(), TippingError> {
-        let mut tip_goal = storage::get_tip_goal(env, &goal_id)
-            .ok_or(TippingError::DataNotFound)?;
+        let mut tip_goal =
+            storage::get_tip_goal(env, &goal_id).ok_or(TippingError::DataNotFound)?;
 
         if !tip_goal.is_active {
             return Err(TippingError::InvalidInput);
@@ -288,7 +291,12 @@ impl SubscriptionManager {
 
         // Emit events
         emit_tip_event(env, &tip);
-        emit_goal_updated(env, &goal_id, tip_goal.current_amount, tip_goal.target_amount);
+        emit_goal_updated(
+            env,
+            &goal_id,
+            tip_goal.current_amount,
+            tip_goal.target_amount,
+        );
 
         Ok(())
     }
@@ -342,8 +350,8 @@ impl SubscriptionManager {
         tip_id: BytesN<32>,
         current_metric_value: i128,
     ) -> Result<(), TippingError> {
-        let mut conditional_tip = storage::get_conditional_tip(env, &tip_id)
-            .ok_or(TippingError::DataNotFound)?;
+        let mut conditional_tip =
+            storage::get_conditional_tip(env, &tip_id).ok_or(TippingError::DataNotFound)?;
 
         if conditional_tip.is_executed {
             return Err(TippingError::InvalidInput);

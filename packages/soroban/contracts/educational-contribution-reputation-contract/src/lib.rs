@@ -365,9 +365,11 @@ impl ContributorReputation {
     }
 
     /// Check circuit breaker status for a service
-    pub fn check_circuit_breaker_status(env: Env, service: String) -> Result<CircuitBreakerState, Error> {
-        storage::get_circuit_breaker_state(&env, service)
-            .ok_or(Error::ServiceUnavailable)
+    pub fn check_circuit_breaker_status(
+        env: Env,
+        service: String,
+    ) -> Result<CircuitBreakerState, Error> {
+        storage::get_circuit_breaker_state(&env, service).ok_or(Error::ServiceUnavailable)
     }
 
     /// Verify reputation invariants for a user
@@ -456,7 +458,14 @@ impl ContributorReputation {
         data_format: String,
         data_content: String,
     ) -> Result<u64, Error> {
-        integration::import_user_data(&env, &caller, user_id, source_system, data_format, data_content)
+        integration::import_user_data(
+            &env,
+            &caller,
+            user_id,
+            source_system,
+            data_format,
+            data_content,
+        )
     }
 
     /// Export user data to external format
@@ -475,15 +484,11 @@ impl ContributorReputation {
         env: Env,
         operation_id: u64,
     ) -> Result<ImportExportOperation, Error> {
-        storage::get_import_export_operation(&env, operation_id)
-            .ok_or(Error::ImportExportFailed)
+        storage::get_import_export_operation(&env, operation_id).ok_or(Error::ImportExportFailed)
     }
 
     /// Get user's import/export history
-    pub fn get_user_import_export_history(
-        env: Env,
-        user_id: u64,
-    ) -> Result<Vec<u64>, Error> {
+    pub fn get_user_import_export_history(env: Env, user_id: u64) -> Result<Vec<u64>, Error> {
         Ok(storage::get_user_import_export_operations(&env, user_id))
     }
 
@@ -491,10 +496,10 @@ impl ContributorReputation {
     pub fn cleanup_expired_data(env: Env, caller: Address) -> Result<(), Error> {
         caller.require_auth();
         security::check_admin_access(&env, &caller)?;
-        
+
         storage::cleanup_expired_probations(&env);
         storage::cleanup_expired_credentials(&env);
-        
+
         Ok(())
     }
 }

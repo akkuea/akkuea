@@ -1,13 +1,8 @@
 #![cfg(test)]
 
-use soroban_sdk::{testutils::Address as _, Address, Env, String};
+use soroban_sdk::{testutils::Address as _, Address, Bytes, Env, String};
 
 use crate::{xlm_to_stroops, GreetingSystem, GreetingSystemClient, TierLevel};
-
-use crate::roles;
-use crate::verify_user_authorization;
-use crate::Error;
-use crate::Role;
 
 fn create_test_env<'a>() -> (Env, GreetingSystemClient<'a>, Address) {
     let env = Env::default();
@@ -330,7 +325,7 @@ fn test_stress_register_many_users() {
 #[cfg(test)]
 mod role_tests {
     use super::*;
-    use soroban_sdk::{testutils::Address as _, Address, Env, String};
+    use soroban_sdk::{Address, Env, String};
 
     #[test]
     fn test_initialize_roles_and_get_owner() {
@@ -606,7 +601,7 @@ mod role_tests {
         // Create a comment longer than 500 characters
         let long_text = "a".repeat(501);
         let long_comment = String::from_str(&env, &long_text);
-        let result = client.add_comment(&user, &greeting_id, &long_comment);
+        let _ = client.add_comment(&user, &greeting_id, &long_comment);
     }
 
     #[test]
@@ -647,7 +642,7 @@ mod role_tests {
         // Try to comment on non-existent greeting
         let greeting_id = 999u64;
         let comment = String::from_str(&env, "Comment");
-        let result = client.add_comment(&user, &greeting_id, &comment);
+        let _ = client.add_comment(&user, &greeting_id, &comment);
     }
 
     #[test]
@@ -747,5 +742,27 @@ mod role_tests {
         // Verify counts
         assert_eq!(client.get_likes_count(&greeting_id), 2);
         assert_eq!(client.get_comments_count(&greeting_id), 2);
+    }
+
+    #[test]
+    fn test_create_and_get_multimedia_greeting() {
+            // Use helper to create env + registered contract + client and a test user
+            let (env, client, creator) = create_test_env();
+            env.mock_all_auths();
+
+        let media_hash = Bytes::from_slice(&env, b"Qm1234567890abcdef");
+        let text = String::from_str(&env, "Hello multimedia!");
+
+        // Register the creator as a user so create_multimedia_greeting succeeds
+        let name = String::from_str(&env, "Creator");
+        let prefs = String::from_str(&env, "p");
+        client.register_user(&creator, &name, &prefs);
+
+        // Create greeting via client (executes contract in proper context)
+        client.create_multimedia_greeting(&1u64, &text, &media_hash, &creator);
+
+        // Retrieve media via client
+        let retrieved = client.get_greeting_media(&1u64);
+        assert_eq!(retrieved, media_hash);
     }
 }

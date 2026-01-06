@@ -31,8 +31,7 @@ pub fn link_progress_with_milestone(
     }
 
     // Verify progress exists
-    let _progress = storage::get_progress(env, token_id)
-        .ok_or(ContractError::ProgressNotFound)?;
+    let _progress = storage::get_progress(env, token_id).ok_or(ContractError::ProgressNotFound)?;
 
     // Create milestone info
     let milestone_info = MilestoneInfo {

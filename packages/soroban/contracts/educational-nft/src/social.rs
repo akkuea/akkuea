@@ -1,8 +1,6 @@
-use soroban_sdk::{
-    contracttype, symbol_short, Address, Env, String, Vec, Symbol
-};
-use crate::utils::NFTError;
 use crate::nft::get_educational_nft_safe;
+use crate::utils::NFTError;
+use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol, Vec};
 
 pub const SHARE_EVENT: Symbol = symbol_short!("nft_share");
 pub const COLLABORATE_EVENT: Symbol = symbol_short!("nft_colab");
@@ -108,17 +106,22 @@ const GROUP_COUNTER: Symbol = symbol_short!("grp_cnt");
 
 pub fn store_social_action(env: &Env, action: &SocialAction) {
     let key = (SOCIAL_ACTIONS, action.user.clone(), action.token_id);
-    let mut actions: Vec<SocialAction> = env.storage().persistent()
+    let mut actions: Vec<SocialAction> = env
+        .storage()
+        .persistent()
         .get(&key)
         .unwrap_or_else(|| Vec::new(env));
-    
+
     actions.push_back(action.clone());
     env.storage().persistent().set(&key, &actions);
 }
 
 pub fn get_social_actions(env: &Env, user: &Address, token_id: u64) -> Vec<SocialAction> {
     let key = (SOCIAL_ACTIONS, user.clone(), token_id);
-    env.storage().persistent().get(&key).unwrap_or_else(|| Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or_else(|| Vec::new(env))
 }
 
 pub fn store_nft_share(env: &Env, share: &NFTShare) {
@@ -142,11 +145,19 @@ pub fn get_collaborative_group(env: &Env, group_id: u64) -> Option<Collaborative
 }
 
 pub fn store_educational_journey(env: &Env, journey: &EducationalJourney) {
-    let key = (EDUCATIONAL_JOURNEYS, journey.user.clone(), journey.collection_id);
+    let key = (
+        EDUCATIONAL_JOURNEYS,
+        journey.user.clone(),
+        journey.collection_id,
+    );
     env.storage().persistent().set(&key, journey);
 }
 
-pub fn get_educational_journey(env: &Env, user: &Address, collection_id: u64) -> Option<EducationalJourney> {
+pub fn get_educational_journey(
+    env: &Env,
+    user: &Address,
+    collection_id: u64,
+) -> Option<EducationalJourney> {
     let key = (EDUCATIONAL_JOURNEYS, user.clone(), collection_id);
     env.storage().persistent().get(&key)
 }
@@ -162,7 +173,11 @@ pub fn get_reputation_boost(env: &Env, user: &Address) -> Option<ReputationBoost
 }
 
 pub fn get_next_group_id(env: &Env) -> u64 {
-    let counter = env.storage().persistent().get(&GROUP_COUNTER).unwrap_or(0u64);
+    let counter = env
+        .storage()
+        .persistent()
+        .get(&GROUP_COUNTER)
+        .unwrap_or(0u64);
     let next_id = counter + 1;
     env.storage().persistent().set(&GROUP_COUNTER, &next_id);
     next_id
@@ -181,7 +196,6 @@ pub fn share_nft(
         return Err(NFTError::NotOwner);
     }
 
-
     let visibility_level = if visibility == String::from_str(env, "Public") {
         VisibilityLevel::Public
     } else if visibility == String::from_str(env, "GroupOnly") {
@@ -192,28 +206,24 @@ pub fn share_nft(
         return Err(NFTError::Unauthorized);
     };
 
-
     let final_group_id = if visibility_level == VisibilityLevel::GroupOnly {
         let gid = group_id.unwrap_or(0);
         if gid == 0 {
             return Err(NFTError::InvalidCollection);
         }
-        
 
-        let group = get_collaborative_group(env, gid)
-            .ok_or(NFTError::InvalidCollection)?;
-        
+        let group = get_collaborative_group(env, gid).ok_or(NFTError::InvalidCollection)?;
+
         if !group.members.contains(caller) && group.creator != *caller {
             return Err(NFTError::Unauthorized);
         }
-        
+
         gid
     } else {
         group_id.unwrap_or(0)
     };
 
     let timestamp = env.ledger().timestamp();
-
 
     let nft_share = NFTShare {
         token_id,
@@ -226,7 +236,6 @@ pub fn share_nft(
 
     store_nft_share(env, &nft_share);
 
-
     let social_action = SocialAction {
         token_id,
         user: caller.clone(),
@@ -236,7 +245,6 @@ pub fn share_nft(
     };
 
     store_social_action(env, &social_action);
-
 
     let share_event = ShareEvent {
         token_id,
@@ -251,7 +259,6 @@ pub fn share_nft(
     Ok(())
 }
 
-
 pub fn join_collaborative_group(
     env: &Env,
     caller: &Address,
@@ -259,46 +266,40 @@ pub fn join_collaborative_group(
     group_id: Option<u64>,
     group_name: Option<String>,
 ) -> Result<u64, NFTError> {
-
     let nft_data = get_educational_nft_safe(env, token_id)?;
     if nft_data.owner != *caller {
         return Err(NFTError::NotOwner);
     }
 
     let timestamp = env.ledger().timestamp();
-    
-    let final_group_id = if let Some(gid) = group_id {
 
-        let mut group = get_collaborative_group(env, gid)
-            .ok_or(NFTError::InvalidCollection)?;
-        
+    let final_group_id = if let Some(gid) = group_id {
+        let mut group = get_collaborative_group(env, gid).ok_or(NFTError::InvalidCollection)?;
+
         if !group.is_active {
             return Err(NFTError::Unauthorized);
         }
-        
 
         if !group.members.contains(caller) && group.creator != *caller {
             group.members.push_back(caller.clone());
         }
-        
 
         if !group.nfts.contains(&token_id) {
             group.nfts.push_back(token_id);
         }
-        
+
         store_collaborative_group(env, &group);
         gid
     } else {
-
         let group_name = group_name.ok_or(NFTError::InvalidCollection)?;
         let new_group_id = get_next_group_id(env);
-        
+
         let mut members = Vec::new(env);
         members.push_back(caller.clone());
-        
+
         let mut nfts = Vec::new(env);
         nfts.push_back(token_id);
-        
+
         let new_group = CollaborativeGroup {
             id: new_group_id,
             name: group_name,
@@ -308,11 +309,10 @@ pub fn join_collaborative_group(
             created_at: timestamp,
             is_active: true,
         };
-        
+
         store_collaborative_group(env, &new_group);
         new_group_id
     };
-
 
     let social_action = SocialAction {
         token_id,
@@ -324,7 +324,6 @@ pub fn join_collaborative_group(
 
     store_social_action(env, &social_action);
 
-
     let collaborate_event = CollaborateEvent {
         token_id,
         user: caller.clone(),
@@ -332,11 +331,11 @@ pub fn join_collaborative_group(
         timestamp,
     };
 
-    env.events().publish((COLLABORATE_EVENT,), collaborate_event);
+    env.events()
+        .publish((COLLABORATE_EVENT,), collaborate_event);
 
     Ok(final_group_id)
 }
-
 
 pub fn showcase_collection(
     env: &Env,
@@ -346,7 +345,6 @@ pub fn showcase_collection(
     description: String,
     visibility: String,
 ) -> Result<(), NFTError> {
-
     let visibility_level = if visibility == String::from_str(env, "Public") {
         VisibilityLevel::Public
     } else if visibility == String::from_str(env, "Private") {
@@ -355,23 +353,18 @@ pub fn showcase_collection(
         return Err(NFTError::Unauthorized);
     };
 
-
-
     let showcase_nfts = Vec::new(env);
-    
+
     let timestamp = env.ledger().timestamp();
 
-
     if let Some(mut existing_journey) = get_educational_journey(env, caller, collection_id) {
-
         existing_journey.title = title;
         existing_journey.description = description;
         existing_journey.visibility = visibility_level;
         existing_journey.updated_at = timestamp;
-        
+
         store_educational_journey(env, &existing_journey);
     } else {
-
         let educational_journey = EducationalJourney {
             user: caller.clone(),
             collection_id,
@@ -386,7 +379,6 @@ pub fn showcase_collection(
         store_educational_journey(env, &educational_journey);
     }
 
-
     let social_action = SocialAction {
         token_id: 0,
         user: caller.clone(),
@@ -396,7 +388,6 @@ pub fn showcase_collection(
     };
 
     store_social_action(env, &social_action);
-
 
     let showcase_event = ShowcaseEvent {
         user: caller.clone(),
@@ -410,49 +401,37 @@ pub fn showcase_collection(
     Ok(())
 }
 
-
 pub fn add_nft_to_showcase(
     env: &Env,
     caller: &Address,
     collection_id: u64,
     token_id: u64,
 ) -> Result<(), NFTError> {
-
     let nft_data = get_educational_nft_safe(env, token_id)?;
     if nft_data.owner != *caller {
         return Err(NFTError::NotOwner);
     }
 
-
-    let mut journey = get_educational_journey(env, caller, collection_id)
-        .ok_or(NFTError::MetadataNotFound)?;
-
+    let mut journey =
+        get_educational_journey(env, caller, collection_id).ok_or(NFTError::MetadataNotFound)?;
 
     if !journey.showcase_nfts.contains(&token_id) {
         journey.showcase_nfts.push_back(token_id);
         journey.updated_at = env.ledger().timestamp();
-        
+
         store_educational_journey(env, &journey);
     }
 
     Ok(())
 }
 
-
 pub fn get_public_nft_shares(env: &Env) -> Vec<NFTShare> {
-
-
-
     Vec::new(env)
 }
-
 
 pub fn get_user_groups(env: &Env, _user: &Address) -> Vec<CollaborativeGroup> {
-
-
     Vec::new(env)
 }
-
 
 pub fn verify_reputation_boost(env: &Env, user: &Address, min_reputation: u32) -> bool {
     if let Some(boost) = get_reputation_boost(env, user) {
@@ -462,7 +441,6 @@ pub fn verify_reputation_boost(env: &Env, user: &Address, min_reputation: u32) -
     }
 }
 
-
 pub fn update_reputation_boost(
     env: &Env,
     user: &Address,
@@ -470,7 +448,7 @@ pub fn update_reputation_boost(
     boost_level: u32,
 ) -> Result<(), NFTError> {
     let timestamp = env.ledger().timestamp();
-    
+
     let reputation_boost = ReputationBoost {
         user: user.clone(),
         reputation_score,

@@ -1,6 +1,8 @@
 use soroban_sdk::{Address, Env, Vec};
 
-use crate::{DataKey, Response, ResponseError, ReviewSystemContract, ModerationStatus, MAX_THREAD_DEPTH};
+use crate::{
+    DataKey, ModerationStatus, Response, ResponseError, ReviewSystemContract, MAX_THREAD_DEPTH,
+};
 
 impl ReviewSystemContract {
     /// Update response indices to maintain thread structure
@@ -91,7 +93,10 @@ impl ReviewSystemContract {
     }
 
     /// Get child responses for a given parent response
-    pub(crate) fn get_child_responses_impl(env: Env, parent_response_id: u64) -> Result<Vec<Response>, ResponseError> {
+    pub(crate) fn get_child_responses_impl(
+        env: Env,
+        parent_response_id: u64,
+    ) -> Result<Vec<Response>, ResponseError> {
         let children_key = DataKey::ResponsesByParent(parent_response_id);
         let child_ids: Vec<u64> = env
             .storage()
@@ -168,10 +173,7 @@ impl ReviewSystemContract {
             }
         }
 
-        Ok(ThreadNode {
-            response,
-            children,
-        })
+        Ok(ThreadNode { response, children })
     }
 
     /// Get responses count for a review
@@ -200,7 +202,10 @@ impl ReviewSystemContract {
     }
 
     /// Get top-level responses (direct replies to review)
-    pub(crate) fn get_top_level_responses_impl(env: Env, review_id: u64) -> Result<Vec<Response>, ResponseError> {
+    pub(crate) fn get_top_level_responses_impl(
+        env: Env,
+        review_id: u64,
+    ) -> Result<Vec<Response>, ResponseError> {
         let response_ids_key = DataKey::ResponsesByReview(review_id);
         let response_ids: Vec<u64> = env
             .storage()
@@ -282,7 +287,9 @@ impl ReviewSystemContract {
                 if new_siblings.is_empty() {
                     env.storage().persistent().remove(&parent_children_key);
                 } else {
-                    env.storage().persistent().set(&parent_children_key, &new_siblings);
+                    env.storage()
+                        .persistent()
+                        .set(&parent_children_key, &new_siblings);
                 }
             }
         }
@@ -300,11 +307,15 @@ impl ReviewSystemContract {
                     new_responses.push_back(resp_id);
                 }
             }
-            env.storage().persistent().set(&review_responses_key, &new_responses);
+            env.storage()
+                .persistent()
+                .set(&review_responses_key, &new_responses);
         }
 
         // Finally, delete the response itself
-        env.storage().persistent().remove(&DataKey::Response(response_id));
+        env.storage()
+            .persistent()
+            .remove(&DataKey::Response(response_id));
 
         Ok(())
     }

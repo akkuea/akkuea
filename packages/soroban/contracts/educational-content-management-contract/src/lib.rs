@@ -1,15 +1,15 @@
 #![no_std]
 use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, String, Vec};
 
-mod publish;
-mod vote;
-mod verify;
-mod storage;
-mod versioning;
+mod analytics;
 mod collaborative;
 mod moderation;
-mod analytics;
+mod publish;
+mod storage;
 mod trending;
+mod verify;
+mod versioning;
+mod vote;
 
 use crate::storage::{CollaboratorPermission, CollaboratorSubmission, ContentVersion, VersionDiff};
 pub use crate::storage::{Content, VerificationLevel};
@@ -68,8 +68,7 @@ impl TokenizedEducationalContent {
         verified_content
     }
 
-
-     pub fn filter_by_verification_level(env: Env, level: VerificationLevel) -> Vec<Content> {
+    pub fn filter_by_verification_level(env: Env, level: VerificationLevel) -> Vec<Content> {
         let mut filtered_content = Vec::new(&env);
         let all_content_ids = storage::get_all_content_ids(&env);
 
@@ -124,7 +123,15 @@ impl TokenizedEducationalContent {
         change_notes: String,
     ) -> u32 {
         creator.require_auth();
-        versioning::create_version(&env, content_id, creator, title, content_hash, subject_tags, change_notes)
+        versioning::create_version(
+            &env,
+            content_id,
+            creator,
+            title,
+            content_hash,
+            subject_tags,
+            change_notes,
+        )
     }
 
     /// Get content as it was at a specific version.
@@ -175,7 +182,12 @@ impl TokenizedEducationalContent {
     /// @param from_version: Base version number
     /// @param to_version: Target version number
     /// @return: VersionDiff struct describing the changes
-    pub fn get_version_diff(env: Env, content_id: u64, from_version: u32, to_version: u32) -> VersionDiff {
+    pub fn get_version_diff(
+        env: Env,
+        content_id: u64,
+        from_version: u32,
+        to_version: u32,
+    ) -> VersionDiff {
         versioning::get_version_diff(&env, content_id, from_version, to_version)
     }
 
@@ -212,7 +224,14 @@ impl TokenizedEducationalContent {
         change_notes: String,
     ) -> bool {
         submitter.require_auth();
-        collaborative::submit_for_review(&env, content_id, submitter, new_content_hash, new_subject_tags, change_notes)
+        collaborative::submit_for_review(
+            &env,
+            content_id,
+            submitter,
+            new_content_hash,
+            new_subject_tags,
+            change_notes,
+        )
     }
 
     /// Accept or reject a submission for content update (creator only).
@@ -238,7 +257,11 @@ impl TokenizedEducationalContent {
     /// @param user: Address of the user
     /// @param content_id: ID of the content
     /// @return: CollaboratorPermission struct
-    pub fn get_collaborative_permission(env: Env, user: Address, content_id: u64) -> CollaboratorPermission {
+    pub fn get_collaborative_permission(
+        env: Env,
+        user: Address,
+        content_id: u64,
+    ) -> CollaboratorPermission {
         storage::get_collaborative_permission(&env, &user, content_id)
     }
 
@@ -246,7 +269,11 @@ impl TokenizedEducationalContent {
     /// @param submitter: Address of the submitter
     /// @param content_id: ID of the content
     /// @return: CollaboratorSubmission struct
-    pub fn get_collaborative_submission(env: Env, submitter: Address, content_id: u64) -> CollaboratorSubmission {
+    pub fn get_collaborative_submission(
+        env: Env,
+        submitter: Address,
+        content_id: u64,
+    ) -> CollaboratorSubmission {
         storage::get_collaborative_submission(&env, &submitter, content_id)
     }
 
@@ -255,9 +282,9 @@ impl TokenizedEducationalContent {
     /// @param content_id: ID of the content
     /// @return: Vector of CollaboratorSubmission structs
     pub fn get_user_contribution_history(
-        env: Env, 
-        user: Address, 
-        content_id: u64
+        env: Env,
+        user: Address,
+        content_id: u64,
     ) -> Vec<CollaboratorSubmission> {
         user.require_auth();
         storage::get_user_content_contribution_history(&env, &user, content_id)
@@ -302,21 +329,12 @@ impl TokenizedEducationalContent {
         verify::delegate_verification(&env, delegator, delegatee, until)
     }
 
-    pub fn revoke_delegation(
-        env: Env,
-        delegator: Address,
-        delegatee: Address,
-    ) {
+    pub fn revoke_delegation(env: Env, delegator: Address, delegatee: Address) {
         verify::revoke_delegation(&env, delegator, delegatee)
     }
 
     // --- Moderation ---
-    pub fn flag_content(
-        env: Env,
-        content_id: u64,
-        flagger: Address,
-        reason: String,
-    ) {
+    pub fn flag_content(env: Env, content_id: u64, flagger: Address, reason: String) {
         moderation::flag_content(&env, content_id, flagger, reason)
     }
 
@@ -334,25 +352,18 @@ impl TokenizedEducationalContent {
         moderation::moderate_content(&env, content_id, moderator, action, reason)
     }
 
-    pub fn get_moderation_history(env: Env, content_id: u64) -> Vec<crate::storage::ModerationAction> {
+    pub fn get_moderation_history(
+        env: Env,
+        content_id: u64,
+    ) -> Vec<crate::storage::ModerationAction> {
         moderation::get_moderation_history(&env, content_id)
     }
 
-    pub fn create_dispute(
-        env: Env,
-        content_id: u64,
-        creator: Address,
-        reason: String,
-    ) -> u64 {
+    pub fn create_dispute(env: Env, content_id: u64, creator: Address, reason: String) -> u64 {
         moderation::create_dispute(&env, content_id, creator, reason)
     }
 
-    pub fn resolve_dispute(
-        env: Env,
-        dispute_id: u64,
-        resolver: Address,
-        approve: bool,
-    ) {
+    pub fn resolve_dispute(env: Env, dispute_id: u64, resolver: Address, approve: bool) {
         moderation::resolve_dispute(&env, dispute_id, resolver, approve)
     }
 
@@ -376,31 +387,43 @@ impl TokenizedEducationalContent {
 
     /// Record a downvote for a content item
     pub fn record_content_downvote(env: Env, content_id: u64) {
-        analytics::Analytics::record_downvote(&env, content_id).unwrap_or_else(|e| panic!("{:?}", e))
+        analytics::Analytics::record_downvote(&env, content_id)
+            .unwrap_or_else(|e| panic!("{:?}", e))
     }
 
     /// Get analytics for a specific content item
     pub fn get_content_analytics(env: Env, content_id: u64) -> crate::storage::ContentAnalytics {
-        analytics::Analytics::get_content_analytics(&env, content_id).unwrap_or_else(|e| panic!("{:?}", e))
+        analytics::Analytics::get_content_analytics(&env, content_id)
+            .unwrap_or_else(|e| panic!("{:?}", e))
     }
 
     /// Get analytics for multiple content items
-    pub fn get_multiple_content_analytics(env: Env, content_ids: Vec<u64>) -> Vec<crate::storage::ContentAnalytics> {
+    pub fn get_multiple_content_analytics(
+        env: Env,
+        content_ids: Vec<u64>,
+    ) -> Vec<crate::storage::ContentAnalytics> {
         analytics::Analytics::get_multiple_content_analytics(&env, &content_ids)
     }
 
     /// Update category analytics for a content item
     pub fn update_category_analytics(env: Env, content_id: u64) {
-        analytics::Analytics::update_category_analytics(&env, content_id).unwrap_or_else(|e| panic!("{:?}", e))
+        analytics::Analytics::update_category_analytics(&env, content_id)
+            .unwrap_or_else(|e| panic!("{:?}", e))
     }
 
     /// Get category analytics
-    pub fn get_category_analytics(env: Env, category: String) -> Option<crate::storage::CategoryAnalytics> {
+    pub fn get_category_analytics(
+        env: Env,
+        category: String,
+    ) -> Option<crate::storage::CategoryAnalytics> {
         analytics::Analytics::get_category_analytics(&env, &category)
     }
 
     /// Get top performing content by engagement rate
-    pub fn get_top_content_by_engagement(env: Env, limit: u32) -> Vec<crate::storage::ContentAnalytics> {
+    pub fn get_top_content_by_engagement(
+        env: Env,
+        limit: u32,
+    ) -> Vec<crate::storage::ContentAnalytics> {
         analytics::Analytics::get_top_content_by_engagement(&env, limit)
     }
 
@@ -409,7 +432,7 @@ impl TokenizedEducationalContent {
         env: Env,
         content_id: u64,
         timestamp: u64,
-        period: crate::storage::TimePeriod
+        period: crate::storage::TimePeriod,
     ) -> Option<crate::storage::TimeBasedMetrics> {
         analytics::Analytics::get_time_based_analytics(&env, content_id, timestamp, period)
     }
@@ -422,25 +445,27 @@ impl TokenizedEducationalContent {
     pub fn calculate_trending_score(
         env: Env,
         content_id: u64,
-        period: crate::storage::TrendingPeriod
+        period: crate::storage::TrendingPeriod,
     ) -> u32 {
-        trending::Trending::calculate_trending_score(&env, content_id, period).unwrap_or_else(|e| panic!("{:?}", e))
+        trending::Trending::calculate_trending_score(&env, content_id, period)
+            .unwrap_or_else(|e| panic!("{:?}", e))
     }
 
     /// Update trending content for a specific period
     pub fn update_trending_content(
         env: Env,
         content_id: u64,
-        period: crate::storage::TrendingPeriod
+        period: crate::storage::TrendingPeriod,
     ) {
-        trending::Trending::update_trending_content(&env, content_id, period).unwrap_or_else(|e| panic!("{:?}", e))
+        trending::Trending::update_trending_content(&env, content_id, period)
+            .unwrap_or_else(|e| panic!("{:?}", e))
     }
 
     /// Get trending content for a specific period
     pub fn get_trending_content(
         env: Env,
         period: crate::storage::TrendingPeriod,
-        limit: u32
+        limit: u32,
     ) -> Vec<crate::storage::TrendingContent> {
         trending::Trending::get_trending_content(&env, period, limit)
     }
@@ -448,23 +473,25 @@ impl TokenizedEducationalContent {
     /// Create a trending snapshot for a specific period
     pub fn create_trending_snapshot(
         env: Env,
-        period: crate::storage::TrendingPeriod
+        period: crate::storage::TrendingPeriod,
     ) -> crate::storage::TrendingSnapshot {
-        trending::Trending::create_trending_snapshot(&env, period).unwrap_or_else(|e| panic!("{:?}", e))
+        trending::Trending::create_trending_snapshot(&env, period)
+            .unwrap_or_else(|e| panic!("{:?}", e))
     }
 
     /// Get trending snapshot for a specific period and timestamp
     pub fn get_trending_snapshot(
         env: Env,
         period: crate::storage::TrendingPeriod,
-        timestamp: u64
+        timestamp: u64,
     ) -> Option<crate::storage::TrendingSnapshot> {
         trending::Trending::get_trending_snapshot(&env, period, timestamp)
     }
 
     /// Update trending content for all periods
     pub fn update_all_trending_content(env: Env, content_id: u64) {
-        trending::Trending::update_all_trending_content(&env, content_id).unwrap_or_else(|e| panic!("{:?}", e))
+        trending::Trending::update_all_trending_content(&env, content_id)
+            .unwrap_or_else(|e| panic!("{:?}", e))
     }
 
     /// Get trending content by category
@@ -472,7 +499,7 @@ impl TokenizedEducationalContent {
         env: Env,
         category: String,
         period: crate::storage::TrendingPeriod,
-        limit: u32
+        limit: u32,
     ) -> Vec<crate::storage::TrendingContent> {
         trending::Trending::get_trending_content_by_category(&env, &category, period, limit)
     }

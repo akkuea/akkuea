@@ -1,4 +1,4 @@
-use soroban_sdk::{symbol_short, contracterror, Address, Env, String, Vec};
+use soroban_sdk::{contracterror, symbol_short, Address, Env, String, Vec};
 
 /// Custom error types for the milestone finance contract
 #[contracterror]
@@ -215,7 +215,11 @@ pub fn validate_voting_time_range(start_time: u64, end_time: u64) -> Result<(), 
 }
 
 /// Validate voting is active
-pub fn validate_voting_active(current_time: u64, start_time: u64, end_time: u64) -> Result<(), Error> {
+pub fn validate_voting_active(
+    current_time: u64,
+    start_time: u64,
+    end_time: u64,
+) -> Result<(), Error> {
     if current_time < start_time {
         return Err(Error::VotingNotStarted);
     }
@@ -236,9 +240,7 @@ pub fn validate_voting_ended(current_time: u64, end_time: u64) -> Result<(), Err
 /// Calculate quadratic cost for voting
 /// Returns the cost = weight^2 or Error on overflow
 pub fn calculate_vote_quadratic_cost(weight: u32) -> Result<u32, Error> {
-    weight
-        .checked_mul(weight)
-        .ok_or(Error::VoteCountOverflow)
+    weight.checked_mul(weight).ok_or(Error::VoteCountOverflow)
 }
 
 /// Apply reputation multiplier to vote weight

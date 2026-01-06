@@ -84,8 +84,8 @@ impl CrowdfundContract {
 #[cfg(test)]
 mod test {
     use super::*;
-    use soroban_sdk::{testutils::Address as _, Env, Address, String, vec};
     use crate::project::Milestone;
+    use soroban_sdk::{testutils::Address as _, vec, Address, Env, String};
 
     #[test]
     fn test_register_project() {
@@ -112,7 +112,14 @@ mod test {
         env.mock_all_auths();
 
         // register_project returns (), not an ID
-        client.register_project(&project_id, &creator, &title, &description, &total_funds, &milestones);
+        client.register_project(
+            &project_id,
+            &creator,
+            &title,
+            &description,
+            &total_funds,
+            &milestones,
+        );
 
         // Verify the project was registered by fetching its info
         let (proj_title, _, _, _, _, _) = client.get_project_info(&project_id);
@@ -143,7 +150,14 @@ mod test {
         // Mock authorization for all calls
         env.mock_all_auths();
 
-        client.register_project(&project_id, &creator, &title, &description, &total_funds, &milestones);
+        client.register_project(
+            &project_id,
+            &creator,
+            &title,
+            &description,
+            &total_funds,
+            &milestones,
+        );
 
         client.vote_for_projects(&project_id, &voter);
 
@@ -173,7 +187,14 @@ mod test {
         // Mock authorization for all calls
         env.mock_all_auths();
 
-        client.register_project(&project_id, &creator, &title, &description, &total_funds, &milestones);
+        client.register_project(
+            &project_id,
+            &creator,
+            &title,
+            &description,
+            &total_funds,
+            &milestones,
+        );
 
         let voter1 = Address::generate(&env);
         let voter2 = Address::generate(&env);
@@ -227,13 +248,17 @@ mod test {
         // Mock authorization for all calls
         env.mock_all_auths();
 
-        client.register_project(&project_id, &creator, &title, &description, &total_funds, &milestones);
+        client.register_project(
+            &project_id,
+            &creator,
+            &title,
+            &description,
+            &total_funds,
+            &milestones,
+        );
 
         client.vote_for_projects(&project_id, &voter);
         // This should panic
         client.vote_for_projects(&project_id, &voter);
     }
 }
-
-
-

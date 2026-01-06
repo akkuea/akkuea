@@ -7,21 +7,26 @@ use soroban_sdk::{
 // Mock Reputation Contract
 mod reputation_mock {
     use soroban_sdk::{contract, contractimpl, contracttype, Address, Env};
-    
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     #[contracttype]
-    pub enum ReputationTier { New, Low, Medium, High }
-    
+    pub enum ReputationTier {
+        New,
+        Low,
+        Medium,
+        High,
+    }
+
     #[derive(Clone, Debug, Eq, PartialEq)]
     #[contracttype]
     pub struct ReputationData {
         pub reputation_score: u32,
         pub reputation_tier: ReputationTier,
     }
-    
+
     #[contract]
     pub struct ReputationContract;
-    
+
     #[contractimpl]
     impl ReputationContract {
         pub fn get_user_reputation(_env: Env, _user: Address) -> ReputationData {
@@ -37,16 +42,16 @@ use reputation_mock::ReputationContract;
 
 fn create_moderation_contract<'a>(env: &Env) -> (CommunityModerationClient<'a>, Address, Address) {
     let admin = Address::generate(env);
-    
+
     // Deploy mock reputation contract
     let reputation_contract_id = env.register(ReputationContract, ());
-    
+
     // Deploy moderation contract
     let contract_id = env.register(CommunityModeration, ());
     let client = CommunityModerationClient::new(env, &contract_id);
-    
+
     client.initialize(&admin, &reputation_contract_id);
-    
+
     (client, admin, reputation_contract_id)
 }
 
@@ -55,16 +60,16 @@ fn test_initialize() {
     let env = Env::default();
     let admin = Address::generate(&env);
     let reputation_contract = Address::generate(&env);
-    
+
     let contract_id = env.register(CommunityModeration, ());
     let client = CommunityModerationClient::new(&env, &contract_id);
-    
+
     client.initialize(&admin, &reputation_contract);
-    
+
     // Verify initialization worked by trying to flag a review
     let flagger = Address::generate(&env);
     env.mock_all_auths();
-    
+
     client.flag_review(&flagger, &1, &String::from_str(&env, "Spam content"));
 }
 
@@ -73,7 +78,7 @@ fn test_initialize() {
 fn test_initialize_twice_fails() {
     let env = Env::default();
     let (client, admin, reputation_contract) = create_moderation_contract(&env);
-    
+
     // Try to initialize again
     client.initialize(&admin, &reputation_contract);
 }
@@ -82,14 +87,14 @@ fn test_initialize_twice_fails() {
 fn test_flag_review() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let review_id = 1u64;
     let reason = String::from_str(&env, "Inappropriate content");
-    
+
     client.flag_review(&flagger, &review_id, &reason);
-    
+
     // Verify flag was created
     let flag = client.get_flag(&review_id).unwrap();
     assert_eq!(flag.review_id, review_id);
@@ -105,12 +110,12 @@ fn test_flag_review_requires_auth() {
     let env = Env::default();
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
-    
+
     // Mock only the flagger's auth
     env.mock_all_auths_allowing_non_root_auth();
-    
+
     client.flag_review(&flagger, &1, &String::from_str(&env, "Spam"));
-    
+
     // Verify auth was called
     assert!(env.auths().len() > 0);
 }
@@ -120,11 +125,11 @@ fn test_flag_review_requires_auth() {
 fn test_flag_review_twice_fails() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let review_id = 1u64;
-    
+
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam again"));
 }
@@ -133,15 +138,15 @@ fn test_flag_review_twice_fails() {
 fn test_vote_moderation() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let voter = Address::generate(&env);
     let review_id = 1u64;
-    
+
     // Flag the review first
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
-    
+
     // Vote to approve removal
     client.vote_moderation(&voter, &review_id, &true);
 
@@ -157,12 +162,12 @@ fn test_vote_moderation() {
 fn test_vote_twice_fails() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let voter = Address::generate(&env);
     let review_id = 1u64;
-    
+
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
     client.vote_moderation(&voter, &review_id, &true);
     client.vote_moderation(&voter, &review_id, &true); // Should panic
@@ -173,10 +178,10 @@ fn test_vote_twice_fails() {
 fn test_vote_non_existent_flag_fails() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let voter = Address::generate(&env);
-    
+
     client.vote_moderation(&voter, &999, &true);
 }
 
@@ -184,13 +189,13 @@ fn test_vote_non_existent_flag_fails() {
 fn test_auto_resolution_on_approval() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let voter1 = Address::generate(&env);
     let voter2 = Address::generate(&env);
     let review_id = 1u64;
-    
+
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
 
     // First vote (weight 6)
@@ -211,13 +216,13 @@ fn test_auto_resolution_on_approval() {
 fn test_auto_resolution_on_rejection() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let voter1 = Address::generate(&env);
     let voter2 = Address::generate(&env);
     let review_id = 1u64;
-    
+
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
 
     // Two votes rejecting the flag (total 12 >= 10 threshold)
@@ -235,14 +240,14 @@ fn test_auto_resolution_on_rejection() {
 fn test_vote_on_resolved_flag_fails() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let voter1 = Address::generate(&env);
     let voter2 = Address::generate(&env);
     let voter3 = Address::generate(&env);
     let review_id = 1u64;
-    
+
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
     client.vote_moderation(&voter1, &review_id, &true);
     client.vote_moderation(&voter2, &review_id, &true); // Resolves (12 votes >= 10 threshold)
@@ -255,16 +260,16 @@ fn test_vote_on_resolved_flag_fails() {
 fn test_admin_resolve() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let review_id = 1u64;
-    
+
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
-    
+
     // Admin resolves without waiting for votes
     client.admin_resolve(&review_id, &true);
-    
+
     let flag = client.get_flag(&review_id).unwrap();
     assert_eq!(flag.resolved, true);
 }
@@ -274,9 +279,9 @@ fn test_admin_resolve() {
 fn test_admin_resolve_non_existent_flag() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
-    
+
     client.admin_resolve(&999, &true);
 }
 
@@ -285,11 +290,11 @@ fn test_admin_resolve_non_existent_flag() {
 fn test_admin_resolve_already_resolved() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let review_id = 1u64;
-    
+
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
     client.admin_resolve(&review_id, &true);
     client.admin_resolve(&review_id, &false); // Should panic
@@ -299,7 +304,7 @@ fn test_admin_resolve_already_resolved() {
 fn test_get_flag_returns_none_for_non_existent() {
     let env = Env::default();
     let (client, _admin, _rep) = create_moderation_contract(&env);
-    
+
     let result = client.get_flag(&999);
     assert_eq!(result, None);
 }
@@ -308,20 +313,24 @@ fn test_get_flag_returns_none_for_non_existent() {
 fn test_mixed_votes() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let voter1 = Address::generate(&env);
     let voter2 = Address::generate(&env);
     let voter3 = Address::generate(&env);
     let review_id = 1u64;
-    
-    client.flag_review(&flagger, &review_id, &String::from_str(&env, "Questionable"));
+
+    client.flag_review(
+        &flagger,
+        &review_id,
+        &String::from_str(&env, "Questionable"),
+    );
 
     // 2 approve, 1 reject (total 18 >= 10 threshold)
-    client.vote_moderation(&voter1, &review_id, &true);  // 6 approve
+    client.vote_moderation(&voter1, &review_id, &true); // 6 approve
     client.vote_moderation(&voter2, &review_id, &false); // 6 reject
-    client.vote_moderation(&voter3, &review_id, &true);  // 12 approve total
+    client.vote_moderation(&voter3, &review_id, &true); // 12 approve total
 
     // Should resolve with approval winning (12 > 6, total 18 >= 10)
     let flag = client.get_flag(&review_id).unwrap();
@@ -334,16 +343,16 @@ fn test_mixed_votes() {
 fn test_event_emission_on_flag() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let review_id = 1u64;
-    
+
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
-    
+
     let events = env.events().all();
     let event = events.last().unwrap();
-    
+
     // Event structure is (contract_id, topics, data)
     assert_eq!(event.0, client.address);
     let topics = &event.1;
@@ -358,15 +367,15 @@ fn test_event_emission_on_flag() {
 fn test_event_emission_on_vote() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let voter = Address::generate(&env);
     let review_id = 1u64;
-    
+
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
     client.vote_moderation(&voter, &review_id, &true);
-    
+
     let events = env.events().all();
     let last_event = events.last().unwrap();
 
@@ -380,17 +389,17 @@ fn test_event_emission_on_vote() {
 fn test_event_emission_on_resolution() {
     let env = Env::default();
     env.mock_all_auths();
-    
+
     let (client, _admin, _rep) = create_moderation_contract(&env);
     let flagger = Address::generate(&env);
     let voter1 = Address::generate(&env);
     let voter2 = Address::generate(&env);
     let review_id = 1u64;
-    
+
     client.flag_review(&flagger, &review_id, &String::from_str(&env, "Spam"));
     client.vote_moderation(&voter1, &review_id, &true);
     client.vote_moderation(&voter2, &review_id, &true); // Should trigger resolution
-    
+
     let events = env.events().all();
     let resolution_count = events
         .iter()
@@ -401,6 +410,6 @@ fn test_event_emission_on_resolution() {
             topic_symbol.map_or(false, |s| s == Symbol::new(&env, "moderation_resolved"))
         })
         .count();
-    
+
     assert_eq!(resolution_count, 1);
 }

@@ -1,11 +1,10 @@
-use soroban_sdk::{Address, BytesN, Env, String, Vec};
 use crate::errors::TippingError;
 use crate::storage;
-use crate::utils::Utils;
 use crate::types::{
-    ProposalType, ProposalStatus, VoteType, Proposal, Vote,
-    GovernanceConfig, FeeConfig
+    FeeConfig, GovernanceConfig, Proposal, ProposalStatus, ProposalType, Vote, VoteType,
 };
+use crate::utils::Utils;
+use soroban_sdk::{Address, BytesN, Env, String, Vec};
 
 pub struct GovernanceManager;
 
@@ -34,7 +33,8 @@ impl GovernanceManager {
             return Err(TippingError::InvalidInput);
         }
 
-        if fee_adjustment_limit > 5000 { // Max 50% change
+        if fee_adjustment_limit > 5000 {
+            // Max 50% change
             return Err(TippingError::InvalidInput);
         }
 
@@ -51,9 +51,9 @@ impl GovernanceManager {
 
         // Initialize default fee config
         let default_fee_config = FeeConfig {
-            base_fee_percentage: 250,  // 2.5%
+            base_fee_percentage: 250,    // 2.5%
             premium_fee_percentage: 500, // 5%
-            withdrawal_fee: 100_000, // 0.1 token units
+            withdrawal_fee: 100_000,     // 0.1 token units
             last_updated: env.ledger().timestamp(),
         };
 
@@ -123,11 +123,13 @@ impl GovernanceManager {
     ) -> Result<BytesN<32>, TippingError> {
         proposer.require_auth();
 
-        let config = storage::get_governance_config(env).ok_or(TippingError::ContractNotInitialized)?;
+        let config =
+            storage::get_governance_config(env).ok_or(TippingError::ContractNotInitialized)?;
 
         // Check minimum stake requirement (simplified - would need token staking in production)
         let voting_power = Self::calculate_voting_power(env, &proposer);
-        if voting_power < 5 { // Minimum 5 voting power to create proposal
+        if voting_power < 5 {
+            // Minimum 5 voting power to create proposal
             return Err(TippingError::Unauthorized);
         }
 
@@ -162,8 +164,8 @@ impl GovernanceManager {
     ) -> Result<(), TippingError> {
         voter.require_auth();
 
-        let mut proposal = storage::get_proposal(env, &proposal_id)
-            .ok_or(TippingError::DataNotFound)?;
+        let mut proposal =
+            storage::get_proposal(env, &proposal_id).ok_or(TippingError::DataNotFound)?;
 
         // Check if proposal is active and not expired
         let current_time = env.ledger().timestamp();
@@ -190,7 +192,7 @@ impl GovernanceManager {
         match vote_type {
             VoteType::For => proposal.vote_count_for += voting_power,
             VoteType::Against => proposal.vote_count_against += voting_power,
-            VoteType::Abstain => {}, // No change to for/against counts
+            VoteType::Abstain => {} // No change to for/against counts
         }
 
         proposal.total_voting_power += voting_power;
@@ -210,8 +212,8 @@ impl GovernanceManager {
     ) -> Result<(), TippingError> {
         finalizer.require_auth();
 
-        let mut proposal = storage::get_proposal(env, &proposal_id)
-            .ok_or(TippingError::DataNotFound)?;
+        let mut proposal =
+            storage::get_proposal(env, &proposal_id).ok_or(TippingError::DataNotFound)?;
 
         // Check if voting period has ended
         let current_time = env.ledger().timestamp();
@@ -224,7 +226,8 @@ impl GovernanceManager {
             return Err(TippingError::InvalidInput);
         }
 
-        let config = storage::get_governance_config(env).ok_or(TippingError::ContractNotInitialized)?;
+        let config =
+            storage::get_governance_config(env).ok_or(TippingError::ContractNotInitialized)?;
 
         // Check quorum
         let min_quorum = (config.min_quorum_percentage as u32 * 100) / 100; // Simplified calculation
@@ -259,15 +262,16 @@ impl GovernanceManager {
     ) -> Result<(), TippingError> {
         executor.require_auth();
 
-        let mut proposal = storage::get_proposal(env, &proposal_id)
-            .ok_or(TippingError::DataNotFound)?;
+        let mut proposal =
+            storage::get_proposal(env, &proposal_id).ok_or(TippingError::DataNotFound)?;
 
         // Check if proposal is approved
         if proposal.status != ProposalStatus::Approved {
             return Err(TippingError::InvalidInput);
         }
 
-        let config = storage::get_governance_config(env).ok_or(TippingError::ContractNotInitialized)?;
+        let config =
+            storage::get_governance_config(env).ok_or(TippingError::ContractNotInitialized)?;
 
         // Check if execution delay has passed
         let current_time = env.ledger().timestamp();
@@ -279,10 +283,10 @@ impl GovernanceManager {
         match proposal.proposal_type {
             ProposalType::FeeAdjustment => {
                 Self::execute_fee_adjustment(env, &proposal)?;
-            },
+            }
             ProposalType::SecurityConfigChange => {
                 Self::execute_security_config_change(env, &proposal)?;
-            },
+            }
             _ => {
                 // For other proposal types, mark as executed but don't perform action yet
                 // This allows for manual implementation of complex proposals
@@ -298,7 +302,8 @@ impl GovernanceManager {
     /// Execute fee adjustment proposal
     fn execute_fee_adjustment(env: &Env, proposal: &Proposal) -> Result<(), TippingError> {
         let mut fee_config = storage::get_fee_config(env).ok_or(TippingError::DataNotFound)?;
-        let governance_config = storage::get_governance_config(env).ok_or(TippingError::ContractNotInitialized)?;
+        let governance_config =
+            storage::get_governance_config(env).ok_or(TippingError::ContractNotInitialized)?;
 
         // Parse execution_data (simplified - would use JSON in production)
         // For now, just apply default fee changes as a placeholder
@@ -317,7 +322,7 @@ impl GovernanceManager {
             // Validate fee change is within limits
             let change_percentage = if fee_config.base_fee_percentage > 0 {
                 ((new_base_fee as i32 - fee_config.base_fee_percentage as i32).abs() * 10000)
-                / fee_config.base_fee_percentage as i32
+                    / fee_config.base_fee_percentage as i32
             } else {
                 0
             };
@@ -334,7 +339,10 @@ impl GovernanceManager {
     }
 
     /// Execute security configuration change proposal
-    fn execute_security_config_change(_env: &Env, _proposal: &Proposal) -> Result<(), TippingError> {
+    fn execute_security_config_change(
+        _env: &Env,
+        _proposal: &Proposal,
+    ) -> Result<(), TippingError> {
         // TODO: Implement security configuration changes via governance
         // This would parse the execution_data and update security parameters
         Ok(())
@@ -365,7 +373,10 @@ impl GovernanceManager {
     ) -> Result<BytesN<32>, TippingError> {
         // Create a fee adjustment proposal
         // Note: In production, this should use proper serialization (JSON)
-        let execution_data = Some(String::from_str(env, "base_fee:250,premium_fee:500,withdrawal_fee:100000"));
+        let execution_data = Some(String::from_str(
+            env,
+            "base_fee:250,premium_fee:500,withdrawal_fee:100000",
+        ));
 
         Self::create_proposal(
             env,

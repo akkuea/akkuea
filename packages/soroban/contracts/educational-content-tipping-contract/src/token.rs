@@ -1,6 +1,6 @@
-use soroban_sdk::{Address, Env, Vec, String, contracttype};
-use crate::storage;
 use crate::errors::TippingError;
+use crate::storage;
+use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
 #[contracttype]
 #[derive(Clone, Debug, PartialEq)]
@@ -39,7 +39,7 @@ impl TokenManager {
         };
 
         storage::set_whitelisted_token(env, &token, &whitelisted_token);
-        
+
         // Add to the list of all tokens if not already present
         let mut token_list = storage::get_token_list(env);
         if !Self::token_exists_in_list(&token_list, &token) {
@@ -51,11 +51,7 @@ impl TokenManager {
     }
 
     /// Remove a token from the whitelist (admin only)
-    pub fn remove_token(
-        env: &Env,
-        admin: &Address,
-        token: &Address,
-    ) -> Result<(), TippingError> {
+    pub fn remove_token(env: &Env, admin: &Address, token: &Address) -> Result<(), TippingError> {
         Self::verify_admin(env, admin)?;
 
         // Deactivate the token instead of removing to maintain history
@@ -112,7 +108,8 @@ impl TokenManager {
 
         for i in 0..token_list.len() {
             if let Some(token_address) = token_list.get(i) {
-                if let Some(whitelisted_token) = storage::get_whitelisted_token(env, &token_address) {
+                if let Some(whitelisted_token) = storage::get_whitelisted_token(env, &token_address)
+                {
                     if whitelisted_token.is_active {
                         result.push_back(whitelisted_token);
                     }
@@ -176,7 +173,7 @@ impl TokenManager {
     /// Convert token amount to standardized decimals (18 decimals as base)
     pub fn normalize_amount(amount: i128, token_decimals: u32) -> i128 {
         const BASE_DECIMALS: u32 = 18;
-        
+
         if token_decimals == BASE_DECIMALS {
             amount
         } else if token_decimals < BASE_DECIMALS {
@@ -191,7 +188,7 @@ impl TokenManager {
     /// Convert normalized amount back to token-specific decimals
     pub fn denormalize_amount(normalized_amount: i128, token_decimals: u32) -> i128 {
         const BASE_DECIMALS: u32 = 18;
-        
+
         if token_decimals == BASE_DECIMALS {
             normalized_amount
         } else if token_decimals < BASE_DECIMALS {

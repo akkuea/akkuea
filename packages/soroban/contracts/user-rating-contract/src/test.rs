@@ -2,7 +2,7 @@
 
 use crate::{
     contract::RatingSystemClient,
-    types::{DataKey, RatingData,ReputationTier},
+    types::{DataKey, RatingData, ReputationTier},
     RatingSystem,
 };
 use soroban_sdk::{
@@ -13,8 +13,8 @@ use soroban_sdk::{
 fn setup_test() -> (
     Env,
     RatingSystemClient<'static>,
-    Address, // rater
-    Address, // rated_user
+    Address,    // rater
+    Address,    // rated_user
     BytesN<32>, // transaction_id
 ) {
     let env = Env::default();
@@ -79,7 +79,7 @@ fn test_submit_rating_success() {
     assert_eq!(rating_data.accuracy_score, 5);
     assert_eq!(rating_data.value_score, 4);
 
-    let rating_history: Vec<BytesN<32>> = env.as_contract(&client.address, || { 
+    let rating_history: Vec<BytesN<32>> = env.as_contract(&client.address, || {
         env.storage()
             .instance()
             .get(&DataKey::UserRatingHistory(rated_user.clone()))
@@ -127,7 +127,10 @@ fn test_submit_rating_duplicate() {
     );
 
     assert!(!result.success);
-    assert_eq!(result.message, String::from_str(&env, "Transaction already rated"));
+    assert_eq!(
+        result.message,
+        String::from_str(&env, "Transaction already rated")
+    );
 }
 
 #[test]
@@ -147,7 +150,10 @@ fn test_submit_rating_self() {
     );
 
     assert!(!result.success);
-    assert_eq!(result.message, String::from_str(&env, "Cannot rate yourself"));
+    assert_eq!(
+        result.message,
+        String::from_str(&env, "Cannot rate yourself")
+    );
 }
 
 #[test]
@@ -155,15 +161,15 @@ fn test_submit_rating_time_restriction() {
     let (env, client, rater, rated_user, transaction_id_1) = setup_test();
     let transaction_id_2 = BytesN::from_array(&env, &[1; 32]);
 
-    env.mock_all_auths(); 
+    env.mock_all_auths();
     client.submit_rating(
         &transaction_id_1,
         &rater,
         &rated_user,
-        &5, 
-        &4, 
-        &5, 
-        &4, 
+        &5,
+        &4,
+        &5,
+        &4,
         &String::from_str(&env, "First rating"),
     );
 
@@ -180,16 +186,16 @@ fn test_submit_rating_time_restriction() {
         max_entry_ttl: current_ledger.max_entry_ttl,
     });
 
-    env.mock_all_auths(); 
+    env.mock_all_auths();
     let result = client.submit_rating(
         &transaction_id_2,
         &rater,
         &rated_user,
-        &4, 
-        &3, 
-        &4, 
-        &3, 
-        &String::from_str(&env, "Second rating"), 
+        &4,
+        &3,
+        &4,
+        &3,
+        &String::from_str(&env, "Second rating"),
     );
 
     assert!(!result.success);
@@ -223,7 +229,7 @@ fn test_submit_rating_invalid_score() {
 }
 
 #[test]
-fn test_get_user_reputation(){
+fn test_get_user_reputation() {
     let (env, client, _, rated_user, _) = setup_test();
     env.mock_all_auths();
     client.init_user_reputation(&rated_user);
@@ -231,14 +237,14 @@ fn test_get_user_reputation(){
 }
 
 #[test]
-fn test_get_user_rating_history(){
+fn test_get_user_rating_history() {
     let (env, client, _, rated_user, _) = setup_test();
     env.mock_all_auths();
     assert_eq!(client.get_user_rating_history(&rated_user).len(), 0);
 }
 
 #[test]
-fn test_get_transaction_rating(){
+fn test_get_transaction_rating() {
     let (env, client, rater, rated_user, transaction_id) = setup_test();
     env.mock_all_auths();
 

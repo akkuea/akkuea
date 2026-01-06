@@ -822,7 +822,13 @@ fn test_create_voting_period_stem() {
     env.mock_all_auths();
 
     // Create voting period for STEM project
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::STEM);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::STEM,
+    );
 
     let period = client.get_voting_period_details(&project_id);
     assert_eq!(period.project_id, project_id);
@@ -853,11 +859,23 @@ fn test_create_voting_period_all_categories() {
     assert_eq!(client.get_voting_period_details(&2).threshold, 800);
 
     // Test Community category
-    client.create_voting_period(&admin, &3, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &3,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
     assert_eq!(client.get_voting_period_details(&3).threshold, 500);
 
     // Test Research category
-    client.create_voting_period(&admin, &4, &start_time, &end_time, &ProjectCategory::RESEARCH);
+    client.create_voting_period(
+        &admin,
+        &4,
+        &start_time,
+        &end_time,
+        &ProjectCategory::RESEARCH,
+    );
     assert_eq!(client.get_voting_period_details(&4).threshold, 1200);
 }
 
@@ -883,7 +901,13 @@ fn test_cast_vote_basic() {
     // Create voting period
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 1000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Cast vote with weight 2 (cost = 4, voting_power should be >= 4)
     let final_weight = client.cast_vote(&voter, &project_id, &2);
@@ -926,7 +950,13 @@ fn test_cast_vote_with_high_reputation() {
     let project_id = 1u64;
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 1000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Cast vote with weight 3
     let final_weight = client.cast_vote(&voter, &project_id, &3);
@@ -958,7 +988,13 @@ fn test_vote_before_period_starts() {
     let project_id = 1u64;
     let start_time = env.ledger().timestamp() + 1000;
     let end_time = env.ledger().timestamp() + 2000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Try to vote before start time
     client.cast_vote(&voter, &project_id, &2);
@@ -985,7 +1021,13 @@ fn test_vote_after_period_ends() {
     let project_id = 1u64;
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 100;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Move time forward past end time
     env.ledger().with_mut(|li| li.timestamp = end_time + 1);
@@ -1015,7 +1057,13 @@ fn test_cannot_vote_twice() {
     let project_id = 1u64;
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 1000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Cast first vote
     client.cast_vote(&voter, &project_id, &2);
@@ -1049,7 +1097,13 @@ fn test_insufficient_reputation() {
     let project_id = 1u64;
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 1000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Try to vote with insufficient reputation
     client.cast_vote(&voter, &project_id, &1);
@@ -1079,12 +1133,17 @@ fn test_insufficient_voting_power() {
     let project_id = 1u64;
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 1000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Try to vote with weight that costs more than voting power
     client.cast_vote(&voter, &project_id, &10);
 }
-
 
 #[test]
 fn test_close_voting_period_approved() {
@@ -1115,7 +1174,13 @@ fn test_close_voting_period_approved() {
     // Create voting period with Community threshold (500)
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 1000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Have voters cast votes
     for i in 0..voters.len() {
@@ -1156,7 +1221,13 @@ fn test_close_voting_period_rejected() {
     let project_id = 1u64;
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 1000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::STEM);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::STEM,
+    );
 
     // Cast single vote (insufficient for approval)
     client.cast_vote(&voter, &project_id, &2);
@@ -1189,7 +1260,13 @@ fn test_cannot_close_active_period() {
     let project_id = 1u64;
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 1000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Try to close while still active
     client.close_voting_period(&admin, &project_id);
@@ -1215,7 +1292,13 @@ fn test_get_vote_record() {
     let project_id = 1u64;
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 1000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Cast vote
     let final_weight = client.cast_vote(&voter, &project_id, &2);
@@ -1250,7 +1333,13 @@ fn test_has_voted() {
     let project_id = 1u64;
     let start_time = env.ledger().timestamp();
     let end_time = env.ledger().timestamp() + 1000;
-    client.create_voting_period(&admin, &project_id, &start_time, &end_time, &ProjectCategory::COMMUNITY);
+    client.create_voting_period(
+        &admin,
+        &project_id,
+        &start_time,
+        &end_time,
+        &ProjectCategory::COMMUNITY,
+    );
 
     // Check before voting
     assert!(!client.has_voter_voted(&project_id, &voter));

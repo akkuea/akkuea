@@ -15,21 +15,21 @@ pub enum DataKey {
     ReputationHistory(u64, String), // (User ID, Subject) -> Historical reputation data
     Analytics(String),              // Analytics key -> Analytics data
     // Security-related keys
-    RateLimit(String),              // Rate limit key -> Rate limit data
-    CircuitBreaker(String),         // Circuit breaker key -> Circuit breaker state
-    Admin(Address),                 // Admin address -> Admin status
-    Moderator(Address),             // Moderator address -> Moderator status
+    RateLimit(String),      // Rate limit key -> Rate limit data
+    CircuitBreaker(String), // Circuit breaker key -> Circuit breaker state
+    Admin(Address),         // Admin address -> Admin status
+    Moderator(Address),     // Moderator address -> Moderator status
     // Integration-related keys
-    ExternalCredential(String),     // External credential ID -> External credential data
-    ProfessionalCert(String),       // Professional certification ID -> Certification data
-    SystemBridge(String),           // System bridge ID -> Bridge configuration
-    ImportExportLog(u64),           // Log ID -> Import/export operation log
-    NextImportExportId,             // Counter for import/export operation IDs
-    UserExternalCredentials(u64),   // User ID -> List of external credential IDs
-    UserProfessionalCerts(u64),     // User ID -> List of professional certification IDs
-    CredentialMapping(String),      // External credential ID -> Internal mapping
+    ExternalCredential(String), // External credential ID -> External credential data
+    ProfessionalCert(String),   // Professional certification ID -> Certification data
+    SystemBridge(String),       // System bridge ID -> Bridge configuration
+    ImportExportLog(u64),       // Log ID -> Import/export operation log
+    NextImportExportId,         // Counter for import/export operation IDs
+    UserExternalCredentials(u64), // User ID -> List of external credential IDs
+    UserProfessionalCerts(u64), // User ID -> List of professional certification IDs
+    CredentialMapping(String),  // External credential ID -> Internal mapping
     // Verification tier system keys
-    UserVerification(u64),          // User ID -> Verification data
+    UserVerification(u64),                // User ID -> Verification data
     VerificationDelegation(Address, u64), // (Delegate Address, User ID) -> Delegation data
 }
 
@@ -150,9 +150,9 @@ pub struct PeerBenchmark {
 #[derive(Clone)]
 pub struct RateLimitData {
     pub key: String,
-    pub operations: Vec<u64>,  // Timestamps of operations
-    pub limit: u32,            // Max operations per window
-    pub window_start: u64,     // Start of current window
+    pub operations: Vec<u64>, // Timestamps of operations
+    pub limit: u32,           // Max operations per window
+    pub window_start: u64,    // Start of current window
 }
 
 #[contracttype]
@@ -168,9 +168,9 @@ pub struct CircuitBreakerState {
 #[contracttype]
 #[derive(Clone)]
 pub enum CircuitState {
-    Closed,    // Normal operation
-    Open,      // Failing, reject requests
-    HalfOpen,  // Testing if service recovered
+    Closed,   // Normal operation
+    Open,     // Failing, reject requests
+    HalfOpen, // Testing if service recovered
 }
 
 #[contracttype]
@@ -194,9 +194,9 @@ pub struct SecurityAuditReport {
 pub struct ExternalCredential {
     pub id: String,
     pub user_id: u64,
-    pub provider: String,          // Academic institution, certification body, etc.
-    pub credential_type: String,   // Degree, certificate, etc.
-    pub subject_area: String,      // Field of study/expertise
+    pub provider: String, // Academic institution, certification body, etc.
+    pub credential_type: String, // Degree, certificate, etc.
+    pub subject_area: String, // Field of study/expertise
     pub issued_date: u64,
     pub expiry_date: Option<u64>,
     pub verification_status: VerificationStatus,
@@ -212,7 +212,7 @@ pub struct ProfessionalCertification {
     pub certification_body: String,
     pub certification_name: String,
     pub competency_areas: Vec<String>,
-    pub skill_level: u32,          // 1-1000 scale
+    pub skill_level: u32, // 1-1000 scale
     pub issued_date: u64,
     pub expiry_date: Option<u64>,
     pub renewal_required: bool,
@@ -248,11 +248,11 @@ pub struct SystemBridge {
 #[contracttype]
 #[derive(Clone)]
 pub enum BridgeType {
-    AcademicSystem,      // University/school systems
-    CertificationBody,   // Professional certification providers
-    LearningPlatform,    // Online learning platforms
-    CredentialWallet,    // Digital credential wallets
-    BlockchainNetwork,   // Other blockchain networks
+    AcademicSystem,    // University/school systems
+    CertificationBody, // Professional certification providers
+    LearningPlatform,  // Online learning platforms
+    CredentialWallet,  // Digital credential wallets
+    BlockchainNetwork, // Other blockchain networks
 }
 
 #[contracttype]
@@ -296,7 +296,7 @@ pub struct CredentialMapping {
     pub external_id: String,
     pub internal_id: u64,
     pub mapping_type: String,
-    pub confidence_score: u32,  // How confident we are in this mapping (0-100)
+    pub confidence_score: u32, // How confident we are in this mapping (0-100)
     pub created_at: u64,
     pub verified_by: Option<Address>,
 }
@@ -307,21 +307,21 @@ pub struct CredentialMapping {
 #[derive(Clone)]
 pub struct UserVerification {
     pub user_id: u64,
-    pub tier: u32,                      // Verification tier (1-4)
-    pub verified_by: Address,           // Who verified this user
-    pub verified_at: u64,               // When verification occurred
-    pub expires_at: u64,                // When verification expires
-    pub verification_details: String,   // Details about verification
+    pub tier: u32,                    // Verification tier (1-4)
+    pub verified_by: Address,         // Who verified this user
+    pub verified_at: u64,             // When verification occurred
+    pub expires_at: u64,              // When verification expires
+    pub verification_details: String, // Details about verification
 }
 
 #[contracttype]
 #[derive(Clone)]
 pub struct VerificationDelegation {
-    pub delegator: Address,             // Who delegated the authority
-    pub delegate: Address,              // Address who received authority
-    pub user_id: u64,                   // Specific user they can verify
-    pub max_tier: u32,                  // Maximum tier they can verify for this user
-    pub expires_at: u64,                // When delegation expires
+    pub delegator: Address, // Who delegated the authority
+    pub delegate: Address,  // Address who received authority
+    pub user_id: u64,       // Specific user they can verify
+    pub max_tier: u32,      // Maximum tier they can verify for this user
+    pub expires_at: u64,    // When delegation expires
 }
 
 #[contracttype]

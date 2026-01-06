@@ -1,9 +1,9 @@
 use soroban_sdk::{contracttype, Address, Env, String};
 
 use crate::error::Error;
+use crate::security;
 use crate::storage;
 use crate::types::*;
-use crate::security;
 
 const SECONDS_PER_DAY: u64 = 24 * 3600;
 const DAYS_PER_YEAR: u64 = 365;
@@ -112,7 +112,8 @@ pub fn verify_user_with_tier(
     // Check if user already has higher or equal tier
     if let Some(current_verification) = storage::get_user_verification(&env, user_id) {
         if current_verification.tier >= tier.as_u32()
-            && !is_verification_expired(&env, &current_verification) {
+            && !is_verification_expired(&env, &current_verification)
+        {
             return Err(Error::AlreadyVerified);
         }
     }
@@ -146,19 +147,14 @@ pub fn verify_user_with_tier(
 }
 
 /// Renew verification for a user - Expiration and renewal processes
-pub fn renew_verification(
-    env: Env,
-    caller: Address,
-    user_id: u64,
-) -> Result<(), Error> {
+pub fn renew_verification(env: Env, caller: Address, user_id: u64) -> Result<(), Error> {
     caller.require_auth();
 
-    let verification = storage::get_user_verification(&env, user_id)
-        .ok_or(Error::NotVerified)?;
-    
+    let verification = storage::get_user_verification(&env, user_id).ok_or(Error::NotVerified)?;
+
     let current_time = env.ledger().timestamp();
     let renewal_window = RENEWAL_WINDOW_DAYS * SECONDS_PER_DAY;
-    
+
     if verification.expires_at > current_time + renewal_window {
         return Err(Error::RenewalNotDue);
     }
@@ -219,17 +215,13 @@ pub fn add_verification_delegation(
 }
 
 /// Check tier requirements - comprehensive validation with proper struct
-fn validate_tier_requirements(
-    env: &Env,
-    user_id: u64,
-    target_tier: u32,
-) -> Result<(), Error> {
+fn validate_tier_requirements(env: &Env, user_id: u64, target_tier: u32) -> Result<(), Error> {
     let tier = VerificationTier::from_u32(target_tier)?;
     let rules = tier.get_validation_rules(env);
-    
+
     // Basic validation - check if user exists and is in good standing
     let user = storage::get_user(env, user_id)?;
-    
+
     // Check if user needs previous verification
     if rules.requires_previous_verification {
         if let Some(current_verification) = storage::get_user_verification(env, user_id) {
@@ -242,31 +234,35 @@ fn validate_tier_requirements(
             return Err(Error::NotVerified);
         }
     }
-    
+
     // Check if user needs verified status
     if rules.requires_verified_status && !user.verified {
         return Err(Error::NotVerified);
     }
-    
+
     // Check minimum expertise areas requirement
     if user.expertise_areas.len() < rules.min_expertise_areas {
         return Err(Error::InsufficientExpertise);
     }
-    
+
     Ok(())
 }
-
 
 // Helper functions
 fn is_verification_expired(env: &Env, verification: &UserVerification) -> bool {
     verification.expires_at <= env.ledger().timestamp()
 }
 
-fn can_caller_verify_tier(env: &Env, caller: &Address, user_id: u64, target_tier: VerificationTier) -> Result<bool, Error> {
+fn can_caller_verify_tier(
+    env: &Env,
+    caller: &Address,
+    user_id: u64,
+    target_tier: VerificationTier,
+) -> Result<bool, Error> {
     if security::check_admin_access(env, caller).is_ok() {
         return Ok(true);
     }
-    
+
     // Check if caller has active delegation for this specific user and tier
     if let Some(delegation) = storage::get_verification_delegation(env, caller, user_id) {
         // Check if delegation is valid and not expired
@@ -278,7 +274,7 @@ fn can_caller_verify_tier(env: &Env, caller: &Address, user_id: u64, target_tier
             }
         }
     }
-    
+
     Ok(false)
 }
 

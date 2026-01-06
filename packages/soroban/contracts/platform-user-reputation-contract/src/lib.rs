@@ -30,10 +30,8 @@ impl Contract {
     pub fn update_expertise(env: Env, user: Address, new_expertise: Vec<Symbol>) {
         register::update_expertise(env.clone(), user.clone(), new_expertise.clone());
 
-        env.events().publish(
-            (symbol_short!("expertise"), user.clone()),
-            new_expertise,
-        );
+        env.events()
+            .publish((symbol_short!("expertise"), user.clone()), new_expertise);
     }
 
     /// Check if a user is already registered
@@ -65,16 +63,14 @@ impl Contract {
             -(storage::UserStorage::get_reputation(&env, &user) as i64),
         );
 
-        env.events()
-            .publish((symbol_short!("rep_reset"), user), ());
+        env.events().publish((symbol_short!("rep_reset"), user), ());
     }
 
     /// Remove a user and emit event
     pub fn remove_user(env: Env, user: Address) {
         storage::UserStorage::remove(&env, &user);
 
-        env.events()
-            .publish((symbol_short!("usr_rem"), user), ());
+        env.events().publish((symbol_short!("usr_rem"), user), ());
     }
 
     /// Get all registered users
@@ -113,10 +109,7 @@ impl Contract {
         storage::UserStorage::reset_all_reputations(&env);
 
         env.events().publish(
-            (
-                symbol_short!("rep_reset"),
-                env.current_contract_address(),
-            ),
+            (symbol_short!("rep_reset"), env.current_contract_address()),
             (),
         );
     }
@@ -126,10 +119,7 @@ impl Contract {
         storage::UserStorage::remove_all_users(&env);
 
         env.events().publish(
-            (
-                symbol_short!("usr_rem"),
-                env.current_contract_address(),
-            ),
+            (symbol_short!("usr_rem"), env.current_contract_address()),
             (),
         );
     }

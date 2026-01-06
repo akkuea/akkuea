@@ -1,8 +1,6 @@
-use soroban_sdk::{
-    contracttype, symbol_short, Address, Env, String, Vec, Symbol
-};
-use crate::utils::NFTError;
 use crate::social::get_reputation_boost;
+use crate::utils::NFTError;
+use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol, Vec};
 
 pub const PROPOSAL_CREATED_EVENT: Symbol = symbol_short!("prop_new");
 pub const VOTE_CAST_EVENT: Symbol = symbol_short!("vote_cast");
@@ -128,13 +126,14 @@ pub fn initialize_governance(env: &Env) {
         min_nfts_to_vote: 1,
         reputation_voting_weight: 100,
     };
-    
+
     env.storage().persistent().set(&GOVERNANCE_CONFIG, &config);
     env.storage().persistent().set(&PROPOSAL_COUNTER, &0u64);
 }
 
 pub fn get_governance_config(env: &Env) -> GovernanceConfig {
-    env.storage().persistent()
+    env.storage()
+        .persistent()
         .get(&GOVERNANCE_CONFIG)
         .unwrap_or_else(|| GovernanceConfig {
             min_proposal_duration: 100,
@@ -148,7 +147,11 @@ pub fn get_governance_config(env: &Env) -> GovernanceConfig {
 }
 
 pub fn get_next_proposal_id(env: &Env) -> u64 {
-    let current = env.storage().persistent().get(&PROPOSAL_COUNTER).unwrap_or(0u64);
+    let current = env
+        .storage()
+        .persistent()
+        .get(&PROPOSAL_COUNTER)
+        .unwrap_or(0u64);
     let next_id = current + 1;
     env.storage().persistent().set(&PROPOSAL_COUNTER, &next_id);
     next_id
@@ -178,11 +181,12 @@ pub fn get_voter_eligibility(env: &Env, voter: &Address) -> VoterEligibility {
     let nft_count = get_user_nft_count(env, voter);
     let reputation = get_reputation_boost(env, voter);
     let reputation_score = reputation.map(|r| r.reputation_score).unwrap_or(0);
-    
+
     let base_voting_power = nft_count as u64;
-    let reputation_bonus = (reputation_score as u64 * get_governance_config(env).reputation_voting_weight) / 1000;
+    let reputation_bonus =
+        (reputation_score as u64 * get_governance_config(env).reputation_voting_weight) / 1000;
     let voting_power = base_voting_power + reputation_bonus;
-    
+
     VoterEligibility {
         address: voter.clone(),
         nft_count,
@@ -210,31 +214,31 @@ pub fn create_proposal(
 ) -> Result<u64, NFTError> {
     let config = get_governance_config(env);
     let current_time = env.ledger().timestamp();
-    
+
     let voter_eligibility = get_voter_eligibility(env, creator);
     if voter_eligibility.reputation_score < config.min_reputation_to_propose {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if !voter_eligibility.is_verified {
         return Err(NFTError::Unauthorized);
     }
-    
+
     let duration = vote_end.saturating_sub(current_time);
     if duration < config.min_proposal_duration || duration > config.max_proposal_duration {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if title.len() == 0 || description.len() == 0 {
         return Err(NFTError::Unauthorized);
     }
-    
+
     let proposal_id = get_next_proposal_id(env);
-    
+
     let total_supply = get_total_nft_supply(env);
     let quorum_required = (total_supply * config.min_quorum_percentage) / 10000;
     let approval_threshold = config.min_approval_percentage;
-    
+
     let proposal = Proposal {
         proposal_id,
         creator: creator.clone(),
@@ -251,9 +255,9 @@ pub fn create_proposal(
         created_at: current_time,
         executed_at: None,
     };
-    
+
     store_proposal(env, &proposal);
-    
+
     let event = ProposalCreatedEvent {
         proposal_id,
         creator: creator.clone(),
@@ -262,9 +266,9 @@ pub fn create_proposal(
         vote_end,
         timestamp: current_time,
     };
-    
+
     env.events().publish((PROPOSAL_CREATED_EVENT,), event);
-    
+
     Ok(proposal_id)
 }
 
@@ -276,32 +280,32 @@ pub fn vote_on_proposal(
 ) -> Result<(), NFTError> {
     let mut proposal = get_proposal(env, proposal_id).ok_or(NFTError::TokenNotFound)?;
     let current_time = env.ledger().timestamp();
-    
+
     if proposal.status != ProposalStatus::Pending {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if current_time >= proposal.vote_end {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if get_vote(env, proposal_id, voter).is_some() {
         return Err(NFTError::Unauthorized);
     }
-    
+
     let voter_eligibility = get_voter_eligibility(env, voter);
     let config = get_governance_config(env);
-    
+
     if voter_eligibility.nft_count < config.min_nfts_to_vote {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if !voter_eligibility.is_verified {
         return Err(NFTError::Unauthorized);
     }
-    
+
     let voting_power = voter_eligibility.voting_power;
-    
+
     let vote_record = Vote {
         proposal_id,
         voter: voter.clone(),
@@ -309,18 +313,18 @@ pub fn vote_on_proposal(
         voting_power,
         timestamp: current_time,
     };
-    
+
     store_vote(env, &vote_record);
-    
+
     if vote {
         proposal.yes_votes += voting_power;
     } else {
         proposal.no_votes += voting_power;
     }
     proposal.total_voting_power += voting_power;
-    
+
     store_proposal(env, &proposal);
-    
+
     let event = VoteCastEvent {
         proposal_id,
         voter: voter.clone(),
@@ -328,30 +332,26 @@ pub fn vote_on_proposal(
         voting_power,
         timestamp: current_time,
     };
-    
+
     env.events().publish((VOTE_CAST_EVENT,), event);
-    
+
     Ok(())
 }
 
-pub fn finalize_proposal(
-    env: &Env,
-    caller: &Address,
-    proposal_id: u64,
-) -> Result<(), NFTError> {
+pub fn finalize_proposal(env: &Env, caller: &Address, proposal_id: u64) -> Result<(), NFTError> {
     let mut proposal = get_proposal(env, proposal_id).ok_or(NFTError::TokenNotFound)?;
     let current_time = env.ledger().timestamp();
-    
+
     if proposal.status != ProposalStatus::Pending {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if current_time < proposal.vote_end {
         return Err(NFTError::Unauthorized);
     }
-    
+
     let total_votes = proposal.yes_votes + proposal.no_votes;
-    
+
     let new_status = if total_votes < proposal.quorum_required {
         ProposalStatus::Expired
     } else {
@@ -362,10 +362,10 @@ pub fn finalize_proposal(
             ProposalStatus::Rejected
         }
     };
-    
+
     proposal.status = new_status.clone();
     store_proposal(env, &proposal);
-    
+
     let event = ProposalFinalizedEvent {
         proposal_id,
         status: new_status.clone(),
@@ -374,93 +374,98 @@ pub fn finalize_proposal(
         total_voting_power: proposal.total_voting_power,
         timestamp: current_time,
     };
-    
+
     env.events().publish((PROPOSAL_FINALIZED_EVENT,), event);
-    
+
     if new_status == ProposalStatus::Approved {
         execute_proposal(env, &proposal)?;
     }
-    
+
     Ok(())
 }
 
 pub fn execute_proposal(env: &Env, proposal: &Proposal) -> Result<(), NFTError> {
     match proposal.proposal_type {
-        ProposalType::RoyaltyAdjustment => {
-            execute_royalty_adjustment(env, proposal)
-        }
-        ProposalType::FeatureEnhancement => {
-            execute_feature_enhancement(env, proposal)
-        }
-        ProposalType::ContentCuration => {
-            execute_content_curation(env, proposal)
-        }
-        ProposalType::MetadataUpdate => {
-            execute_metadata_update(env, proposal)
-        }
-        ProposalType::PlatformUpgrade => {
-            execute_platform_upgrade(env, proposal)
-        }
+        ProposalType::RoyaltyAdjustment => execute_royalty_adjustment(env, proposal),
+        ProposalType::FeatureEnhancement => execute_feature_enhancement(env, proposal),
+        ProposalType::ContentCuration => execute_content_curation(env, proposal),
+        ProposalType::MetadataUpdate => execute_metadata_update(env, proposal),
+        ProposalType::PlatformUpgrade => execute_platform_upgrade(env, proposal),
     }
 }
 
 pub fn execute_royalty_adjustment(env: &Env, proposal: &Proposal) -> Result<(), NFTError> {
     let current_time = env.ledger().timestamp();
-    
-    env.events().publish((GOVERNANCE_ACTION_EVENT,), (
-        proposal.proposal_id,
-        String::from_str(env, "RoyaltyAdjustment"),
-        current_time,
-    ));
-    
+
+    env.events().publish(
+        (GOVERNANCE_ACTION_EVENT,),
+        (
+            proposal.proposal_id,
+            String::from_str(env, "RoyaltyAdjustment"),
+            current_time,
+        ),
+    );
+
     Ok(())
 }
 
 pub fn execute_feature_enhancement(env: &Env, proposal: &Proposal) -> Result<(), NFTError> {
     let current_time = env.ledger().timestamp();
-    
-    env.events().publish((GOVERNANCE_ACTION_EVENT,), (
-        proposal.proposal_id,
-        String::from_str(env, "FeatureEnhancement"),
-        current_time,
-    ));
-    
+
+    env.events().publish(
+        (GOVERNANCE_ACTION_EVENT,),
+        (
+            proposal.proposal_id,
+            String::from_str(env, "FeatureEnhancement"),
+            current_time,
+        ),
+    );
+
     Ok(())
 }
 
 pub fn execute_content_curation(env: &Env, proposal: &Proposal) -> Result<(), NFTError> {
     let current_time = env.ledger().timestamp();
-    
-    env.events().publish((GOVERNANCE_ACTION_EVENT,), (
-        proposal.proposal_id,
-        String::from_str(env, "ContentCuration"),
-        current_time,
-    ));
-    
+
+    env.events().publish(
+        (GOVERNANCE_ACTION_EVENT,),
+        (
+            proposal.proposal_id,
+            String::from_str(env, "ContentCuration"),
+            current_time,
+        ),
+    );
+
     Ok(())
 }
 
 pub fn execute_metadata_update(env: &Env, proposal: &Proposal) -> Result<(), NFTError> {
     let current_time = env.ledger().timestamp();
-    
-    env.events().publish((GOVERNANCE_ACTION_EVENT,), (
-        proposal.proposal_id,
-        String::from_str(env, "MetadataUpdate"),
-        current_time,
-    ));
-    
+
+    env.events().publish(
+        (GOVERNANCE_ACTION_EVENT,),
+        (
+            proposal.proposal_id,
+            String::from_str(env, "MetadataUpdate"),
+            current_time,
+        ),
+    );
+
     Ok(())
 }
 
 pub fn execute_platform_upgrade(env: &Env, proposal: &Proposal) -> Result<(), NFTError> {
     let current_time = env.ledger().timestamp();
-    
-    env.events().publish((GOVERNANCE_ACTION_EVENT,), (
-        proposal.proposal_id,
-        String::from_str(env, "PlatformUpgrade"),
-        current_time,
-    ));
-    
+
+    env.events().publish(
+        (GOVERNANCE_ACTION_EVENT,),
+        (
+            proposal.proposal_id,
+            String::from_str(env, "PlatformUpgrade"),
+            current_time,
+        ),
+    );
+
     Ok(())
 }
 

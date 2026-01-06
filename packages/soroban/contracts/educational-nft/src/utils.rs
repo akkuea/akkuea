@@ -1,4 +1,4 @@
-use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Bytes, Env, Symbol, String};
+use soroban_sdk::{contracterror, contracttype, symbol_short, Address, Bytes, Env, String, Symbol};
 
 /// Event symbols for Educational NFT operations
 ///
@@ -179,7 +179,6 @@ pub fn emit_metadata_updated_event(
     };
     env.events().publish((METADATA_UPDATED_EVENT,), event_data);
 }
-
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]

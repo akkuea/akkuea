@@ -11,7 +11,7 @@ pub struct LearningProgress {
     pub token_id: u64,
     pub user: Address,
     pub course_id: u64,
-    pub completion_status: u32, // 0-100 percentage
+    pub completion_status: u32,  // 0-100 percentage
     pub prerequisites: Vec<u64>, // List of prerequisite course IDs
     pub created_at: u64,
     pub updated_at: u64,
@@ -21,11 +21,11 @@ pub struct LearningProgress {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StorageKey {
-    Progress(u64),                    // token_id -> LearningProgress
-    UserProgress(Address, u64),       // (user, course_id) -> token_id
-    UserNFTs(Address),                // user -> Vec<token_id>
-    CourseNFTs(u64),                  // course_id -> Vec<token_id>
-    CoursePrerequisites(u64),         // course_id -> Vec<prerequisite_course_ids>
+    Progress(u64),              // token_id -> LearningProgress
+    UserProgress(Address, u64), // (user, course_id) -> token_id
+    UserNFTs(Address),          // user -> Vec<token_id>
+    CourseNFTs(u64),            // course_id -> Vec<token_id>
+    CoursePrerequisites(u64),   // course_id -> Vec<prerequisite_course_ids>
 }
 
 // Admin functions
@@ -119,7 +119,10 @@ pub fn set_user_progress_token_id(env: &Env, user: &Address, course_id: u64, tok
 // User NFT tracking
 pub fn get_user_nfts(env: &Env, user: &Address) -> Vec<u64> {
     let key = StorageKey::UserNFTs(user.clone());
-    env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env))
 }
 
 pub fn add_user_nft(env: &Env, user: &Address, token_id: u64) {
@@ -134,7 +137,10 @@ pub fn add_user_nft(env: &Env, user: &Address, token_id: u64) {
 // Course NFT tracking
 pub fn get_course_nfts(env: &Env, course_id: u64) -> Vec<u64> {
     let key = StorageKey::CourseNFTs(course_id);
-    env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env))
 }
 
 pub fn add_course_nft(env: &Env, course_id: u64, token_id: u64) {
@@ -149,7 +155,10 @@ pub fn add_course_nft(env: &Env, course_id: u64, token_id: u64) {
 // Course prerequisites management
 pub fn get_course_prerequisites(env: &Env, course_id: u64) -> Vec<u64> {
     let key = StorageKey::CoursePrerequisites(course_id);
-    env.storage().persistent().get(&key).unwrap_or(Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(Vec::new(env))
 }
 
 pub fn set_course_prerequisites(env: &Env, course_id: u64, prerequisites: &Vec<u64>) {

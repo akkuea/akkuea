@@ -1,4 +1,4 @@
-use soroban_sdk::{Address, Env, contracttype, Symbol, IntoVal};
+use soroban_sdk::{contracttype, Address, Env, IntoVal, Symbol};
 
 use crate::{DataKey, ResponseError, ReviewSystemContract};
 
@@ -16,22 +16,20 @@ impl ReviewSystemContract {
     /// Increment review count for a reviewer
     pub(crate) fn increment_review_count(env: &Env, reviewer: &Address) {
         let profile_key = DataKey::ReviewerProfile(reviewer.clone());
-        let mut profile: ReviewerProfile = env
-            .storage()
-            .persistent()
-            .get(&profile_key)
-            .unwrap_or(ReviewerProfile {
-                reviewer: reviewer.clone(),
-                credibility_score: 50, // Start with base score
-                review_count: 0,
-                helpful_votes: 0,
-            });
+        let mut profile: ReviewerProfile =
+            env.storage()
+                .persistent()
+                .get(&profile_key)
+                .unwrap_or(ReviewerProfile {
+                    reviewer: reviewer.clone(),
+                    credibility_score: 50, // Start with base score
+                    review_count: 0,
+                    helpful_votes: 0,
+                });
 
         profile.review_count += 1;
-        profile.credibility_score = Self::calculate_base_credibility(
-            profile.review_count, 
-            profile.helpful_votes
-        );
+        profile.credibility_score =
+            Self::calculate_base_credibility(profile.review_count, profile.helpful_votes);
 
         env.storage().persistent().set(&profile_key, &profile);
 

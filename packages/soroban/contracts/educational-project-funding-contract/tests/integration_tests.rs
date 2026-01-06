@@ -1,7 +1,7 @@
 mod test_helpers;
 
-use soroban_sdk::{testutils::Address as _, Address, String, Vec};
 use educational_project_funding_contract::{CrowdfundContract, CrowdfundContractClient};
+use soroban_sdk::{testutils::Address as _, Address, String, Vec};
 use test_helpers::helpers::setup_minimal_env;
 
 #[cfg(test)]
@@ -30,7 +30,14 @@ mod integration_tests {
         let target_amount = 1000u64;
         let milestones = Vec::new(&env);
 
-        client.register_project(&project_id, &admin, &title, &description, &target_amount, &milestones);
+        client.register_project(
+            &project_id,
+            &admin,
+            &title,
+            &description,
+            &target_amount,
+            &milestones,
+        );
         client.vote_for_projects(&project_id, &voter);
 
         assert_eq!(client.get_vote(&project_id), 1);
@@ -46,7 +53,14 @@ mod integration_tests {
         let description = String::from_str(&env, "Testing edge cases");
         let target_amount = 500u64;
         let milestones = Vec::new(&env);
-        client.register_project(&project_id, &admin, &title, &description, &target_amount, &milestones);
+        client.register_project(
+            &project_id,
+            &admin,
+            &title,
+            &description,
+            &target_amount,
+            &milestones,
+        );
         client.vote_for_projects(&project_id, &voter);
 
         assert_eq!(client.get_vote(&project_id), 1);
@@ -67,8 +81,22 @@ mod integration_tests {
         let description2 = String::from_str(&env, "Second project");
         let target_amount = 1000u64;
         let milestones = Vec::new(&env);
-        client.register_project(&project1_id, &admin, &title1, &description1, &target_amount, &milestones);
-        client.register_project(&project2_id, &admin, &title2, &description2, &target_amount, &milestones);
+        client.register_project(
+            &project1_id,
+            &admin,
+            &title1,
+            &description1,
+            &target_amount,
+            &milestones,
+        );
+        client.register_project(
+            &project2_id,
+            &admin,
+            &title2,
+            &description2,
+            &target_amount,
+            &milestones,
+        );
         client.vote_for_projects(&project1_id, &user1);
         client.vote_for_projects(&project2_id, &user2);
         client.vote_for_projects(&project2_id, &user1);
@@ -85,7 +113,14 @@ mod integration_tests {
         let description = String::from_str(&env, "Test");
         let target_amount = 1u64;
         let milestones = Vec::new(&env);
-        client.register_project(&project_id, &admin, &title, &description, &target_amount, &milestones);
+        client.register_project(
+            &project_id,
+            &admin,
+            &title,
+            &description,
+            &target_amount,
+            &milestones,
+        );
         assert_eq!(client.get_vote(&project_id), 0);
     }
 

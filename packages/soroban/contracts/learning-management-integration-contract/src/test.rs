@@ -2,7 +2,10 @@
 extern crate std;
 
 use crate::{LearningManagementContract, LearningManagementContractClient};
-use soroban_sdk::{testutils::{Address as _, Events}, Address, Env, Vec};
+use soroban_sdk::{
+    testutils::{Address as _, Events},
+    Address, Env, Vec,
+};
 
 fn create_contract<'a>(env: &Env) -> LearningManagementContractClient<'a> {
     let contract_address = env.register(LearningManagementContract, ());
@@ -159,8 +162,7 @@ fn test_get_user_nfts() {
 
     // Create and complete multiple courses
     for course_id in 1..=3 {
-        let token_id =
-            contract.initialize_progress(&platform, &user, &course_id, &Vec::new(&env));
+        let token_id = contract.initialize_progress(&platform, &user, &course_id, &Vec::new(&env));
         contract.update_progress(&platform, &token_id, &100u32);
         contract.issue_course_nft(&platform, &token_id);
     }
@@ -773,7 +775,8 @@ fn test_full_learning_path_with_prerequisites_and_milestone() {
 
     // Step 1: Complete foundational course (no prerequisites)
     let foundation_course = 1u64;
-    let foundation_token = contract.initialize_progress(&platform, &user, &foundation_course, &Vec::new(&env));
+    let foundation_token =
+        contract.initialize_progress(&platform, &user, &foundation_course, &Vec::new(&env));
     contract.update_progress(&platform, &foundation_token, &100u32);
     contract.issue_course_nft(&platform, &foundation_token);
 
@@ -785,7 +788,8 @@ fn test_full_learning_path_with_prerequisites_and_milestone() {
 
     assert!(contract.verify_prerequisites(&user, &intermediate_course));
 
-    let intermediate_token = contract.initialize_progress(&platform, &user, &intermediate_course, &Vec::new(&env));
+    let intermediate_token =
+        contract.initialize_progress(&platform, &user, &intermediate_course, &Vec::new(&env));
     contract.update_progress(&platform, &intermediate_token, &100u32);
     contract.issue_course_nft(&platform, &intermediate_token);
 
@@ -798,7 +802,8 @@ fn test_full_learning_path_with_prerequisites_and_milestone() {
 
     assert!(contract.verify_prerequisites(&user, &advanced_course));
 
-    let advanced_token = contract.initialize_progress(&platform, &user, &advanced_course, &Vec::new(&env));
+    let advanced_token =
+        contract.initialize_progress(&platform, &user, &advanced_course, &Vec::new(&env));
 
     // Link with milestone
     contract.link_progress_with_milestone(&platform, &advanced_token, &100u64, &1u64);

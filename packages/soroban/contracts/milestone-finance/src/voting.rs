@@ -1,5 +1,3 @@
-
-
 use soroban_sdk::{contracttype, symbol_short, Address, Env, Map, Symbol, Vec};
 
 use crate::reputation::get_voting_power;
@@ -27,7 +25,7 @@ pub enum ProjectCategory {
 pub struct Vote {
     pub project_id: u64,
     pub voter: Address,
-    pub weight: u32,          // Quadratic vote weight
+    pub weight: u32, // Quadratic vote weight
     pub timestamp: u64,
 }
 
@@ -38,7 +36,7 @@ pub struct VotingPeriod {
     pub project_id: u64,
     pub start_time: u64,
     pub end_time: u64,
-    pub threshold: u32,       // Required votes for approval
+    pub threshold: u32, // Required votes for approval
     pub category: ProjectCategory,
     pub is_active: bool,
     pub is_approved: bool,
@@ -64,7 +62,6 @@ pub fn get_category_threshold(category: &ProjectCategory) -> u32 {
     }
 }
 
-
 /// Create a new voting period for a project
 pub fn create_voting_period(
     env: Env,
@@ -76,7 +73,6 @@ pub fn create_voting_period(
 ) {
     admin.require_auth();
 
-   
     // Validate time parameters
     if start_time >= end_time {
         panic!("Invalid voting period: start_time must be before end_time");
@@ -206,9 +202,7 @@ pub fn cast_vote(env: Env, voter: Address, project_id: u64, weight: u32) -> Resu
         .unwrap_or_else(|| Vec::new(&env));
     voter_list.push_back(voter.clone());
     voter_lists.set(project_id, voter_list);
-    env.storage()
-        .instance()
-        .set(&VOTER_LIST_KEY, &voter_lists);
+    env.storage().instance().set(&VOTER_LIST_KEY, &voter_lists);
 
     emit_vote_cast_event(&env, project_id, voter, final_weight, current_time);
 

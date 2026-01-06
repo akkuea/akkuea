@@ -1,12 +1,20 @@
-use soroban_sdk::{Address, Env, String, Map, Symbol};
+use crate::utils::{
+    get_vote_weight, ModerationFlag, INSTANCE_BUMP_AMOUNT, INSTANCE_LIFETIME_THRESHOLD,
+    MODERATION_FLAGS,
+};
 use core::option::Option;
-use crate::utils::{ModerationFlag, MODERATION_FLAGS, get_vote_weight, INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT};
+use soroban_sdk::{Address, Env, Map, String, Symbol};
 
 pub fn flag_review_impl(env: Env, flagger: Address, review_id: u64, reason: String) {
     flagger.require_auth();
 
-    env.storage().persistent().extend_ttl(&MODERATION_FLAGS, INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
-    let mut flags: Map<u64, ModerationFlag> = env.storage().persistent().get(&MODERATION_FLAGS).unwrap();
+    env.storage().persistent().extend_ttl(
+        &MODERATION_FLAGS,
+        INSTANCE_LIFETIME_THRESHOLD,
+        INSTANCE_BUMP_AMOUNT,
+    );
+    let mut flags: Map<u64, ModerationFlag> =
+        env.storage().persistent().get(&MODERATION_FLAGS).unwrap();
 
     if flags.contains_key(review_id) {
         panic!("Review already flagged");
@@ -25,18 +33,23 @@ pub fn flag_review_impl(env: Env, flagger: Address, review_id: u64, reason: Stri
     flags.set(review_id, flag);
     env.storage().persistent().set(&MODERATION_FLAGS, &flags);
 
-    env.events().publish(
-        (Symbol::new(&env, "review_flagged"),),
-        (review_id, flagger),
-    );
+    env.events()
+        .publish((Symbol::new(&env, "review_flagged"),), (review_id, flagger));
 }
 
 pub fn vote_moderation_impl(env: Env, voter: Address, review_id: u64, approve: bool) {
     voter.require_auth();
 
-    env.storage().persistent().extend_ttl(&MODERATION_FLAGS, INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
-    let mut flags: Map<u64, ModerationFlag> = env.storage().persistent().get(&MODERATION_FLAGS).unwrap();
-    let mut flag = flags.get(review_id).unwrap_or_else(|| panic!("Flag not found"));
+    env.storage().persistent().extend_ttl(
+        &MODERATION_FLAGS,
+        INSTANCE_LIFETIME_THRESHOLD,
+        INSTANCE_BUMP_AMOUNT,
+    );
+    let mut flags: Map<u64, ModerationFlag> =
+        env.storage().persistent().get(&MODERATION_FLAGS).unwrap();
+    let mut flag = flags
+        .get(review_id)
+        .unwrap_or_else(|| panic!("Flag not found"));
 
     if flag.resolved {
         panic!("Moderation already resolved");
@@ -55,7 +68,6 @@ pub fn vote_moderation_impl(env: Env, voter: Address, review_id: u64, approve: b
     }
 
     flag.voters.set(voter.clone(), true);
-    
 
     env.events().publish(
         (Symbol::new(&env, "moderation_voted"),),
@@ -64,8 +76,10 @@ pub fn vote_moderation_impl(env: Env, voter: Address, review_id: u64, approve: b
 
     // Resolution logic: require at least 10 total vote weight and a clear majority
     let total_votes = flag.votes_approve + flag.votes_reject;
-    if total_votes >= 10 && ((flag.votes_approve > flag.votes_reject && flag.votes_approve > total_votes / 2) ||
-                             (flag.votes_reject > flag.votes_approve && flag.votes_reject > total_votes / 2)) {
+    if total_votes >= 10
+        && ((flag.votes_approve > flag.votes_reject && flag.votes_approve > total_votes / 2)
+            || (flag.votes_reject > flag.votes_approve && flag.votes_reject > total_votes / 2))
+    {
         flag.resolved = true;
         let outcome = flag.votes_approve > flag.votes_reject; // true if approved for removal
 
@@ -80,7 +94,12 @@ pub fn vote_moderation_impl(env: Env, voter: Address, review_id: u64, approve: b
 }
 
 pub fn get_flag_impl(env: Env, review_id: u64) -> Option<ModerationFlag> {
-    env.storage().persistent().extend_ttl(&MODERATION_FLAGS, INSTANCE_LIFETIME_THRESHOLD, INSTANCE_BUMP_AMOUNT);
-    let flags: Map<u64, ModerationFlag> = env.storage().persistent().get(&MODERATION_FLAGS).unwrap();
+    env.storage().persistent().extend_ttl(
+        &MODERATION_FLAGS,
+        INSTANCE_LIFETIME_THRESHOLD,
+        INSTANCE_BUMP_AMOUNT,
+    );
+    let flags: Map<u64, ModerationFlag> =
+        env.storage().persistent().get(&MODERATION_FLAGS).unwrap();
     flags.get(review_id)
 }

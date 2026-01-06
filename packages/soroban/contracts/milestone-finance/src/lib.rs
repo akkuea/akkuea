@@ -8,10 +8,20 @@ mod voting;
 
 pub use milestone::*;
 pub use reputation::{
-    initialize_user, update_reputation, get_voting_power, penalize_missed_milestone,
-    get_reputation, vote_for_project, get_project_voting_power,
+    complete_milestone,
     get_project_voters as get_reputation_project_voters, // Rename to avoid conflict
-    complete_milestone, get_reputation_stats, Reputation, User, ProjectVote, ReputationStats
+    get_project_voting_power,
+    get_reputation,
+    get_reputation_stats,
+    get_voting_power,
+    initialize_user,
+    penalize_missed_milestone,
+    update_reputation,
+    vote_for_project,
+    ProjectVote,
+    Reputation,
+    ReputationStats,
+    User,
 };
 pub use utils::*;
 pub use voting::*;

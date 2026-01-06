@@ -1,16 +1,21 @@
 #![cfg(test)]
 
-use soroban_sdk::{
-    testutils::{Address as _},
-    Address, Env, String,
-};
+use soroban_sdk::{testutils::Address as _, Address, Env, String};
 
 use crate::{
-    ModerationStatus, Response, ResponseError, ResponseStats, ReviewSystemContract,
-    ReviewSystemContractClient, ThreadNode, ReviewerProfile, CredibilityTier,
+    CredibilityTier, ModerationStatus, Response, ResponseError, ResponseStats,
+    ReviewSystemContract, ReviewSystemContractClient, ReviewerProfile, ThreadNode,
 };
 
-fn create_contract(env: &Env) -> (ReviewSystemContractClient, Address, Address, Address, Address) {
+fn create_contract(
+    env: &Env,
+) -> (
+    ReviewSystemContractClient,
+    Address,
+    Address,
+    Address,
+    Address,
+) {
     let contract_address = env.register_contract(None, ReviewSystemContract);
     let client = ReviewSystemContractClient::new(env, &contract_address);
 
@@ -19,7 +24,13 @@ fn create_contract(env: &Env) -> (ReviewSystemContractClient, Address, Address, 
     let verification_contract = Address::generate(env);
     let user_reputation_contract = Address::generate(env);
 
-    (client, admin, moderation_contract, verification_contract, user_reputation_contract)
+    (
+        client,
+        admin,
+        moderation_contract,
+        verification_contract,
+        user_reputation_contract,
+    )
 }
 
 #[test]
@@ -27,9 +38,15 @@ fn test_initialize_contract() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
 
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     // Test that we cannot initialize twice
     // Trying to initialize again should panic
@@ -41,9 +58,14 @@ fn test_add_top_level_response() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user = Address::generate(&env);
     let review_id = 1u64;
@@ -53,8 +75,7 @@ fn test_add_top_level_response() {
     // Mock the verification contract to return true
     // Note: Mocking external contract calls would be done here in production
 
-    let response_id = client
-        .add_response(&user, &review_id, &parent_response, &text);
+    let response_id = client.add_response(&user, &review_id, &parent_response, &text);
 
     assert_eq!(response_id, 1u64);
 
@@ -72,9 +93,14 @@ fn test_add_nested_response() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user1 = Address::generate(&env);
     let user2 = Address::generate(&env);
@@ -85,19 +111,14 @@ fn test_add_nested_response() {
 
     // Add top-level response
     let top_level_text = String::from_str(&env, "Top level response");
-    let top_level_id = client
-        .add_response(&user1, &review_id, &0u64, &top_level_text)
-;
+    let top_level_id = client.add_response(&user1, &review_id, &0u64, &top_level_text);
 
     // Approve the top-level response for testing nested replies
-    client
-        .update_moderation_status(&top_level_id, &ModerationStatus::Approved);
+    client.update_moderation_status(&top_level_id, &ModerationStatus::Approved);
 
     // Add nested response
     let nested_text = String::from_str(&env, "This is a reply to the top-level response");
-    let nested_id = client
-        .add_response(&user2, &review_id, &top_level_id, &nested_text)
-;
+    let nested_id = client.add_response(&user2, &review_id, &top_level_id, &nested_text);
 
     assert_eq!(nested_id, 2u64);
 
@@ -112,9 +133,14 @@ fn test_response_threading() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let review_id = 1u64;
 
@@ -124,44 +150,35 @@ fn test_response_threading() {
     let user = Address::generate(&env);
 
     // Add multiple responses to create a thread
-    let response1_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &0u64,
-            &String::from_str(&env, "First response"),
-        )
-;
+    let response1_id = client.add_response(
+        &user,
+        &review_id,
+        &0u64,
+        &String::from_str(&env, "First response"),
+    );
 
     // Approve first response
-    client
-        .update_moderation_status(&response1_id, &ModerationStatus::Approved);
+    client.update_moderation_status(&response1_id, &ModerationStatus::Approved);
 
-    let response2_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &response1_id,
-            &String::from_str(&env, "Reply to first"),
-        )
-;
+    let response2_id = client.add_response(
+        &user,
+        &review_id,
+        &response1_id,
+        &String::from_str(&env, "Reply to first"),
+    );
 
     // Approve second response
-    client
-        .update_moderation_status(&response2_id, &ModerationStatus::Approved);
+    client.update_moderation_status(&response2_id, &ModerationStatus::Approved);
 
-    let response3_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &response2_id,
-            &String::from_str(&env, "Reply to reply"),
-        )
-;
+    let response3_id = client.add_response(
+        &user,
+        &review_id,
+        &response2_id,
+        &String::from_str(&env, "Reply to reply"),
+    );
 
     // Approve third response
-    client
-        .update_moderation_status(&response3_id, &ModerationStatus::Approved);
+    client.update_moderation_status(&response3_id, &ModerationStatus::Approved);
 
     // Test getting child responses
     let children = client.get_child_responses(&response1_id);
@@ -182,9 +199,14 @@ fn test_vote_helpful() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user = Address::generate(&env);
     let voter = Address::generate(&env);
@@ -193,14 +215,12 @@ fn test_vote_helpful() {
     // Mock the verification contract to return true
     // Note: Mocking external contract calls would be done here in production
 
-    let response_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &0u64,
-            &String::from_str(&env, "Test response"),
-        )
-;
+    let response_id = client.add_response(
+        &user,
+        &review_id,
+        &0u64,
+        &String::from_str(&env, "Test response"),
+    );
 
     // Vote helpful
     client.vote_helpful(&voter, &response_id, &true);
@@ -219,9 +239,14 @@ fn _test_text_length_validation() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user = Address::generate(&env);
     let review_id = 1u64;
@@ -246,9 +271,14 @@ fn _test_unverified_account() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user = Address::generate(&env);
     let review_id = 1u64;
@@ -272,9 +302,14 @@ fn _test_invalid_parent_response() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user = Address::generate(&env);
     let review_id = 1u64;
@@ -298,9 +333,14 @@ fn test_moderation_status_update() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user = Address::generate(&env);
     let review_id = 1u64;
@@ -308,22 +348,19 @@ fn test_moderation_status_update() {
     // Mock the verification contract to return true
     // Note: Mocking external contract calls would be done here in production
 
-    let response_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &0u64,
-            &String::from_str(&env, "Test response"),
-        )
-;
+    let response_id = client.add_response(
+        &user,
+        &review_id,
+        &0u64,
+        &String::from_str(&env, "Test response"),
+    );
 
     // Initially should be pending
     let response = client.get_response(&response_id);
     assert_eq!(response.moderation_status, ModerationStatus::Pending);
 
     // Update to approved
-    client
-        .update_moderation_status(&response_id, &ModerationStatus::Approved);
+    client.update_moderation_status(&response_id, &ModerationStatus::Approved);
 
     let response = client.get_response(&response_id);
     assert_eq!(response.moderation_status, ModerationStatus::Approved);
@@ -334,9 +371,14 @@ fn test_get_response_thread() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user = Address::generate(&env);
     let review_id = 1u64;
@@ -345,29 +387,23 @@ fn test_get_response_thread() {
     // Note: Mocking external contract calls would be done here in production
 
     // Add multiple responses
-    let response1_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &0u64,
-            &String::from_str(&env, "First response"),
-        )
-;
+    let response1_id = client.add_response(
+        &user,
+        &review_id,
+        &0u64,
+        &String::from_str(&env, "First response"),
+    );
 
-    let response2_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &0u64,
-            &String::from_str(&env, "Second response"),
-        )
-;
+    let response2_id = client.add_response(
+        &user,
+        &review_id,
+        &0u64,
+        &String::from_str(&env, "Second response"),
+    );
 
     // Approve both responses
-    client
-        .update_moderation_status(&response1_id, &ModerationStatus::Approved);
-    client
-        .update_moderation_status(&response2_id, &ModerationStatus::Approved);
+    client.update_moderation_status(&response1_id, &ModerationStatus::Approved);
+    client.update_moderation_status(&response2_id, &ModerationStatus::Approved);
 
     let thread = client.get_response_thread(&review_id);
     assert_eq!(thread.len(), 2);
@@ -378,9 +414,14 @@ fn test_thread_depth_limit() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user = Address::generate(&env);
     let review_id = 1u64;
@@ -392,19 +433,15 @@ fn test_thread_depth_limit() {
 
     // Create a deep thread up to the limit
     for i in 1..=10 {
-        let response_id = client
-            .add_response(
-                &user,
-                &review_id,
-                &current_parent,
-                &String::from_str(&env, "Response"),
-            )
-    ;
+        let response_id = client.add_response(
+            &user,
+            &review_id,
+            &current_parent,
+            &String::from_str(&env, "Response"),
+        );
 
         // Approve the response so we can reply to it
-        client
-            .update_moderation_status(&response_id, &ModerationStatus::Approved)
-    ;
+        client.update_moderation_status(&response_id, &ModerationStatus::Approved);
 
         current_parent = response_id;
     }
@@ -418,9 +455,14 @@ fn test_get_top_level_responses() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user = Address::generate(&env);
     let review_id = 1u64;
@@ -429,39 +471,31 @@ fn test_get_top_level_responses() {
     // Note: Mocking external contract calls would be done here in production
 
     // Add top-level responses
-    let response1_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &0u64,
-            &String::from_str(&env, "Top level 1"),
-        )
-;
+    let response1_id = client.add_response(
+        &user,
+        &review_id,
+        &0u64,
+        &String::from_str(&env, "Top level 1"),
+    );
 
-    let response2_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &0u64,
-            &String::from_str(&env, "Top level 2"),
-        )
-;
+    let response2_id = client.add_response(
+        &user,
+        &review_id,
+        &0u64,
+        &String::from_str(&env, "Top level 2"),
+    );
 
     // Approve responses
-    client
-        .update_moderation_status(&response1_id, &ModerationStatus::Approved);
-    client
-        .update_moderation_status(&response2_id, &ModerationStatus::Approved);
+    client.update_moderation_status(&response1_id, &ModerationStatus::Approved);
+    client.update_moderation_status(&response2_id, &ModerationStatus::Approved);
 
     // Add a nested response
-    let _nested_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &response1_id,
-            &String::from_str(&env, "Nested response"),
-        )
-;
+    let _nested_id = client.add_response(
+        &user,
+        &review_id,
+        &response1_id,
+        &String::from_str(&env, "Nested response"),
+    );
 
     let top_level = client.get_top_level_responses(&review_id);
     assert_eq!(top_level.len(), 2); // Should only return top-level responses
@@ -472,9 +506,14 @@ fn test_response_count() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client
-        .initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let user = Address::generate(&env);
     let review_id = 1u64;
@@ -487,22 +526,19 @@ fn test_response_count() {
     assert_eq!(count, 0);
 
     // Add a response
-    let response_id = client
-        .add_response(
-            &user,
-            &review_id,
-            &0u64,
-            &String::from_str(&env, "Test response"),
-        )
-;
+    let response_id = client.add_response(
+        &user,
+        &review_id,
+        &0u64,
+        &String::from_str(&env, "Test response"),
+    );
 
     // Still 0 because it's pending moderation
     let count = client.get_response_count(&review_id);
     assert_eq!(count, 0);
 
     // Approve the response
-    client
-        .update_moderation_status(&response_id, &ModerationStatus::Approved);
+    client.update_moderation_status(&response_id, &ModerationStatus::Approved);
 
     // Now should be 1
     let count = client.get_response_count(&review_id);
@@ -514,18 +550,24 @@ fn test_credibility_scoring() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let reviewer = Address::generate(&env);
-    
+
     // Initially, credibility should be 0 (no profile exists yet)
     let initial_credibility = client.get_credibility(&reviewer);
     assert_eq!(initial_credibility, 0);
 
     // Update credibility manually
     client.update_credibility(&reviewer, &10);
-    
+
     // Check updated credibility
     let updated_credibility = client.get_credibility(&reviewer);
     assert!(updated_credibility > 0);
@@ -541,8 +583,14 @@ fn test_credibility_auto_update_on_vote() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let responder = Address::generate(&env);
     let voter = Address::generate(&env);
@@ -557,7 +605,7 @@ fn test_credibility_auto_update_on_vote() {
 
     // Check initial credibility
     let initial_credibility = client.get_credibility(&responder);
-    
+
     // Vote helpful on the response
     client.vote_helpful(&voter, &response_id, &true);
 
@@ -571,8 +619,14 @@ fn test_credibility_reset_admin_only() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let reviewer = Address::generate(&env);
     let non_admin = Address::generate(&env);
@@ -596,8 +650,14 @@ fn test_reviewer_profile_updates() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     let reviewer = Address::generate(&env);
     let review_id = 1u64;
@@ -616,13 +676,9 @@ fn test_reviewer_profile_updates() {
 
 use crate::{QualityThresholds, RewardAmounts};
 
-fn setup_reward_system(
-    env: &Env,
-    client: &ReviewSystemContractClient,
-    admin: &Address,
-) {
+fn setup_reward_system(env: &Env, client: &ReviewSystemContractClient, admin: &Address) {
     let reward_contract = Address::generate(env);
-    
+
     let quality_thresholds = QualityThresholds {
         min_length: 50,
         min_helpful_votes: 1,
@@ -631,7 +687,7 @@ fn setup_reward_system(
     };
 
     let reward_amounts = RewardAmounts {
-        basic_reward: 1_000_000,       // 1 XLM in stroops
+        basic_reward: 1_000_000,        // 1 XLM in stroops
         high_quality_reward: 5_000_000, // 5 XLM in stroops
         exceptional_reward: 10_000_000, // 10 XLM in stroops
     };
@@ -649,8 +705,14 @@ fn test_initialize_reward_system() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
 
     setup_reward_system(&env, &client, &admin);
 
@@ -664,22 +726,23 @@ fn test_issue_reward_for_quality_review() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
     setup_reward_system(&env, &client, &admin);
 
     let reviewer = Address::generate(&env);
     let review_id = 1u64;
-    
+
     // Create a high-quality response
     let response_text = String::from_str(&env, "This is a very detailed and helpful response that provides comprehensive feedback on the educational content. It includes specific examples and actionable suggestions for improvement.");
-    
-    let response_id = client.add_response(
-        &reviewer,
-        &review_id,
-        &0u64,
-        &response_text,
-    );
+
+    let response_id = client.add_response(&reviewer, &review_id, &0u64, &response_text);
 
     // Approve the response
     client.update_moderation_status(&response_id, &ModerationStatus::Approved);
@@ -715,8 +778,14 @@ fn test_reward_eligibility_criteria() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
     setup_reward_system(&env, &client, &admin);
 
     let reviewer = Address::generate(&env);
@@ -743,7 +812,7 @@ fn test_reward_eligibility_criteria() {
     let review_id3 = 3u64;
     let response_id3 = client.add_response(&reviewer, &review_id3, &0u64, &good_text);
     client.update_moderation_status(&response_id3, &ModerationStatus::Approved);
-    
+
     let voter = Address::generate(&env);
     client.vote_helpful(&voter, &response_id3, &true);
 
@@ -756,18 +825,24 @@ fn test_prevent_duplicate_rewards() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
     setup_reward_system(&env, &client, &admin);
 
     let reviewer = Address::generate(&env);
     let review_id = 1u64;
-    
+
     // Create a quality response
     let response_text = String::from_str(&env, "This is a detailed response that should qualify for rewards based on its length and helpfulness.");
     let response_id = client.add_response(&reviewer, &review_id, &0u64, &response_text);
     client.update_moderation_status(&response_id, &ModerationStatus::Approved);
-    
+
     let voter = Address::generate(&env);
     client.vote_helpful(&voter, &response_id, &true);
 
@@ -784,18 +859,24 @@ fn test_custom_reward_amount() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
     setup_reward_system(&env, &client, &admin);
 
     let reviewer = Address::generate(&env);
     let review_id = 1u64;
-    
+
     // Create a quality response
     let response_text = String::from_str(&env, "Excellent response with detailed feedback and constructive suggestions for the educational content.");
     let response_id = client.add_response(&reviewer, &review_id, &0u64, &response_text);
     client.update_moderation_status(&response_id, &ModerationStatus::Approved);
-    
+
     let voter = Address::generate(&env);
     client.vote_helpful(&voter, &response_id, &true);
 
@@ -810,18 +891,27 @@ fn test_invalid_reward_amount() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
     setup_reward_system(&env, &client, &admin);
 
     let reviewer = Address::generate(&env);
     let review_id = 1u64;
-    
+
     // Create a quality response
-    let response_text = String::from_str(&env, "Quality response that meets all the criteria for rewards.");
+    let response_text = String::from_str(
+        &env,
+        "Quality response that meets all the criteria for rewards.",
+    );
     let response_id = client.add_response(&reviewer, &review_id, &0u64, &response_text);
     client.update_moderation_status(&response_id, &ModerationStatus::Approved);
-    
+
     let voter = Address::generate(&env);
     client.vote_helpful(&voter, &response_id, &true);
 
@@ -829,7 +919,7 @@ fn test_invalid_reward_amount() {
     // let invalid_amount = 0i128;
     // This would panic: client.issue_reward(&admin, &review_id, &Some(invalid_amount));
 
-    // Try with negative amount - will also panic  
+    // Try with negative amount - will also panic
     // let negative_amount = -1000i128;
     // This would panic: client.issue_reward(&admin, &review_id, &Some(negative_amount));
 }
@@ -839,8 +929,14 @@ fn test_update_quality_thresholds() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
     setup_reward_system(&env, &client, &admin);
 
     // Update thresholds
@@ -856,11 +952,14 @@ fn test_update_quality_thresholds() {
     // Test with a response that would have qualified under old thresholds
     let reviewer = Address::generate(&env);
     let review_id = 1u64;
-    
-    let response_text = String::from_str(&env, "This response is good but not exceptional under new stricter criteria.");
+
+    let response_text = String::from_str(
+        &env,
+        "This response is good but not exceptional under new stricter criteria.",
+    );
     let response_id = client.add_response(&reviewer, &review_id, &0u64, &response_text);
     client.update_moderation_status(&response_id, &ModerationStatus::Approved);
-    
+
     // Add only 2 helpful votes (less than new minimum of 3)
     let voter1 = Address::generate(&env);
     let voter2 = Address::generate(&env);
@@ -876,13 +975,19 @@ fn test_update_reward_amounts() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
     setup_reward_system(&env, &client, &admin);
 
     // Update reward amounts
     let new_amounts = RewardAmounts {
-        basic_reward: 2_000_000,       // 2 XLM
+        basic_reward: 2_000_000,        // 2 XLM
         high_quality_reward: 8_000_000, // 8 XLM
         exceptional_reward: 20_000_000, // 20 XLM
     };
@@ -892,16 +997,19 @@ fn test_update_reward_amounts() {
     // Create a quality response and issue reward
     let reviewer = Address::generate(&env);
     let review_id = 1u64;
-    
-    let response_text = String::from_str(&env, "High quality response with detailed analysis and constructive feedback.");
+
+    let response_text = String::from_str(
+        &env,
+        "High quality response with detailed analysis and constructive feedback.",
+    );
     let response_id = client.add_response(&reviewer, &review_id, &0u64, &response_text);
     client.update_moderation_status(&response_id, &ModerationStatus::Approved);
-    
+
     let voter = Address::generate(&env);
     client.vote_helpful(&voter, &response_id, &true);
 
     let reward = client.issue_reward(&admin, &review_id, &None);
-    
+
     // Reward amount should reflect the new amounts
     assert!(reward.token_amount >= new_amounts.basic_reward);
 }
@@ -911,22 +1019,31 @@ fn test_get_review_reward() {
     let env = Env::default();
     env.mock_all_auths();
 
-    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) = create_contract(&env);
-    client.initialize(&admin, &moderation_contract, &verification_contract, &user_reputation_contract);
+    let (client, admin, moderation_contract, verification_contract, user_reputation_contract) =
+        create_contract(&env);
+    client.initialize(
+        &admin,
+        &moderation_contract,
+        &verification_contract,
+        &user_reputation_contract,
+    );
     setup_reward_system(&env, &client, &admin);
 
     let reviewer = Address::generate(&env);
     let review_id = 1u64;
-    
+
     // Initially no reward
     let reward = client.get_review_reward(&review_id);
     assert!(reward.is_none());
 
     // Create and reward a response
-    let response_text = String::from_str(&env, "Comprehensive review response with valuable insights and suggestions.");
+    let response_text = String::from_str(
+        &env,
+        "Comprehensive review response with valuable insights and suggestions.",
+    );
     let response_id = client.add_response(&reviewer, &review_id, &0u64, &response_text);
     client.update_moderation_status(&response_id, &ModerationStatus::Approved);
-    
+
     let voter = Address::generate(&env);
     client.vote_helpful(&voter, &response_id, &true);
 
@@ -935,7 +1052,7 @@ fn test_get_review_reward() {
     // Now should have reward
     let reward = client.get_review_reward(&review_id);
     assert!(reward.is_some());
-    
+
     let reward_data = reward.unwrap();
     assert_eq!(reward_data.review_id, review_id);
     assert_eq!(reward_data.reviewer, reviewer);

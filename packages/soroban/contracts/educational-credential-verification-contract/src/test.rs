@@ -1,11 +1,13 @@
 #![cfg(test)]
 
 use crate::{
-    datatype::{DisputeStatus, VerificationLevel, },
+    datatype::{DisputeStatus, VerificationLevel},
     EducatorVerificationContract, EducatorVerificationContractClient,
 };
-use soroban_sdk::{testutils::{Address as _, Ledger}, vec, Address, Env, IntoVal, Map, String, Vec};
-
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    vec, Address, Env, IntoVal, Map, String, Vec,
+};
 
 fn setup_test() -> (
     Env,
@@ -43,7 +45,8 @@ fn test_initialize_twice() {
 fn test_register_educator() {
     let (env, client, _, _, educator) = setup_test();
     let name = String::from_str(&env, "John Doe");
-    let registered_address = client.register_educator(&educator, &name, &Vec::new(&env), &Vec::new(&env));
+    let registered_address =
+        client.register_educator(&educator, &name, &Vec::new(&env), &Vec::new(&env));
     assert_eq!(registered_address, educator);
 
     let educator_data = client.get_educator(&educator).unwrap();
@@ -66,16 +69,24 @@ fn test_add_reviewer_unauthorized() {
 fn test_verify_and_revoke() {
     let (env, client, admin, reviewer, educator) = setup_test();
     let mut credentials = Vec::new(&env);
-    credentials.push_back(String::from_str(&env, "0123456789012345678901234567890123456789012345678901234567890123"));
-    client.register_educator(&educator, &"J. Doe".into_val(&env), &credentials, &Vec::new(&env));
+    credentials.push_back(String::from_str(
+        &env,
+        "0123456789012345678901234567890123456789012345678901234567890123",
+    ));
+    client.register_educator(
+        &educator,
+        &"J. Doe".into_val(&env),
+        &credentials,
+        &Vec::new(&env),
+    );
     client.add_verified_credential(&reviewer, &credentials.get_unchecked(0));
-    
+
     // Verify
     client.verify_educator(&reviewer, &educator, &VerificationLevel::Basic);
     let educator_data = client.get_educator(&educator).unwrap();
     assert_eq!(educator_data.verification_status, true);
     assert!(educator_data.nft_token_id.is_some());
-    
+
     // Revoke
     client.revoke_verification(&admin, &educator, &"Reason".into_val(&env));
     let educator_data_after_revoke = client.get_educator(&educator).unwrap();
@@ -86,29 +97,40 @@ fn test_verify_and_revoke() {
 #[test]
 fn test_get_educators_by_specialty() {
     let (env, client, _admin, _reviewer, educator) = setup_test();
-    
+
     // Register an educator with specialties
     let mut specialties = Vec::new(&env);
     specialties.push_back(String::from_str(&env, "Math"));
     specialties.push_back(String::from_str(&env, "Physics"));
-    client.register_educator(&educator, &"John Doe".into_val(&env), &Vec::new(&env), &specialties);
-    
+    client.register_educator(
+        &educator,
+        &"John Doe".into_val(&env),
+        &Vec::new(&env),
+        &specialties,
+    );
+
     // Register another educator with a different specialty
     let another_educator = Address::generate(&env);
     let mut another_specialties = Vec::new(&env);
     another_specialties.push_back(String::from_str(&env, "Biology"));
-    client.register_educator(&another_educator, &"Jane Smith".into_val(&env), &Vec::new(&env), &another_specialties);
-    
+    client.register_educator(
+        &another_educator,
+        &"Jane Smith".into_val(&env),
+        &Vec::new(&env),
+        &another_specialties,
+    );
+
     // Search educators by specialty
     let math_educators = client.get_educators_by_specialty(&String::from_str(&env, "Math"));
     assert_eq!(math_educators.len(), 1);
     assert_eq!(math_educators.get_unchecked(0), educator);
-    
+
     let biology_educators = client.get_educators_by_specialty(&String::from_str(&env, "Biology"));
     assert_eq!(biology_educators.len(), 1);
     assert_eq!(biology_educators.get_unchecked(0), another_educator);
-    
-    let chemistry_educators = client.get_educators_by_specialty(&String::from_str(&env, "Chemistry"));
+
+    let chemistry_educators =
+        client.get_educators_by_specialty(&String::from_str(&env, "Chemistry"));
     assert_eq!(chemistry_educators.len(), 0);
 }
 
@@ -119,9 +141,24 @@ fn test_weighted_review_system() {
     client.add_reviewer(&admin, &expert_reviewer);
 
     // Register all participants
-    client.register_educator(&educator, &"Educator".into_val(&env), &Vec::new(&env), &Vec::new(&env));
-    client.register_educator(&reviewer, &"Basic Reviewer".into_val(&env), &Vec::new(&env), &Vec::new(&env));
-    client.register_educator(&expert_reviewer, &"Expert Reviewer".into_val(&env), &Vec::new(&env), &Vec::new(&env));
+    client.register_educator(
+        &educator,
+        &"Educator".into_val(&env),
+        &Vec::new(&env),
+        &Vec::new(&env),
+    );
+    client.register_educator(
+        &reviewer,
+        &"Basic Reviewer".into_val(&env),
+        &Vec::new(&env),
+        &Vec::new(&env),
+    );
+    client.register_educator(
+        &expert_reviewer,
+        &"Expert Reviewer".into_val(&env),
+        &Vec::new(&env),
+        &Vec::new(&env),
+    );
 
     // Verify reviewers to give them weight
     client.verify_educator(&reviewer, &reviewer, &VerificationLevel::Basic); // Weight 1
@@ -139,18 +176,31 @@ fn test_weighted_review_system() {
 
     // Weighted average should be: ((5*1) + (10*3)) / (1+3) = 35 / 4 = 8.75, stored as 8
     let educator_data = client.get_educator(&educator).unwrap();
-    let (total_score, total_weight) = educator_data.ratings.get(String::from_str(&env, "Knowledge")).unwrap();
+    let (total_score, total_weight) = educator_data
+        .ratings
+        .get(String::from_str(&env, "Knowledge"))
+        .unwrap();
     assert_eq!(total_score / total_weight, 8);
 }
 
 #[test]
 fn test_analytics_trend_and_performance() {
     let (env, client, admin, reviewer, educator) = setup_test();
-    
+
     // Register participants
-    client.register_educator(&educator, &"E".into_val(&env), &Vec::new(&env), &vec![&env, "Physics".into_val(&env)]);
-    client.register_educator(&reviewer, &"R".into_val(&env), &Vec::new(&env), &Vec::new(&env));
-    
+    client.register_educator(
+        &educator,
+        &"E".into_val(&env),
+        &Vec::new(&env),
+        &vec![&env, "Physics".into_val(&env)],
+    );
+    client.register_educator(
+        &reviewer,
+        &"R".into_val(&env),
+        &Vec::new(&env),
+        &Vec::new(&env),
+    );
+
     // Day 1: Verification and a review
     client.verify_educator(&reviewer, &reviewer, &VerificationLevel::Basic);
     client.verify_educator(&reviewer, &educator, &VerificationLevel::Basic);
@@ -158,7 +208,9 @@ fn test_analytics_trend_and_performance() {
     client.recalculate_analytics(&admin);
 
     // Day 2: Another review and a dispute
-    env.ledger().with_mut(|li| { li.timestamp += 86400; }); // Advance time by 1 day
+    env.ledger().with_mut(|li| {
+        li.timestamp += 86400;
+    }); // Advance time by 1 day
     client.submit_review(&reviewer, &educator, &Map::new(&env), &"h2".into_val(&env));
     client.dispute_review(&educator, &1, &"reason".into_val(&env));
     client.recalculate_analytics(&admin);
@@ -186,8 +238,18 @@ fn test_verify_and_dispute_review() {
     client.add_reviewer(&admin, &verifier);
 
     // Register participants
-    client.register_educator(&educator, &"E".into_val(&env), &Vec::new(&env), &Vec::new(&env));
-    client.register_educator(&reviewer, &"R".into_val(&env), &Vec::new(&env), &Vec::new(&env));
+    client.register_educator(
+        &educator,
+        &"E".into_val(&env),
+        &Vec::new(&env),
+        &Vec::new(&env),
+    );
+    client.register_educator(
+        &reviewer,
+        &"R".into_val(&env),
+        &Vec::new(&env),
+        &Vec::new(&env),
+    );
 
     // Verify the reviewer so they have weight and are allowed to submit a review.
     client.verify_educator(&reviewer, &reviewer, &VerificationLevel::Basic);

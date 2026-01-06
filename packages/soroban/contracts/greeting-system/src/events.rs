@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol};
+use soroban_sdk::{contracttype, symbol_short, Address, Bytes, Env, String, Symbol};
 
 use crate::datatype::{OperationStatus, TierAssignmentEvent, TierLevel, TierUpgradeEvent};
 use crate::error::Error;
@@ -133,6 +133,20 @@ pub fn emit_comment_added(
     env.events().publish(
         (COMMENT_ADDED, symbol_short!("added")),
         (user.clone(), greeting_id, comment_text.clone(), timestamp),
+    );
+    Ok(())
+}
+
+/// Emit multimedia greeting event
+pub fn emit_multimedia_greeting_created(
+    env: &Env,
+    creator: &Address,
+    greeting_id: u64,
+    media_hash: &Bytes,
+) -> Result<(), crate::Error> {
+    env.events().publish(
+        (creator, "multimedia_greeting_created"),
+        (greeting_id, media_hash.clone()),
     );
     Ok(())
 }

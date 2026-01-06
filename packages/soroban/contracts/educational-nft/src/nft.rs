@@ -279,7 +279,7 @@ pub fn get_educator_verification_address_safe(e: &Env) -> Result<Address, NFTErr
 }
 
 /// Metadata management functions
-use crate::metadata::{NFTMetadata, MetadataHistory, ContentType};
+use crate::metadata::{ContentType, MetadataHistory, NFTMetadata};
 
 /// Store NFT metadata
 pub fn store_nft_metadata(e: &Env, token_id: u64, metadata: &NFTMetadata) {

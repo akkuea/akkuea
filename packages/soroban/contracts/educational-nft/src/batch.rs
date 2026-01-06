@@ -1,57 +1,52 @@
-use soroban_sdk::{contracttype, Address, Env, String, Vec, Bytes, symbol_short, Symbol, log};
-use crate::{nft, utils::{NFTError}, MockEducatorVerificationNft, Base}; 
-use crate::utils::{emit_transfer_event};
-use stellar_tokens::non_fungible::{ContractOverrides, emit_transfer};
+use crate::utils::emit_transfer_event;
+use crate::{nft, utils::NFTError, Base, MockEducatorVerificationNft};
+use soroban_sdk::{contracttype, log, symbol_short, Address, Bytes, Env, String, Symbol, Vec};
+use stellar_tokens::non_fungible::{emit_transfer, ContractOverrides};
 
-const BATCH_COUNTER_KEY: Symbol = symbol_short!("bat_cnt"); 
+const BATCH_COUNTER_KEY: Symbol = symbol_short!("bat_cnt");
 const BATCH_OPS_PREFIX: Symbol = symbol_short!("bat_op");
 const BATCH_EVENT: Symbol = symbol_short!("batch");
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct BatchOperation {
-    operation_id: u64,     // Unique identifier for the batch
-    operation_type: String,// Mint, Transfer, Query
-    token_ids: Vec<u64>,   // List of affected NFT token IDs
-    status: OperationStatus,// Pending, Completed, Failed
+    operation_id: u64,       // Unique identifier for the batch
+    operation_type: String,  // Mint, Transfer, Query
+    token_ids: Vec<u64>,     // List of affected NFT token IDs
+    status: OperationStatus, // Pending, Completed, Failed
 }
 
-#[contracttype] 
-#[derive(Copy, Clone, Debug, Eq, PartialEq)] 
-#[repr(u32)] 
-pub enum OperationStatus { 
-    Pending = 0, 
-    Completed = 1, 
-    Failed = 2, 
-} 
+#[contracttype]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[repr(u32)]
+pub enum OperationStatus {
+    Pending = 0,
+    Completed = 1,
+    Failed = 2,
+}
 
-#[contracttype] 
-#[derive(Clone, Debug, Eq, PartialEq)] 
-pub struct BatchEventData { 
-    pub operation_id: u64, 
-    pub op_type: String, 
-    pub status: OperationStatus, 
-} 
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BatchEventData {
+    pub operation_id: u64,
+    pub op_type: String,
+    pub status: OperationStatus,
+}
 
-pub fn emit_batch_event( 
-    env: &Env, 
-    operation_id: u64, 
-    op_type: &String,
-    status: OperationStatus, 
-) { 
-    let event_data = BatchEventData { 
-        operation_id, 
-        op_type: op_type.clone(), 
-        status, 
-    }; 
-    env.events().publish((BATCH_EVENT,), event_data); 
-} 
+pub fn emit_batch_event(env: &Env, operation_id: u64, op_type: &String, status: OperationStatus) {
+    let event_data = BatchEventData {
+        operation_id,
+        op_type: op_type.clone(),
+        status,
+    };
+    env.events().publish((BATCH_EVENT,), event_data);
+}
 
-fn get_next_batch_id(e: &Env) -> u64 { 
-    let key = BATCH_COUNTER_KEY; 
-    let id: u64 = e.storage().instance().get(&key).unwrap_or(0u64); 
-    e.storage().instance().set(&key, &(id + 1)); 
-    id + 1 
+fn get_next_batch_id(e: &Env) -> u64 {
+    let key = BATCH_COUNTER_KEY;
+    let id: u64 = e.storage().instance().get(&key).unwrap_or(0u64);
+    e.storage().instance().set(&key, &(id + 1));
+    id + 1
 }
 
 fn store_batch_operation(e: &Env, op: &BatchOperation) {
@@ -75,7 +70,7 @@ pub fn batch_mint_nfts(
     let mut token_ids_u64: Vec<u64> = Vec::new(e);
     for i in 0..owners.len() {
         let owner = owners.get(i).unwrap();
-        let is_verified = MockEducatorVerificationNft::verify_educator(e.clone(), owner.clone()) ;
+        let is_verified = MockEducatorVerificationNft::verify_educator(e.clone(), owner.clone());
         if !is_verified {
             return Err(NFTError::Unauthorized);
         }
@@ -107,7 +102,12 @@ pub fn batch_mint_nfts(
         status: OperationStatus::Completed,
     };
     store_batch_operation(e, &batch_op);
-    emit_batch_event(e, op_id, &String::from_str(e, "Mint"), OperationStatus::Completed);
+    emit_batch_event(
+        e,
+        op_id,
+        &String::from_str(e, "Mint"),
+        OperationStatus::Completed,
+    );
     Ok(minted_token_ids)
 }
 
@@ -158,7 +158,12 @@ pub fn batch_transfer_nfts(
         status: OperationStatus::Completed,
     };
     store_batch_operation(e, &batch_op);
-    emit_batch_event(e, op_id, &String::from_str(e, "Transfer"), OperationStatus::Completed);
+    emit_batch_event(
+        e,
+        op_id,
+        &String::from_str(e, "Transfer"),
+        OperationStatus::Completed,
+    );
     Ok(())
 }
 
@@ -172,7 +177,7 @@ pub fn batch_query_ownership(
         results.push_back((token_id, nft));
     }
     Ok(results)
-} 
+}
 
 // Helper function to transfer without requiring auth each time
 fn transfer_without_auth(
@@ -186,10 +191,10 @@ fn transfer_without_auth(
     if owner != *from {
         return Err(NFTError::Unauthorized);
     }
-    
+
     Base::update(e, Some(from), Some(to), token_id);
     // Emit transfer event
     emit_transfer(e, from, to, token_id);
-    
+
     Ok(())
 }

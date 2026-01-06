@@ -86,8 +86,8 @@ pub fn update_progress(
     }
 
     // Get existing progress
-    let mut progress = storage::get_progress(env, token_id)
-        .ok_or(ContractError::ProgressNotFound)?;
+    let mut progress =
+        storage::get_progress(env, token_id).ok_or(ContractError::ProgressNotFound)?;
 
     // Update progress
     progress.completion_status = completion_status;
@@ -132,8 +132,8 @@ pub fn verify_prerequisites(
         let prereq_token_id = storage::get_user_progress_token_id(env, user, prereq_id);
 
         if let Some(token_id) = prereq_token_id {
-            let prereq_progress = storage::get_progress(env, token_id)
-                .ok_or(ContractError::PrerequisiteNotFound)?;
+            let prereq_progress =
+                storage::get_progress(env, token_id).ok_or(ContractError::PrerequisiteNotFound)?;
 
             // Check if prerequisite course is completed (100%) and NFT issued
             if prereq_progress.completion_status < 100 || !prereq_progress.nft_issued {
@@ -155,11 +155,7 @@ pub fn verify_prerequisites(
 }
 
 /// Issue NFT upon course completion
-pub fn issue_course_nft(
-    env: &Env,
-    token_id: u64,
-    platform: &Address,
-) -> Result<(), ContractError> {
+pub fn issue_course_nft(env: &Env, token_id: u64, platform: &Address) -> Result<(), ContractError> {
     validate_token_id(token_id)?;
 
     // Check if platform is authorized
@@ -168,8 +164,8 @@ pub fn issue_course_nft(
     }
 
     // Get progress
-    let mut progress = storage::get_progress(env, token_id)
-        .ok_or(ContractError::ProgressNotFound)?;
+    let mut progress =
+        storage::get_progress(env, token_id).ok_or(ContractError::ProgressNotFound)?;
 
     // Check if NFT already issued
     if progress.nft_issued {
@@ -271,11 +267,7 @@ pub fn set_course_prerequisites(
 }
 
 /// Add a learning platform
-pub fn add_platform(
-    env: &Env,
-    admin: &Address,
-    platform: &Address,
-) -> Result<(), ContractError> {
+pub fn add_platform(env: &Env, admin: &Address, platform: &Address) -> Result<(), ContractError> {
     if !storage::is_admin(env, admin) {
         return Err(ContractError::AdminOnly);
     }

@@ -1,11 +1,12 @@
 #![no_std]
 extern crate alloc;
-use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, String, Vec};
 
 mod batch;
 mod datatype;
 mod error;
 mod events;
+mod greeting;
 mod interactions;
 mod interface;
 mod roles;
@@ -277,6 +278,22 @@ impl GreetingSystem {
     /// Get the number of comments for a greeting
     pub fn get_comments_count(env: Env, greeting_id: u64) -> Result<u32, Error> {
         interactions::get_comments_count(&env, greeting_id)
+    }
+
+    /// Create a multimedia greeting with image/audio reference
+    pub fn create_multimedia_greeting(
+        env: Env,
+        greeting_id: u64,
+        text: String,
+        media_hash: Bytes,
+        creator: Address,
+    ) -> Result<(), Error> {
+        greeting::create_multimedia_greeting(&env, greeting_id, text, media_hash, creator)
+    }
+
+    /// Retrieve media hash (IPFS/Arweave) for a greeting
+    pub fn get_greeting_media(env: Env, greeting_id: u64) -> Result<Bytes, Error> {
+        greeting::get_greeting_media(&env, greeting_id)
     }
 }
 

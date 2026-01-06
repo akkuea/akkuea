@@ -1,4 +1,5 @@
- use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, Symbol, Map, U256};
+
+use soroban_sdk::{contract, contractimpl, Address, Bytes, Env, Map, Symbol, U256};
 
 // Define the contract structure
 #[contract]
@@ -54,9 +55,10 @@ impl YourContract {
         env.storage().instance().set(&owner_key, &owner);
 
         // Set the initial greeting message
-        env.storage()
-            .instance()
-            .set(&greeting_key, &Bytes::from_slice(&env, b"Building Unstoppable Apps!!!"));
+        env.storage().instance().set(
+            &greeting_key,
+            &Bytes::from_slice(&env, b"Building Unstoppable Apps!!!"),
+        );
 
         // Initialize the total greeting counter to 0
         env.storage()
@@ -117,7 +119,9 @@ impl YourContract {
         user_greeting_counter.set(caller.clone(), user_count.add(&U256::from_u32(&env, 1)));
 
         // Save the updated counters back to storage
-        env.storage().instance().set(&total_counter_key, &total_counter);
+        env.storage()
+            .instance()
+            .set(&total_counter_key, &total_counter);
         env.storage()
             .instance()
             .set(&user_greeting_counter_key, &user_greeting_counter);
@@ -164,9 +168,6 @@ impl YourContract {
         let premium_key = get_premium_key(&env); // Key for the premium status
 
         // Retrieve the premium status from storage or return false if not set
-        env.storage()
-            .instance()
-            .get(&premium_key)
-            .unwrap_or(false)
+        env.storage().instance().get(&premium_key).unwrap_or(false)
     }
 }

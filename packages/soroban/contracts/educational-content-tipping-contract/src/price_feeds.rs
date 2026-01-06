@@ -1,15 +1,15 @@
-use soroban_sdk::{Address, Env, Vec, String, contracttype};
-use crate::storage;
 use crate::errors::TippingError;
+use crate::storage;
 use crate::token::TokenManager;
+use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
 #[contracttype]
 #[derive(Clone, Debug, PartialEq)]
 pub struct PriceData {
     pub token: Address,
-    pub price_in_usd: i128,  // Price with 8 decimal places (like Chainlink)
+    pub price_in_usd: i128, // Price with 8 decimal places (like Chainlink)
     pub last_updated: u64,
-    pub confidence: u32,     // Confidence level (0-100)
+    pub confidence: u32, // Confidence level (0-100)
     pub oracle_source: String,
 }
 
@@ -18,7 +18,7 @@ pub struct PriceData {
 pub struct ConversionRate {
     pub from_token: Address,
     pub to_token: Address,
-    pub rate: i128,          // Exchange rate with 18 decimal places
+    pub rate: i128, // Exchange rate with 18 decimal places
     pub last_updated: u64,
 }
 
@@ -74,8 +74,7 @@ impl PriceFeed {
         token: &Address,
         amount: i128,
     ) -> Result<i128, TippingError> {
-        let price_data = Self::get_price_data(env, token)
-            .ok_or(TippingError::PriceDataNotFound)?;
+        let price_data = Self::get_price_data(env, token).ok_or(TippingError::PriceDataNotFound)?;
 
         // Check price freshness (24 hours max)
         if !Self::is_price_fresh(env, token, 86400) {
@@ -88,15 +87,16 @@ impl PriceFeed {
         }
 
         // Get token info for decimal normalization
-        let token_info = TokenManager::get_token_info(env, token)
-            .ok_or(TippingError::TokenNotWhitelisted)?;
+        let token_info =
+            TokenManager::get_token_info(env, token).ok_or(TippingError::TokenNotWhitelisted)?;
 
         // Normalize amount to 18 decimals
         let normalized_amount = TokenManager::normalize_amount(amount, token_info.decimals);
 
         // Calculate USD value: (normalized_amount * price_in_usd) / 10^18
         // Price is in 8 decimals, so result will be in 8 decimals
-        let usd_value = (normalized_amount * price_data.price_in_usd) / 1_000_000_000_000_000_000_i128;
+        let usd_value =
+            (normalized_amount * price_data.price_in_usd) / 1_000_000_000_000_000_000_i128;
 
         Ok(usd_value)
     }
@@ -117,8 +117,8 @@ impl PriceFeed {
         let usd_value = Self::calculate_usd_value(env, from_token, amount)?;
 
         // Get price data for to_token
-        let to_price_data = Self::get_price_data(env, to_token)
-            .ok_or(TippingError::PriceDataNotFound)?;
+        let to_price_data =
+            Self::get_price_data(env, to_token).ok_or(TippingError::PriceDataNotFound)?;
 
         // Check to_token price freshness
         if !Self::is_price_fresh(env, to_token, 86400) {
@@ -131,14 +131,16 @@ impl PriceFeed {
         }
 
         // Get to_token info for decimal handling
-        let to_token_info = TokenManager::get_token_info(env, to_token)
-            .ok_or(TippingError::TokenNotWhitelisted)?;
+        let to_token_info =
+            TokenManager::get_token_info(env, to_token).ok_or(TippingError::TokenNotWhitelisted)?;
 
         // Calculate to_token amount: (usd_value * 10^18) / to_price_in_usd
-        let normalized_to_amount = (usd_value * 1_000_000_000_000_000_000_i128) / to_price_data.price_in_usd;
+        let normalized_to_amount =
+            (usd_value * 1_000_000_000_000_000_000_i128) / to_price_data.price_in_usd;
 
         // Denormalize to target token decimals
-        let to_amount = TokenManager::denormalize_amount(normalized_to_amount, to_token_info.decimals);
+        let to_amount =
+            TokenManager::denormalize_amount(normalized_to_amount, to_token_info.decimals);
 
         Ok(to_amount)
     }
@@ -167,13 +169,15 @@ impl PriceFeed {
         }
 
         // Calculate new conversion rate
-        let from_price = Self::get_price_data(env, from_token)
-            .ok_or(TippingError::PriceDataNotFound)?;
-        let to_price = Self::get_price_data(env, to_token)
-            .ok_or(TippingError::PriceDataNotFound)?;
+        let from_price =
+            Self::get_price_data(env, from_token).ok_or(TippingError::PriceDataNotFound)?;
+        let to_price =
+            Self::get_price_data(env, to_token).ok_or(TippingError::PriceDataNotFound)?;
 
         // Check freshness and confidence
-        if !Self::is_price_fresh(env, from_token, 86400) || !Self::is_price_fresh(env, to_token, 86400) {
+        if !Self::is_price_fresh(env, from_token, 86400)
+            || !Self::is_price_fresh(env, to_token, 86400)
+        {
             return Err(TippingError::PriceDataStale);
         }
 
@@ -182,7 +186,8 @@ impl PriceFeed {
         }
 
         // Calculate rate: from_price / to_price (with 18 decimal places)
-        let rate = (from_price.price_in_usd * 1_000_000_000_000_000_000_i128) / to_price.price_in_usd;
+        let rate =
+            (from_price.price_in_usd * 1_000_000_000_000_000_000_i128) / to_price.price_in_usd;
 
         let conversion_rate = ConversionRate {
             from_token: from_token.clone(),
@@ -254,11 +259,7 @@ impl PriceFeed {
     }
 
     /// Add authorized oracle (admin only)
-    pub fn add_oracle(
-        env: &Env,
-        admin: &Address,
-        oracle: &Address,
-    ) -> Result<(), TippingError> {
+    pub fn add_oracle(env: &Env, admin: &Address, oracle: &Address) -> Result<(), TippingError> {
         if let Some(contract_admin) = storage::get_admin(env) {
             if *admin != contract_admin {
                 return Err(TippingError::Unauthorized);
@@ -272,11 +273,7 @@ impl PriceFeed {
     }
 
     /// Remove authorized oracle (admin only)
-    pub fn remove_oracle(
-        env: &Env,
-        admin: &Address,
-        oracle: &Address,
-    ) -> Result<(), TippingError> {
+    pub fn remove_oracle(env: &Env, admin: &Address, oracle: &Address) -> Result<(), TippingError> {
         if let Some(contract_admin) = storage::get_admin(env) {
             if *admin != contract_admin {
                 return Err(TippingError::Unauthorized);

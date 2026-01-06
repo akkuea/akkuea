@@ -1,8 +1,6 @@
-use soroban_sdk::{
-    contracttype, symbol_short, Address, Env, String, Vec, Symbol
-};
-use crate::utils::NFTError;
 use crate::nft::get_educational_nft_safe;
+use crate::utils::NFTError;
+use soroban_sdk::{contracttype, symbol_short, Address, Env, String, Symbol, Vec};
 
 pub const LISTING_EVENT: Symbol = symbol_short!("nft_list");
 pub const SALE_EVENT: Symbol = symbol_short!("nft_sale");
@@ -115,17 +113,22 @@ pub fn remove_listing(env: &Env, token_id: u64) {
 
 pub fn store_bid(env: &Env, token_id: u64, bid: &Bid) {
     let key = (BIDS, token_id);
-    let mut bids: Vec<Bid> = env.storage().persistent()
+    let mut bids: Vec<Bid> = env
+        .storage()
+        .persistent()
         .get(&key)
         .unwrap_or_else(|| Vec::new(env));
-    
+
     bids.push_back(bid.clone());
     env.storage().persistent().set(&key, &bids);
 }
 
 pub fn get_bids(env: &Env, token_id: u64) -> Vec<Bid> {
     let key = (BIDS, token_id);
-    env.storage().persistent().get(&key).unwrap_or_else(|| Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or_else(|| Vec::new(env))
 }
 
 pub fn get_highest_bid(env: &Env, token_id: u64) -> Option<Bid> {
@@ -133,7 +136,7 @@ pub fn get_highest_bid(env: &Env, token_id: u64) -> Option<Bid> {
     if bids.is_empty() {
         return None;
     }
-    
+
     let mut highest_bid = bids.get(0).unwrap();
     for i in 1..bids.len() {
         let bid = bids.get(i).unwrap();
@@ -146,41 +149,48 @@ pub fn get_highest_bid(env: &Env, token_id: u64) -> Option<Bid> {
 
 pub fn store_sale(env: &Env, sale: &Sale) {
     let key = (SALES_HISTORY, sale.token_id);
-    let mut sales: Vec<Sale> = env.storage().persistent()
+    let mut sales: Vec<Sale> = env
+        .storage()
+        .persistent()
         .get(&key)
         .unwrap_or_else(|| Vec::new(env));
-    
+
     sales.push_back(sale.clone());
     env.storage().persistent().set(&key, &sales);
 }
 
 pub fn get_sales_history(env: &Env, token_id: u64) -> Vec<Sale> {
     let key = (SALES_HISTORY, token_id);
-    env.storage().persistent().get(&key).unwrap_or_else(|| Vec::new(env))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or_else(|| Vec::new(env))
 }
 
 pub fn update_price_history(env: &Env, token_id: u64, price: i128) {
     let key = (PRICE_HISTORY, token_id);
     let timestamp = env.ledger().timestamp();
-    
-    let mut history: PriceHistory = env.storage().persistent()
-        .get(&key)
-        .unwrap_or_else(|| PriceHistory {
-            token_id,
-            prices: Vec::new(env),
-            timestamps: Vec::new(env),
-            last_updated: timestamp,
-        });
-    
+
+    let mut history: PriceHistory =
+        env.storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or_else(|| PriceHistory {
+                token_id,
+                prices: Vec::new(env),
+                timestamps: Vec::new(env),
+                last_updated: timestamp,
+            });
+
     history.prices.push_back(price);
     history.timestamps.push_back(timestamp);
     history.last_updated = timestamp;
-    
+
     if history.prices.len() > 10 {
         history.prices.remove(0);
         history.timestamps.remove(0);
     }
-    
+
     env.storage().persistent().set(&key, &history);
 }
 
@@ -194,7 +204,7 @@ pub fn calculate_average_price(env: &Env, token_id: u64) -> Option<i128> {
     if history.prices.is_empty() {
         return None;
     }
-    
+
     let mut total: i128 = 0;
     for i in 0..history.prices.len() {
         total += history.prices.get(i).unwrap();
@@ -214,19 +224,19 @@ pub fn list_nft(
     if nft_data.owner != *caller {
         return Err(NFTError::NotOwner);
     }
-    
+
     if price <= 0 {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if royalty_rate > 10000 {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if auction_end > 0 && auction_end <= env.ledger().timestamp() {
         return Err(NFTError::Unauthorized);
     }
-    
+
     let timestamp = env.ledger().timestamp();
     let listing = Listing {
         token_id,
@@ -237,9 +247,9 @@ pub fn list_nft(
         is_active: true,
         created_at: timestamp,
     };
-    
+
     store_listing(env, &listing);
-    
+
     let listing_event = ListingEvent {
         token_id,
         seller: caller.clone(),
@@ -247,9 +257,9 @@ pub fn list_nft(
         auction_end,
         timestamp,
     };
-    
+
     env.events().publish((LISTING_EVENT,), listing_event);
-    
+
     Ok(())
 }
 
@@ -260,29 +270,29 @@ pub fn buy_nft(
     payment_amount: i128,
 ) -> Result<(), NFTError> {
     let listing = get_listing(env, token_id).ok_or(NFTError::TokenNotFound)?;
-    
+
     if !listing.is_active {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if listing.auction_end > 0 {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if payment_amount < listing.price {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if listing.seller == *caller {
         return Err(NFTError::Unauthorized);
     }
-    
+
     let nft_data = get_educational_nft_safe(env, token_id)?;
     let royalty_amount = (listing.price * listing.royalty_rate as i128) / 10000;
     let seller_amount = listing.price - royalty_amount;
-    
+
     let timestamp = env.ledger().timestamp();
-    
+
     let sale = Sale {
         token_id,
         seller: listing.seller.clone(),
@@ -292,11 +302,11 @@ pub fn buy_nft(
         royalty_recipient: nft_data.owner.clone(),
         timestamp,
     };
-    
+
     store_sale(env, &sale);
     update_price_history(env, token_id, listing.price);
     remove_listing(env, token_id);
-    
+
     let sale_event = SaleEvent {
         token_id,
         seller: listing.seller.clone(),
@@ -305,9 +315,9 @@ pub fn buy_nft(
         royalty_paid: royalty_amount,
         timestamp,
     };
-    
+
     env.events().publish((SALE_EVENT,), sale_event);
-    
+
     if royalty_amount > 0 {
         let royalty_event = RoyaltyEvent {
             token_id,
@@ -316,10 +326,10 @@ pub fn buy_nft(
             sale_price: listing.price,
             timestamp,
         };
-        
+
         env.events().publish((ROYALTY_EVENT,), royalty_event);
     }
-    
+
     Ok(())
 }
 
@@ -330,27 +340,27 @@ pub fn place_bid(
     bid_amount: i128,
 ) -> Result<(), NFTError> {
     let listing = get_listing(env, token_id).ok_or(NFTError::TokenNotFound)?;
-    
+
     if !listing.is_active {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if listing.auction_end == 0 {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if env.ledger().timestamp() >= listing.auction_end {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if bid_amount <= 0 {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if listing.seller == *caller {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if let Some(highest_bid) = get_highest_bid(env, token_id) {
         if bid_amount <= highest_bid.amount {
             return Err(NFTError::Unauthorized);
@@ -358,7 +368,7 @@ pub fn place_bid(
     } else if bid_amount < listing.price {
         return Err(NFTError::Unauthorized);
     }
-    
+
     let timestamp = env.ledger().timestamp();
     let bid = Bid {
         token_id,
@@ -366,54 +376,50 @@ pub fn place_bid(
         amount: bid_amount,
         timestamp,
     };
-    
+
     store_bid(env, token_id, &bid);
-    
+
     let bid_event = BidEvent {
         token_id,
         bidder: caller.clone(),
         amount: bid_amount,
         timestamp,
     };
-    
+
     env.events().publish((BID_EVENT,), bid_event);
-    
+
     Ok(())
 }
 
-pub fn settle_auction(
-    env: &Env,
-    caller: &Address,
-    token_id: u64,
-) -> Result<(), NFTError> {
+pub fn settle_auction(env: &Env, caller: &Address, token_id: u64) -> Result<(), NFTError> {
     let mut listing = get_listing(env, token_id).ok_or(NFTError::TokenNotFound)?;
-    
+
     if !listing.is_active {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if listing.auction_end == 0 {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if env.ledger().timestamp() < listing.auction_end {
         return Err(NFTError::Unauthorized);
     }
-    
+
     let highest_bid = get_highest_bid(env, token_id);
     if highest_bid.is_none() {
         listing.is_active = false;
         store_listing(env, &listing);
         return Ok(());
     }
-    
+
     let winning_bid = highest_bid.unwrap();
     let nft_data = get_educational_nft_safe(env, token_id)?;
     let royalty_amount = (winning_bid.amount * listing.royalty_rate as i128) / 10000;
     let seller_amount = winning_bid.amount - royalty_amount;
-    
+
     let timestamp = env.ledger().timestamp();
-    
+
     let sale = Sale {
         token_id,
         seller: listing.seller.clone(),
@@ -423,11 +429,11 @@ pub fn settle_auction(
         royalty_recipient: nft_data.owner.clone(),
         timestamp,
     };
-    
+
     store_sale(env, &sale);
     update_price_history(env, token_id, winning_bid.amount);
     remove_listing(env, token_id);
-    
+
     let sale_event = SaleEvent {
         token_id,
         seller: listing.seller.clone(),
@@ -436,9 +442,9 @@ pub fn settle_auction(
         royalty_paid: royalty_amount,
         timestamp,
     };
-    
+
     env.events().publish((SALE_EVENT,), sale_event);
-    
+
     if royalty_amount > 0 {
         let royalty_event = RoyaltyEvent {
             token_id,
@@ -447,34 +453,30 @@ pub fn settle_auction(
             sale_price: winning_bid.amount,
             timestamp,
         };
-        
+
         env.events().publish((ROYALTY_EVENT,), royalty_event);
     }
-    
+
     Ok(())
 }
 
-pub fn cancel_listing(
-    env: &Env,
-    caller: &Address,
-    token_id: u64,
-) -> Result<(), NFTError> {
+pub fn cancel_listing(env: &Env, caller: &Address, token_id: u64) -> Result<(), NFTError> {
     let listing = get_listing(env, token_id).ok_or(NFTError::TokenNotFound)?;
-    
+
     if listing.seller != *caller {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if !listing.is_active {
         return Err(NFTError::Unauthorized);
     }
-    
+
     if listing.auction_end > 0 && get_highest_bid(env, token_id).is_some() {
         return Err(NFTError::Unauthorized);
     }
-    
+
     remove_listing(env, token_id);
-    
+
     Ok(())
 }
 

@@ -1,11 +1,10 @@
-use soroban_sdk::{
-    Env, Vec, String, vec,
-};
+use soroban_sdk::{vec, Env, String, Vec};
 
 use crate::storage::{
-    TrendingContent, TrendingSnapshot, TrendingPeriod, ContentAnalytics, TimeBasedMetrics, TimePeriod,
-    save_trending_content, get_trending_content, save_trending_snapshot, get_trending_snapshot,
-    get_content_analytics, get_time_based_metrics, get_all_content_ids, content_exists
+    content_exists, get_all_content_ids, get_content_analytics, get_time_based_metrics,
+    get_trending_content, get_trending_snapshot, save_trending_content, save_trending_snapshot,
+    ContentAnalytics, TimeBasedMetrics, TimePeriod, TrendingContent, TrendingPeriod,
+    TrendingSnapshot,
 };
 
 /// Trending module for calculating and managing trending content
@@ -16,7 +15,7 @@ impl Trending {
     pub fn calculate_trending_score(
         env: &Env,
         content_id: u64,
-        period: TrendingPeriod
+        period: TrendingPeriod,
     ) -> Result<u32, String> {
         if !content_exists(env, content_id) {
             return Err(String::from_str(env, "Content does not exist"));
@@ -34,17 +33,18 @@ impl Trending {
         };
 
         // Get recent engagement metrics
-        let recent_metrics = Self::get_recent_engagement_metrics(
-            env, content_id, start_time, current_time
-        )?;
+        let recent_metrics =
+            Self::get_recent_engagement_metrics(env, content_id, start_time, current_time)?;
 
         // Calculate trending score components
         let engagement_score = Self::calculate_engagement_score(&analytics, &recent_metrics);
-        let velocity_score = Self::calculate_velocity_score(&analytics, &recent_metrics, time_window);
+        let velocity_score =
+            Self::calculate_velocity_score(&analytics, &recent_metrics, time_window);
         let time_weighted_score = Self::calculate_time_weighted_score(&analytics, current_time);
 
         // Combine scores with weights
-        let trending_score = (engagement_score * 40 + velocity_score * 40 + time_weighted_score * 20) / 100;
+        let trending_score =
+            (engagement_score * 40 + velocity_score * 40 + time_weighted_score * 20) / 100;
 
         Ok(trending_score)
     }
@@ -53,7 +53,7 @@ impl Trending {
     pub fn update_trending_content(
         env: &Env,
         content_id: u64,
-        period: TrendingPeriod
+        period: TrendingPeriod,
     ) -> Result<(), String> {
         let trending_score = Self::calculate_trending_score(env, content_id, period)?;
         let analytics = get_content_analytics(env, content_id)
@@ -67,11 +67,11 @@ impl Trending {
             0
         };
 
-        let recent_metrics = Self::get_recent_engagement_metrics(
-            env, content_id, start_time, current_time
-        )?;
+        let recent_metrics =
+            Self::get_recent_engagement_metrics(env, content_id, start_time, current_time)?;
 
-        let velocity_score = Self::calculate_velocity_score(&analytics, &recent_metrics, time_window);
+        let velocity_score =
+            Self::calculate_velocity_score(&analytics, &recent_metrics, time_window);
         let time_weighted_score = Self::calculate_time_weighted_score(&analytics, current_time);
 
         let trending_content = TrendingContent {
@@ -91,7 +91,7 @@ impl Trending {
     pub fn get_trending_content(
         env: &Env,
         period: TrendingPeriod,
-        limit: u32
+        limit: u32,
     ) -> Vec<TrendingContent> {
         let all_content_ids = get_all_content_ids(env);
         let mut trending_list = Vec::new(env);
@@ -125,7 +125,7 @@ impl Trending {
     /// Create a trending snapshot for a specific period
     pub fn create_trending_snapshot(
         env: &Env,
-        period: TrendingPeriod
+        period: TrendingPeriod,
     ) -> Result<TrendingSnapshot, String> {
         let trending_content = Self::get_trending_content(env, period, 50); // Top 50
         let current_time = env.ledger().timestamp();
@@ -154,7 +154,7 @@ impl Trending {
     pub fn get_trending_snapshot(
         env: &Env,
         period: TrendingPeriod,
-        timestamp: u64
+        timestamp: u64,
     ) -> Option<TrendingSnapshot> {
         get_trending_snapshot(env, period, timestamp)
     }
@@ -172,7 +172,7 @@ impl Trending {
         env: &Env,
         category: &String,
         period: TrendingPeriod,
-        limit: u32
+        limit: u32,
     ) -> Vec<TrendingContent> {
         let all_trending = Self::get_trending_content(env, period, 100); // Get more to filter
         let mut category_trending = Vec::new(env);
@@ -180,7 +180,7 @@ impl Trending {
         for i in 0..all_trending.len() {
             let trending = all_trending.get(i).unwrap();
             let content = crate::storage::get_content(env, trending.content_id);
-            
+
             // Check if content belongs to the category
             for j in 0..content.subject_tags.len() {
                 let tag = content.subject_tags.get(j).unwrap();
@@ -204,8 +204,8 @@ impl Trending {
     /// Get time window in seconds for a trending period
     fn get_time_window_for_period(period: TrendingPeriod) -> u64 {
         match period {
-            TrendingPeriod::Daily => 24 * 60 * 60,    // 24 hours
-            TrendingPeriod::Weekly => 7 * 24 * 60 * 60, // 7 days
+            TrendingPeriod::Daily => 24 * 60 * 60,        // 24 hours
+            TrendingPeriod::Weekly => 7 * 24 * 60 * 60,   // 7 days
             TrendingPeriod::Monthly => 30 * 24 * 60 * 60, // 30 days
         }
     }
@@ -215,7 +215,7 @@ impl Trending {
         env: &Env,
         content_id: u64,
         start_time: u64,
-        end_time: u64
+        end_time: u64,
     ) -> Result<TimeBasedMetrics, String> {
         // This is a simplified implementation
         // In a real system, you'd aggregate metrics from multiple time periods
@@ -225,7 +225,7 @@ impl Trending {
 
         // Get metrics for different time periods within the window
         let periods = vec![&env, TimePeriod::Hourly, TimePeriod::Daily];
-        
+
         for period in periods {
             if let Some(metrics) = get_time_based_metrics(env, content_id, end_time, period) {
                 if metrics.timestamp >= start_time {
@@ -249,7 +249,7 @@ impl Trending {
     /// Calculate engagement score (scaled)
     fn calculate_engagement_score(
         _analytics: &ContentAnalytics,
-        recent_metrics: &TimeBasedMetrics
+        recent_metrics: &TimeBasedMetrics,
     ) -> u32 {
         let total_engagement = recent_metrics.upvotes + recent_metrics.downvotes;
         if recent_metrics.views == 0 {
@@ -264,7 +264,7 @@ impl Trending {
     fn calculate_velocity_score(
         _analytics: &ContentAnalytics,
         recent_metrics: &TimeBasedMetrics,
-        time_window: u64
+        time_window: u64,
     ) -> u32 {
         if time_window == 0 {
             return 0;
@@ -276,27 +276,24 @@ impl Trending {
     }
 
     /// Calculate time-weighted score (recent activity gets higher weight)
-    fn calculate_time_weighted_score(
-        analytics: &ContentAnalytics,
-        current_time: u64
-    ) -> u32 {
+    fn calculate_time_weighted_score(analytics: &ContentAnalytics, current_time: u64) -> u32 {
         // Handle case where last_updated is 0 (default value)
         let time_since_update = if analytics.last_updated == 0 {
             0 // New content, give it highest score
         } else {
             current_time.saturating_sub(analytics.last_updated)
         };
-        
+
         // Exponential decay: newer content gets higher score
         // Scale: 1 hour = 10000, 1 day = 5000, 1 week = 1000
         let decay_factor = if time_since_update < 3600 {
             10000 // Within 1 hour
         } else if time_since_update < 86400 {
-            5000  // Within 1 day
+            5000 // Within 1 day
         } else if time_since_update < 604800 {
-            1000  // Within 1 week
+            1000 // Within 1 week
         } else {
-            100   // Older than 1 week
+            100 // Older than 1 week
         };
 
         // Combine with engagement rate
@@ -311,7 +308,7 @@ impl Trending {
             for j in 0..len - i - 1 {
                 let current = trending_list.get(j).unwrap();
                 let next = trending_list.get(j + 1).unwrap();
-                
+
                 if current.trending_score < next.trending_score {
                     // Swap elements
                     trending_list.set(j, next);
@@ -320,4 +317,4 @@ impl Trending {
             }
         }
     }
-} 
+}

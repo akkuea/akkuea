@@ -1,7 +1,7 @@
 use crate::achievement_storage;
+use crate::achievement_storage::*;
 use crate::error::ContractError;
 use crate::events::*;
-use crate::achievement_storage::*;
 use crate::storage;
 use soroban_sdk::{Address, Env, String, Vec};
 
@@ -62,13 +62,7 @@ pub fn create_achievement(
     add_user_achievement(env, user, token_id);
     add_educator_achievement(env, educator, token_id);
 
-    emit_achievement_created(
-        env,
-        token_id,
-        user.clone(),
-        educator.clone(),
-        course_title,
-    );
+    emit_achievement_created(env, token_id, user.clone(), educator.clone(), course_title);
 
     Ok(())
 }
@@ -87,7 +81,6 @@ pub fn update_achievement(
     validate_completion_status(completion_status)?;
     validate_quiz_results(&quiz_results)?;
 
-    
     let mut achievement = get_achievement(env, token_id)?;
 
     // Verify educator authorization for this achievement
@@ -147,11 +140,11 @@ pub fn issue_certification(
     // Calculate average quiz score
     let mut total_score = 0u32;
     let quiz_count = achievement.quiz_results.len() as u32;
-    
+
     for score in achievement.quiz_results.iter() {
         total_score += score;
     }
-    
+
     let average_score = if quiz_count > 0 {
         total_score / quiz_count
     } else {
@@ -171,19 +164,12 @@ pub fn issue_certification(
     Ok(())
 }
 
-pub fn verify_certification(
-    env: &Env,
-    token_id: u64,
-) -> Result<bool, ContractError> {
+pub fn verify_certification(env: &Env, token_id: u64) -> Result<bool, ContractError> {
     let achievement = get_achievement(env, token_id)?;
     Ok(achievement.certified)
 }
 
-pub fn add_educator(
-    env: &Env,
-    admin: &Address,
-    educator: &Address,
-) -> Result<(), ContractError> {
+pub fn add_educator(env: &Env, admin: &Address, educator: &Address) -> Result<(), ContractError> {
     if !storage::is_admin(env, admin) {
         return Err(ContractError::AdminOnly);
     }
@@ -224,11 +210,11 @@ pub fn get_user_achievements(
 ) -> Result<Vec<u64>, ContractError> {
     let all_achievements = achievement_storage::get_user_achievements(env, user);
     let mut result = Vec::new(env);
-    
+
     let start = offset as usize;
     let end = (offset + limit) as usize;
     let achievements_len = all_achievements.len() as usize;
-    
+
     for i in start..end.min(achievements_len) {
         if let Some(token_id) = all_achievements.get(i as u32) {
             result.push_back(token_id);
@@ -246,11 +232,11 @@ pub fn get_educator_achievements(
 ) -> Result<Vec<u64>, ContractError> {
     let all_achievements = achievement_storage::get_educator_achievements(env, educator);
     let mut result = Vec::new(env);
-    
+
     let start = offset as usize;
     let end = (offset + limit) as usize;
     let achievements_len = all_achievements.len() as usize;
-    
+
     for i in start..end.min(achievements_len) {
         if let Some(token_id) = all_achievements.get(i as u32) {
             result.push_back(token_id);

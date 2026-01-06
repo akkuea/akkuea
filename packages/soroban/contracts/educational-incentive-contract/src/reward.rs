@@ -23,7 +23,7 @@ impl RewardTrait for RewardSystem {
             (symbol_short!("rd_issued"), recipient),
             (reward_type, amount, env.ledger().timestamp()),
         );
-        
+
         Ok(())
     }
 

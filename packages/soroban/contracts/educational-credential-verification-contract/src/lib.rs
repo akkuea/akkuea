@@ -1,41 +1,39 @@
 #![no_std]
-use soroban_sdk::{contract, contractimpl, Address, Env, Map, String, Vec, BytesN};
+use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, Map, String, Vec};
 
+mod analytics;
 mod datatype;
 mod interfaces;
-mod verification;
 mod nft;
 mod review;
-mod analytics;
-mod storage;
-mod utils;
 mod security;
-mod upgrade;
+mod storage;
 #[cfg(test)]
 mod test;
 #[cfg(test)]
 mod test_security;
 #[cfg(test)]
 mod test_upgrade;
+mod upgrade;
+mod utils;
+mod verification;
 
+use analytics::AnalyticsSystem;
 use datatype::{
-    AnalyticsData, Educator, VerificationLevel, Review, Dispute, ReviewerPerformance, 
-    Credential, NFT, NFTTemplate, AchievementBadge, SecurityConfig, MultiSigProposal, 
-    TimeLockOperation, FraudReport, ReputationStake, ContractVersion, MigrationState
+    AchievementBadge, AnalyticsData, ContractVersion, Credential, Dispute, Educator, FraudReport,
+    MigrationState, MultiSigProposal, NFTTemplate, ReputationStake, Review, ReviewerPerformance,
+    SecurityConfig, TimeLockOperation, VerificationLevel, NFT,
 };
 use interfaces::EducatorVerificationInterface;
-use verification::VerificationSystem;
-use review::ReviewSystem;
-use analytics::AnalyticsSystem;
 use nft::NFTImplementation;
+use review::ReviewSystem;
 use security::SecuritySystem;
+use storage::{DataKey, ADMIN, DISPUTES, EDUCATORS, REVOKED};
 use upgrade::UpgradeSystem;
-use storage::{EDUCATORS, ADMIN, REVOKED, DISPUTES, DataKey};
-
+use verification::VerificationSystem;
 
 #[contract]
 pub struct EducatorVerificationContract;
-
 
 #[contractimpl]
 impl EducatorVerificationInterface for EducatorVerificationContract {
@@ -70,8 +68,12 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
             achievement_badges: Vec::new(&env),
         };
 
-        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap_or(Map::new(&env));
-        
+        let mut educators: Map<Address, Educator> = env
+            .storage()
+            .persistent()
+            .get(&EDUCATORS)
+            .unwrap_or(Map::new(&env));
+
         if educators.contains_key(educator_address.clone()) {
             panic!("educator already registered");
         }
@@ -93,8 +95,11 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
             panic!("not authorized reviewer");
         }
 
-        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap();
-        let mut educator = educators.get(educator_address.clone()).expect("educator not found");
+        let mut educators: Map<Address, Educator> =
+            env.storage().persistent().get(&EDUCATORS).unwrap();
+        let mut educator = educators
+            .get(educator_address.clone())
+            .expect("educator not found");
 
         if educator.verification_status {
             panic!("educator already verified");
@@ -112,13 +117,16 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         educator.verification_timestamp = env.ledger().timestamp();
 
         let nft_id = VerificationSystem::mint_verification_nft(
-            &env, &educator_address, &verification_level, &educator.specialty_areas
+            &env,
+            &educator_address,
+            &verification_level,
+            &educator.specialty_areas,
         );
         educator.nft_token_id = Some(nft_id);
 
         educators.set(educator_address.clone(), educator);
         env.storage().persistent().set(&EDUCATORS, &educators);
-        
+
         AnalyticsSystem::recalculate_all_analytics(&env);
     }
 
@@ -127,7 +135,7 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         VerificationSystem::verify_admin(&env, &admin);
         VerificationSystem::add_reviewer(&env, &reviewer);
     }
-    
+
     fn remove_reviewer(env: Env, admin: Address, reviewer: Address) {
         admin.require_auth();
         VerificationSystem::verify_admin(&env, &admin);
@@ -135,12 +143,20 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
     }
 
     fn get_educator(env: Env, educator_address: Address) -> Option<Educator> {
-        let educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap_or(Map::new(&env));
+        let educators: Map<Address, Educator> = env
+            .storage()
+            .persistent()
+            .get(&EDUCATORS)
+            .unwrap_or(Map::new(&env));
         educators.get(educator_address)
     }
 
     fn get_verified_educators(env: Env) -> Vec<Address> {
-        let educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap_or(Map::new(&env));
+        let educators: Map<Address, Educator> = env
+            .storage()
+            .persistent()
+            .get(&EDUCATORS)
+            .unwrap_or(Map::new(&env));
         let mut verified = Vec::new(&env);
         for (address, educator) in educators.iter() {
             if educator.verification_status {
@@ -150,21 +166,34 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         verified
     }
 
-    fn update_educator_profile(env: Env, educator_address: Address, name: Option<String>, specialty_areas: Option<Vec<String>>) -> bool {
+    fn update_educator_profile(
+        env: Env,
+        educator_address: Address,
+        name: Option<String>,
+        specialty_areas: Option<Vec<String>>,
+    ) -> bool {
         educator_address.require_auth();
-        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap();
+        let mut educators: Map<Address, Educator> =
+            env.storage().persistent().get(&EDUCATORS).unwrap();
         if let Some(mut educator) = educators.get(educator_address.clone()) {
-            if let Some(new_name) = name { educator.name = new_name; }
-            if let Some(new_specialties) = specialty_areas { educator.specialty_areas = new_specialties; }
+            if let Some(new_name) = name {
+                educator.name = new_name;
+            }
+            if let Some(new_specialties) = specialty_areas {
+                educator.specialty_areas = new_specialties;
+            }
             educators.set(educator_address, educator);
             env.storage().persistent().set(&EDUCATORS, &educators);
             true
-        } else { false }
+        } else {
+            false
+        }
     }
 
     fn add_credentials(env: Env, educator_address: Address, new_credentials: Vec<String>) -> bool {
         educator_address.require_auth();
-        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap();
+        let mut educators: Map<Address, Educator> =
+            env.storage().persistent().get(&EDUCATORS).unwrap();
         if let Some(mut educator) = educators.get(educator_address.clone()) {
             // For now, we'll skip adding credentials to the new structure
             // In a full implementation, this would create Credential structs
@@ -176,35 +205,50 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
                 env.storage().persistent().set(&EDUCATORS, &educators);
             }
             updated
-        } else { false }
+        } else {
+            false
+        }
     }
 
     fn revoke_verification(env: Env, admin: Address, educator_address: Address, reason: String) {
         admin.require_auth();
         VerificationSystem::verify_admin(&env, &admin);
-        let mut educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap();
+        let mut educators: Map<Address, Educator> =
+            env.storage().persistent().get(&EDUCATORS).unwrap();
         if let Some(mut educator) = educators.get(educator_address.clone()) {
             if educator.verification_status {
                 educator.verification_status = false;
                 educator.verification_level = VerificationLevel::Pending;
-                
-                let mut revocations: Map<Address, String> = env.storage().persistent().get(&REVOKED).unwrap_or(Map::new(&env));
+
+                let mut revocations: Map<Address, String> = env
+                    .storage()
+                    .persistent()
+                    .get(&REVOKED)
+                    .unwrap_or(Map::new(&env));
                 revocations.set(educator_address.clone(), reason);
                 env.storage().persistent().set(&REVOKED, &revocations);
-                
+
                 if let Some(nft_id) = educator.nft_token_id.clone() {
                     nft::NFTImplementation::burn_nft(env.clone(), nft_id);
                     educator.nft_token_id = None;
                 }
-                
+
                 educators.set(educator_address, educator);
                 env.storage().persistent().set(&EDUCATORS, &educators);
-            } else { panic!("educator not verified"); }
-        } else { panic!("educator not found"); }
+            } else {
+                panic!("educator not verified");
+            }
+        } else {
+            panic!("educator not found");
+        }
     }
 
     fn get_educators_by_specialty(env: Env, specialty: String) -> Vec<Address> {
-        let educators: Map<Address, Educator> = env.storage().persistent().get(&EDUCATORS).unwrap_or(Map::new(&env));
+        let educators: Map<Address, Educator> = env
+            .storage()
+            .persistent()
+            .get(&EDUCATORS)
+            .unwrap_or(Map::new(&env));
         let mut filtered_educators = Vec::new(&env);
         for (address, educator) in educators.iter() {
             if educator.specialty_areas.contains(&specialty) {
@@ -216,7 +260,10 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
 
     fn get_educator_reviews(env: Env, educator_address: Address) -> Vec<Review> {
         let reviews_key = DataKey::Reviews(educator_address);
-        env.storage().persistent().get(&reviews_key).unwrap_or_else(|| Vec::new(&env))
+        env.storage()
+            .persistent()
+            .get(&reviews_key)
+            .unwrap_or_else(|| Vec::new(&env))
     }
 
     fn add_verified_credential(env: Env, reviewer: Address, credential: String) {
@@ -226,7 +273,7 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         }
         VerificationSystem::add_verified_credential(&env, credential, &reviewer);
     }
-    
+
     fn add_authorized_institution(env: Env, admin: Address, institution_id: String) {
         admin.require_auth();
         VerificationSystem::verify_admin(&env, &admin);
@@ -256,9 +303,12 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
     }
 
     fn get_disputes(env: Env) -> Vec<Dispute> {
-        env.storage().persistent().get(&DISPUTES).unwrap_or(Vec::new(&env))
+        env.storage()
+            .persistent()
+            .get(&DISPUTES)
+            .unwrap_or(Vec::new(&env))
     }
-    
+
     fn get_analytics(env: Env) -> AnalyticsData {
         AnalyticsSystem::get_analytics(&env)
     }
@@ -275,7 +325,7 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
     }
 
     // --- Enhanced Credential Functions ---
-    
+
     fn create_credential(
         env: Env,
         issuer: Address,
@@ -284,7 +334,14 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         tier: u32,
         w3c_compliant: bool,
     ) -> BytesN<32> {
-        VerificationSystem::create_credential(&env, &issuer, &subject, credential_hash, tier, w3c_compliant)
+        VerificationSystem::create_credential(
+            &env,
+            &issuer,
+            &subject,
+            credential_hash,
+            tier,
+            w3c_compliant,
+        )
     }
 
     fn renew_credential(env: Env, issuer: Address, credential_id: BytesN<32>) -> bool {
@@ -298,7 +355,13 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         chain_id: u32,
         verification_hash: String,
     ) -> bool {
-        VerificationSystem::verify_cross_chain(&env, &verifier, credential_id, chain_id, verification_hash)
+        VerificationSystem::verify_cross_chain(
+            &env,
+            &verifier,
+            credential_id,
+            chain_id,
+            verification_hash,
+        )
     }
 
     fn get_credential_info(env: Env, credential_id: BytesN<32>) -> Option<Credential> {
@@ -310,7 +373,7 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
     }
 
     // --- Dynamic NFT Functions ---
-    
+
     fn create_dynamic_nft(
         env: Env,
         admin: Address,
@@ -319,7 +382,14 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         is_badge: bool,
         initial_metadata: Map<String, String>,
     ) -> BytesN<32> {
-        NFTImplementation::create_nft_internal(env, admin, owner, template_id, is_badge, initial_metadata)
+        NFTImplementation::create_nft_internal(
+            env,
+            admin,
+            owner,
+            template_id,
+            is_badge,
+            initial_metadata,
+        )
     }
 
     fn update_nft_metadata(
@@ -349,7 +419,7 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
     }
 
     // --- NFT Template Functions ---
-    
+
     fn create_nft_template(
         env: Env,
         admin: Address,
@@ -359,7 +429,15 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         attributes: Map<String, String>,
         is_badge_template: bool,
     ) -> u32 {
-        NFTImplementation::create_nft_template(env, admin, name, description, image_url, attributes, is_badge_template)
+        NFTImplementation::create_nft_template(
+            env,
+            admin,
+            name,
+            description,
+            image_url,
+            attributes,
+            is_badge_template,
+        )
     }
 
     fn get_nft_template(env: Env, template_id: u32) -> Option<NFTTemplate> {
@@ -367,7 +445,7 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
     }
 
     // --- Achievement Badge Functions ---
-    
+
     fn issue_badge(
         env: Env,
         admin: Address,
@@ -378,7 +456,16 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         required_tier: u32,
         template_id: u32,
     ) -> BytesN<32> {
-        NFTImplementation::issue_badge(env, admin, educator, badge_name, badge_description, criteria, required_tier, template_id)
+        NFTImplementation::issue_badge(
+            env,
+            admin,
+            educator,
+            badge_name,
+            badge_description,
+            criteria,
+            required_tier,
+            template_id,
+        )
     }
 
     fn get_achievement_badge(env: Env, badge_id: BytesN<32>) -> Option<AchievementBadge> {
@@ -386,7 +473,7 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
     }
 
     // --- Security Functions ---
-    
+
     fn configure_security(env: Env, admin: Address, config: SecurityConfig) {
         SecuritySystem::configure_security(&env, &admin, config);
     }
@@ -438,7 +525,11 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         SecuritySystem::schedule_time_locked_operation(&env, &proposer, operation, target, data)
     }
 
-    fn execute_time_locked_operation(env: Env, executor: Address, operation_id: BytesN<32>) -> bool {
+    fn execute_time_locked_operation(
+        env: Env,
+        executor: Address,
+        operation_id: BytesN<32>,
+    ) -> bool {
         if UpgradeSystem::is_contract_paused(&env) {
             panic!("contract is paused");
         }
@@ -457,7 +548,13 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         fraud_type: String,
         evidence_hash: String,
     ) -> BytesN<32> {
-        SecuritySystem::flag_fraudulent_activity(&env, &reporter, &target, fraud_type, evidence_hash)
+        SecuritySystem::flag_fraudulent_activity(
+            &env,
+            &reporter,
+            &target,
+            fraud_type,
+            evidence_hash,
+        )
     }
 
     // Reputation staking functions
@@ -494,7 +591,12 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
         UpgradeSystem::get_version_info(&env)
     }
 
-    fn upgrade_contract(env: Env, admin: Address, new_implementation: Address, new_version: String) -> bool {
+    fn upgrade_contract(
+        env: Env,
+        admin: Address,
+        new_implementation: Address,
+        new_version: String,
+    ) -> bool {
         UpgradeSystem::upgrade_contract(&env, &admin, new_implementation, new_version)
     }
 
@@ -549,11 +651,7 @@ impl EducatorVerificationInterface for EducatorVerificationContract {
     }
 
     // Backward compatibility functions
-    fn create_compatibility_adapter(
-        env: Env, 
-        old_function: String, 
-        new_function: String, 
-    ) -> bool {
+    fn create_compatibility_adapter(env: Env, old_function: String, new_function: String) -> bool {
         UpgradeSystem::create_compatibility_adapter(&env, old_function, new_function)
     }
 

@@ -5,12 +5,12 @@ on:
     branches: ['main']
     paths:
       - 'akkuea-edu/packages/soroban/**'
-      - '.github/workflows/akkuea-edu/rust.yml'
+      - '.github/workflows/rust.yml'
   pull_request:
     branches: ['main']
     paths:
       - 'akkuea-edu/packages/soroban/**'
-      - '.github/workflows/akkuea-edu/rust.yml'
+      - '.github/workflows/rust.yml'
 
 env:
   CARGO_TERM_COLOR: always

@@ -5,12 +5,12 @@ on:
     branches: ['main']
     paths:
       - 'akkuea-edu/packages/gin/**'
-      - '.github/workflows/akkuea-edu/gin.yml'
+      - '.github/workflows/gin.yml'
   pull_request:
     branches: ['main']
     paths:
       - 'akkuea-edu/packages/gin/**'
-      - '.github/workflows/akkuea-edu/gin.yml'
+      - '.github/workflows/gin.yml'
 
 jobs:
   build-and-test:

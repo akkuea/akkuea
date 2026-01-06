@@ -5,12 +5,12 @@ on:
     branches: ['main']
     paths:
       - 'akkuea-edu/packages/nextjs/**'
-      - '.github/workflows/akkuea-edu/nextjs.yml'
+      - '.github/workflows/nextjs.yml'
   pull_request:
     branches: ['main']
     paths:
       - 'akkuea-edu/packages/nextjs/**'
-      - '.github/workflows/akkuea-edu/nextjs.yml'
+      - '.github/workflows/nextjs.yml'
 
 jobs:
   build:

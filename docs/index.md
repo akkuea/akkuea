@@ -62,8 +62,6 @@ Akkuea is a revolutionary social networking platform designed to transform educa
 
 ---
 
-Issue 312
-
 ## Quick Navigation
 
 | Section | Description | Target Audience |

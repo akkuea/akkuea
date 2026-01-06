@@ -416,11 +416,6 @@ flowchart TD
 }
 ```
 
-
----
-
-Issue 553
-
 ---
 
 ### Design Tokens

@@ -8,6 +8,7 @@ import { useTheme } from 'next-themes';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useParams } from "next/navigation";
 import './HeaderLanding.css';
 
 interface NavLink {
@@ -66,6 +67,7 @@ export default function HeaderLanding() {
   const pathname = usePathname();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { locale } = useParams();
 
   useEffect(() => setMounted(true), []);
 
@@ -260,7 +262,7 @@ export default function HeaderLanding() {
                 </TooltipProvider>
               )}
             </div>
-            <Link href="/get-started" className="card-nav-cta-button">
+            <Link href={`/${locale}`} className="card-nav-cta-button">
               Get Started
             </Link>
           </div>

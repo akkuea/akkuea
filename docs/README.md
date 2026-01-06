@@ -154,9 +154,30 @@ pie title Documentation Coverage
 
 ---
 
-Issue 305
 
-<!-- Make the changes from issue number 305 here. Thank you for contributing to Akkuea! -->
+## 🚀 Getting Started
+
+### For New Users
+1. Start with [Getting Started Guide](guides/getting-started.md)
+2. Explore [Platform Features](features/README.md)
+3. Try [User Workflows](guides/user-workflows.md)
+
+### For Developers
+1. Begin with [Development Setup](development/setup.md)
+2. Read [Contributing Guidelines](development/contributing.md)
+3. Study [System Architecture](technical/architecture.md)
+
+### For Designers
+1. Review [Visual Identity](design/visual-identity.md)
+2. Explore [Marketplace Documentation](marketplace/README.md)
+3. Understand cultural design principles
+
+### For Educators
+1. Understand [Educational Resources](educational-resources/README.md)
+2. Learn about [AI Agents](ai-agents/README.md)
+3. Explore [Reward System](analytics/reward-system.md)
+
+
 
 ---
 

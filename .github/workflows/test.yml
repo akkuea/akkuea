@@ -35,6 +35,7 @@ jobs:
 
       - name: Install root dependencies
         run: bun install
+        working-directory: akkuea-edu
 
       - name: Install nextjs dependencies
         run: bun install

@@ -1,6 +1,5 @@
 # Dependency directories
 node_modules/
-.bun/
 target/
 
 # Next.js build output
@@ -56,10 +55,6 @@ Desktop.ini
 *.pid
 *.seed
 *.coverdata
-
-#bun
-bun.lock
-packages/nextjs/bun.lock
 .qodo
 
 # Stellar-specific files

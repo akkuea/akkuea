@@ -177,152 +177,152 @@ export default function RightSidebar() {
           )}
         </Button>
 
-      {isCollapsed ? (
-        // Collapsed State - Icon Navigation (hidden on mobile)
-        <div className="hidden md:block h-full py-4">
-          <div className="flex justify-center mb-6">
-            <div className="bg-primary rounded-[8px] h-8 w-8 flex items-center justify-center">
-              <Compass className="w-5 h-5 text-white" />
+        {isCollapsed ? (
+          // Collapsed State - Icon Navigation (hidden on mobile)
+          <div className="hidden md:block h-full py-4">
+            <div className="flex justify-center mb-6">
+              <div className="bg-primary rounded-[8px] h-8 w-8 flex items-center justify-center">
+                <Compass className="w-5 h-5 text-white" />
+              </div>
             </div>
-          </div>
-          <div className="space-y-4 px-2">
-            <div className="relative group">
-              <div className="flex justify-center">
-                <div
-                  onClick={() => scrollToTab('recommendations')}
-                  className="bg-primary rounded-[8px] h-8 w-8 flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
-                >
-                  <Sparkles className="w-5 h-5 text-white" />
+            <div className="space-y-4 px-2">
+              <div className="relative group">
+                <div className="flex justify-center">
+                  <div
+                    onClick={() => scrollToTab('recommendations')}
+                    className="bg-primary rounded-[8px] h-8 w-8 flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
+                  >
+                    <Sparkles className="w-5 h-5 text-white" />
+                  </div>
+                </div>
+                <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all border border-border shadow-lg">
+                  Recommendations
                 </div>
               </div>
-              <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all border border-border shadow-lg">
-                Recommendations
-              </div>
-            </div>
-            <div className="relative group">
-              <div className="flex justify-center">
-                <div
-                  onClick={() => scrollToTab('trending')}
-                  className="bg-primary rounded-[8px] h-8 w-8 flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
-                >
-                  <Flame className="w-5 h-5 text-white" />
+              <div className="relative group">
+                <div className="flex justify-center">
+                  <div
+                    onClick={() => scrollToTab('trending')}
+                    className="bg-primary rounded-[8px] h-8 w-8 flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
+                  >
+                    <Flame className="w-5 h-5 text-white" />
+                  </div>
                 </div>
-              </div>
-              <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all border border-border shadow-lg">
-                Trending
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        // Expanded State - Full Content
-        <div className="h-full flex flex-col pt-16 md:pt-0">
-          <div className="p-4 md:p-4 border-b border-sidebar-border">
-            <h2 className="text-lg md:text-lg font-semibold text-primary flex items-center gap-2">
-              <Compass className="w-5 h-5" />
-              Discovery
-            </h2>
-          </div>
-
-          <div
-            ref={contentRef}
-            className="flex-1 overflow-y-auto p-4 md:p-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-          >
-            <Tabs defaultValue="recommendations" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4 bg-gray-200 dark:bg-gray-800 rounded-lg p-1">
-                <TabsTrigger value="recommendations" className="text-xs md:text-xs">
-                  <Sparkles className="w-4 h-4 mr-1.5" />
-                  <span className="hidden sm:inline">For You</span>
-                  <span className="sm:hidden">You</span>
-                </TabsTrigger>
-                <TabsTrigger value="trending" className="text-xs md:text-xs">
-                  <Flame className="w-4 h-4 mr-1.5" />
+                <div className="absolute right-full top-1/2 -translate-y-1/2 mr-2 px-2 py-1 bg-popover text-popover-foreground text-xs rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all border border-border shadow-lg">
                   Trending
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="recommendations" className="space-y-4">
-                <div className="space-y-3">
-                  {recommendations.map((item) => (
-                    <Card
-                      key={item.id}
-                      className="hover:shadow-md transition-all duration-200 cursor-pointer group border-border/50 hover:border-primary/20"
-                    >
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center mb-2">
-                          <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
-                            {item.type}
-                          </Badge>
-                          <Badge variant="outline" className="text-[10px] px-2 py-0.5">
-                            {item.relevance}% match
-                          </Badge>
-                        </div>
-                        <CardTitle className="text-sm font-medium text-card-foreground group-hover:text-primary transition-colors leading-tight">
-                          {item.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 pb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">
-                            <User size={12} className="text-muted-foreground" />
-                          </div>
-                          <span className="text-xs text-muted-foreground">{item.author}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
                 </div>
-                <Button
-                  variant="ghost"
-                  className="w-full text-sm text-primary hover:text-primary/80 font-medium justify-start p-0"
-                >
-                  See more recommendations →
-                </Button>
-              </TabsContent>
-
-              <TabsContent value="trending" className="space-y-4">
-                <div className="space-y-3">
-                  {trending.map((item) => (
-                    <Card
-                      key={item.id}
-                      className="hover:shadow-md transition-all duration-200 cursor-pointer group border-border/50 hover:border-primary/20"
-                    >
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-card-foreground group-hover:text-primary transition-colors leading-tight">
-                          {item.title}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 pb-3">
-                        <div className="flex justify-between items-center">
-                          <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
-                            {item.category}
-                          </Badge>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <MessageSquare size={12} />
-                              <span>{item.comments}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Share2 size={12} />
-                              <span>{item.shares}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-                <Button
-                  variant="ghost"
-                  className="w-full text-sm text-primary hover:text-primary/80 font-medium justify-start p-0"
-                >
-                  See more trending topics →
-                </Button>
-              </TabsContent>
-            </Tabs>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        ) : (
+          // Expanded State - Full Content
+          <div className="h-full flex flex-col pt-16 md:pt-0">
+            <div className="p-4 md:p-4 border-b border-sidebar-border">
+              <h2 className="text-lg md:text-lg font-semibold text-primary flex items-center gap-2">
+                <Compass className="w-5 h-5" />
+                Discovery
+              </h2>
+            </div>
+
+            <div
+              ref={contentRef}
+              className="flex-1 overflow-y-auto p-4 md:p-4 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+            >
+              <Tabs defaultValue="recommendations" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-4 bg-gray-200 dark:bg-gray-800 rounded-lg p-1">
+                  <TabsTrigger value="recommendations" className="text-xs md:text-xs">
+                    <Sparkles className="w-4 h-4 mr-1.5" />
+                    <span className="hidden sm:inline">For You</span>
+                    <span className="sm:hidden">You</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="trending" className="text-xs md:text-xs">
+                    <Flame className="w-4 h-4 mr-1.5" />
+                    Trending
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="recommendations" className="space-y-4">
+                  <div className="space-y-3">
+                    {recommendations.map((item) => (
+                      <Card
+                        key={item.id}
+                        className="hover:shadow-md transition-all duration-200 cursor-pointer group border-border/50 hover:border-primary/20"
+                      >
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-center mb-2">
+                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
+                              {item.type}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                              {item.relevance}% match
+                            </Badge>
+                          </div>
+                          <CardTitle className="text-sm font-medium text-card-foreground group-hover:text-primary transition-colors leading-tight">
+                            {item.title}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0 pb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">
+                              <User size={12} className="text-muted-foreground" />
+                            </div>
+                            <span className="text-xs text-muted-foreground">{item.author}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-sm text-primary hover:text-primary/80 font-medium justify-start p-0"
+                  >
+                    See more recommendations →
+                  </Button>
+                </TabsContent>
+
+                <TabsContent value="trending" className="space-y-4">
+                  <div className="space-y-3">
+                    {trending.map((item) => (
+                      <Card
+                        key={item.id}
+                        className="hover:shadow-md transition-all duration-200 cursor-pointer group border-border/50 hover:border-primary/20"
+                      >
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-sm font-medium text-card-foreground group-hover:text-primary transition-colors leading-tight">
+                            {item.title}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0 pb-3">
+                          <div className="flex justify-between items-center">
+                            <Badge variant="secondary" className="text-[10px] px-2 py-0.5">
+                              {item.category}
+                            </Badge>
+                            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <MessageSquare size={12} />
+                                <span>{item.comments}</span>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Share2 size={12} />
+                                <span>{item.shares}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    className="w-full text-sm text-primary hover:text-primary/80 font-medium justify-start p-0"
+                  >
+                    See more trending topics →
+                  </Button>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+        )}
       </aside>
     </>
   );

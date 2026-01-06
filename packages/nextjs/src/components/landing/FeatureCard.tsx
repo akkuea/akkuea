@@ -17,9 +17,7 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ title, description, icon: Ico
       <h3 className="text-lg font-semibold text-about-text dark:text-foreground mb-10 group-hover:text-[#5EEAD4] dark:group-hover:text-primary transition-colors">
         {title}
       </h3>
-      <p className="text-gray-600 dark:text-muted text-sm leading-relaxed">
-        {description}
-      </p>
+      <p className="text-gray-600 dark:text-muted text-sm leading-relaxed">{description}</p>
     </div>
   );
 };

@@ -78,7 +78,10 @@ export default function Roadmap() {
   }, []);
 
   return (
-    <section ref={sectionRef} className="bg-[#F3F4F6] dark:bg-background py-16 px-4 overflow-hidden">
+    <section
+      ref={sectionRef}
+      className="bg-[#F3F4F6] dark:bg-background py-16 px-4 overflow-hidden"
+    >
       <div
         className={`max-w-4xl mx-auto text-center space-y-2 transition-all duration-1000 ${
           isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
@@ -96,7 +99,6 @@ export default function Roadmap() {
           isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'
         }`}
       >
-
         <Chrono
           theme={{
             primary: '#5EEAD4',

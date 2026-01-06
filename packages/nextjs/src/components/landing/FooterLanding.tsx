@@ -37,9 +37,7 @@ const navigationLinks = [
   { label: 'Community', href: '#community' },
 ];
 
-const bottomNavigationLinks = [
-  { label: 'Open Source', href: '#open-source' },
-];
+const bottomNavigationLinks = [{ label: 'Open Source', href: '#open-source' }];
 
 const socialLinks = [
   { platform: 'github' as const, href: 'https://github.com/akkuea/akkuea' },
@@ -92,11 +90,7 @@ export function FooterLanding() {
             {/* Right: Social Icons */}
             <div className="flex items-center gap-4">
               {socialLinks.map((social) => (
-                <SocialIcon
-                  key={social.platform}
-                  platform={social.platform}
-                  href={social.href}
-                />
+                <SocialIcon key={social.platform} platform={social.platform} href={social.href} />
               ))}
             </div>
           </div>
@@ -139,11 +133,7 @@ export function FooterLanding() {
             {/* Social Icons (horizontal row) */}
             <div className="flex items-center gap-6">
               {socialLinks.map((social) => (
-                <SocialIcon
-                  key={social.platform}
-                  platform={social.platform}
-                  href={social.href}
-                />
+                <SocialIcon key={social.platform} platform={social.platform} href={social.href} />
               ))}
             </div>
           </div>

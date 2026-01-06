@@ -6,7 +6,7 @@ import Roadmap from '@/components/landing/Roadmap';
 export default function LandingPage() {
   return (
     <div>
-      <HeroSection/>
+      <HeroSection />
       <AboutSection />
       <Benefits />
       <Roadmap />

@@ -4,11 +4,11 @@ on:
   push:
     branches: [main]
     paths-ignore:
-      - 'docs/**'
+      - 'akkuea-edu/docs/**'
   pull_request:
     branches: [main]
     paths-ignore:
-      - 'docs/**'
+      - 'akkuea-edu/docs/**'
 
 jobs:
   test:
@@ -28,7 +28,7 @@ jobs:
           path: |
             ~/.bun/install/cache
             node_modules
-            packages/nextjs/node_modules
+            akkuea-edu/packages/nextjs/node_modules
           key: ${{ runner.os }}-vitest-bun-${{ hashFiles('**/bun.lockb') }}
           restore-keys: |
             ${{ runner.os }}-vitest-bun-
@@ -38,11 +38,11 @@ jobs:
 
       - name: Install nextjs dependencies
         run: bun install
-        working-directory: packages/nextjs
+        working-directory: akkuea-edu/packages/nextjs
 
       - name: Run tests with coverage
         run: bun vitest run --coverage --reporter=default
-        working-directory: packages/nextjs
+        working-directory: akkuea-edu/packages/nextjs
 
       - name: Display coverage summary
         if: always()

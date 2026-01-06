@@ -4,11 +4,13 @@ on:
   push:
     branches: ['main']
     paths:
-      - 'packages/gin/**'
+      - 'akkuea-edu/packages/gin/**'
+      - '.github/workflows/akkuea-edu/gin.yml'
   pull_request:
     branches: ['main']
     paths:
-      - 'packages/gin/**'
+      - 'akkuea-edu/packages/gin/**'
+      - '.github/workflows/akkuea-edu/gin.yml'
 
 jobs:
   build-and-test:
@@ -29,24 +31,24 @@ jobs:
           path: |
             ~/.cache/go-build
             ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('packages/gin/go.sum') }}
+          key: ${{ runner.os }}-go-${{ hashFiles('akkuea-edu/packages/gin/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
 
       - name: Install dependencies
         run: go mod download
-        working-directory: packages/gin
+        working-directory: akkuea-edu/packages/gin
 
       - name: Run build
         run: go build ./...
-        working-directory: packages/gin
+        working-directory: akkuea-edu/packages/gin
 
       - name: Run tests
         run: go test ./... -v
-        working-directory: packages/gin
+        working-directory: akkuea-edu/packages/gin
 
       - name: Run linter
         uses: golangci/golangci-lint-action@v6
         with:
           version: latest
-          working-directory: packages/gin
+          working-directory: akkuea-edu/packages/gin

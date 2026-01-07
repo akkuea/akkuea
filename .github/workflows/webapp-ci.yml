@@ -48,7 +48,7 @@ jobs:
     - name: ESLint checking
       run: |
         cd akkuea-defi-rwa/apps/webapp
-        bun run lint
+        bunx next lint
         
     - name: Format checking with Prettier
       run: |
@@ -74,8 +74,8 @@ jobs:
         # Install Playwright
         bunx playwright install
         
-        # Run E2E tests
-        bun run test:e2e || true
+        # Run E2E tests (skip for now - no script defined)
+        echo "Skipping E2E tests - no test:e2e script defined"
         
     - name: Analyze bundle size
       run: |
@@ -115,7 +115,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/webapp
-        npm ci --prefer-offline
+        bun ci --prefer-offline
         
     - name: Audit dependencies
       run: |
@@ -187,14 +187,14 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/webapp
-        npm ci --prefer-offline
+        bun ci --prefer-offline
         
     - name: Build and analyze performance
       run: |
         cd akkuea-defi-rwa/apps/webapp
         
         # Build production version
-        npm run build
+        bun run build
         
         # Install Lighthouse CLI
         bun add -g @lhci/cli@0.12.x
@@ -247,7 +247,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/webapp
-        npm ci --prefer-offline
+        bun ci --prefer-offline
         
     - name: Test coverage verification
       run: |

@@ -5,9 +5,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "bun run build:types",
+    "build": "tsc",
     "build:types": "tsc",
-    "dev": "bun run dev:types",
+    "dev": "tsc --watch",
     "dev:types": "tsc --watch",
     "test": "bun test",
     "clean": "rm -rf dist"

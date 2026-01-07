@@ -1,0 +1,48 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'akkuea-defi-rwa/**'
+
+jobs:
+  security-audit:
+    name: Security Audit
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          repository: akkuea/akkuea
+          token: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+          
+      - name: Install dependencies
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+          /Users/runner/.bun/bin/bun install
+          
+      - name: Check for vulnerabilities
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+          
+          # Check for vulnerabilities
+          bunx audit-ci --moderate || true
+          
+      - name: Check for secrets
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+          
+          # Scan for potential secrets
+          echo "Scanning for potential secrets..."
+          
+          # Common secret patterns
+          if grep -r -E "(API_KEY|SECRET|TOKEN|PASSWORD|PRIVATE_KEY)" src/ --exclude-dir=node_modules; then
+            echo "Warning: Potential secret patterns found in source code"
+            exit 1
+          fi

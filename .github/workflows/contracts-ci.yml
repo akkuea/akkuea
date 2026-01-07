@@ -1,0 +1,187 @@
+name: Smart Contracts CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'akkuea-defi-rwa/apps/contracts/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'akkuea-defi-rwa/apps/contracts/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-and-test:
+    name: Build and Test Contracts
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+          
+      - name: Install WASM target
+        run: rustup target add wasm32-unknown-unknown
+        
+      - name: Install Stellar CLI
+        run: |
+          if ! command -v brew &> /dev/null; then
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> $GITHUB_ENV
+          fi
+          brew install stellar-cli
+          stellar --version
+          
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+            
+      - name: Check Rust formatting
+        run: |
+          cd akkuea-defi-rwa/apps/contracts
+          cargo fmt --all -- --check
+          
+      - name: Run Clippy lints
+        run: |
+          cd akkuea-defi-rwa/apps/contracts
+          cargo clippy --all-targets --all-features -- -D warnings
+          
+      - name: Build contracts
+        run: |
+          cd akkuea-defi-rwa/apps/contracts
+          cargo build --target wasm32-unknown-unknown --release
+          ls -la target/wasm32-unknown-unknown/release/
+          for file in target/wasm32-unknown-unknown/release/*.wasm; do
+            if [ -f "$file" ]; then
+              size=$(stat -f%z "$file")
+              echo "Contract size: $size bytes"
+              if [ $size -gt 1048576 ]; then
+                echo "Error: Contract size exceeds 1MB limit"
+                exit 1
+              fi
+            fi
+          done
+          
+      - name: Run unit tests
+        run: |
+          cd akkuea-defi-rwa/apps/contracts
+          cargo test --lib
+          
+      - name: Run integration tests
+        run: |
+          cd akkuea-defi-rwa/apps/contracts
+          stellar network testnet
+          stellar keys generate --network testnet --name test-account
+          cargo test --test integration --features testutils
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-wasm
+          path: akkuea-defi-rwa/apps/contracts/target/wasm32-unknown-unknown/release/*.wasm
+          retention-days: 7
+
+  security-audit:
+    name: Security Audit
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Install cargo-audit
+        run: cargo install cargo-audit
+        
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-audit-${{ hashFiles('**/Cargo.lock') }}
+          
+      - name: Run security audit
+        run: |
+          cd akkuea-defi-rwa/apps/contracts
+          cargo audit
+          cargo deny check
+          
+      - name: Check for sensitive data
+        run: |
+          cd akkuea-defi-rwa/apps/contracts
+          echo "Scanning for potential secrets..."
+          if grep -r -i "secret\|password\|key\|token" src/ --exclude-dir=target; then
+            echo "Warning: Potential sensitive data found in source code"
+            exit 1
+          fi
+
+  code-coverage:
+    name: Code Coverage
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+          
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov
+        
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
+          
+      - name: Generate coverage report
+        run: |
+          cd akkuea-defi-rwa/apps/contracts
+          cargo llvm-cov --lib --workspace --lcov --output-path lcov.info
+          cargo llvm-cov --lib --workspace --html
+          
+      - name: Verify coverage threshold
+        run: |
+          cd akkuea-defi-rwa/apps/contracts
+          COVERAGE=$(cargo llvm-cov --lib --workspace --text | grep -o '[0-9]*\.[0-9]*%' | head -1 | tr -d '%')
+          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+            echo "Error: Coverage $COVERAGE% is below required 80%"
+            exit 1
+          fi
+          echo "Coverage: $COVERAGE%"
+          
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./akkuea-defi-rwa/apps/contracts/lcov.info
+          flags: contracts
+          name: smart-contracts-coverage
+          
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: akkuea-defi-rwa/apps/contracts/target/llvm-cov/html/
+          retention-days: 7

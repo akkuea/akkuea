@@ -1,0 +1,40 @@
+{
+  "name": "real-estate-defi-platform",
+  "version": "1.0.0",
+  "description": "Real Estate Tokenization and DeFi Lending Platform on Stellar",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"bun run dev:webapp\" \"bun run dev:api\"",
+    "dev:webapp": "bun run dev --workspace=apps/webapp",
+    "dev:api": "bun run dev --workspace=apps/api",
+    "build": "bun run build --workspaces",
+    "build:webapp": "bun run build --workspace=apps/webapp",
+    "build:api": "bun run build --workspace=apps/api",
+    "build:shared": "bun run build --workspace=apps/shared",
+    "build:contracts": "./scripts/build.sh",
+    "test": "bun test --workspaces",
+    "lint": "bun run lint --workspaces",
+    "typecheck": "bun run type-check --workspaces",
+    "clean": "bun run clean --workspaces && rm -rf node_modules",
+    "install:all": "bun install && bun install --workspaces",
+    "deploy:contracts": "./scripts/deploy.sh",
+    "format": "prettier --write \"**/*.{js,ts,tsx,json,md,rs}\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "concurrently": "^8.2.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "stellar-sdk": "^12.0.0",
+    "soroban-client": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "bun@1.0.0"
+}

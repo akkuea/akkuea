@@ -1,0 +1,26 @@
+{
+  "name": "@real-estate-defi/shared",
+  "version": "1.0.0",
+  "description": "Shared utilities and types for Real Estate DeFi platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "bun run build:types",
+    "build:types": "tsc",
+    "dev": "bun run dev:types",
+    "dev:types": "tsc --watch",
+    "test": "bun test",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["stellar", "soroban", "defi", "real-estate"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "bun-types": "latest"
+  },
+  "dependencies": {
+    "stellar-sdk": "^12.0.0",
+    "soroban-client": "^1.0.0"
+  }
+}

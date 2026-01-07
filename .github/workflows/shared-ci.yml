@@ -41,12 +41,12 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun install
+        /Users/runner/.bun/bin/bun install
         
     - name: Type checking
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun run build:types
+        /Users/runner/.bun/bin/bun run build:types
         
     - name: Linting with ESLint
       run: |
@@ -63,12 +63,12 @@ jobs:
     - name: Format checking with Prettier
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bunx prettier --check "src/**/*.{ts,js,json}"
+        /Users/runner/.bun/bin/bunx prettier --check "src/**/*.{ts,js,json}"
         
     - name: Build library
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun run build
+        /Users/runner/.bun/bin/bun run build
         
         # Verify build output
         if [ ! -d "dist" ]; then
@@ -133,7 +133,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun install
+        /Users/runner/.bun/bin/bun install
         
     - name: Audit dependencies
       run: |
@@ -190,7 +190,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun install
+        /Users/runner/.bun/bin/bun install
         
     - name: Strict TypeScript compilation
       run: |
@@ -241,10 +241,10 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun install
+        /Users/runner/.bun/bin/bun install
         
         cd ../../api
-        bun install
+        /Users/runner/.bun/bin/bun install
         
     - name: Test API integration
       run: |
@@ -269,7 +269,7 @@ jobs:
         cd akkuea-defi-rwa/apps/webapp
         
         # Test importing in frontend context
-        bun install
+        /Users/runner/.bun/bin/bun install
         
         node -e "
         try {
@@ -295,7 +295,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun install
+        /Users/runner/.bun/bin/bun install
         
     - name: Code complexity analysis
       run: |

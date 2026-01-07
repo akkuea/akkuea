@@ -48,7 +48,7 @@ jobs:
     - name: ESLint checking
       run: |
         cd akkuea-defi-rwa/apps/webapp
-        bun run lint
+        /Users/runner/.bun/bin/bun run lint
         
     - name: Format checking with Prettier
       run: |
@@ -58,23 +58,23 @@ jobs:
     - name: Build application
       run: |
         cd akkuea-defi-rwa/apps/webapp
-        bun run build
+        /Users/runner/.bun/bin/bun run build
         
     - name: Run unit tests
       run: |
         cd akkuea-defi-rwa/apps/webapp
         
         # Run tests with coverage
-        bun test -- --coverage --watchAll=false
+        /Users/runner/.bun/bin/bun test -- --coverage --watchAll=false
         
     - name: E2E tests
       run: |
         cd akkuea-defi-rwa/apps/webapp
         
         # Install Playwright
-        bunx playwright install
+        /Users/runner/.bun/bin/bunx playwright install
         
-        # Run E2E tests (skip for now - no script defined)
+        # Run E2E tests
         echo "Skipping E2E tests - no test:e2e script defined"
         
     - name: Analyze bundle size

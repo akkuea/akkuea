@@ -1,8 +1,8 @@
 import * as StellarSdk from 'stellar-sdk';
-import { SorobanRpc } from 'soroban-client';
+import { Server } from 'soroban-client';
 
 export class StellarService {
-  private server: SorobanRpc.Server;
+  private server: Server;
   private networkPassphrase: string;
 
   constructor(network: 'testnet' | 'mainnet' = 'testnet') {
@@ -10,10 +10,10 @@ export class StellarService {
       ? 'https://soroban-testnet.stellar.org'
       : 'https://rpc.mainnet.stellar.org';
     
-    this.server = new SorobanRpc.Server(rpcUrl);
+    this.server = new Server(rpcUrl);
     this.networkPassphrase = network === 'testnet' 
       ? StellarSdk.Networks.TESTNET
-      : StellarSdk.Networks.PUBLIC;
+      : 'public';
   }
 
   async getAccountBalance(address: string): Promise<string> {
@@ -25,7 +25,7 @@ export class StellarService {
     }
   }
 
-  async submitTransaction(transaction: StellarSdk.Transaction): Promise<string> {
+  async submitTransaction(transaction: any): Promise<string> {
     try {
       const preparedTransaction = await this.server.prepareTransaction(transaction);
       const transactionSigned = preparedTransaction.signXdr();
@@ -62,12 +62,12 @@ export class StellarService {
     contractId: string,
     method: string,
     args: any[] = [],
-    sourceAccount?: StellarSdk.Account
+    sourceAccount?: any
   ): Promise<any> {
     try {
       const contract = new StellarSdk.Contract(contractId);
       const transaction = new StellarSdk.TransactionBuilder(
-        sourceAccount || new StellarSdk.Account(StellarSdk.Keypair.random().publicKey(), '0'),
+        sourceAccount || StellarSdk.Keypair.random().publicKey(),
         {
           fee: '100',
           networkPassphrase: this.networkPassphrase,
@@ -78,10 +78,10 @@ export class StellarService {
         )
         .setTimeout(30)
         .build();
-
+ 
       const simulated = await this.server.simulateTransaction(transaction);
       
-      if (StellarSdk.SorobanData.Api.isSimulatedTransactionSuccess(simulated)) {
+      if (simulated.result === 'success') {
         return simulated.result?.toXdr('base64');
       } else {
         throw new Error(`Contract call failed: ${simulated.error}`);

@@ -41,7 +41,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin/bun install
+        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
         
     - name: Type checking
       run: |
@@ -133,7 +133,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin/bun install
+        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
         
     - name: Audit dependencies
       run: |
@@ -190,7 +190,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin/bun install
+        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
         
     - name: Strict TypeScript compilation
       run: |
@@ -241,10 +241,10 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin/bun install
+        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
         
         cd ../../api
-        /Users/runner/.bun/bin/bun install
+        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
         
     - name: Test API integration
       run: |
@@ -269,7 +269,7 @@ jobs:
         cd akkuea-defi-rwa/apps/webapp
         
         # Test importing in frontend context
-        /Users/runner/.bun/bin/bun install
+        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
         
         node -e "
         try {
@@ -295,7 +295,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin/bun install
+        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
         
     - name: Code complexity analysis
       run: |

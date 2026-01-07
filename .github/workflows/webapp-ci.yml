@@ -48,7 +48,7 @@ jobs:
     - name: ESLint checking
       run: |
         cd akkuea-defi-rwa/apps/webapp
-        bunx next lint
+        bun run lint
         
     - name: Format checking with Prettier
       run: |

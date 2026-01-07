@@ -4,7 +4,9 @@
   "description": "Real Estate Tokenization and DeFi Lending Platform on Stellar",
   "private": true,
   "workspaces": [
-    "apps/*"
+    "apps/api",
+    "apps/shared",
+    "apps/webapp"
   ],
   "scripts": {
     "dev": "concurrently \"bun run dev:webapp\" \"bun run dev:api\"",

@@ -1,0 +1,301 @@
+name: WebApp - Quality and Security CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'akkuea-defi-rwa/apps/webapp/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'akkuea-defi-rwa/apps/webapp/**'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  build-and-test:
+    name: Build and Test WebApp
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+        
+    - name: Cache node modules
+      uses: actions/cache@v4
+      with:
+        path: ~/.bun/install/cache
+        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+        restore-keys: |
+          ${{ runner.os }}-bun-
+          
+    - name: Install dependencies
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        bun install --frozen-lockfile
+        
+    - name: Type checking
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        bun run type-check
+        
+    - name: ESLint checking
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        bun run lint
+        
+    - name: Format checking with Prettier
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+        
+    - name: Build application
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        bun run build
+        
+    - name: Run unit tests
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Run tests with coverage
+        bun test -- --coverage --watchAll=false
+        
+    - name: E2E tests
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Install Playwright
+        bunx playwright install
+        
+        # Run E2E tests
+        bun run test:e2e || true
+        
+    - name: Analyze bundle size
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Check if .next directory exists and size is reasonable
+        if [ -d ".next" ]; then
+          BUILD_SIZE=$(du -sk .next | cut -f1)
+          echo "Build size: ${BUILD_SIZE}KB"
+          
+          # Warn if build is too large (>50MB)
+          if [ $BUILD_SIZE -gt 51200 ]; then
+            echo "Warning: Build size is large ($BUILD_SIZE KB)"
+          fi
+        fi
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: webapp-build
+        path: akkuea-defi-rwa/apps/webapp/.next/
+        retention-days: 4
+
+  security-audit:
+    name: Security Audit
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        npm ci --prefer-offline
+        
+    - name: Audit dependencies
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Check for known vulnerabilities
+        bun audit
+        
+        # Check for outdated packages
+        bun outdated || true
+        
+    - name: Check for secrets in code
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Scan for potential secrets
+        echo "Scanning for potential secrets..."
+        
+        # Common secret patterns
+        if grep -r -E "(API_KEY|SECRET|TOKEN|PASSWORD|PRIVATE_KEY)" src/ public/ --exclude-dir=node_modules --exclude-dir=.next; then
+          echo "Warning: Potential secret patterns found in source code"
+          exit 1
+        fi
+        
+        # Check for hardcoded URLs
+        if grep -r "https://.*\|http://.*" src/ --exclude-dir=node_modules | grep -v "localhost\|127.0.0.1"; then
+          echo "Warning: Hardcoded URLs found"
+        fi
+        
+    - name: Security linting
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Install security-focused ESLint plugins
+        bun add --dev eslint-plugin-security eslint-plugin-xss
+        
+        # Run security linting
+        bunx eslint src/ --ext .ts,.tsx --config '{"extends": ["plugin:security/recommended", "plugin:xss/recommended"]}' || true
+        
+    - name: Check CSP headers
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Build app first
+        bun run build
+        
+        # Check if CSP headers are configured
+        if [ -f "next.config.js" ] || [ -f "next.config.ts" ]; then
+          if grep -r "Content-Security-Policy\|CSP" .; then
+            echo "CSP configuration found"
+          else
+            echo "Warning: No CSP configuration found"
+          fi
+        fi
+
+  performance-analysis:
+    name: Performance Analysis
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        npm ci --prefer-offline
+        
+    - name: Build and analyze performance
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Build production version
+        npm run build
+        
+        # Install Lighthouse CLI
+        bun add -g @lhci/cli@0.12.x
+        
+        # Start app in background
+        bun start &
+        APP_PID=$!
+        
+        # Wait for app to start
+        sleep 30
+        
+        # Run Lighthouse CI
+        lhci autorun
+          --config=.lighthouserc.js
+          --collect.url=http://localhost:3000
+          --collect.numberOfRuns=3 || true
+          
+        # Kill app
+        kill $APP_PID
+        
+    - name: Check bundle optimization
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Analyze webpack bundle (if available)
+        if [ -d ".next/static" ]; then
+          echo "Analyzing bundle sizes..."
+          
+          # Find large chunks (>1MB)
+          find .next/static -name "*.js" -exec ls -lh {} + | awk '$5 > "1.0M" {print $9, $5}'
+          
+          # Total bundle size
+          TOTAL_SIZE=$(du -sh .next/static | cut -f1)
+          echo "Total bundle size: $TOTAL_SIZE"
+        fi
+
+  code-quality:
+    name: Code Quality
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Install dependencies
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        npm ci --prefer-offline
+        
+    - name: Test coverage verification
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Generate coverage report
+        bun test -- --coverage --watchAll=false --coverageReporters=text
+        
+        # Extract coverage percentage
+        COVERAGE=$(bun test -- --coverage --watchAll=false --coverageReporters=json | jq -r '.total.lines.pct' 2>/dev/null || echo "0")
+        
+        # Require minimum 80% coverage
+        if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+          echo "Error: Test coverage $COVERAGE% is below required 80%"
+          exit 1
+        fi
+        
+        echo "Test coverage: $COVERAGE%"
+        
+    - name: Component complexity analysis
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Install complexity analyzer
+        bun add --dev react-scanner
+        
+        # Analyze React components
+        bunx react-scanner src/ --json || true
+        
+    - name: Check for code duplication
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Install duplication detector
+        bun add --dev jsinspect
+        
+        # Check for duplicated code
+        bunx jsinspect src/ --threshold 30 --ignore "tests/**" || true
+        
+    - name: Accessibility audit
+      run: |
+        cd akkuea-defi-rwa/apps/webapp
+        
+        # Install accessibility checker
+        bun add --dev pa11y-ci
+        
+        # Build app
+        bun run build
+        
+        # Run accessibility tests
+        bunx pa11y-ci --sitemap http://localhost:3000/sitemap.xml || true

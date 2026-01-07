@@ -34,14 +34,14 @@ jobs:
         path: |
           ~/.bun/install/cache
           node_modules/.cache
-        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb') }}
+        key: ${{ runner.os }}-bun-${{ hashFiles('**/package.json') }}
         restore-keys: |
           ${{ runner.os }}-bun-
           
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun install --frozen-lockfile
+        bun install
         
     - name: Type checking
       run: |
@@ -133,7 +133,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun install --frozen-lockfile
+        bun install
         
     - name: Audit dependencies
       run: |
@@ -190,7 +190,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun install --frozen-lockfile
+        bun install
         
     - name: Strict TypeScript compilation
       run: |
@@ -241,10 +241,10 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun install --frozen-lockfile
+        bun install
         
         cd ../../api
-        bun install --frozen-lockfile
+        bun install
         
     - name: Test API integration
       run: |
@@ -295,7 +295,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bun install --frozen-lockfile
+        bun install
         
     - name: Code complexity analysis
       run: |

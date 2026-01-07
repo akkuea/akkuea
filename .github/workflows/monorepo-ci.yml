@@ -111,7 +111,7 @@ jobs:
         cd akkuea-defi-rwa
         
         # Install root dependencies
-        bun install --frozen-lockfile
+        bun install
         bun install --workspaces
         
         # Audit Bun workspaces
@@ -169,7 +169,7 @@ jobs:
         
         # Build webapp
         cd apps/webapp
-        bun install --frozen-lockfile
+        bun install
         bun run build
         WEBAPP_BUILD_TIME=$(date +%s)
         
@@ -251,7 +251,7 @@ jobs:
         echo "Running cross-workspace integration tests..."
         
         # Install all dependencies
-        bun install --frozen-lockfile
+        bun install
         bun install --workspaces
         
         # Build shared library first

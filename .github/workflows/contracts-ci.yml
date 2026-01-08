@@ -5,10 +5,12 @@ on:
     branches: [ main, develop ]
     paths:
       - 'akkuea-defi-rwa/apps/contracts/**'
+      - '.github/workflows/contracts-ci.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
     paths:
       - 'akkuea-defi-rwa/apps/contracts/**'
+      - '.github/workflows/contracts-ci.yml'
 
 env:
   CARGO_TERM_COLOR: always

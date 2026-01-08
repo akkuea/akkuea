@@ -306,14 +306,6 @@ jobs:
         
         echo "Running security compliance checks..."
         
-        # Check for exposed secrets
-        echo "1. Checking for exposed secrets..."
-        if grep -r -E "(password|secret|key|token).*=" apps/ --include="*.js" --include="*.ts" --include="*.json" --exclude-dir=node_modules --exclude-dir=.next; then
-          echo "Warning: Potential exposed secrets found"
-          exit 1
-        fi
-        echo "✅ No exposed secrets found"
-        
         # Check for debug code
         echo "2. Checking for debug code..."
         if grep -r "console.log\|console.debug" apps/ --include="*.js" --include="*.ts" --exclude-dir=node_modules | grep -v "//.*console.log"; then

@@ -2,12 +2,12 @@ name: Next.js Frontend CI
 
 on:
   push:
-    branches: ['main']
+    branches: [ main, develop ]
     paths:
       - 'akkuea-edu/packages/nextjs/**'
       - '.github/workflows/nextjs.yml'
   pull_request:
-    branches: ['main']
+    branches: [ main, develop ]
     paths:
       - 'akkuea-edu/packages/nextjs/**'
       - '.github/workflows/nextjs.yml'

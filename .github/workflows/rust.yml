@@ -2,12 +2,12 @@ name: Soroban Smart Contracts CI
 
 on:
   push:
-    branches: ['main']
+    branches: [ main, develop ]
     paths:
       - 'akkuea-edu/packages/soroban/**'
       - '.github/workflows/rust.yml'
   pull_request:
-    branches: ['main']
+    branches: [ main, develop ]
     paths:
       - 'akkuea-edu/packages/soroban/**'
       - '.github/workflows/rust.yml'

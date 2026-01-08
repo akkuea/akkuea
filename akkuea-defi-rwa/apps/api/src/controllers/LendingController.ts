@@ -1,10 +1,8 @@
-import { LendingPool, DepositPosition, BorrowPosition } from '@real-estate-defi/shared';
-import { StellarService } from '../services/StellarService';
+import type { LendingPool, DepositPosition, BorrowPosition } from '@real-estate-defi/shared';
 
 export class LendingController {
   static async getPools(): Promise<LendingPool[]> {
     try {
-      const stellar = new StellarService();
       // Implementation to fetch all lending pools
       return []; // Placeholder
     } catch (error) {
@@ -14,7 +12,6 @@ export class LendingController {
 
   static async getPool(id: string): Promise<LendingPool> {
     try {
-      const stellar = new StellarService();
       // Implementation to fetch specific pool
       return {} as LendingPool; // Placeholder
     } catch (error) {
@@ -22,9 +19,8 @@ export class LendingController {
     }
   }
 
-  static async createPool(data: Partial<LendingPool>): Promise<LendingPool> {
+  static async createPool(_data: Partial<LendingPool>): Promise<LendingPool> {
     try {
-      const stellar = new StellarService();
       // Implementation to create lending pool
       return {} as LendingPool; // Placeholder
     } catch (error) {
@@ -32,9 +28,11 @@ export class LendingController {
     }
   }
 
-  static async deposit(id: string, data: { user: string; amount: number }): Promise<{ txHash: string }> {
+  static async deposit(
+    _id: string,
+    _data: { user: string; amount: number },
+  ): Promise<{ txHash: string }> {
     try {
-      const stellar = new StellarService();
       // Implementation to handle deposit
       return { txHash: 'placeholder' };
     } catch (error) {
@@ -42,14 +40,16 @@ export class LendingController {
     }
   }
 
-  static async borrow(id: string, data: {
-    borrower: string;
-    collateralPropertyId: string;
-    collateralShares: number;
-    borrowAmount: number;
-  }): Promise<{ txHash: string }> {
+  static async borrow(
+    _id: string,
+    _data: {
+      borrower: string;
+      collateralPropertyId: string;
+      collateralShares: number;
+      borrowAmount: number;
+    },
+  ): Promise<{ txHash: string }> {
     try {
-      const stellar = new StellarService();
       // Implementation to handle borrowing
       return { txHash: 'placeholder' };
     } catch (error) {
@@ -57,9 +57,8 @@ export class LendingController {
     }
   }
 
-  static async getUserDeposits(id: string, address: string): Promise<DepositPosition[]> {
+  static async getUserDeposits(_id: string, _address: string): Promise<DepositPosition[]> {
     try {
-      const stellar = new StellarService();
       // Implementation to fetch user deposits
       return []; // Placeholder
     } catch (error) {
@@ -67,9 +66,8 @@ export class LendingController {
     }
   }
 
-  static async getUserBorrows(id: string, address: string): Promise<BorrowPosition[]> {
+  static async getUserBorrows(_id: string, _address: string): Promise<BorrowPosition[]> {
     try {
-      const stellar = new StellarService();
       // Implementation to fetch user borrows
       return []; // Placeholder
     } catch (error) {

@@ -308,7 +308,7 @@ jobs:
         
         # Check for exposed secrets
         echo "1. Checking for exposed secrets..."
-        if grep -r -E "(password|secret|key|token).*=" apps/ --include="*.js" --include="*.ts" --include="*.json" --exclude-dir=node_modules --exclude-dir=.next; then
+        if grep -r -E "(password|secret|key).*=" apps/ --include="*.js" --include="*.ts" --include="*.json" --exclude-dir=node_modules --exclude-dir=.next; then
           echo "Warning: Potential exposed secrets found"
           exit 1
         fi

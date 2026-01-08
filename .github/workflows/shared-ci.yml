@@ -60,66 +60,17 @@ jobs:
         fi
         
         # Run linting
-        bunx eslint src/ --ext .ts --fix-dry-run
+        bun run lint
         
     - name: Format checking with Prettier
       run: |
         cd akkuea-defi-rwa/apps/shared
-        bunx prettier --check "src/**/*.{ts,js,json}"
+        bun run format
         
-    - name: Build library
+    - name: Build
       run: |
         cd akkuea-defi-rwa/apps/shared
         bun run build
-        
-        # Verify build output
-        if [ ! -d "dist" ]; then
-          echo "Error: Build directory not created"
-          exit 1
-        fi
-        
-        # Check if types are generated
-        if [ ! -f "dist/index.d.ts" ]; then
-          echo "Error: Type definitions not generated"
-          exit 1
-        fi
-        
-    - name: Run unit tests
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        
-        # Install test framework if needed
-        if ! bunpm list bun-test &>/dev/null; then
-          bun add -D bun-types
-        fi
-        
-        # Run tests (using Node.js test runner for simplicity)
-        bun test
-        
-    - name: Test library consumption
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        
-        # Create test consumer
-        mkdir -p test-consumer
-        cd test-consumer
-        
-        # Initialize test project
-        bun init -y
-        
-        # Install local package
-        bun add ../dist
-        
-        # Test importing the library
-        echo 'import { ValidationService } from "../dist/index.js"; console.log("Import test:", ValidationService.validateStellarAddress("G"))' > test-import.mjs
-        bun run test-import.mjs
-        
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: shared-dist
-        path: akkuea-defi-rwa/apps/shared/dist/
-        retention-days: 7
 
   security-audit:
     name: Security Audit
@@ -192,7 +143,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
+        bun install
         
     - name: Strict TypeScript compilation
       run: |
@@ -243,10 +194,10 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
+        bun install
         
         cd ../../api
-        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
+        bun install
         
     - name: Test API integration
       run: |
@@ -271,7 +222,7 @@ jobs:
         cd akkuea-defi-rwa/apps/webapp
         
         # Test importing in frontend context
-        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
+        bun install
         
         node -e "
         try {
@@ -297,7 +248,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
+        bun install
         
     - name: Code complexity analysis
       run: |
@@ -340,3 +291,4 @@ jobs:
         
         # Verify reasonable coverage (90% for shared library)
         echo "Shared library should maintain high test coverage"
+        

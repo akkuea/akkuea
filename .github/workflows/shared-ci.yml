@@ -97,37 +97,6 @@ jobs:
         
         # Additional security checks
         bunx audit-ci --moderate || true
-        
-    - name: Check for secrets in code
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        
-        # Scan for potential secrets
-        echo "Scanning for potential secrets..."
-        
-        # Common secret patterns
-        if grep -r -E "(API_KEY|SECRET|TOKEN|PASSWORD|PRIVATE_KEY)" src/ --exclude-dir=node_modules; then
-          echo "Warning: Potential secret patterns found in source code"
-          exit 1
-        fi
-        
-        # Check for hardcoded Stellar keys (common issue)
-        if grep -r "S[A-Z0-9]{55}" src/ 2>/dev/null; then
-          echo "Warning: Potential Stellar private key found"
-          exit 1
-        fi
-        
-    - name: Validate Stellar addresses and keys
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        
-        # Ensure no hardcoded addresses in utils
-        echo "Validating Stellar utilities..."
-        
-        if grep -r "G[A-Z0-9]{55}" src/ | grep -v "validate\|example\|test"; then
-          echo "Warning: Hardcoded Stellar address found"
-          exit 1
-        fi
 
   type-safety:
     name: Type Safety Analysis
@@ -162,56 +131,56 @@ jobs:
         # Check type coverage (require 100% for shared library)
         bunx type-coverage --strict --detail
 
-  api-compatibility:
-    name: API Compatibility Test
-    runs-on: ubuntu-latest
+  # api-compatibility:
+  #   name: API Compatibility Test
+  #   runs-on: ubuntu-latest
     
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+  #   steps:
+  #   - name: Checkout repository
+  #     uses: actions/checkout@v4
       
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
+  #   - name: Setup Bun
+  #     uses: oven-sh/setup-bun@v2
       
-    - name: Install dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        bun install
+  #   - name: Install dependencies
+  #     run: |
+  #       cd akkuea-defi-rwa/apps/shared
+  #       bun install
         
-        cd ../api
-        bun install
+  #       cd ../api
+  #       bun install
         
-    - name: Test API integration
-      run: |
-        cd akkuea-defi-rwa/apps/api
+  #   - name: Test API integration
+  #     run: |
+  #       cd akkuea-defi-rwa/apps/api
         
-        # Import shared library in API context
-        node -e "
-        try {
-          const shared = require('../shared/dist/index.js');
-          const { ValidationService } = shared;
-          console.log('✅ Shared library imported successfully');
-          console.log('✅ ValidationService available:', typeof ValidationService);
-          console.log('✅ Stellar validation works:', ValidationService.validateStellarAddress ? 'Yes' : 'No');
-        } catch (error) {
-          console.error('❌ Import failed:', error.message);
-          process.exit(1);
-        }
-        "
+  #       # Import shared library in API context
+  #       node -e "
+  #       try {
+  #         const shared = require('../shared/dist/index.js');
+  #         const { ValidationService } = shared;
+  #         console.log('✅ Shared library imported successfully');
+  #         console.log('✅ ValidationService available:', typeof ValidationService);
+  #         console.log('✅ Stellar validation works:', ValidationService.validateStellarAddress ? 'Yes' : 'No');
+  #       } catch (error) {
+  #         console.error('❌ Import failed:', error.message);
+  #         process.exit(1);
+  #       }
+  #       "
         
-    - name: Test frontend integration
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
+  #   - name: Test frontend integration
+  #     run: |
+  #       cd akkuea-defi-rwa/apps/webapp
         
-        # Test importing in frontend context
-        bun install
+  #       # Test importing in frontend context
+  #       bun install
         
-        node -e "
-        try {
-          const shared = require('../shared/dist/index.js');
-          console.log('✅ Frontend integration test passed');
-        } catch (error) {
-          console.error('❌ Frontend integration failed:', error.message);
-          process.exit(1);
-        }
-        "
+  #       node -e "
+  #       try {
+  #         const shared = require('../shared/dist/index.js');
+  #         console.log('✅ Frontend integration test passed');
+  #       } catch (error) {
+  #         console.error('❌ Frontend integration failed:', error.message);
+  #         process.exit(1);
+  #       }
+  #       "

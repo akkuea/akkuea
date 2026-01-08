@@ -1,8 +1,7 @@
 import { KYCDocument } from '@real-estate-defi/shared';
-import { StellarService } from '../services/StellarService';
 
 export class KYCController {
-  static async getKYCStatus(userId: string): Promise<{
+  static async getKYCStatus(_userId: string): Promise<{
     status: 'pending' | 'verified' | 'rejected';
     documents: KYCDocument[];
   }> {
@@ -17,7 +16,7 @@ export class KYCController {
     }
   }
 
-  static async submitKYC(data: {
+  static async submitKYC(_data: {
     userId: string;
     documents: {
       type: 'passport' | 'id_card' | 'proof_of_address' | 'other';
@@ -25,7 +24,6 @@ export class KYCController {
     }[];
   }): Promise<{ submissionId: string }> {
     try {
-      const stellar = new StellarService();
       // Implementation to submit KYC documents
       return { submissionId: 'placeholder' };
     } catch (error) {
@@ -34,8 +32,8 @@ export class KYCController {
   }
 
   static async verifyDocument(
-    documentId: string,
-    data: {
+    _documentId: string,
+    _data: {
       verified: boolean;
       notes?: string;
     },
@@ -48,7 +46,7 @@ export class KYCController {
     }
   }
 
-  static async getUserDocuments(userId: string): Promise<KYCDocument[]> {
+  static async getUserDocuments(_userId: string): Promise<KYCDocument[]> {
     try {
       // Implementation to fetch user documents
       return [];

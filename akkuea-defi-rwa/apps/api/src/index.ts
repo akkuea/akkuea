@@ -33,7 +33,9 @@ const app = new Elysia()
   }))
   .listen(process.env.PORT || 3001);
 
+// eslint-disable-next-line no-console
 console.log(`🚀 Real Estate DeFi API is running on port ${process.env.PORT || 3001}`);
+// eslint-disable-next-line no-console
 console.log(`📚 Swagger docs available at http://localhost:${process.env.PORT || 3001}/swagger`);
 
 export default app;

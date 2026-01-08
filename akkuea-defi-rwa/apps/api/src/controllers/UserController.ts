@@ -1,11 +1,11 @@
-import { User, Transaction, PropertyInfo, BorrowPosition } from '@real-estate-defi/shared';
+import { User, Transaction, PropertyInfo } from '@real-estate-defi/shared';
 import { StellarService } from '../services/StellarService';
 
 export class UserController {
   static async getUser(address: string): Promise<User> {
     try {
-      const stellar = new StellarService();
-      const balance = await stellar.getAccountBalance(address);
+      // const stellar = new StellarService();
+      // const balance = await stellar.getAccountBalance(address);
 
       return {
         address,
@@ -20,12 +20,12 @@ export class UserController {
 
   static async connectWallet(
     address: string,
-    data: { signature: string; message: string },
+    _data: { signature: string; message: string },
   ): Promise<User> {
     try {
       // Verify signature and message
-      const stellar = new StellarService();
-      if (!stellar.validateAddress(address)) {
+      // const stellar = new StellarService();
+      if (!(new StellarService()).validateAddress(address)) {
         throw new Error('Invalid address format');
       }
 
@@ -36,9 +36,9 @@ export class UserController {
     }
   }
 
-  static async getUserTransactions(address: string): Promise<Transaction[]> {
+  static async getUserTransactions(_address: string): Promise<Transaction[]> {
     try {
-      const stellar = new StellarService();
+      // const stellar = new StellarService();
       // Implementation to fetch user transaction history
       return []; // Placeholder
     } catch (error) {
@@ -46,7 +46,7 @@ export class UserController {
     }
   }
 
-  static async getUserPortfolio(address: string): Promise<{
+  static async getUserPortfolio(_address: string): Promise<{
     properties: PropertyInfo[];
     totalValue: number;
     deposits: number;
@@ -54,7 +54,7 @@ export class UserController {
     netWorth: number;
   }> {
     try {
-      const stellar = new StellarService();
+      // const stellar = new StellarService();
       // Implementation to calculate user portfolio
       return {
         properties: [],

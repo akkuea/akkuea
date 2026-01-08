@@ -61,9 +61,9 @@ export class StellarService {
   async callContract(
     contractId: string,
     method: string,
-    args: any[] = [],
+    args: unknown[] = [],
     sourceAccount?: StellarSdk.Account,
-  ): Promise<any> {
+  ): Promise<unknown> {
     try {
       const contract = new StellarSdk.Contract(contractId);
       const transaction = new StellarSdk.TransactionBuilder(

@@ -6,7 +6,7 @@ export const errorHandler = new Elysia().onError(({ error, code, set }) => {
     return {
       success: false,
       error: 'Validation Error',
-      message: error.message,
+      message: error instanceof Error ? error.message : String(error),
       timestamp: new Date().toISOString(),
     };
   }
@@ -36,7 +36,7 @@ export const errorHandler = new Elysia().onError(({ error, code, set }) => {
   return {
     success: false,
     error: 'Server Error',
-    message: error.message || 'An unexpected error occurred',
+    message: error instanceof Error ? error.message : 'An unexpected error occurred',
     timestamp: new Date().toISOString(),
   };
 });

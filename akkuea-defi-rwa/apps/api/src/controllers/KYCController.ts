@@ -1,9 +1,9 @@
-import { KYCDocument } from '@real-estate-defi/shared';
+import type { KycDocument } from '@real-estate-defi/shared';
 
 export class KYCController {
   static async getKYCStatus(_userId: string): Promise<{
     status: 'pending' | 'verified' | 'rejected';
-    documents: KYCDocument[];
+    documents: KycDocument[];
   }> {
     try {
       // Implementation to fetch KYC status
@@ -46,7 +46,7 @@ export class KYCController {
     }
   }
 
-  static async getUserDocuments(_userId: string): Promise<KYCDocument[]> {
+  static async getUserDocuments(_userId: string): Promise<KycDocument[]> {
     try {
       // Implementation to fetch user documents
       return [];

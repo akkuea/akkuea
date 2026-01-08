@@ -1,4 +1,4 @@
-import { User, Transaction, PropertyInfo } from '@real-estate-defi/shared';
+import type { User, Transaction, PropertyInfo } from '@real-estate-defi/shared';
 import { StellarService } from '../services/StellarService';
 
 export class UserController {
@@ -25,7 +25,8 @@ export class UserController {
     try {
       // Verify signature and message
       // const stellar = new StellarService();
-      if (!(new StellarService()).validateAddress(address)) {
+      const stellarService = new StellarService();
+      if (!stellarService.validateAddress(address)) {
         throw new Error('Invalid address format');
       }
 

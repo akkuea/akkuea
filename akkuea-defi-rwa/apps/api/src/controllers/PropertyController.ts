@@ -1,4 +1,4 @@
-import { PropertyInfo, Transaction, ShareOwnership } from '@real-estate-defi/shared';
+import type { PropertyInfo, Transaction, ShareOwnership } from '@real-estate-defi/shared';
 
 export class PropertyController {
   static async getProperties(): Promise<PropertyInfo[]> {

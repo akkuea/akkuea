@@ -1,4 +1,4 @@
-import { LendingPool, DepositPosition, BorrowPosition } from '@real-estate-defi/shared';
+import type { LendingPool, DepositPosition, BorrowPosition } from '@real-estate-defi/shared';
 
 export class LendingController {
   static async getPools(): Promise<LendingPool[]> {

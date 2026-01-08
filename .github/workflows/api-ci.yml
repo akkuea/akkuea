@@ -46,12 +46,12 @@ jobs:
     - name: Linting with ESLint
       run: |
         cd akkuea-defi-rwa/apps/api
-        bun run lint || echo "Linting skipped - configuration needed"
+        bun run lint
         
     - name: Format checking with Prettier
       run: |
         cd akkuea-defi-rwa/apps/api
-        bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json}"
+        bun run format
         
     - name: Build application
       run: |

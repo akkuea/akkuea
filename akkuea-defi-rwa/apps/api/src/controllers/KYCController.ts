@@ -33,10 +33,13 @@ export class KYCController {
     }
   }
 
-  static async verifyDocument(documentId: string, data: {
-    verified: boolean;
-    notes?: string;
-  }): Promise<{ success: boolean }> {
+  static async verifyDocument(
+    documentId: string,
+    data: {
+      verified: boolean;
+      notes?: string;
+    },
+  ): Promise<{ success: boolean }> {
     try {
       // Implementation to verify documents (admin only)
       return { success: true };

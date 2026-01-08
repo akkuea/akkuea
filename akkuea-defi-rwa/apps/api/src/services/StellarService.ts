@@ -6,20 +6,20 @@ export class StellarService {
   private networkPassphrase: string;
 
   constructor(network: 'testnet' | 'mainnet' = 'testnet') {
-    const rpcUrl = network === 'testnet' 
-      ? 'https://soroban-testnet.stellar.org'
-      : 'https://rpc.mainnet.stellar.org';
-    
+    const rpcUrl =
+      network === 'testnet'
+        ? 'https://soroban-testnet.stellar.org'
+        : 'https://rpc.mainnet.stellar.org';
+
     this.server = new SorobanRpc.Server(rpcUrl);
-    this.networkPassphrase = network === 'testnet' 
-      ? StellarSdk.Networks.TESTNET
-      : StellarSdk.Networks.PUBLIC;
+    this.networkPassphrase =
+      network === 'testnet' ? StellarSdk.Networks.TESTNET : StellarSdk.Networks.PUBLIC;
   }
 
   async getAccountBalance(address: string): Promise<string> {
     try {
       const account = await this.server.getAccount(address);
-      return account.balances.find(b => b.asset_type === 'native')?.balance || '0';
+      return account.balances.find((b) => b.asset_type === 'native')?.balance || '0';
     } catch (error) {
       throw new Error(`Failed to get account balance: ${error}`);
     }
@@ -29,9 +29,9 @@ export class StellarService {
     try {
       const preparedTransaction = await this.server.prepareTransaction(transaction);
       const transactionSigned = preparedTransaction.signXdr();
-      
+
       const result = await this.server.sendTransaction(transactionSigned);
-      
+
       if (result.status === 'SUCCESS') {
         return result.hash!;
       } else {
@@ -45,7 +45,7 @@ export class StellarService {
   async getTransactionStatus(txHash: string): Promise<'pending' | 'success' | 'error'> {
     try {
       const result = await this.server.getTransaction(txHash);
-      
+
       if (result.status === 'SUCCESS') {
         return 'success';
       } else if (result.status === 'FAILED') {
@@ -62,7 +62,7 @@ export class StellarService {
     contractId: string,
     method: string,
     args: any[] = [],
-    sourceAccount?: StellarSdk.Account
+    sourceAccount?: StellarSdk.Account,
   ): Promise<any> {
     try {
       const contract = new StellarSdk.Contract(contractId);
@@ -71,16 +71,14 @@ export class StellarService {
         {
           fee: '100',
           networkPassphrase: this.networkPassphrase,
-        }
+        },
       )
-        .addOperation(
-          contract.call(method, ...args)
-        )
+        .addOperation(contract.call(method, ...args))
         .setTimeout(30)
         .build();
 
       const simulated = await this.server.simulateTransaction(transaction);
-      
+
       if (StellarSdk.SorobanData.Api.isSimulatedTransactionSuccess(simulated)) {
         return simulated.result?.toXdr('base64');
       } else {

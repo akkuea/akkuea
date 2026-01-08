@@ -2,12 +2,12 @@ name: Gin Backend CI
 
 on:
   push:
-    branches: ['main']
+    branches: [ main, develop ]
     paths:
       - 'akkuea-edu/packages/gin/**'
       - '.github/workflows/gin.yml'
   pull_request:
-    branches: ['main']
+    branches: [ main, develop ]
     paths:
       - 'akkuea-edu/packages/gin/**'
       - '.github/workflows/gin.yml'

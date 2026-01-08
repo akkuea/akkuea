@@ -43,7 +43,10 @@ export class PropertyController {
     }
   }
 
-  static async buyShares(id: string, data: { buyer: string; shares: number }): Promise<Transaction> {
+  static async buyShares(
+    id: string,
+    data: { buyer: string; shares: number },
+  ): Promise<Transaction> {
     try {
       const stellar = new StellarService();
       // Implementation to handle share purchase

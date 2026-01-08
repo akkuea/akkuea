@@ -5,10 +5,12 @@ on:
     branches: [ main, develop ]
     paths:
       - 'akkuea-defi-rwa/apps/api/**'
+      - '.github/workflows/api-ci.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'akkuea-defi-rwa/apps/api/**'
+      - '.github/workflows/api-ci.yml'
 
 env:
   NODE_VERSION: '20'
@@ -17,7 +19,7 @@ env:
 jobs:
   build-and-test:
     name: Build and Test API
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -90,7 +92,7 @@ jobs:
 
   security-audit:
     name: Security Audit
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -148,7 +150,7 @@ jobs:
 
   performance-analysis:
     name: Performance Analysis
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -211,7 +213,7 @@ jobs:
 
   code-quality:
     name: Code Quality
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository

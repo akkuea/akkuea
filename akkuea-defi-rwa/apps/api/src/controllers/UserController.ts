@@ -6,7 +6,7 @@ export class UserController {
     try {
       const stellar = new StellarService();
       const balance = await stellar.getAccountBalance(address);
-      
+
       return {
         address,
         kycStatus: 'pending',
@@ -18,14 +18,17 @@ export class UserController {
     }
   }
 
-  static async connectWallet(address: string, data: { signature: string; message: string }): Promise<User> {
+  static async connectWallet(
+    address: string,
+    data: { signature: string; message: string },
+  ): Promise<User> {
     try {
       // Verify signature and message
       const stellar = new StellarService();
       if (!stellar.validateAddress(address)) {
         throw new Error('Invalid address format');
       }
-      
+
       // Implementation for wallet connection
       return await this.getUser(address);
     } catch (error) {

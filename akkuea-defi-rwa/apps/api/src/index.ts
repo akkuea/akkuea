@@ -9,15 +9,18 @@ import { errorHandler } from './middleware/errorHandler';
 
 const app = new Elysia()
   .use(cors())
-  .use(swagger({
-    documentation: {
-      info: {
-        title: 'Real Estate DeFi API',
-        version: '1.0.0',
-        description: 'Backend API for Real Estate Tokenization and DeFi Lending Platform on Stellar',
+  .use(
+    swagger({
+      documentation: {
+        info: {
+          title: 'Real Estate DeFi API',
+          version: '1.0.0',
+          description:
+            'Backend API for Real Estate Tokenization and DeFi Lending Platform on Stellar',
+        },
       },
-    },
-  }))
+    }),
+  )
   .use(errorHandler)
   .use(propertyRoutes)
   .use(lendingRoutes)

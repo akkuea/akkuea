@@ -32,7 +32,10 @@ export class LendingController {
     }
   }
 
-  static async deposit(id: string, data: { user: string; amount: number }): Promise<{ txHash: string }> {
+  static async deposit(
+    id: string,
+    data: { user: string; amount: number },
+  ): Promise<{ txHash: string }> {
     try {
       const stellar = new StellarService();
       // Implementation to handle deposit
@@ -42,12 +45,15 @@ export class LendingController {
     }
   }
 
-  static async borrow(id: string, data: {
-    borrower: string;
-    collateralPropertyId: string;
-    collateralShares: number;
-    borrowAmount: number;
-  }): Promise<{ txHash: string }> {
+  static async borrow(
+    id: string,
+    data: {
+      borrower: string;
+      collateralPropertyId: string;
+      collateralShares: number;
+      borrowAmount: number;
+    },
+  ): Promise<{ txHash: string }> {
     try {
       const stellar = new StellarService();
       // Implementation to handle borrowing

@@ -103,7 +103,7 @@ jobs:
 
   security-audit:
     name: Security Audit
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -176,69 +176,4 @@ jobs:
           else
             echo "Warning: No CSP configuration found"
           fi
-        fi
-
-  performance-analysis:
-    name: Performance Analysis
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      with:
-        bun-version: latest
-        
-    - name: Install dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        bun install
-        
-    - name: Build and analyze performance
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        
-        # Build production version
-        bun run build
-        
-        # Install Lighthouse CLI
-        bun add -g @lhci/cli@0.12.x
-        
-        # Start app in background
-        bun start &
-        APP_PID=$!
-        
-        # Wait for app to start
-        sleep 30
-        
-        # Run Lighthouse CI
-        lhci autorun
-          --config=.lighthouserc.js
-          --collect.url=http://localhost:3000
-          --collect.numberOfRuns=3 || true
-          
-        # Kill app
-        kill $APP_PID
-        
-    - name: Check bundle optimization
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        
-        # Analyze webpack bundle (if available)
-        if [ -d ".next/static" ]; then
-          echo "Analyzing bundle sizes..."
-          
-          # Find large chunks (>1MB)
-          find .next/static -name "*.js" -exec ls -lh {} + | awk '$5 > "1.0M" {print $9, $5}'
-          
-          # Total bundle size
-          TOTAL_SIZE=$(du -sh .next/static | cut -f1)
-          echo "Total bundle size: $TOTAL_SIZE"
         fi

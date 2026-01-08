@@ -5,10 +5,12 @@ on:
     branches: [ main, develop ]
     paths:
       - 'akkuea-defi-rwa/**'
+      - '.github/workflows/monorepo-ci.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
     paths:
       - 'akkuea-defi-rwa/**'
+      - '.github/workflows/monorepo-ci.yml'
 
 env:
   NODE_VERSION: '20'
@@ -17,7 +19,7 @@ env:
 jobs:
   monorepo-integrity:
     name: Monorepo Integrity Check
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -90,7 +92,7 @@ jobs:
 
   dependency-audit:
     name: Dependency Security Audit
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -137,7 +139,7 @@ jobs:
 
   performance-benchmark:
     name: Performance Benchmark
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -223,7 +225,7 @@ jobs:
 
   integration-test:
     name: Cross-Workspace Integration
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -292,7 +294,7 @@ jobs:
 
   security-compliance:
     name: Security Compliance Check
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository

@@ -89,7 +89,7 @@ export class StellarService {
         account = {
           accountId: () => source,
           sequenceNumber: () => "0",
-          incrementSequenceNumber: () => {},
+          incrementSequenceNumber: () => { },
         };
       }
 
@@ -104,6 +104,7 @@ export class StellarService {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const simulated: any = await this.server.simulateTransaction(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         transaction as any,
       );
 
@@ -130,7 +131,7 @@ export class StellarService {
       const account = {
         accountId: () => source,
         sequenceNumber: () => "1",
-        incrementSequenceNumber: () => {},
+        incrementSequenceNumber: () => { },
       };
 
       const transaction = new StellarSdk.TransactionBuilder(account, {

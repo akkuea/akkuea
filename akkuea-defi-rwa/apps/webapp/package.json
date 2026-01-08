@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf .next"
   },
@@ -14,19 +14,21 @@
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "stellar-sdk": "^12.0.0",
-    "soroban-client": "^1.0.0",
+    "stellar-sdk": "^12.3.0",
+    "soroban-client": "^1.0.1",
     "@real-estate-defi/shared": "workspace:*"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
+    "@tailwindcss/postcss": "^4.1.18",
+    "@types/node": "^20.19.27",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "bun-types": "latest",
+    "eslint": "^9.39.2",
     "eslint-config-next": "16.1.1",
-    "tailwindcss": "^4",
-    "typescript": "^5",
-    "bun-types": "latest"
+    "eslint-plugin-security": "^3.0.1",
+    "eslint-plugin-xss": "^0.1.12",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3"
   }
 }

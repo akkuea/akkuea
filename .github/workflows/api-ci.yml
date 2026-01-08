@@ -28,16 +28,6 @@ jobs:
       with:
         bun-version: ${{ env.BUN_VERSION }}
         
-    - name: Cache Bun dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.bun/install/cache
-          node_modules/.cache
-        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-bun-
-          
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/api

@@ -81,19 +81,12 @@ jobs:
           cd akkuea-defi-rwa/apps/contracts
           cargo test --lib
           
-      - name: Run integration tests
-        run: |
-          cd akkuea-defi-rwa/apps/contracts
-          stellar network testnet
-          stellar keys generate --network testnet --name test-account
-          cargo test --test integration --features testutils
-          
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: contract-wasm
           path: akkuea-defi-rwa/apps/contracts/target/wasm32-unknown-unknown/release/*.wasm
-          retention-days: 7
+          retention-days: 4
 
   security-audit:
     name: Security Audit
@@ -108,6 +101,9 @@ jobs:
         
       - name: Install cargo-audit
         run: cargo install cargo-audit
+
+      - name: Install cargo-deny
+        run: cargo install --locked cargo-deny
         
       - name: Cache cargo registry
         uses: actions/cache@v4

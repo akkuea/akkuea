@@ -4,11 +4,13 @@ on:
   push:
     branches: ['main']
     paths:
-      - 'packages/soroban/**'
+      - 'akkuea-edu/packages/soroban/**'
+      - '.github/workflows/rust.yml'
   pull_request:
     branches: ['main']
     paths:
-      - 'packages/soroban/**'
+      - 'akkuea-edu/packages/soroban/**'
+      - '.github/workflows/rust.yml'
 
 env:
   CARGO_TERM_COLOR: always
@@ -38,16 +40,16 @@ jobs:
         run: |
           source $HOME/.cargo/env
           cargo build --verbose
-        working-directory: packages/soroban
+        working-directory: akkuea-edu/packages/soroban
 
       - name: Build Soroban contract
         run: |
           source $HOME/.cargo/env
           stellar contract build --verbose
-        working-directory: packages/soroban
+        working-directory: akkuea-edu/packages/soroban
 
       - name: Run Cargo tests
         run: |
           source $HOME/.cargo/env
           cargo test --verbose
-        working-directory: packages/soroban
+        working-directory: akkuea-edu/packages/soroban

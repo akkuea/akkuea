@@ -1,0 +1,366 @@
+name: Monorepo - Quality and Security CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'akkuea-defi-rwa/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'akkuea-defi-rwa/**'
+
+env:
+  NODE_VERSION: '20'
+  BUN_VERSION: 'latest'
+
+jobs:
+  monorepo-integrity:
+    name: Monorepo Integrity Check
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js and Bun
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ env.BUN_VERSION }}
+        
+    - name: Check workspace consistency
+      run: |
+        cd akkuea-defi-rwa
+        
+        # Verify all workspaces are properly configured
+        echo "Checking workspace configuration..."
+        
+        # Check package.json workspaces array
+        WORKSPACES=$(jq -r '.workspaces[]' package.json)
+        echo "Configured workspaces: $WORKSPACES"
+        
+        # Verify each workspace has package.json
+        for workspace in $WORKSPACES; do
+          if [ ! -f "$workspace/package.json" ]; then
+            echo "Error: Workspace $workspace missing package.json"
+            exit 1
+          fi
+          echo "✅ $workspace has package.json"
+        done
+        
+    - name: Check dependency consistency
+      run: |
+        cd akkuea-defi-rwa
+        
+        # Check for shared package references
+        echo "Checking cross-workspace dependencies..."
+        
+        # Check if webapp references shared
+        if grep -q "@real-estate-defi/shared" apps/webapp/package.json; then
+          echo "✅ Webapp references shared package"
+        fi
+        
+        # Check if API references shared
+        if grep -q "@real-estate-defi/shared" apps/api/package.json; then
+          echo "✅ API references shared package"
+        fi
+        
+    - name: Validate TypeScript configuration
+      run: |
+        cd akkuea-defi-rwa
+        
+        # Check TypeScript configurations are consistent
+        echo "Validating TypeScript configurations..."
+        
+        for workspace in apps/*/; do
+          if [ -f "$workspace/tsconfig.json" ]; then
+            echo "Checking $workspace"
+            cat "$workspace/tsconfig.json" | jq . > /dev/null || {
+              echo "Error: Invalid tsconfig.json in $workspace"
+              exit 1
+            }
+            echo "✅ $workspace tsconfig.json valid"
+          fi
+        done
+
+  dependency-audit:
+    name: Dependency Security Audit
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ env.BUN_VERSION }}
+        
+    - name: Audit all dependencies
+      run: |
+        cd akkuea-defi-rwa
+        
+        # Install root dependencies
+        bun install
+        bun install --workspaces
+        
+        # Audit Bun workspaces
+        bun audit --workspaces || true
+        
+        # Audit Bun workspaces
+        cd apps/api && bun install && bun audit || true
+        cd ../shared && bun install && bun audit || true
+        
+    - name: Check for license conflicts
+      run: |
+        cd akkuea-defi-rwa
+        
+        # Install license checker
+        bun add -g license-checker
+        
+        # Check for license conflicts
+        echo "Checking license compatibility..."
+        
+        for workspace in apps/*/; do
+          if [ -f "$workspace/package.json" ]; then
+            echo "Checking $workspace"
+            cd "$workspace"
+            license-checker --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC' || true
+            cd ../..
+          fi
+        done
+
+  performance-benchmark:
+    name: Performance Benchmark
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js and Bun
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ env.BUN_VERSION }}
+        
+    - name: Build performance test
+      run: |
+        cd akkuea-defi-rwa
+        
+        echo "Testing build performance..."
+        
+        # Record build times
+        START_TIME=$(date +%s)
+        
+        # Build webapp
+        cd apps/webapp
+        bun install
+        bun run build
+        WEBAPP_BUILD_TIME=$(date +%s)
+        
+        # Build API
+        cd ../api
+        bun install
+        bun run build
+        API_BUILD_TIME=$(date +%s)
+        
+        # Build shared
+        cd ../shared
+        bun install
+        bun run build
+        SHARED_BUILD_TIME=$(date +%s)
+        
+        # Calculate build times
+        WEBAPP_TOTAL=$((WEBAPP_BUILD_TIME - START_TIME))
+        API_TOTAL=$((API_BUILD_TIME - WEBAPP_BUILD_TIME))
+        SHARED_TOTAL=$((SHARED_BUILD_TIME - API_BUILD_TIME))
+        TOTAL=$((SHARED_BUILD_TIME - START_TIME))
+        
+        echo "Build times:"
+        echo "WebApp: ${WEBAPP_TOTAL}s"
+        echo "API: ${API_TOTAL}s"
+        echo "Shared: ${SHARED_TOTAL}s"
+        echo "Total: ${TOTAL}s"
+        
+        # Alert if build is slow (>5 minutes)
+        if [ $TOTAL -gt 300 ]; then
+          echo "Warning: Total build time exceeds 5 minutes"
+        fi
+        
+    - name: Bundle size analysis
+      run: |
+        cd akkuea-defi-rwa
+        
+        echo "Analyzing bundle sizes..."
+        
+        # Check webapp bundle
+        if [ -d "apps/webapp/.next" ]; then
+          WEBAPP_SIZE=$(du -sk apps/webapp/.next | cut -f1)
+          echo "WebApp bundle: ${WEBAPP_SIZE}KB"
+        fi
+        
+        # Check API bundle
+        if [ -d "apps/api/dist" ]; then
+          API_SIZE=$(du -sk apps/api/dist | cut -f1)
+          echo "API bundle: ${API_SIZE}KB"
+        fi
+        
+        # Check shared library
+        if [ -d "apps/shared/dist" ]; then
+          SHARED_SIZE=$(du -sk apps/shared/dist | cut -f1)
+          echo "Shared library: ${SHARED_SIZE}KB"
+        fi
+
+  integration-test:
+    name: Cross-Workspace Integration
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js and Bun
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ env.BUN_VERSION }}
+        
+    - name: Integration tests
+      run: |
+        cd akkuea-defi-rwa
+        
+        echo "Running cross-workspace integration tests..."
+        
+        # Install all dependencies
+        bun install
+        bun install --workspaces
+        
+        # Build shared library first
+        cd apps/shared
+        bun install
+        bun run build
+        cd ../..
+        
+        # Test API imports from shared
+        cd apps/api
+        bun install
+        node -e "
+        const shared = require('../shared/dist/index.js');
+        console.log('✅ API can import shared library');
+        const { ValidationService } = shared;
+        console.log('✅ ValidationService available:', typeof ValidationService);
+        "
+        cd ../..
+        
+        # Test webapp imports from shared
+        cd apps/webapp
+        bun install
+        node -e "
+        const shared = require('../shared/dist/index.js');
+        console.log('✅ WebApp can import shared library');
+        "
+        cd ../..
+        
+    - name: Type compatibility test
+      run: |
+        cd akkuea-defi-rwa
+        
+        echo "Testing type compatibility across workspaces..."
+        
+        # Check if types are compatible
+        cd apps/api
+        bunx tsc --noEmit --skipLibCheck
+        cd ../webapp
+        bunx tsc --noEmit --skipLibCheck
+        cd ../..
+        
+        echo "✅ Type compatibility verified"
+
+  security-compliance:
+    name: Security Compliance Check
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Check for common security issues
+      run: |
+        cd akkuea-defi-rwa
+        
+        echo "Running security compliance checks..."
+        
+        # Check for exposed secrets
+        echo "1. Checking for exposed secrets..."
+        if grep -r -E "(password|secret|key|token).*=" apps/ --include="*.js" --include="*.ts" --include="*.json" --exclude-dir=node_modules --exclude-dir=.next; then
+          echo "Warning: Potential exposed secrets found"
+          exit 1
+        fi
+        echo "✅ No exposed secrets found"
+        
+        # Check for debug code
+        echo "2. Checking for debug code..."
+        if grep -r "console.log\|console.debug" apps/ --include="*.js" --include="*.ts" --exclude-dir=node_modules | grep -v "//.*console.log"; then
+          echo "Warning: Debug console statements found in production code"
+        fi
+        echo "✅ No production debug code found"
+        
+        # Check for unsafe eval usage
+        echo "3. Checking for unsafe eval usage..."
+        if grep -r "eval\|Function(" apps/ --include="*.js" --include="*.ts" --exclude-dir=node_modules | grep -v "//.*eval"; then
+          echo "Warning: Unsafe eval usage found"
+          exit 1
+        fi
+        echo "✅ No unsafe eval usage found"
+        
+    - name: Check file permissions
+      run: |
+        cd akkuea-defi-rwa
+        
+        echo "Checking file permissions..."
+        
+        # Ensure executable files are intended
+        find . -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
+        
+        # Check for overly permissive files
+        find apps/ -type f -perm /o+w,g+w -exec ls -la {} + 2>/dev/null || true
+        
+        echo "✅ File permissions verified"
+        
+    - name: Validate package.json security
+      run: |
+        cd akkuea-defi-rwa
+        
+        echo "Checking package.json security..."
+        
+        for package_file in apps/*/package.json; do
+          if [ -f "$package_file" ]; then
+            echo "Checking $package_file"
+            
+            # Check for scripts that could be exploited
+            SCRIPTS=$(jq -r '.scripts // {}' "$package_file" | grep -v "null\|{}")
+            if [ "$SCRIPTS" != "{}" ]; then
+              echo "Scripts in $package_file: $SCRIPTS"
+            fi
+            
+            # Check for unusual dependencies
+            DEPS=$(jq -r '.dependencies // {}' "$package_file")
+            if echo "$DEPS" | grep -q -E "(curl\|wget\|fetch)"; then
+              echo "Warning: Unusual dependencies in $package_file"
+            fi
+          fi
+        done

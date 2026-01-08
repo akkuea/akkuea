@@ -5,10 +5,16 @@ on:
     branches: [main]
     paths-ignore:
       - 'akkuea-edu/docs/**'
+    paths:
+      - 'akkuea-edu/**'
+      - '.github/workflows/test.yml'
   pull_request:
     branches: [main]
     paths-ignore:
       - 'akkuea-edu/docs/**'
+    paths:
+      - 'akkuea-edu/**'
+      - '.github/workflows/test.yml'
 
 jobs:
   test:

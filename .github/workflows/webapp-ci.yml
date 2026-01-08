@@ -113,6 +113,11 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
         
     - name: Install dependencies
       run: |
@@ -185,6 +190,11 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ env.NODE_VERSION }}
+
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
         
     - name: Install dependencies
       run: |
@@ -232,40 +242,3 @@ jobs:
           TOTAL_SIZE=$(du -sh .next/static | cut -f1)
           echo "Total bundle size: $TOTAL_SIZE"
         fi
-
-  code-quality:
-    name: Code Quality
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        
-    - name: Install dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        bun install
-        
-    # - name: Test coverage verification
-    #   run: |
-    #     cd akkuea-defi-rwa/apps/webapp
-        
-    #     # Generate coverage report
-    #     bun test -- --coverage --watchAll=false --coverageReporters=text
-        
-    #     # Extract coverage percentage
-    #     COVERAGE=$(bun test -- --coverage --watchAll=false --coverageReporters=json | jq -r '.total.lines.pct' 2>/dev/null || echo "0")
-        
-    #     # Require minimum 80% coverage
-    #     if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-    #       echo "Error: Test coverage $COVERAGE% is below required 80%"
-    #       exit 1
-    #     fi
-        
-    #     echo "Test coverage: $COVERAGE%"
-    

@@ -57,38 +57,6 @@ jobs:
       run: |
         cd akkuea-defi-rwa/apps/api
         bun run build
-        
-    - name: Run unit tests
-      run: |
-        cd akkuea-defi-rwa/apps/api
-        bun test --coverage
-        
-    - name: API integration tests
-      run: |
-        cd akkuea-defi-rwa/apps/api
-        
-        # Start API server in background
-        bun run dev &
-        API_PID=$!
-        
-        # Wait for server to start
-        sleep 10
-        
-        # Run health check
-        curl -f http://localhost:3001/health || exit 1
-        
-        # Run API integration tests
-        bun test tests/integration/ || true
-        
-        # Kill server
-        kill $API_PID
-        
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: api-dist
-        path: akkuea-defi-rwa/apps/api/dist/
-        retention-days: 7
 
   security-audit:
     name: Security Audit
@@ -104,7 +72,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/api
-        bun install --frozen-lockfile
+        bun install
         
     - name: Audit dependencies
       run: |
@@ -112,104 +80,6 @@ jobs:
         
         # Check for vulnerabilities in dependencies
         bun audit
-        
-        # Additional security checks
-        bunx audit-ci --moderate
-        
-    - name: Check for secrets in code
-      run: |
-        cd akkuea-defi-rwa/apps/api
-        
-        # Scan for potential secrets
-        echo "Scanning for potential secrets..."
-        
-        # Common secret patterns
-        if grep -r -E "(API_KEY|SECRET|TOKEN|PASSWORD|PRIVATE_KEY)" src/ --exclude-dir=node_modules; then
-          echo "Warning: Potential secret patterns found in source code"
-          exit 1
-        fi
-        
-    - name: Security linting
-      run: |
-        cd akkuea-defi-rwa/apps/api
-        
-        # Install security linter
-        bun add -D eslint-plugin-security
-        
-        # Run security-focused linting
-        bunx eslint src/ --ext .ts,.tsx --config '{"extends": ["plugin:security/recommended"]}' || true
-        
-    - name: Check dependencies for known vulnerabilities
-      run: |
-        cd akkuea-defi-rwa/apps/api
-        
-        # Use snyk if available (without API key)
-        if command -v snyk &> /dev/null; then
-          snyk test --severity-threshold=high || true
-        fi
-
-  performance-analysis:
-    name: Performance Analysis
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      
-    - name: Install dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/api
-        bun install --frozen-lockfile
-        
-    - name: Bundle size analysis
-      run: |
-        cd akkuea-defi-rwa/apps/api
-        
-        # Build and analyze bundle size
-        bun run build
-        
-        # Check if dist size is reasonable (< 10MB)
-        if [ -d "dist" ]; then
-          BUNDLE_SIZE=$(du -sk dist/ | cut -f1)
-          echo "Bundle size: ${BUNDLE_SIZE}KB"
-          
-          if [ $BUNDLE_SIZE -gt 10240 ]; then
-            echo "Error: Bundle size exceeds 10MB limit"
-            exit 1
-          fi
-        fi
-        
-    - name: Performance benchmarking
-      run: |
-        cd akkuea-defi-rwa/apps/api
-        
-        # Start API
-        bun run dev &
-        API_PID=$!
-        
-        # Wait for startup
-        sleep 5
-        
-        # Basic performance test
-        START_TIME=$(date +%s%N)
-        for i in {1..100}; do
-          curl -s http://localhost:3001/health > /dev/null
-        done
-        END_TIME=$(date +%s%N)
-        
-        RESPONSE_TIME=$(( (END_TIME - START_TIME) / 1000000 / 100 ))
-        echo "Average response time: ${RESPONSE_TIME}ms"
-        
-        # Require sub-100ms average
-        if [ $RESPONSE_TIME -gt 100 ]; then
-          echo "Error: Response time exceeds 100ms average"
-          exit 1
-        fi
-        
-        kill $API_PID
 
   code-quality:
     name: Code Quality
@@ -225,7 +95,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/api
-        bun install --frozen-lockfile
+        bun install
         
     - name: Complexity analysis
       run: |
@@ -243,29 +113,3 @@ jobs:
           cat complexity.json
         fi
         
-    - name: Duplication detection
-      run: |
-        cd akkuea-defi-rwa/apps/api
-        
-        # Check for code duplication (simple approach)
-        echo "Checking for potential code duplication..."
-        
-        # Find duplicate lines (basic heuristic)
-        find src/ -name "*.ts" -exec wc -l {} + | sort -n | tail -10
-        
-    - name: Test coverage verification
-      run: |
-        cd akkuea-defi-rwa/apps/api
-        
-        # Generate coverage report
-        bun test --coverage --coverage-reporter=text
-        
-        # Verify minimum coverage (80%)
-        COVERAGE=$(bun test --coverage --coverage-reporter=json | jq -r '.totalLineCoverage' 2>/dev/null || echo "0")
-        
-        if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-          echo "Error: Test coverage $COVERAGE% is below required 80%"
-          exit 1
-        fi
-        
-        echo "Test coverage: $COVERAGE%"

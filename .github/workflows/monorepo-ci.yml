@@ -101,11 +101,6 @@ jobs:
       with:
         bun-version: ${{ env.BUN_VERSION }}
         
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      with:
-        bun-version: ${{ env.BUN_VERSION }}
-        
     - name: Audit all dependencies
       run: |
         cd akkuea-defi-rwa

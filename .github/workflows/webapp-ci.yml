@@ -31,7 +31,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ~/.bun/install/cache
-        key: ${{ runner.os }}-bun-${{ hashFiles('**/package.json') }}
+        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
         restore-keys: |
           ${{ runner.os }}-bun-
           
@@ -48,7 +48,7 @@ jobs:
     - name: ESLint checking
       run: |
         cd akkuea-defi-rwa/apps/webapp
-        /Users/runner/.bun/bin/bun run lint
+        bun run lint
         
     - name: Format checking with Prettier
       run: |
@@ -58,21 +58,21 @@ jobs:
     - name: Build application
       run: |
         cd akkuea-defi-rwa/apps/webapp
-        /Users/runner/.bun/bin/bun run build
+        bun run build
         
     - name: Run unit tests
       run: |
         cd akkuea-defi-rwa/apps/webapp
         
         # Run tests with coverage
-        /Users/runner/.bun/bin/bun test -- --coverage --watchAll=false
+        bun test --coverage --watchAll=false
         
     - name: E2E tests
       run: |
         cd akkuea-defi-rwa/apps/webapp
         
         # Install Playwright
-        /Users/runner/.bun/bin/bunx playwright install
+        bunx playwright install
         
         # Run E2E tests
         echo "Skipping E2E tests - no test:e2e script defined"

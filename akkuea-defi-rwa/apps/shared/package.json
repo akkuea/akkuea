@@ -20,7 +20,10 @@
     "bun-types": "latest"
   },
   "dependencies": {
-    "stellar-sdk": "^12.0.0",
-    "soroban-client": "^1.0.0"
+    "stellar-sdk": "^12.3.0",
+    "soroban-client": "^1.0.1"
+  },
+  "resolutions": {
+    "stellar-base": "12.1.1"
   }
 }

@@ -13,29 +13,28 @@ export class StellarService {
     this.server = new Server(rpcUrl);
     this.networkPassphrase = network === 'testnet' 
       ? StellarSdk.Networks.TESTNET
-      : 'public';
+      : StellarSdk.Networks.PUBLIC;
   }
 
   async getAccountBalance(address: string): Promise<string> {
     try {
-      const account = await this.server.getAccount(address);
-      return account.balances.find(b => b.asset_type === 'native')?.balance || '0';
+      const account: any = await this.server.getAccount(address);
+      const balances = account.balances || [];
+      const nativeBalance = balances.find((b: any) => b.asset_type === 'native');
+      return nativeBalance?.balance || '0';
     } catch (error) {
       throw new Error(`Failed to get account balance: ${error}`);
     }
   }
 
-  async submitTransaction(transaction: any): Promise<string> {
+  async submitTransaction(signedXdr: string): Promise<string> {
     try {
-      const preparedTransaction = await this.server.prepareTransaction(transaction);
-      const transactionSigned = preparedTransaction.signXdr();
-      
-      const result = await this.server.sendTransaction(transactionSigned);
+      const result: any = await this.server.sendTransaction(signedXdr as any);
       
       if (result.status === 'SUCCESS') {
-        return result.hash!;
+        return result.hash;
       } else {
-        throw new Error(`Transaction failed: ${result.errorResultXdr}`);
+        throw new Error(`Transaction failed: ${result.errorResult || 'Unknown error'}`);
       }
     } catch (error) {
       throw new Error(`Failed to submit transaction: ${error}`);
@@ -62,32 +61,74 @@ export class StellarService {
     contractId: string,
     method: string,
     args: any[] = [],
-    sourceAccount?: any
+    sourceAccount?: string
   ): Promise<any> {
     try {
       const contract = new StellarSdk.Contract(contractId);
-      const transaction = new StellarSdk.TransactionBuilder(
-        sourceAccount || StellarSdk.Keypair.random().publicKey(),
-        {
-          fee: '100',
-          networkPassphrase: this.networkPassphrase,
-        }
-      )
+      const source = sourceAccount || StellarSdk.Keypair.random().publicKey();
+      
+      // Get account details
+      let account: any;
+      try {
+        account = await this.server.getAccount(source);
+      } catch {
+        // Account doesn't exist, create a minimal account object
+        account = {
+          accountId: () => source,
+          sequenceNumber: () => '0',
+          incrementSequenceNumber: () => {}
+        };
+      }
+      
+      const transaction = new StellarSdk.TransactionBuilder(account, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
         .addOperation(
           contract.call(method, ...args)
         )
         .setTimeout(30)
         .build();
- 
-      const simulated = await this.server.simulateTransaction(transaction);
+
+      const simulated: any = await this.server.simulateTransaction(transaction as any);
       
-      if (simulated.result === 'success') {
-        return simulated.result?.toXdr('base64');
-      } else {
+      if (simulated.transactionData) {
+        return simulated.transactionData.toXdr('base64');
+      } else if (simulated.error) {
         throw new Error(`Contract call failed: ${simulated.error}`);
+      } else {
+        throw new Error(`Contract call failed: Unknown simulation result`);
       }
     } catch (error) {
       throw new Error(`Failed to call contract: ${error}`);
+    }
+  }
+
+  buildAndSignTransaction(
+    source: string,
+    secretKey: string,
+    operation: any
+  ): string {
+    try {
+      const keypair = StellarSdk.Keypair.fromSecret(secretKey);
+      const account = {
+        accountId: () => source,
+        sequenceNumber: () => '1',
+        incrementSequenceNumber: () => {}
+      };
+
+      const transaction = new StellarSdk.TransactionBuilder(account, {
+        fee: '100',
+        networkPassphrase: this.networkPassphrase,
+      })
+        .addOperation(operation as any)
+        .setTimeout(30)
+        .build();
+
+      transaction.sign(keypair);
+      return transaction.toXDR();
+    } catch (error) {
+      throw new Error(`Failed to build transaction: ${error}`);
     }
   }
 

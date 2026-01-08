@@ -5,10 +5,12 @@ on:
     branches: [ main, develop ]
     paths:
       - 'akkuea-defi-rwa/apps/shared/**'
+      - '.github/workflows/shared-ci.yml'
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
     paths:
       - 'akkuea-defi-rwa/apps/shared/**'
+      - '.github/workflows/shared-ci.yml'
 
 env:
   NODE_VERSION: '20'
@@ -17,7 +19,7 @@ env:
 jobs:
   build-and-test:
     name: Build and Test Shared Library
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -41,12 +43,12 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
+        bun install
         
     - name: Type checking
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin/bun run build:types
+        bun run build:types
         
     - name: Linting with ESLint
       run: |
@@ -63,12 +65,12 @@ jobs:
     - name: Format checking with Prettier
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin/bunx prettier --check "src/**/*.{ts,js,json}"
+        bunx prettier --check "src/**/*.{ts,js,json}"
         
     - name: Build library
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin/bun run build
+        bun run build
         
         # Verify build output
         if [ ! -d "dist" ]; then
@@ -121,7 +123,7 @@ jobs:
 
   security-audit:
     name: Security Audit
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -133,7 +135,7 @@ jobs:
     - name: Install dependencies
       run: |
         cd akkuea-defi-rwa/apps/shared
-        /Users/runner/.bun/bin//Users/runner/.bun/bin/bun install
+        bun install
         
     - name: Audit dependencies
       run: |
@@ -178,7 +180,7 @@ jobs:
 
   type-safety:
     name: Type Safety Analysis
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -229,7 +231,7 @@ jobs:
 
   api-compatibility:
     name: API Compatibility Test
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
@@ -283,7 +285,7 @@ jobs:
 
   code-quality:
     name: Code Quality
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository

@@ -17,7 +17,7 @@ export interface PropertyInfo {
   documents?: {
     title: string;
     url: string;
-    type: 'deed' | 'appraisal' | 'inspection' | 'other';
+    type: "deed" | "appraisal" | "inspection" | "other";
   }[];
 }
 
@@ -62,20 +62,20 @@ export interface BorrowPosition {
 
 export interface Transaction {
   id: string;
-  type: 'share_purchase' | 'deposit' | 'borrow' | 'repayment' | 'withdrawal';
+  type: "share_purchase" | "deposit" | "borrow" | "repayment" | "withdrawal";
   amount: number;
   from: string;
   to?: string;
   timestamp: Date;
   txHash: string;
-  status: 'pending' | 'confirmed' | 'failed';
-  metadata?: Record<string, any>;
+  status: "pending" | "confirmed" | "failed";
+  metadata?: Record<string, unknown>;
 }
 
 export interface User {
   address: string;
   email?: string;
-  kycStatus: 'pending' | 'verified' | 'rejected';
+  kycStatus: "pending" | "verified" | "rejected";
   reputation: number;
   createdAt: Date;
 }
@@ -83,9 +83,9 @@ export interface User {
 export interface KycDocument {
   id: string;
   userId: string;
-  documentType: 'passport' | 'id_card' | 'proof_of_address' | 'other';
+  documentType: "passport" | "id_card" | "proof_of_address" | "other";
   documentUrl: string;
-  status: 'pending' | 'verified' | 'rejected';
+  status: "pending" | "verified" | "rejected";
   submittedAt: Date;
   verifiedAt?: Date;
 }

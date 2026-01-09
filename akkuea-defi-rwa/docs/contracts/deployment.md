@@ -14,6 +14,7 @@ This guide covers deploying the Real Estate DeFi Platform smart contracts to Ste
 The platform includes two main contracts:
 
 ### 1. Real Estate Token Contract
+
 - **File**: `apps/contracts/src/real_estate_token.rs`
 - **Purpose**: Property tokenization and share management
 - **Key Features**:
@@ -23,6 +24,7 @@ The platform includes two main contracts:
   - Metadata management
 
 ### 2. DeFi Lending Contract
+
 - **File**: `apps/contracts/src/defi_lending.rs`
 - **Purpose**: Lending pools and borrowing operations
 - **Key Features**:
@@ -34,11 +36,13 @@ The platform includes two main contracts:
 ## Build Process
 
 ### 1. Install Rust WASM Target
+
 ```bash
 rustup target add wasm32-unknown-unknown
 ```
 
 ### 2. Build Contracts
+
 ```bash
 cd apps/contracts
 
@@ -49,6 +53,7 @@ cargo build --target wasm32-unknown-unknown --release
 ```
 
 ### 3. Verify Build
+
 ```bash
 # Check if WASM files were created
 ls -la target/wasm32-unknown-unknown/release/
@@ -60,6 +65,7 @@ ls -la target/wasm32-unknown-unknown/release/
 ## Network Setup
 
 ### Testnet Configuration
+
 ```bash
 # Configure Stellar CLI for testnet
 stellar network testnet
@@ -72,6 +78,7 @@ stellar account fund $(stellar keys address) --network testnet
 ```
 
 ### Mainnet Configuration
+
 ```bash
 # Configure Stellar CLI for mainnet
 stellar network mainnet
@@ -85,6 +92,7 @@ stellar keys import --name mainnet-account
 ## Deployment Script
 
 ### Automated Deployment
+
 Use the provided deployment script:
 
 ```bash
@@ -102,6 +110,7 @@ Use the provided deployment script:
 ### Manual Deployment
 
 #### 1. Deploy Real Estate Token Contract
+
 ```bash
 cd apps/contracts
 
@@ -123,6 +132,7 @@ stellar contract invoke \
 ```
 
 #### 2. Deploy DeFi Lending Contract
+
 ```bash
 # Deploy contract (same WASM file, different initialization)
 LENDING_CONTRACT_ID=$(stellar contract deploy \
@@ -144,6 +154,7 @@ stellar contract invoke \
 ## Post-Deployment Configuration
 
 ### 1. Environment Variables
+
 Update your environment files with contract IDs:
 
 ```bash
@@ -154,6 +165,7 @@ STELLAR_NETWORK=testnet
 ```
 
 ### 2. Frontend Configuration
+
 Update frontend configuration:
 
 ```typescript
@@ -165,6 +177,7 @@ export const CONTRACTS = {
 ```
 
 ### 3. API Configuration
+
 Update API configuration:
 
 ```typescript
@@ -178,6 +191,7 @@ export const CONTRACTS = {
 ## Verification
 
 ### 1. Check Contract Status
+
 ```bash
 # Verify contract is deployed
 stellar contract read \
@@ -187,6 +201,7 @@ stellar contract read \
 ```
 
 ### 2. Test Contract Functions
+
 ```bash
 # Test property tokenization
 stellar contract invoke \
@@ -198,6 +213,7 @@ stellar contract invoke \
 ```
 
 ### 3. API Integration Test
+
 ```bash
 # Test API integration
 curl http://localhost:3001/api/properties/TEST_PROPERTY_ID
@@ -206,6 +222,7 @@ curl http://localhost:3001/api/properties/TEST_PROPERTY_ID
 ## Contract Upgrade Process
 
 ### 1. Build New Version
+
 ```bash
 cd apps/contracts
 
@@ -215,6 +232,7 @@ cargo build --target wasm32-unknown-unknown --release
 ```
 
 ### 2. Deploy Upgrade
+
 ```bash
 # Deploy new version
 stellar contract deploy \
@@ -224,7 +242,9 @@ stellar contract deploy \
 ```
 
 ### 3. Migrate Data (if needed)
+
 Some upgrades may require data migration:
+
 ```bash
 # Call migration functions
 stellar contract invoke \
@@ -237,6 +257,7 @@ stellar contract invoke \
 ## Monitoring & Maintenance
 
 ### 1. Contract Monitoring
+
 ```bash
 # Monitor contract events
 stellar contract events \
@@ -246,13 +267,16 @@ stellar contract events \
 ```
 
 ### 2. Performance Metrics
+
 Track these metrics:
+
 - **Transaction success rate**
 - **Gas usage per operation**
 - **Response times**
 - **Error rates**
 
 ### 3. Security Monitoring
+
 - Watch for unusual activity
 - Monitor admin function calls
 - Track large token transfers
@@ -263,6 +287,7 @@ Track these metrics:
 ### Common Issues
 
 #### 1. Insufficient Balance
+
 ```bash
 # Check account balance
 stellar balance
@@ -272,18 +297,21 @@ stellar account fund $(stellar keys address) --network testnet
 ```
 
 #### 2. Contract Not Found
+
 ```bash
 # Verify contract ID format
 stellar contract info $CONTRACT_ID --network testnet
 ```
 
 #### 3. Transaction Failed
+
 ```bash
 # Get transaction details
 stellar transaction --id $TRANSACTION_ID --network testnet
 ```
 
 ### Error Messages
+
 - **"Insufficient fee"**: Increase transaction fee
 - **"Contract not found"**: Verify contract ID and network
 - **"Authorization failed"**: Check signing account

@@ -11,12 +11,14 @@ The Real Estate DeFi Platform API is built with Elysia framework running on Bun,
 ## API Architecture
 
 ### Framework & Runtime
+
 - **Framework**: Elysia (TypeScript-first web framework)
 - **Runtime**: Bun (High-performance JavaScript runtime)
 - **Type Safety**: Full TypeScript coverage from frontend to backend
 - **Documentation**: Auto-generated Swagger/OpenAPI specifications
 
 ### Key Features
+
 - **Type-safe request/response** handling
 - **Automatic validation** with TypeScript types
 - **Structured error handling** with consistent format
@@ -38,6 +40,7 @@ The Real Estate DeFi Platform API is built with Elysia framework running on Bun,
 ## Authentication
 
 The API uses wallet-based authentication:
+
 1. Users connect their Stellar wallet
 2. Sign a challenge message with their private key
 3. API verifies the signature
@@ -46,15 +49,19 @@ The API uses wallet-based authentication:
 ## Request/Response Format
 
 ### Success Response
+
 ```json
 {
   "success": true,
-  "data": { /* Response data */ },
+  "data": {
+    /* Response data */
+  },
   "timestamp": "2026-01-06T10:30:00.000Z"
 }
 ```
 
 ### Error Response
+
 ```json
 {
   "success": false,
@@ -74,6 +81,7 @@ The API uses wallet-based authentication:
 ## Error Handling
 
 ### HTTP Status Codes
+
 - `200` - Success
 - `400` - Bad Request (Validation error)
 - `401` - Unauthorized (Authentication required)
@@ -83,6 +91,7 @@ The API uses wallet-based authentication:
 - `500` - Internal Server Error
 
 ### Error Types
+
 1. **Validation Errors** - Invalid input parameters
 2. **Authentication Errors** - Invalid credentials or signatures
 3. **Authorization Errors** - Insufficient permissions
@@ -101,12 +110,15 @@ Max Age: 86400 seconds (24 hours)
 ## Monitoring & Logging
 
 ### Health Check Endpoint
+
 ```http
 GET /health
 ```
+
 Returns service status, version, and timestamp.
 
 ### Logging
+
 - **Structured JSON logging** for all requests
 - **Error tracking** with stack traces
 - **Performance metrics** for response times
@@ -115,12 +127,14 @@ Returns service status, version, and timestamp.
 ## Security Features
 
 ### Input Validation
+
 - **Type-safe validation** using TypeScript
 - **SQL injection prevention** with parameterized queries
 - **XSS protection** with input sanitization
 - **File upload security** with type and size limits
 
 ### Authentication Security
+
 - **Signature verification** for wallet authentication
 - **Nonce validation** to prevent replay attacks
 - **Session expiration** with configurable timeouts
@@ -129,28 +143,30 @@ Returns service status, version, and timestamp.
 ## Integration Examples
 
 ### Frontend Integration (TypeScript)
+
 ```typescript
-import { PropertyInfo } from '@real-estate-defi/shared';
+import { PropertyInfo } from "@real-estate-defi/shared";
 
 // Type-safe API calls
-const properties = await fetch('/api/properties')
-  .then(res => res.json())
+const properties = await fetch("/api/properties")
+  .then((res) => res.json())
   .then((data: PropertyInfo[]) => data);
 
 // With error handling
 try {
-  const property = await fetch(`/api/properties/${id}`)
-    .then(res => {
-      if (!res.ok) throw new Error('Property not found');
-      return res.json();
-    });
+  const property = await fetch(`/api/properties/${id}`).then((res) => {
+    if (!res.ok) throw new Error("Property not found");
+    return res.json();
+  });
 } catch (error) {
-  console.error('Failed to fetch property:', error);
+  console.error("Failed to fetch property:", error);
 }
 ```
 
 ### Webhook Support
+
 The API supports webhooks for real-time updates:
+
 - **Transaction confirmations**
 - **KYC status changes**
 - **Property listings updates**
@@ -159,20 +175,24 @@ The API supports webhooks for real-time updates:
 ## SDK & Tools
 
 ### TypeScript SDK
-A TypeScript SDK is provided in the `@real-estate-defi/shared` package:
-```typescript
-import { RealEstateAPI } from '@real-estate-defi/shared/api';
 
-const api = new RealEstateAPI('http://localhost:3001');
+A TypeScript SDK is provided in the `@real-estate-defi/shared` package:
+
+```typescript
+import { RealEstateAPI } from "@real-estate-defi/shared/api";
+
+const api = new RealEstateAPI("http://localhost:3001");
 const properties = await api.properties.getAll();
 ```
 
 ### Postman Collection
+
 Pre-configured Postman collection available for API testing and documentation.
 
 ## Environment Configuration
 
 ### Required Environment Variables
+
 ```bash
 # API Configuration
 API_PORT=3001

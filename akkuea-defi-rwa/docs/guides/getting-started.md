@@ -7,6 +7,7 @@ Welcome to the Real Estate DeFi Platform! This guide will help you get up and ru
 Before you begin, ensure you have the following installed:
 
 ### Required Tools
+
 - **Bun** (v1.0.0+) - Package manager and runtime
 - **Node.js** (v18.0.0+) - For frontend development
 - **Rust** (latest) - For contract development
@@ -14,6 +15,7 @@ Before you begin, ensure you have the following installed:
 - **Git** - Version control
 
 ### Optional but Recommended
+
 - **VS Code** with extensions:
   - Rust Analyzer
   - TypeScript and JavaScript Language Features
@@ -23,12 +25,14 @@ Before you begin, ensure you have the following installed:
 ## Quick Installation
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/your-org/real-estate-defi-platform.git
 cd real-estate-defi-platform
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 # Install all dependencies for all workspaces
 bun install:all
@@ -39,6 +43,7 @@ bun install --workspaces
 ```
 
 ### 3. Set Up Stellar CLI
+
 ```bash
 # Install Stellar CLI (if not already installed)
 curl -sSf https://raw.githubusercontent.com/stellar/stellar-cli/main/install.sh | sh
@@ -51,6 +56,7 @@ stellar keys address
 ```
 
 ### 4. Start Development Environment
+
 ```bash
 # Start all services
 bun run dev
@@ -63,10 +69,13 @@ bun run dev:api     # Backend API on http://localhost:3001
 ## Verification Steps
 
 ### 1. Check Frontend
+
 Visit http://localhost:3000 - You should see the landing page.
 
 ### 2. Check API
+
 Visit http://localhost:3001/health - You should see:
+
 ```json
 {
   "status": "ok",
@@ -76,9 +85,11 @@ Visit http://localhost:3001/health - You should see:
 ```
 
 ### 3. Check API Documentation
+
 Visit http://localhost:3001/swagger - You should see the API documentation.
 
 ### 4. Test Smart Contracts
+
 ```bash
 cd apps/contracts
 cargo build --target wasm32-unknown-unknown --release
@@ -95,7 +106,9 @@ cargo build --target wasm32-unknown-unknown --release
 ## Common Issues
 
 ### Port Conflicts
+
 If ports 3000 or 3001 are already in use:
+
 ```bash
 # Kill existing processes
 lsof -ti:3000 | xargs kill -9
@@ -106,7 +119,9 @@ PORT=3002 bun run dev:api
 ```
 
 ### Stellar CLI Issues
+
 If Stellar CLI commands fail:
+
 ```bash
 # Ensure you're on the correct network
 stellar network info
@@ -116,7 +131,9 @@ stellar config reset
 ```
 
 ### Dependency Issues
+
 If you encounter dependency conflicts:
+
 ```bash
 # Clean and reinstall
 bun run clean

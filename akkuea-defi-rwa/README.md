@@ -18,18 +18,21 @@ real-estate-defi-platform/
 ## Features
 
 ### 1. Real Estate Tokenization
+
 - Fractional ownership of properties through tokenization
 - KYC/AML compliance on-chain
 - Automated royalty distribution
 - Metadata storage for property information
 
 ### 2. DeFi Lending Protocol
+
 - Privacy-configurable lending pools
 - Collateralized borrowing using tokenized real estate
 - Institutional-grade privacy features
 - Automated liquidation mechanisms
 
 ### 3. Key Components
+
 - **Smart Contracts**: Soroban contracts for property tokens and lending pools
 - **Frontend**: Next.js with TypeScript and Tailwind CSS
 - **Shared Libraries**: Common utilities, types, and Stellar integration
@@ -38,6 +41,7 @@ real-estate-defi-platform/
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 18+
 - Rust with Soroban CLI
 - Stellar CLI tools
@@ -46,40 +50,42 @@ real-estate-defi-platform/
 
 ```bash
 # Clone and install dependencies
-npm run install:all
+bun run install:all
 
 # Start development environment
-npm run dev
+bun run dev
 ```
 
 ### Development
 
 ```bash
 # Start webapp development server
-npm run dev:webapp
+bun run dev:webapp
 
 # Watch contracts for changes
-npm run dev:contracts
+bun run dev:contracts
 
 # Build all projects
-npm run build
+bun run build
 
 # Run tests
-npm run test
+bun run test
 
 # Lint and type checking
-npm run lint
-npm run typecheck
+bun run lint
+bun run typecheck
 ```
 
 ## Smart Contracts
 
 ### Real Estate Token Contract
+
 - Property tokenization functionality
 - Share ownership tracking
 - Transfer and minting controls
 
 ### DeFi Lending Contract
+
 - Pool management
 - Deposit and borrowing operations
 - Interest calculation and collateral management

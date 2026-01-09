@@ -89,7 +89,7 @@ export class StellarService {
         account = {
           accountId: () => source,
           sequenceNumber: () => "0",
-          incrementSequenceNumber: () => { },
+          incrementSequenceNumber: () => {},
         };
       }
 
@@ -131,7 +131,7 @@ export class StellarService {
       const account = {
         accountId: () => source,
         sequenceNumber: () => "1",
-        incrementSequenceNumber: () => { },
+        incrementSequenceNumber: () => {},
       };
 
       const transaction = new StellarSdk.TransactionBuilder(account, {

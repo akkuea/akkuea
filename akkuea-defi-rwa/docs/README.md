@@ -5,29 +5,34 @@ Welcome to the comprehensive documentation for the Real Estate Tokenization and 
 ## 🏗️ Platform Overview
 
 This platform combines two powerful concepts:
+
 1. **Real Estate Tokenization** - Fractional ownership of properties through blockchain tokens
 2. **DeFi Lending** - Privacy-configurable lending pools using tokenized real estate as collateral
 
 ## 📚 Documentation Sections
 
 ### 🚀 Quick Start
+
 - [Getting Started](./guides/getting-started.md)
 - [Installation Guide](./guides/installation.md)
 - [Development Setup](./guides/development-setup.md)
 
 ### 🏗️ Architecture
+
 - [System Architecture](./architecture/system-architecture.md)
 - [Contract Architecture](./architecture/contracts.md)
 - [API Architecture](./architecture/api.md)
 - [Security Model](./architecture/security.md)
 
 ### 🔧 Smart Contracts
+
 - [Real Estate Token Contract](./contracts/real-estate-token.md)
 - [DeFi Lending Contract](./contracts/defi-lending.md)
 - [Contract Deployment](./contracts/deployment.md)
 - [Contract Testing](./contracts/testing.md)
 
 ### 🌐 API Documentation
+
 - [API Overview](./api/overview.md)
 - [Authentication](./api/authentication.md)
 - [Endpoints Reference](./api/endpoints.md)
@@ -35,12 +40,14 @@ This platform combines two powerful concepts:
 - [Rate Limiting](./api/rate-limiting.md)
 
 ### 🚀 Deployment
+
 - [Environment Setup](./deployment/environment.md)
 - [Testnet Deployment](./deployment/testnet.md)
 - [Mainnet Deployment](./deployment/mainnet.md)
 - [Monitoring & Maintenance](./deployment/monitoring.md)
 
 ### 📖 Guides
+
 - [Property Tokenization Guide](./guides/property-tokenization.md)
 - [DeFi Lending Guide](./guides/defi-lending.md)
 - [KYC Integration](./guides/kyc-integration.md)
@@ -65,6 +72,7 @@ This platform combines two powerful concepts:
 ## 📞 Support
 
 For technical support or questions:
+
 - Create an issue in the GitHub repository
 - Join our community Discord
 - Check the FAQ section
@@ -79,4 +87,4 @@ For technical support or questions:
 
 ---
 
-*This documentation is continuously updated. Last updated: January 2026*
+_This documentation is continuously updated. Last updated: January 2026_

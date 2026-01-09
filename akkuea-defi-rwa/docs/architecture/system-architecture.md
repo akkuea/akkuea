@@ -22,7 +22,9 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 ## Component Breakdown
 
 ### 1. Web Application (apps/webapp)
+
 **Technology Stack:**
+
 - Next.js 14 with App Router
 - TypeScript for type safety
 - Tailwind CSS for styling
@@ -30,6 +32,7 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 - React Query for state management
 
 **Responsibilities:**
+
 - User interface for property browsing
 - Wallet connection and management
 - Share purchase/sale interface
@@ -38,7 +41,9 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 - Portfolio management
 
 ### 2. Backend API (apps/api)
+
 **Technology Stack:**
+
 - Elysia framework (Bun runtime)
 - TypeScript
 - Stellar SDK for blockchain operations
@@ -46,6 +51,7 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 - Built-in validation and error handling
 
 **Responsibilities:**
+
 - RESTful API for frontend consumption
 - Blockchain transaction orchestration
 - KYC verification workflow
@@ -54,13 +60,16 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 - User management
 
 ### 3. Smart Contracts (apps/contracts)
+
 **Technology Stack:**
+
 - Rust programming language
 - Soroban SDK
 - Stellar blockchain
 - WASM compilation target
 
 **Responsibilities:**
+
 - Property tokenization logic
 - Share ownership tracking
 - Lending pool management
@@ -69,7 +78,9 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 - Liquidation logic
 
 ### 4. Shared Library (apps/shared)
+
 **Technology Stack:**
+
 - TypeScript
 - Common type definitions
 - Stellar utilities
@@ -77,6 +88,7 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 - Constants and configurations
 
 **Responsibilities:**
+
 - Type sharing between frontend and backend
 - Common utilities and helpers
 - Validation logic
@@ -86,6 +98,7 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 ## Data Flow Architecture
 
 ### Property Tokenization Flow
+
 ```
 1. User uploads property info → Frontend
 2. Frontend validates → Backend API
@@ -96,6 +109,7 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 ```
 
 ### DeFi Lending Flow
+
 ```
 1. User wants to borrow → Frontend
 2. Frontend calculates available → Backend API
@@ -108,18 +122,21 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 ## Security Architecture
 
 ### 1. Authentication & Authorization
+
 - **Wallet-based authentication** using Stellar signatures
 - **Role-based access control** for different user types
 - **KYC verification** for compliance
 - **Rate limiting** to prevent abuse
 
 ### 2. Smart Contract Security
+
 - **Access control patterns** for admin functions
 - **Reentrancy protection** for lending operations
 - **Input validation** for all external calls
 - **Event logging** for audit trails
 
 ### 3. API Security
+
 - **CORS configuration** for frontend access
 - **Input sanitization** to prevent injection attacks
 - **Environment variable protection** for sensitive data
@@ -128,18 +145,21 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 ## Scalability Considerations
 
 ### 1. Frontend Scaling
+
 - **Static generation** for property listings
 - **Incremental Static Regeneration** for dynamic content
 - **Client-side caching** with React Query
 - **Code splitting** for optimal loading
 
 ### 2. Backend Scaling
+
 - **Horizontal scaling** with stateless API design
 - **Database connection pooling** for efficiency
 - **Redis caching** for frequently accessed data
 - **Queue processing** for background tasks
 
 ### 3. Blockchain Scaling
+
 - **Stellar's high throughput** (5,000+ TPS)
 - **Low transaction fees** for user accessibility
 - **Batch operations** for efficiency
@@ -148,18 +168,21 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 ## Monitoring & Observability
 
 ### 1. Application Monitoring
+
 - **Health check endpoints** for service status
 - **Performance metrics** for response times
 - **Error tracking** with structured logs
 - **User analytics** for platform usage
 
 ### 2. Blockchain Monitoring
+
 - **Transaction monitoring** for failed transactions
 - **Event listening** for real-time updates
 - **Contract state monitoring** for security
 - **Network status** for Stellar operations
 
 ### 3. Infrastructure Monitoring
+
 - **Server resource utilization**
 - **Database performance metrics**
 - **API rate limiting status**
@@ -168,6 +191,7 @@ The Real Estate DeFi Platform is built as a monorepo with multiple specialized a
 ## Deployment Architecture
 
 ### Development Environment
+
 ```
 Local Machine:
 ├── Frontend (localhost:3000)
@@ -177,6 +201,7 @@ Local Machine:
 ```
 
 ### Production Environment
+
 ```
 Cloud Infrastructure:
 ├── Frontend (CDN/Static Hosting)
@@ -190,6 +215,7 @@ Cloud Infrastructure:
 ## Integration Points
 
 ### External Services
+
 1. **Stellar Network** - Blockchain operations
 2. **KYC Providers** - Identity verification
 3. **Property Data APIs** - Real estate information
@@ -197,6 +223,7 @@ Cloud Infrastructure:
 5. **Payment Processors** - Fiat on-ramps
 
 ### Internal Integrations
+
 1. **Shared Types** - Frontend ↔ Backend communication
 2. **Stellar SDK** - All components ↔ Blockchain
 3. **Database Models** - API ↔ Data persistence
@@ -205,16 +232,19 @@ Cloud Infrastructure:
 ## Future Architecture Considerations
 
 ### 1. Multi-chain Support
+
 - Bridge contracts for other blockchains
 - Cross-chain asset transfers
 - Unified asset representation
 
 ### 2. Advanced Privacy Features
+
 - Zero-knowledge proof integration
 - Private lending pools
 - Encrypted transaction data
 
 ### 3. Institutional Features
+
 - Enterprise-grade compliance tools
 - Advanced reporting capabilities
 - Custom contract deployment

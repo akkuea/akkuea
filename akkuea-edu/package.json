@@ -11,10 +11,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "dev": "bun run dev --parallel",
-    "build": "bun run build",
-    "start": "bun run start",
-    "lint": "bun run lint",
-    "test": "bun test",
+    "build": "concurrently \"cd packages/nextjs && bun run build\" \"cd packages/assistant && bun run build\" \"cd packages/agent && bun run build\" \"cd packages/gin && bun run build\" \"cd packages/shared && bun run build\" \"cd packages/soroban && bun run build\"",
+    "start": "concurrently \"cd packages/nextjs && bun run start\" \"cd packages/assistant && bun run start\" \"cd packages/agent && bun run start\" \"cd packages/gin && bun run start\" \"cd packages/shared && bun run start\" \"cd packages/soroban && bun run start\"", 
+    "lint": "concurrently \"cd packages/nextjs && bun run lint\" \"cd packages/assistant && bun run lint\" \"cd packages/agent && bun run lint\" \"cd packages/gin && bun run lint\" \"cd packages/shared && bun run lint\" \"cd packages/soroban && bun run lint\"",
+    "test": "bun test --workspaces",
     "clean": "bun run clean --parallel",
     "prepare": "husky"
   },
@@ -25,6 +25,7 @@
   "devDependencies": {
     "@types/node": "^24.10.4",
     "bun-types": "^1.3.5",
+    "concurrently": "^8.2.2",
     "prettier": "^3.7.4",
     "typescript": "^5.9.3"
   },

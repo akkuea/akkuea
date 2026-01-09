@@ -16,14 +16,14 @@ Please read this guide carefully before submitting your contribution.
    ```
 
 2. Install dependencies:
-   ```bash
-   npm install
-   ```
+    ```bash
+    bun install
+    ```
 
 3. Run the app locally:
-   ```bash
-   npm run dev
-   ```
+    ```bash
+    bun run dev
+    ```
 
 ---
 
@@ -66,12 +66,12 @@ feature/add-profile-page
 
 Run linting:
 ```bash
-npm run lint
+bun run lint
 ```
 
 Run tests:
 ```bash
-npm run test
+bun run test
 ```
 
 PRs will only be merged if they pass linting and tests ✅.

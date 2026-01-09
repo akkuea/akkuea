@@ -14,13 +14,13 @@
     "next": "16.1.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "stellar-sdk": "^12.3.0",
+    "stellar-sdk": "^13.3.0",
     "soroban-client": "^1.0.1",
     "@real-estate-defi/shared": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",
-    "@types/node": "^20.19.27",
+    "@types/node": "^25.0.3",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "bun-types": "latest",

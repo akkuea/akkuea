@@ -10,27 +10,27 @@
     "build": "bun build index.ts --target bun --outdir dist",
     "start": "bun run dist/index.js",
     "test": "bun test",
-    "lint": "eslint \"src/**/*.ts\"",
+    "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,json}\"",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "elysia": "^1.0.0",
-    "@elysiajs/cors": "^1.0.0",
-    "@elysiajs/swagger": "^1.0.0",
-    "stellar-sdk": "^12.0.0",
-    "soroban-client": "^1.0.0",
+    "elysia": "^1.4.21",
+    "@elysiajs/cors": "^1.4.1",
+    "@elysiajs/swagger": "^1.3.1",
+    "stellar-sdk": "^13.3.0",
+    "soroban-client": "^1.0.1",
     "@real-estate-defi/shared": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@typescript-eslint/eslint-plugin": "^6.0.0",
-    "@typescript-eslint/parser": "^6.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.21.0",
+    "@typescript-eslint/parser": "^6.21.0",
     "complexity-report": "^2.0.0-alpha",
-    "eslint": "^8.0.0",
-    "eslint-config-prettier": "^9.0.0",
-    "prettier": "^3.0.0",
-    "typescript": "^5"
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.2",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3"
   },
   "peerDependencies": {
     "typescript": "^5"

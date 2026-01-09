@@ -10,30 +10,30 @@
   ],
   "scripts": {
     "dev": "concurrently \"bun run dev:webapp\" \"bun run dev:api\"",
-    "dev:webapp": "bun run dev --workspace=apps/webapp",
-    "dev:api": "bun run dev --workspace=apps/api",
-    "build": "bun run build --workspaces",
-    "build:webapp": "bun run build --workspace=apps/webapp",
-    "build:api": "bun run build --workspace=apps/api",
-    "build:shared": "bun run build --workspace=apps/shared",
+    "dev:webapp": "cd apps/webapp && bun run dev",
+    "dev:api": "cd apps/api && bun run dev",
+    "build": "concurrently \"bun run build:api\" \"bun run build:webapp\" \"bun run build:shared\"",
+    "build:webapp": "cd apps/webapp && bun run build",
+    "build:api": "cd apps/api && bun run build",
+    "build:shared": "cd apps/shared && bun run build",
     "build:contracts": "./scripts/build.sh",
     "test": "bun test --workspaces",
-    "lint": "bun run lint --workspaces",
-    "typecheck": "bun run type-check --workspaces",
+    "lint": "concurrently \"cd apps/api && bun run lint\" \"cd apps/webapp && bun run lint\" \"cd apps/shared && bun run lint\"",
+    "typecheck": "concurrently \"cd apps/api && bun run type-check\" \"cd apps/webapp && bun run type-check\" \"cd apps/shared && bun run type-check\"",
     "clean": "bun run clean --workspaces && rm -rf node_modules",
     "install:all": "bun install && bun install --workspaces",
     "deploy:contracts": "./scripts/deploy.sh",
-    "format": "prettier --write \"**/*.{js,ts,tsx,json,md,rs}\""
+    "format": "prettier --write \"**/*.{js,ts,tsx,json,md,rs}\" \"!apps/contracts/**\""
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "concurrently": "^8.2.0",
-    "prettier": "^3.0.0",
-    "typescript": "^5.0.0"
+    "@types/node": "^25.0.3",
+    "concurrently": "^9.2.1",
+    "prettier": "^3.7.4",
+    "typescript": "^5.9.3"
   },
   "dependencies": {
-    "stellar-sdk": "^12.0.0",
-    "soroban-client": "^1.0.0"
+    "soroban-client": "^1.0.1",
+    "stellar-sdk": "^13.3.0"
   },
   "engines": {
     "node": ">=18.0.0"

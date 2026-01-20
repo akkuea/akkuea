@@ -78,7 +78,11 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-family:
+    var(--font-sans),
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 /* Cursor pointer for interactive elements */
@@ -190,7 +194,12 @@ input[type="button"],
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, transparent 40%, var(--accent) 50%, transparent 60%);
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    var(--accent) 50%,
+    transparent 60%
+  );
   -webkit-mask:
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
@@ -213,7 +222,11 @@ input[type="button"],
 }
 
 .gradient-text-accent {
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-secondary) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--accent) 0%,
+    var(--accent-secondary) 100%
+  );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -221,7 +234,8 @@ input[type="button"],
 
 /* ASCII art decorations */
 .ascii-border {
-  border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Ctext x='0' y='7' font-size='8' fill='%23404040'%3E+%3C/text%3E%3C/svg%3E") 4 repeat;
+  border-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Ctext x='0' y='7' font-size='8' fill='%23404040'%3E+%3C/text%3E%3C/svg%3E")
+    4 repeat;
 }
 
 /* Pixel-perfect borders */
@@ -235,13 +249,23 @@ input[type="button"],
 
 /* Animation utilities */
 @keyframes flicker {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 @keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
 @keyframes slide-up {
@@ -256,7 +280,8 @@ input[type="button"],
 }
 
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -274,7 +299,8 @@ input[type="button"],
 }
 
 @keyframes gradient-x {
-  0%, 100% {
+  0%,
+  100% {
     background-position: 0% 50%;
   }
   50% {
@@ -283,13 +309,23 @@ input[type="button"],
 }
 
 @keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
 }
 
 @keyframes typing {
-  from { width: 0; }
-  to { width: 100%; }
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
 }
 
 .animate-flicker {
@@ -319,7 +355,9 @@ input[type="button"],
 
 /* Hover lift effect */
 .hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .hover-lift:hover {
@@ -351,7 +389,9 @@ input[type="button"],
 
 /* Monospace text styling */
 .font-mono {
-  font-feature-settings: "tnum" 1, "zero" 1;
+  font-feature-settings:
+    "tnum" 1,
+    "zero" 1;
 }
 
 /* Status indicator */

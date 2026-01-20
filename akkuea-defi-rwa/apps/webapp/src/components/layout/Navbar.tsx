@@ -7,8 +7,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Menu,
   X,
-  Sun,
-  Moon,
   Wallet,
   Building2,
   LayoutDashboard,
@@ -30,7 +28,7 @@ const navigation = [
 
 export function Navbar() {
   const pathname = usePathname();
-  const { theme, toggleTheme } = useTheme();
+  useTheme();
   const { address, isConnected, isConnecting, connect, disconnect } = useWallet();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);

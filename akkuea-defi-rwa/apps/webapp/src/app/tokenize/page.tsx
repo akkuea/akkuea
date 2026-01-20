@@ -8,7 +8,6 @@ import {
   Building2,
   Coins,
   CheckCircle2,
-  X,
   Link2,
   Image as ImageIcon,
   MapPin,
@@ -24,7 +23,7 @@ import {
 import { Navbar, Footer } from '@/components/layout';
 import { Card, Button, Input, Textarea, Badge, Stepper } from '@/components/ui';
 import { useWallet } from '@/context/WalletContext';
-import { formatCurrency, cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { pageTransition, fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
 
 const steps = [

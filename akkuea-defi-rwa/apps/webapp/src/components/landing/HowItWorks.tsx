@@ -95,7 +95,7 @@ export function HowItWorks() {
           <div className="absolute left-[23px] top-0 bottom-0 w-px bg-gradient-to-b from-[#262626] via-[#404040] to-[#262626] hidden md:block" />
 
           <div className="space-y-6">
-            {steps.map((step, index) => (
+            {steps.map((step) => (
               <motion.div
                 key={step.title}
                 variants={itemVariants}

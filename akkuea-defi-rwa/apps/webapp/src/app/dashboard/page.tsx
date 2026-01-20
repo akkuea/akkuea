@@ -155,7 +155,7 @@ export default function DashboardPage() {
           <motion.div variants={staggerItem} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-              <p className="text-sm text-neutral-500 mt-1">Welcome back! Here's your portfolio overview.</p>
+              <p className="text-sm text-neutral-500 mt-1">Welcome back! Here&apos;s your portfolio overview.</p>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={() => setShowBalance(!showBalance)}>

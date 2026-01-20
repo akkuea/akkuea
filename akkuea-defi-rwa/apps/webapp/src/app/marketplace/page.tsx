@@ -7,14 +7,9 @@ import {
   SlidersHorizontal,
   MapPin,
   Building2,
-  TrendingUp,
-  Users,
   DollarSign,
-  Percent,
   Lock,
   ArrowRight,
-  X,
-  ChevronDown,
 } from 'lucide-react';
 import { Navbar, Footer } from '@/components/layout';
 import { Card, Button, Badge, Input, Modal } from '@/components/ui';
@@ -143,6 +138,7 @@ function InvestModal({ property, isOpen, onClose }: InvestModalProps) {
       <div className="space-y-6">
         {/* Property Summary */}
         <div className="flex gap-4 p-4 bg-[#1a1a1a] border border-[#262626] rounded-lg">
+          {/* When we use images from db, we use Image component from next/image */}
           <img
             src={property.image}
             alt={property.name}

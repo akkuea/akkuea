@@ -5,22 +5,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Landmark,
   TrendingUp,
-  Lock,
   Shield,
   Calculator,
   Eye,
   EyeOff,
-  AlertCircle,
   CheckCircle2,
   Clock,
-  ArrowRight,
   Percent,
   DollarSign,
   Coins,
   FileText,
   ChevronDown,
   ChevronUp,
-  Info,
   Wallet,
 } from 'lucide-react';
 import { Navbar, Footer } from '@/components/layout';

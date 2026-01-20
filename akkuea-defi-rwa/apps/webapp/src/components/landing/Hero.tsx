@@ -1,20 +1,10 @@
 'use client';
 
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useMotionValue } from 'framer-motion';
 import { ArrowRight, ArrowUpRight } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 
-const ASCII_ART = `
-    ╔═══════════════════════════════╗
-    ║   ▄▀▀▄ ▄▀▀▄ █  █ █ █ █▀▀ ▄▀▀▄  ║
-    ║   █▄▄█ █  █ █▀▀█ █ █ █▀▀ █▄▄█  ║
-    ║   █  █ ▀▄▄▀ █  █ ▀▄█ █▄▄ █  █  ║
-    ╚═══════════════════════════════╝
-`;
-
-const GRID_CHARS = ['·', '+', '×', '○', '□'];
 
 function GridBackground() {
   return (
@@ -41,34 +31,6 @@ function GridBackground() {
   );
 }
 
-function TypewriterText({ text, delay = 0 }: { text: string; delay?: number }) {
-  const [displayText, setDisplayText] = useState('');
-  const [showCursor, setShowCursor] = useState(true);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      let index = 0;
-      const interval = setInterval(() => {
-        if (index <= text.length) {
-          setDisplayText(text.slice(0, index));
-          index++;
-        } else {
-          clearInterval(interval);
-          setTimeout(() => setShowCursor(false), 1000);
-        }
-      }, 50);
-      return () => clearInterval(interval);
-    }, delay);
-    return () => clearTimeout(timeout);
-  }, [text, delay]);
-
-  return (
-    <span className="font-mono">
-      {displayText}
-      {showCursor && <span className="animate-blink">_</span>}
-    </span>
-  );
-}
 
 function MarqueeText() {
   const items = [

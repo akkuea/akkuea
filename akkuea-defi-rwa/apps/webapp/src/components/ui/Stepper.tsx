@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { Check } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { motion } from "framer-motion";
+import { Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface Step {
   id: string;
@@ -18,7 +18,7 @@ interface StepperProps {
 
 export function Stepper({ steps, currentStep, className }: StepperProps) {
   return (
-    <div className={cn('w-full', className)}>
+    <div className={cn("w-full", className)}>
       <div className="flex items-center justify-between">
         {steps.map((step, index) => (
           <div key={step.id} className="flex items-center flex-1">
@@ -29,18 +29,18 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
                   scale: index === currentStep ? 1.1 : 1,
                   backgroundColor:
                     index < currentStep
-                      ? 'rgb(16, 185, 129)'
+                      ? "rgb(16, 185, 129)"
                       : index === currentStep
-                      ? 'rgb(16, 185, 129)'
-                      : 'rgb(39, 39, 42)',
+                        ? "rgb(16, 185, 129)"
+                        : "rgb(39, 39, 42)",
                 }}
                 className={cn(
-                  'w-10 h-10 rounded-full flex items-center justify-center border-2',
+                  "w-10 h-10 rounded-full flex items-center justify-center border-2",
                   index < currentStep
-                    ? 'border-emerald-500'
+                    ? "border-emerald-500"
                     : index === currentStep
-                    ? 'border-emerald-500 shadow-lg shadow-emerald-500/30'
-                    : 'border-zinc-700'
+                      ? "border-emerald-500 shadow-lg shadow-emerald-500/30"
+                      : "border-zinc-700",
                 )}
               >
                 {index < currentStep ? (
@@ -48,8 +48,8 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
                 ) : (
                   <span
                     className={cn(
-                      'text-sm font-semibold',
-                      index === currentStep ? 'text-white' : 'text-zinc-500'
+                      "text-sm font-semibold",
+                      index === currentStep ? "text-white" : "text-zinc-500",
                     )}
                   >
                     {index + 1}
@@ -59,8 +59,8 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
               <div className="mt-2 text-center">
                 <p
                   className={cn(
-                    'text-sm font-medium',
-                    index <= currentStep ? 'text-white' : 'text-zinc-500'
+                    "text-sm font-medium",
+                    index <= currentStep ? "text-white" : "text-zinc-500",
                   )}
                 >
                   {step.title}
@@ -77,7 +77,7 @@ export function Stepper({ steps, currentStep, className }: StepperProps) {
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{
-                    width: index < currentStep ? '100%' : '0%',
+                    width: index < currentStep ? "100%" : "0%",
                   }}
                   transition={{ duration: 0.3 }}
                   className="absolute inset-0 bg-emerald-500"

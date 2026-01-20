@@ -1,40 +1,47 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { motion } from 'framer-motion';
-import { Building2, Github, Twitter, MessageCircle, Mail, ArrowUpRight } from 'lucide-react';
+import Link from "next/link";
+import { motion } from "framer-motion";
+import {
+  Building2,
+  Github,
+  Twitter,
+  MessageCircle,
+  Mail,
+  ArrowUpRight,
+} from "lucide-react";
 
 const footerLinks = {
   product: [
-    { name: 'Marketplace', href: '/marketplace' },
-    { name: 'Tokenize', href: '/tokenize' },
-    { name: 'Lending', href: '/lending' },
-    { name: 'Dashboard', href: '/dashboard' },
+    { name: "Marketplace", href: "/marketplace" },
+    { name: "Tokenize", href: "/tokenize" },
+    { name: "Lending", href: "/lending" },
+    { name: "Dashboard", href: "/dashboard" },
   ],
   resources: [
-    { name: 'Documentation', href: '#' },
-    { name: 'API Reference', href: '#' },
-    { name: 'Whitepaper', href: '#' },
-    { name: 'Blog', href: '#' },
+    { name: "Documentation", href: "#" },
+    { name: "API Reference", href: "#" },
+    { name: "Whitepaper", href: "#" },
+    { name: "Blog", href: "#" },
   ],
   company: [
-    { name: 'About', href: '#' },
-    { name: 'Careers', href: '#' },
-    { name: 'Press', href: '#' },
-    { name: 'Contact', href: '#' },
+    { name: "About", href: "#" },
+    { name: "Careers", href: "#" },
+    { name: "Press", href: "#" },
+    { name: "Contact", href: "#" },
   ],
   legal: [
-    { name: 'Privacy', href: '#' },
-    { name: 'Terms', href: '#' },
-    { name: 'Cookies', href: '#' },
+    { name: "Privacy", href: "#" },
+    { name: "Terms", href: "#" },
+    { name: "Cookies", href: "#" },
   ],
 };
 
 const socialLinks = [
-  { name: 'Twitter', icon: Twitter, href: '#' },
-  { name: 'GitHub', icon: Github, href: '#' },
-  { name: 'Discord', icon: MessageCircle, href: '#' },
-  { name: 'Email', icon: Mail, href: '#' },
+  { name: "Twitter", icon: Twitter, href: "#" },
+  { name: "GitHub", icon: Github, href: "#" },
+  { name: "Discord", icon: MessageCircle, href: "#" },
+  { name: "Email", icon: Mail, href: "#" },
 ];
 
 const containerVariants = {
@@ -79,8 +86,8 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-xs text-neutral-500 mb-6 max-w-xs leading-relaxed">
-              Democratizing real estate investment through blockchain technology.
-              Fractional ownership for everyone.
+              Democratizing real estate investment through blockchain
+              technology. Fractional ownership for everyone.
             </p>
             <div className="flex items-center gap-2">
               {socialLinks.map((social) => (
@@ -187,13 +194,10 @@ export function Footer() {
           </p>
           <div className="flex items-center gap-4">
             <p className="text-[10px] text-neutral-600 font-mono">
-              Built on{' '}
-              <span className="text-white">Stellar</span>
+              Built on <span className="text-white">Stellar</span>
             </p>
             <span className="text-neutral-700">|</span>
-            <p className="text-[10px] text-neutral-600 font-mono">
-              v1.0.0
-            </p>
+            <p className="text-[10px] text-neutral-600 font-mono">v1.0.0</p>
           </div>
         </motion.div>
 
@@ -206,7 +210,7 @@ export function Footer() {
           className="mt-8 flex justify-center"
         >
           <pre className="text-[6px] sm:text-[8px] font-mono text-neutral-800 select-none leading-tight text-center">
-{`╔═══════════════════════════════════════════════════════════╗
+            {`╔═══════════════════════════════════════════════════════════╗
 ║  █████╗ ██╗  ██╗██╗  ██╗██╗   ██╗███████╗ █████╗          ║
 ║ ██╔══██╗██║ ██╔╝██║ ██╔╝██║   ██║██╔════╝██╔══██╗         ║
 ║ ███████║█████╔╝ █████╔╝ ██║   ██║█████╗  ███████║         ║

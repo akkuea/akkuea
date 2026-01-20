@@ -1,6 +1,12 @@
-'use client';
+"use client";
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
 
 interface WalletState {
   address: string | null;
@@ -34,7 +40,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     // Mock connected state
     setState({
-      address: 'GBXGQ...7K4M',
+      address: "GBXGQ...7K4M",
       balance: 12450.75,
       isConnecting: false,
       isConnected: true,
@@ -55,7 +61,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 export function useWallet() {
   const context = useContext(WalletContext);
   if (!context) {
-    throw new Error('useWallet must be used within a WalletProvider');
+    throw new Error("useWallet must be used within a WalletProvider");
   }
   return context;
 }

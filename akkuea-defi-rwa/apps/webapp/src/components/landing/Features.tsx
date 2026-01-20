@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
+import { motion } from "framer-motion";
 import {
   Blocks,
   Shield,
@@ -11,56 +11,64 @@ import {
   Zap,
   Users,
   ArrowUpRight,
-} from 'lucide-react';
+} from "lucide-react";
 
 const features = [
   {
     icon: Blocks,
-    title: 'Fractional Ownership',
-    description: 'Own premium real estate with investments starting at $100. NFT-based shares ensure transparent ownership.',
-    tag: '001',
+    title: "Fractional Ownership",
+    description:
+      "Own premium real estate with investments starting at $100. NFT-based shares ensure transparent ownership.",
+    tag: "001",
   },
   {
     icon: Shield,
-    title: 'Institutional Security',
-    description: 'Multi-sig wallets, hardware security modules, and comprehensive insurance protect your investments.',
-    tag: '002',
+    title: "Institutional Security",
+    description:
+      "Multi-sig wallets, hardware security modules, and comprehensive insurance protect your investments.",
+    tag: "002",
   },
   {
     icon: Coins,
-    title: 'DeFi Lending',
-    description: 'Use tokenized real estate as collateral or earn yields by providing liquidity to lending pools.',
-    tag: '003',
+    title: "DeFi Lending",
+    description:
+      "Use tokenized real estate as collateral or earn yields by providing liquidity to lending pools.",
+    tag: "003",
   },
   {
     icon: Globe2,
-    title: 'Emerging Markets',
-    description: 'Access high-growth real estate markets in Latin America and Africa.',
-    tag: '004',
+    title: "Emerging Markets",
+    description:
+      "Access high-growth real estate markets in Latin America and Africa.",
+    tag: "004",
   },
   {
     icon: LineChart,
-    title: 'Chainlink Oracles',
-    description: 'Real-time property valuations powered by Chainlink oracles ensure accurate pricing.',
-    tag: '005',
+    title: "Chainlink Oracles",
+    description:
+      "Real-time property valuations powered by Chainlink oracles ensure accurate pricing.",
+    tag: "005",
   },
   {
     icon: Lock,
-    title: 'ZK Privacy',
-    description: 'Zero-knowledge proofs verify eligibility without revealing sensitive details.',
-    tag: '006',
+    title: "ZK Privacy",
+    description:
+      "Zero-knowledge proofs verify eligibility without revealing sensitive details.",
+    tag: "006",
   },
   {
     icon: Zap,
-    title: 'Instant Settlement',
-    description: 'Stellar blockchain enables near-instant transactions with fees under $0.01.',
-    tag: '007',
+    title: "Instant Settlement",
+    description:
+      "Stellar blockchain enables near-instant transactions with fees under $0.01.",
+    tag: "007",
   },
   {
     icon: Users,
-    title: 'KYC Compliant',
-    description: 'Fully compliant with regulatory requirements. Verified investors only.',
-    tag: '008',
+    title: "KYC Compliant",
+    description:
+      "Fully compliant with regulatory requirements. Verified investors only.",
+    tag: "008",
   },
 ];
 
@@ -121,7 +129,9 @@ function FeatureCard({
           {title}
           <ArrowUpRight className="w-3.5 h-3.5 text-neutral-600 opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-0.5 -translate-y-0 group-hover:-translate-y-0.5 transition-all" />
         </h3>
-        <p className="text-xs text-neutral-500 leading-relaxed">{description}</p>
+        <p className="text-xs text-neutral-500 leading-relaxed">
+          {description}
+        </p>
       </div>
 
       {/* Bottom accent line */}
@@ -157,8 +167,8 @@ export function Features() {
             <span className="text-neutral-500">of Finance</span>
           </h2>
           <p className="text-sm text-neutral-500 max-w-lg">
-            Combining blockchain technology with real-world assets to create a transparent,
-            efficient, and accessible investment platform.
+            Combining blockchain technology with real-world assets to create a
+            transparent, efficient, and accessible investment platform.
           </p>
         </motion.div>
 
@@ -167,7 +177,7 @@ export function Features() {
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: '-50px' }}
+          viewport={{ once: true, margin: "-50px" }}
           className="grid md:grid-cols-2 lg:grid-cols-4 gap-4"
         >
           {features.map((feature) => (

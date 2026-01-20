@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   SlidersHorizontal,
@@ -10,115 +10,124 @@ import {
   DollarSign,
   Lock,
   ArrowRight,
-} from 'lucide-react';
-import { Navbar, Footer } from '@/components/layout';
-import { Card, Button, Badge, Input, Modal } from '@/components/ui';
-import { formatCurrency, cn } from '@/lib/utils';
-import { pageTransition, staggerContainer, staggerItem } from '@/lib/animations';
+} from "lucide-react";
+import { Navbar, Footer } from "@/components/layout";
+import { Card, Button, Badge, Input, Modal } from "@/components/ui";
+import { formatCurrency, cn } from "@/lib/utils";
+import {
+  pageTransition,
+  staggerContainer,
+  staggerItem,
+} from "@/lib/animations";
 
 // Mock property data
 const properties = [
   {
     id: 1,
-    name: 'Lagos Marina Towers',
-    location: 'Lagos, Nigeria',
-    region: 'Africa',
-    type: 'Residential',
+    name: "Lagos Marina Towers",
+    location: "Lagos, Nigeria",
+    region: "Africa",
+    type: "Residential",
     price: 2500000,
     tokenPrice: 100,
     totalTokens: 25000,
     soldTokens: 18750,
     yield: 8.5,
     minInvestment: 100,
-    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800',
+    image: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800",
     featured: true,
     verified: true,
   },
   {
     id: 2,
-    name: 'Mexico City Business Center',
-    location: 'CDMX, Mexico',
-    region: 'Latin America',
-    type: 'Commercial',
+    name: "Mexico City Business Center",
+    location: "CDMX, Mexico",
+    region: "Latin America",
+    type: "Commercial",
     price: 5000000,
     tokenPrice: 250,
     totalTokens: 20000,
     soldTokens: 15000,
     yield: 7.2,
     minInvestment: 250,
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800',
+    image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800",
     featured: true,
     verified: true,
   },
   {
     id: 3,
-    name: 'Nairobi Tech Park',
-    location: 'Nairobi, Kenya',
-    region: 'Africa',
-    type: 'Commercial',
+    name: "Nairobi Tech Park",
+    location: "Nairobi, Kenya",
+    region: "Africa",
+    type: "Commercial",
     price: 3200000,
     tokenPrice: 160,
     totalTokens: 20000,
     soldTokens: 12000,
     yield: 9.1,
     minInvestment: 160,
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800',
+    image: "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800",
     featured: false,
     verified: true,
   },
   {
     id: 4,
-    name: 'Accra Luxury Villas',
-    location: 'Accra, Ghana',
-    region: 'Africa',
-    type: 'Residential',
+    name: "Accra Luxury Villas",
+    location: "Accra, Ghana",
+    region: "Africa",
+    type: "Residential",
     price: 1800000,
     tokenPrice: 90,
     totalTokens: 20000,
     soldTokens: 8000,
     yield: 7.8,
     minInvestment: 90,
-    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800',
+    image: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
     featured: false,
     verified: true,
   },
   {
     id: 5,
-    name: 'Bogota Residential Complex',
-    location: 'Bogota, Colombia',
-    region: 'Latin America',
-    type: 'Residential',
+    name: "Bogota Residential Complex",
+    location: "Bogota, Colombia",
+    region: "Latin America",
+    type: "Residential",
     price: 2100000,
     tokenPrice: 105,
     totalTokens: 20000,
     soldTokens: 14000,
     yield: 8.0,
     minInvestment: 105,
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800',
+    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
     featured: false,
     verified: true,
   },
   {
     id: 6,
-    name: 'Johannesburg Office Tower',
-    location: 'Johannesburg, South Africa',
-    region: 'Africa',
-    type: 'Commercial',
+    name: "Johannesburg Office Tower",
+    location: "Johannesburg, South Africa",
+    region: "Africa",
+    type: "Commercial",
     price: 4500000,
     tokenPrice: 225,
     totalTokens: 20000,
     soldTokens: 16500,
     yield: 6.9,
     minInvestment: 225,
-    image: 'https://images.unsplash.com/photo-1577495508326-19a1b3cf65b7?w=800',
+    image: "https://images.unsplash.com/photo-1577495508326-19a1b3cf65b7?w=800",
     featured: true,
     verified: true,
   },
 ];
 
-const regions = ['All Regions', 'Africa', 'Latin America'];
-const propertyTypes = ['All Types', 'Residential', 'Commercial'];
-const sortOptions = ['Highest Yield', 'Lowest Price', 'Most Funded', 'Recently Added'];
+const regions = ["All Regions", "Africa", "Latin America"];
+const propertyTypes = ["All Types", "Residential", "Commercial"];
+const sortOptions = [
+  "Highest Yield",
+  "Lowest Price",
+  "Most Funded",
+  "Recently Added",
+];
 
 interface InvestModalProps {
   property: (typeof properties)[0];
@@ -128,13 +137,18 @@ interface InvestModalProps {
 
 function InvestModal({ property, isOpen, onClose }: InvestModalProps) {
   const [tokens, setTokens] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'usdc' | 'fiat'>('usdc');
+  const [paymentMethod, setPaymentMethod] = useState<"usdc" | "fiat">("usdc");
 
   const totalCost = tokens * property.tokenPrice;
   const estimatedYield = (totalCost * property.yield) / 100;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Invest in Property" size="lg">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Invest in Property"
+      size="lg"
+    >
       <div className="space-y-6">
         {/* Property Summary */}
         <div className="flex gap-4 p-4 bg-[#1a1a1a] border border-[#262626] rounded-lg">
@@ -171,7 +185,9 @@ function InvestModal({ property, isOpen, onClose }: InvestModalProps) {
             <Input
               type="number"
               value={tokens}
-              onChange={(e) => setTokens(Math.max(1, parseInt(e.target.value) || 1))}
+              onChange={(e) =>
+                setTokens(Math.max(1, parseInt(e.target.value) || 1))
+              }
               className="text-center w-24"
             />
             <Button
@@ -194,12 +210,12 @@ function InvestModal({ property, isOpen, onClose }: InvestModalProps) {
           </label>
           <div className="grid grid-cols-2 gap-3">
             <button
-              onClick={() => setPaymentMethod('usdc')}
+              onClick={() => setPaymentMethod("usdc")}
               className={cn(
-                'p-4 rounded-lg border-2 transition-all text-left cursor-pointer',
-                paymentMethod === 'usdc'
-                  ? 'border-[#00ff88] bg-[#00ff88]/10'
-                  : 'border-[#262626] hover:border-[#404040]'
+                "p-4 rounded-lg border-2 transition-all text-left cursor-pointer",
+                paymentMethod === "usdc"
+                  ? "border-[#00ff88] bg-[#00ff88]/10"
+                  : "border-[#262626] hover:border-[#404040]",
               )}
             >
               <div className="flex items-center gap-2 mb-1">
@@ -211,12 +227,12 @@ function InvestModal({ property, isOpen, onClose }: InvestModalProps) {
               <p className="text-xs text-neutral-500">Pay with stablecoin</p>
             </button>
             <button
-              onClick={() => setPaymentMethod('fiat')}
+              onClick={() => setPaymentMethod("fiat")}
               className={cn(
-                'p-4 rounded-lg border-2 transition-all text-left cursor-pointer',
-                paymentMethod === 'fiat'
-                  ? 'border-[#00ff88] bg-[#00ff88]/10'
-                  : 'border-[#262626] hover:border-[#404040]'
+                "p-4 rounded-lg border-2 transition-all text-left cursor-pointer",
+                paymentMethod === "fiat"
+                  ? "border-[#00ff88] bg-[#00ff88]/10"
+                  : "border-[#262626] hover:border-[#404040]",
               )}
             >
               <div className="flex items-center gap-2 mb-1">
@@ -236,15 +252,21 @@ function InvestModal({ property, isOpen, onClose }: InvestModalProps) {
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-neutral-500">Price per Token</span>
-            <span className="text-white font-mono">{formatCurrency(property.tokenPrice)}</span>
+            <span className="text-white font-mono">
+              {formatCurrency(property.tokenPrice)}
+            </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-neutral-500">Est. Annual Yield</span>
-            <span className="text-[#00ff88] font-mono">{formatCurrency(estimatedYield)}</span>
+            <span className="text-[#00ff88] font-mono">
+              {formatCurrency(estimatedYield)}
+            </span>
           </div>
           <div className="border-t border-[#262626] pt-3 flex justify-between">
             <span className="font-medium text-white">Total</span>
-            <span className="font-bold text-xl text-white font-mono">{formatCurrency(totalCost)}</span>
+            <span className="font-bold text-xl text-white font-mono">
+              {formatCurrency(totalCost)}
+            </span>
           </div>
         </div>
 
@@ -253,7 +275,11 @@ function InvestModal({ property, isOpen, onClose }: InvestModalProps) {
           <Button variant="outline" className="flex-1" onClick={onClose}>
             Cancel
           </Button>
-          <Button className="flex-1" isSecure rightIcon={<ArrowRight className="w-4 h-4" />}>
+          <Button
+            className="flex-1"
+            isSecure
+            rightIcon={<ArrowRight className="w-4 h-4" />}
+          >
             Confirm Investment
           </Button>
         </div>
@@ -268,28 +294,35 @@ function InvestModal({ property, isOpen, onClose }: InvestModalProps) {
 }
 
 export default function MarketplacePage() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState('All Regions');
-  const [selectedType, setSelectedType] = useState('All Types');
-  const [sortBy, setSortBy] = useState('Highest Yield');
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState("All Regions");
+  const [selectedType, setSelectedType] = useState("All Types");
+  const [sortBy, setSortBy] = useState("Highest Yield");
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<(typeof properties)[0] | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<
+    (typeof properties)[0] | null
+  >(null);
 
   // Filter and sort properties
   const filteredProperties = properties
     .filter((p) => {
-      if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-      if (selectedRegion !== 'All Regions' && p.region !== selectedRegion) return false;
-      if (selectedType !== 'All Types' && p.type !== selectedType) return false;
+      if (
+        searchQuery &&
+        !p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+        return false;
+      if (selectedRegion !== "All Regions" && p.region !== selectedRegion)
+        return false;
+      if (selectedType !== "All Types" && p.type !== selectedType) return false;
       return true;
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case 'Highest Yield':
+        case "Highest Yield":
           return b.yield - a.yield;
-        case 'Lowest Price':
+        case "Lowest Price":
           return a.tokenPrice - b.tokenPrice;
-        case 'Most Funded':
+        case "Most Funded":
           return b.soldTokens / b.totalTokens - a.soldTokens / a.totalTokens;
         default:
           return 0;
@@ -315,7 +348,8 @@ export default function MarketplacePage() {
           <motion.div variants={staggerItem}>
             <h1 className="text-2xl font-bold text-white">Marketplace</h1>
             <p className="text-sm text-neutral-500 mt-1">
-              Discover and invest in tokenized real estate across emerging markets
+              Discover and invest in tokenized real estate across emerging
+              markets
             </p>
           </motion.div>
 
@@ -343,12 +377,14 @@ export default function MarketplacePage() {
               {showFilters && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
+                  animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
                   className="grid sm:grid-cols-3 gap-4 p-4 bg-[#0a0a0a] rounded-lg border border-[#262626]"
                 >
                   <div>
-                    <label className="block text-xs text-neutral-500 mb-2 uppercase tracking-wider">Region</label>
+                    <label className="block text-xs text-neutral-500 mb-2 uppercase tracking-wider">
+                      Region
+                    </label>
                     <select
                       value={selectedRegion}
                       onChange={(e) => setSelectedRegion(e.target.value)}
@@ -362,7 +398,9 @@ export default function MarketplacePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-500 mb-2 uppercase tracking-wider">Property Type</label>
+                    <label className="block text-xs text-neutral-500 mb-2 uppercase tracking-wider">
+                      Property Type
+                    </label>
                     <select
                       value={selectedType}
                       onChange={(e) => setSelectedType(e.target.value)}
@@ -376,7 +414,9 @@ export default function MarketplacePage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-500 mb-2 uppercase tracking-wider">Sort By</label>
+                    <label className="block text-xs text-neutral-500 mb-2 uppercase tracking-wider">
+                      Sort By
+                    </label>
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
@@ -395,9 +435,15 @@ export default function MarketplacePage() {
           </motion.div>
 
           {/* Results Count */}
-          <motion.div variants={staggerItem} className="flex items-center justify-between">
+          <motion.div
+            variants={staggerItem}
+            className="flex items-center justify-between"
+          >
             <p className="text-xs text-neutral-500 font-mono">
-              Showing <span className="text-white font-medium">{filteredProperties.length}</span>{' '}
+              Showing{" "}
+              <span className="text-white font-medium">
+                {filteredProperties.length}
+              </span>{" "}
               properties
             </p>
           </motion.div>
@@ -455,9 +501,14 @@ export default function MarketplacePage() {
                     {/* Progress */}
                     <div className="mt-4">
                       <div className="flex items-center justify-between text-xs mb-1.5">
-                        <span className="text-neutral-500">Funding Progress</span>
+                        <span className="text-neutral-500">
+                          Funding Progress
+                        </span>
                         <span className="text-white font-medium font-mono">
-                          {Math.round((property.soldTokens / property.totalTokens) * 100)}%
+                          {Math.round(
+                            (property.soldTokens / property.totalTokens) * 100,
+                          )}
+                          %
                         </span>
                       </div>
                       <div className="h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
@@ -475,20 +526,30 @@ export default function MarketplacePage() {
                     {/* Stats */}
                     <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-[#1a1a1a]">
                       <div className="text-center">
-                        <p className="text-sm font-bold text-white font-mono">{property.yield}%</p>
-                        <p className="text-[10px] text-neutral-600 uppercase tracking-wider">APY</p>
+                        <p className="text-sm font-bold text-white font-mono">
+                          {property.yield}%
+                        </p>
+                        <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
+                          APY
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm font-bold text-white font-mono">
                           ${property.tokenPrice}
                         </p>
-                        <p className="text-[10px] text-neutral-600 uppercase tracking-wider">Min</p>
+                        <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
+                          Min
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm font-bold text-white font-mono">
-                          {(property.totalTokens - property.soldTokens).toLocaleString()}
+                          {(
+                            property.totalTokens - property.soldTokens
+                          ).toLocaleString()}
                         </p>
-                        <p className="text-[10px] text-neutral-600 uppercase tracking-wider">Left</p>
+                        <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
+                          Left
+                        </p>
                       </div>
                     </div>
 
@@ -504,8 +565,12 @@ export default function MarketplacePage() {
           {filteredProperties.length === 0 && (
             <motion.div variants={staggerItem} className="text-center py-16">
               <Building2 className="w-16 h-16 text-neutral-700 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-white mb-2">No properties found</h3>
-              <p className="text-sm text-neutral-500">Try adjusting your filters or search query</p>
+              <h3 className="text-lg font-semibold text-white mb-2">
+                No properties found
+              </h3>
+              <p className="text-sm text-neutral-500">
+                Try adjusting your filters or search query
+              </p>
             </motion.div>
           )}
         </motion.div>

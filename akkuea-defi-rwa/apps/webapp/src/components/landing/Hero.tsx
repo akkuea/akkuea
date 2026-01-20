@@ -1,10 +1,9 @@
-'use client';
+"use client";
 
-import { motion, useMotionValue } from 'framer-motion';
-import { ArrowRight, ArrowUpRight } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
-
+import { motion, useMotionValue } from "framer-motion";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 
 function GridBackground() {
   return (
@@ -31,24 +30,26 @@ function GridBackground() {
   );
 }
 
-
 function MarqueeText() {
   const items = [
-    'REAL ESTATE',
-    'TOKENIZATION',
-    'DEFI',
-    'STELLAR',
-    'BLOCKCHAIN',
-    'FRACTIONAL',
-    'OWNERSHIP',
-    'EMERGING MARKETS',
+    "REAL ESTATE",
+    "TOKENIZATION",
+    "DEFI",
+    "STELLAR",
+    "BLOCKCHAIN",
+    "FRACTIONAL",
+    "OWNERSHIP",
+    "EMERGING MARKETS",
   ];
 
   return (
     <div className="marquee border-y border-[#262626] py-3 bg-[#0a0a0a]">
       <div className="marquee-content">
         {items.map((item, i) => (
-          <span key={i} className="mx-8 text-sm font-mono text-neutral-500 tracking-wider">
+          <span
+            key={i}
+            className="mx-8 text-sm font-mono text-neutral-500 tracking-wider"
+          >
             {item}
             <span className="ml-8 text-[#ff3e00]">●</span>
           </span>
@@ -56,7 +57,10 @@ function MarqueeText() {
       </div>
       <div className="marquee-content" aria-hidden>
         {items.map((item, i) => (
-          <span key={i} className="mx-8 text-sm font-mono text-neutral-500 tracking-wider">
+          <span
+            key={i}
+            className="mx-8 text-sm font-mono text-neutral-500 tracking-wider"
+          >
             {item}
             <span className="ml-8 text-[#ff3e00]">●</span>
           </span>
@@ -77,7 +81,10 @@ export function Hero() {
   };
 
   return (
-    <section className="relative min-h-screen flex flex-col" onMouseMove={handleMouseMove}>
+    <section
+      className="relative min-h-screen flex flex-col"
+      onMouseMove={handleMouseMove}
+    >
       <GridBackground />
 
       {/* Main Content */}
@@ -110,9 +117,7 @@ export function Hero() {
               <span className="block mt-2">
                 <span className="text-neutral-500">Tokenized.</span>
               </span>
-              <span className="block mt-2 text-[#ff3e00]">
-                Democratized.
-              </span>
+              <span className="block mt-2 text-[#ff3e00]">Democratized.</span>
             </h1>
           </motion.div>
 
@@ -124,7 +129,7 @@ export function Hero() {
             className="hidden md:block absolute top-32 right-8 lg:right-16"
           >
             <pre className="text-[10px] leading-tight font-mono text-neutral-700 select-none">
-{`┌─────────────────────┐
+              {`┌─────────────────────┐
 │  ██████╗ ██╗    ██╗ │
 │  ██╔══██╗██║    ██║ │
 │  ██████╔╝██║ █╗ ██║ │
@@ -160,10 +165,7 @@ export function Hero() {
             className="flex flex-col sm:flex-row items-start gap-4 mb-16"
           >
             <Link href="/marketplace">
-              <Button
-                size="lg"
-                rightIcon={<ArrowRight className="w-4 h-4" />}
-              >
+              <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
                 Explore Properties
               </Button>
             </Link>
@@ -186,9 +188,9 @@ export function Hero() {
             className="flex flex-wrap items-center gap-8 sm:gap-12 border-t border-[#262626] pt-8"
           >
             {[
-              { value: '$3B', label: 'Target AUM' },
-              { value: '847+', label: 'Properties' },
-              { value: '12.5K', label: 'Investors' },
+              { value: "$3B", label: "Target AUM" },
+              { value: "847+", label: "Properties" },
+              { value: "12.5K", label: "Investors" },
             ].map((stat) => (
               <div key={stat.label} className="group cursor-default">
                 <div className="text-2xl sm:text-3xl font-bold text-white font-mono tracking-tight group-hover:text-[#ff3e00] transition-colors">

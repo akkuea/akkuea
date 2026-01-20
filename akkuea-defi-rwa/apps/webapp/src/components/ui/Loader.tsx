@@ -1,31 +1,31 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface LoaderProps {
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   className?: string;
 }
 
 const sizes = {
-  sm: 'w-4 h-4',
-  md: 'w-8 h-8',
-  lg: 'w-12 h-12',
+  sm: "w-4 h-4",
+  md: "w-8 h-8",
+  lg: "w-12 h-12",
 };
 
-export function Loader({ size = 'md', className }: LoaderProps) {
+export function Loader({ size = "md", className }: LoaderProps) {
   return (
-    <div className={cn('relative', sizes[size], className)}>
+    <div className={cn("relative", sizes[size], className)}>
       <motion.div
         className="absolute inset-0 rounded-full border-2 border-emerald-500/30"
         animate={{ rotate: 360 }}
-        transition={{ duration: 1.5, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
       />
       <motion.div
         className="absolute inset-0 rounded-full border-2 border-transparent border-t-emerald-500"
         animate={{ rotate: 360 }}
-        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
       />
     </div>
   );
@@ -35,7 +35,7 @@ interface PageLoaderProps {
   message?: string;
 }
 
-export function PageLoader({ message = 'Loading...' }: PageLoaderProps) {
+export function PageLoader({ message = "Loading..." }: PageLoaderProps) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -54,9 +54,9 @@ export function PageLoader({ message = 'Loading...' }: PageLoaderProps) {
             className="w-16 h-16 rounded-full border-4 border-emerald-500/20"
             animate={{
               boxShadow: [
-                '0 0 20px rgba(16, 185, 129, 0.2)',
-                '0 0 40px rgba(16, 185, 129, 0.4)',
-                '0 0 20px rgba(16, 185, 129, 0.2)',
+                "0 0 20px rgba(16, 185, 129, 0.2)",
+                "0 0 40px rgba(16, 185, 129, 0.4)",
+                "0 0 20px rgba(16, 185, 129, 0.2)",
               ],
             }}
             transition={{ duration: 2, repeat: Infinity }}
@@ -64,7 +64,7 @@ export function PageLoader({ message = 'Loading...' }: PageLoaderProps) {
           <motion.div
             className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-500"
             animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
           />
         </div>
         <motion.p
@@ -87,7 +87,7 @@ interface SkeletonProps {
 export function Skeleton({ className }: SkeletonProps) {
   return (
     <motion.div
-      className={cn('bg-zinc-800 rounded-lg', className)}
+      className={cn("bg-zinc-800 rounded-lg", className)}
       animate={{ opacity: [0.5, 1, 0.5] }}
       transition={{ duration: 1.5, repeat: Infinity }}
     />

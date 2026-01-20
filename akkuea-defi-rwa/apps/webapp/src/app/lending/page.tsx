@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Landmark,
   TrendingUp,
@@ -18,19 +18,34 @@ import {
   ChevronDown,
   ChevronUp,
   Wallet,
-} from 'lucide-react';
-import { Navbar, Footer } from '@/components/layout';
-import { Card, CardHeader, CardTitle, CardContent, Button, Badge, Input, Modal, Toggle } from '@/components/ui';
-import { useWallet } from '@/context/WalletContext';
-import { formatCurrency, cn } from '@/lib/utils';
-import { pageTransition, staggerContainer, staggerItem, fadeInUp } from '@/lib/animations';
+} from "lucide-react";
+import { Navbar, Footer } from "@/components/layout";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  Button,
+  Badge,
+  Input,
+  Modal,
+  Toggle,
+} from "@/components/ui";
+import { useWallet } from "@/context/WalletContext";
+import { formatCurrency, cn } from "@/lib/utils";
+import {
+  pageTransition,
+  staggerContainer,
+  staggerItem,
+  fadeInUp,
+} from "@/lib/animations";
 
 // Mock lending pools data
 const lendingPools = [
   {
     id: 1,
-    name: 'USDC Stable Pool',
-    asset: 'USDC',
+    name: "USDC Stable Pool",
+    asset: "USDC",
     totalLiquidity: 5000000,
     utilization: 72,
     supplyAPY: 5.2,
@@ -39,12 +54,12 @@ const lendingPools = [
     available: 1400000,
     yourDeposit: 25000,
     yourBorrow: 0,
-    icon: '💵',
+    icon: "💵",
   },
   {
     id: 2,
-    name: 'XLM Native Pool',
-    asset: 'XLM',
+    name: "XLM Native Pool",
+    asset: "XLM",
     totalLiquidity: 2000000,
     utilization: 65,
     supplyAPY: 4.5,
@@ -53,12 +68,12 @@ const lendingPools = [
     available: 700000,
     yourDeposit: 0,
     yourBorrow: 5000,
-    icon: '⭐',
+    icon: "⭐",
   },
   {
     id: 3,
-    name: 'RWA Collateral Pool',
-    asset: 'RWA',
+    name: "RWA Collateral Pool",
+    asset: "RWA",
     totalLiquidity: 10000000,
     utilization: 45,
     supplyAPY: 8.5,
@@ -67,7 +82,7 @@ const lendingPools = [
     available: 5500000,
     yourDeposit: 50000,
     yourBorrow: 0,
-    icon: '🏢',
+    icon: "🏢",
   },
 ];
 
@@ -75,39 +90,39 @@ const lendingPools = [
 const auditLogs = [
   {
     id: 1,
-    action: 'Deposit',
-    pool: 'USDC Stable Pool',
+    action: "Deposit",
+    pool: "USDC Stable Pool",
     amount: 10000,
-    timestamp: '2025-01-15 14:32:00',
-    txHash: '0x1234...5678',
-    status: 'completed',
+    timestamp: "2025-01-15 14:32:00",
+    txHash: "0x1234...5678",
+    status: "completed",
   },
   {
     id: 2,
-    action: 'Borrow',
-    pool: 'XLM Native Pool',
+    action: "Borrow",
+    pool: "XLM Native Pool",
     amount: 5000,
-    timestamp: '2025-01-14 09:15:00',
-    txHash: '0xabcd...efgh',
-    status: 'completed',
+    timestamp: "2025-01-14 09:15:00",
+    txHash: "0xabcd...efgh",
+    status: "completed",
   },
   {
     id: 3,
-    action: 'Repay',
-    pool: 'XLM Native Pool',
+    action: "Repay",
+    pool: "XLM Native Pool",
     amount: 2500,
-    timestamp: '2025-01-12 18:45:00',
-    txHash: '0x9876...5432',
-    status: 'completed',
+    timestamp: "2025-01-12 18:45:00",
+    txHash: "0x9876...5432",
+    status: "completed",
   },
   {
     id: 4,
-    action: 'Withdraw',
-    pool: 'RWA Collateral Pool',
+    action: "Withdraw",
+    pool: "RWA Collateral Pool",
     amount: 15000,
-    timestamp: '2025-01-10 11:20:00',
-    txHash: '0xijkl...mnop',
-    status: 'completed',
+    timestamp: "2025-01-10 11:20:00",
+    txHash: "0xijkl...mnop",
+    status: "completed",
   },
 ];
 
@@ -117,9 +132,9 @@ interface YieldCalculatorProps {
 }
 
 function YieldCalculator({ isOpen, onClose }: YieldCalculatorProps) {
-  const [amount, setAmount] = useState('10000');
-  const [duration, setDuration] = useState('12');
-  const [apy, setApy] = useState('5.2');
+  const [amount, setAmount] = useState("10000");
+  const [duration, setDuration] = useState("12");
+  const [apy, setApy] = useState("5.2");
 
   const earnings = useMemo(() => {
     const principal = parseFloat(amount) || 0;
@@ -169,19 +184,25 @@ function YieldCalculator({ isOpen, onClose }: YieldCalculatorProps) {
         <div className="p-6 bg-gradient-to-br from-[#00ff88]/5 to-[#ff3e00]/5 border border-[#00ff88]/20 rounded-lg">
           <div className="grid sm:grid-cols-3 gap-6 text-center">
             <div>
-              <p className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">Total Earnings</p>
+              <p className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">
+                Total Earnings
+              </p>
               <p className="text-xl font-bold text-[#00ff88] font-mono">
                 {formatCurrency(earnings.interest)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">Final Amount</p>
+              <p className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">
+                Final Amount
+              </p>
               <p className="text-xl font-bold text-white font-mono">
                 {formatCurrency(earnings.finalAmount)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">Monthly Yield</p>
+              <p className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">
+                Monthly Yield
+              </p>
               <p className="text-xl font-bold text-[#ff3e00] font-mono">
                 {formatCurrency(earnings.monthlyYield)}
               </p>
@@ -190,7 +211,8 @@ function YieldCalculator({ isOpen, onClose }: YieldCalculatorProps) {
         </div>
 
         <p className="text-[10px] text-neutral-600 text-center font-mono">
-          *Calculations are estimates based on current APY rates. Actual returns may vary.
+          *Calculations are estimates based on current APY rates. Actual returns
+          may vary.
         </p>
       </div>
     </Modal>
@@ -199,40 +221,45 @@ function YieldCalculator({ isOpen, onClose }: YieldCalculatorProps) {
 
 interface PoolActionModalProps {
   pool: (typeof lendingPools)[0] | null;
-  action: 'supply' | 'borrow' | 'withdraw' | 'repay';
+  action: "supply" | "borrow" | "withdraw" | "repay";
   isOpen: boolean;
   onClose: () => void;
 }
 
-function PoolActionModal({ pool, action, isOpen, onClose }: PoolActionModalProps) {
-  const [amount, setAmount] = useState('');
+function PoolActionModal({
+  pool,
+  action,
+  isOpen,
+  onClose,
+}: PoolActionModalProps) {
+  const [amount, setAmount] = useState("");
   const [zkPrivacy, setZkPrivacy] = useState(false);
 
   if (!pool) return null;
 
   const actionConfig = {
     supply: {
-      title: 'Supply to Pool',
-      description: 'Earn interest by supplying liquidity',
-      buttonText: 'Supply',
+      title: "Supply to Pool",
+      description: "Earn interest by supplying liquidity",
+      buttonText: "Supply",
       apy: pool.supplyAPY,
     },
     borrow: {
-      title: 'Borrow from Pool',
-      description: 'Borrow against your collateral',
-      buttonText: 'Borrow',
+      title: "Borrow from Pool",
+      description: "Borrow against your collateral",
+      buttonText: "Borrow",
       apy: pool.borrowAPY,
     },
     withdraw: {
-      title: 'Withdraw',
-      description: 'Withdraw your deposited funds',
-      buttonText: 'Withdraw',
+      title: "Withdraw",
+      description: "Withdraw your deposited funds",
+      buttonText: "Withdraw",
       apy: pool.supplyAPY,
     },
     repay: {
-      title: 'Repay Loan',
-      description: 'Repay your outstanding loan',
-      buttonText: 'Repay',
+      title: "Repay Loan",
+      description: "Repay your outstanding loan",
+      buttonText: "Repay",
       apy: pool.borrowAPY,
     },
   };
@@ -240,7 +267,12 @@ function PoolActionModal({ pool, action, isOpen, onClose }: PoolActionModalProps
   const config = actionConfig[action];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={config.title} description={config.description}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={config.title}
+      description={config.description}
+    >
       <div className="space-y-6">
         <div className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#262626] rounded-lg">
           <span className="text-3xl">{pool.icon}</span>
@@ -260,7 +292,7 @@ function PoolActionModal({ pool, action, isOpen, onClose }: PoolActionModalProps
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           leftIcon={<Coins className="w-4 h-4" />}
-          hint={`Available: ${formatCurrency(action === 'supply' || action === 'borrow' ? pool.available : action === 'withdraw' ? pool.yourDeposit : pool.yourBorrow)}`}
+          hint={`Available: ${formatCurrency(action === "supply" || action === "borrow" ? pool.available : action === "withdraw" ? pool.yourDeposit : pool.yourBorrow)}`}
         />
 
         {/* ZK Privacy Toggle */}
@@ -274,13 +306,13 @@ function PoolActionModal({ pool, action, isOpen, onClose }: PoolActionModalProps
           {zkPrivacy && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
+              animate={{ opacity: 1, height: "auto" }}
               className="mt-3 flex items-start gap-2 text-sm text-blue-400"
             >
               <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
               <span className="text-xs">
-                Your transaction amount and balance will be hidden from public view. Only you can
-                see the full details.
+                Your transaction amount and balance will be hidden from public
+                view. Only you can see the full details.
               </span>
             </motion.div>
           )}
@@ -310,16 +342,29 @@ function PoolActionModal({ pool, action, isOpen, onClose }: PoolActionModalProps
 
 export default function LendingPage() {
   const { isConnected, connect, isConnecting } = useWallet();
-  const [selectedPool, setSelectedPool] = useState<(typeof lendingPools)[0] | null>(null);
-  const [actionType, setActionType] = useState<'supply' | 'borrow' | 'withdraw' | 'repay'>('supply');
+  const [selectedPool, setSelectedPool] = useState<
+    (typeof lendingPools)[0] | null
+  >(null);
+  const [actionType, setActionType] = useState<
+    "supply" | "borrow" | "withdraw" | "repay"
+  >("supply");
   const [showCalculator, setShowCalculator] = useState(false);
   const [showAuditLogs, setShowAuditLogs] = useState(false);
   const [hideBalances, setHideBalances] = useState(false);
 
-  const totalDeposited = lendingPools.reduce((acc, pool) => acc + pool.yourDeposit, 0);
-  const totalBorrowed = lendingPools.reduce((acc, pool) => acc + pool.yourBorrow, 0);
+  const totalDeposited = lendingPools.reduce(
+    (acc, pool) => acc + pool.yourDeposit,
+    0,
+  );
+  const totalBorrowed = lendingPools.reduce(
+    (acc, pool) => acc + pool.yourBorrow,
+    0,
+  );
 
-  const openPoolAction = (pool: (typeof lendingPools)[0], action: 'supply' | 'borrow' | 'withdraw' | 'repay') => {
+  const openPoolAction = (
+    pool: (typeof lendingPools)[0],
+    action: "supply" | "borrow" | "withdraw" | "repay",
+  ) => {
     setSelectedPool(pool);
     setActionType(action);
   };
@@ -345,8 +390,9 @@ export default function LendingPage() {
             </div>
             <h1 className="text-2xl font-bold text-white mb-3">DeFi Lending</h1>
             <p className="text-sm text-neutral-500 max-w-md mb-8">
-              Connect your wallet to access lending pools. Supply liquidity to earn yields or
-              borrow against your tokenized real estate collateral.
+              Connect your wallet to access lending pools. Supply liquidity to
+              earn yields or borrow against your tokenized real estate
+              collateral.
             </p>
             <Button
               size="lg"
@@ -380,11 +426,15 @@ export default function LendingPage() {
           className="space-y-8"
         >
           {/* Header */}
-          <motion.div variants={staggerItem} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <motion.div
+            variants={staggerItem}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          >
             <div>
               <h1 className="text-2xl font-bold text-white">DeFi Lending</h1>
               <p className="text-sm text-neutral-500 mt-1">
-                Supply liquidity to earn yields or borrow against your RWA collateral
+                Supply liquidity to earn yields or borrow against your RWA
+                collateral
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -392,9 +442,15 @@ export default function LendingPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setHideBalances(!hideBalances)}
-                leftIcon={hideBalances ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                leftIcon={
+                  hideBalances ? (
+                    <Eye className="w-4 h-4" />
+                  ) : (
+                    <EyeOff className="w-4 h-4" />
+                  )
+                }
               >
-                {hideBalances ? 'Show' : 'Hide'}
+                {hideBalances ? "Show" : "Hide"}
               </Button>
               <Button
                 variant="outline"
@@ -408,13 +464,18 @@ export default function LendingPage() {
           </motion.div>
 
           {/* Overview Stats */}
-          <motion.div variants={staggerItem} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <motion.div
+            variants={staggerItem}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          >
             <Card>
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-neutral-500 uppercase tracking-wider">Total Supplied</p>
+                  <p className="text-xs text-neutral-500 uppercase tracking-wider">
+                    Total Supplied
+                  </p>
                   <p className="text-xl font-bold text-white mt-1 font-mono">
-                    {hideBalances ? '••••••' : formatCurrency(totalDeposited)}
+                    {hideBalances ? "••••••" : formatCurrency(totalDeposited)}
                   </p>
                   <p className="text-xs text-[#00ff88] mt-1">+5.8% avg APY</p>
                 </div>
@@ -427,9 +488,11 @@ export default function LendingPage() {
             <Card>
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-neutral-500 uppercase tracking-wider">Total Borrowed</p>
+                  <p className="text-xs text-neutral-500 uppercase tracking-wider">
+                    Total Borrowed
+                  </p>
                   <p className="text-xl font-bold text-white mt-1 font-mono">
-                    {hideBalances ? '••••••' : formatCurrency(totalBorrowed)}
+                    {hideBalances ? "••••••" : formatCurrency(totalBorrowed)}
                   </p>
                   <p className="text-xs text-amber-400 mt-1">6.5% APR</p>
                 </div>
@@ -442,11 +505,17 @@ export default function LendingPage() {
             <Card>
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-neutral-500 uppercase tracking-wider">Net Worth</p>
-                  <p className="text-xl font-bold text-white mt-1 font-mono">
-                    {hideBalances ? '••••••' : formatCurrency(totalDeposited - totalBorrowed)}
+                  <p className="text-xs text-neutral-500 uppercase tracking-wider">
+                    Net Worth
                   </p>
-                  <p className="text-xs text-neutral-600 mt-1 font-mono">Deposits - Borrows</p>
+                  <p className="text-xl font-bold text-white mt-1 font-mono">
+                    {hideBalances
+                      ? "••••••"
+                      : formatCurrency(totalDeposited - totalBorrowed)}
+                  </p>
+                  <p className="text-xs text-neutral-600 mt-1 font-mono">
+                    Deposits - Borrows
+                  </p>
                 </div>
                 <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
                   <DollarSign className="w-4 h-4 text-blue-400" />
@@ -457,9 +526,15 @@ export default function LendingPage() {
             <Card>
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs text-neutral-500 uppercase tracking-wider">Health Factor</p>
-                  <p className="text-xl font-bold text-[#00ff88] mt-1 font-mono">2.45</p>
-                  <p className="text-xs text-neutral-600 mt-1 font-mono">Safe (&gt;1.5)</p>
+                  <p className="text-xs text-neutral-500 uppercase tracking-wider">
+                    Health Factor
+                  </p>
+                  <p className="text-xl font-bold text-[#00ff88] mt-1 font-mono">
+                    2.45
+                  </p>
+                  <p className="text-xs text-neutral-600 mt-1 font-mono">
+                    Safe (&gt;1.5)
+                  </p>
                 </div>
                 <div className="p-2 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20">
                   <Shield className="w-4 h-4 text-[#00ff88]" />
@@ -490,29 +565,45 @@ export default function LendingPage() {
                       <div className="flex items-center gap-4 lg:w-1/4">
                         <span className="text-3xl">{pool.icon}</span>
                         <div>
-                          <h3 className="text-sm font-semibold text-white">{pool.name}</h3>
-                          <p className="text-xs text-neutral-500 font-mono">{pool.asset}</p>
+                          <h3 className="text-sm font-semibold text-white">
+                            {pool.name}
+                          </h3>
+                          <p className="text-xs text-neutral-500 font-mono">
+                            {pool.asset}
+                          </p>
                         </div>
                       </div>
 
                       {/* Stats */}
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 lg:flex-1">
                         <div>
-                          <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">Total Liquidity</p>
+                          <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">
+                            Total Liquidity
+                          </p>
                           <p className="text-sm font-medium text-white font-mono">
                             {formatCurrency(pool.totalLiquidity)}
                           </p>
                         </div>
                         <div>
-                          <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">Supply APY</p>
-                          <p className="text-sm font-medium text-[#00ff88] font-mono">{pool.supplyAPY}%</p>
+                          <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">
+                            Supply APY
+                          </p>
+                          <p className="text-sm font-medium text-[#00ff88] font-mono">
+                            {pool.supplyAPY}%
+                          </p>
                         </div>
                         <div>
-                          <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">Borrow APY</p>
-                          <p className="text-sm font-medium text-amber-400 font-mono">{pool.borrowAPY}%</p>
+                          <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">
+                            Borrow APY
+                          </p>
+                          <p className="text-sm font-medium text-amber-400 font-mono">
+                            {pool.borrowAPY}%
+                          </p>
                         </div>
                         <div>
-                          <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">Utilization</p>
+                          <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">
+                            Utilization
+                          </p>
                           <div className="flex items-center gap-2">
                             <div className="flex-1 h-1 bg-[#262626] rounded-full overflow-hidden">
                               <div
@@ -520,7 +611,9 @@ export default function LendingPage() {
                                 style={{ width: `${pool.utilization}%` }}
                               />
                             </div>
-                            <span className="text-xs text-white font-mono">{pool.utilization}%</span>
+                            <span className="text-xs text-white font-mono">
+                              {pool.utilization}%
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -528,15 +621,23 @@ export default function LendingPage() {
                       {/* Your Position */}
                       {(pool.yourDeposit > 0 || pool.yourBorrow > 0) && (
                         <div className="p-3 bg-[#0a0a0a] border border-[#262626] rounded-lg lg:w-48">
-                          <p className="text-[10px] text-neutral-600 mb-2 uppercase tracking-wider">Your Position</p>
+                          <p className="text-[10px] text-neutral-600 mb-2 uppercase tracking-wider">
+                            Your Position
+                          </p>
                           {pool.yourDeposit > 0 && (
                             <p className="text-xs text-white font-mono">
-                              Supplied: {hideBalances ? '••••' : formatCurrency(pool.yourDeposit)}
+                              Supplied:{" "}
+                              {hideBalances
+                                ? "••••"
+                                : formatCurrency(pool.yourDeposit)}
                             </p>
                           )}
                           {pool.yourBorrow > 0 && (
                             <p className="text-xs text-amber-400 font-mono">
-                              Borrowed: {hideBalances ? '••••' : formatCurrency(pool.yourBorrow)}
+                              Borrowed:{" "}
+                              {hideBalances
+                                ? "••••"
+                                : formatCurrency(pool.yourBorrow)}
                             </p>
                           )}
                         </div>
@@ -547,14 +648,14 @@ export default function LendingPage() {
                         <Button
                           variant="primary"
                           size="sm"
-                          onClick={() => openPoolAction(pool, 'supply')}
+                          onClick={() => openPoolAction(pool, "supply")}
                         >
                           Supply
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => openPoolAction(pool, 'borrow')}
+                          onClick={() => openPoolAction(pool, "borrow")}
                         >
                           Borrow
                         </Button>
@@ -562,7 +663,7 @@ export default function LendingPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openPoolAction(pool, 'withdraw')}
+                            onClick={() => openPoolAction(pool, "withdraw")}
                           >
                             Withdraw
                           </Button>
@@ -571,7 +672,7 @@ export default function LendingPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => openPoolAction(pool, 'repay')}
+                            onClick={() => openPoolAction(pool, "repay")}
                           >
                             Repay
                           </Button>
@@ -592,11 +693,13 @@ export default function LendingPage() {
                   <Shield className="w-5 h-5 text-blue-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-white mb-2">Zero-Knowledge Privacy</h3>
+                  <h3 className="text-sm font-semibold text-white mb-2">
+                    Zero-Knowledge Privacy
+                  </h3>
                   <p className="text-xs text-neutral-500 mb-4">
-                    Enable ZK privacy on any transaction to hide your balances and transaction
-                    amounts from public view. Only you can see the full details while maintaining
-                    full auditability.
+                    Enable ZK privacy on any transaction to hide your balances
+                    and transaction amounts from public view. Only you can see
+                    the full details while maintaining full auditability.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <Badge variant="info" dot>
@@ -637,32 +740,37 @@ export default function LendingPage() {
                 {showAuditLogs && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
+                    animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.2 }}
                   >
                     <CardContent className="divide-y divide-[#1a1a1a]">
                       {auditLogs.map((log) => (
-                        <div key={log.id} className="p-4 flex items-center gap-4">
+                        <div
+                          key={log.id}
+                          className="p-4 flex items-center gap-4"
+                        >
                           <div
                             className={cn(
-                              'w-10 h-10 rounded-full flex items-center justify-center',
-                              log.action === 'Deposit' || log.action === 'Supply'
-                                ? 'bg-[#00ff88]/10'
-                                : log.action === 'Borrow'
-                                ? 'bg-amber-500/10'
-                                : 'bg-[#1a1a1a]'
+                              "w-10 h-10 rounded-full flex items-center justify-center",
+                              log.action === "Deposit" ||
+                                log.action === "Supply"
+                                ? "bg-[#00ff88]/10"
+                                : log.action === "Borrow"
+                                  ? "bg-amber-500/10"
+                                  : "bg-[#1a1a1a]",
                             )}
                           >
-                            {log.status === 'completed' ? (
+                            {log.status === "completed" ? (
                               <CheckCircle2
                                 className={cn(
-                                  'w-4 h-4',
-                                  log.action === 'Deposit' || log.action === 'Supply'
-                                    ? 'text-[#00ff88]'
-                                    : log.action === 'Borrow'
-                                    ? 'text-amber-400'
-                                    : 'text-neutral-500'
+                                  "w-4 h-4",
+                                  log.action === "Deposit" ||
+                                    log.action === "Supply"
+                                    ? "text-[#00ff88]"
+                                    : log.action === "Borrow"
+                                      ? "text-amber-400"
+                                      : "text-neutral-500",
                                 )}
                               />
                             ) : (
@@ -671,15 +779,21 @@ export default function LendingPage() {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium text-white">{log.action}</span>
+                              <span className="text-sm font-medium text-white">
+                                {log.action}
+                              </span>
                               <Badge variant="outline" className="text-[10px]">
                                 {log.pool}
                               </Badge>
                             </div>
-                            <p className="text-xs text-neutral-500 font-mono">{log.timestamp}</p>
+                            <p className="text-xs text-neutral-500 font-mono">
+                              {log.timestamp}
+                            </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-medium text-white font-mono">{formatCurrency(log.amount)}</p>
+                            <p className="text-sm font-medium text-white font-mono">
+                              {formatCurrency(log.amount)}
+                            </p>
                             <a
                               href="#"
                               className="text-[10px] text-[#ff3e00] hover:underline font-mono cursor-pointer"
@@ -700,7 +814,10 @@ export default function LendingPage() {
       <Footer />
 
       {/* Modals */}
-      <YieldCalculator isOpen={showCalculator} onClose={() => setShowCalculator(false)} />
+      <YieldCalculator
+        isOpen={showCalculator}
+        onClose={() => setShowCalculator(false)}
+      />
       <PoolActionModal
         pool={selectedPool}
         action={actionType}

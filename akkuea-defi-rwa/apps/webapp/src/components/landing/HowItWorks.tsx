@@ -1,36 +1,40 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { Wallet, Search, ShoppingCart, TrendingUp } from 'lucide-react';
+import { motion } from "framer-motion";
+import { Wallet, Search, ShoppingCart, TrendingUp } from "lucide-react";
 
 const steps = [
   {
     icon: Wallet,
-    step: '01',
-    title: 'Connect Wallet',
-    description: 'Link your Stellar wallet and complete KYC verification to unlock the platform.',
-    command: '> connect --wallet stellar',
+    step: "01",
+    title: "Connect Wallet",
+    description:
+      "Link your Stellar wallet and complete KYC verification to unlock the platform.",
+    command: "> connect --wallet stellar",
   },
   {
     icon: Search,
-    step: '02',
-    title: 'Browse Properties',
-    description: 'Explore tokenized properties across Latin America and Africa with full transparency.',
-    command: '> search --region LATAM,AFRICA',
+    step: "02",
+    title: "Browse Properties",
+    description:
+      "Explore tokenized properties across Latin America and Africa with full transparency.",
+    command: "> search --region LATAM,AFRICA",
   },
   {
     icon: ShoppingCart,
-    step: '03',
-    title: 'Invest',
-    description: 'Purchase fractional ownership tokens with stablecoins. Receive NFT certificates.',
-    command: '> buy --shares 100 --asset USDC',
+    step: "03",
+    title: "Invest",
+    description:
+      "Purchase fractional ownership tokens with stablecoins. Receive NFT certificates.",
+    command: "> buy --shares 100 --asset USDC",
   },
   {
     icon: TrendingUp,
-    step: '04',
-    title: 'Earn Returns',
-    description: 'Collect rental income, benefit from appreciation, or use as DeFi collateral.',
-    command: '> yield --claim all',
+    step: "04",
+    title: "Earn Returns",
+    description:
+      "Collect rental income, benefit from appreciation, or use as DeFi collateral.",
+    command: "> yield --claim all",
   },
 ];
 
@@ -113,8 +117,12 @@ export function HowItWorks() {
                 {/* Content */}
                 <div className="flex-1 pb-8 border-b border-[#1a1a1a] group-last:border-0">
                   <div className="flex items-center gap-3 mb-2">
-                    <span className="text-[10px] font-mono text-[#ff3e00]">[{step.step}]</span>
-                    <h3 className="text-lg font-semibold text-white">{step.title}</h3>
+                    <span className="text-[10px] font-mono text-[#ff3e00]">
+                      [{step.step}]
+                    </span>
+                    <h3 className="text-lg font-semibold text-white">
+                      {step.title}
+                    </h3>
                   </div>
                   <p className="text-sm text-neutral-500 mb-3 max-w-md">
                     {step.description}

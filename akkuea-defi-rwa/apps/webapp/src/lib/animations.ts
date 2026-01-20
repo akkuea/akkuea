@@ -1,4 +1,4 @@
-import type { Variants } from 'framer-motion';
+import type { Variants } from "framer-motion";
 
 // Easing functions
 export const easeOutQuart = [0.25, 0.46, 0.45, 0.94];
@@ -92,17 +92,17 @@ export const hoverLift = {
 };
 
 export const glowPulse: Variants = {
-  initial: { boxShadow: '0 0 0 rgba(255, 62, 0, 0)' },
+  initial: { boxShadow: "0 0 0 rgba(255, 62, 0, 0)" },
   animate: {
     boxShadow: [
-      '0 0 0 rgba(255, 62, 0, 0)',
-      '0 0 20px rgba(255, 62, 0, 0.3)',
-      '0 0 0 rgba(255, 62, 0, 0)',
+      "0 0 0 rgba(255, 62, 0, 0)",
+      "0 0 20px rgba(255, 62, 0, 0.3)",
+      "0 0 0 rgba(255, 62, 0, 0)",
     ],
     transition: {
       duration: 2,
       repeat: Infinity,
-      ease: 'easeInOut',
+      ease: "easeInOut",
     },
   },
 };
@@ -120,16 +120,16 @@ export const pageTransition: Variants = {
 };
 
 export const blurIn: Variants = {
-  hidden: { opacity: 0, filter: 'blur(10px)' },
+  hidden: { opacity: 0, filter: "blur(10px)" },
   visible: {
     opacity: 1,
-    filter: 'blur(0px)',
+    filter: "blur(0px)",
     transition: { duration: 0.5, ease: easeOutQuart },
   },
 };
 
 export const revealText: Variants = {
-  hidden: { opacity: 0, y: '100%' },
+  hidden: { opacity: 0, y: "100%" },
   visible: {
     opacity: 1,
     y: 0,
@@ -138,17 +138,17 @@ export const revealText: Variants = {
 };
 
 export const borderGlow: Variants = {
-  initial: { borderColor: 'rgba(38, 38, 38, 1)' },
+  initial: { borderColor: "rgba(38, 38, 38, 1)" },
   hover: {
-    borderColor: 'rgba(64, 64, 64, 1)',
+    borderColor: "rgba(64, 64, 64, 1)",
     transition: { duration: 0.2 },
   },
 };
 
 export const accentGlow: Variants = {
-  initial: { boxShadow: '0 0 0 rgba(255, 62, 0, 0)' },
+  initial: { boxShadow: "0 0 0 rgba(255, 62, 0, 0)" },
   hover: {
-    boxShadow: '0 0 30px rgba(255, 62, 0, 0.2)',
+    boxShadow: "0 0 30px rgba(255, 62, 0, 0.2)",
     transition: { duration: 0.3 },
   },
 };

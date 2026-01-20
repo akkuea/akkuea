@@ -1,9 +1,15 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { Navbar, Footer } from '@/components/layout';
-import { Hero, AnimatedStats, Features, HowItWorks, CTA } from '@/components/landing';
-import { pageTransition } from '@/lib/animations';
+import { motion } from "framer-motion";
+import { Navbar, Footer } from "@/components/layout";
+import {
+  Hero,
+  AnimatedStats,
+  Features,
+  HowItWorks,
+  CTA,
+} from "@/components/landing";
+import { pageTransition } from "@/lib/animations";
 
 export default function Home() {
   return (

@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { ArrowRight, ArrowUpRight, Shield, Lock, Zap } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/Button';
+import { motion } from "framer-motion";
+import { ArrowRight, ArrowUpRight, Shield, Lock, Zap } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/Button";
 
 const features = [
-  { icon: Shield, label: 'Bank-grade security' },
-  { icon: Lock, label: 'Regulatory compliant' },
-  { icon: Zap, label: 'Instant settlements' },
+  { icon: Shield, label: "Bank-grade security" },
+  { icon: Lock, label: "Regulatory compliant" },
+  { icon: Zap, label: "Instant settlements" },
 ];
 
 export function CTA() {
@@ -61,8 +61,9 @@ export function CTA() {
 
               {/* Description */}
               <p className="text-neutral-400 max-w-lg mx-auto mb-8 text-sm sm:text-base">
-                Join thousands of investors already earning yields from tokenized properties.
-                Start with as little as $100 and diversify globally.
+                Join thousands of investors already earning yields from
+                tokenized properties. Start with as little as $100 and diversify
+                globally.
               </p>
 
               {/* CTA Buttons */}
@@ -113,7 +114,7 @@ export function CTA() {
             className="mt-8 text-center"
           >
             <pre className="inline-block text-[8px] font-mono text-neutral-800 select-none leading-tight">
-{`    ╔══════════════════════════════════════════════════════════╗
+              {`    ╔══════════════════════════════════════════════════════════╗
     ║  ▄▀▀▄ █ █ █ █ █  █ █▀▀ ▄▀▀▄   █▀▀▄ █▀▀ █▀▀ ▀█▀   █▀▀▄ █  █ ▄▀▀▄ ║
     ║  █▄▄█ █▀▄ █▀▄ █  █ █▀▀ █▄▄█   █  █ █▀▀ █▀▀  █    █▄▄▀ █  █ █▄▄█ ║
     ║  █  █ █ █ █ █ ▀▄▄▀ █▄▄ █  █   █▄▄▀ █▄▄ █   ▄█▄   █  █ ▀▄▄▀ █  █ ║

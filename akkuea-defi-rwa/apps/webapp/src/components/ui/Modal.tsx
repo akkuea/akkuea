@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { Fragment, type ReactNode } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Fragment, type ReactNode } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ModalProps {
   isOpen: boolean;
@@ -11,15 +11,15 @@ interface ModalProps {
   title?: string;
   description?: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: "sm" | "md" | "lg" | "xl";
   showCloseButton?: boolean;
 }
 
 const sizeClasses = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
+  sm: "max-w-sm",
+  md: "max-w-md",
+  lg: "max-w-lg",
+  xl: "max-w-xl",
 };
 
 export function Modal({
@@ -28,7 +28,7 @@ export function Modal({
   title,
   description,
   children,
-  size = 'md',
+  size = "md",
   showCloseButton = true,
 }: ModalProps) {
   return (
@@ -51,10 +51,10 @@ export function Modal({
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
               className={cn(
-                'relative w-full bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl',
-                sizeClasses[size]
+                "relative w-full bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl",
+                sizeClasses[size],
               )}
               onClick={(e) => e.stopPropagation()}
             >
@@ -62,8 +62,16 @@ export function Modal({
               {(title || showCloseButton) && (
                 <div className="flex items-start justify-between p-6 pb-0">
                   <div>
-                    {title && <h2 className="text-xl font-semibold text-white">{title}</h2>}
-                    {description && <p className="text-sm text-zinc-400 mt-1">{description}</p>}
+                    {title && (
+                      <h2 className="text-xl font-semibold text-white">
+                        {title}
+                      </h2>
+                    )}
+                    {description && (
+                      <p className="text-sm text-zinc-400 mt-1">
+                        {description}
+                      </p>
+                    )}
                   </div>
                   {showCloseButton && (
                     <button

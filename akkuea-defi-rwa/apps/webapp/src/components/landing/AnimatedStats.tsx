@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useState, useRef } from 'react';
-import { motion, useInView } from 'framer-motion';
-import { TrendingUp, Building, Users, DollarSign } from 'lucide-react';
+import { useEffect, useState, useRef } from "react";
+import { motion, useInView } from "framer-motion";
+import { TrendingUp, Building, Users, DollarSign } from "lucide-react";
 
 interface StatProps {
   icon: React.ComponentType<{ className?: string }>;
@@ -17,7 +17,7 @@ interface StatProps {
 function AnimatedCounter({
   value,
   suffix,
-  prefix = '',
+  prefix = "",
   decimals = 0,
   duration = 2,
 }: {
@@ -29,7 +29,7 @@ function AnimatedCounter({
 }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: '-100px' });
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
 
   useEffect(() => {
     if (!isInView) return;
@@ -54,7 +54,9 @@ function AnimatedCounter({
 
   return (
     <span ref={ref} className="font-mono tabular-nums">
-      {prefix}{count.toFixed(decimals)}{suffix}
+      {prefix}
+      {count.toFixed(decimals)}
+      {suffix}
     </span>
   );
 }
@@ -63,33 +65,33 @@ const stats: StatProps[] = [
   {
     icon: TrendingUp,
     value: 172,
-    suffix: '%',
-    label: 'Platform Growth YoY',
+    suffix: "%",
+    label: "Platform Growth YoY",
     decimals: 0,
     duration: 2,
   },
   {
     icon: DollarSign,
     value: 3,
-    suffix: 'B',
-    prefix: '$',
-    label: 'Target AUM by 2027',
+    suffix: "B",
+    prefix: "$",
+    label: "Target AUM by 2027",
     decimals: 0,
     duration: 1.5,
   },
   {
     icon: Building,
     value: 847,
-    suffix: '+',
-    label: 'Properties Tokenized',
+    suffix: "+",
+    label: "Properties Tokenized",
     decimals: 0,
     duration: 2.5,
   },
   {
     icon: Users,
     value: 12.5,
-    suffix: 'K',
-    label: 'Active Investors',
+    suffix: "K",
+    label: "Active Investors",
     decimals: 1,
     duration: 2,
   },
@@ -145,7 +147,7 @@ export function AnimatedStats() {
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
-          viewport={{ once: true, margin: '-100px' }}
+          viewport={{ once: true, margin: "-100px" }}
           className="grid grid-cols-2 lg:grid-cols-4 gap-4"
         >
           {stats.map((stat, index) => (
@@ -195,7 +197,7 @@ export function AnimatedStats() {
           className="mt-12 text-center"
         >
           <pre className="inline-block text-[10px] font-mono text-neutral-700 select-none">
-{`┌────────────────────────────────────────────┐
+            {`┌────────────────────────────────────────────┐
 │  ████████╗ ██████╗ ██╗  ██╗███████╗███╗   ██╗██╗███████╗███████╗██████╗  │
 │  ╚══██╔══╝██╔═══██╗██║ ██╔╝██╔════╝████╗  ██║██║╚══███╔╝██╔════╝██╔══██╗ │
 │     ██║   ██║   ██║█████╔╝ █████╗  ██╔██╗ ██║██║  ███╔╝ █████╗  ██║  ██║ │

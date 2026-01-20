@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
   X,
@@ -13,23 +13,24 @@ import {
   Store,
   Landmark,
   ChevronDown,
-} from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { useTheme } from '@/context/ThemeContext';
-import { useWallet } from '@/context/WalletContext';
-import { cn, truncateAddress } from '@/lib/utils';
+} from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { useTheme } from "@/context/ThemeContext";
+import { useWallet } from "@/context/WalletContext";
+import { cn, truncateAddress } from "@/lib/utils";
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Marketplace', href: '/marketplace', icon: Store },
-  { name: 'Tokenize', href: '/tokenize', icon: Building2 },
-  { name: 'Lending', href: '/lending', icon: Landmark },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Marketplace", href: "/marketplace", icon: Store },
+  { name: "Tokenize", href: "/tokenize", icon: Building2 },
+  { name: "Lending", href: "/lending", icon: Landmark },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
   useTheme();
-  const { address, isConnected, isConnecting, connect, disconnect } = useWallet();
+  const { address, isConnected, isConnecting, connect, disconnect } =
+    useWallet();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
 
@@ -65,17 +66,21 @@ export function Navbar() {
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'relative px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer',
+                    "relative px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer",
                     isActive
-                      ? 'text-white'
-                      : 'text-neutral-500 hover:text-white'
+                      ? "text-white"
+                      : "text-neutral-500 hover:text-white",
                   )}
                 >
                   {isActive && (
                     <motion.div
                       layoutId="navbar-active"
                       className="absolute inset-0 bg-[#1a1a1a] rounded-md border border-[#262626]"
-                      transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 30,
+                      }}
                     />
                   )}
                   <span className="relative flex items-center gap-1.5">
@@ -111,13 +116,15 @@ export function Navbar() {
                   rightIcon={
                     <ChevronDown
                       className={cn(
-                        'w-3.5 h-3.5 transition-transform',
-                        walletMenuOpen && 'rotate-180'
+                        "w-3.5 h-3.5 transition-transform",
+                        walletMenuOpen && "rotate-180",
                       )}
                     />
                   }
                 >
-                  <span className="font-mono">{truncateAddress(address || '')}</span>
+                  <span className="font-mono">
+                    {truncateAddress(address || "")}
+                  </span>
                 </Button>
                 <AnimatePresence>
                   {walletMenuOpen && (
@@ -137,8 +144,12 @@ export function Navbar() {
                         className="absolute right-0 mt-2 w-52 bg-[#0a0a0a] border border-[#262626] rounded-lg shadow-2xl overflow-hidden z-20"
                       >
                         <div className="p-3 border-b border-[#262626]">
-                          <p className="text-[10px] text-neutral-500 uppercase tracking-wider mb-1">Connected</p>
-                          <p className="text-xs text-white font-mono">{truncateAddress(address || '', 6)}</p>
+                          <p className="text-[10px] text-neutral-500 uppercase tracking-wider mb-1">
+                            Connected
+                          </p>
+                          <p className="text-xs text-white font-mono">
+                            {truncateAddress(address || "", 6)}
+                          </p>
                         </div>
                         <button
                           onClick={() => {
@@ -172,7 +183,11 @@ export function Navbar() {
               className="md:hidden p-2 rounded-md text-neutral-500 hover:text-white hover:bg-[#1a1a1a] transition-colors cursor-pointer"
               aria-label="Toggle menu"
             >
-              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              {mobileMenuOpen ? (
+                <X className="w-4 h-4" />
+              ) : (
+                <Menu className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>
@@ -182,7 +197,7 @@ export function Navbar() {
           {mobileMenuOpen && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
+              animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
               className="md:hidden border-t border-[#262626] overflow-hidden"
@@ -196,10 +211,10 @@ export function Navbar() {
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer',
+                        "flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
                         isActive
-                          ? 'bg-[#1a1a1a] text-white border border-[#262626]'
-                          : 'text-neutral-500 hover:text-white hover:bg-[#1a1a1a]/50'
+                          ? "bg-[#1a1a1a] text-white border border-[#262626]"
+                          : "text-neutral-500 hover:text-white hover:bg-[#1a1a1a]/50",
                       )}
                     >
                       <item.icon className="w-4 h-4" />

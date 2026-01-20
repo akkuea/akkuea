@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
   FileText,
@@ -19,18 +19,31 @@ import {
   ArrowLeft,
   AlertCircle,
   Wallet,
-} from 'lucide-react';
-import { Navbar, Footer } from '@/components/layout';
-import { Card, Button, Input, Textarea, Badge, Stepper } from '@/components/ui';
-import { useWallet } from '@/context/WalletContext';
-import { formatCurrency } from '@/lib/utils';
-import { pageTransition, fadeInUp, staggerContainer, staggerItem } from '@/lib/animations';
+} from "lucide-react";
+import { Navbar, Footer } from "@/components/layout";
+import { Card, Button, Input, Textarea, Badge, Stepper } from "@/components/ui";
+import { useWallet } from "@/context/WalletContext";
+import { formatCurrency } from "@/lib/utils";
+import {
+  pageTransition,
+  fadeInUp,
+  staggerContainer,
+  staggerItem,
+} from "@/lib/animations";
 
 const steps = [
-  { id: 'details', title: 'Property Details', description: 'Basic information' },
-  { id: 'documents', title: 'Documents', description: 'Upload files' },
-  { id: 'tokenization', title: 'Tokenization', description: 'Configure tokens' },
-  { id: 'review', title: 'Review', description: 'Confirm & submit' },
+  {
+    id: "details",
+    title: "Property Details",
+    description: "Basic information",
+  },
+  { id: "documents", title: "Documents", description: "Upload files" },
+  {
+    id: "tokenization",
+    title: "Tokenization",
+    description: "Configure tokens",
+  },
+  { id: "review", title: "Review", description: "Confirm & submit" },
 ];
 
 interface FormData {
@@ -60,26 +73,26 @@ interface FormData {
 }
 
 const initialFormData: FormData = {
-  name: '',
-  description: '',
-  address: '',
-  city: '',
-  country: '',
-  propertyType: 'residential',
-  totalArea: '',
-  bedrooms: '',
-  bathrooms: '',
-  yearBuilt: '',
+  name: "",
+  description: "",
+  address: "",
+  city: "",
+  country: "",
+  propertyType: "residential",
+  totalArea: "",
+  bedrooms: "",
+  bathrooms: "",
+  yearBuilt: "",
   titleDeed: null,
   propertyImages: [],
   legalDocuments: [],
   appraisalReport: null,
-  totalValue: '',
-  totalTokens: '',
-  tokenPrice: '',
-  minInvestment: '',
-  expectedYield: '',
-  fundingDeadline: '',
+  totalValue: "",
+  totalTokens: "",
+  tokenPrice: "",
+  minInvestment: "",
+  expectedYield: "",
+  fundingDeadline: "",
 };
 
 export default function TokenizePage() {
@@ -137,10 +150,13 @@ export default function TokenizePage() {
             <div className="w-16 h-16 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center mb-6">
               <Wallet className="w-8 h-8 text-neutral-500" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-3">Tokenize Your Property</h1>
+            <h1 className="text-2xl font-bold text-white mb-3">
+              Tokenize Your Property
+            </h1>
             <p className="text-sm text-neutral-500 max-w-md mb-8">
-              Connect your wallet to begin the property tokenization process. Turn your real estate
-              into tradeable digital assets on the Stellar blockchain.
+              Connect your wallet to begin the property tokenization process.
+              Turn your real estate into tradeable digital assets on the Stellar
+              blockchain.
             </p>
             <Button
               size="lg"
@@ -175,9 +191,12 @@ export default function TokenizePage() {
         >
           {/* Header */}
           <motion.div variants={staggerItem} className="text-center">
-            <h1 className="text-2xl font-bold text-white">Tokenize Your Property</h1>
+            <h1 className="text-2xl font-bold text-white">
+              Tokenize Your Property
+            </h1>
             <p className="text-sm text-neutral-500 mt-2">
-              Transform your real estate into digital tokens in four simple steps
+              Transform your real estate into digital tokens in four simple
+              steps
             </p>
           </motion.div>
 
@@ -205,8 +224,12 @@ export default function TokenizePage() {
                         <Building2 className="w-5 h-5 text-[#ff3e00]" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold text-white">Property Details</h2>
-                        <p className="text-xs text-neutral-500">Basic information about your property</p>
+                        <h2 className="text-lg font-semibold text-white">
+                          Property Details
+                        </h2>
+                        <p className="text-xs text-neutral-500">
+                          Basic information about your property
+                        </p>
                       </div>
                     </div>
 
@@ -216,7 +239,9 @@ export default function TokenizePage() {
                           label="Property Name"
                           placeholder="e.g., Luxury Apartments Lagos"
                           value={formData.name}
-                          onChange={(e) => updateFormData({ name: e.target.value })}
+                          onChange={(e) =>
+                            updateFormData({ name: e.target.value })
+                          }
                         />
                       </div>
                       <div className="sm:col-span-2">
@@ -225,7 +250,9 @@ export default function TokenizePage() {
                           placeholder="Describe your property..."
                           rows={3}
                           value={formData.description}
-                          onChange={(e) => updateFormData({ description: e.target.value })}
+                          onChange={(e) =>
+                            updateFormData({ description: e.target.value })
+                          }
                         />
                       </div>
                       <div className="sm:col-span-2">
@@ -233,7 +260,9 @@ export default function TokenizePage() {
                           label="Street Address"
                           placeholder="123 Main Street"
                           value={formData.address}
-                          onChange={(e) => updateFormData({ address: e.target.value })}
+                          onChange={(e) =>
+                            updateFormData({ address: e.target.value })
+                          }
                           leftIcon={<MapPin className="w-4 h-4" />}
                         />
                       </div>
@@ -241,7 +270,9 @@ export default function TokenizePage() {
                         label="City"
                         placeholder="Lagos"
                         value={formData.city}
-                        onChange={(e) => updateFormData({ city: e.target.value })}
+                        onChange={(e) =>
+                          updateFormData({ city: e.target.value })
+                        }
                       />
                       <div>
                         <label className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wider">
@@ -249,7 +280,9 @@ export default function TokenizePage() {
                         </label>
                         <select
                           value={formData.country}
-                          onChange={(e) => updateFormData({ country: e.target.value })}
+                          onChange={(e) =>
+                            updateFormData({ country: e.target.value })
+                          }
                           className="w-full px-3 py-2.5 bg-[#0a0a0a] border border-[#262626] rounded-lg text-white text-sm focus:outline-none focus:border-[#404040] cursor-pointer"
                         >
                           <option value="">Select country</option>
@@ -268,7 +301,9 @@ export default function TokenizePage() {
                         </label>
                         <select
                           value={formData.propertyType}
-                          onChange={(e) => updateFormData({ propertyType: e.target.value })}
+                          onChange={(e) =>
+                            updateFormData({ propertyType: e.target.value })
+                          }
                           className="w-full px-3 py-2.5 bg-[#0a0a0a] border border-[#262626] rounded-lg text-white text-sm focus:outline-none focus:border-[#404040] cursor-pointer"
                         >
                           <option value="residential">Residential</option>
@@ -282,28 +317,36 @@ export default function TokenizePage() {
                         type="number"
                         placeholder="5000"
                         value={formData.totalArea}
-                        onChange={(e) => updateFormData({ totalArea: e.target.value })}
+                        onChange={(e) =>
+                          updateFormData({ totalArea: e.target.value })
+                        }
                       />
                       <Input
                         label="Bedrooms"
                         type="number"
                         placeholder="3"
                         value={formData.bedrooms}
-                        onChange={(e) => updateFormData({ bedrooms: e.target.value })}
+                        onChange={(e) =>
+                          updateFormData({ bedrooms: e.target.value })
+                        }
                       />
                       <Input
                         label="Bathrooms"
                         type="number"
                         placeholder="2"
                         value={formData.bathrooms}
-                        onChange={(e) => updateFormData({ bathrooms: e.target.value })}
+                        onChange={(e) =>
+                          updateFormData({ bathrooms: e.target.value })
+                        }
                       />
                       <Input
                         label="Year Built"
                         type="number"
                         placeholder="2020"
                         value={formData.yearBuilt}
-                        onChange={(e) => updateFormData({ yearBuilt: e.target.value })}
+                        onChange={(e) =>
+                          updateFormData({ yearBuilt: e.target.value })
+                        }
                       />
                     </div>
                   </motion.div>
@@ -324,7 +367,9 @@ export default function TokenizePage() {
                         <FileText className="w-5 h-5 text-[#ff3e00]" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold text-white">Upload Documents</h2>
+                        <h2 className="text-lg font-semibold text-white">
+                          Upload Documents
+                        </h2>
                         <p className="text-xs text-neutral-500">
                           Required documents for property verification
                         </p>
@@ -340,8 +385,12 @@ export default function TokenizePage() {
                               <FileText className="w-5 h-5 text-neutral-500" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-white">Title Deed / Proof of Ownership</p>
-                              <p className="text-xs text-neutral-600 font-mono">PDF or image, max 10MB</p>
+                              <p className="text-sm font-medium text-white">
+                                Title Deed / Proof of Ownership
+                              </p>
+                              <p className="text-xs text-neutral-600 font-mono">
+                                PDF or image, max 10MB
+                              </p>
                             </div>
                           </div>
                           {formData.titleDeed ? (
@@ -349,7 +398,11 @@ export default function TokenizePage() {
                               Uploaded
                             </Badge>
                           ) : (
-                            <Button variant="outline" size="sm" leftIcon={<Upload className="w-4 h-4" />}>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              leftIcon={<Upload className="w-4 h-4" />}
+                            >
                               Upload
                             </Button>
                           )}
@@ -364,11 +417,17 @@ export default function TokenizePage() {
                               <ImageIcon className="w-5 h-5 text-neutral-500" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-white">Property Images</p>
-                              <p className="text-xs text-neutral-600 font-mono">Min 5 images, max 20MB each</p>
+                              <p className="text-sm font-medium text-white">
+                                Property Images
+                              </p>
+                              <p className="text-xs text-neutral-600 font-mono">
+                                Min 5 images, max 20MB each
+                              </p>
                             </div>
                           </div>
-                          <Badge variant="outline">{formData.propertyImages.length}/5 min</Badge>
+                          <Badge variant="outline">
+                            {formData.propertyImages.length}/5 min
+                          </Badge>
                         </div>
                       </div>
 
@@ -380,13 +439,19 @@ export default function TokenizePage() {
                               <Shield className="w-5 h-5 text-neutral-500" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-white">Legal Documents</p>
+                              <p className="text-sm font-medium text-white">
+                                Legal Documents
+                              </p>
                               <p className="text-xs text-neutral-600 font-mono">
                                 Insurance, permits, compliance docs
                               </p>
                             </div>
                           </div>
-                          <Button variant="outline" size="sm" leftIcon={<Upload className="w-4 h-4" />}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            leftIcon={<Upload className="w-4 h-4" />}
+                          >
                             Upload
                           </Button>
                         </div>
@@ -400,11 +465,19 @@ export default function TokenizePage() {
                               <DollarSign className="w-5 h-5 text-neutral-500" />
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-white">Appraisal Report (Optional)</p>
-                              <p className="text-xs text-neutral-600 font-mono">Professional property valuation</p>
+                              <p className="text-sm font-medium text-white">
+                                Appraisal Report (Optional)
+                              </p>
+                              <p className="text-xs text-neutral-600 font-mono">
+                                Professional property valuation
+                              </p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" leftIcon={<Upload className="w-4 h-4" />}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            leftIcon={<Upload className="w-4 h-4" />}
+                          >
                             Upload
                           </Button>
                         </div>
@@ -415,10 +488,13 @@ export default function TokenizePage() {
                       <div className="flex items-start gap-3">
                         <Link2 className="w-5 h-5 text-blue-400 mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-white">Chainlink Oracle Integration</p>
+                          <p className="text-sm font-medium text-white">
+                            Chainlink Oracle Integration
+                          </p>
                           <p className="text-xs text-neutral-500 mt-1">
-                            Your property will be valued using Chainlink price feeds for accurate,
-                            manipulation-resistant pricing data.
+                            Your property will be valued using Chainlink price
+                            feeds for accurate, manipulation-resistant pricing
+                            data.
                           </p>
                         </div>
                       </div>
@@ -441,7 +517,9 @@ export default function TokenizePage() {
                         <Coins className="w-5 h-5 text-[#ff3e00]" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold text-white">Token Configuration</h2>
+                        <h2 className="text-lg font-semibold text-white">
+                          Token Configuration
+                        </h2>
                         <p className="text-xs text-neutral-500">
                           Configure how your property will be fractionalized
                         </p>
@@ -454,7 +532,9 @@ export default function TokenizePage() {
                         type="number"
                         placeholder="1000000"
                         value={formData.totalValue}
-                        onChange={(e) => updateFormData({ totalValue: e.target.value })}
+                        onChange={(e) =>
+                          updateFormData({ totalValue: e.target.value })
+                        }
                         leftIcon={<DollarSign className="w-4 h-4" />}
                       />
                       <Input
@@ -462,7 +542,9 @@ export default function TokenizePage() {
                         type="number"
                         placeholder="10000"
                         value={formData.totalTokens}
-                        onChange={(e) => updateFormData({ totalTokens: e.target.value })}
+                        onChange={(e) =>
+                          updateFormData({ totalTokens: e.target.value })
+                        }
                         leftIcon={<Coins className="w-4 h-4" />}
                       />
                       <div>
@@ -470,16 +552,22 @@ export default function TokenizePage() {
                           Price per Token
                         </label>
                         <div className="px-3 py-2.5 bg-[#0a0a0a] border border-[#262626] rounded-lg text-white font-mono text-sm">
-                          {calculatedTokenPrice ? formatCurrency(calculatedTokenPrice) : '-'}
+                          {calculatedTokenPrice
+                            ? formatCurrency(calculatedTokenPrice)
+                            : "-"}
                         </div>
-                        <p className="text-[10px] text-neutral-600 mt-1 font-mono">Auto-calculated</p>
+                        <p className="text-[10px] text-neutral-600 mt-1 font-mono">
+                          Auto-calculated
+                        </p>
                       </div>
                       <Input
                         label="Minimum Investment (Tokens)"
                         type="number"
                         placeholder="1"
                         value={formData.minInvestment}
-                        onChange={(e) => updateFormData({ minInvestment: e.target.value })}
+                        onChange={(e) =>
+                          updateFormData({ minInvestment: e.target.value })
+                        }
                         leftIcon={<Users className="w-4 h-4" />}
                       />
                       <Input
@@ -487,14 +575,18 @@ export default function TokenizePage() {
                         type="number"
                         placeholder="8.5"
                         value={formData.expectedYield}
-                        onChange={(e) => updateFormData({ expectedYield: e.target.value })}
+                        onChange={(e) =>
+                          updateFormData({ expectedYield: e.target.value })
+                        }
                         leftIcon={<Percent className="w-4 h-4" />}
                       />
                       <Input
                         label="Funding Deadline"
                         type="date"
                         value={formData.fundingDeadline}
-                        onChange={(e) => updateFormData({ fundingDeadline: e.target.value })}
+                        onChange={(e) =>
+                          updateFormData({ fundingDeadline: e.target.value })
+                        }
                       />
                     </div>
 
@@ -502,10 +594,13 @@ export default function TokenizePage() {
                       <div className="flex items-start gap-3">
                         <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-white">Token Standards</p>
+                          <p className="text-sm font-medium text-white">
+                            Token Standards
+                          </p>
                           <p className="text-xs text-neutral-500 mt-1">
-                            Tokens will be minted as Soroban assets on Stellar, compliant with
-                            regulatory requirements. Each token represents fractional ownership.
+                            Tokens will be minted as Soroban assets on Stellar,
+                            compliant with regulatory requirements. Each token
+                            represents fractional ownership.
                           </p>
                         </div>
                       </div>
@@ -528,7 +623,9 @@ export default function TokenizePage() {
                         <CheckCircle2 className="w-5 h-5 text-[#00ff88]" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold text-white">Review & Submit</h2>
+                        <h2 className="text-lg font-semibold text-white">
+                          Review & Submit
+                        </h2>
                         <p className="text-xs text-neutral-500">
                           Review your property details before submission
                         </p>
@@ -538,30 +635,36 @@ export default function TokenizePage() {
                     <div className="space-y-4">
                       {/* Property Summary */}
                       <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
-                        <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">Property Details</h3>
+                        <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
+                          Property Details
+                        </h3>
                         <div className="grid sm:grid-cols-2 gap-3 text-sm">
                           <div>
                             <span className="text-neutral-500">Name:</span>
-                            <span className="ml-2 text-white">{formData.name || '-'}</span>
+                            <span className="ml-2 text-white">
+                              {formData.name || "-"}
+                            </span>
                           </div>
                           <div>
                             <span className="text-neutral-500">Location:</span>
                             <span className="ml-2 text-white">
                               {formData.city && formData.country
                                 ? `${formData.city}, ${formData.country}`
-                                : '-'}
+                                : "-"}
                             </span>
                           </div>
                           <div>
                             <span className="text-neutral-500">Type:</span>
                             <span className="ml-2 text-white capitalize">
-                              {formData.propertyType || '-'}
+                              {formData.propertyType || "-"}
                             </span>
                           </div>
                           <div>
                             <span className="text-neutral-500">Area:</span>
                             <span className="ml-2 text-white font-mono">
-                              {formData.totalArea ? `${formData.totalArea} sq ft` : '-'}
+                              {formData.totalArea
+                                ? `${formData.totalArea} sq ft`
+                                : "-"}
                             </span>
                           </div>
                         </div>
@@ -569,30 +672,52 @@ export default function TokenizePage() {
 
                       {/* Tokenization Summary */}
                       <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
-                        <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">Tokenization</h3>
+                        <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
+                          Tokenization
+                        </h3>
                         <div className="grid sm:grid-cols-2 gap-3 text-sm">
                           <div>
-                            <span className="text-neutral-500">Total Value:</span>
+                            <span className="text-neutral-500">
+                              Total Value:
+                            </span>
                             <span className="ml-2 text-white font-mono">
-                              {formData.totalValue ? formatCurrency(parseFloat(formData.totalValue)) : '-'}
+                              {formData.totalValue
+                                ? formatCurrency(
+                                    parseFloat(formData.totalValue),
+                                  )
+                                : "-"}
                             </span>
                           </div>
                           <div>
-                            <span className="text-neutral-500">Total Tokens:</span>
+                            <span className="text-neutral-500">
+                              Total Tokens:
+                            </span>
                             <span className="ml-2 text-white font-mono">
-                              {formData.totalTokens ? parseInt(formData.totalTokens).toLocaleString() : '-'}
+                              {formData.totalTokens
+                                ? parseInt(
+                                    formData.totalTokens,
+                                  ).toLocaleString()
+                                : "-"}
                             </span>
                           </div>
                           <div>
-                            <span className="text-neutral-500">Token Price:</span>
+                            <span className="text-neutral-500">
+                              Token Price:
+                            </span>
                             <span className="ml-2 text-white font-mono">
-                              {calculatedTokenPrice ? formatCurrency(calculatedTokenPrice) : '-'}
+                              {calculatedTokenPrice
+                                ? formatCurrency(calculatedTokenPrice)
+                                : "-"}
                             </span>
                           </div>
                           <div>
-                            <span className="text-neutral-500">Expected Yield:</span>
+                            <span className="text-neutral-500">
+                              Expected Yield:
+                            </span>
                             <span className="ml-2 text-[#00ff88] font-mono">
-                              {formData.expectedYield ? `${formData.expectedYield}% APY` : '-'}
+                              {formData.expectedYield
+                                ? `${formData.expectedYield}% APY`
+                                : "-"}
                             </span>
                           </div>
                         </div>
@@ -600,30 +725,43 @@ export default function TokenizePage() {
 
                       {/* Fees */}
                       <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
-                        <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">Fees</h3>
+                        <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
+                          Fees
+                        </h3>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-neutral-500">Platform Fee (2%)</span>
+                            <span className="text-neutral-500">
+                              Platform Fee (2%)
+                            </span>
                             <span className="text-white font-mono">
                               {formData.totalValue
-                                ? formatCurrency(parseFloat(formData.totalValue) * 0.02)
-                                : '-'}
+                                ? formatCurrency(
+                                    parseFloat(formData.totalValue) * 0.02,
+                                  )
+                                : "-"}
                             </span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-neutral-500">Token Minting</span>
+                            <span className="text-neutral-500">
+                              Token Minting
+                            </span>
                             <span className="text-white font-mono">$50</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-neutral-500">Oracle Integration</span>
+                            <span className="text-neutral-500">
+                              Oracle Integration
+                            </span>
                             <span className="text-white font-mono">$100</span>
                           </div>
                           <div className="border-t border-[#262626] pt-2 mt-2 flex justify-between font-medium">
                             <span className="text-white">Total Fees</span>
                             <span className="text-white font-mono">
                               {formData.totalValue
-                                ? formatCurrency(parseFloat(formData.totalValue) * 0.02 + 150)
-                                : '-'}
+                                ? formatCurrency(
+                                    parseFloat(formData.totalValue) * 0.02 +
+                                      150,
+                                  )
+                                : "-"}
                             </span>
                           </div>
                         </div>
@@ -634,10 +772,13 @@ export default function TokenizePage() {
                       <div className="flex items-start gap-3">
                         <Shield className="w-5 h-5 text-[#00ff88] mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-white">Ready for Review</p>
+                          <p className="text-sm font-medium text-white">
+                            Ready for Review
+                          </p>
                           <p className="text-xs text-neutral-500 mt-1">
-                            After submission, our team will review your property documents and
-                            verify ownership. This typically takes 3-5 business days.
+                            After submission, our team will review your property
+                            documents and verify ownership. This typically takes
+                            3-5 business days.
                           </p>
                         </div>
                       </div>
@@ -657,7 +798,10 @@ export default function TokenizePage() {
                   Back
                 </Button>
                 {currentStep < steps.length - 1 ? (
-                  <Button onClick={nextStep} rightIcon={<ArrowRight className="w-4 h-4" />}>
+                  <Button
+                    onClick={nextStep}
+                    rightIcon={<ArrowRight className="w-4 h-4" />}
+                  >
                     Continue
                   </Button>
                 ) : (

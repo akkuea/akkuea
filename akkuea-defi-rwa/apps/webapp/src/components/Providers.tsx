@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { type ReactNode } from 'react';
-import { ThemeProvider } from '@/context/ThemeContext';
-import { WalletProvider } from '@/context/WalletContext';
+import { type ReactNode } from "react";
+import { ThemeProvider } from "@/context/ThemeContext";
+import { WalletProvider } from "@/context/WalletContext";
 
 interface ProvidersProps {
   children: ReactNode;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Upload,
@@ -21,9 +21,11 @@ import {
   Wallet,
 } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
-import { Card, Button, Input, Textarea, Badge, Stepper } from "@/components/ui";
+import { Card, Button, Textarea, Badge, Stepper } from "@/components/ui";
 import { useWallet } from "@/context/WalletContext";
 import { formatCurrency } from "@/lib/utils";
+import { Form, FormInput, FormSelect } from "@/components/forms";
+import { tokenizeSchema, type TokenizeFormValues } from "@/schemas/forms";
 import {
   pageTransition,
   fadeInUp,
@@ -46,33 +48,7 @@ const steps = [
   { id: "review", title: "Review", description: "Confirm & submit" },
 ];
 
-interface FormData {
-  // Step 1: Property Details
-  name: string;
-  description: string;
-  address: string;
-  city: string;
-  country: string;
-  propertyType: string;
-  totalArea: string;
-  bedrooms: string;
-  bathrooms: string;
-  yearBuilt: string;
-  // Step 2: Documents
-  titleDeed: File | null;
-  propertyImages: File[];
-  legalDocuments: File[];
-  appraisalReport: File | null;
-  // Step 3: Tokenization
-  totalValue: string;
-  totalTokens: string;
-  tokenPrice: string;
-  minInvestment: string;
-  expectedYield: string;
-  fundingDeadline: string;
-}
-
-const initialFormData: FormData = {
+const initialFormData: TokenizeFormValues = {
   name: "",
   description: "",
   address: "",
@@ -89,7 +65,6 @@ const initialFormData: FormData = {
   appraisalReport: null,
   totalValue: "",
   totalTokens: "",
-  tokenPrice: "",
   minInvestment: "",
   expectedYield: "",
   fundingDeadline: "",
@@ -98,12 +73,6 @@ const initialFormData: FormData = {
 export default function TokenizePage() {
   const { isConnected, connect, isConnecting } = useWallet();
   const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const updateFormData = useCallback((updates: Partial<FormData>) => {
-    setFormData((prev) => ({ ...prev, ...updates }));
-  }, []);
 
   const nextStep = () => {
     if (currentStep < steps.length - 1) {
@@ -116,20 +85,6 @@ export default function TokenizePage() {
       setCurrentStep((prev) => prev - 1);
     }
   };
-
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-    setIsSubmitting(false);
-    // Show success state
-  };
-
-  // Calculate token price automatically
-  const calculatedTokenPrice =
-    formData.totalValue && formData.totalTokens
-      ? parseFloat(formData.totalValue) / parseFloat(formData.totalTokens)
-      : 0;
 
   if (!isConnected) {
     return (
@@ -208,160 +163,181 @@ export default function TokenizePage() {
           {/* Form Content */}
           <motion.div variants={staggerItem}>
             <Card className="relative overflow-hidden">
-              <AnimatePresence mode="wait">
-                {/* Step 1: Property Details */}
-                {currentStep === 0 && (
-                  <motion.div
-                    key="step-1"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                  >
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-lg bg-[#ff3e00]/10 border border-[#ff3e00]/20 flex items-center justify-center">
-                        <Building2 className="w-5 h-5 text-[#ff3e00]" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">
-                          Property Details
-                        </h2>
-                        <p className="text-xs text-neutral-500">
-                          Basic information about your property
-                        </p>
-                      </div>
-                    </div>
+              <Form
+                schema={tokenizeSchema}
+                defaultValues={initialFormData}
+                successMessage="Submitted for review."
+                onSubmit={async () => {
+                  // Simulate API call
+                  await new Promise((resolve) => setTimeout(resolve, 1500));
+                }}
+              >
+                {({ register, formState, trigger, watch }) => {
+                  const calculatedTokenPrice =
+                    watch("totalValue") && watch("totalTokens")
+                      ? parseFloat(watch("totalValue")) /
+                        parseFloat(watch("totalTokens"))
+                      : 0;
 
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <div className="sm:col-span-2">
-                        <Input
-                          label="Property Name"
-                          placeholder="e.g., Luxury Apartments Lagos"
-                          value={formData.name}
-                          onChange={(e) =>
-                            updateFormData({ name: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <Textarea
-                          label="Description"
-                          placeholder="Describe your property..."
-                          rows={3}
-                          value={formData.description}
-                          onChange={(e) =>
-                            updateFormData({ description: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <Input
-                          label="Street Address"
-                          placeholder="123 Main Street"
-                          value={formData.address}
-                          onChange={(e) =>
-                            updateFormData({ address: e.target.value })
-                          }
-                          leftIcon={<MapPin className="w-4 h-4" />}
-                        />
-                      </div>
-                      <Input
-                        label="City"
-                        placeholder="Lagos"
-                        value={formData.city}
-                        onChange={(e) =>
-                          updateFormData({ city: e.target.value })
-                        }
-                      />
-                      <div>
-                        <label className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wider">
-                          Country
-                        </label>
-                        <select
-                          value={formData.country}
-                          onChange={(e) =>
-                            updateFormData({ country: e.target.value })
-                          }
-                          className="w-full px-3 py-2.5 bg-[#0a0a0a] border border-[#262626] rounded-lg text-white text-sm focus:outline-none focus:border-[#404040] cursor-pointer"
-                        >
-                          <option value="">Select country</option>
-                          <option value="nigeria">Nigeria</option>
-                          <option value="kenya">Kenya</option>
-                          <option value="ghana">Ghana</option>
-                          <option value="south-africa">South Africa</option>
-                          <option value="mexico">Mexico</option>
-                          <option value="colombia">Colombia</option>
-                          <option value="brazil">Brazil</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wider">
-                          Property Type
-                        </label>
-                        <select
-                          value={formData.propertyType}
-                          onChange={(e) =>
-                            updateFormData({ propertyType: e.target.value })
-                          }
-                          className="w-full px-3 py-2.5 bg-[#0a0a0a] border border-[#262626] rounded-lg text-white text-sm focus:outline-none focus:border-[#404040] cursor-pointer"
-                        >
-                          <option value="residential">Residential</option>
-                          <option value="commercial">Commercial</option>
-                          <option value="industrial">Industrial</option>
-                          <option value="mixed-use">Mixed Use</option>
-                        </select>
-                      </div>
-                      <Input
-                        label="Total Area (sq ft)"
-                        type="number"
-                        placeholder="5000"
-                        value={formData.totalArea}
-                        onChange={(e) =>
-                          updateFormData({ totalArea: e.target.value })
-                        }
-                      />
-                      <Input
-                        label="Bedrooms"
-                        type="number"
-                        placeholder="3"
-                        value={formData.bedrooms}
-                        onChange={(e) =>
-                          updateFormData({ bedrooms: e.target.value })
-                        }
-                      />
-                      <Input
-                        label="Bathrooms"
-                        type="number"
-                        placeholder="2"
-                        value={formData.bathrooms}
-                        onChange={(e) =>
-                          updateFormData({ bathrooms: e.target.value })
-                        }
-                      />
-                      <Input
-                        label="Year Built"
-                        type="number"
-                        placeholder="2020"
-                        value={formData.yearBuilt}
-                        onChange={(e) =>
-                          updateFormData({ yearBuilt: e.target.value })
-                        }
-                      />
-                    </div>
-                  </motion.div>
-                )}
+                  const stepFields: Array<Array<keyof TokenizeFormValues>> = [
+                    [
+                      "name",
+                      "description",
+                      "address",
+                      "city",
+                      "country",
+                      "propertyType",
+                      "totalArea",
+                      "bedrooms",
+                      "bathrooms",
+                      "yearBuilt",
+                    ],
+                    [],
+                    [
+                      "totalValue",
+                      "totalTokens",
+                      "minInvestment",
+                      "expectedYield",
+                      "fundingDeadline",
+                    ],
+                    [],
+                  ];
 
-                {/* Step 2: Documents */}
-                {currentStep === 1 && (
-                  <motion.div
-                    key="step-2"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                  >
+                  const goNext = async () => {
+                    const fields = stepFields[currentStep] ?? [];
+                    if (fields.length > 0) {
+                      const ok = await trigger(fields as never, {
+                        shouldFocus: true,
+                      });
+                      if (!ok) return;
+                    }
+                    nextStep();
+                  };
+
+                  const values = watch();
+
+                  return (
+                    <>
+                      <AnimatePresence mode="wait">
+                        {/* Step 1: Property Details */}
+                        {currentStep === 0 && (
+                          <motion.div
+                            key="step-1"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="space-y-6"
+                          >
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-10 h-10 rounded-lg bg-[#ff3e00]/10 border border-[#ff3e00]/20 flex items-center justify-center">
+                                <Building2 className="w-5 h-5 text-[#ff3e00]" />
+                              </div>
+                              <div>
+                                <h2 className="text-lg font-semibold text-white">
+                                  Property Details
+                                </h2>
+                                <p className="text-xs text-neutral-500">
+                                  Basic information about your property
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <div className="sm:col-span-2">
+                                <FormInput<TokenizeFormValues>
+                                  name="name"
+                                  label="Property Name"
+                                  placeholder="e.g., Luxury Apartments Lagos"
+                                />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <Textarea
+                                  label="Description"
+                                  placeholder="Describe your property..."
+                                  rows={3}
+                                  error={
+                                    typeof formState.errors.description?.message ===
+                                    "string"
+                                      ? formState.errors.description?.message
+                                      : undefined
+                                  }
+                                  {...register("description")}
+                                />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <FormInput<TokenizeFormValues>
+                                  name="address"
+                                  label="Street Address"
+                                  placeholder="123 Main Street"
+                                  leftIcon={<MapPin className="w-4 h-4" />}
+                                />
+                              </div>
+                              <FormInput<TokenizeFormValues>
+                                name="city"
+                                label="City"
+                                placeholder="Lagos"
+                              />
+                              <FormSelect<TokenizeFormValues>
+                                name="country"
+                                label="Country"
+                              >
+                                <option value="">Select country</option>
+                                <option value="nigeria">Nigeria</option>
+                                <option value="kenya">Kenya</option>
+                                <option value="ghana">Ghana</option>
+                                <option value="south-africa">South Africa</option>
+                                <option value="mexico">Mexico</option>
+                                <option value="colombia">Colombia</option>
+                                <option value="brazil">Brazil</option>
+                              </FormSelect>
+                              <FormSelect<TokenizeFormValues>
+                                name="propertyType"
+                                label="Property Type"
+                              >
+                                <option value="residential">Residential</option>
+                                <option value="commercial">Commercial</option>
+                                <option value="industrial">Industrial</option>
+                                <option value="mixed-use">Mixed Use</option>
+                              </FormSelect>
+                              <FormInput<TokenizeFormValues>
+                                name="totalArea"
+                                label="Total Area (sq ft)"
+                                type="number"
+                                placeholder="5000"
+                              />
+                              <FormInput<TokenizeFormValues>
+                                name="bedrooms"
+                                label="Bedrooms"
+                                type="number"
+                                placeholder="3"
+                              />
+                              <FormInput<TokenizeFormValues>
+                                name="bathrooms"
+                                label="Bathrooms"
+                                type="number"
+                                placeholder="2"
+                              />
+                              <FormInput<TokenizeFormValues>
+                                name="yearBuilt"
+                                label="Year Built"
+                                type="number"
+                                placeholder="2020"
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* Step 2: Documents */}
+                        {currentStep === 1 && (
+                          <motion.div
+                            key="step-2"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="space-y-6"
+                          >
                     <div className="flex items-center gap-3 mb-6">
                       <div className="w-10 h-10 rounded-lg bg-[#ff3e00]/10 border border-[#ff3e00]/20 flex items-center justify-center">
                         <FileText className="w-5 h-5 text-[#ff3e00]" />
@@ -393,7 +369,7 @@ export default function TokenizePage() {
                               </p>
                             </div>
                           </div>
-                          {formData.titleDeed ? (
+                          {values.titleDeed ? (
                             <Badge variant="success" dot>
                               Uploaded
                             </Badge>
@@ -426,7 +402,7 @@ export default function TokenizePage() {
                             </div>
                           </div>
                           <Badge variant="outline">
-                            {formData.propertyImages.length}/5 min
+                            {(values.propertyImages?.length ?? 0)}/5 min
                           </Badge>
                         </div>
                       </div>
@@ -527,24 +503,18 @@ export default function TokenizePage() {
                     </div>
 
                     <div className="grid sm:grid-cols-2 gap-4">
-                      <Input
+                      <FormInput<TokenizeFormValues>
+                        name="totalValue"
                         label="Total Property Value (USD)"
                         type="number"
                         placeholder="1000000"
-                        value={formData.totalValue}
-                        onChange={(e) =>
-                          updateFormData({ totalValue: e.target.value })
-                        }
                         leftIcon={<DollarSign className="w-4 h-4" />}
                       />
-                      <Input
+                      <FormInput<TokenizeFormValues>
+                        name="totalTokens"
                         label="Total Tokens to Mint"
                         type="number"
                         placeholder="10000"
-                        value={formData.totalTokens}
-                        onChange={(e) =>
-                          updateFormData({ totalTokens: e.target.value })
-                        }
                         leftIcon={<Coins className="w-4 h-4" />}
                       />
                       <div>
@@ -560,33 +530,24 @@ export default function TokenizePage() {
                           Auto-calculated
                         </p>
                       </div>
-                      <Input
+                      <FormInput<TokenizeFormValues>
+                        name="minInvestment"
                         label="Minimum Investment (Tokens)"
                         type="number"
                         placeholder="1"
-                        value={formData.minInvestment}
-                        onChange={(e) =>
-                          updateFormData({ minInvestment: e.target.value })
-                        }
                         leftIcon={<Users className="w-4 h-4" />}
                       />
-                      <Input
+                      <FormInput<TokenizeFormValues>
+                        name="expectedYield"
                         label="Expected Annual Yield (%)"
                         type="number"
                         placeholder="8.5"
-                        value={formData.expectedYield}
-                        onChange={(e) =>
-                          updateFormData({ expectedYield: e.target.value })
-                        }
                         leftIcon={<Percent className="w-4 h-4" />}
                       />
-                      <Input
+                      <FormInput<TokenizeFormValues>
+                        name="fundingDeadline"
                         label="Funding Deadline"
                         type="date"
-                        value={formData.fundingDeadline}
-                        onChange={(e) =>
-                          updateFormData({ fundingDeadline: e.target.value })
-                        }
                       />
                     </div>
 
@@ -642,28 +603,28 @@ export default function TokenizePage() {
                           <div>
                             <span className="text-neutral-500">Name:</span>
                             <span className="ml-2 text-white">
-                              {formData.name || "-"}
+                              {values.name || "-"}
                             </span>
                           </div>
                           <div>
                             <span className="text-neutral-500">Location:</span>
                             <span className="ml-2 text-white">
-                              {formData.city && formData.country
-                                ? `${formData.city}, ${formData.country}`
+                              {values.city && values.country
+                                ? `${values.city}, ${values.country}`
                                 : "-"}
                             </span>
                           </div>
                           <div>
                             <span className="text-neutral-500">Type:</span>
                             <span className="ml-2 text-white capitalize">
-                              {formData.propertyType || "-"}
+                              {values.propertyType || "-"}
                             </span>
                           </div>
                           <div>
                             <span className="text-neutral-500">Area:</span>
                             <span className="ml-2 text-white font-mono">
-                              {formData.totalArea
-                                ? `${formData.totalArea} sq ft`
+                              {values.totalArea
+                                ? `${values.totalArea} sq ft`
                                 : "-"}
                             </span>
                           </div>
@@ -681,9 +642,9 @@ export default function TokenizePage() {
                               Total Value:
                             </span>
                             <span className="ml-2 text-white font-mono">
-                              {formData.totalValue
+                              {values.totalValue
                                 ? formatCurrency(
-                                    parseFloat(formData.totalValue),
+                                    parseFloat(values.totalValue),
                                   )
                                 : "-"}
                             </span>
@@ -693,9 +654,9 @@ export default function TokenizePage() {
                               Total Tokens:
                             </span>
                             <span className="ml-2 text-white font-mono">
-                              {formData.totalTokens
+                              {values.totalTokens
                                 ? parseInt(
-                                    formData.totalTokens,
+                                    values.totalTokens,
                                   ).toLocaleString()
                                 : "-"}
                             </span>
@@ -715,8 +676,8 @@ export default function TokenizePage() {
                               Expected Yield:
                             </span>
                             <span className="ml-2 text-[#00ff88] font-mono">
-                              {formData.expectedYield
-                                ? `${formData.expectedYield}% APY`
+                              {values.expectedYield
+                                ? `${values.expectedYield}% APY`
                                 : "-"}
                             </span>
                           </div>
@@ -734,9 +695,9 @@ export default function TokenizePage() {
                               Platform Fee (2%)
                             </span>
                             <span className="text-white font-mono">
-                              {formData.totalValue
+                              {values.totalValue
                                 ? formatCurrency(
-                                    parseFloat(formData.totalValue) * 0.02,
+                                    parseFloat(values.totalValue) * 0.02,
                                   )
                                 : "-"}
                             </span>
@@ -756,9 +717,9 @@ export default function TokenizePage() {
                           <div className="border-t border-[#262626] pt-2 mt-2 flex justify-between font-medium">
                             <span className="text-white">Total Fees</span>
                             <span className="text-white font-mono">
-                              {formData.totalValue
+                              {values.totalValue
                                 ? formatCurrency(
-                                    parseFloat(formData.totalValue) * 0.02 +
+                                    parseFloat(values.totalValue) * 0.02 +
                                       150,
                                   )
                                 : "-"}
@@ -785,36 +746,44 @@ export default function TokenizePage() {
                     </div>
                   </motion.div>
                 )}
-              </AnimatePresence>
+                      </AnimatePresence>
 
-              {/* Navigation Buttons */}
-              <div className="flex items-center justify-between mt-8 pt-6 border-t border-[#262626]">
-                <Button
-                  variant="ghost"
-                  onClick={prevStep}
-                  disabled={currentStep === 0}
-                  leftIcon={<ArrowLeft className="w-4 h-4" />}
-                >
-                  Back
-                </Button>
-                {currentStep < steps.length - 1 ? (
-                  <Button
-                    onClick={nextStep}
-                    rightIcon={<ArrowRight className="w-4 h-4" />}
-                  >
-                    Continue
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleSubmit}
-                    isLoading={isSubmitting}
-                    isSecure
-                    rightIcon={<CheckCircle2 className="w-4 h-4" />}
-                  >
-                    Submit for Review
-                  </Button>
-                )}
-              </div>
+                      {/* Navigation Buttons */}
+                      <div className="flex items-center justify-between mt-8 pt-6 border-t border-[#262626]">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          onClick={prevStep}
+                          disabled={currentStep === 0 || formState.isSubmitting}
+                          leftIcon={<ArrowLeft className="w-4 h-4" />}
+                        >
+                          Back
+                        </Button>
+                        {currentStep < steps.length - 1 ? (
+                          <Button
+                            type="button"
+                            onClick={goNext}
+                            disabled={formState.isSubmitting}
+                            rightIcon={<ArrowRight className="w-4 h-4" />}
+                          >
+                            Continue
+                          </Button>
+                        ) : (
+                          <Button
+                            type="submit"
+                            isLoading={formState.isSubmitting}
+                            disabled={!formState.isValid}
+                            isSecure
+                            rightIcon={<CheckCircle2 className="w-4 h-4" />}
+                          >
+                            Submit for Review
+                          </Button>
+                        )}
+                      </div>
+                    </>
+                  );
+                }}
+              </Form>
             </Card>
           </motion.div>
         </motion.div>

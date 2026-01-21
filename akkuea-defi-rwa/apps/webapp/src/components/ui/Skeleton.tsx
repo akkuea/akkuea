@@ -80,3 +80,47 @@ export function SkeletonText({
         </div>
     );
 }
+
+/**
+ * Skeleton for card content
+ */
+interface SkeletonCardProps {
+    className?: string;
+    hasImage?: boolean;
+    imageHeight?: number;
+    lines?: number;
+}
+
+export function SkeletonCard({
+    className,
+    hasImage = true,
+    imageHeight = 200,
+    lines = 3,
+}: SkeletonCardProps) {
+    return (
+        <div
+            className={cn(
+                'rounded-xl border border-white/10 bg-white/5 overflow-hidden',
+                className
+            )}
+            role="status"
+            aria-label="Loading card..."
+        >
+            {hasImage && (
+                <Skeleton
+                    className="w-full"
+                    height={imageHeight}
+                    variant="rectangular"
+                />
+            )}
+            <div className="p-4 space-y-3">
+                <Skeleton className="h-6 w-3/4" />
+                <SkeletonText lines={lines} />
+                <div className="flex gap-2 pt-2">
+                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-8 w-20" />
+                </div>
+            </div>
+        </div>
+    );
+}

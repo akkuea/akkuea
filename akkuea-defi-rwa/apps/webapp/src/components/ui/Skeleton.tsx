@@ -53,3 +53,30 @@ export function Skeleton({
         />
     );
 }
+
+/**
+ * Skeleton for text content
+ */
+interface SkeletonTextProps {
+    lines?: number;
+    className?: string;
+    lastLineWidth?: string;
+}
+
+export function SkeletonText({
+    lines = 1,
+    className,
+    lastLineWidth = '75%',
+}: SkeletonTextProps) {
+    return (
+        <div className={cn('space-y-2', className)} role="status" aria-label="Loading text...">
+            {Array.from({ length: lines }).map((_, index) => (
+                <Skeleton
+                    key={index}
+                    className="h-4"
+                    width={index === lines - 1 ? lastLineWidth : '100%'}
+                />
+            ))}
+        </div>
+    );
+}

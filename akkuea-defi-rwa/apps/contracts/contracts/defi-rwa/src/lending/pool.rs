@@ -1,6 +1,6 @@
 use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
-use super::interest::{InterestRateModel, InterestStorage, PRECISION};
+use super::interest::PRECISION;
 use super::keys::{lending_bump, LendingKey};
 
 /// Lending pool configuration and state

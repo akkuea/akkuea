@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, String, Env};
+use soroban_sdk::{contracttype, Address, Env, String};
 
 use super::keys::StorageKey;
 
@@ -135,8 +135,7 @@ pub fn get_property_counter(env: &Env) -> u64 {
 /// Counter is stored separately for efficient ID generation
 pub fn increment_property_counter(env: &Env) -> u64 {
     let current = get_property_counter(env);
-    let next = current.checked_add(1)
-        .expect("Property counter overflow");
+    let next = current.checked_add(1).expect("Property counter overflow");
     let key = StorageKey::PropertyCounter;
     env.storage().instance().set(&key, &next);
     next

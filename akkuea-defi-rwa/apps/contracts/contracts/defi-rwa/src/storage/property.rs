@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, String, Env};
+use soroban_sdk::{contracttype, Address, Env, String};
 
 use super::keys::StorageKey;
 

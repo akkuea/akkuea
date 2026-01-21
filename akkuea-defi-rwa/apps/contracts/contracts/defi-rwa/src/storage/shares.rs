@@ -55,8 +55,7 @@ pub fn set_balance(env: &Env, property_id: u64, owner: &Address, balance: u64) {
 /// Panics if the addition would overflow u64
 pub fn increase_balance(env: &Env, property_id: u64, owner: &Address, amount: u64) {
     let current = get_balance(env, property_id, owner);
-    let new_balance = current.checked_add(amount)
-        .expect("Share balance overflow");
+    let new_balance = current.checked_add(amount).expect("Share balance overflow");
     set_balance(env, property_id, owner, new_balance);
 }
 
@@ -72,7 +71,8 @@ pub fn increase_balance(env: &Env, property_id: u64, owner: &Address, amount: u6
 /// Panics if the subtraction would underflow (insufficient balance)
 pub fn decrease_balance(env: &Env, property_id: u64, owner: &Address, amount: u64) {
     let current = get_balance(env, property_id, owner);
-    let new_balance = current.checked_sub(amount)
+    let new_balance = current
+        .checked_sub(amount)
         .expect("Insufficient share balance");
     set_balance(env, property_id, owner, new_balance);
 }
@@ -112,13 +112,7 @@ pub fn set_total_shares(env: &Env, property_id: u64, total: u64) {
 ///
 /// # Panics
 /// Panics if sender has insufficient balance
-pub fn transfer_shares(
-    env: &Env,
-    property_id: u64,
-    from: &Address,
-    to: &Address,
-    amount: u64,
-) {
+pub fn transfer_shares(env: &Env, property_id: u64, from: &Address, to: &Address, amount: u64) {
     decrease_balance(env, property_id, from, amount);
     increase_balance(env, property_id, to, amount);
 }

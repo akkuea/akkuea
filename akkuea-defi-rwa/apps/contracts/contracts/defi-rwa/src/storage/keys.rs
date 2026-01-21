@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Symbol, Address};
+use soroban_sdk::{contracttype, Address, Symbol};
 
 /// Storage keys for the property tokenization contract
 ///

@@ -45,7 +45,7 @@ pub struct BorrowPosition {
 pub struct PositionStorage;
 
 impl PositionStorage {
-    // ============ Deposit Position Methods ============
+    // Deposit Position Methods
 
     /// Store deposit position
     pub fn set_deposit(env: &Env, position: &DepositPosition) {
@@ -143,7 +143,7 @@ impl PositionStorage {
         (position.amount * (index_ratio - PRECISION)) / PRECISION
     }
 
-    // ============ Borrow Position Methods ============
+    // Borrow Position Methods
 
     /// Store borrow position
     pub fn set_borrow(env: &Env, position: &BorrowPosition) {

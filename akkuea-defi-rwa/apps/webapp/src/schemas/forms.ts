@@ -27,7 +27,6 @@ const positiveIntString = (label: string) =>
   );
 
 const tokenizeBaseSchema = z.object({
-  // Step 1: Property Details
   name: nonEmpty("Property name"),
   description: nonEmpty("Description").min(
     10,

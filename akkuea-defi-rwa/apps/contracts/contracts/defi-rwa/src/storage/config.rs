@@ -73,7 +73,7 @@ impl TokenConfig {
     /// # Returns
     /// * `bool` - True if initialized, false otherwise
     pub fn is_initialized(env: &Env) -> bool {
-        Self::load(env).map_or(false, |config| config.initialized)
+        Self::load(env).is_some_and(|config| config.initialized)
     }
 
     /// Updates the admin address
@@ -94,6 +94,7 @@ impl TokenConfig {
 ///
 /// # Returns
 /// * `Option<Address>` - Admin address if found, None otherwise
+#[allow(dead_code)]
 pub fn get_admin(env: &Env) -> Option<Address> {
     TokenConfig::load(env).map(|config| config.admin)
 }
@@ -106,6 +107,7 @@ pub fn get_admin(env: &Env) -> Option<Address> {
 ///
 /// # Storage Optimization
 /// This uses a dedicated storage key for quick admin lookups
+#[allow(dead_code)]
 pub fn set_admin(env: &Env, admin: &Address) {
     let key = StorageKey::Admin;
     env.storage().instance().set(&key, admin);
@@ -118,6 +120,7 @@ pub fn set_admin(env: &Env, admin: &Address) {
 ///
 /// # Returns
 /// * `u64` - Current counter value (0 if not set)
+#[allow(dead_code)]
 pub fn get_property_counter(env: &Env) -> u64 {
     let key = StorageKey::PropertyCounter;
     env.storage().instance().get(&key).unwrap_or(0)
@@ -133,6 +136,7 @@ pub fn get_property_counter(env: &Env) -> u64 {
 ///
 /// # Storage Optimization
 /// Counter is stored separately for efficient ID generation
+#[allow(dead_code)]
 pub fn increment_property_counter(env: &Env) -> u64 {
     let current = get_property_counter(env);
     let next = current.checked_add(1).expect("Property counter overflow");

@@ -49,6 +49,7 @@ impl PropertyMetadata {
     /// * `valuation` - Total property valuation
     /// * `total_shares` - Number of shares to create
     /// * `created_at` - Registration timestamp
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         property_id: u64,
         owner: Address,

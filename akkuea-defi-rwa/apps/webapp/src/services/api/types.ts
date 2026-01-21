@@ -62,6 +62,21 @@ export class ApiRequestError extends Error {
   ) {
     super(message);
     this.name = 'ApiRequestError';
+    // Ensure proper prototype chain for instanceof checks
+    Object.setPrototypeOf(this, ApiRequestError.prototype);
+  }
+
+  /**
+   * Serialize error to JSON
+   */
+  toJSON() {
+    return {
+      name: this.name,
+      status: this.status,
+      code: this.code,
+      message: this.message,
+      details: this.details,
+    };
   }
 }
 
@@ -69,6 +84,7 @@ export class AuthenticationError extends ApiRequestError {
   constructor(message: string = 'Authentication required') {
     super(401, 'UNAUTHORIZED', message);
     this.name = 'AuthenticationError';
+    Object.setPrototypeOf(this, AuthenticationError.prototype);
   }
 }
 
@@ -76,6 +92,17 @@ export class NetworkError extends Error {
   constructor(message: string = 'Network error occurred') {
     super(message);
     this.name = 'NetworkError';
+    Object.setPrototypeOf(this, NetworkError.prototype);
+  }
+
+  /**
+   * Serialize error to JSON
+   */
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+    };
   }
 }
 
@@ -83,5 +110,16 @@ export class TimeoutError extends Error {
   constructor(message: string = 'Request timed out') {
     super(message);
     this.name = 'TimeoutError';
+    Object.setPrototypeOf(this, TimeoutError.prototype);
+  }
+
+  /**
+   * Serialize error to JSON
+   */
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+    };
   }
 }

@@ -101,21 +101,34 @@ export function createApiClient(config: ApiClientConfig) {
    * Parse error response
    */
   async function parseErrorResponse(response: Response): Promise<ApiRequestError> {
-    try {
-      const body = await response.json();
-      return new ApiRequestError(
-        response.status,
-        body.code || 'UNKNOWN_ERROR',
-        body.message || response.statusText,
-        body.details
-      );
-    } catch {
-      return new ApiRequestError(
-        response.status,
-        'UNKNOWN_ERROR',
-        response.statusText
-      );
+    // Check if response has a body
+    const contentType = response.headers.get('content-type');
+    const hasJsonBody = contentType && contentType.includes('application/json');
+    
+    // Check if body exists and is not empty
+    const contentLength = response.headers.get('content-length');
+    const hasBody = contentLength !== '0' && hasJsonBody;
+    
+    if (hasBody) {
+      try {
+        const body = await response.json();
+        return new ApiRequestError(
+          response.status,
+          body.code || 'UNKNOWN_ERROR',
+          body.message || response.statusText,
+          body.details
+        );
+      } catch {
+        // If JSON parsing fails, fall through to default error
+      }
     }
+    
+    // For responses without body, return error with status text
+    return new ApiRequestError(
+      response.status,
+      'UNKNOWN_ERROR',
+      response.statusText || 'Unknown error occurred'
+    );
   }
 
   /**
@@ -172,7 +185,30 @@ export function createApiClient(config: ApiClientConfig) {
         }
 
         // Parse successful response
-        const data = await response.json();
+        // Handle 204 No Content (no body)
+        if (response.status === 204) {
+          return {
+            data: undefined as T,
+            status: response.status,
+          };
+        }
+        
+        // Try to parse JSON, but handle empty responses
+        let data: T;
+        try {
+          const jsonData = await response.json();
+          data = jsonData as T;
+        } catch (error) {
+          // If JSON parsing fails but status is success, return null
+          // This handles cases like 200 OK with no body
+          if (response.ok) {
+            data = null as T;
+          } else {
+            // For error responses, re-throw to be handled by parseErrorResponse
+            throw error;
+          }
+        }
+        
         return {
           data: data as T,
           status: response.status,

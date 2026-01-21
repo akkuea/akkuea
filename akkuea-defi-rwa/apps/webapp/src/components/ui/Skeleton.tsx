@@ -118,9 +118,48 @@ export function SkeletonCard({
                 <SkeletonText lines={lines} />
                 <div className="flex gap-2 pt-2">
                     <Skeleton className="h-8 w-20" />
-                    <Skeleton className="h-8 w-20" />
+                    <Skeleton className="h-8 w-10" />
                 </div>
             </div>
+        </div>
+    );
+}
+
+/**
+ * Skeleton for table rows
+ */
+interface SkeletonTableProps {
+    rows?: number;
+    columns?: number;
+    className?: string;
+}
+
+export function SkeletonTable({
+    rows = 5,
+    columns = 4,
+    className,
+}: SkeletonTableProps) {
+    return (
+        <div className={cn('space-y-2', className)} role="status" aria-label="Loading table...">
+            {/* Header */}
+            <div className="flex gap-4 pb-2 border-b border-white/10">
+                {Array.from({ length: columns }).map((_, index) => (
+                    <Skeleton key={index} className="h-4 flex-1" />
+                ))}
+            </div>
+
+            {/* Rows */}
+            {Array.from({ length: rows }).map((_, rowIndex) => (
+                <div key={rowIndex} className="flex gap-4 py-2">
+                    {Array.from({ length: columns }).map((_, colIndex) => (
+                        <Skeleton
+                            key={colIndex}
+                            className="h-4 flex-1"
+                            width={colIndex === 0 ? '60%' : undefined}
+                        />
+                    ))}
+                </div>
+            ))}
         </div>
     );
 }

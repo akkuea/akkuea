@@ -35,8 +35,9 @@
     "typescript-eslint": "^8.52.0"
   },
   "dependencies": {
+    "soroban-client": "^1.0.1",
     "stellar-sdk": "^13.3.0",
-    "soroban-client": "^1.0.1"
+    "zod": "^4.3.5"
   },
   "resolutions": {
     "stellar-base": "12.1.1"

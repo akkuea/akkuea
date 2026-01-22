@@ -32,7 +32,7 @@ fn test_property_registered_event() {
 
     // Execute in contract context
     env.as_contract(&contract_id, || {
-        PropertyEvents::property_registered(&env, property_id, owner, name, 1000, 1000_00);
+        PropertyEvents::property_registered(&env, property_id, owner, name, 1000, 100_000);
     });
 
     let events = env.events().all();

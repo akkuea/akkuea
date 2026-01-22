@@ -51,7 +51,11 @@ impl LendingEvents {
         shares_burned: i128,
         new_total_deposits: i128,
     ) {
-        let topics = (symbol_short!("withdraw"), pool_id.clone(), withdrawer.clone());
+        let topics = (
+            symbol_short!("withdraw"),
+            pool_id.clone(),
+            withdrawer.clone(),
+        );
         env.events()
             .publish(topics, (amount, shares_burned, new_total_deposits));
     }
@@ -72,7 +76,12 @@ impl LendingEvents {
         let topics = (symbol_short!("borrow"), pool_id.clone(), borrower.clone());
         env.events().publish(
             topics,
-            (amount, collateral_amount, collateral_asset.clone(), health_factor),
+            (
+                amount,
+                collateral_amount,
+                collateral_asset.clone(),
+                health_factor,
+            ),
         );
     }
 
@@ -106,7 +115,11 @@ impl LendingEvents {
         collateral_seized: i128,
         penalty: i128,
     ) {
-        let topics = (symbol_short!("liquidate"), pool_id.clone(), borrower.clone());
+        let topics = (
+            symbol_short!("liquidate"),
+            pool_id.clone(),
+            borrower.clone(),
+        );
         env.events().publish(
             topics,
             (liquidator.clone(), debt_repaid, collateral_seized, penalty),
@@ -126,8 +139,10 @@ impl LendingEvents {
     ) {
         let topics = (symbol_short!("accrue"), pool_id.clone());
         let timestamp = env.ledger().timestamp();
-        env.events()
-            .publish(topics, (interest_accrued, new_index, reserves_added, timestamp));
+        env.events().publish(
+            topics,
+            (interest_accrued, new_index, reserves_added, timestamp),
+        );
     }
 
     /// Emitted when pool parameters are updated
@@ -150,12 +165,7 @@ impl LendingEvents {
     ///
     /// Topics: ["pool_pause", pool_id]
     /// Data: (paused, by_admin)
-    pub fn pool_pause_toggled(
-        env: &Env,
-        pool_id: &String,
-        paused: bool,
-        by_admin: &Address,
-    ) {
+    pub fn pool_pause_toggled(env: &Env, pool_id: &String, paused: bool, by_admin: &Address) {
         let topics = (symbol_short!("pool_pse"), pool_id.clone());
         env.events().publish(topics, (paused, by_admin.clone()));
     }

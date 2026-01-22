@@ -1,6 +1,6 @@
 #![cfg(test)]
 use super::*;
-use soroban_sdk::{testutils::Address as _, testutils::Events, Address, Env, String, vec,};
+use soroban_sdk::{testutils::Address as _, testutils::Events, vec, Address, Env, String};
 
 use super::{PropertyTokenContract, PropertyTokenContractClient};
 
@@ -25,21 +25,14 @@ fn test() {
 fn test_property_registered_event() {
     let env = Env::default();
     let contract_id = env.register_contract(None, PropertyTokenContract);
-    
+
     let owner = Address::generate(&env);
     let property_id = String::from_str(&env, "PROP001");
     let name = String::from_str(&env, "Test Property");
 
     // Execute in contract context
     env.as_contract(&contract_id, || {
-        PropertyEvents::property_registered(
-            &env,
-            &property_id,
-            &owner,
-            &name,
-            1000,
-            1000_00,
-        );
+        PropertyEvents::property_registered(&env, &property_id, &owner, &name, 1000, 1000_00);
     });
 
     let events = env.events().all();
@@ -50,7 +43,7 @@ fn test_property_registered_event() {
 fn test_deposit_event() {
     let env = Env::default();
     let contract_id = env.register_contract(None, PropertyTokenContract);
-    
+
     let depositor = Address::generate(&env);
     let pool_id = String::from_str(&env, "USDC-POOL");
 

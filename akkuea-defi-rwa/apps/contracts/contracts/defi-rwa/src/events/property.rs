@@ -27,14 +27,11 @@ impl PropertyEvents {
     ///
     /// Topics: ["property_verified", property_id]
     /// Data: (verified_by, timestamp)
-    pub fn property_verified(
-        env: &Env,
-        property_id: &String,
-        verified_by: &Address,
-    ) {
+    pub fn property_verified(env: &Env, property_id: &String, verified_by: &Address) {
         let topics = (symbol_short!("prop_ver"), property_id.clone());
         let timestamp = env.ledger().timestamp();
-        env.events().publish(topics, (verified_by.clone(), timestamp));
+        env.events()
+            .publish(topics, (verified_by.clone(), timestamp));
     }
 
     /// Emitted when shares are transferred
@@ -48,7 +45,11 @@ impl PropertyEvents {
         to: &Address,
         amount: i128,
     ) {
-        let topics = (symbol_short!("share_xfr"), property_id.clone(), from.clone());
+        let topics = (
+            symbol_short!("share_xfr"),
+            property_id.clone(),
+            from.clone(),
+        );
         env.events().publish(topics, (to.clone(), amount));
     }
 
@@ -63,7 +64,11 @@ impl PropertyEvents {
         shares: i128,
         total_cost: i128,
     ) {
-        let topics = (symbol_short!("share_buy"), property_id.clone(), buyer.clone());
+        let topics = (
+            symbol_short!("share_buy"),
+            property_id.clone(),
+            buyer.clone(),
+        );
         env.events().publish(topics, (shares, total_cost));
     }
 
@@ -78,7 +83,11 @@ impl PropertyEvents {
         shares: i128,
         proceeds: i128,
     ) {
-        let topics = (symbol_short!("share_sel"), property_id.clone(), seller.clone());
+        let topics = (
+            symbol_short!("share_sel"),
+            property_id.clone(),
+            seller.clone(),
+        );
         env.events().publish(topics, (shares, proceeds));
     }
 
@@ -102,12 +111,7 @@ impl PropertyEvents {
     ///
     /// Topics: ["dividend_claim", property_id, claimer]
     /// Data: (amount)
-    pub fn dividend_claimed(
-        env: &Env,
-        property_id: &String,
-        claimer: &Address,
-        amount: i128,
-    ) {
+    pub fn dividend_claimed(env: &Env, property_id: &String, claimer: &Address, amount: i128) {
         let topics = (
             symbol_short!("div_claim"),
             property_id.clone(),

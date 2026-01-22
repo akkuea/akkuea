@@ -1,5 +1,3 @@
-#![cfg(test)]
-
 use super::*;
 use soroban_sdk::{contract, contractimpl, testutils::Address as _, Address, Env, String};
 
@@ -333,7 +331,7 @@ fn test_multiple_pools_storage() {
     assert_eq!(retrieved_3.asset_address, asset_address_3);
     assert_eq!(retrieved_3.collateral_factor, 800_000_000_000_000_000);
     assert_eq!(retrieved_3.reserve_factor, 1500);
-    assert_eq!(retrieved_3.is_active, false);
+    assert!(!retrieved_3.is_active);
 
     // Verify pool list contains all pools
     let pool_list = env.as_contract(&contract_id, || PoolStorage::get_list(&env));

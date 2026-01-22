@@ -23,10 +23,10 @@ pub struct InterestRateModel {
     pub optimal_utilization: i128,
 }
 
-impl InterestRateModel {
+impl Default for InterestRateModel {
     /// Create default interest rate model
     /// Base: 2%, Slope1: 4%, Slope2: 75%, Optimal: 80%
-    pub fn default() -> Self {
+    fn default() -> Self {
         Self {
             base_rate: 20_000_000_000_000_000,            // 2%
             slope1: 40_000_000_000_000_000,               // 4%
@@ -34,7 +34,9 @@ impl InterestRateModel {
             optimal_utilization: 800_000_000_000_000_000, // 80%
         }
     }
+}
 
+impl InterestRateModel {
     /// Calculate borrow rate based on utilization
     pub fn calculate_borrow_rate(&self, utilization: i128) -> i128 {
         if utilization <= self.optimal_utilization {
@@ -75,10 +77,7 @@ impl InterestStorage {
     /// Get interest rate model for pool
     pub fn get_model(env: &Env, pool_id: &String) -> InterestRateModel {
         let key = LendingKey::InterestRateModel(pool_id.clone());
-        env.storage()
-            .instance()
-            .get(&key)
-            .unwrap_or_else(InterestRateModel::default)
+        env.storage().instance().get(&key).unwrap_or_default()
     }
 
     /// Get accumulated interest index

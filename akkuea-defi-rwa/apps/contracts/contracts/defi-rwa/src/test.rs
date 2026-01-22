@@ -237,8 +237,6 @@ fn test_utilization_rate_calculation() {
 
 // Multiple pools storage
 
-use super::{PropertyTokenContract, PropertyTokenContractClient};
-
 #[test]
 fn test_multiple_pools_storage() {
     let env = Env::default();

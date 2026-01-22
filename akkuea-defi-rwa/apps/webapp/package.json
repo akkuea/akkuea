@@ -16,7 +16,10 @@
     "react-dom": "19.2.3",
     "stellar-sdk": "^13.3.0",
     "soroban-client": "^1.0.1",
-    "@real-estate-defi/shared": "workspace:*"
+    "@real-estate-defi/shared": "workspace:*",
+    "framer-motion": "^11.15.0",
+    "lucide-react": "^0.468.0",
+    "clsx": "^2.1.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.18",

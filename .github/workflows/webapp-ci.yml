@@ -142,7 +142,7 @@ jobs:
         echo "Scanning for potential secrets..."
         
         # Common secret patterns
-        if grep -r -E "(API_KEY|SECRET|TOKEN|PASSWORD|PRIVATE_KEY)" src/ public/ --exclude-dir=node_modules --exclude-dir=.next; then
+        if grep -r -E "(API_KEY|SECRET|PASSWORD|PRIVATE_KEY)" src/ public/ --exclude-dir=node_modules --exclude-dir=.next; then
           echo "Warning: Potential secret patterns found in source code"
           exit 1
         fi

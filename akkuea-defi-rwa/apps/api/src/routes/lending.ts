@@ -2,7 +2,7 @@ import { Elysia } from 'elysia';
 import { LendingController } from '../controllers/LendingController';
 
 export const lendingRoutes = new Elysia({ prefix: '/lending' })
-  .get('/pools', () => LendingController.getPools)
+  .get('/pools', LendingController.getPools)
   .post('/pools', ({ body }) =>
     LendingController.createPool(body as Partial<import('@real-estate-defi/shared').LendingPool>),
   )

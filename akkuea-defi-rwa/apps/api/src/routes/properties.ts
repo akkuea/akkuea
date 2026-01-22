@@ -2,7 +2,7 @@ import { Elysia } from 'elysia';
 import { PropertyController } from '../controllers/PropertyController';
 
 export const propertyRoutes = new Elysia({ prefix: '/properties' })
-  .get('/', () => PropertyController.getProperties)
+  .get('/', PropertyController.getProperties)
   .get('/:id', ({ params: { id } }) => PropertyController.getProperty(id))
   .post('/', ({ body }) =>
     PropertyController.createProperty(

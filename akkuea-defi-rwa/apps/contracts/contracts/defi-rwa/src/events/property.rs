@@ -96,7 +96,13 @@ impl PropertyEvents {
     }
 
     /// Emitted when shares are transferred
-    pub fn share_transfer(env: &Env, property_id: String, from: Address, to: Address, amount: i128) {
+    pub fn share_transfer(
+        env: &Env,
+        property_id: String,
+        from: Address,
+        to: Address,
+        amount: i128,
+    ) {
         ShareTransfer {
             property_id,
             from,

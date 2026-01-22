@@ -3,20 +3,19 @@
 //!
 //! This contract enables tokenization of real-world properties on the Stellar/Soroban blockchain.
 //! It provides functionality for property registration, share management, and ownership tracking.
-//!
-//! #![no_std]
 
 mod events;
 mod lending;
+mod storage;
 
 pub use events::*;
 pub use lending::*;
 pub use storage::*;
 
-#[cfg(test)]
+// Import necessary types for the contract (always available, not just in tests)
 use soroban_sdk::{contract, contractimpl, vec, Env, String, Vec};
 
-mod storage;
+#[cfg(test)]
 mod test;
 
 #[contract]

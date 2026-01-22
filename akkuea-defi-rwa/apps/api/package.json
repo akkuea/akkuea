@@ -33,7 +33,7 @@
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "complexity-report": "^2.0.0-alpha",
-    "drizzle-kit": "^0.30.1",
+    "drizzle-kit": "^0.31.8",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.2",
     "prettier": "^3.7.4",

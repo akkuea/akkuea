@@ -31,7 +31,7 @@ fn test_store_and_retrieve_lending_pool() {
         collateral_factor: 750_000_000_000_000_000, // 75%
         liquidation_threshold: 800_000_000_000_000_000, // 80%
         liquidation_penalty: 50_000_000_000_000_000, // 5%
-        reserve_factor: 1000, // 10%
+        reserve_factor: 1000,                       // 10%
         is_active: true,
         created_at: 1700000000,
     };
@@ -42,15 +42,11 @@ fn test_store_and_retrieve_lending_pool() {
     });
 
     // Verify pool exists
-    let exists = env.as_contract(&contract_id, || {
-        PoolStorage::exists(&env, &pool_id)
-    });
+    let exists = env.as_contract(&contract_id, || PoolStorage::exists(&env, &pool_id));
     assert!(exists);
 
     // Retrieve and verify data integrity
-    let retrieved = env.as_contract(&contract_id, || {
-        PoolStorage::get(&env, &pool_id).unwrap()
-    });
+    let retrieved = env.as_contract(&contract_id, || PoolStorage::get(&env, &pool_id).unwrap());
     assert_eq!(retrieved.id, pool.id);
     assert_eq!(retrieved.name, pool.name);
     assert_eq!(retrieved.asset, pool.asset);
@@ -236,7 +232,8 @@ fn test_utilization_rate_calculation() {
     assert_eq!(available_full, 0);
 
     // Test available liquidity when borrows exceed deposits
-    let available_negative = PoolStorage::calculate_available_liquidity(total_deposits, total_deposits + 100);
+    let available_negative =
+        PoolStorage::calculate_available_liquidity(total_deposits, total_deposits + 100);
     assert_eq!(available_negative, 0);
 }
 
@@ -309,39 +306,27 @@ fn test_multiple_pools_storage() {
     });
 
     // Verify all pools exist
-    let exists_1 = env.as_contract(&contract_id, || {
-        PoolStorage::exists(&env, &pool_id_1)
-    });
-    let exists_2 = env.as_contract(&contract_id, || {
-        PoolStorage::exists(&env, &pool_id_2)
-    });
-    let exists_3 = env.as_contract(&contract_id, || {
-        PoolStorage::exists(&env, &pool_id_3)
-    });
+    let exists_1 = env.as_contract(&contract_id, || PoolStorage::exists(&env, &pool_id_1));
+    let exists_2 = env.as_contract(&contract_id, || PoolStorage::exists(&env, &pool_id_2));
+    let exists_3 = env.as_contract(&contract_id, || PoolStorage::exists(&env, &pool_id_3));
     assert!(exists_1);
     assert!(exists_2);
     assert!(exists_3);
 
     // Verify pools are isolated correctly - retrieve each and verify data integrity
-    let retrieved_1 = env.as_contract(&contract_id, || {
-        PoolStorage::get(&env, &pool_id_1).unwrap()
-    });
+    let retrieved_1 = env.as_contract(&contract_id, || PoolStorage::get(&env, &pool_id_1).unwrap());
     assert_eq!(retrieved_1.asset, String::from_str(&env, "USDC"));
     assert_eq!(retrieved_1.asset_address, asset_address_1);
     assert_eq!(retrieved_1.collateral_factor, 750_000_000_000_000_000);
     assert_eq!(retrieved_1.reserve_factor, 1000);
 
-    let retrieved_2 = env.as_contract(&contract_id, || {
-        PoolStorage::get(&env, &pool_id_2).unwrap()
-    });
+    let retrieved_2 = env.as_contract(&contract_id, || PoolStorage::get(&env, &pool_id_2).unwrap());
     assert_eq!(retrieved_2.asset, String::from_str(&env, "USDT"));
     assert_eq!(retrieved_2.asset_address, asset_address_2);
     assert_eq!(retrieved_2.collateral_factor, 700_000_000_000_000_000);
     assert_eq!(retrieved_2.reserve_factor, 1200);
 
-    let retrieved_3 = env.as_contract(&contract_id, || {
-        PoolStorage::get(&env, &pool_id_3).unwrap()
-    });
+    let retrieved_3 = env.as_contract(&contract_id, || PoolStorage::get(&env, &pool_id_3).unwrap());
     assert_eq!(retrieved_3.asset, String::from_str(&env, "DAI"));
     assert_eq!(retrieved_3.asset_address, asset_address_3);
     assert_eq!(retrieved_3.collateral_factor, 800_000_000_000_000_000);
@@ -349,9 +334,7 @@ fn test_multiple_pools_storage() {
     assert_eq!(retrieved_3.is_active, false);
 
     // Verify pool list contains all pools
-    let pool_list = env.as_contract(&contract_id, || {
-        PoolStorage::get_list(&env)
-    });
+    let pool_list = env.as_contract(&contract_id, || PoolStorage::get_list(&env));
     assert!(pool_list.len() >= 3);
     assert!(pool_list.contains(&pool_id_1));
     assert!(pool_list.contains(&pool_id_2));

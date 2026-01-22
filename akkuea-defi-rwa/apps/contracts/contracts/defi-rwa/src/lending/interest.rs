@@ -28,9 +28,9 @@ impl InterestRateModel {
     /// Base: 2%, Slope1: 4%, Slope2: 75%, Optimal: 80%
     pub fn default() -> Self {
         Self {
-            base_rate: 20_000_000_000_000_000,      // 2%
-            slope1: 40_000_000_000_000_000,          // 4%
-            slope2: 750_000_000_000_000_000,         // 75%
+            base_rate: 20_000_000_000_000_000,            // 2%
+            slope1: 40_000_000_000_000_000,               // 4%
+            slope2: 750_000_000_000_000_000,              // 75%
             optimal_utilization: 800_000_000_000_000_000, // 80%
         }
     }
@@ -50,7 +50,12 @@ impl InterestRateModel {
     }
 
     /// Calculate supply rate based on borrow rate and utilization
-    pub fn calculate_supply_rate(&self, borrow_rate: i128, utilization: i128, reserve_factor: i128) -> i128 {
+    pub fn calculate_supply_rate(
+        &self,
+        borrow_rate: i128,
+        utilization: i128,
+        reserve_factor: i128,
+    ) -> i128 {
         // supply_rate = borrow_rate * utilization * (1 - reserve_factor)
         let effective_rate = (borrow_rate * utilization) / PRECISION;
         (effective_rate * (PRECISION - reserve_factor)) / PRECISION
@@ -86,9 +91,11 @@ impl InterestStorage {
     pub fn set_interest_index(env: &Env, pool_id: &String, index: i128) {
         let key = LendingKey::PoolInterestIndex(pool_id.clone());
         env.storage().persistent().set(&key, &index);
-        env.storage()
-            .persistent()
-            .extend_ttl(&key, lending_bump::PERSISTENT_BUMP, lending_bump::PERSISTENT_BUMP);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
     }
 
     /// Get last accrual timestamp
@@ -104,11 +111,7 @@ impl InterestStorage {
     }
 
     /// Calculate new interest index based on time elapsed
-    pub fn calculate_new_index(
-        current_index: i128,
-        borrow_rate: i128,
-        time_elapsed: u64,
-    ) -> i128 {
+    pub fn calculate_new_index(current_index: i128, borrow_rate: i128, time_elapsed: u64) -> i128 {
         if time_elapsed == 0 {
             return current_index;
         }

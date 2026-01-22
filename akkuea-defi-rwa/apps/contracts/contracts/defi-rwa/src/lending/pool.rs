@@ -37,18 +37,22 @@ impl PoolStorage {
     pub fn set(env: &Env, pool: &LendingPool) {
         let key = LendingKey::Pool(pool.id.clone());
         env.storage().persistent().set(&key, pool);
-        env.storage()
-            .persistent()
-            .extend_ttl(&key, lending_bump::PERSISTENT_BUMP, lending_bump::PERSISTENT_BUMP);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
     }
 
     /// Get lending pool by ID
     pub fn get(env: &Env, pool_id: &String) -> Option<LendingPool> {
         let key = LendingKey::Pool(pool_id.clone());
         if env.storage().persistent().has(&key) {
-            env.storage()
-                .persistent()
-                .extend_ttl(&key, lending_bump::PERSISTENT_BUMP, lending_bump::PERSISTENT_BUMP);
+            env.storage().persistent().extend_ttl(
+                &key,
+                lending_bump::PERSISTENT_BUMP,
+                lending_bump::PERSISTENT_BUMP,
+            );
             env.storage().persistent().get(&key)
         } else {
             None
@@ -71,9 +75,11 @@ impl PoolStorage {
     pub fn set_total_deposits(env: &Env, pool_id: &String, amount: i128) {
         let key = LendingKey::PoolTotalDeposits(pool_id.clone());
         env.storage().persistent().set(&key, &amount);
-        env.storage()
-            .persistent()
-            .extend_ttl(&key, lending_bump::PERSISTENT_BUMP, lending_bump::PERSISTENT_BUMP);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
     }
 
     /// Get total borrows for pool
@@ -86,9 +92,11 @@ impl PoolStorage {
     pub fn set_total_borrows(env: &Env, pool_id: &String, amount: i128) {
         let key = LendingKey::PoolTotalBorrows(pool_id.clone());
         env.storage().persistent().set(&key, &amount);
-        env.storage()
-            .persistent()
-            .extend_ttl(&key, lending_bump::PERSISTENT_BUMP, lending_bump::PERSISTENT_BUMP);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
     }
 
     /// Get pool reserves

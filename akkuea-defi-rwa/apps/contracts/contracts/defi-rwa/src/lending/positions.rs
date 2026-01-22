@@ -49,14 +49,13 @@ impl PositionStorage {
 
     /// Store deposit position
     pub fn set_deposit(env: &Env, position: &DepositPosition) {
-        let key = LendingKey::DepositPosition(
-            position.depositor.clone(),
-            position.pool_id.clone(),
-        );
+        let key = LendingKey::DepositPosition(position.depositor.clone(), position.pool_id.clone());
         env.storage().persistent().set(&key, position);
-        env.storage()
-            .persistent()
-            .extend_ttl(&key, lending_bump::PERSISTENT_BUMP, lending_bump::PERSISTENT_BUMP);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
 
         // Add to user's deposit list
         Self::add_to_user_deposits(env, &position.depositor, &position.pool_id);
@@ -70,9 +69,11 @@ impl PositionStorage {
     ) -> Option<DepositPosition> {
         let key = LendingKey::DepositPosition(depositor.clone(), pool_id.clone());
         if env.storage().persistent().has(&key) {
-            env.storage()
-                .persistent()
-                .extend_ttl(&key, lending_bump::PERSISTENT_BUMP, lending_bump::PERSISTENT_BUMP);
+            env.storage().persistent().extend_ttl(
+                &key,
+                lending_bump::PERSISTENT_BUMP,
+                lending_bump::PERSISTENT_BUMP,
+            );
             env.storage().persistent().get(&key)
         } else {
             None
@@ -147,29 +148,26 @@ impl PositionStorage {
 
     /// Store borrow position
     pub fn set_borrow(env: &Env, position: &BorrowPosition) {
-        let key = LendingKey::BorrowPosition(
-            position.borrower.clone(),
-            position.pool_id.clone(),
-        );
+        let key = LendingKey::BorrowPosition(position.borrower.clone(), position.pool_id.clone());
         env.storage().persistent().set(&key, position);
-        env.storage()
-            .persistent()
-            .extend_ttl(&key, lending_bump::PERSISTENT_BUMP, lending_bump::PERSISTENT_BUMP);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
 
         Self::add_to_user_borrows(env, &position.borrower, &position.pool_id);
     }
 
     /// Get borrow position
-    pub fn get_borrow(
-        env: &Env,
-        borrower: &Address,
-        pool_id: &String,
-    ) -> Option<BorrowPosition> {
+    pub fn get_borrow(env: &Env, borrower: &Address, pool_id: &String) -> Option<BorrowPosition> {
         let key = LendingKey::BorrowPosition(borrower.clone(), pool_id.clone());
         if env.storage().persistent().has(&key) {
-            env.storage()
-                .persistent()
-                .extend_ttl(&key, lending_bump::PERSISTENT_BUMP, lending_bump::PERSISTENT_BUMP);
+            env.storage().persistent().extend_ttl(
+                &key,
+                lending_bump::PERSISTENT_BUMP,
+                lending_bump::PERSISTENT_BUMP,
+            );
             env.storage().persistent().get(&key)
         } else {
             None

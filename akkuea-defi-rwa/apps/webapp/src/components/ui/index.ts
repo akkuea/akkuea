@@ -7,11 +7,11 @@ export * from "./Loader";
 export * from "./Toggle";
 export * from "./Stepper";
 export {
-    Skeleton,
-    SkeletonText,
-    SkeletonCard,
-    SkeletonTable,
-    SkeletonAvatar,
-    SkeletonPropertyCard,
-    SkeletonPoolCard,
-} from './Skeleton';
+  Skeleton,
+  SkeletonText,
+  SkeletonCard,
+  SkeletonTable,
+  SkeletonAvatar,
+  SkeletonPropertyCard,
+  SkeletonPoolCard,
+} from "./Skeleton";

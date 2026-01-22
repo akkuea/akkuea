@@ -7,10 +7,13 @@
 //! #![no_std]
 
 mod events;
+mod lending;
 
 pub use events::*;
+pub use lending::*;
 pub use storage::*;
 
+#[cfg(test)]
 use soroban_sdk::{contract, contractimpl, vec, Env, String, Vec};
 
 mod storage;

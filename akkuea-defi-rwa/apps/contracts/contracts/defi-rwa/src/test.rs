@@ -24,7 +24,7 @@ fn test() {
 #[test]
 fn test_property_registered_event() {
     let env = Env::default();
-    let contract_id = env.register_contract(None, PropertyTokenContract);
+    let contract_id = env.register(PropertyTokenContract, ());
 
     let owner = Address::generate(&env);
     let property_id = String::from_str(&env, "PROP001");
@@ -32,7 +32,7 @@ fn test_property_registered_event() {
 
     // Execute in contract context
     env.as_contract(&contract_id, || {
-        PropertyEvents::property_registered(&env, &property_id, &owner, &name, 1000, 1000_00);
+        PropertyEvents::property_registered(&env, property_id, owner, name, 1000, 1000_00);
     });
 
     let events = env.events().all();
@@ -42,7 +42,7 @@ fn test_property_registered_event() {
 #[test]
 fn test_deposit_event() {
     let env = Env::default();
-    let contract_id = env.register_contract(None, PropertyTokenContract);
+    let contract_id = env.register(PropertyTokenContract, ());
 
     let depositor = Address::generate(&env);
     let pool_id = String::from_str(&env, "USDC-POOL");
@@ -51,11 +51,11 @@ fn test_deposit_event() {
     env.as_contract(&contract_id, || {
         LendingEvents::deposit(
             &env,
-            &pool_id,
-            &depositor,
-            1000_000_000,
-            1000_000_000,
-            5000_000_000,
+            pool_id,
+            depositor,
+            1_000_000_000,
+            1_000_000_000,
+            5_000_000_000,
         );
     });
 

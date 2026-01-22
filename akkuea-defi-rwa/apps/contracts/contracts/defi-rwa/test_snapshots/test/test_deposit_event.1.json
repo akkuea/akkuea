@@ -84,24 +84,49 @@
             "topics": [
               {
                 "symbol": "deposit"
-              },
-              {
-                "string": "USDC-POOL"
-              },
-              {
-                "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
               }
             ],
             "data": {
-              "vec": [
+              "map": [
                 {
-                  "i128": "1000000000"
+                  "key": {
+                    "symbol": "amount"
+                  },
+                  "val": {
+                    "i128": "1000000000"
+                  }
                 },
                 {
-                  "i128": "1000000000"
+                  "key": {
+                    "symbol": "depositor"
+                  },
+                  "val": {
+                    "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                  }
                 },
                 {
-                  "i128": "5000000000"
+                  "key": {
+                    "symbol": "new_total_deposits"
+                  },
+                  "val": {
+                    "i128": "5000000000"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "pool_id"
+                  },
+                  "val": {
+                    "string": "USDC-POOL"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "shares_minted"
+                  },
+                  "val": {
+                    "i128": "1000000000"
+                  }
                 }
               ]
             }

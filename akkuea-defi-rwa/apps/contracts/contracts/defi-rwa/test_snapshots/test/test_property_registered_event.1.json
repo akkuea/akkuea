@@ -83,25 +83,50 @@
           "v0": {
             "topics": [
               {
-                "symbol": "prop_reg"
-              },
-              {
-                "string": "PROP001"
+                "symbol": "property_registered"
               }
             ],
             "data": {
-              "vec": [
+              "map": [
                 {
-                  "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                  "key": {
+                    "symbol": "name"
+                  },
+                  "val": {
+                    "string": "Test Property"
+                  }
                 },
                 {
-                  "string": "Test Property"
+                  "key": {
+                    "symbol": "owner"
+                  },
+                  "val": {
+                    "address": "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFCT4"
+                  }
                 },
                 {
-                  "i128": "1000"
+                  "key": {
+                    "symbol": "price_per_share"
+                  },
+                  "val": {
+                    "i128": "100000"
+                  }
                 },
                 {
-                  "i128": "100000"
+                  "key": {
+                    "symbol": "property_id"
+                  },
+                  "val": {
+                    "string": "PROP001"
+                  }
+                },
+                {
+                  "key": {
+                    "symbol": "total_shares"
+                  },
+                  "val": {
+                    "i128": "1000"
+                  }
                 }
               ]
             }

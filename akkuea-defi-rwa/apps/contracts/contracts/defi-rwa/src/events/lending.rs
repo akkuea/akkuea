@@ -1,172 +1,255 @@
-use soroban_sdk::{symbol_short, Address, Env, String};
+use soroban_sdk::{contractevent, Address, Env, String};
 
-/// Event topics for lending operations
+/// Emitted when a new lending pool is created
+#[contractevent]
+pub struct PoolCreated {
+    pub pool_id: String,
+    pub asset: String,
+    pub asset_address: Address,
+    pub collateral_factor: i128,
+}
+
+/// Emitted when assets are deposited into a pool
+#[contractevent]
+pub struct Deposit {
+    pub pool_id: String,
+    pub depositor: Address,
+    pub amount: i128,
+    pub shares_minted: i128,
+    pub new_total_deposits: i128,
+}
+
+/// Emitted when assets are withdrawn from a pool
+#[contractevent]
+pub struct Withdraw {
+    pub pool_id: String,
+    pub withdrawer: Address,
+    pub amount: i128,
+    pub shares_burned: i128,
+    pub new_total_deposits: i128,
+}
+
+/// Emitted when assets are borrowed from a pool
+#[contractevent]
+pub struct Borrow {
+    pub pool_id: String,
+    pub borrower: Address,
+    pub amount: i128,
+    pub collateral_amount: i128,
+    pub collateral_asset: Address,
+    pub health_factor: i128,
+}
+
+/// Emitted when a loan is repaid
+#[contractevent]
+pub struct Repay {
+    pub pool_id: String,
+    pub borrower: Address,
+    pub amount: i128,
+    pub remaining_debt: i128,
+    pub collateral_released: i128,
+}
+
+/// Emitted when a position is liquidated
+#[contractevent]
+pub struct Liquidation {
+    pub pool_id: String,
+    pub borrower: Address,
+    pub liquidator: Address,
+    pub debt_repaid: i128,
+    pub collateral_seized: i128,
+    pub penalty: i128,
+}
+
+/// Emitted when interest is accrued
+#[contractevent]
+pub struct InterestAccrued {
+    pub pool_id: String,
+    pub interest_accrued: i128,
+    pub new_index: i128,
+    pub reserves_added: i128,
+    pub timestamp: u64,
+}
+
+/// Emitted when pool parameters are updated
+#[contractevent]
+pub struct PoolUpdated {
+    pub pool_id: String,
+    pub parameter: String,
+    pub old_value: i128,
+    pub new_value: i128,
+}
+
+/// Emitted when pool is paused/unpaused
+#[contractevent]
+pub struct PoolPauseToggled {
+    pub pool_id: String,
+    pub paused: bool,
+    pub by_admin: Address,
+}
+
+/// Event helper functions for lending operations
 pub struct LendingEvents;
 
 impl LendingEvents {
     /// Emitted when a new lending pool is created
-    ///
-    /// Topics: ["pool_created", pool_id]
-    /// Data: (asset, asset_address, collateral_factor)
     pub fn pool_created(
         env: &Env,
-        pool_id: &String,
-        asset: &String,
-        asset_address: &Address,
+        pool_id: String,
+        asset: String,
+        asset_address: Address,
         collateral_factor: i128,
     ) {
-        let topics = (symbol_short!("pool_new"), pool_id.clone());
-        env.events().publish(
-            topics,
-            (asset.clone(), asset_address.clone(), collateral_factor),
-        );
+        PoolCreated {
+            pool_id,
+            asset,
+            asset_address,
+            collateral_factor,
+        }
+        .publish(env);
     }
 
     /// Emitted when assets are deposited into a pool
-    ///
-    /// Topics: ["deposit", pool_id, depositor]
-    /// Data: (amount, shares_minted, new_total_deposits)
     pub fn deposit(
         env: &Env,
-        pool_id: &String,
-        depositor: &Address,
+        pool_id: String,
+        depositor: Address,
         amount: i128,
         shares_minted: i128,
         new_total_deposits: i128,
     ) {
-        let topics = (symbol_short!("deposit"), pool_id.clone(), depositor.clone());
-        env.events()
-            .publish(topics, (amount, shares_minted, new_total_deposits));
+        Deposit {
+            pool_id,
+            depositor,
+            amount,
+            shares_minted,
+            new_total_deposits,
+        }
+        .publish(env);
     }
 
     /// Emitted when assets are withdrawn from a pool
-    ///
-    /// Topics: ["withdraw", pool_id, withdrawer]
-    /// Data: (amount, shares_burned, new_total_deposits)
     pub fn withdraw(
         env: &Env,
-        pool_id: &String,
-        withdrawer: &Address,
+        pool_id: String,
+        withdrawer: Address,
         amount: i128,
         shares_burned: i128,
         new_total_deposits: i128,
     ) {
-        let topics = (
-            symbol_short!("withdraw"),
-            pool_id.clone(),
-            withdrawer.clone(),
-        );
-        env.events()
-            .publish(topics, (amount, shares_burned, new_total_deposits));
+        Withdraw {
+            pool_id,
+            withdrawer,
+            amount,
+            shares_burned,
+            new_total_deposits,
+        }
+        .publish(env);
     }
 
     /// Emitted when assets are borrowed from a pool
-    ///
-    /// Topics: ["borrow", pool_id, borrower]
-    /// Data: (amount, collateral_amount, collateral_asset, health_factor)
     pub fn borrow(
         env: &Env,
-        pool_id: &String,
-        borrower: &Address,
+        pool_id: String,
+        borrower: Address,
         amount: i128,
         collateral_amount: i128,
-        collateral_asset: &Address,
+        collateral_asset: Address,
         health_factor: i128,
     ) {
-        let topics = (symbol_short!("borrow"), pool_id.clone(), borrower.clone());
-        env.events().publish(
-            topics,
-            (
-                amount,
-                collateral_amount,
-                collateral_asset.clone(),
-                health_factor,
-            ),
-        );
+        Borrow {
+            pool_id,
+            borrower,
+            amount,
+            collateral_amount,
+            collateral_asset,
+            health_factor,
+        }
+        .publish(env);
     }
 
     /// Emitted when a loan is repaid
-    ///
-    /// Topics: ["repay", pool_id, borrower]
-    /// Data: (amount, remaining_debt, collateral_released)
     pub fn repay(
         env: &Env,
-        pool_id: &String,
-        borrower: &Address,
+        pool_id: String,
+        borrower: Address,
         amount: i128,
         remaining_debt: i128,
         collateral_released: i128,
     ) {
-        let topics = (symbol_short!("repay"), pool_id.clone(), borrower.clone());
-        env.events()
-            .publish(topics, (amount, remaining_debt, collateral_released));
+        Repay {
+            pool_id,
+            borrower,
+            amount,
+            remaining_debt,
+            collateral_released,
+        }
+        .publish(env);
     }
 
     /// Emitted when a position is liquidated
-    ///
-    /// Topics: ["liquidate", pool_id, borrower]
-    /// Data: (liquidator, debt_repaid, collateral_seized, penalty)
     pub fn liquidation(
         env: &Env,
-        pool_id: &String,
-        borrower: &Address,
-        liquidator: &Address,
+        pool_id: String,
+        borrower: Address,
+        liquidator: Address,
         debt_repaid: i128,
         collateral_seized: i128,
         penalty: i128,
     ) {
-        let topics = (
-            symbol_short!("liquidate"),
-            pool_id.clone(),
-            borrower.clone(),
-        );
-        env.events().publish(
-            topics,
-            (liquidator.clone(), debt_repaid, collateral_seized, penalty),
-        );
+        Liquidation {
+            pool_id,
+            borrower,
+            liquidator,
+            debt_repaid,
+            collateral_seized,
+            penalty,
+        }
+        .publish(env);
     }
 
     /// Emitted when interest is accrued
-    ///
-    /// Topics: ["accrue", pool_id]
-    /// Data: (interest_accrued, new_index, reserves_added, timestamp)
     pub fn interest_accrued(
         env: &Env,
-        pool_id: &String,
+        pool_id: String,
         interest_accrued: i128,
         new_index: i128,
         reserves_added: i128,
     ) {
-        let topics = (symbol_short!("accrue"), pool_id.clone());
-        let timestamp = env.ledger().timestamp();
-        env.events().publish(
-            topics,
-            (interest_accrued, new_index, reserves_added, timestamp),
-        );
+        InterestAccrued {
+            pool_id,
+            interest_accrued,
+            new_index,
+            reserves_added,
+            timestamp: env.ledger().timestamp(),
+        }
+        .publish(env);
     }
 
     /// Emitted when pool parameters are updated
-    ///
-    /// Topics: ["pool_update", pool_id]
-    /// Data: (parameter_name, old_value, new_value)
     pub fn pool_updated(
         env: &Env,
-        pool_id: &String,
-        parameter: &String,
+        pool_id: String,
+        parameter: String,
         old_value: i128,
         new_value: i128,
     ) {
-        let topics = (symbol_short!("pool_upd"), pool_id.clone());
-        env.events()
-            .publish(topics, (parameter.clone(), old_value, new_value));
+        PoolUpdated {
+            pool_id,
+            parameter,
+            old_value,
+            new_value,
+        }
+        .publish(env);
     }
 
     /// Emitted when pool is paused/unpaused
-    ///
-    /// Topics: ["pool_pause", pool_id]
-    /// Data: (paused, by_admin)
-    pub fn pool_pause_toggled(env: &Env, pool_id: &String, paused: bool, by_admin: &Address) {
-        let topics = (symbol_short!("pool_pse"), pool_id.clone());
-        env.events().publish(topics, (paused, by_admin.clone()));
+    pub fn pool_pause_toggled(env: &Env, pool_id: String, paused: bool, by_admin: Address) {
+        PoolPauseToggled {
+            pool_id,
+            paused,
+            by_admin,
+        }
+        .publish(env);
     }
 }

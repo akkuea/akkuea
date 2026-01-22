@@ -1,23 +1,38 @@
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import { propertyApi } from '../properties';
-import { setupMockFetch } from './helpers';
+import { setupMockFetch, wrapFetchMock } from './helpers';
+import type { PropertyInfo, ShareOwnership } from '@real-estate-defi/shared';
 
 describe('Property API', () => {
   let originalFetch: typeof fetch;
 
   beforeEach(() => {
     originalFetch = global.fetch;
-    global.fetch = mock(() => {
+    global.fetch = wrapFetchMock(mock(() => {
       throw new Error('fetch not mocked');
-    });
+    }));
   });
 
   describe('getAll', () => {
     it('fetches all properties with pagination', async () => {
-      const mockResponse = {
+      const mockResponse: { data: PropertyInfo[]; pagination: { page: number; limit: number; total: number; totalPages: number } } = {
         data: [
-          { id: '1', name: 'Property 1' },
-          { id: '2', name: 'Property 2' },
+          {
+            id: '1',
+            owner: '0xowner1',
+            totalShares: 1000,
+            availableShares: 500,
+            valuePerShare: 100,
+            metadata: { name: 'Property 1' },
+          },
+          {
+            id: '2',
+            owner: '0xowner2',
+            totalShares: 2000,
+            availableShares: 1500,
+            valuePerShare: 200,
+            metadata: { name: 'Property 2' },
+          },
         ],
         pagination: {
           page: 1,
@@ -80,10 +95,16 @@ describe('Property API', () => {
 
   describe('getById', () => {
     it('fetches property by ID', async () => {
-      const mockProperty = {
+      const mockProperty: PropertyInfo = {
         id: '123',
-        name: 'Test Property',
-        description: 'A test property',
+        owner: '0xowner',
+        totalShares: 1000,
+        availableShares: 800,
+        valuePerShare: 100,
+        metadata: {
+          name: 'Test Property',
+          description: 'A test property',
+        },
       };
 
       const { fetchMock, calls } = setupMockFetch({
@@ -118,9 +139,25 @@ describe('Property API', () => {
         images: ['image1.jpg'],
       };
 
-      const mockResponse = {
+      const mockResponse: PropertyInfo = {
         id: '123',
-        ...createPayload,
+        owner: '0xowner',
+        totalShares: createPayload.totalShares,
+        availableShares: createPayload.totalShares,
+        valuePerShare: Number(createPayload.pricePerShare),
+        metadata: {
+          name: createPayload.name,
+          description: createPayload.description,
+          propertyType: createPayload.propertyType,
+          totalValue: createPayload.totalValue,
+          pricePerShare: createPayload.pricePerShare,
+          images: createPayload.images.join(','),
+        },
+        location: {
+          address: createPayload.location.address,
+          city: createPayload.location.city,
+          country: createPayload.location.country,
+        },
       };
 
       const { fetchMock, calls } = setupMockFetch({
@@ -183,11 +220,12 @@ describe('Property API', () => {
 
   describe('getShares', () => {
     it('gets user share holdings for a property', async () => {
-      const mockShareOwnership = {
+      const mockShareOwnership: ShareOwnership = {
         propertyId: '123',
-        ownerAddress: '0xowner...',
+        owner: '0xowner...',
         shares: 100,
-        percentage: 10,
+        purchaseDate: new Date(),
+        purchasePrice: 10000,
       };
 
       const { fetchMock, calls } = setupMockFetch({

@@ -6,7 +6,7 @@ import {
   NetworkError,
   TimeoutError,
 } from '../types';
-import { setupMockFetch, setupMockLocalStorage } from './helpers';
+import { setupMockFetch, setupMockLocalStorage, wrapFetchMock } from './helpers';
 
 describe('API Client', () => {
   let originalFetch: typeof fetch;
@@ -17,9 +17,9 @@ describe('API Client', () => {
     mockLocalStorage = setupMockLocalStorage();
 
     // Setup global fetch mock (will be overridden in each test)
-    global.fetch = mock(() => {
+    global.fetch = wrapFetchMock(mock(() => {
       throw new Error('fetch not mocked');
-    });
+    }));
 
     // Setup localStorage mock
     if (typeof window !== 'undefined') {
@@ -240,9 +240,9 @@ describe('API Client', () => {
     });
 
     it('handles network errors', async () => {
-      global.fetch = mock(() => {
+      global.fetch = wrapFetchMock(mock(() => {
         throw new Error('Network error');
-      });
+      }));
 
       const client = createApiClient({ baseUrl: 'https://api.test.com' });
 
@@ -270,7 +270,7 @@ describe('API Client', () => {
 
     it('retries on timeout', async () => {
       let callCount = 0;
-      global.fetch = mock((url: string, options?: RequestInit) => {
+      const timeoutFetch = mock((input: RequestInfo | URL, options?: RequestInit) => {
         callCount++;
         
         return new Promise((resolve, reject) => {
@@ -294,6 +294,9 @@ describe('API Client', () => {
           }
         });
       });
+      global.fetch = wrapFetchMock(
+        timeoutFetch as unknown as (input: RequestInfo | URL, options?: RequestInit) => Promise<Response>
+      );
 
       const client = createApiClient({ baseUrl: 'https://api.test.com' });
 
@@ -379,10 +382,10 @@ describe('API Client', () => {
         { status: 500, body: {} },
         { status: 200, body: {} },
       ]);
-      global.fetch = mock(async () => {
+      global.fetch = wrapFetchMock(mock(async () => {
         timestamps.push(Date.now());
         return fetchMock('', {});
-      });
+      }));
 
       const client = createApiClient({ baseUrl: 'https://api.test.com' });
       const startTime = Date.now();

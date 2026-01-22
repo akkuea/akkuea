@@ -15,6 +15,24 @@ export interface MockFetchCall {
   options: RequestInit;
 }
 
+export type FetchMock = (
+  input: RequestInfo | URL,
+  options?: RequestInit
+) => Promise<Response>;
+
+export function wrapFetchMock(mockFn: FetchMock): typeof fetch;
+export function wrapFetchMock(mockFn: (...args: unknown[]) => unknown): typeof fetch;
+export function wrapFetchMock(
+  mockFn: FetchMock | ((...args: unknown[]) => unknown)
+): typeof fetch {
+  const typed = mockFn as unknown as typeof fetch;
+  if (!typed.preconnect) {
+    // No-op for Bun-specific fetch.preconnect typing.
+    typed.preconnect = () => {};
+  }
+  return typed;
+}
+
 /**
  * Create a mock Response object
  */
@@ -84,7 +102,16 @@ export function setupMockFetch(
   const responseArray = Array.isArray(responses) ? responses : [responses];
   let responseIndex = 0;
 
-  const fetchMock = async (url: string, options?: RequestInit) => {
+  const fetchMock: FetchMock = async (
+    input: RequestInfo | URL,
+    options?: RequestInit
+  ): Promise<Response> => {
+    const url =
+      typeof input === 'string'
+        ? input
+        : input instanceof URL
+        ? input.toString()
+        : input.url;
     calls.push({ url, options: options || {} });
 
     const responseConfig = responseArray[responseIndex] || responseArray[0];
@@ -134,12 +161,14 @@ export function setupMockFetch(
     return createMockResponse(responseConfig);
   };
 
+  const typedFetchMock = wrapFetchMock(fetchMock);
+
   const reset = () => {
     calls.length = 0;
     responseIndex = 0;
   };
 
-  return { fetchMock, calls, reset };
+  return { fetchMock: typedFetchMock, calls, reset };
 }
 
 /**

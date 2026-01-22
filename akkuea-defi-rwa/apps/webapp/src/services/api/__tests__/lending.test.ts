@@ -1,22 +1,43 @@
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import { lendingApi } from '../lending';
-import { setupMockFetch } from './helpers';
+import { setupMockFetch, wrapFetchMock } from './helpers';
+import type { BorrowPosition, DepositPosition, LendingPool } from '@real-estate-defi/shared';
 
 describe('Lending API', () => {
   let originalFetch: typeof fetch;
 
   beforeEach(() => {
     originalFetch = global.fetch;
-    global.fetch = mock(() => {
+    global.fetch = wrapFetchMock(mock(() => {
       throw new Error('fetch not mocked');
-    });
+    }));
   });
 
   describe('getPools', () => {
     it('fetches all lending pools', async () => {
-      const mockPools = [
-        { id: '1', name: 'Pool 1', totalAssets: '1000000' },
-        { id: '2', name: 'Pool 2', totalAssets: '2000000' },
+      const mockPools: LendingPool[] = [
+        {
+          id: '1',
+          assetSymbol: 'USD',
+          baseRate: 2.5,
+          collateralFactor: 0.6,
+          totalDeposits: 1000000,
+          totalBorrows: 500000,
+          depositors: ['0xuser...'],
+          borrowers: ['0xborrower...'],
+          isActive: true,
+        },
+        {
+          id: '2',
+          assetSymbol: 'USD',
+          baseRate: 3.1,
+          collateralFactor: 0.65,
+          totalDeposits: 2000000,
+          totalBorrows: 1200000,
+          depositors: ['0xuser2...'],
+          borrowers: ['0xborrower2...'],
+          isActive: true,
+        },
       ];
 
       const { fetchMock, calls } = setupMockFetch({
@@ -35,11 +56,16 @@ describe('Lending API', () => {
 
   describe('getPool', () => {
     it('fetches pool by ID', async () => {
-      const mockPool = {
+      const mockPool: LendingPool = {
         id: '123',
-        name: 'Test Pool',
-        totalAssets: '1000000',
-        apy: '5.5',
+        assetSymbol: 'USD',
+        baseRate: 2.5,
+        collateralFactor: 0.6,
+        totalDeposits: 1000000,
+        totalBorrows: 500000,
+        depositors: ['0xuser...'],
+        borrowers: ['0xborrower...'],
+        isActive: true,
       };
 
       const { fetchMock, calls } = setupMockFetch({
@@ -63,13 +89,14 @@ describe('Lending API', () => {
         amount: 1000,
       };
 
-      const mockResponse = {
+      const mockResponse: { transactionHash: string; position: DepositPosition } = {
         transactionHash: '0xtx...',
         position: {
-          id: 'pos1',
+          poolId: '123',
           user: '0xuser...',
           amount: 1000,
-          poolId: '123',
+          depositDate: new Date(),
+          accruedInterest: 12.5,
         },
       };
 
@@ -97,15 +124,17 @@ describe('Lending API', () => {
         borrowAmount: 5000,
       };
 
-      const mockResponse = {
+      const mockResponse: { transactionHash: string; position: BorrowPosition } = {
         transactionHash: '0xtx...',
         position: {
-          id: 'borrow1',
-          borrower: '0xborrower...',
-          amount: 5000,
           poolId: '123',
+          borrower: '0xborrower...',
           collateralPropertyId: 'prop123',
           collateralShares: 10,
+          borrowAmount: 5000,
+          borrowDate: new Date(),
+          interestRate: 4.2,
+          isLiquidated: false,
         },
       };
 
@@ -126,18 +155,20 @@ describe('Lending API', () => {
 
   describe('getUserDeposits', () => {
     it('gets user deposit positions', async () => {
-      const mockDeposits = [
+      const mockDeposits: DepositPosition[] = [
         {
-          id: 'dep1',
+          poolId: '123',
           user: '0xuser...',
           amount: 1000,
-          poolId: '123',
+          depositDate: new Date(),
+          accruedInterest: 5.2,
         },
         {
-          id: 'dep2',
+          poolId: '123',
           user: '0xuser...',
           amount: 2000,
-          poolId: '123',
+          depositDate: new Date(),
+          accruedInterest: 8.1,
         },
       ];
 
@@ -159,14 +190,16 @@ describe('Lending API', () => {
 
   describe('getUserBorrows', () => {
     it('gets user borrow positions', async () => {
-      const mockBorrows = [
+      const mockBorrows: BorrowPosition[] = [
         {
-          id: 'borrow1',
-          borrower: '0xuser...',
-          amount: 5000,
           poolId: '123',
+          borrower: '0xuser...',
           collateralPropertyId: 'prop123',
           collateralShares: 10,
+          borrowAmount: 5000,
+          borrowDate: new Date(),
+          interestRate: 4.2,
+          isLiquidated: false,
         },
       ];
 

@@ -1,24 +1,26 @@
 import { describe, it, expect, beforeEach, mock } from 'bun:test';
 import { userApi } from '../users';
-import { setupMockFetch } from './helpers';
+import { setupMockFetch, wrapFetchMock } from './helpers';
+import type { KycDocument, Transaction, User } from '@real-estate-defi/shared';
 
 describe('User API', () => {
   let originalFetch: typeof fetch;
 
   beforeEach(() => {
     originalFetch = global.fetch;
-    global.fetch = mock(() => {
+    global.fetch = wrapFetchMock(mock(() => {
       throw new Error('fetch not mocked');
-    });
+    }));
   });
 
   describe('getByWallet', () => {
     it('fetches user by wallet address', async () => {
-      const mockUser = {
-        id: 'user123',
-        walletAddress: '0xwallet...',
+      const mockUser: User = {
+        address: '0xwallet...',
         email: 'user@example.com',
-        displayName: 'Test User',
+        kycStatus: 'pending',
+        reputation: 0,
+        createdAt: new Date(),
       };
 
       const { fetchMock, calls } = setupMockFetch({
@@ -42,12 +44,14 @@ describe('User API', () => {
         message: 'Connect wallet message',
       };
 
-      const mockResponse = {
+      const mockResponse: { token: string; user: User } = {
         token: 'auth-token-123',
         user: {
-          id: 'user123',
-          walletAddress: '0xwallet...',
+          address: '0xwallet...',
           email: 'user@example.com',
+          kycStatus: 'pending',
+          reputation: 0,
+          createdAt: new Date(),
         },
       };
 
@@ -68,20 +72,26 @@ describe('User API', () => {
 
   describe('getTransactions', () => {
     it('fetches user transactions', async () => {
-      const mockTransactions = [
+      const mockTransactions: Transaction[] = [
         {
           id: 'tx1',
-          userId: 'user123',
-          type: 'purchase',
-          amount: '1000',
-          timestamp: '2024-01-01T00:00:00Z',
+          type: 'deposit',
+          amount: 1000,
+          from: '0xfrom',
+          to: '0xto',
+          timestamp: new Date(),
+          txHash: '0xtxhash1',
+          status: 'confirmed',
         },
         {
           id: 'tx2',
-          userId: 'user123',
-          type: 'sale',
-          amount: '500',
-          timestamp: '2024-01-02T00:00:00Z',
+          type: 'borrow',
+          amount: 500,
+          from: '0xfrom',
+          to: '0xto',
+          timestamp: new Date(),
+          txHash: '0xtxhash2',
+          status: 'pending',
         },
       ];
 
@@ -183,14 +193,15 @@ describe('User API', () => {
 
   describe('getKycDocuments', () => {
     it('fetches user KYC documents', async () => {
-      const mockDocuments = [
+      const mockDocuments: KycDocument[] = [
         {
           id: 'doc1',
           userId: 'user123',
-          type: 'passport',
+          documentType: 'passport',
           documentUrl: 'https://example.com/doc.pdf',
           status: 'verified',
-          uploadedAt: '2024-01-01T00:00:00Z',
+          submittedAt: new Date(),
+          verifiedAt: new Date(),
         },
       ];
 

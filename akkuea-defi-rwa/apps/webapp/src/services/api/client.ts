@@ -7,17 +7,6 @@ import {
   RequestConfig,
 } from './types';
 
-// Type declaration for process.env (available in Node.js and Next.js)
-// This allows TypeScript to recognize process.env without importing @types/node globally
-declare global {
-  // eslint-disable-next-line no-var
-  var process: {
-    env: {
-      [key: string]: string | undefined;
-    };
-  };
-}
-
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_RETRIES = 3;
 const DEFAULT_RETRY_DELAY = 1000; // 1 second
@@ -289,9 +278,9 @@ export function createApiClient(config: ApiClientConfig) {
  */
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - process.env is available in Next.js runtime but TypeScript doesn't recognize it
-const API_BASE_URL = 
-  // @ts-ignore
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL =
+  (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) ||
+  'http://localhost:3001';
 
 const getApiBaseUrl = (): string => {
   return API_BASE_URL;

@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { stellarAddressSchema, isoDateSchema } from "./common.schema";
+import {
+  stellarAddressSchema,
+  isoDateSchema,
+  positiveAmountSchema,
+} from "./common.schema";
 
 /**
  * KYC status enum
@@ -82,7 +86,7 @@ export const transactionSchema = z.object({
   asset: z.string(),
   status: z.enum(["pending", "confirmed", "failed"]),
   timestamp: isoDateSchema,
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**

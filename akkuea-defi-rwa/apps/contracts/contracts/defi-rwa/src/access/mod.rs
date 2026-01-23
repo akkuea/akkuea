@@ -1,10 +1,10 @@
-pub mod roles;
 pub mod admin;
+pub mod roles;
 
 pub use admin::{AdminControl, PauseControl};
-pub use roles::{RoleStorage, Role};
+pub use roles::{Role, RoleStorage};
 
-use soroban_sdk::{Env, Address};
+use soroban_sdk::{Address, Env};
 
 pub fn require_role(env: &Env, caller: &Address, role: &Role) {
     if !RoleStorage::has_role(env, caller, role) {

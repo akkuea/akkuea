@@ -1,7 +1,7 @@
 #![no_std]
 
-mod lending;
 mod access;
+mod lending;
 
 pub use lending::*;
 

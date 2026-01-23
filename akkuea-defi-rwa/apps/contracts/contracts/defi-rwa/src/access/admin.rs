@@ -1,13 +1,13 @@
 use soroban_sdk::{Address, Env};
 
-use crate::access::{roles::{RoleKey, RoleStorage, Role}};
+use crate::access::roles::{Role, RoleKey, RoleStorage};
 
 #[derive(Debug)]
 pub enum AdminError {
     NotAdmin,
     NotPendingAdmin,
     AlreadyInitialized,
-    ZeroAddress
+    ZeroAddress,
 }
 
 pub struct AdminControl;
@@ -33,7 +33,7 @@ impl AdminControl {
     pub fn is_admin(env: &Env, address: &Address) -> bool {
         match Self::get_admin(env) {
             Some(admin) => admin == address.clone(),
-            None => false
+            None => false,
         }
     }
 
@@ -45,22 +45,26 @@ impl AdminControl {
 
     pub fn transfer_admin_start(env: &Env, caller: &Address, new_admin: &Address) {
         Self::require_admin(env, caller);
-        env.storage().instance().set(&RoleKey::PendingAdmin, new_admin);
+        env.storage()
+            .instance()
+            .set(&RoleKey::PendingAdmin, new_admin);
     }
 
     pub fn transfer_admin_accept(env: &Env, new_admin: &Address) {
         let pending: Option<Address> = env.storage().instance().get(&RoleKey::PendingAdmin);
 
         match pending {
-            Some(pending_admin) => if pending_admin == new_admin.clone() {
-                if let Some(old_admin) = Self::get_admin(env) {
-                    RoleStorage::revoke_role(env, &old_admin, &Role::ADMIN);
-                }
+            Some(pending_admin) => {
+                if pending_admin == new_admin.clone() {
+                    if let Some(old_admin) = Self::get_admin(env) {
+                        RoleStorage::revoke_role(env, &old_admin, &Role::ADMIN);
+                    }
 
-                env.storage().instance().set(&RoleKey::Admin, new_admin);
-                RoleStorage::grant_role(env, new_admin, &Role::ADMIN);
-                env.storage().instance().remove(&RoleKey::PendingAdmin);
-            },
+                    env.storage().instance().set(&RoleKey::Admin, new_admin);
+                    RoleStorage::grant_role(env, new_admin, &Role::ADMIN);
+                    env.storage().instance().remove(&RoleKey::PendingAdmin);
+                }
+            }
             _ => panic!("Caller is not pending admin"),
         }
     }
@@ -79,7 +83,10 @@ pub struct PauseControl;
 
 impl PauseControl {
     pub fn is_paused(env: &Env) -> bool {
-        env.storage().instance().get(&RoleKey::Paused).unwrap_or(false)
+        env.storage()
+            .instance()
+            .get(&RoleKey::Paused)
+            .unwrap_or(false)
     }
 
     pub fn can_pause(env: &Env, address: &Address) -> bool {
@@ -117,5 +124,4 @@ impl PauseControl {
             panic!("Contract paused")
         }
     }
-
 }

@@ -1,4 +1,4 @@
-use soroban_sdk::{Env, Vec, Address, contracttype};
+use soroban_sdk::{contracttype, Address, Env, Vec};
 
 #[derive(Debug, PartialEq, Clone)]
 #[contracttype]
@@ -12,7 +12,7 @@ pub enum Role {
     // Right to verify property
     VERIFIER,
     // Right to execute liquidations
-    LIQUIDATOR
+    LIQUIDATOR,
 }
 
 #[derive(Clone)]
@@ -22,7 +22,7 @@ pub enum RoleKey {
     Paused,
     HasRole(Address, Role),
     RoleMembers(Role),
-    PendingAdmin
+    PendingAdmin,
 }
 
 pub struct RoleStorage;
@@ -38,7 +38,11 @@ impl RoleStorage {
         env.storage().instance().set(&key, &true);
 
         let members_key = RoleKey::RoleMembers(role.clone());
-        let mut members: Vec<Address> = env.storage().instance().get(&members_key).unwrap_or(Vec::new(env));
+        let mut members: Vec<Address> = env
+            .storage()
+            .instance()
+            .get(&members_key)
+            .unwrap_or(Vec::new(env));
 
         let mut exists = false;
         for i in 0..members.len() {
@@ -78,5 +82,4 @@ impl RoleStorage {
         let key = RoleKey::RoleMembers(role.clone());
         env.storage().instance().get(&key).unwrap_or(Vec::new(env))
     }
-
 }

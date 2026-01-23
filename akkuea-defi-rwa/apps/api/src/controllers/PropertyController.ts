@@ -1,7 +1,7 @@
 import type { PropertyInfo, Transaction, ShareOwnership } from '@real-estate-defi/shared';
 
 export class PropertyController {
-  static async getProperties(): Promise<PropertyInfo[]> {
+  static async getProperties(_query?: Record<string, unknown>): Promise<PropertyInfo[]> {
     try {
       // Get all properties from blockchain or database
       // Implementation to fetch all properties

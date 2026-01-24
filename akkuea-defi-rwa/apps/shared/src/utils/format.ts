@@ -72,7 +72,7 @@ export const abbreviateNumber = (
   return new Intl.NumberFormat(locale, {
     notation: "compact",
     compactDisplay: "short",
-    minimumFractionDigits: decimals,
+    minimumFractionDigits: 0,
     maximumFractionDigits: decimals,
   }).format(value);
 };

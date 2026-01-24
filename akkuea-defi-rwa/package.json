@@ -20,6 +20,7 @@
     "test": "bun test --workspaces",
     "lint": "concurrently \"cd apps/api && bun run lint\" \"cd apps/webapp && bun run lint\" \"cd apps/shared && bun run lint\"",
     "typecheck": "concurrently \"cd apps/api && bun run type-check\" \"cd apps/webapp && bun run type-check\" \"cd apps/shared && bun run type-check\"",
+    "type-check": "concurrently \"cd apps/api && bun run type-check\" \"cd apps/webapp && bun run type-check\" \"cd apps/shared && bun run type-check\"",
     "clean": "bun run clean --workspaces && rm -rf node_modules",
     "install:all": "bun install && bun install --workspaces",
     "deploy:contracts": "./scripts/deploy.sh",

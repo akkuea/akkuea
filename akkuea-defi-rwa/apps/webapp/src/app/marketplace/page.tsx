@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import {
   Search,
   SlidersHorizontal,
@@ -153,11 +154,14 @@ function InvestModal({ property, isOpen, onClose }: InvestModalProps) {
         {/* Property Summary */}
         <div className="flex gap-4 p-4 bg-[#1a1a1a] border border-[#262626] rounded-lg">
           {/* When we use images from db, we use Image component from next/image */}
-          <img
-            src={property.image}
-            alt={property.name}
-            className="w-20 h-20 rounded-lg object-cover"
-          />
+          <div className="relative w-20 h-20 rounded-lg overflow-hidden">
+            <Image
+              src={property.image}
+              alt={property.name}
+              fill
+              className="object-cover"
+            />
+          </div>
           <div>
             <h3 className="font-semibold text-white">{property.name}</h3>
             <p className="text-sm text-neutral-500">{property.location}</p>
@@ -463,10 +467,11 @@ export default function MarketplacePage() {
                 >
                   {/* Image */}
                   <div className="relative h-48 overflow-hidden">
-                    <img
+                    <Image
                       src={property.image}
                       alt={property.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     {property.featured && (
                       <div className="absolute top-3 left-3">

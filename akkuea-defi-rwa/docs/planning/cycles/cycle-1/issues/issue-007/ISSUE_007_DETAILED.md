@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute | Value |
-|-----------|-------|
-| Issue ID | C1-007 |
-| Title | Implement lending pool storage structures |
-| Area | CONTRACT |
-| Difficulty | High |
-| Labels | smart-contract, soroban, high |
-| Dependencies | None |
-| Estimated Lines | 300-400 |
+| Attribute       | Value                                     |
+| --------------- | ----------------------------------------- |
+| Issue ID        | C1-007                                    |
+| Title           | Implement lending pool storage structures |
+| Area            | CONTRACT                                  |
+| Difficulty      | High                                      |
+| Labels          | smart-contract, soroban, high             |
+| Dependencies    | None                                      |
+| Estimated Lines | 300-400                                   |
 
 ## Overview
 
@@ -744,19 +744,19 @@ fn test_position_storage() {
 
 ## Related Resources
 
-| Resource | Link |
-|----------|------|
+| Resource                    | Link                                                       |
+| --------------------------- | ---------------------------------------------------------- |
 | Compound Finance Whitepaper | https://compound.finance/documents/Compound.Whitepaper.pdf |
-| Aave Protocol Documentation | https://docs.aave.com/developers/ |
-| Soroban Storage | https://soroban.stellar.org/docs/learn/persisting-data |
+| Aave Protocol Documentation | https://docs.aave.com/developers/                          |
+| Soroban Storage             | https://soroban.stellar.org/docs/learn/persisting-data     |
 
 ## Verification Checklist
 
-| Item | Status |
-|------|--------|
-| Interest rate model implemented | |
-| Pool storage complete | |
-| Position storage complete | |
-| Storage keys unique | |
-| Unit tests passing | |
-| cargo clippy clean | |
+| Item                            | Status |
+| ------------------------------- | ------ |
+| Interest rate model implemented |        |
+| Pool storage complete           |        |
+| Position storage complete       |        |
+| Storage keys unique             |        |
+| Unit tests passing              |        |
+| cargo clippy clean              |        |

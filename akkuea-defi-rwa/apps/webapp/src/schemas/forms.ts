@@ -35,7 +35,12 @@ const tokenizeBaseSchema = z.object({
   address: nonEmpty("Street address"),
   city: nonEmpty("City"),
   country: nonEmpty("Country"),
-  propertyType: z.enum(["residential", "commercial", "industrial", "mixed-use"]),
+  propertyType: z.enum([
+    "residential",
+    "commercial",
+    "industrial",
+    "mixed-use",
+  ]),
   totalArea: positiveNumberString("Total area"),
   bedrooms: nonNegativeIntString("Bedrooms"),
   bathrooms: nonNegativeIntString("Bathrooms"),
@@ -110,11 +115,10 @@ export function createLendingActionSchema(args: {
 }) {
   const max = Number.isFinite(args.maxAmount) ? args.maxAmount : 0;
   return z.object({
-    amount: positiveNumberString("Amount")
-      .refine(
-        (v: string) => Number(v) <= max,
-        `Amount cannot exceed available ${args.asset}`,
-      ),
+    amount: positiveNumberString("Amount").refine(
+      (v: string) => Number(v) <= max,
+      `Amount cannot exceed available ${args.asset}`,
+    ),
     zkPrivacy: z.boolean().default(false),
   });
 }
@@ -123,4 +127,3 @@ export type LendingActionFormValues = {
   amount: string;
   zkPrivacy: boolean;
 };
-

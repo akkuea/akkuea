@@ -24,8 +24,10 @@ function getErrorMessage<TFieldValues extends FieldValues>(
   return typeof msg === "string" ? msg : undefined;
 }
 
-export interface FormInputProps<TFieldValues extends FieldValues>
-  extends Omit<React.ComponentProps<typeof Input>, "name" | "defaultValue"> {
+export interface FormInputProps<TFieldValues extends FieldValues> extends Omit<
+  React.ComponentProps<typeof Input>,
+  "name" | "defaultValue"
+> {
   name: Path<TFieldValues>;
   rules?: RegisterOptions<TFieldValues, Path<TFieldValues>>;
 }
@@ -45,4 +47,3 @@ export function FormInput<TFieldValues extends FieldValues>({
 
   return <Input {...props} {...field} ref={ref} error={error} />;
 }
-

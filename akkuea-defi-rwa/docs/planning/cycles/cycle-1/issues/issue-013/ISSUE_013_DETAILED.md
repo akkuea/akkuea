@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute | Value |
-|-----------|-------|
-| Issue ID | C1-013 |
-| Title | Implement user CRUD operations in UserController |
-| Area | API |
-| Difficulty | Medium |
-| Labels | backend, api, medium |
-| Dependencies | None |
-| Estimated Lines | 120-180 |
+| Attribute       | Value                                            |
+| --------------- | ------------------------------------------------ |
+| Issue ID        | C1-013                                           |
+| Title           | Implement user CRUD operations in UserController |
+| Area            | API                                              |
+| Difficulty      | Medium                                           |
+| Labels          | backend, api, medium                             |
+| Dependencies    | None                                             |
+| Estimated Lines | 120-180                                          |
 
 ## Overview
 
@@ -25,7 +25,7 @@ This issue implements the user management layer including registration, profile 
 Create `apps/api/src/dto/user.dto.ts`:
 
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Stellar address validation regex
@@ -38,8 +38,8 @@ const stellarAddressRegex = /^G[A-Z2-7]{55}$/;
 export const CreateUserDto = z.object({
   walletAddress: z
     .string()
-    .length(56, 'Wallet address must be 56 characters')
-    .regex(stellarAddressRegex, 'Invalid Stellar address format'),
+    .length(56, "Wallet address must be 56 characters")
+    .regex(stellarAddressRegex, "Invalid Stellar address format"),
   email: z.string().email().optional(),
   displayName: z.string().min(2).max(50).optional(),
 });
@@ -60,8 +60,14 @@ export const UserResponseDto = z.object({
   walletAddress: z.string(),
   email: z.string().email().nullable(),
   displayName: z.string().nullable(),
-  kycStatus: z.enum(['not_started', 'pending', 'approved', 'rejected', 'expired']),
-  kycTier: z.enum(['none', 'basic', 'verified', 'accredited']),
+  kycStatus: z.enum([
+    "not_started",
+    "pending",
+    "approved",
+    "rejected",
+    "expired",
+  ]),
+  kycTier: z.enum(["none", "basic", "verified", "accredited"]),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   lastLoginAt: z.string().datetime().nullable(),
@@ -77,15 +83,19 @@ export type UserResponse = z.infer<typeof UserResponseDto>;
 Create `apps/api/src/repositories/UserRepository.ts`:
 
 ```typescript
-import { eq } from 'drizzle-orm';
-import { db } from '../db';
-import { users } from '../db/schema';
-import { BaseRepository } from './BaseRepository';
+import { eq } from "drizzle-orm";
+import { db } from "../db";
+import { users } from "../db/schema";
+import { BaseRepository } from "./BaseRepository";
 
 type User = typeof users.$inferSelect;
 type NewUser = typeof users.$inferInsert;
 
-export class UserRepository extends BaseRepository<typeof users, NewUser, User> {
+export class UserRepository extends BaseRepository<
+  typeof users,
+  NewUser,
+  User
+> {
   constructor() {
     super(users);
   }
@@ -131,7 +141,7 @@ export class UserRepository extends BaseRepository<typeof users, NewUser, User> 
    */
   async updateProfile(
     id: string,
-    data: { email?: string; displayName?: string }
+    data: { email?: string; displayName?: string },
   ): Promise<User | undefined> {
     const updateData: Partial<NewUser> = {
       updatedAt: new Date(),
@@ -181,10 +191,10 @@ export const userRepository = new UserRepository();
 Update `apps/api/src/controllers/UserController.ts`:
 
 ```typescript
-import { Context } from 'elysia';
-import { userRepository } from '../repositories/UserRepository';
-import { CreateUserDto, UpdateUserDto } from '../dto/user.dto';
-import { ApiError } from '../errors/ApiError';
+import { Context } from "elysia";
+import { userRepository } from "../repositories/UserRepository";
+import { CreateUserDto, UpdateUserDto } from "../dto/user.dto";
+import { ApiError } from "../errors/ApiError";
 
 export class UserController {
   /**
@@ -195,7 +205,7 @@ export class UserController {
     const validationResult = CreateUserDto.safeParse(body);
 
     if (!validationResult.success) {
-      throw new ApiError(400, 'VALIDATION_ERROR', 'Invalid user data', {
+      throw new ApiError(400, "VALIDATION_ERROR", "Invalid user data", {
         errors: validationResult.error.flatten().fieldErrors,
       });
     }
@@ -207,8 +217,8 @@ export class UserController {
     if (exists) {
       throw new ApiError(
         409,
-        'WALLET_EXISTS',
-        'User with this wallet address already exists'
+        "WALLET_EXISTS",
+        "User with this wallet address already exists",
       );
     }
 
@@ -220,7 +230,7 @@ export class UserController {
 
     return new Response(JSON.stringify(user), {
       status: 201,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   }
 
@@ -228,34 +238,36 @@ export class UserController {
    * Get current user profile (authenticated)
    */
   static async getProfile(ctx: Context): Promise<Response> {
-    const userId = ctx.headers.get('x-user-id');
+    const userId = ctx.headers.get("x-user-id");
 
     if (!userId) {
-      throw new ApiError(401, 'UNAUTHORIZED', 'Authentication required');
+      throw new ApiError(401, "UNAUTHORIZED", "Authentication required");
     }
 
     const user = await userRepository.findById(userId);
 
     if (!user) {
-      throw new ApiError(404, 'NOT_FOUND', 'User not found');
+      throw new ApiError(404, "NOT_FOUND", "User not found");
     }
 
     return new Response(JSON.stringify(user), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   }
 
   /**
    * Get user by ID
    */
-  static async getById(ctx: Context<{ params: { id: string } }>): Promise<Response> {
+  static async getById(
+    ctx: Context<{ params: { id: string } }>,
+  ): Promise<Response> {
     const { id } = ctx.params;
 
     const user = await userRepository.findById(id);
 
     if (!user) {
-      throw new ApiError(404, 'NOT_FOUND', `User with ID ${id} not found`);
+      throw new ApiError(404, "NOT_FOUND", `User with ID ${id} not found`);
     }
 
     // Return public profile (omit sensitive fields)
@@ -269,7 +281,7 @@ export class UserController {
 
     return new Response(JSON.stringify(publicProfile), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   }
 
@@ -277,19 +289,23 @@ export class UserController {
    * Get user by wallet address
    */
   static async getByWallet(
-    ctx: Context<{ params: { address: string } }>
+    ctx: Context<{ params: { address: string } }>,
   ): Promise<Response> {
     const { address } = ctx.params;
 
     // Validate wallet address format
     if (!/^G[A-Z2-7]{55}$/.test(address)) {
-      throw new ApiError(400, 'INVALID_ADDRESS', 'Invalid Stellar address format');
+      throw new ApiError(
+        400,
+        "INVALID_ADDRESS",
+        "Invalid Stellar address format",
+      );
     }
 
     const user = await userRepository.findByWalletAddress(address);
 
     if (!user) {
-      throw new ApiError(404, 'NOT_FOUND', 'User not found');
+      throw new ApiError(404, "NOT_FOUND", "User not found");
     }
 
     // Return public profile
@@ -303,7 +319,7 @@ export class UserController {
 
     return new Response(JSON.stringify(publicProfile), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   }
 
@@ -311,30 +327,33 @@ export class UserController {
    * Update current user profile
    */
   static async updateProfile(ctx: Context): Promise<Response> {
-    const userId = ctx.headers.get('x-user-id');
+    const userId = ctx.headers.get("x-user-id");
 
     if (!userId) {
-      throw new ApiError(401, 'UNAUTHORIZED', 'Authentication required');
+      throw new ApiError(401, "UNAUTHORIZED", "Authentication required");
     }
 
     const body = await ctx.request.json();
     const validationResult = UpdateUserDto.safeParse(body);
 
     if (!validationResult.success) {
-      throw new ApiError(400, 'VALIDATION_ERROR', 'Invalid update data', {
+      throw new ApiError(400, "VALIDATION_ERROR", "Invalid update data", {
         errors: validationResult.error.flatten().fieldErrors,
       });
     }
 
-    const user = await userRepository.updateProfile(userId, validationResult.data);
+    const user = await userRepository.updateProfile(
+      userId,
+      validationResult.data,
+    );
 
     if (!user) {
-      throw new ApiError(404, 'NOT_FOUND', 'User not found');
+      throw new ApiError(404, "NOT_FOUND", "User not found");
     }
 
     return new Response(JSON.stringify(user), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   }
 
@@ -346,14 +365,18 @@ export class UserController {
     const { walletAddress } = body;
 
     if (!walletAddress || !/^G[A-Z2-7]{55}$/.test(walletAddress)) {
-      throw new ApiError(400, 'INVALID_ADDRESS', 'Invalid Stellar address format');
+      throw new ApiError(
+        400,
+        "INVALID_ADDRESS",
+        "Invalid Stellar address format",
+      );
     }
 
     const user = await userRepository.getOrCreateByWallet(walletAddress);
 
     return new Response(JSON.stringify(user), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { "Content-Type": "application/json" },
     });
   }
 }
@@ -364,17 +387,20 @@ export class UserController {
 Update `apps/api/src/routes/users.ts`:
 
 ```typescript
-import { Elysia } from 'elysia';
-import { z } from 'zod';
-import { validate, uuidParamSchema } from '../middleware';
-import { UserController } from '../controllers/UserController';
+import { Elysia } from "elysia";
+import { z } from "zod";
+import { validate, uuidParamSchema } from "../middleware";
+import { UserController } from "../controllers/UserController";
 
 const walletParamSchema = z.object({
   address: z.string().length(56),
 });
 
 const createUserSchema = z.object({
-  walletAddress: z.string().length(56).regex(/^G[A-Z2-7]{55}$/),
+  walletAddress: z
+    .string()
+    .length(56)
+    .regex(/^G[A-Z2-7]{55}$/),
   email: z.string().email().optional(),
   displayName: z.string().min(2).max(50).optional(),
 });
@@ -385,32 +411,35 @@ const updateUserSchema = z.object({
 });
 
 const authWalletSchema = z.object({
-  walletAddress: z.string().length(56).regex(/^G[A-Z2-7]{55}$/),
+  walletAddress: z
+    .string()
+    .length(56)
+    .regex(/^G[A-Z2-7]{55}$/),
 });
 
-export const userRoutes = new Elysia({ prefix: '/users' })
+export const userRoutes = new Elysia({ prefix: "/users" })
   // POST /users - Create user
   .use(validate({ body: createUserSchema }))
-  .post('/', async (ctx) => UserController.create(ctx))
+  .post("/", async (ctx) => UserController.create(ctx))
 
   // GET /users/me - Get current user profile
-  .get('/me', async (ctx) => UserController.getProfile(ctx))
+  .get("/me", async (ctx) => UserController.getProfile(ctx))
 
   // PATCH /users/me - Update current user profile
   .use(validate({ body: updateUserSchema }))
-  .patch('/me', async (ctx) => UserController.updateProfile(ctx))
+  .patch("/me", async (ctx) => UserController.updateProfile(ctx))
 
   // GET /users/:id - Get user by ID
   .use(validate({ params: uuidParamSchema }))
-  .get('/:id', async (ctx) => UserController.getById(ctx))
+  .get("/:id", async (ctx) => UserController.getById(ctx))
 
   // GET /users/wallet/:address - Get user by wallet address
   .use(validate({ params: walletParamSchema }))
-  .get('/wallet/:address', async (ctx) => UserController.getByWallet(ctx))
+  .get("/wallet/:address", async (ctx) => UserController.getByWallet(ctx))
 
   // POST /users/auth - Authenticate by wallet (get or create)
   .use(validate({ body: authWalletSchema }))
-  .post('/auth', async (ctx) => UserController.authenticateByWallet(ctx));
+  .post("/auth", async (ctx) => UserController.authenticateByWallet(ctx));
 ```
 
 ## Testing Guidelines
@@ -418,20 +447,21 @@ export const userRoutes = new Elysia({ prefix: '/users' })
 ### Integration Test Example
 
 ```typescript
-import { describe, it, expect } from 'bun:test';
-import { app } from '../src/index';
+import { describe, it, expect } from "bun:test";
+import { app } from "../src/index";
 
-describe('UserController', () => {
-  const testWallet = 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+describe("UserController", () => {
+  const testWallet =
+    "GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
 
-  describe('POST /users', () => {
-    it('should create a new user', async () => {
+  describe("POST /users", () => {
+    it("should create a new user", async () => {
       const response = await app.handle(
-        new Request('http://localhost/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        new Request("http://localhost/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ walletAddress: testWallet }),
-        })
+        }),
       );
 
       expect(response.status).toBe(201);
@@ -439,41 +469,41 @@ describe('UserController', () => {
       expect(body.walletAddress).toBe(testWallet);
     });
 
-    it('should reject duplicate wallet', async () => {
+    it("should reject duplicate wallet", async () => {
       // First create
       await app.handle(
-        new Request('http://localhost/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        new Request("http://localhost/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ walletAddress: testWallet }),
-        })
+        }),
       );
 
       // Second create should fail
       const response = await app.handle(
-        new Request('http://localhost/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        new Request("http://localhost/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ walletAddress: testWallet }),
-        })
+        }),
       );
 
       expect(response.status).toBe(409);
     });
   });
 
-  describe('GET /users/wallet/:address', () => {
-    it('should return user by wallet', async () => {
+  describe("GET /users/wallet/:address", () => {
+    it("should return user by wallet", async () => {
       const response = await app.handle(
-        new Request(`http://localhost/users/wallet/${testWallet}`)
+        new Request(`http://localhost/users/wallet/${testWallet}`),
       );
 
       expect(response.status).toBe(200);
     });
 
-    it('should return 400 for invalid address', async () => {
+    it("should return 400 for invalid address", async () => {
       const response = await app.handle(
-        new Request('http://localhost/users/wallet/invalid')
+        new Request("http://localhost/users/wallet/invalid"),
       );
 
       expect(response.status).toBe(400);
@@ -484,18 +514,18 @@ describe('UserController', () => {
 
 ## Related Resources
 
-| Resource | Link |
-|----------|------|
+| Resource               | Link                                                            |
+| ---------------------- | --------------------------------------------------------------- |
 | Stellar Address Format | https://developers.stellar.org/docs/encyclopedia/account-format |
-| Drizzle ORM | https://orm.drizzle.team |
+| Drizzle ORM            | https://orm.drizzle.team                                        |
 
 ## Verification Checklist
 
-| Item | Status |
-|------|--------|
-| DTOs created | |
-| Repository implemented | |
-| Controller methods working | |
-| Routes configured | |
-| Validation working | |
-| Tests passing | |
+| Item                       | Status |
+| -------------------------- | ------ |
+| DTOs created               |        |
+| Repository implemented     |        |
+| Controller methods working |        |
+| Routes configured          |        |
+| Validation working         |        |
+| Tests passing              |        |

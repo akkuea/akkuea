@@ -19,8 +19,10 @@ function getErrorMessage<TFieldValues extends FieldValues>(
   return typeof msg === "string" ? msg : undefined;
 }
 
-export interface FormSelectProps<TFieldValues extends FieldValues>
-  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, "name"> {
+export interface FormSelectProps<TFieldValues extends FieldValues> extends Omit<
+  React.SelectHTMLAttributes<HTMLSelectElement>,
+  "name"
+> {
   name: Path<TFieldValues>;
   label?: string;
   hint?: string;
@@ -82,4 +84,3 @@ export function FormSelect<TFieldValues extends FieldValues>({
     </div>
   );
 }
-

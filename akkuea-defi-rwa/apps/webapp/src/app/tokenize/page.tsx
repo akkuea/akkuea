@@ -257,8 +257,8 @@ export default function TokenizePage() {
                                   placeholder="Describe your property..."
                                   rows={3}
                                   error={
-                                    typeof formState.errors.description?.message ===
-                                    "string"
+                                    typeof formState.errors.description
+                                      ?.message === "string"
                                       ? formState.errors.description?.message
                                       : undefined
                                   }
@@ -286,7 +286,9 @@ export default function TokenizePage() {
                                 <option value="nigeria">Nigeria</option>
                                 <option value="kenya">Kenya</option>
                                 <option value="ghana">Ghana</option>
-                                <option value="south-africa">South Africa</option>
+                                <option value="south-africa">
+                                  South Africa
+                                </option>
                                 <option value="mexico">Mexico</option>
                                 <option value="colombia">Colombia</option>
                                 <option value="brazil">Brazil</option>
@@ -338,414 +340,432 @@ export default function TokenizePage() {
                             transition={{ duration: 0.3 }}
                             className="space-y-6"
                           >
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-lg bg-[#ff3e00]/10 border border-[#ff3e00]/20 flex items-center justify-center">
-                        <FileText className="w-5 h-5 text-[#ff3e00]" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">
-                          Upload Documents
-                        </h2>
-                        <p className="text-xs text-neutral-500">
-                          Required documents for property verification
-                        </p>
-                      </div>
-                    </div>
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-10 h-10 rounded-lg bg-[#ff3e00]/10 border border-[#ff3e00]/20 flex items-center justify-center">
+                                <FileText className="w-5 h-5 text-[#ff3e00]" />
+                              </div>
+                              <div>
+                                <h2 className="text-lg font-semibold text-white">
+                                  Upload Documents
+                                </h2>
+                                <p className="text-xs text-neutral-500">
+                                  Required documents for property verification
+                                </p>
+                              </div>
+                            </div>
 
-                    <div className="space-y-4">
-                      {/* Title Deed */}
-                      <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
-                              <FileText className="w-5 h-5 text-neutral-500" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-white">
-                                Title Deed / Proof of Ownership
-                              </p>
-                              <p className="text-xs text-neutral-600 font-mono">
-                                PDF or image, max 10MB
-                              </p>
-                            </div>
-                          </div>
-                          {values.titleDeed ? (
-                            <Badge variant="success" dot>
-                              Uploaded
-                            </Badge>
-                          ) : (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              leftIcon={<Upload className="w-4 h-4" />}
-                            >
-                              Upload
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                            <div className="space-y-4">
+                              {/* Title Deed */}
+                              <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
+                                      <FileText className="w-5 h-5 text-neutral-500" />
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-white">
+                                        Title Deed / Proof of Ownership
+                                      </p>
+                                      <p className="text-xs text-neutral-600 font-mono">
+                                        PDF or image, max 10MB
+                                      </p>
+                                    </div>
+                                  </div>
+                                  {values.titleDeed ? (
+                                    <Badge variant="success" dot>
+                                      Uploaded
+                                    </Badge>
+                                  ) : (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      leftIcon={<Upload className="w-4 h-4" />}
+                                    >
+                                      Upload
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
 
-                      {/* Property Images */}
-                      <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
-                              <ImageIcon className="w-5 h-5 text-neutral-500" />
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-white">
-                                Property Images
-                              </p>
-                              <p className="text-xs text-neutral-600 font-mono">
-                                Min 5 images, max 20MB each
-                              </p>
-                            </div>
-                          </div>
-                          <Badge variant="outline">
-                            {(values.propertyImages?.length ?? 0)}/5 min
-                          </Badge>
-                        </div>
-                      </div>
+                              {/* Property Images */}
+                              <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
+                                      <ImageIcon className="w-5 h-5 text-neutral-500" />
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-white">
+                                        Property Images
+                                      </p>
+                                      <p className="text-xs text-neutral-600 font-mono">
+                                        Min 5 images, max 20MB each
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Badge variant="outline">
+                                    {values.propertyImages?.length ?? 0}/5 min
+                                  </Badge>
+                                </div>
+                              </div>
 
-                      {/* Legal Documents */}
-                      <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
-                              <Shield className="w-5 h-5 text-neutral-500" />
+                              {/* Legal Documents */}
+                              <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
+                                      <Shield className="w-5 h-5 text-neutral-500" />
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-white">
+                                        Legal Documents
+                                      </p>
+                                      <p className="text-xs text-neutral-600 font-mono">
+                                        Insurance, permits, compliance docs
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    leftIcon={<Upload className="w-4 h-4" />}
+                                  >
+                                    Upload
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {/* Appraisal Report */}
+                              <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
+                                      <DollarSign className="w-5 h-5 text-neutral-500" />
+                                    </div>
+                                    <div>
+                                      <p className="text-sm font-medium text-white">
+                                        Appraisal Report (Optional)
+                                      </p>
+                                      <p className="text-xs text-neutral-600 font-mono">
+                                        Professional property valuation
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    leftIcon={<Upload className="w-4 h-4" />}
+                                  >
+                                    Upload
+                                  </Button>
+                                </div>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-white">
-                                Legal Documents
-                              </p>
-                              <p className="text-xs text-neutral-600 font-mono">
-                                Insurance, permits, compliance docs
-                              </p>
+
+                            <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-lg">
+                              <div className="flex items-start gap-3">
+                                <Link2 className="w-5 h-5 text-blue-400 mt-0.5" />
+                                <div>
+                                  <p className="text-sm font-medium text-white">
+                                    Chainlink Oracle Integration
+                                  </p>
+                                  <p className="text-xs text-neutral-500 mt-1">
+                                    Your property will be valued using Chainlink
+                                    price feeds for accurate,
+                                    manipulation-resistant pricing data.
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            leftIcon={<Upload className="w-4 h-4" />}
+                          </motion.div>
+                        )}
+
+                        {/* Step 3: Tokenization */}
+                        {currentStep === 2 && (
+                          <motion.div
+                            key="step-3"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="space-y-6"
                           >
-                            Upload
-                          </Button>
-                        </div>
-                      </div>
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-10 h-10 rounded-lg bg-[#ff3e00]/10 border border-[#ff3e00]/20 flex items-center justify-center">
+                                <Coins className="w-5 h-5 text-[#ff3e00]" />
+                              </div>
+                              <div>
+                                <h2 className="text-lg font-semibold text-white">
+                                  Token Configuration
+                                </h2>
+                                <p className="text-xs text-neutral-500">
+                                  Configure how your property will be
+                                  fractionalized
+                                </p>
+                              </div>
+                            </div>
 
-                      {/* Appraisal Report */}
-                      <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
-                              <DollarSign className="w-5 h-5 text-neutral-500" />
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <FormInput<TokenizeFormValues>
+                                name="totalValue"
+                                label="Total Property Value (USD)"
+                                type="number"
+                                placeholder="1000000"
+                                leftIcon={<DollarSign className="w-4 h-4" />}
+                              />
+                              <FormInput<TokenizeFormValues>
+                                name="totalTokens"
+                                label="Total Tokens to Mint"
+                                type="number"
+                                placeholder="10000"
+                                leftIcon={<Coins className="w-4 h-4" />}
+                              />
+                              <div>
+                                <label className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wider">
+                                  Price per Token
+                                </label>
+                                <div className="px-3 py-2.5 bg-[#0a0a0a] border border-[#262626] rounded-lg text-white font-mono text-sm">
+                                  {calculatedTokenPrice
+                                    ? formatCurrency(calculatedTokenPrice)
+                                    : "-"}
+                                </div>
+                                <p className="text-[10px] text-neutral-600 mt-1 font-mono">
+                                  Auto-calculated
+                                </p>
+                              </div>
+                              <FormInput<TokenizeFormValues>
+                                name="minInvestment"
+                                label="Minimum Investment (Tokens)"
+                                type="number"
+                                placeholder="1"
+                                leftIcon={<Users className="w-4 h-4" />}
+                              />
+                              <FormInput<TokenizeFormValues>
+                                name="expectedYield"
+                                label="Expected Annual Yield (%)"
+                                type="number"
+                                placeholder="8.5"
+                                leftIcon={<Percent className="w-4 h-4" />}
+                              />
+                              <FormInput<TokenizeFormValues>
+                                name="fundingDeadline"
+                                label="Funding Deadline"
+                                type="date"
+                              />
                             </div>
-                            <div>
-                              <p className="text-sm font-medium text-white">
-                                Appraisal Report (Optional)
-                              </p>
-                              <p className="text-xs text-neutral-600 font-mono">
-                                Professional property valuation
-                              </p>
+
+                            <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                              <div className="flex items-start gap-3">
+                                <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5" />
+                                <div>
+                                  <p className="text-sm font-medium text-white">
+                                    Token Standards
+                                  </p>
+                                  <p className="text-xs text-neutral-500 mt-1">
+                                    Tokens will be minted as Soroban assets on
+                                    Stellar, compliant with regulatory
+                                    requirements. Each token represents
+                                    fractional ownership.
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            leftIcon={<Upload className="w-4 h-4" />}
+                          </motion.div>
+                        )}
+
+                        {/* Step 4: Review */}
+                        {currentStep === 3 && (
+                          <motion.div
+                            key="step-4"
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ duration: 0.3 }}
+                            className="space-y-6"
                           >
-                            Upload
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
+                            <div className="flex items-center gap-3 mb-6">
+                              <div className="w-10 h-10 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center">
+                                <CheckCircle2 className="w-5 h-5 text-[#00ff88]" />
+                              </div>
+                              <div>
+                                <h2 className="text-lg font-semibold text-white">
+                                  Review & Submit
+                                </h2>
+                                <p className="text-xs text-neutral-500">
+                                  Review your property details before submission
+                                </p>
+                              </div>
+                            </div>
 
-                    <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <Link2 className="w-5 h-5 text-blue-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-white">
-                            Chainlink Oracle Integration
-                          </p>
-                          <p className="text-xs text-neutral-500 mt-1">
-                            Your property will be valued using Chainlink price
-                            feeds for accurate, manipulation-resistant pricing
-                            data.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
+                            <div className="space-y-4">
+                              {/* Property Summary */}
+                              <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
+                                <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
+                                  Property Details
+                                </h3>
+                                <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                                  <div>
+                                    <span className="text-neutral-500">
+                                      Name:
+                                    </span>
+                                    <span className="ml-2 text-white">
+                                      {values.name || "-"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-500">
+                                      Location:
+                                    </span>
+                                    <span className="ml-2 text-white">
+                                      {values.city && values.country
+                                        ? `${values.city}, ${values.country}`
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-500">
+                                      Type:
+                                    </span>
+                                    <span className="ml-2 text-white capitalize">
+                                      {values.propertyType || "-"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-500">
+                                      Area:
+                                    </span>
+                                    <span className="ml-2 text-white font-mono">
+                                      {values.totalArea
+                                        ? `${values.totalArea} sq ft`
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
 
-                {/* Step 3: Tokenization */}
-                {currentStep === 2 && (
-                  <motion.div
-                    key="step-3"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                  >
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-lg bg-[#ff3e00]/10 border border-[#ff3e00]/20 flex items-center justify-center">
-                        <Coins className="w-5 h-5 text-[#ff3e00]" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">
-                          Token Configuration
-                        </h2>
-                        <p className="text-xs text-neutral-500">
-                          Configure how your property will be fractionalized
-                        </p>
-                      </div>
-                    </div>
+                              {/* Tokenization Summary */}
+                              <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
+                                <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
+                                  Tokenization
+                                </h3>
+                                <div className="grid sm:grid-cols-2 gap-3 text-sm">
+                                  <div>
+                                    <span className="text-neutral-500">
+                                      Total Value:
+                                    </span>
+                                    <span className="ml-2 text-white font-mono">
+                                      {values.totalValue
+                                        ? formatCurrency(
+                                            parseFloat(values.totalValue),
+                                          )
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-500">
+                                      Total Tokens:
+                                    </span>
+                                    <span className="ml-2 text-white font-mono">
+                                      {values.totalTokens
+                                        ? parseInt(
+                                            values.totalTokens,
+                                          ).toLocaleString()
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-500">
+                                      Token Price:
+                                    </span>
+                                    <span className="ml-2 text-white font-mono">
+                                      {calculatedTokenPrice
+                                        ? formatCurrency(calculatedTokenPrice)
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-neutral-500">
+                                      Expected Yield:
+                                    </span>
+                                    <span className="ml-2 text-[#00ff88] font-mono">
+                                      {values.expectedYield
+                                        ? `${values.expectedYield}% APY`
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
 
-                    <div className="grid sm:grid-cols-2 gap-4">
-                      <FormInput<TokenizeFormValues>
-                        name="totalValue"
-                        label="Total Property Value (USD)"
-                        type="number"
-                        placeholder="1000000"
-                        leftIcon={<DollarSign className="w-4 h-4" />}
-                      />
-                      <FormInput<TokenizeFormValues>
-                        name="totalTokens"
-                        label="Total Tokens to Mint"
-                        type="number"
-                        placeholder="10000"
-                        leftIcon={<Coins className="w-4 h-4" />}
-                      />
-                      <div>
-                        <label className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wider">
-                          Price per Token
-                        </label>
-                        <div className="px-3 py-2.5 bg-[#0a0a0a] border border-[#262626] rounded-lg text-white font-mono text-sm">
-                          {calculatedTokenPrice
-                            ? formatCurrency(calculatedTokenPrice)
-                            : "-"}
-                        </div>
-                        <p className="text-[10px] text-neutral-600 mt-1 font-mono">
-                          Auto-calculated
-                        </p>
-                      </div>
-                      <FormInput<TokenizeFormValues>
-                        name="minInvestment"
-                        label="Minimum Investment (Tokens)"
-                        type="number"
-                        placeholder="1"
-                        leftIcon={<Users className="w-4 h-4" />}
-                      />
-                      <FormInput<TokenizeFormValues>
-                        name="expectedYield"
-                        label="Expected Annual Yield (%)"
-                        type="number"
-                        placeholder="8.5"
-                        leftIcon={<Percent className="w-4 h-4" />}
-                      />
-                      <FormInput<TokenizeFormValues>
-                        name="fundingDeadline"
-                        label="Funding Deadline"
-                        type="date"
-                      />
-                    </div>
+                              {/* Fees */}
+                              <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
+                                <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
+                                  Fees
+                                </h3>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span className="text-neutral-500">
+                                      Platform Fee (2%)
+                                    </span>
+                                    <span className="text-white font-mono">
+                                      {values.totalValue
+                                        ? formatCurrency(
+                                            parseFloat(values.totalValue) *
+                                              0.02,
+                                          )
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-neutral-500">
+                                      Token Minting
+                                    </span>
+                                    <span className="text-white font-mono">
+                                      $50
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-neutral-500">
+                                      Oracle Integration
+                                    </span>
+                                    <span className="text-white font-mono">
+                                      $100
+                                    </span>
+                                  </div>
+                                  <div className="border-t border-[#262626] pt-2 mt-2 flex justify-between font-medium">
+                                    <span className="text-white">
+                                      Total Fees
+                                    </span>
+                                    <span className="text-white font-mono">
+                                      {values.totalValue
+                                        ? formatCurrency(
+                                            parseFloat(values.totalValue) *
+                                              0.02 +
+                                              150,
+                                          )
+                                        : "-"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
 
-                    <div className="p-4 bg-amber-500/5 border border-amber-500/20 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-white">
-                            Token Standards
-                          </p>
-                          <p className="text-xs text-neutral-500 mt-1">
-                            Tokens will be minted as Soroban assets on Stellar,
-                            compliant with regulatory requirements. Each token
-                            represents fractional ownership.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                {/* Step 4: Review */}
-                {currentStep === 3 && (
-                  <motion.div
-                    key="step-4"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6"
-                  >
-                    <div className="flex items-center gap-3 mb-6">
-                      <div className="w-10 h-10 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20 flex items-center justify-center">
-                        <CheckCircle2 className="w-5 h-5 text-[#00ff88]" />
-                      </div>
-                      <div>
-                        <h2 className="text-lg font-semibold text-white">
-                          Review & Submit
-                        </h2>
-                        <p className="text-xs text-neutral-500">
-                          Review your property details before submission
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-4">
-                      {/* Property Summary */}
-                      <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
-                        <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
-                          Property Details
-                        </h3>
-                        <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <span className="text-neutral-500">Name:</span>
-                            <span className="ml-2 text-white">
-                              {values.name || "-"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-neutral-500">Location:</span>
-                            <span className="ml-2 text-white">
-                              {values.city && values.country
-                                ? `${values.city}, ${values.country}`
-                                : "-"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-neutral-500">Type:</span>
-                            <span className="ml-2 text-white capitalize">
-                              {values.propertyType || "-"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-neutral-500">Area:</span>
-                            <span className="ml-2 text-white font-mono">
-                              {values.totalArea
-                                ? `${values.totalArea} sq ft`
-                                : "-"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Tokenization Summary */}
-                      <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
-                        <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
-                          Tokenization
-                        </h3>
-                        <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                          <div>
-                            <span className="text-neutral-500">
-                              Total Value:
-                            </span>
-                            <span className="ml-2 text-white font-mono">
-                              {values.totalValue
-                                ? formatCurrency(
-                                    parseFloat(values.totalValue),
-                                  )
-                                : "-"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-neutral-500">
-                              Total Tokens:
-                            </span>
-                            <span className="ml-2 text-white font-mono">
-                              {values.totalTokens
-                                ? parseInt(
-                                    values.totalTokens,
-                                  ).toLocaleString()
-                                : "-"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-neutral-500">
-                              Token Price:
-                            </span>
-                            <span className="ml-2 text-white font-mono">
-                              {calculatedTokenPrice
-                                ? formatCurrency(calculatedTokenPrice)
-                                : "-"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-neutral-500">
-                              Expected Yield:
-                            </span>
-                            <span className="ml-2 text-[#00ff88] font-mono">
-                              {values.expectedYield
-                                ? `${values.expectedYield}% APY`
-                                : "-"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Fees */}
-                      <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
-                        <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
-                          Fees
-                        </h3>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span className="text-neutral-500">
-                              Platform Fee (2%)
-                            </span>
-                            <span className="text-white font-mono">
-                              {values.totalValue
-                                ? formatCurrency(
-                                    parseFloat(values.totalValue) * 0.02,
-                                  )
-                                : "-"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-neutral-500">
-                              Token Minting
-                            </span>
-                            <span className="text-white font-mono">$50</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-neutral-500">
-                              Oracle Integration
-                            </span>
-                            <span className="text-white font-mono">$100</span>
-                          </div>
-                          <div className="border-t border-[#262626] pt-2 mt-2 flex justify-between font-medium">
-                            <span className="text-white">Total Fees</span>
-                            <span className="text-white font-mono">
-                              {values.totalValue
-                                ? formatCurrency(
-                                    parseFloat(values.totalValue) * 0.02 +
-                                      150,
-                                  )
-                                : "-"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-4 bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <Shield className="w-5 h-5 text-[#00ff88] mt-0.5" />
-                        <div>
-                          <p className="text-sm font-medium text-white">
-                            Ready for Review
-                          </p>
-                          <p className="text-xs text-neutral-500 mt-1">
-                            After submission, our team will review your property
-                            documents and verify ownership. This typically takes
-                            3-5 business days.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
+                            <div className="p-4 bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-lg">
+                              <div className="flex items-start gap-3">
+                                <Shield className="w-5 h-5 text-[#00ff88] mt-0.5" />
+                                <div>
+                                  <p className="text-sm font-medium text-white">
+                                    Ready for Review
+                                  </p>
+                                  <p className="text-xs text-neutral-500 mt-1">
+                                    After submission, our team will review your
+                                    property documents and verify ownership.
+                                    This typically takes 3-5 business days.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
                       </AnimatePresence>
 
                       {/* Navigation Buttons */}

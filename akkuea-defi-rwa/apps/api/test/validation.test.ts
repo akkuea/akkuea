@@ -12,7 +12,13 @@ describe('Validation Middleware', () => {
     );
 
     expect(response.status).toBe(400);
-    const body = await response.json();
+    const body = await response.json() as {
+      code: string;
+      details: {
+        source: string;
+        errors: Record<string, any>;
+      };
+    };
     expect(body.code).toBe('VALIDATION_ERROR');
     expect(body.details.source).toBe('body');
     expect(body.details.errors.name).toBeDefined();
@@ -25,7 +31,13 @@ describe('Validation Middleware', () => {
     );
 
     expect(response.status).toBe(400);
-    const body = await response.json();
+    const body = await response.json() as {
+      code: string;
+      details: {
+        source: string;
+        errors: Record<string, any>;
+      };
+    };
     expect(body.code).toBe('VALIDATION_ERROR');
     expect(body.details.source).toBe('query');
     expect(body.details.errors.page).toBeDefined();
@@ -37,7 +49,13 @@ describe('Validation Middleware', () => {
     );
 
     expect(response.status).toBe(400);
-    const body = await response.json();
+    const body = await response.json() as {
+      code: string;
+      details: {
+        source: string;
+        errors: Record<string, any>;
+      };
+    };
     expect(body.code).toBe('VALIDATION_ERROR');
     expect(body.details.source).toBe('params');
     expect(body.details.errors.id).toBeDefined();

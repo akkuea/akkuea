@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                                   |
-| --------------- | --------------------------------------- |
-| Issue ID        | C1-011                                  |
-| Title           | Add contract event definitions          |
-| Area            | CONTRACT                                |
-| Difficulty      | Medium                                  |
-| Labels          | smart-contract, soroban, events, medium |
-| Dependencies    | None                                    |
-| Estimated Lines | 80-120                                  |
+| Attribute | Value |
+|-----------|-------|
+| Issue ID | C1-011 |
+| Title | Add contract event definitions |
+| Area | CONTRACT |
+| Difficulty | Medium |
+| Labels | smart-contract, soroban, events, medium |
+| Dependencies | None |
+| Estimated Lines | 80-120 |
 
 ## Overview
 
@@ -445,18 +445,18 @@ fn test_deposit_event() {
 
 ## Related Resources
 
-| Resource             | Link                                              |
-| -------------------- | ------------------------------------------------- |
-| Soroban Events       | https://soroban.stellar.org/docs/learn/events     |
+| Resource | Link |
+|----------|------|
+| Soroban Events | https://soroban.stellar.org/docs/learn/events |
 | Event Best Practices | https://soroban.stellar.org/docs/tutorials/events |
 
 ## Verification Checklist
 
-| Item                     | Status |
-| ------------------------ | ------ |
-| Property events defined  |        |
-| Lending events defined   |        |
-| Events module created    |        |
-| Helper functions working |        |
-| Unit tests passing       |        |
-| Documentation complete   |        |
+| Item | Status |
+|------|--------|
+| Property events defined | |
+| Lending events defined | |
+| Events module created | |
+| Helper functions working | |
+| Unit tests passing | |
+| Documentation complete | |

@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                                       |
-| --------------- | ------------------------------------------- |
-| Issue ID        | C1-002                                      |
-| Title           | Implement database connection and ORM setup |
-| Area            | API                                         |
-| Difficulty      | High                                        |
-| Labels          | backend, database, high                     |
-| Dependencies    | None                                        |
-| Estimated Lines | 300-400                                     |
+| Attribute | Value |
+|-----------|-------|
+| Issue ID | C1-002 |
+| Title | Implement database connection and ORM setup |
+| Area | API |
+| Difficulty | High |
+| Labels | backend, database, high |
+| Dependencies | None |
+| Estimated Lines | 300-400 |
 
 ## Overview
 
@@ -55,23 +55,22 @@ NODE_ENV=development
 Create `apps/api/src/db/index.ts`:
 
 ```typescript
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
-import * as schema from "./schema";
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres from 'postgres';
+import * as schema from './schema';
 
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
-  throw new Error("DATABASE_URL environment variable is required");
+  throw new Error('DATABASE_URL environment variable is required');
 }
 
 // Connection pool configuration
 const poolConfig = {
-  max: parseInt(process.env.DATABASE_POOL_MAX || "10"),
+  max: parseInt(process.env.DATABASE_POOL_MAX || '10'),
   idle_timeout: 20,
   connect_timeout: 10,
-  ssl:
-    process.env.DATABASE_SSL === "true" ? { rejectUnauthorized: false } : false,
+  ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
 };
 
 // Create postgres connection
@@ -100,7 +99,7 @@ export async function checkDatabaseHealth(): Promise<{
     return {
       healthy: false,
       latency: Date.now() - start,
-      error: error instanceof Error ? error.message : "Unknown error",
+      error: error instanceof Error ? error.message : 'Unknown error',
     };
   }
 }
@@ -123,69 +122,63 @@ import {
   timestamp,
   pgEnum,
   text,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
 
-export const kycStatusEnum = pgEnum("kyc_status", [
-  "not_started",
-  "pending",
-  "approved",
-  "rejected",
-  "expired",
+export const kycStatusEnum = pgEnum('kyc_status', [
+  'not_started',
+  'pending',
+  'approved',
+  'rejected',
+  'expired',
 ]);
 
-export const kycTierEnum = pgEnum("kyc_tier", [
-  "none",
-  "basic",
-  "verified",
-  "accredited",
+export const kycTierEnum = pgEnum('kyc_tier', [
+  'none',
+  'basic',
+  'verified',
+  'accredited',
 ]);
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  walletAddress: varchar("wallet_address", { length: 56 }).notNull().unique(),
-  email: varchar("email", { length: 255 }),
-  displayName: varchar("display_name", { length: 50 }),
-  kycStatus: kycStatusEnum("kyc_status").notNull().default("not_started"),
-  kycTier: kycTierEnum("kyc_tier").notNull().default("none"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  walletAddress: varchar('wallet_address', { length: 56 }).notNull().unique(),
+  email: varchar('email', { length: 255 }),
+  displayName: varchar('display_name', { length: 50 }),
+  kycStatus: kycStatusEnum('kyc_status').notNull().default('not_started'),
+  kycTier: kycTierEnum('kyc_tier').notNull().default('none'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
 });
 
-export const kycDocumentTypeEnum = pgEnum("kyc_document_type", [
-  "passport",
-  "national_id",
-  "drivers_license",
-  "proof_of_address",
-  "bank_statement",
-  "tax_document",
+export const kycDocumentTypeEnum = pgEnum('kyc_document_type', [
+  'passport',
+  'national_id',
+  'drivers_license',
+  'proof_of_address',
+  'bank_statement',
+  'tax_document',
 ]);
 
-export const kycDocumentStatusEnum = pgEnum("kyc_document_status", [
-  "pending",
-  "approved",
-  "rejected",
+export const kycDocumentStatusEnum = pgEnum('kyc_document_status', [
+  'pending',
+  'approved',
+  'rejected',
 ]);
 
-export const kycDocuments = pgTable("kyc_documents", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
+export const kycDocuments = pgTable('kyc_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id')
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  type: kycDocumentTypeEnum("type").notNull(),
-  fileName: varchar("file_name", { length: 255 }).notNull(),
-  fileUrl: text("file_url").notNull(),
-  status: kycDocumentStatusEnum("status").notNull().default("pending"),
-  rejectionReason: text("rejection_reason"),
-  uploadedAt: timestamp("uploaded_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    .references(() => users.id, { onDelete: 'cascade' }),
+  type: kycDocumentTypeEnum('type').notNull(),
+  fileName: varchar('file_name', { length: 255 }).notNull(),
+  fileUrl: text('file_url').notNull(),
+  status: kycDocumentStatusEnum('status').notNull().default('pending'),
+  rejectionReason: text('rejection_reason'),
+  uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
+  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -214,89 +207,75 @@ import {
   decimal,
   boolean,
   jsonb,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-import { users } from "./users";
+} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { users } from './users';
 
-export const propertyTypeEnum = pgEnum("property_type", [
-  "residential",
-  "commercial",
-  "industrial",
-  "land",
-  "mixed",
+export const propertyTypeEnum = pgEnum('property_type', [
+  'residential',
+  'commercial',
+  'industrial',
+  'land',
+  'mixed',
 ]);
 
-export const properties = pgTable("properties", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
-  description: text("description").notNull(),
-  propertyType: propertyTypeEnum("property_type").notNull(),
-  location: jsonb("location").notNull().$type<{
+export const properties = pgTable('properties', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description').notNull(),
+  propertyType: propertyTypeEnum('property_type').notNull(),
+  location: jsonb('location').notNull().$type<{
     address: string;
     city: string;
     country: string;
     postalCode?: string;
     coordinates?: { latitude: number; longitude: number };
   }>(),
-  totalValue: decimal("total_value", { precision: 20, scale: 2 }).notNull(),
-  tokenAddress: varchar("token_address", { length: 56 }),
-  totalShares: integer("total_shares").notNull(),
-  availableShares: integer("available_shares").notNull(),
-  pricePerShare: decimal("price_per_share", {
-    precision: 20,
-    scale: 2,
-  }).notNull(),
-  images: jsonb("images").notNull().$type<string[]>(),
-  verified: boolean("verified").notNull().default(false),
-  listedAt: timestamp("listed_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  ownerId: uuid("owner_id")
+  totalValue: decimal('total_value', { precision: 20, scale: 2 }).notNull(),
+  tokenAddress: varchar('token_address', { length: 56 }),
+  totalShares: integer('total_shares').notNull(),
+  availableShares: integer('available_shares').notNull(),
+  pricePerShare: decimal('price_per_share', { precision: 20, scale: 2 }).notNull(),
+  images: jsonb('images').notNull().$type<string[]>(),
+  verified: boolean('verified').notNull().default(false),
+  listedAt: timestamp('listed_at', { withTimezone: true }).notNull().defaultNow(),
+  ownerId: uuid('owner_id')
     .notNull()
     .references(() => users.id),
 });
 
-export const propertyDocumentTypeEnum = pgEnum("property_document_type", [
-  "deed",
-  "appraisal",
-  "inspection",
-  "insurance",
-  "other",
+export const propertyDocumentTypeEnum = pgEnum('property_document_type', [
+  'deed',
+  'appraisal',
+  'inspection',
+  'insurance',
+  'other',
 ]);
 
-export const propertyDocuments = pgTable("property_documents", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  propertyId: uuid("property_id")
+export const propertyDocuments = pgTable('property_documents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  propertyId: uuid('property_id')
     .notNull()
-    .references(() => properties.id, { onDelete: "cascade" }),
-  type: propertyDocumentTypeEnum("type").notNull(),
-  name: varchar("name", { length: 255 }).notNull(),
-  url: text("url").notNull(),
-  uploadedAt: timestamp("uploaded_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  verified: boolean("verified").notNull().default(false),
+    .references(() => properties.id, { onDelete: 'cascade' }),
+  type: propertyDocumentTypeEnum('type').notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  url: text('url').notNull(),
+  uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
+  verified: boolean('verified').notNull().default(false),
 });
 
-export const shareOwnerships = pgTable("share_ownerships", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  propertyId: uuid("property_id")
+export const shareOwnerships = pgTable('share_ownerships', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  propertyId: uuid('property_id')
     .notNull()
     .references(() => properties.id),
-  ownerId: uuid("owner_id")
+  ownerId: uuid('owner_id')
     .notNull()
     .references(() => users.id),
-  shares: integer("shares").notNull(),
-  purchasePrice: decimal("purchase_price", {
-    precision: 20,
-    scale: 2,
-  }).notNull(),
-  purchasedAt: timestamp("purchased_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  lastDividendClaimed: timestamp("last_dividend_claimed", {
-    withTimezone: true,
-  }),
+  shares: integer('shares').notNull(),
+  purchasePrice: decimal('purchase_price', { precision: 20, scale: 2 }).notNull(),
+  purchasedAt: timestamp('purchased_at', { withTimezone: true }).notNull().defaultNow(),
+  lastDividendClaimed: timestamp('last_dividend_claimed', { withTimezone: true }),
 });
 
 export const propertiesRelations = relations(properties, ({ one, many }) => ({
@@ -320,101 +299,60 @@ import {
   timestamp,
   boolean,
   integer,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-import { users } from "./users";
+} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { users } from './users';
 
-export const lendingPools = pgTable("lending_pools", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  name: varchar("name", { length: 255 }).notNull(),
-  asset: varchar("asset", { length: 20 }).notNull(),
-  assetAddress: varchar("asset_address", { length: 56 }).notNull(),
-  totalDeposits: decimal("total_deposits", { precision: 20, scale: 7 })
-    .notNull()
-    .default("0"),
-  totalBorrows: decimal("total_borrows", { precision: 20, scale: 7 })
-    .notNull()
-    .default("0"),
-  availableLiquidity: decimal("available_liquidity", {
-    precision: 20,
-    scale: 7,
-  })
-    .notNull()
-    .default("0"),
-  utilizationRate: decimal("utilization_rate", { precision: 5, scale: 2 })
-    .notNull()
-    .default("0"),
-  supplyAPY: decimal("supply_apy", { precision: 5, scale: 2 })
-    .notNull()
-    .default("0"),
-  borrowAPY: decimal("borrow_apy", { precision: 5, scale: 2 })
-    .notNull()
-    .default("0"),
-  collateralFactor: decimal("collateral_factor", {
-    precision: 5,
-    scale: 2,
-  }).notNull(),
-  liquidationThreshold: decimal("liquidation_threshold", {
-    precision: 5,
-    scale: 2,
-  }).notNull(),
-  liquidationPenalty: decimal("liquidation_penalty", {
-    precision: 5,
-    scale: 2,
-  }).notNull(),
-  reserveFactor: integer("reserve_factor").notNull().default(1000),
-  isActive: boolean("is_active").notNull().default(true),
-  isPaused: boolean("is_paused").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+export const lendingPools = pgTable('lending_pools', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  asset: varchar('asset', { length: 20 }).notNull(),
+  assetAddress: varchar('asset_address', { length: 56 }).notNull(),
+  totalDeposits: decimal('total_deposits', { precision: 20, scale: 7 }).notNull().default('0'),
+  totalBorrows: decimal('total_borrows', { precision: 20, scale: 7 }).notNull().default('0'),
+  availableLiquidity: decimal('available_liquidity', { precision: 20, scale: 7 }).notNull().default('0'),
+  utilizationRate: decimal('utilization_rate', { precision: 5, scale: 2 }).notNull().default('0'),
+  supplyAPY: decimal('supply_apy', { precision: 5, scale: 2 }).notNull().default('0'),
+  borrowAPY: decimal('borrow_apy', { precision: 5, scale: 2 }).notNull().default('0'),
+  collateralFactor: decimal('collateral_factor', { precision: 5, scale: 2 }).notNull(),
+  liquidationThreshold: decimal('liquidation_threshold', { precision: 5, scale: 2 }).notNull(),
+  liquidationPenalty: decimal('liquidation_penalty', { precision: 5, scale: 2 }).notNull(),
+  reserveFactor: integer('reserve_factor').notNull().default(1000),
+  isActive: boolean('is_active').notNull().default(true),
+  isPaused: boolean('is_paused').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const depositPositions = pgTable("deposit_positions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  poolId: uuid("pool_id")
+export const depositPositions = pgTable('deposit_positions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  poolId: uuid('pool_id')
     .notNull()
     .references(() => lendingPools.id),
-  depositorId: uuid("depositor_id")
+  depositorId: uuid('depositor_id')
     .notNull()
     .references(() => users.id),
-  amount: decimal("amount", { precision: 20, scale: 7 }).notNull(),
-  shares: decimal("shares", { precision: 20, scale: 7 }).notNull(),
-  depositedAt: timestamp("deposited_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  lastAccrualAt: timestamp("last_accrual_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  accruedInterest: decimal("accrued_interest", { precision: 20, scale: 7 })
-    .notNull()
-    .default("0"),
+  amount: decimal('amount', { precision: 20, scale: 7 }).notNull(),
+  shares: decimal('shares', { precision: 20, scale: 7 }).notNull(),
+  depositedAt: timestamp('deposited_at', { withTimezone: true }).notNull().defaultNow(),
+  lastAccrualAt: timestamp('last_accrual_at', { withTimezone: true }).notNull().defaultNow(),
+  accruedInterest: decimal('accrued_interest', { precision: 20, scale: 7 }).notNull().default('0'),
 });
 
-export const borrowPositions = pgTable("borrow_positions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  poolId: uuid("pool_id")
+export const borrowPositions = pgTable('borrow_positions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  poolId: uuid('pool_id')
     .notNull()
     .references(() => lendingPools.id),
-  borrowerId: uuid("borrower_id")
+  borrowerId: uuid('borrower_id')
     .notNull()
     .references(() => users.id),
-  principal: decimal("principal", { precision: 20, scale: 7 }).notNull(),
-  accruedInterest: decimal("accrued_interest", { precision: 20, scale: 7 })
-    .notNull()
-    .default("0"),
-  collateralAmount: decimal("collateral_amount", {
-    precision: 20,
-    scale: 7,
-  }).notNull(),
-  collateralAsset: varchar("collateral_asset", { length: 56 }).notNull(),
-  healthFactor: decimal("health_factor", { precision: 10, scale: 4 }).notNull(),
-  borrowedAt: timestamp("borrowed_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  lastAccrualAt: timestamp("last_accrual_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
+  principal: decimal('principal', { precision: 20, scale: 7 }).notNull(),
+  accruedInterest: decimal('accrued_interest', { precision: 20, scale: 7 }).notNull().default('0'),
+  collateralAmount: decimal('collateral_amount', { precision: 20, scale: 7 }).notNull(),
+  collateralAsset: varchar('collateral_asset', { length: 56 }).notNull(),
+  healthFactor: decimal('health_factor', { precision: 10, scale: 4 }).notNull(),
+  borrowedAt: timestamp('borrowed_at', { withTimezone: true }).notNull().defaultNow(),
+  lastAccrualAt: timestamp('last_accrual_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const lendingPoolsRelations = relations(lendingPools, ({ many }) => ({
@@ -434,42 +372,40 @@ import {
   timestamp,
   pgEnum,
   jsonb,
-} from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-import { users } from "./users";
+} from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { users } from './users';
 
-export const transactionTypeEnum = pgEnum("transaction_type", [
-  "deposit",
-  "withdraw",
-  "borrow",
-  "repay",
-  "liquidation",
-  "buy_shares",
-  "sell_shares",
-  "dividend",
+export const transactionTypeEnum = pgEnum('transaction_type', [
+  'deposit',
+  'withdraw',
+  'borrow',
+  'repay',
+  'liquidation',
+  'buy_shares',
+  'sell_shares',
+  'dividend',
 ]);
 
-export const transactionStatusEnum = pgEnum("transaction_status", [
-  "pending",
-  "confirmed",
-  "failed",
+export const transactionStatusEnum = pgEnum('transaction_status', [
+  'pending',
+  'confirmed',
+  'failed',
 ]);
 
-export const transactions = pgTable("transactions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  type: transactionTypeEnum("type").notNull(),
-  hash: varchar("hash", { length: 64 }),
-  fromUserId: uuid("from_user_id")
+export const transactions = pgTable('transactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  type: transactionTypeEnum('type').notNull(),
+  hash: varchar('hash', { length: 64 }),
+  fromUserId: uuid('from_user_id')
     .notNull()
     .references(() => users.id),
-  toUserId: uuid("to_user_id").references(() => users.id),
-  amount: decimal("amount", { precision: 20, scale: 7 }).notNull(),
-  asset: varchar("asset", { length: 56 }).notNull(),
-  status: transactionStatusEnum("status").notNull().default("pending"),
-  timestamp: timestamp("timestamp", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
+  toUserId: uuid('to_user_id').references(() => users.id),
+  amount: decimal('amount', { precision: 20, scale: 7 }).notNull(),
+  asset: varchar('asset', { length: 56 }).notNull(),
+  status: transactionStatusEnum('status').notNull().default('pending'),
+  timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>(),
 });
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({
@@ -487,10 +423,10 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
 Create `apps/api/src/db/schema/index.ts`:
 
 ```typescript
-export * from "./users";
-export * from "./properties";
-export * from "./lending";
-export * from "./transactions";
+export * from './users';
+export * from './properties';
+export * from './lending';
+export * from './transactions';
 ```
 
 ### Step 5: Create Drizzle Configuration
@@ -498,12 +434,12 @@ export * from "./transactions";
 Create `apps/api/drizzle.config.ts`:
 
 ```typescript
-import type { Config } from "drizzle-kit";
+import type { Config } from 'drizzle-kit';
 
 export default {
-  schema: "./src/db/schema/index.ts",
-  out: "./drizzle/migrations",
-  dialect: "postgresql",
+  schema: './src/db/schema/index.ts',
+  out: './drizzle/migrations',
+  dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL!,
   },
@@ -517,17 +453,17 @@ export default {
 Create `apps/api/src/db/migrate.ts`:
 
 ```typescript
-import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { db, closeDatabaseConnection } from "./index";
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { db, closeDatabaseConnection } from './index';
 
 async function runMigrations() {
-  console.log("Running migrations...");
+  console.log('Running migrations...');
 
   try {
-    await migrate(db, { migrationsFolder: "./drizzle/migrations" });
-    console.log("Migrations completed successfully");
+    await migrate(db, { migrationsFolder: './drizzle/migrations' });
+    console.log('Migrations completed successfully');
   } catch (error) {
-    console.error("Migration failed:", error);
+    console.error('Migration failed:', error);
     process.exit(1);
   } finally {
     await closeDatabaseConnection();
@@ -542,11 +478,15 @@ runMigrations();
 Create `apps/api/src/repositories/BaseRepository.ts`:
 
 ```typescript
-import { db } from "../db";
-import { eq, SQL } from "drizzle-orm";
-import { PgTable } from "drizzle-orm/pg-core";
+import { db } from '../db';
+import { eq, SQL } from 'drizzle-orm';
+import { PgTable } from 'drizzle-orm/pg-core';
 
-export abstract class BaseRepository<TTable extends PgTable, TInsert, TSelect> {
+export abstract class BaseRepository<
+  TTable extends PgTable,
+  TInsert,
+  TSelect,
+> {
   constructor(protected readonly table: TTable) {}
 
   async findAll(): Promise<TSelect[]> {
@@ -555,7 +495,10 @@ export abstract class BaseRepository<TTable extends PgTable, TInsert, TSelect> {
 
   async findById(id: string): Promise<TSelect | undefined> {
     const idColumn = (this.table as any).id;
-    const results = await db.select().from(this.table).where(eq(idColumn, id));
+    const results = await db
+      .select()
+      .from(this.table)
+      .where(eq(idColumn, id));
     return results[0] as TSelect | undefined;
   }
 
@@ -574,10 +517,7 @@ export abstract class BaseRepository<TTable extends PgTable, TInsert, TSelect> {
     return results[0] as TSelect;
   }
 
-  async update(
-    id: string,
-    data: Partial<TInsert>,
-  ): Promise<TSelect | undefined> {
+  async update(id: string, data: Partial<TInsert>): Promise<TSelect | undefined> {
     const idColumn = (this.table as any).id;
     const results = await db
       .update(this.table)
@@ -603,14 +543,14 @@ export abstract class BaseRepository<TTable extends PgTable, TInsert, TSelect> {
 Update `apps/api/src/index.ts` to include:
 
 ```typescript
-import { checkDatabaseHealth, closeDatabaseConnection } from "./db";
+import { checkDatabaseHealth, closeDatabaseConnection } from './db';
 
 // Add health check endpoint
-app.get("/health", async () => {
+app.get('/health', async () => {
   const dbHealth = await checkDatabaseHealth();
 
   return {
-    status: dbHealth.healthy ? "healthy" : "unhealthy",
+    status: dbHealth.healthy ? 'healthy' : 'unhealthy',
     timestamp: new Date().toISOString(),
     services: {
       database: dbHealth,
@@ -619,8 +559,8 @@ app.get("/health", async () => {
 });
 
 // Graceful shutdown
-process.on("SIGTERM", async () => {
-  console.log("SIGTERM received, closing database connections...");
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, closing database connections...');
   await closeDatabaseConnection();
   process.exit(0);
 });
@@ -646,11 +586,11 @@ Update `apps/api/package.json`:
 ### Integration Test Example
 
 ```typescript
-import { describe, it, expect, beforeAll, afterAll } from "bun:test";
-import { db, checkDatabaseHealth, closeDatabaseConnection } from "../src/db";
-import { users } from "../src/db/schema";
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
+import { db, checkDatabaseHealth, closeDatabaseConnection } from '../src/db';
+import { users } from '../src/db/schema';
 
-describe("Database Connection", () => {
+describe('Database Connection', () => {
   beforeAll(async () => {
     // Ensure connection is established
     const health = await checkDatabaseHealth();
@@ -661,18 +601,18 @@ describe("Database Connection", () => {
     await closeDatabaseConnection();
   });
 
-  it("should connect to database", async () => {
+  it('should connect to database', async () => {
     const health = await checkDatabaseHealth();
     expect(health.healthy).toBe(true);
     expect(health.latency).toBeLessThan(1000);
   });
 
-  it("should perform basic CRUD operations", async () => {
+  it('should perform basic CRUD operations', async () => {
     // Create
     const [user] = await db
       .insert(users)
       .values({
-        walletAddress: "GTEST" + "X".repeat(51),
+        walletAddress: 'GTEST' + 'X'.repeat(51),
       })
       .returning();
 
@@ -692,21 +632,21 @@ describe("Database Connection", () => {
 
 ## Related Resources
 
-| Resource                  | Link                             |
-| ------------------------- | -------------------------------- |
-| Drizzle ORM Documentation | https://orm.drizzle.team         |
-| PostgreSQL Documentation  | https://www.postgresql.org/docs/ |
-| Bun SQL Driver            | https://bun.sh/docs/api/sql      |
+| Resource | Link |
+|----------|------|
+| Drizzle ORM Documentation | https://orm.drizzle.team |
+| PostgreSQL Documentation | https://www.postgresql.org/docs/ |
+| Bun SQL Driver | https://bun.sh/docs/api/sql |
 
 ## Verification Checklist
 
-| Item                             | Status |
-| -------------------------------- | ------ |
-| Dependencies installed           |        |
-| Environment variables configured |        |
-| All schema files created         |        |
-| Migrations generated and applied |        |
-| Health check endpoint working    |        |
-| Base repository implemented      |        |
-| Graceful shutdown handling       |        |
-| Integration tests passing        |        |
+| Item | Status |
+|------|--------|
+| Dependencies installed | |
+| Environment variables configured | |
+| All schema files created | |
+| Migrations generated and applied | |
+| Health check endpoint working | |
+| Base repository implemented | |
+| Graceful shutdown handling | |
+| Integration tests passing | |

@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                                                     |
-| --------------- | --------------------------------------------------------- |
-| Issue ID        | C1-008                                                    |
-| Title           | Implement real wallet connection with Stellar Wallets Kit |
-| Area            | WEBAPP                                                    |
-| Difficulty      | High                                                      |
-| Labels          | frontend, wallet, stellar, high                           |
-| Dependencies    | None                                                      |
-| Estimated Lines | 200-300                                                   |
+| Attribute | Value |
+|-----------|-------|
+| Issue ID | C1-008 |
+| Title | Implement real wallet connection with Stellar Wallets Kit |
+| Area | WEBAPP |
+| Difficulty | High |
+| Labels | frontend, wallet, stellar, high |
+| Dependencies | None |
+| Estimated Lines | 200-300 |
 
 ## Overview
 
@@ -28,17 +28,17 @@ This issue replaces the mock wallet implementation with real Stellar wallet inte
 
 Stellar Wallets Kit supports the following wallets out of the box:
 
-| Wallet        | Description                    |
-| ------------- | ------------------------------ |
-| xBull Wallet  | Full-featured Stellar wallet   |
-| Freighter     | Popular browser extension      |
-| Albedo        | Web-based Stellar signer       |
-| Rabet         | Browser extension wallet       |
+| Wallet | Description |
+|--------|-------------|
+| xBull Wallet | Full-featured Stellar wallet |
+| Freighter | Popular browser extension |
+| Albedo | Web-based Stellar signer |
+| Rabet | Browser extension wallet |
 | WalletConnect | Cross-platform wallet protocol |
-| Lobstr        | Mobile and web wallet          |
-| Hana          | Stellar wallet                 |
-| Hot Wallet    | Stellar wallet                 |
-| Klever Wallet | Multi-chain wallet             |
+| Lobstr | Mobile and web wallet |
+| Hana | Stellar wallet |
+| Hot Wallet | Stellar wallet |
+| Klever Wallet | Multi-chain wallet |
 
 ## Implementation Steps
 
@@ -50,7 +50,6 @@ bun add @creit.tech/stellar-wallets-kit zustand stellar-sdk
 ```
 
 Or using npm:
-
 ```bash
 npx jsr add @creit-tech/stellar-wallets-kit
 npm install zustand stellar-sdk
@@ -137,7 +136,7 @@ const initialState = {
  * Authentication slice for Zustand store
  */
 export const createAuthenticationSlice: StateCreator<AuthenticationStore> = (
-  set,
+  set
 ) => ({
   ...initialState,
 
@@ -190,16 +189,12 @@ export const useGlobalAuthenticationStore = create<AuthenticationStore>()(
         walletName: state.walletName,
         isConnected: state.isConnected,
       }),
-    },
-  ),
+    }
+  )
 );
 
 // Export types
-export type {
-  AuthenticationState,
-  AuthenticationActions,
-  AuthenticationStore,
-} from "./@types/authentication.entity";
+export type { AuthenticationState, AuthenticationActions, AuthenticationStore } from "./@types/authentication.entity";
 ```
 
 ### Step 6: Create useWallet Hook
@@ -251,7 +246,7 @@ export const useWallet = () => {
    */
   const signTransaction = async (
     xdr: string,
-    networkPassphrase: string,
+    networkPassphrase: string
   ): Promise<string> => {
     const { address } = await kit.getAddress();
     const { signedTxXdr } = await kit.signTransaction(xdr, {
@@ -317,7 +312,7 @@ export interface AccountBalance {
  */
 export async function fetchAccountBalances(
   publicKey: string,
-  network: string = "TESTNET",
+  network: string = "TESTNET"
 ): Promise<AccountBalance[]> {
   const server = getHorizonServer(network);
 
@@ -363,7 +358,7 @@ export async function fetchAccountBalances(
  */
 export async function accountExists(
   publicKey: string,
-  network: string = "TESTNET",
+  network: string = "TESTNET"
 ): Promise<boolean> {
   const server = getHorizonServer(network);
 
@@ -502,16 +497,16 @@ apps/webapp/src/
 
 ### Manual Testing Checklist
 
-| Test               | Steps                       | Expected Result                       |
-| ------------------ | --------------------------- | ------------------------------------- |
-| Open modal         | Click "Connect Wallet"      | Modal opens showing available wallets |
-| Select wallet      | Click on a wallet in modal  | Wallet connection initiated           |
-| Approve connection | Approve in wallet extension | Address shown, modal closes           |
-| Reject connection  | Reject in wallet            | Modal closes, no error                |
-| Disconnect         | Click "Disconnect"          | State cleared, shows connect button   |
-| Persistence        | Reload page while connected | Stays connected                       |
-| Balance display    | After connection            | XLM balance shown (if implemented)    |
-| Sign transaction   | Initiate a transaction      | Wallet prompts for signature          |
+| Test | Steps | Expected Result |
+|------|-------|-----------------|
+| Open modal | Click "Connect Wallet" | Modal opens showing available wallets |
+| Select wallet | Click on a wallet in modal | Wallet connection initiated |
+| Approve connection | Approve in wallet extension | Address shown, modal closes |
+| Reject connection | Reject in wallet | Modal closes, no error |
+| Disconnect | Click "Disconnect" | State cleared, shows connect button |
+| Persistence | Reload page while connected | Stays connected |
+| Balance display | After connection | XLM balance shown (if implemented) |
+| Sign transaction | Initiate a transaction | Wallet prompts for signature |
 
 ### Test Scenarios
 
@@ -538,23 +533,23 @@ describe("Wallet Connection", () => {
 
 ## Related Resources
 
-| Resource                   | Link                                                                   |
-| -------------------------- | ---------------------------------------------------------------------- |
-| Stellar Wallets Kit Docs   | https://stellarwalletskit.dev                                          |
-| Stellar Wallets Kit GitHub | https://github.com/Creit-Tech/Stellar-Wallets-Kit                      |
-| Example Implementation PR  | https://github.com/ScaffoldRust/SRust-Basic-Stellar-nextjs-bun/pull/16 |
-| Zustand Documentation      | https://zustand-demo.pmnd.rs/                                          |
-| Stellar SDK                | https://stellar.github.io/js-stellar-sdk/                              |
-| Horizon API                | https://developers.stellar.org/api/horizon                             |
+| Resource | Link |
+|----------|------|
+| Stellar Wallets Kit Docs | https://stellarwalletskit.dev |
+| Stellar Wallets Kit GitHub | https://github.com/Creit-Tech/Stellar-Wallets-Kit |
+| Example Implementation PR | https://github.com/ScaffoldRust/SRust-Basic-Stellar-nextjs-bun/pull/16 |
+| Zustand Documentation | https://zustand-demo.pmnd.rs/ |
+| Stellar SDK | https://stellar.github.io/js-stellar-sdk/ |
+| Horizon API | https://developers.stellar.org/api/horizon |
 
 ## Verification Checklist
 
-| Item                            | Status |
-| ------------------------------- | ------ |
-| Stellar Wallets Kit initialized |        |
-| Wallet modal opens correctly    |        |
-| Connection flow complete        |        |
-| Zustand store working           |        |
-| Session persistence working     |        |
-| Disconnect working              |        |
-| Transaction signing ready       |        |
+| Item | Status |
+|------|--------|
+| Stellar Wallets Kit initialized | |
+| Wallet modal opens correctly | |
+| Connection flow complete | |
+| Zustand store working | |
+| Session persistence working | |
+| Disconnect working | |
+| Transaction signing ready | |

@@ -4,14 +4,14 @@ This document provides guidelines and templates for creating issues in the Akkue
 
 ## Table of Contents
 
-| Section                                             | Description                       |
-| --------------------------------------------------- | --------------------------------- |
-| [Issue Structure](#issue-structure)                 | Overview of issue organization    |
-| [Difficulty Levels](#difficulty-levels)             | Classification criteria           |
-| [Dependency Rules](#dependency-rules)               | Cross-cycle dependency guidelines |
-| [Issue Naming Convention](#issue-naming-convention) | File and title formats            |
-| [Templates](#templates)                             | Development templates by area     |
-| [Labels](#labels)                                   | Standard label definitions        |
+| Section | Description |
+|---------|-------------|
+| [Issue Structure](#issue-structure) | Overview of issue organization |
+| [Difficulty Levels](#difficulty-levels) | Classification criteria |
+| [Dependency Rules](#dependency-rules) | Cross-cycle dependency guidelines |
+| [Issue Naming Convention](#issue-naming-convention) | File and title formats |
+| [Templates](#templates) | Development templates by area |
+| [Labels](#labels) | Standard label definitions |
 
 ---
 
@@ -19,10 +19,10 @@ This document provides guidelines and templates for creating issues in the Akkue
 
 Each issue in this project consists of two documentation files:
 
-| File Type               | Purpose                                           | Audience                    |
-| ----------------------- | ------------------------------------------------- | --------------------------- |
-| `ISSUE_XXX.md`          | Professional summary with clear requirements      | Project managers, reviewers |
-| `ISSUE_XXX_DETAILED.md` | Technical implementation guide with code examples | Software developers         |
+| File Type | Purpose | Audience |
+|-----------|---------|----------|
+| `ISSUE_XXX.md` | Professional summary with clear requirements | Project managers, reviewers |
+| `ISSUE_XXX_DETAILED.md` | Technical implementation guide with code examples | Software developers |
 
 ### Professional File Structure
 
@@ -49,30 +49,27 @@ The detailed file (`ISSUE_XXX_DETAILED.md`) must contain:
 
 ## Difficulty Levels
 
-| Level   | Description                                                                | Typical Scope        | Time Estimate     |
-| ------- | -------------------------------------------------------------------------- | -------------------- | ----------------- |
-| Trivial | Typos, small bug fixes, minor copy changes, configuration updates          | 1-20 lines of code   | Less than 2 hours |
-| Medium  | Standard features, involved bug fixes, component implementations           | 20-200 lines of code | 2-8 hours         |
-| High    | Complex features, major refactors, new integrations, architectural changes | 200+ lines of code   | 8+ hours          |
+| Level | Description | Typical Scope | Time Estimate |
+|-------|-------------|---------------|---------------|
+| Trivial | Typos, small bug fixes, minor copy changes, configuration updates | 1-20 lines of code | Less than 2 hours |
+| Medium | Standard features, involved bug fixes, component implementations | 20-200 lines of code | 2-8 hours |
+| High | Complex features, major refactors, new integrations, architectural changes | 200+ lines of code | 8+ hours |
 
 ### Criteria for Classification
 
 **Trivial**
-
 - Single file changes
 - No new dependencies
 - No architectural impact
 - Straightforward implementation path
 
 **Medium**
-
 - Multiple file changes within same module
 - May introduce minor dependencies
 - Limited architectural impact
 - Clear implementation path with some complexity
 
 **High**
-
 - Cross-module changes
 - New external dependencies or integrations
 - Significant architectural considerations
@@ -86,13 +83,13 @@ Dependencies define the relationship between issues and determine execution orde
 
 ### Allowed Dependencies
 
-| Scenario                                     | Allowed |
-| -------------------------------------------- | ------- |
-| Issue in Cycle 2 depends on Issue in Cycle 1 | Yes     |
-| Issue in Cycle 3 depends on Issue in Cycle 1 | Yes     |
-| Issue in Cycle 3 depends on Issue in Cycle 2 | Yes     |
-| Issue in Cycle 1 depends on Issue in Cycle 1 | No      |
-| Issue in Cycle 2 depends on Issue in Cycle 2 | No      |
+| Scenario | Allowed |
+|----------|---------|
+| Issue in Cycle 2 depends on Issue in Cycle 1 | Yes |
+| Issue in Cycle 3 depends on Issue in Cycle 1 | Yes |
+| Issue in Cycle 3 depends on Issue in Cycle 2 | Yes |
+| Issue in Cycle 1 depends on Issue in Cycle 1 | No |
+| Issue in Cycle 2 depends on Issue in Cycle 2 | No |
 
 ### Dependency Declaration Format
 
@@ -135,11 +132,11 @@ docs/planning/cycles/cycle-N/issues/issue-XXX/
 
 ### Issue ID Format
 
-| Component    | Format                   | Example        |
-| ------------ | ------------------------ | -------------- |
-| Cycle prefix | C + cycle number         | C1, C2, C3     |
-| Issue number | Three digits             | 001, 002, 017  |
-| Full ID      | Prefix + hyphen + number | C1-001, C2-017 |
+| Component | Format | Example |
+|-----------|--------|---------|
+| Cycle prefix | C + cycle number | C1, C2, C3 |
+| Issue number | Three digits | 001, 002, 017 |
+| Full ID | Prefix + hyphen + number | C1-001, C2-017 |
 
 ### Title Format
 
@@ -148,7 +145,6 @@ docs/planning/cycles/cycle-N/issues/issue-XXX/
 ```
 
 Areas:
-
 - `[API]` - Backend development
 - `[CONTRACT]` - Smart contract development
 - `[SHARED]` - Shared library development
@@ -164,9 +160,9 @@ Areas:
 ---
 name: Frontend Development
 about: Task template for frontend implementation work
-title: "feat: "
+title: 'feat: '
 labels: frontend
-assignees: ""
+assignees: ''
 ---
 
 **Description**
@@ -221,9 +217,9 @@ or
 ---
 name: Backend Development
 about: Task template for backend implementation work
-title: "feat: "
+title: 'feat: '
 labels: backend
-assignees: ""
+assignees: ''
 ---
 
 **Description**
@@ -283,9 +279,9 @@ or
 ---
 name: Smart Contract Development
 about: Task template for Soroban smart contract implementation work
-title: "feat: "
+title: 'feat: '
 labels: smart-contract, soroban
-assignees: ""
+assignees: ''
 ---
 
 **Description**
@@ -344,9 +340,9 @@ or
 ---
 name: Shared Library Development
 about: Task template for shared library implementation work
-title: "feat: "
+title: 'feat: '
 labels: shared
-assignees: ""
+assignees: ''
 ---
 
 **Description**
@@ -397,20 +393,20 @@ or
 
 ## Labels
 
-| Label            | Description                      | Color  |
-| ---------------- | -------------------------------- | ------ |
-| `frontend`       | Frontend/webapp related tasks    | Blue   |
-| `backend`        | Backend/API related tasks        | Green  |
-| `smart-contract` | Soroban contract tasks           | Purple |
-| `shared`         | Shared library tasks             | Orange |
-| `soroban`        | Stellar/Soroban blockchain tasks | Yellow |
-| `trivial`        | Low complexity task              | Gray   |
-| `medium`         | Medium complexity task           | Yellow |
-| `high`           | High complexity task             | Red    |
-| `blocked`        | Task is blocked by dependency    | Red    |
-| `in-progress`    | Task is being worked on          | Blue   |
-| `review`         | Task is ready for review         | Purple |
-| `done`           | Task is completed                | Green  |
+| Label | Description | Color |
+|-------|-------------|-------|
+| `frontend` | Frontend/webapp related tasks | Blue |
+| `backend` | Backend/API related tasks | Green |
+| `smart-contract` | Soroban contract tasks | Purple |
+| `shared` | Shared library tasks | Orange |
+| `soroban` | Stellar/Soroban blockchain tasks | Yellow |
+| `trivial` | Low complexity task | Gray |
+| `medium` | Medium complexity task | Yellow |
+| `high` | High complexity task | Red |
+| `blocked` | Task is blocked by dependency | Red |
+| `in-progress` | Task is being worked on | Blue |
+| `review` | Task is ready for review | Purple |
+| `done` | Task is completed | Green |
 
 ---
 
@@ -418,17 +414,17 @@ or
 
 Before submitting a new issue, verify:
 
-| Item                                         | Verified |
-| -------------------------------------------- | -------- |
-| Issue ID follows naming convention           |          |
-| Difficulty level is appropriate              |          |
-| Dependencies are correctly declared          |          |
-| No same-cycle dependencies exist             |          |
-| Both professional and detailed files created |          |
-| Code examples included in detailed file      |          |
-| Acceptance criteria are measurable           |          |
-| Appropriate labels assigned                  |          |
-| Area tag is correct                          |          |
+| Item | Verified |
+|------|----------|
+| Issue ID follows naming convention | |
+| Difficulty level is appropriate | |
+| Dependencies are correctly declared | |
+| No same-cycle dependencies exist | |
+| Both professional and detailed files created | |
+| Code examples included in detailed file | |
+| Acceptance criteria are measurable | |
+| Appropriate labels assigned | |
+| Area tag is correct | |
 
 ---
 

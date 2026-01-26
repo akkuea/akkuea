@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                        |
-| --------------- | ---------------------------- |
-| Issue ID        | C1-004                       |
-| Title           | Add API client service layer |
-| Area            | WEBAPP                       |
-| Difficulty      | Medium                       |
-| Labels          | frontend, api, medium        |
-| Dependencies    | None                         |
-| Estimated Lines | 200-300                      |
+| Attribute | Value |
+|-----------|-------|
+| Issue ID | C1-004 |
+| Title | Add API client service layer |
+| Area | WEBAPP |
+| Difficulty | Medium |
+| Labels | frontend, api, medium |
+| Dependencies | None |
+| Estimated Lines | 200-300 |
 
 ## Overview
 
@@ -67,7 +67,7 @@ export interface PaginationParams {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: "asc" | "desc";
+  sortOrder?: 'asc' | 'desc';
 }
 
 /**
@@ -91,31 +91,31 @@ export class ApiRequestError extends Error {
     public status: number,
     public code: string,
     message: string,
-    public details?: Record<string, unknown>,
+    public details?: Record<string, unknown>
   ) {
     super(message);
-    this.name = "ApiRequestError";
+    this.name = 'ApiRequestError';
   }
 }
 
 export class AuthenticationError extends ApiRequestError {
-  constructor(message: string = "Authentication required") {
-    super(401, "UNAUTHORIZED", message);
-    this.name = "AuthenticationError";
+  constructor(message: string = 'Authentication required') {
+    super(401, 'UNAUTHORIZED', message);
+    this.name = 'AuthenticationError';
   }
 }
 
 export class NetworkError extends Error {
-  constructor(message: string = "Network error occurred") {
+  constructor(message: string = 'Network error occurred') {
     super(message);
-    this.name = "NetworkError";
+    this.name = 'NetworkError';
   }
 }
 
 export class TimeoutError extends Error {
-  constructor(message: string = "Request timed out") {
+  constructor(message: string = 'Request timed out') {
     super(message);
-    this.name = "TimeoutError";
+    this.name = 'TimeoutError';
   }
 }
 ```
@@ -132,7 +132,7 @@ import {
   NetworkError,
   TimeoutError,
   RequestConfig,
-} from "./types";
+} from './types';
 
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_RETRIES = 3;
@@ -159,14 +159,14 @@ export function createApiClient(config: ApiClientConfig) {
    */
   function buildHeaders(customHeaders?: Record<string, string>): Headers {
     const headers = new Headers({
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       ...defaultHeaders,
       ...customHeaders,
     });
 
     const token = getAuthToken?.();
     if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
+      headers.set('Authorization', `Bearer ${token}`);
     }
 
     return headers;
@@ -178,7 +178,7 @@ export function createApiClient(config: ApiClientConfig) {
   async function fetchWithTimeout(
     url: string,
     options: RequestInit,
-    timeout: number,
+    timeout: number
   ): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -190,10 +190,8 @@ export function createApiClient(config: ApiClientConfig) {
       });
       return response;
     } catch (error) {
-      if (error instanceof Error && error.name === "AbortError") {
-        throw new TimeoutError(
-          `Request to ${url} timed out after ${timeout}ms`,
-        );
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new TimeoutError(`Request to ${url} timed out after ${timeout}ms`);
       }
       throw error;
     } finally {
@@ -218,22 +216,20 @@ export function createApiClient(config: ApiClientConfig) {
   /**
    * Parse error response
    */
-  async function parseErrorResponse(
-    response: Response,
-  ): Promise<ApiRequestError> {
+  async function parseErrorResponse(response: Response): Promise<ApiRequestError> {
     try {
       const body = await response.json();
       return new ApiRequestError(
         response.status,
-        body.code || "UNKNOWN_ERROR",
+        body.code || 'UNKNOWN_ERROR',
         body.message || response.statusText,
-        body.details,
+        body.details
       );
     } catch {
       return new ApiRequestError(
         response.status,
-        "UNKNOWN_ERROR",
-        response.statusText,
+        'UNKNOWN_ERROR',
+        response.statusText
       );
     }
   }
@@ -245,7 +241,7 @@ export function createApiClient(config: ApiClientConfig) {
     method: string,
     path: string,
     body?: unknown,
-    config: RequestConfig = {},
+    config: RequestConfig = {}
   ): Promise<ApiResponse<T>> {
     const {
       headers: customHeaders,
@@ -298,10 +294,7 @@ export function createApiClient(config: ApiClientConfig) {
           status: response.status,
         };
       } catch (error) {
-        if (
-          error instanceof AuthenticationError ||
-          error instanceof ApiRequestError
-        ) {
+        if (error instanceof AuthenticationError || error instanceof ApiRequestError) {
           throw error;
         }
 
@@ -324,12 +317,12 @@ export function createApiClient(config: ApiClientConfig) {
         }
 
         throw new NetworkError(
-          error instanceof Error ? error.message : "Network request failed",
+          error instanceof Error ? error.message : 'Network request failed'
         );
       }
     }
 
-    throw lastError || new NetworkError("Request failed after retries");
+    throw lastError || new NetworkError('Request failed after retries');
   }
 
   return {
@@ -337,47 +330,35 @@ export function createApiClient(config: ApiClientConfig) {
      * GET request
      */
     get<T>(path: string, config?: RequestConfig): Promise<ApiResponse<T>> {
-      return request<T>("GET", path, undefined, config);
+      return request<T>('GET', path, undefined, config);
     },
 
     /**
      * POST request
      */
-    post<T>(
-      path: string,
-      body?: unknown,
-      config?: RequestConfig,
-    ): Promise<ApiResponse<T>> {
-      return request<T>("POST", path, body, config);
+    post<T>(path: string, body?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> {
+      return request<T>('POST', path, body, config);
     },
 
     /**
      * PUT request
      */
-    put<T>(
-      path: string,
-      body?: unknown,
-      config?: RequestConfig,
-    ): Promise<ApiResponse<T>> {
-      return request<T>("PUT", path, body, config);
+    put<T>(path: string, body?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> {
+      return request<T>('PUT', path, body, config);
     },
 
     /**
      * PATCH request
      */
-    patch<T>(
-      path: string,
-      body?: unknown,
-      config?: RequestConfig,
-    ): Promise<ApiResponse<T>> {
-      return request<T>("PATCH", path, body, config);
+    patch<T>(path: string, body?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> {
+      return request<T>('PATCH', path, body, config);
     },
 
     /**
      * DELETE request
      */
     delete<T>(path: string, config?: RequestConfig): Promise<ApiResponse<T>> {
-      return request<T>("DELETE", path, undefined, config);
+      return request<T>('DELETE', path, undefined, config);
     },
   };
 }
@@ -386,17 +367,17 @@ export function createApiClient(config: ApiClientConfig) {
  * Default API client instance
  */
 export const apiClient = createApiClient({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
+  baseUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
   getAuthToken: () => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("auth_token");
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('auth_token');
     }
     return null;
   },
   onUnauthorized: () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("auth_token");
-      window.dispatchEvent(new CustomEvent("auth:unauthorized"));
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('auth_token');
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     }
   },
 });
@@ -407,9 +388,9 @@ export const apiClient = createApiClient({
 Create `apps/webapp/src/services/api/properties.ts`:
 
 ```typescript
-import type { PropertyInfo, ShareOwnership } from "@akkuea/shared";
-import { apiClient } from "./client";
-import type { PaginatedResponse, PaginationParams } from "./types";
+import type { PropertyInfo, ShareOwnership } from '@akkuea/shared';
+import { apiClient } from './client';
+import type { PaginatedResponse, PaginationParams } from './types';
 
 /**
  * Property creation payload
@@ -449,7 +430,7 @@ export const propertyApi = {
    * Get all properties with pagination
    */
   async getAll(
-    params?: PaginationParams & PropertyFilters,
+    params?: PaginationParams & PropertyFilters
   ): Promise<PaginatedResponse<PropertyInfo>> {
     const searchParams = new URLSearchParams();
     if (params) {
@@ -460,7 +441,7 @@ export const propertyApi = {
       });
     }
     const query = searchParams.toString();
-    const path = `/properties${query ? `?${query}` : ""}`;
+    const path = `/properties${query ? `?${query}` : ''}`;
     const response = await apiClient.get<PaginatedResponse<PropertyInfo>>(path);
     return response.data;
   },
@@ -477,20 +458,17 @@ export const propertyApi = {
    * Create new property
    */
   async create(payload: CreatePropertyPayload): Promise<PropertyInfo> {
-    const response = await apiClient.post<PropertyInfo>("/properties", payload);
+    const response = await apiClient.post<PropertyInfo>('/properties', payload);
     return response.data;
   },
 
   /**
    * Tokenize property
    */
-  async tokenize(
-    id: string,
-  ): Promise<{ tokenAddress: string; transactionHash: string }> {
-    const response = await apiClient.post<{
-      tokenAddress: string;
-      transactionHash: string;
-    }>(`/properties/${id}/tokenize`);
+  async tokenize(id: string): Promise<{ tokenAddress: string; transactionHash: string }> {
+    const response = await apiClient.post<{ tokenAddress: string; transactionHash: string }>(
+      `/properties/${id}/tokenize`
+    );
     return response.data;
   },
 
@@ -499,24 +477,21 @@ export const propertyApi = {
    */
   async buyShares(
     id: string,
-    shares: number,
+    shares: number
   ): Promise<{ transactionHash: string; newBalance: number }> {
-    const response = await apiClient.post<{
-      transactionHash: string;
-      newBalance: number;
-    }>(`/properties/${id}/buy-shares`, { shares });
+    const response = await apiClient.post<{ transactionHash: string; newBalance: number }>(
+      `/properties/${id}/buy-shares`,
+      { shares }
+    );
     return response.data;
   },
 
   /**
    * Get user's share holdings for a property
    */
-  async getShares(
-    propertyId: string,
-    ownerAddress: string,
-  ): Promise<ShareOwnership | null> {
+  async getShares(propertyId: string, ownerAddress: string): Promise<ShareOwnership | null> {
     const response = await apiClient.get<ShareOwnership | null>(
-      `/properties/${propertyId}/shares/${ownerAddress}`,
+      `/properties/${propertyId}/shares/${ownerAddress}`
     );
     return response.data;
   },
@@ -526,7 +501,7 @@ export const propertyApi = {
    */
   async getByOwner(ownerAddress: string): Promise<PropertyInfo[]> {
     const response = await apiClient.get<PropertyInfo[]>(
-      `/properties?owner=${ownerAddress}`,
+      `/properties?owner=${ownerAddress}`
     );
     return response.data;
   },
@@ -538,12 +513,8 @@ export const propertyApi = {
 Create `apps/webapp/src/services/api/lending.ts`:
 
 ```typescript
-import type {
-  LendingPool,
-  DepositPosition,
-  BorrowPosition,
-} from "@akkuea/shared";
-import { apiClient } from "./client";
+import type { LendingPool, DepositPosition, BorrowPosition } from '@akkuea/shared';
+import { apiClient } from './client';
 
 /**
  * Deposit payload
@@ -569,7 +540,7 @@ export const lendingApi = {
    * Get all lending pools
    */
   async getPools(): Promise<LendingPool[]> {
-    const response = await apiClient.get<LendingPool[]>("/lending/pools");
+    const response = await apiClient.get<LendingPool[]>('/lending/pools');
     return response.data;
   },
 
@@ -586,7 +557,7 @@ export const lendingApi = {
    */
   async deposit(
     poolId: string,
-    payload: DepositPayload,
+    payload: DepositPayload
   ): Promise<{ transactionHash: string; position: DepositPosition }> {
     const response = await apiClient.post<{
       transactionHash: string;
@@ -600,12 +571,12 @@ export const lendingApi = {
    */
   async withdraw(
     poolId: string,
-    amount: string,
+    amount: string
   ): Promise<{ transactionHash: string; withdrawn: string }> {
-    const response = await apiClient.post<{
-      transactionHash: string;
-      withdrawn: string;
-    }>(`/lending/pools/${poolId}/withdraw`, { amount });
+    const response = await apiClient.post<{ transactionHash: string; withdrawn: string }>(
+      `/lending/pools/${poolId}/withdraw`,
+      { amount }
+    );
     return response.data;
   },
 
@@ -614,7 +585,7 @@ export const lendingApi = {
    */
   async borrow(
     poolId: string,
-    payload: BorrowPayload,
+    payload: BorrowPayload
   ): Promise<{ transactionHash: string; position: BorrowPosition }> {
     const response = await apiClient.post<{
       transactionHash: string;
@@ -628,24 +599,21 @@ export const lendingApi = {
    */
   async repay(
     poolId: string,
-    amount: string,
+    amount: string
   ): Promise<{ transactionHash: string; remainingDebt: string }> {
-    const response = await apiClient.post<{
-      transactionHash: string;
-      remainingDebt: string;
-    }>(`/lending/pools/${poolId}/repay`, { amount });
+    const response = await apiClient.post<{ transactionHash: string; remainingDebt: string }>(
+      `/lending/pools/${poolId}/repay`,
+      { amount }
+    );
     return response.data;
   },
 
   /**
    * Get user's deposit positions
    */
-  async getUserDeposits(
-    poolId: string,
-    userAddress: string,
-  ): Promise<DepositPosition[]> {
+  async getUserDeposits(poolId: string, userAddress: string): Promise<DepositPosition[]> {
     const response = await apiClient.get<DepositPosition[]>(
-      `/lending/pools/${poolId}/user/${userAddress}/deposits`,
+      `/lending/pools/${poolId}/user/${userAddress}/deposits`
     );
     return response.data;
   },
@@ -653,12 +621,9 @@ export const lendingApi = {
   /**
    * Get user's borrow positions
    */
-  async getUserBorrows(
-    poolId: string,
-    userAddress: string,
-  ): Promise<BorrowPosition[]> {
+  async getUserBorrows(poolId: string, userAddress: string): Promise<BorrowPosition[]> {
     const response = await apiClient.get<BorrowPosition[]>(
-      `/lending/pools/${poolId}/user/${userAddress}/borrows`,
+      `/lending/pools/${poolId}/user/${userAddress}/borrows`
     );
     return response.data;
   },
@@ -670,8 +635,8 @@ export const lendingApi = {
 Create `apps/webapp/src/services/api/users.ts`:
 
 ```typescript
-import type { User, KycDocument } from "@akkuea/shared";
-import { apiClient } from "./client";
+import type { User, KycDocument } from '@akkuea/shared';
+import { apiClient } from './client';
 
 /**
  * User update payload
@@ -698,7 +663,7 @@ export const userApi = {
    * Get current user profile
    */
   async getProfile(): Promise<User> {
-    const response = await apiClient.get<User>("/users/me");
+    const response = await apiClient.get<User>('/users/me');
     return response.data;
   },
 
@@ -706,9 +671,7 @@ export const userApi = {
    * Get user by wallet address
    */
   async getByWallet(walletAddress: string): Promise<User> {
-    const response = await apiClient.get<User>(
-      `/users/wallet/${walletAddress}`,
-    );
+    const response = await apiClient.get<User>(`/users/wallet/${walletAddress}`);
     return response.data;
   },
 
@@ -716,7 +679,7 @@ export const userApi = {
    * Update user profile
    */
   async updateProfile(payload: UpdateUserPayload): Promise<User> {
-    const response = await apiClient.patch<User>("/users/me", payload);
+    const response = await apiClient.patch<User>('/users/me', payload);
     return response.data;
   },
 
@@ -724,20 +687,15 @@ export const userApi = {
    * Get user's KYC documents
    */
   async getKycDocuments(): Promise<KycDocument[]> {
-    const response = await apiClient.get<KycDocument[]>("/kyc/documents");
+    const response = await apiClient.get<KycDocument[]>('/kyc/documents');
     return response.data;
   },
 
   /**
    * Upload KYC document
    */
-  async uploadKycDocument(
-    payload: UploadKycDocumentPayload,
-  ): Promise<KycDocument> {
-    const response = await apiClient.post<KycDocument>(
-      "/kyc/documents",
-      payload,
-    );
+  async uploadKycDocument(payload: UploadKycDocumentPayload): Promise<KycDocument> {
+    const response = await apiClient.post<KycDocument>('/kyc/documents', payload);
     return response.data;
   },
 
@@ -746,7 +704,7 @@ export const userApi = {
    */
   async submitKyc(): Promise<{ status: string; message: string }> {
     const response = await apiClient.post<{ status: string; message: string }>(
-      "/kyc/submit",
+      '/kyc/submit'
     );
     return response.data;
   },
@@ -758,23 +716,23 @@ export const userApi = {
 Create `apps/webapp/src/services/api/index.ts`:
 
 ```typescript
-export * from "./types";
-export * from "./client";
-export { propertyApi } from "./properties";
-export { lendingApi } from "./lending";
-export { userApi } from "./users";
+export * from './types';
+export * from './client';
+export { propertyApi } from './properties';
+export { lendingApi } from './lending';
+export { userApi } from './users';
 ```
 
 Create `apps/webapp/src/services/index.ts`:
 
 ```typescript
-export * from "./api";
+export * from './api';
 ```
 
 ## Usage Example
 
 ```typescript
-import { propertyApi, lendingApi, userApi, ApiRequestError } from "@/services";
+import { propertyApi, lendingApi, userApi, ApiRequestError } from '@/services';
 
 // Fetch properties
 async function loadProperties() {
@@ -782,7 +740,7 @@ async function loadProperties() {
     const properties = await propertyApi.getAll({
       page: 1,
       limit: 10,
-      propertyType: "residential",
+      propertyType: 'residential',
     });
     console.log(properties.data);
   } catch (error) {
@@ -801,20 +759,20 @@ async function buyPropertyShares(propertyId: string, shares: number) {
 
 ## Related Resources
 
-| Resource                | Link                                                                        |
-| ----------------------- | --------------------------------------------------------------------------- |
-| Fetch API               | https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API                  |
-| TypeScript Generics     | https://www.typescriptlang.org/docs/handbook/2/generics.html                |
+| Resource | Link |
+|----------|------|
+| Fetch API | https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API |
+| TypeScript Generics | https://www.typescriptlang.org/docs/handbook/2/generics.html |
 | Error Handling Patterns | https://kentcdodds.com/blog/get-a-catch-block-error-message-with-typescript |
 
 ## Verification Checklist
 
-| Item                         | Status |
-| ---------------------------- | ------ |
-| Base client created          |        |
-| All API services implemented |        |
-| Type safety verified         |        |
-| Error handling complete      |        |
-| Retry logic working          |        |
-| Timeout handling working     |        |
-| Services exported            |        |
+| Item | Status |
+|------|--------|
+| Base client created | |
+| All API services implemented | |
+| Type safety verified | |
+| Error handling complete | |
+| Retry logic working | |
+| Timeout handling working | |
+| Services exported | |

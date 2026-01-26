@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                                            |
-| --------------- | ------------------------------------------------ |
-| Issue ID        | C1-016                                           |
-| Title           | Add form validation with React Hook Form and Zod |
-| Area            | WEBAPP                                           |
-| Difficulty      | Medium                                           |
-| Labels          | frontend, forms, validation, medium              |
-| Dependencies    | None                                             |
-| Estimated Lines | 150-200                                          |
+| Attribute | Value |
+|-----------|-------|
+| Issue ID | C1-016 |
+| Title | Add form validation with React Hook Form and Zod |
+| Area | WEBAPP |
+| Difficulty | Medium |
+| Labels | frontend, forms, validation, medium |
+| Dependencies | None |
+| Estimated Lines | 150-200 |
 
 ## Overview
 
@@ -38,7 +38,7 @@ bun add react-hook-form @hookform/resolvers zod
 Create `apps/webapp/src/schemas/forms.ts`:
 
 ```typescript
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * Property creation form schema
@@ -46,33 +46,33 @@ import { z } from "zod";
 export const createPropertySchema = z.object({
   name: z
     .string()
-    .min(1, "Property name is required")
-    .max(255, "Name must be less than 255 characters"),
+    .min(1, 'Property name is required')
+    .max(255, 'Name must be less than 255 characters'),
   description: z
     .string()
-    .min(10, "Description must be at least 10 characters")
-    .max(5000, "Description must be less than 5000 characters"),
+    .min(10, 'Description must be at least 10 characters')
+    .max(5000, 'Description must be less than 5000 characters'),
   propertyType: z.enum(
-    ["residential", "commercial", "industrial", "land", "mixed"],
-    { errorMap: () => ({ message: "Please select a property type" }) },
+    ['residential', 'commercial', 'industrial', 'land', 'mixed'],
+    { errorMap: () => ({ message: 'Please select a property type' }) }
   ),
-  address: z.string().min(1, "Address is required"),
-  city: z.string().min(1, "City is required"),
-  country: z.string().min(1, "Country is required"),
+  address: z.string().min(1, 'Address is required'),
+  city: z.string().min(1, 'City is required'),
+  country: z.string().min(1, 'Country is required'),
   postalCode: z.string().optional(),
   totalValue: z
     .string()
-    .min(1, "Total value is required")
-    .regex(/^\d+(\.\d{1,2})?$/, "Enter a valid amount"),
+    .min(1, 'Total value is required')
+    .regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount'),
   totalShares: z
-    .number({ invalid_type_error: "Enter a valid number" })
-    .int("Must be a whole number")
-    .positive("Must be greater than 0")
-    .max(1000000, "Maximum 1,000,000 shares"),
+    .number({ invalid_type_error: 'Enter a valid number' })
+    .int('Must be a whole number')
+    .positive('Must be greater than 0')
+    .max(1000000, 'Maximum 1,000,000 shares'),
   pricePerShare: z
     .string()
-    .min(1, "Price per share is required")
-    .regex(/^\d+(\.\d{1,2})?$/, "Enter a valid amount"),
+    .min(1, 'Price per share is required')
+    .regex(/^\d+(\.\d{1,2})?$/, 'Enter a valid amount'),
 });
 
 export type CreatePropertyFormData = z.infer<typeof createPropertySchema>;
@@ -83,9 +83,9 @@ export type CreatePropertyFormData = z.infer<typeof createPropertySchema>;
 export const depositSchema = z.object({
   amount: z
     .string()
-    .min(1, "Amount is required")
-    .regex(/^\d+(\.\d+)?$/, "Enter a valid amount")
-    .refine((val) => parseFloat(val) > 0, "Amount must be greater than 0"),
+    .min(1, 'Amount is required')
+    .regex(/^\d+(\.\d+)?$/, 'Enter a valid amount')
+    .refine((val) => parseFloat(val) > 0, 'Amount must be greater than 0'),
 });
 
 export type DepositFormData = z.infer<typeof depositSchema>;
@@ -96,14 +96,14 @@ export type DepositFormData = z.infer<typeof depositSchema>;
 export const borrowSchema = z.object({
   amount: z
     .string()
-    .min(1, "Borrow amount is required")
-    .regex(/^\d+(\.\d+)?$/, "Enter a valid amount")
-    .refine((val) => parseFloat(val) > 0, "Amount must be greater than 0"),
+    .min(1, 'Borrow amount is required')
+    .regex(/^\d+(\.\d+)?$/, 'Enter a valid amount')
+    .refine((val) => parseFloat(val) > 0, 'Amount must be greater than 0'),
   collateralAmount: z
     .string()
-    .min(1, "Collateral amount is required")
-    .regex(/^\d+(\.\d+)?$/, "Enter a valid amount")
-    .refine((val) => parseFloat(val) > 0, "Amount must be greater than 0"),
+    .min(1, 'Collateral amount is required')
+    .regex(/^\d+(\.\d+)?$/, 'Enter a valid amount')
+    .refine((val) => parseFloat(val) > 0, 'Amount must be greater than 0'),
 });
 
 export type BorrowFormData = z.infer<typeof borrowSchema>;
@@ -113,9 +113,9 @@ export type BorrowFormData = z.infer<typeof borrowSchema>;
  */
 export const buySharesSchema = z.object({
   shares: z
-    .number({ invalid_type_error: "Enter a valid number" })
-    .int("Must be a whole number")
-    .positive("Must be at least 1 share"),
+    .number({ invalid_type_error: 'Enter a valid number' })
+    .int('Must be a whole number')
+    .positive('Must be at least 1 share'),
 });
 
 export type BuySharesFormData = z.infer<typeof buySharesSchema>;
@@ -126,15 +126,15 @@ export type BuySharesFormData = z.infer<typeof buySharesSchema>;
 export const updateProfileSchema = z.object({
   displayName: z
     .string()
-    .min(2, "Name must be at least 2 characters")
-    .max(50, "Name must be less than 50 characters")
+    .min(2, 'Name must be at least 2 characters')
+    .max(50, 'Name must be less than 50 characters')
     .optional()
-    .or(z.literal("")),
+    .or(z.literal('')),
   email: z
     .string()
-    .email("Enter a valid email address")
+    .email('Enter a valid email address')
     .optional()
-    .or(z.literal("")),
+    .or(z.literal('')),
 });
 
 export type UpdateProfileFormData = z.infer<typeof updateProfileSchema>;
@@ -506,11 +506,11 @@ export function FormSubmit({
 Create `apps/webapp/src/components/forms/index.ts`:
 
 ```typescript
-export { Form, useFormContext, useWatch, useFieldArray } from "./Form";
-export { FormInput } from "./FormInput";
-export { FormSelect } from "./FormSelect";
-export { FormTextarea } from "./FormTextarea";
-export { FormSubmit } from "./FormSubmit";
+export { Form, useFormContext, useWatch, useFieldArray } from './Form';
+export { FormInput } from './FormInput';
+export { FormSelect } from './FormSelect';
+export { FormTextarea } from './FormTextarea';
+export { FormSubmit } from './FormSubmit';
 ```
 
 ## Usage Example
@@ -599,21 +599,21 @@ export function CreatePropertyForm() {
 
 ## Related Resources
 
-| Resource           | Link                                         |
-| ------------------ | -------------------------------------------- |
-| React Hook Form    | https://react-hook-form.com                  |
-| Zod                | https://zod.dev                              |
+| Resource | Link |
+|----------|------|
+| React Hook Form | https://react-hook-form.com |
+| Zod | https://zod.dev |
 | Hookform Resolvers | https://github.com/react-hook-form/resolvers |
 
 ## Verification Checklist
 
-| Item                       | Status |
-| -------------------------- | ------ |
-| Dependencies installed     |        |
-| Form component created     |        |
-| FormInput working          |        |
-| FormSelect working         |        |
-| FormTextarea working       |        |
-| Validation schemas created |        |
-| Error display working      |        |
-| Submit states working      |        |
+| Item | Status |
+|------|--------|
+| Dependencies installed | |
+| Form component created | |
+| FormInput working | |
+| FormSelect working | |
+| FormTextarea working | |
+| Validation schemas created | |
+| Error display working | |
+| Submit states working | |

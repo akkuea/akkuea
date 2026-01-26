@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                                        |
-| --------------- | -------------------------------------------- |
-| Issue ID        | C1-006                                       |
-| Title           | Add error types and error handling utilities |
-| Area            | SHARED                                       |
-| Difficulty      | Medium                                       |
-| Labels          | shared, error-handling, medium               |
-| Dependencies    | None                                         |
-| Estimated Lines | 100-150                                      |
+| Attribute | Value |
+|-----------|-------|
+| Issue ID | C1-006 |
+| Title | Add error types and error handling utilities |
+| Area | SHARED |
+| Difficulty | Medium |
+| Labels | shared, error-handling, medium |
+| Dependencies | None |
+| Estimated Lines | 100-150 |
 
 ## Overview
 
@@ -35,51 +35,51 @@ Create `apps/shared/src/errors/codes.ts`:
  */
 export enum ErrorCode {
   // General errors (1xxx)
-  UNKNOWN = "E1000",
-  INTERNAL_ERROR = "E1001",
-  SERVICE_UNAVAILABLE = "E1002",
-  TIMEOUT = "E1003",
+  UNKNOWN = 'E1000',
+  INTERNAL_ERROR = 'E1001',
+  SERVICE_UNAVAILABLE = 'E1002',
+  TIMEOUT = 'E1003',
 
   // Validation errors (2xxx)
-  VALIDATION_ERROR = "E2000",
-  INVALID_INPUT = "E2001",
-  MISSING_FIELD = "E2002",
-  INVALID_FORMAT = "E2003",
+  VALIDATION_ERROR = 'E2000',
+  INVALID_INPUT = 'E2001',
+  MISSING_FIELD = 'E2002',
+  INVALID_FORMAT = 'E2003',
 
   // Authentication errors (3xxx)
-  UNAUTHORIZED = "E3000",
-  INVALID_TOKEN = "E3001",
-  TOKEN_EXPIRED = "E3002",
-  WALLET_NOT_CONNECTED = "E3003",
+  UNAUTHORIZED = 'E3000',
+  INVALID_TOKEN = 'E3001',
+  TOKEN_EXPIRED = 'E3002',
+  WALLET_NOT_CONNECTED = 'E3003',
 
   // Authorization errors (4xxx)
-  FORBIDDEN = "E4000",
-  INSUFFICIENT_PERMISSIONS = "E4001",
-  KYC_REQUIRED = "E4002",
-  KYC_PENDING = "E4003",
+  FORBIDDEN = 'E4000',
+  INSUFFICIENT_PERMISSIONS = 'E4001',
+  KYC_REQUIRED = 'E4002',
+  KYC_PENDING = 'E4003',
 
   // Resource errors (5xxx)
-  NOT_FOUND = "E5000",
-  ALREADY_EXISTS = "E5001",
-  CONFLICT = "E5002",
+  NOT_FOUND = 'E5000',
+  ALREADY_EXISTS = 'E5001',
+  CONFLICT = 'E5002',
 
   // Business logic errors (6xxx)
-  INSUFFICIENT_BALANCE = "E6000",
-  INSUFFICIENT_SHARES = "E6001",
-  PROPERTY_NOT_TOKENIZED = "E6002",
-  POOL_PAUSED = "E6003",
-  POSITION_UNHEALTHY = "E6004",
-  INVALID_AMOUNT = "E6005",
+  INSUFFICIENT_BALANCE = 'E6000',
+  INSUFFICIENT_SHARES = 'E6001',
+  PROPERTY_NOT_TOKENIZED = 'E6002',
+  POOL_PAUSED = 'E6003',
+  POSITION_UNHEALTHY = 'E6004',
+  INVALID_AMOUNT = 'E6005',
 
   // Blockchain errors (7xxx)
-  TRANSACTION_FAILED = "E7000",
-  CONTRACT_ERROR = "E7001",
-  NETWORK_ERROR = "E7002",
-  SIGNATURE_INVALID = "E7003",
+  TRANSACTION_FAILED = 'E7000',
+  CONTRACT_ERROR = 'E7001',
+  NETWORK_ERROR = 'E7002',
+  SIGNATURE_INVALID = 'E7003',
 
   // Rate limiting (8xxx)
-  RATE_LIMITED = "E8000",
-  TOO_MANY_REQUESTS = "E8001",
+  RATE_LIMITED = 'E8000',
+  TOO_MANY_REQUESTS = 'E8001',
 }
 
 /**
@@ -132,7 +132,7 @@ export const errorCodeToStatus: Record<ErrorCode, number> = {
 Create `apps/shared/src/errors/AppError.ts`:
 
 ```typescript
-import { ErrorCode, errorCodeToStatus } from "./codes";
+import { ErrorCode, errorCodeToStatus } from './codes';
 
 /**
  * Serialized error format
@@ -160,10 +160,10 @@ export class AppError extends Error {
     code: ErrorCode | string,
     message: string,
     details?: Record<string, unknown>,
-    status?: number,
+    status?: number
   ) {
     super(message);
-    this.name = "AppError";
+    this.name = 'AppError';
     this.code = code;
     this.details = details;
     this.timestamp = new Date();
@@ -201,12 +201,7 @@ export class AppError extends Error {
    * Create error from serialized format
    */
   static fromJSON(json: SerializedError): AppError {
-    const error = new AppError(
-      json.code,
-      json.message,
-      json.details,
-      json.status,
-    );
+    const error = new AppError(json.code, json.message, json.details, json.status);
     error.requestId = json.requestId;
     return error;
   }
@@ -226,8 +221,8 @@ export class AppError extends Error {
 Create `apps/shared/src/errors/types.ts`:
 
 ```typescript
-import { AppError } from "./AppError";
-import { ErrorCode } from "./codes";
+import { AppError } from './AppError';
+import { ErrorCode } from './codes';
 
 /**
  * Validation error with field-level details
@@ -243,15 +238,14 @@ export class ValidationError extends AppError {
 
   constructor(message: string, fieldErrors: FieldError[] = []) {
     super(ErrorCode.VALIDATION_ERROR, message, { fieldErrors });
-    this.name = "ValidationError";
+    this.name = 'ValidationError';
     this.fieldErrors = fieldErrors;
   }
 
   static fromFields(fieldErrors: FieldError[]): ValidationError {
-    const message =
-      fieldErrors.length === 1
-        ? fieldErrors[0].message
-        : `Validation failed for ${fieldErrors.length} fields`;
+    const message = fieldErrors.length === 1
+      ? fieldErrors[0].message
+      : `Validation failed for ${fieldErrors.length} fields`;
     return new ValidationError(message, fieldErrors);
   }
 }
@@ -265,7 +259,7 @@ export class NotFoundError extends AppError {
       ? `${resource} with ID '${identifier}' not found`
       : `${resource} not found`;
     super(ErrorCode.NOT_FOUND, message, { resource, identifier });
-    this.name = "NotFoundError";
+    this.name = 'NotFoundError';
   }
 }
 
@@ -273,9 +267,9 @@ export class NotFoundError extends AppError {
  * Authentication error
  */
 export class AuthenticationError extends AppError {
-  constructor(message: string = "Authentication required") {
+  constructor(message: string = 'Authentication required') {
     super(ErrorCode.UNAUTHORIZED, message);
-    this.name = "AuthenticationError";
+    this.name = 'AuthenticationError';
   }
 }
 
@@ -283,9 +277,9 @@ export class AuthenticationError extends AppError {
  * Authorization error
  */
 export class AuthorizationError extends AppError {
-  constructor(message: string = "Insufficient permissions") {
+  constructor(message: string = 'Insufficient permissions') {
     super(ErrorCode.FORBIDDEN, message);
-    this.name = "AuthorizationError";
+    this.name = 'AuthorizationError';
   }
 }
 
@@ -295,7 +289,7 @@ export class AuthorizationError extends AppError {
 export class ConflictError extends AppError {
   constructor(message: string, details?: Record<string, unknown>) {
     super(ErrorCode.CONFLICT, message, details);
-    this.name = "ConflictError";
+    this.name = 'ConflictError';
   }
 }
 
@@ -306,10 +300,10 @@ export class BusinessError extends AppError {
   constructor(
     code: ErrorCode,
     message: string,
-    details?: Record<string, unknown>,
+    details?: Record<string, unknown>
   ) {
     super(code, message, details);
-    this.name = "BusinessError";
+    this.name = 'BusinessError';
   }
 }
 
@@ -322,13 +316,13 @@ export class BlockchainError extends AppError {
   constructor(
     message: string,
     transactionHash?: string,
-    details?: Record<string, unknown>,
+    details?: Record<string, unknown>
   ) {
     super(ErrorCode.TRANSACTION_FAILED, message, {
       ...details,
       transactionHash,
     });
-    this.name = "BlockchainError";
+    this.name = 'BlockchainError';
     this.transactionHash = transactionHash;
   }
 }
@@ -337,9 +331,9 @@ export class BlockchainError extends AppError {
  * Network/timeout error
  */
 export class NetworkError extends AppError {
-  constructor(message: string = "Network request failed") {
+  constructor(message: string = 'Network request failed') {
     super(ErrorCode.NETWORK_ERROR, message);
-    this.name = "NetworkError";
+    this.name = 'NetworkError';
   }
 }
 
@@ -352,9 +346,9 @@ export class RateLimitError extends AppError {
   constructor(retryAfter?: number) {
     const message = retryAfter
       ? `Too many requests. Retry after ${retryAfter} seconds`
-      : "Too many requests";
+      : 'Too many requests';
     super(ErrorCode.RATE_LIMITED, message, { retryAfter });
-    this.name = "RateLimitError";
+    this.name = 'RateLimitError';
     this.retryAfter = retryAfter;
   }
 }
@@ -365,7 +359,7 @@ export class RateLimitError extends AppError {
 Create `apps/shared/src/errors/guards.ts`:
 
 ```typescript
-import { AppError, SerializedError } from "./AppError";
+import { AppError, SerializedError } from './AppError';
 import {
   ValidationError,
   NotFoundError,
@@ -376,8 +370,8 @@ import {
   BlockchainError,
   NetworkError,
   RateLimitError,
-} from "./types";
-import { ErrorCode } from "./codes";
+} from './types';
+import { ErrorCode } from './codes';
 
 /**
  * Check if value is an AppError
@@ -403,18 +397,14 @@ export function isNotFoundError(error: unknown): error is NotFoundError {
 /**
  * Check if value is an AuthenticationError
  */
-export function isAuthenticationError(
-  error: unknown,
-): error is AuthenticationError {
+export function isAuthenticationError(error: unknown): error is AuthenticationError {
   return error instanceof AuthenticationError;
 }
 
 /**
  * Check if value is an AuthorizationError
  */
-export function isAuthorizationError(
-  error: unknown,
-): error is AuthorizationError {
+export function isAuthorizationError(error: unknown): error is AuthorizationError {
   return error instanceof AuthorizationError;
 }
 
@@ -443,12 +433,12 @@ export function hasErrorCode(error: unknown, code: ErrorCode): boolean {
  * Check if serialized object is an error response
  */
 export function isSerializedError(obj: unknown): obj is SerializedError {
-  if (typeof obj !== "object" || obj === null) return false;
+  if (typeof obj !== 'object' || obj === null) return false;
   const candidate = obj as Record<string, unknown>;
   return (
-    typeof candidate.code === "string" &&
-    typeof candidate.message === "string" &&
-    typeof candidate.status === "number"
+    typeof candidate.code === 'string' &&
+    typeof candidate.message === 'string' &&
+    typeof candidate.status === 'number'
   );
 }
 
@@ -464,7 +454,7 @@ export function toAppError(error: unknown): AppError {
     return new AppError(ErrorCode.INTERNAL_ERROR, error.message);
   }
 
-  if (typeof error === "string") {
+  if (typeof error === 'string') {
     return new AppError(ErrorCode.INTERNAL_ERROR, error);
   }
 
@@ -472,7 +462,7 @@ export function toAppError(error: unknown): AppError {
     return AppError.fromJSON(error);
   }
 
-  return new AppError(ErrorCode.UNKNOWN, "An unknown error occurred");
+  return new AppError(ErrorCode.UNKNOWN, 'An unknown error occurred');
 }
 ```
 
@@ -482,10 +472,10 @@ Create `apps/shared/src/errors/index.ts`:
 
 ```typescript
 // Base error
-export { AppError, type SerializedError } from "./AppError";
+export { AppError, type SerializedError } from './AppError';
 
 // Error codes
-export { ErrorCode, errorCodeToStatus } from "./codes";
+export { ErrorCode, errorCodeToStatus } from './codes';
 
 // Specific error types
 export {
@@ -499,7 +489,7 @@ export {
   NetworkError,
   RateLimitError,
   type FieldError,
-} from "./types";
+} from './types';
 
 // Type guards
 export {
@@ -513,7 +503,7 @@ export {
   hasErrorCode,
   isSerializedError,
   toAppError,
-} from "./guards";
+} from './guards';
 ```
 
 ### Step 6: Update Main Index
@@ -522,19 +512,19 @@ Update `apps/shared/src/index.ts`:
 
 ```typescript
 // Types
-export * from "./types";
+export * from './types';
 
 // Schemas
-export * from "./schemas";
+export * from './schemas';
 
 // Errors
-export * from "./errors";
+export * from './errors';
 
 // Utils
-export * from "./utils";
+export * from './utils';
 
 // Constants
-export * from "./constants";
+export * from './constants';
 ```
 
 ## Usage Examples
@@ -542,19 +532,19 @@ export * from "./constants";
 ### In API
 
 ```typescript
-import { ValidationError, NotFoundError, isAppError } from "@akkuea/shared";
+import { ValidationError, NotFoundError, isAppError } from '@akkuea/shared';
 
 // Throwing validation error
 if (!input.email) {
   throw ValidationError.fromFields([
-    { field: "email", message: "Email is required" },
+    { field: 'email', message: 'Email is required' }
   ]);
 }
 
 // Throwing not found error
 const user = await userRepository.findById(id);
 if (!user) {
-  throw new NotFoundError("User", id);
+  throw new NotFoundError('User', id);
 }
 
 // Error handler middleware
@@ -563,14 +553,14 @@ app.onError(({ error, set }) => {
     set.status = error.status;
     return error.toJSON();
   }
-  return { code: "E1000", message: "Internal server error", status: 500 };
+  return { code: 'E1000', message: 'Internal server error', status: 500 };
 });
 ```
 
 ### In Webapp
 
 ```typescript
-import { isValidationError, isNotFoundError, toAppError } from "@akkuea/shared";
+import { isValidationError, isNotFoundError, toAppError } from '@akkuea/shared';
 
 try {
   await propertyApi.create(data);
@@ -579,7 +569,7 @@ try {
 
   if (isValidationError(appError)) {
     // Show field errors
-    appError.fieldErrors.forEach((fe) => {
+    appError.fieldErrors.forEach(fe => {
       setFieldError(fe.field, fe.message);
     });
   } else if (isNotFoundError(appError)) {
@@ -594,18 +584,18 @@ try {
 
 ## Related Resources
 
-| Resource                      | Link                                                                        |
-| ----------------------------- | --------------------------------------------------------------------------- |
-| TypeScript Error Handling     | https://www.typescriptlang.org/docs/handbook/2/narrowing.html               |
+| Resource | Link |
+|----------|------|
+| TypeScript Error Handling | https://www.typescriptlang.org/docs/handbook/2/narrowing.html |
 | Error Handling Best Practices | https://kentcdodds.com/blog/get-a-catch-block-error-message-with-typescript |
 
 ## Verification Checklist
 
-| Item                         | Status |
-| ---------------------------- | ------ |
-| Error codes defined          |        |
-| Base error class created     |        |
-| Specific error types created |        |
-| Type guards implemented      |        |
-| Serialization working        |        |
-| Tests passing                |        |
+| Item | Status |
+|------|--------|
+| Error codes defined | |
+| Base error class created | |
+| Specific error types created | |
+| Type guards implemented | |
+| Serialization working | |
+| Tests passing | |

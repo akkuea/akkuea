@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                          |
-| --------------- | ------------------------------ |
-| Issue ID        | C1-017                         |
-| Title           | Add structured logging service |
-| Area            | API                            |
-| Difficulty      | Trivial                        |
-| Labels          | backend, logging, trivial      |
-| Dependencies    | None                           |
-| Estimated Lines | 50-80                          |
+| Attribute | Value |
+|-----------|-------|
+| Issue ID | C1-017 |
+| Title | Add structured logging service |
+| Area | API |
+| Difficulty | Trivial |
+| Labels | backend, logging, trivial |
+| Dependencies | None |
+| Estimated Lines | 50-80 |
 
 ## Overview
 
@@ -63,8 +63,8 @@ interface LoggerConfig {
  * Default configuration
  */
 const defaultConfig: LoggerConfig = {
-  level: process.env.NODE_ENV === "production" ? LogLevel.INFO : LogLevel.DEBUG,
-  pretty: process.env.NODE_ENV !== "production",
+  level: process.env.NODE_ENV === 'production' ? LogLevel.INFO : LogLevel.DEBUG,
+  pretty: process.env.NODE_ENV !== 'production',
   includeStack: true,
 };
 
@@ -103,7 +103,7 @@ class Logger {
     levelName: string,
     message: string,
     context?: Record<string, unknown>,
-    error?: Error,
+    error?: Error
   ): void {
     if (level < this.config.level) {
       return;
@@ -141,32 +141,28 @@ class Logger {
    * Log debug message
    */
   debug(message: string, context?: Record<string, unknown>): void {
-    this.log(LogLevel.DEBUG, "debug", message, context);
+    this.log(LogLevel.DEBUG, 'debug', message, context);
   }
 
   /**
    * Log info message
    */
   info(message: string, context?: Record<string, unknown>): void {
-    this.log(LogLevel.INFO, "info", message, context);
+    this.log(LogLevel.INFO, 'info', message, context);
   }
 
   /**
    * Log warning message
    */
   warn(message: string, context?: Record<string, unknown>): void {
-    this.log(LogLevel.WARN, "warn", message, context);
+    this.log(LogLevel.WARN, 'warn', message, context);
   }
 
   /**
    * Log error message
    */
-  error(
-    message: string,
-    error?: Error,
-    context?: Record<string, unknown>,
-  ): void {
-    this.log(LogLevel.ERROR, "error", message, context, error);
+  error(message: string, error?: Error, context?: Record<string, unknown>): void {
+    this.log(LogLevel.ERROR, 'error', message, context, error);
   }
 }
 
@@ -188,15 +184,15 @@ export function createLogger(config?: Partial<LoggerConfig>): Logger {
 Create `apps/api/src/middleware/requestLogger.ts`:
 
 ```typescript
-import { Elysia } from "elysia";
-import { logger } from "../services/logger";
-import { randomUUID } from "crypto";
+import { Elysia } from 'elysia';
+import { logger } from '../services/logger';
+import { randomUUID } from 'crypto';
 
 /**
  * Request logging middleware
  * Logs all incoming requests with timing information
  */
-export const requestLogger = new Elysia({ name: "request-logger" })
+export const requestLogger = new Elysia({ name: 'request-logger' })
   .derive(({ request }) => {
     const requestId = randomUUID();
     const startTime = Date.now();
@@ -208,17 +204,17 @@ export const requestLogger = new Elysia({ name: "request-logger" })
     };
   })
   .onBeforeHandle(({ request, requestId, requestLogger }) => {
-    requestLogger.info("Request started", {
+    requestLogger.info('Request started', {
       method: request.method,
       path: new URL(request.url).pathname,
-      userAgent: request.headers.get("user-agent"),
+      userAgent: request.headers.get('user-agent'),
     });
   })
   .onAfterHandle(({ request, requestId, startTime, set }) => {
     const duration = Date.now() - startTime;
     const requestLogger = logger.child({ requestId });
 
-    requestLogger.info("Request completed", {
+    requestLogger.info('Request completed', {
       method: request.method,
       path: new URL(request.url).pathname,
       status: set.status || 200,
@@ -230,25 +226,25 @@ export const requestLogger = new Elysia({ name: "request-logger" })
     const requestLogger = logger.child({ requestId });
 
     requestLogger.error(
-      "Request failed",
+      'Request failed',
       error instanceof Error ? error : new Error(String(error)),
       {
         method: request.method,
         path: new URL(request.url).pathname,
         status: set.status || 500,
         duration: `${duration}ms`,
-      },
+      }
     );
   });
 
 /**
  * Add request ID header to response
  */
-export const requestIdHeader = new Elysia({ name: "request-id-header" })
+export const requestIdHeader = new Elysia({ name: 'request-id-header' })
   .derive(({ set }) => {
     return {
       setRequestIdHeader: (requestId: string) => {
-        set.headers["x-request-id"] = requestId;
+        set.headers['x-request-id'] = requestId;
       },
     };
   })
@@ -264,7 +260,7 @@ export const requestIdHeader = new Elysia({ name: "request-id-header" })
 Update `apps/api/src/middleware/index.ts`:
 
 ```typescript
-export { errorHandler } from "./errorHandler";
+export { errorHandler } from './errorHandler';
 export {
   validate,
   validateBody,
@@ -272,8 +268,8 @@ export {
   validateParams,
   uuidParamSchema,
   paginationQuerySchema,
-} from "./validation";
-export { requestLogger, requestIdHeader } from "./requestLogger";
+} from './validation';
+export { requestLogger, requestIdHeader } from './requestLogger';
 ```
 
 ### Step 4: Update Main Application
@@ -281,16 +277,16 @@ export { requestLogger, requestIdHeader } from "./requestLogger";
 Update `apps/api/src/index.ts`:
 
 ```typescript
-import { Elysia } from "elysia";
-import { swagger } from "@elysiajs/swagger";
-import { cors } from "@elysiajs/cors";
-import { requestLogger, requestIdHeader, errorHandler } from "./middleware";
-import { propertyRoutes } from "./routes/properties";
-import { lendingRoutes } from "./routes/lending";
-import { userRoutes } from "./routes/users";
-import { kycRoutes } from "./routes/kyc";
-import { checkDatabaseHealth } from "./db";
-import { logger } from "./services/logger";
+import { Elysia } from 'elysia';
+import { swagger } from '@elysiajs/swagger';
+import { cors } from '@elysiajs/cors';
+import { requestLogger, requestIdHeader, errorHandler } from './middleware';
+import { propertyRoutes } from './routes/properties';
+import { lendingRoutes } from './routes/lending';
+import { userRoutes } from './routes/users';
+import { kycRoutes } from './routes/kyc';
+import { checkDatabaseHealth } from './db';
+import { logger } from './services/logger';
 
 const app = new Elysia()
   // Global middleware
@@ -301,10 +297,10 @@ const app = new Elysia()
   .use(errorHandler)
 
   // Health check
-  .get("/health", async () => {
+  .get('/health', async () => {
     const dbHealth = await checkDatabaseHealth();
     return {
-      status: dbHealth.healthy ? "healthy" : "unhealthy",
+      status: dbHealth.healthy ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
       services: { database: dbHealth },
     };
@@ -319,7 +315,7 @@ const app = new Elysia()
   // Start server
   .listen(process.env.PORT || 3001);
 
-logger.info("Server started", {
+logger.info('Server started', {
   port: app.server?.port,
   environment: process.env.NODE_ENV,
 });
@@ -332,20 +328,20 @@ export { app };
 ### In Controllers
 
 ```typescript
-import { logger } from "../services/logger";
+import { logger } from '../services/logger';
 
 export class PropertyController {
   static async create(ctx: Context) {
     const { requestLogger } = ctx;
 
-    requestLogger.debug("Creating property", { body: ctx.body });
+    requestLogger.debug('Creating property', { body: ctx.body });
 
     try {
       const property = await propertyRepository.create(ctx.body);
-      requestLogger.info("Property created", { propertyId: property.id });
+      requestLogger.info('Property created', { propertyId: property.id });
       return property;
     } catch (error) {
-      requestLogger.error("Failed to create property", error as Error);
+      requestLogger.error('Failed to create property', error as Error);
       throw error;
     }
   }
@@ -355,25 +351,25 @@ export class PropertyController {
 ### Direct Usage
 
 ```typescript
-import { logger } from "./services/logger";
+import { logger } from './services/logger';
 
 // Simple logging
-logger.info("Application starting");
-logger.debug("Configuration loaded", { config });
+logger.info('Application starting');
+logger.debug('Configuration loaded', { config });
 
 // With context
-logger.info("User authenticated", { userId: "abc123" });
+logger.info('User authenticated', { userId: 'abc123' });
 
 // Error logging
 try {
   await riskyOperation();
 } catch (error) {
-  logger.error("Operation failed", error as Error, { operationId: "xyz" });
+  logger.error('Operation failed', error as Error, { operationId: 'xyz' });
 }
 
 // Child logger with persistent context
-const userLogger = logger.child({ userId: "abc123" });
-userLogger.info("User action"); // Includes userId in all logs
+const userLogger = logger.child({ userId: 'abc123' });
+userLogger.info('User action'); // Includes userId in all logs
 ```
 
 ## Sample Log Output
@@ -412,19 +408,19 @@ userLogger.info("User action"); // Includes userId in all logs
 
 ## Related Resources
 
-| Resource           | Link                                                                                       |
-| ------------------ | ------------------------------------------------------------------------------------------ |
+| Resource | Link |
+|----------|------|
 | Structured Logging | https://www.loggly.com/blog/why-json-is-the-best-application-log-format-and-how-to-switch/ |
-| Elysia Lifecycle   | https://elysiajs.com/concept/lifecycle.html                                                |
+| Elysia Lifecycle | https://elysiajs.com/concept/lifecycle.html |
 
 ## Verification Checklist
 
-| Item                       | Status |
-| -------------------------- | ------ |
-| Logger service created     |        |
-| Request middleware created |        |
-| JSON output working        |        |
-| Log levels filtering       |        |
-| Request timing logged      |        |
-| Request ID in headers      |        |
-| Error stack traces         |        |
+| Item | Status |
+|------|--------|
+| Logger service created | |
+| Request middleware created | |
+| JSON output working | |
+| Log levels filtering | |
+| Request timing logged | |
+| Request ID in headers | |
+| Error stack traces | |

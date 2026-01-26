@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                                       |
-| --------------- | ------------------------------------------- |
-| Issue ID        | C1-003                                      |
-| Title           | Implement property token storage structures |
-| Area            | CONTRACT                                    |
-| Difficulty      | High                                        |
-| Labels          | smart-contract, soroban, high               |
-| Dependencies    | None                                        |
-| Estimated Lines | 250-350                                     |
+| Attribute | Value |
+|-----------|-------|
+| Issue ID | C1-003 |
+| Title | Implement property token storage structures |
+| Area | CONTRACT |
+| Difficulty | High |
+| Labels | smart-contract, soroban, high |
+| Dependencies | None |
+| Estimated Lines | 250-350 |
 
 ## Overview
 
@@ -596,20 +596,20 @@ fn test_share_balance() {
 
 ## Related Resources
 
-| Resource                      | Link                                                                      |
-| ----------------------------- | ------------------------------------------------------------------------- |
-| Soroban Storage Documentation | https://soroban.stellar.org/docs/learn/persisting-data                    |
-| Soroban SDK Reference         | https://docs.rs/soroban-sdk/latest/soroban_sdk/                           |
-| Storage Best Practices        | https://soroban.stellar.org/docs/fundamentals-and-concepts/state-archival |
+| Resource | Link |
+|----------|------|
+| Soroban Storage Documentation | https://soroban.stellar.org/docs/learn/persisting-data |
+| Soroban SDK Reference | https://docs.rs/soroban-sdk/latest/soroban_sdk/ |
+| Storage Best Practices | https://soroban.stellar.org/docs/fundamentals-and-concepts/state-archival |
 
 ## Verification Checklist
 
-| Item                        | Status |
-| --------------------------- | ------ |
-| All storage structs defined |        |
-| Storage keys are unique     |        |
-| TTL extensions implemented  |        |
-| Helper functions complete   |        |
-| Unit tests passing          |        |
-| cargo clippy clean          |        |
-| Documentation complete      |        |
+| Item | Status |
+|------|--------|
+| All storage structs defined | |
+| Storage keys are unique | |
+| TTL extensions implemented | |
+| Helper functions complete | |
+| Unit tests passing | |
+| cargo clippy clean | |
+| Documentation complete | |

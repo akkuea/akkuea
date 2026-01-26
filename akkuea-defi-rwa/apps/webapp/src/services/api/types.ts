@@ -34,7 +34,7 @@ export interface PaginationParams {
   page?: number;
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 /**
@@ -58,10 +58,10 @@ export class ApiRequestError extends Error {
     public status: number,
     public code: string,
     message: string,
-    public details?: Record<string, unknown>
+    public details?: Record<string, unknown>,
   ) {
     super(message);
-    this.name = 'ApiRequestError';
+    this.name = "ApiRequestError";
     // Ensure proper prototype chain for instanceof checks
     Object.setPrototypeOf(this, ApiRequestError.prototype);
   }
@@ -81,17 +81,17 @@ export class ApiRequestError extends Error {
 }
 
 export class AuthenticationError extends ApiRequestError {
-  constructor(message: string = 'Authentication required') {
-    super(401, 'UNAUTHORIZED', message);
-    this.name = 'AuthenticationError';
+  constructor(message: string = "Authentication required") {
+    super(401, "UNAUTHORIZED", message);
+    this.name = "AuthenticationError";
     Object.setPrototypeOf(this, AuthenticationError.prototype);
   }
 }
 
 export class NetworkError extends Error {
-  constructor(message: string = 'Network error occurred') {
+  constructor(message: string = "Network error occurred") {
     super(message);
-    this.name = 'NetworkError';
+    this.name = "NetworkError";
     Object.setPrototypeOf(this, NetworkError.prototype);
   }
 
@@ -107,9 +107,9 @@ export class NetworkError extends Error {
 }
 
 export class TimeoutError extends Error {
-  constructor(message: string = 'Request timed out') {
+  constructor(message: string = "Request timed out") {
     super(message);
-    this.name = 'TimeoutError';
+    this.name = "TimeoutError";
     Object.setPrototypeOf(this, TimeoutError.prototype);
   }
 

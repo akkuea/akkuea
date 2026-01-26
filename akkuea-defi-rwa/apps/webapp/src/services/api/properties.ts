@@ -1,6 +1,6 @@
-import type { PropertyInfo, ShareOwnership } from '@real-estate-defi/shared';
-import { apiClient } from './client';
-import type { PaginatedResponse, PaginationParams } from './types';
+import type { PropertyInfo, ShareOwnership } from "@real-estate-defi/shared";
+import { apiClient } from "./client";
+import type { PaginatedResponse, PaginationParams } from "./types";
 
 /**
  * Property creation payload
@@ -40,7 +40,7 @@ export const propertyApi = {
    * Get all properties with pagination
    */
   async getAll(
-    params?: PaginationParams & PropertyFilters
+    params?: PaginationParams & PropertyFilters,
   ): Promise<PaginatedResponse<PropertyInfo>> {
     const searchParams = new URLSearchParams();
     if (params) {
@@ -51,7 +51,7 @@ export const propertyApi = {
       });
     }
     const query = searchParams.toString();
-    const path = `/properties${query ? `?${query}` : ''}`;
+    const path = `/properties${query ? `?${query}` : ""}`;
     const response = await apiClient.get<PaginatedResponse<PropertyInfo>>(path);
     return response.data;
   },
@@ -68,17 +68,20 @@ export const propertyApi = {
    * Create new property
    */
   async create(payload: CreatePropertyPayload): Promise<PropertyInfo> {
-    const response = await apiClient.post<PropertyInfo>('/properties', payload);
+    const response = await apiClient.post<PropertyInfo>("/properties", payload);
     return response.data;
   },
 
   /**
    * Tokenize property
    */
-  async tokenize(id: string): Promise<{ tokenAddress: string; transactionHash: string }> {
-    const response = await apiClient.post<{ tokenAddress: string; transactionHash: string }>(
-      `/properties/${id}/tokenize`
-    );
+  async tokenize(
+    id: string,
+  ): Promise<{ tokenAddress: string; transactionHash: string }> {
+    const response = await apiClient.post<{
+      tokenAddress: string;
+      transactionHash: string;
+    }>(`/properties/${id}/tokenize`);
     return response.data;
   },
 
@@ -87,21 +90,24 @@ export const propertyApi = {
    */
   async buyShares(
     id: string,
-    shares: number
+    shares: number,
   ): Promise<{ transactionHash: string; newBalance: number }> {
-    const response = await apiClient.post<{ transactionHash: string; newBalance: number }>(
-      `/properties/${id}/buy-shares`,
-      { shares }
-    );
+    const response = await apiClient.post<{
+      transactionHash: string;
+      newBalance: number;
+    }>(`/properties/${id}/buy-shares`, { shares });
     return response.data;
   },
 
   /**
    * Get user's share holdings for a property
    */
-  async getShares(propertyId: string, ownerAddress: string): Promise<ShareOwnership | null> {
+  async getShares(
+    propertyId: string,
+    ownerAddress: string,
+  ): Promise<ShareOwnership | null> {
     const response = await apiClient.get<ShareOwnership | null>(
-      `/properties/${propertyId}/shares/${ownerAddress}`
+      `/properties/${propertyId}/shares/${ownerAddress}`,
     );
     return response.data;
   },

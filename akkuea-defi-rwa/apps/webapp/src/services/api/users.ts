@@ -1,5 +1,5 @@
-import type { User, Transaction, KycDocument } from '@real-estate-defi/shared';
-import { apiClient } from './client';
+import type { User, Transaction, KycDocument } from "@real-estate-defi/shared";
+import { apiClient } from "./client";
 
 /**
  * Connect wallet payload
@@ -15,7 +15,7 @@ export interface ConnectWalletPayload {
 export interface SubmitKycPayload {
   userId: string;
   documents: {
-    type: 'passport' | 'id_card' | 'proof_of_address' | 'other';
+    type: "passport" | "id_card" | "proof_of_address" | "other";
     documentUrl: string;
   }[];
 }
@@ -37,11 +37,11 @@ export const userApi = {
    */
   async connectWallet(
     address: string,
-    payload: ConnectWalletPayload
+    payload: ConnectWalletPayload,
   ): Promise<{ token: string; user: User }> {
     const response = await apiClient.post<{ token: string; user: User }>(
       `/users/${address}/wallet`,
-      payload
+      payload,
     );
     return response.data;
   },
@@ -50,7 +50,9 @@ export const userApi = {
    * Get user's transactions
    */
   async getTransactions(address: string): Promise<Transaction[]> {
-    const response = await apiClient.get<Transaction[]>(`/users/${address}/transactions`);
+    const response = await apiClient.get<Transaction[]>(
+      `/users/${address}/transactions`,
+    );
     return response.data;
   },
 
@@ -73,9 +75,11 @@ export const userApi = {
   /**
    * Get KYC status
    */
-  async getKycStatus(userId: string): Promise<{ status: string; tier?: string }> {
+  async getKycStatus(
+    userId: string,
+  ): Promise<{ status: string; tier?: string }> {
     const response = await apiClient.get<{ status: string; tier?: string }>(
-      `/kyc/status/${userId}`
+      `/kyc/status/${userId}`,
     );
     return response.data;
   },
@@ -83,10 +87,12 @@ export const userApi = {
   /**
    * Submit KYC for verification
    */
-  async submitKyc(payload: SubmitKycPayload): Promise<{ status: string; message: string }> {
+  async submitKyc(
+    payload: SubmitKycPayload,
+  ): Promise<{ status: string; message: string }> {
     const response = await apiClient.post<{ status: string; message: string }>(
-      '/kyc/submit',
-      payload
+      "/kyc/submit",
+      payload,
     );
     return response.data;
   },
@@ -95,7 +101,9 @@ export const userApi = {
    * Get user's KYC documents
    */
   async getKycDocuments(userId: string): Promise<KycDocument[]> {
-    const response = await apiClient.get<KycDocument[]>(`/kyc/documents/${userId}`);
+    const response = await apiClient.get<KycDocument[]>(
+      `/kyc/documents/${userId}`,
+    );
     return response.data;
   },
 };

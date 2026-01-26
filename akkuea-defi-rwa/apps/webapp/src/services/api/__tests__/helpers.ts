@@ -17,13 +17,15 @@ export interface MockFetchCall {
 
 export type FetchMock = (
   input: RequestInfo | URL,
-  options?: RequestInit
+  options?: RequestInit,
 ) => Promise<Response>;
 
 export function wrapFetchMock(mockFn: FetchMock): typeof fetch;
-export function wrapFetchMock(mockFn: (...args: unknown[]) => unknown): typeof fetch;
 export function wrapFetchMock(
-  mockFn: FetchMock | ((...args: unknown[]) => unknown)
+  mockFn: (...args: unknown[]) => unknown,
+): typeof fetch;
+export function wrapFetchMock(
+  mockFn: FetchMock | ((...args: unknown[]) => unknown),
 ): typeof fetch {
   const typed = mockFn as unknown as typeof fetch;
   if (!typed.preconnect) {
@@ -36,29 +38,23 @@ export function wrapFetchMock(
 /**
  * Create a mock Response object
  */
-export function createMockResponse(
-  response: MockFetchResponse
-): Response {
-  const {
-    status = 200,
-    statusText = 'OK',
-    body = {},
-    headers = {},
-  } = response;
+export function createMockResponse(response: MockFetchResponse): Response {
+  const { status = 200, statusText = "OK", body = {}, headers = {} } = response;
 
   // Handle null body case
   const hasBody = body !== null && body !== undefined;
   const isSuccess = status >= 200 && status < 300;
-  const contentType = headers['Content-Type'] || (hasBody ? 'application/json' : 'text/plain');
+  const contentType =
+    headers["Content-Type"] || (hasBody ? "application/json" : "text/plain");
 
   const mockResponse = {
     ok: isSuccess,
     status,
     statusText,
     headers: new Headers({
-      'Content-Type': contentType,
+      "Content-Type": contentType,
       ...headers,
-      ...(hasBody ? {} : { 'Content-Length': '0' }),
+      ...(hasBody ? {} : { "Content-Length": "0" }),
     }),
     json: async () => {
       // For 204 No Content, return empty object
@@ -67,8 +63,8 @@ export function createMockResponse(
       }
       // For error responses without body, throw error to simulate failed JSON parse
       if (!hasBody && !isSuccess) {
-        const error = new Error('Unexpected end of JSON input');
-        error.name = 'SyntaxError';
+        const error = new Error("Unexpected end of JSON input");
+        error.name = "SyntaxError";
         throw error;
       }
       // For success responses without body, return null
@@ -79,9 +75,9 @@ export function createMockResponse(
     },
     text: async () => {
       if (!hasBody) {
-        return '';
+        return "";
       }
-      return typeof body === 'string' ? body : JSON.stringify(body);
+      return typeof body === "string" ? body : JSON.stringify(body);
     },
   } as Response;
 
@@ -92,7 +88,7 @@ export function createMockResponse(
  * Setup mock fetch with response configuration
  */
 export function setupMockFetch(
-  responses: MockFetchResponse | MockFetchResponse[]
+  responses: MockFetchResponse | MockFetchResponse[],
 ): {
   fetchMock: typeof fetch;
   calls: MockFetchCall[];
@@ -104,14 +100,14 @@ export function setupMockFetch(
 
   const fetchMock: FetchMock = async (
     input: RequestInfo | URL,
-    options?: RequestInit
+    options?: RequestInit,
   ): Promise<Response> => {
     const url =
-      typeof input === 'string'
+      typeof input === "string"
         ? input
         : input instanceof URL
-        ? input.toString()
-        : input.url;
+          ? input.toString()
+          : input.url;
     calls.push({ url, options: options || {} });
 
     const responseConfig = responseArray[responseIndex] || responseArray[0];
@@ -119,8 +115,8 @@ export function setupMockFetch(
 
     // Check if request was aborted before starting
     if (options?.signal?.aborted) {
-      const abortError = new Error('The operation was aborted.');
-      abortError.name = 'AbortError';
+      const abortError = new Error("The operation was aborted.");
+      abortError.name = "AbortError";
       throw abortError;
     }
 
@@ -130,8 +126,8 @@ export function setupMockFetch(
         const timeoutId = setTimeout(() => {
           // Check if aborted after delay
           if (options?.signal?.aborted) {
-            const abortError = new Error('The operation was aborted.');
-            abortError.name = 'AbortError';
+            const abortError = new Error("The operation was aborted.");
+            abortError.name = "AbortError";
             reject(abortError);
             return;
           }
@@ -142,19 +138,19 @@ export function setupMockFetch(
         if (options?.signal) {
           const abortHandler = () => {
             clearTimeout(timeoutId);
-            const abortError = new Error('The operation was aborted.');
-            abortError.name = 'AbortError';
+            const abortError = new Error("The operation was aborted.");
+            abortError.name = "AbortError";
             reject(abortError);
           };
-          options.signal.addEventListener('abort', abortHandler);
+          options.signal.addEventListener("abort", abortHandler);
         }
       });
     }
 
     // Check again if aborted after delay (if no delay was set)
     if (options?.signal?.aborted) {
-      const abortError = new Error('The operation was aborted.');
-      abortError.name = 'AbortError';
+      const abortError = new Error("The operation was aborted.");
+      abortError.name = "AbortError";
       throw abortError;
     }
 
@@ -203,7 +199,7 @@ export function setupMockLocalStorage(): {
  */
 export function createDelayedPromise<T>(
   delay: number,
-  resolveValue?: T
+  resolveValue?: T,
 ): Promise<T> {
   return new Promise((resolve) => {
     setTimeout(() => resolve(resolveValue as T), delay);

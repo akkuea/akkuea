@@ -1,5 +1,9 @@
-import type { LendingPool, DepositPosition, BorrowPosition } from '@real-estate-defi/shared';
-import { apiClient } from './client';
+import type {
+  LendingPool,
+  DepositPosition,
+  BorrowPosition,
+} from "@real-estate-defi/shared";
+import { apiClient } from "./client";
 
 /**
  * Deposit payload
@@ -27,7 +31,7 @@ export const lendingApi = {
    * Get all lending pools
    */
   async getPools(): Promise<LendingPool[]> {
-    const response = await apiClient.get<LendingPool[]>('/lending/pools');
+    const response = await apiClient.get<LendingPool[]>("/lending/pools");
     return response.data;
   },
 
@@ -44,7 +48,7 @@ export const lendingApi = {
    */
   async deposit(
     poolId: string,
-    payload: DepositPayload
+    payload: DepositPayload,
   ): Promise<{ transactionHash: string; position: DepositPosition }> {
     const response = await apiClient.post<{
       transactionHash: string;
@@ -58,7 +62,7 @@ export const lendingApi = {
    */
   async borrow(
     poolId: string,
-    payload: BorrowPayload
+    payload: BorrowPayload,
   ): Promise<{ transactionHash: string; position: BorrowPosition }> {
     const response = await apiClient.post<{
       transactionHash: string;
@@ -70,9 +74,12 @@ export const lendingApi = {
   /**
    * Get user's deposit positions
    */
-  async getUserDeposits(poolId: string, userAddress: string): Promise<DepositPosition[]> {
+  async getUserDeposits(
+    poolId: string,
+    userAddress: string,
+  ): Promise<DepositPosition[]> {
     const response = await apiClient.get<DepositPosition[]>(
-      `/lending/pools/${poolId}/user/${userAddress}/deposits`
+      `/lending/pools/${poolId}/user/${userAddress}/deposits`,
     );
     return response.data;
   },
@@ -80,9 +87,12 @@ export const lendingApi = {
   /**
    * Get user's borrow positions
    */
-  async getUserBorrows(poolId: string, userAddress: string): Promise<BorrowPosition[]> {
+  async getUserBorrows(
+    poolId: string,
+    userAddress: string,
+  ): Promise<BorrowPosition[]> {
     const response = await apiClient.get<BorrowPosition[]>(
-      `/lending/pools/${poolId}/user/${userAddress}/borrows`
+      `/lending/pools/${poolId}/user/${userAddress}/borrows`,
     );
     return response.data;
   },

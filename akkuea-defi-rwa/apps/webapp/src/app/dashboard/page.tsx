@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   Wallet,
@@ -352,9 +353,11 @@ export default function DashboardPage() {
                       className="p-4 flex items-center gap-4 hover:bg-[#0a0a0a] transition-colors cursor-pointer"
                     >
                       <div className="w-14 h-14 rounded-lg bg-[#1a1a1a] overflow-hidden flex-shrink-0">
-                        <img
+                        <Image
                           src={property.image}
                           alt={property.name}
+                          width={56}
+                          height={56}
                           className="w-full h-full object-cover"
                         />
                       </div>

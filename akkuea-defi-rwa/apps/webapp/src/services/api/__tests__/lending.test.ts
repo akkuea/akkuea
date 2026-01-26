@@ -1,41 +1,44 @@
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
-import { lendingApi } from '../lending';
-import { setupMockFetch, wrapFetchMock } from './helpers';
-import type { BorrowPosition, DepositPosition, LendingPool } from '@real-estate-defi/shared';
+import { describe, it, expect, beforeEach, mock } from "bun:test";
+import { lendingApi } from "../lending";
+import { setupMockFetch, wrapFetchMock } from "./helpers";
+import type {
+  BorrowPosition,
+  DepositPosition,
+  LendingPool,
+} from "@real-estate-defi/shared";
 
-describe('Lending API', () => {
-  let originalFetch: typeof fetch;
-
+describe("Lending API", () => {
   beforeEach(() => {
-    originalFetch = global.fetch;
-    global.fetch = wrapFetchMock(mock(() => {
-      throw new Error('fetch not mocked');
-    }));
+    global.fetch = wrapFetchMock(
+      mock(() => {
+        throw new Error("fetch not mocked");
+      }),
+    );
   });
 
-  describe('getPools', () => {
-    it('fetches all lending pools', async () => {
+  describe("getPools", () => {
+    it("fetches all lending pools", async () => {
       const mockPools: LendingPool[] = [
         {
-          id: '1',
-          assetSymbol: 'USD',
+          id: "1",
+          assetSymbol: "USD",
           baseRate: 2.5,
           collateralFactor: 0.6,
           totalDeposits: 1000000,
           totalBorrows: 500000,
-          depositors: ['0xuser...'],
-          borrowers: ['0xborrower...'],
+          depositors: ["0xuser..."],
+          borrowers: ["0xborrower..."],
           isActive: true,
         },
         {
-          id: '2',
-          assetSymbol: 'USD',
+          id: "2",
+          assetSymbol: "USD",
           baseRate: 3.1,
           collateralFactor: 0.65,
           totalDeposits: 2000000,
           totalBorrows: 1200000,
-          depositors: ['0xuser2...'],
-          borrowers: ['0xborrower2...'],
+          depositors: ["0xuser2..."],
+          borrowers: ["0xborrower2..."],
           isActive: true,
         },
       ];
@@ -49,22 +52,22 @@ describe('Lending API', () => {
       const result = await lendingApi.getPools();
 
       expect(result).toEqual(mockPools);
-      expect(calls[0].url).toBe('http://localhost:3001/lending/pools');
-      expect(calls[0].options.method).toBe('GET');
+      expect(calls[0].url).toBe("http://localhost:3001/lending/pools");
+      expect(calls[0].options.method).toBe("GET");
     });
   });
 
-  describe('getPool', () => {
-    it('fetches pool by ID', async () => {
+  describe("getPool", () => {
+    it("fetches pool by ID", async () => {
       const mockPool: LendingPool = {
-        id: '123',
-        assetSymbol: 'USD',
+        id: "123",
+        assetSymbol: "USD",
         baseRate: 2.5,
         collateralFactor: 0.6,
         totalDeposits: 1000000,
         totalBorrows: 500000,
-        depositors: ['0xuser...'],
-        borrowers: ['0xborrower...'],
+        depositors: ["0xuser..."],
+        borrowers: ["0xborrower..."],
         isActive: true,
       };
 
@@ -74,26 +77,29 @@ describe('Lending API', () => {
       });
       global.fetch = fetchMock;
 
-      const result = await lendingApi.getPool('123');
+      const result = await lendingApi.getPool("123");
 
       expect(result).toEqual(mockPool);
-      expect(calls[0].url).toBe('http://localhost:3001/lending/pools/123');
-      expect(calls[0].options.method).toBe('GET');
+      expect(calls[0].url).toBe("http://localhost:3001/lending/pools/123");
+      expect(calls[0].options.method).toBe("GET");
     });
   });
 
-  describe('deposit', () => {
-    it('deposits into pool', async () => {
+  describe("deposit", () => {
+    it("deposits into pool", async () => {
       const depositPayload = {
-        user: '0xuser...',
+        user: "0xuser...",
         amount: 1000,
       };
 
-      const mockResponse: { transactionHash: string; position: DepositPosition } = {
-        transactionHash: '0xtx...',
+      const mockResponse: {
+        transactionHash: string;
+        position: DepositPosition;
+      } = {
+        transactionHash: "0xtx...",
         position: {
-          poolId: '123',
-          user: '0xuser...',
+          poolId: "123",
+          user: "0xuser...",
           amount: 1000,
           depositDate: new Date(),
           accruedInterest: 12.5,
@@ -106,30 +112,37 @@ describe('Lending API', () => {
       });
       global.fetch = fetchMock;
 
-      const result = await lendingApi.deposit('123', depositPayload);
+      const result = await lendingApi.deposit("123", depositPayload);
 
       expect(result).toEqual(mockResponse);
-      expect(calls[0].url).toBe('http://localhost:3001/lending/pools/123/deposit');
-      expect(calls[0].options.method).toBe('POST');
-      expect(JSON.parse(calls[0].options.body as string)).toEqual(depositPayload);
+      expect(calls[0].url).toBe(
+        "http://localhost:3001/lending/pools/123/deposit",
+      );
+      expect(calls[0].options.method).toBe("POST");
+      expect(JSON.parse(calls[0].options.body as string)).toEqual(
+        depositPayload,
+      );
     });
   });
 
-  describe('borrow', () => {
-    it('borrows from pool', async () => {
+  describe("borrow", () => {
+    it("borrows from pool", async () => {
       const borrowPayload = {
-        borrower: '0xborrower...',
-        collateralPropertyId: 'prop123',
+        borrower: "0xborrower...",
+        collateralPropertyId: "prop123",
         collateralShares: 10,
         borrowAmount: 5000,
       };
 
-      const mockResponse: { transactionHash: string; position: BorrowPosition } = {
-        transactionHash: '0xtx...',
+      const mockResponse: {
+        transactionHash: string;
+        position: BorrowPosition;
+      } = {
+        transactionHash: "0xtx...",
         position: {
-          poolId: '123',
-          borrower: '0xborrower...',
-          collateralPropertyId: 'prop123',
+          poolId: "123",
+          borrower: "0xborrower...",
+          collateralPropertyId: "prop123",
           collateralShares: 10,
           borrowAmount: 5000,
           borrowDate: new Date(),
@@ -144,28 +157,32 @@ describe('Lending API', () => {
       });
       global.fetch = fetchMock;
 
-      const result = await lendingApi.borrow('123', borrowPayload);
+      const result = await lendingApi.borrow("123", borrowPayload);
 
       expect(result).toEqual(mockResponse);
-      expect(calls[0].url).toBe('http://localhost:3001/lending/pools/123/borrow');
-      expect(calls[0].options.method).toBe('POST');
-      expect(JSON.parse(calls[0].options.body as string)).toEqual(borrowPayload);
+      expect(calls[0].url).toBe(
+        "http://localhost:3001/lending/pools/123/borrow",
+      );
+      expect(calls[0].options.method).toBe("POST");
+      expect(JSON.parse(calls[0].options.body as string)).toEqual(
+        borrowPayload,
+      );
     });
   });
 
-  describe('getUserDeposits', () => {
-    it('gets user deposit positions', async () => {
+  describe("getUserDeposits", () => {
+    it("gets user deposit positions", async () => {
       const mockDeposits: DepositPosition[] = [
         {
-          poolId: '123',
-          user: '0xuser...',
+          poolId: "123",
+          user: "0xuser...",
           amount: 1000,
           depositDate: new Date(),
           accruedInterest: 5.2,
         },
         {
-          poolId: '123',
-          user: '0xuser...',
+          poolId: "123",
+          user: "0xuser...",
           amount: 2000,
           depositDate: new Date(),
           accruedInterest: 8.1,
@@ -178,23 +195,23 @@ describe('Lending API', () => {
       });
       global.fetch = fetchMock;
 
-      const result = await lendingApi.getUserDeposits('123', '0xuser...');
+      const result = await lendingApi.getUserDeposits("123", "0xuser...");
 
       expect(result).toEqual(mockDeposits);
       expect(calls[0].url).toBe(
-        'http://localhost:3001/lending/pools/123/user/0xuser.../deposits'
+        "http://localhost:3001/lending/pools/123/user/0xuser.../deposits",
       );
-      expect(calls[0].options.method).toBe('GET');
+      expect(calls[0].options.method).toBe("GET");
     });
   });
 
-  describe('getUserBorrows', () => {
-    it('gets user borrow positions', async () => {
+  describe("getUserBorrows", () => {
+    it("gets user borrow positions", async () => {
       const mockBorrows: BorrowPosition[] = [
         {
-          poolId: '123',
-          borrower: '0xuser...',
-          collateralPropertyId: 'prop123',
+          poolId: "123",
+          borrower: "0xuser...",
+          collateralPropertyId: "prop123",
           collateralShares: 10,
           borrowAmount: 5000,
           borrowDate: new Date(),
@@ -209,13 +226,13 @@ describe('Lending API', () => {
       });
       global.fetch = fetchMock;
 
-      const result = await lendingApi.getUserBorrows('123', '0xuser...');
+      const result = await lendingApi.getUserBorrows("123", "0xuser...");
 
       expect(result).toEqual(mockBorrows);
       expect(calls[0].url).toBe(
-        'http://localhost:3001/lending/pools/123/user/0xuser.../borrows'
+        "http://localhost:3001/lending/pools/123/user/0xuser.../borrows",
       );
-      expect(calls[0].options.method).toBe('GET');
+      expect(calls[0].options.method).toBe("GET");
     });
   });
 });

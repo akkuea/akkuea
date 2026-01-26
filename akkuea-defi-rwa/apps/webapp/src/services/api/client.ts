@@ -5,7 +5,7 @@ import {
   NetworkError,
   TimeoutError,
   RequestConfig,
-} from './types';
+} from "./types";
 
 const DEFAULT_TIMEOUT = 30000; // 30 seconds
 const DEFAULT_RETRIES = 3;
@@ -32,14 +32,14 @@ export function createApiClient(config: ApiClientConfig) {
    */
   function buildHeaders(customHeaders?: Record<string, string>): Headers {
     const headers = new Headers({
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...defaultHeaders,
       ...customHeaders,
     });
 
     const token = getAuthToken?.();
     if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+      headers.set("Authorization", `Bearer ${token}`);
     }
 
     return headers;
@@ -51,7 +51,7 @@ export function createApiClient(config: ApiClientConfig) {
   async function fetchWithTimeout(
     url: string,
     options: RequestInit,
-    timeout: number
+    timeout: number,
   ): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -63,8 +63,10 @@ export function createApiClient(config: ApiClientConfig) {
       });
       return response;
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new TimeoutError(`Request to ${url} timed out after ${timeout}ms`);
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new TimeoutError(
+          `Request to ${url} timed out after ${timeout}ms`,
+        );
       }
       throw error;
     } finally {
@@ -89,34 +91,36 @@ export function createApiClient(config: ApiClientConfig) {
   /**
    * Parse error response
    */
-  async function parseErrorResponse(response: Response): Promise<ApiRequestError> {
+  async function parseErrorResponse(
+    response: Response,
+  ): Promise<ApiRequestError> {
     // Check if response has a body
-    const contentType = response.headers.get('content-type');
-    const hasJsonBody = contentType && contentType.includes('application/json');
-    
+    const contentType = response.headers.get("content-type");
+    const hasJsonBody = contentType && contentType.includes("application/json");
+
     // Check if body exists and is not empty
-    const contentLength = response.headers.get('content-length');
-    const hasBody = contentLength !== '0' && hasJsonBody;
-    
+    const contentLength = response.headers.get("content-length");
+    const hasBody = contentLength !== "0" && hasJsonBody;
+
     if (hasBody) {
       try {
         const body = await response.json();
         return new ApiRequestError(
           response.status,
-          body.code || 'UNKNOWN_ERROR',
+          body.code || "UNKNOWN_ERROR",
           body.message || response.statusText,
-          body.details
+          body.details,
         );
       } catch {
         // If JSON parsing fails, fall through to default error
       }
     }
-    
+
     // For responses without body, return error with status text
     return new ApiRequestError(
       response.status,
-      'UNKNOWN_ERROR',
-      response.statusText || 'Unknown error occurred'
+      "UNKNOWN_ERROR",
+      response.statusText || "Unknown error occurred",
     );
   }
 
@@ -127,7 +131,7 @@ export function createApiClient(config: ApiClientConfig) {
     method: string,
     path: string,
     body?: unknown,
-    config: RequestConfig = {}
+    config: RequestConfig = {},
   ): Promise<ApiResponse<T>> {
     const {
       headers: customHeaders,
@@ -181,7 +185,7 @@ export function createApiClient(config: ApiClientConfig) {
             status: response.status,
           };
         }
-        
+
         // Try to parse JSON, but handle empty responses
         let data: T;
         try {
@@ -197,13 +201,16 @@ export function createApiClient(config: ApiClientConfig) {
             throw error;
           }
         }
-        
+
         return {
           data: data as T,
           status: response.status,
         };
       } catch (error) {
-        if (error instanceof AuthenticationError || error instanceof ApiRequestError) {
+        if (
+          error instanceof AuthenticationError ||
+          error instanceof ApiRequestError
+        ) {
           throw error;
         }
 
@@ -226,12 +233,12 @@ export function createApiClient(config: ApiClientConfig) {
         }
 
         throw new NetworkError(
-          error instanceof Error ? error.message : 'Network request failed'
+          error instanceof Error ? error.message : "Network request failed",
         );
       }
     }
 
-    throw lastError || new NetworkError('Request failed after retries');
+    throw lastError || new NetworkError("Request failed after retries");
   }
 
   return {
@@ -239,35 +246,47 @@ export function createApiClient(config: ApiClientConfig) {
      * GET request
      */
     get<T>(path: string, config?: RequestConfig): Promise<ApiResponse<T>> {
-      return request<T>('GET', path, undefined, config);
+      return request<T>("GET", path, undefined, config);
     },
 
     /**
      * POST request
      */
-    post<T>(path: string, body?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> {
-      return request<T>('POST', path, body, config);
+    post<T>(
+      path: string,
+      body?: unknown,
+      config?: RequestConfig,
+    ): Promise<ApiResponse<T>> {
+      return request<T>("POST", path, body, config);
     },
 
     /**
      * PUT request
      */
-    put<T>(path: string, body?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> {
-      return request<T>('PUT', path, body, config);
+    put<T>(
+      path: string,
+      body?: unknown,
+      config?: RequestConfig,
+    ): Promise<ApiResponse<T>> {
+      return request<T>("PUT", path, body, config);
     },
 
     /**
      * PATCH request
      */
-    patch<T>(path: string, body?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> {
-      return request<T>('PATCH', path, body, config);
+    patch<T>(
+      path: string,
+      body?: unknown,
+      config?: RequestConfig,
+    ): Promise<ApiResponse<T>> {
+      return request<T>("PATCH", path, body, config);
     },
 
     /**
      * DELETE request
      */
     delete<T>(path: string, config?: RequestConfig): Promise<ApiResponse<T>> {
-      return request<T>('DELETE', path, undefined, config);
+      return request<T>("DELETE", path, undefined, config);
     },
   };
 }
@@ -279,8 +298,8 @@ export function createApiClient(config: ApiClientConfig) {
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore - process.env is available in Next.js runtime but TypeScript doesn't recognize it
 const API_BASE_URL =
-  (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_API_URL) ||
-  'http://localhost:3001';
+  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) ||
+  "http://localhost:3001";
 
 const getApiBaseUrl = (): string => {
   return API_BASE_URL;
@@ -292,15 +311,15 @@ const getApiBaseUrl = (): string => {
 export const apiClient = createApiClient({
   baseUrl: getApiBaseUrl(),
   getAuthToken: () => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token');
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("auth_token");
     }
     return null;
   },
   onUnauthorized: () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('auth_token');
-      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("auth_token");
+      window.dispatchEvent(new CustomEvent("auth:unauthorized"));
     }
   },
 });

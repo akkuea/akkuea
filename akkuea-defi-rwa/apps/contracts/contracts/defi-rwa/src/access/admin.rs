@@ -19,7 +19,7 @@ impl AdminControl {
         }
 
         env.storage().instance().set(&RoleKey::Admin, admin);
-        RoleStorage::grant_role(env, admin, &Role::ADMIN);
+        RoleStorage::grant_role(env, admin, &Role::Admin);
     }
 
     pub fn is_initialized(env: &Env) -> bool {
@@ -57,11 +57,11 @@ impl AdminControl {
             Some(pending_admin) => {
                 if pending_admin == new_admin.clone() {
                     if let Some(old_admin) = Self::get_admin(env) {
-                        RoleStorage::revoke_role(env, &old_admin, &Role::ADMIN);
+                        RoleStorage::revoke_role(env, &old_admin, &Role::Admin);
                     }
 
                     env.storage().instance().set(&RoleKey::Admin, new_admin);
-                    RoleStorage::grant_role(env, new_admin, &Role::ADMIN);
+                    RoleStorage::grant_role(env, new_admin, &Role::Admin);
                     env.storage().instance().remove(&RoleKey::PendingAdmin);
                 }
             }
@@ -91,7 +91,7 @@ impl PauseControl {
 
     pub fn can_pause(env: &Env, address: &Address) -> bool {
         let is_admin = AdminControl::is_admin(env, address);
-        let is_pauser = RoleStorage::has_role(env, address, &Role::PAUSER);
+        let is_pauser = RoleStorage::has_role(env, address, &Role::Pauser);
 
         is_admin || is_pauser
     }

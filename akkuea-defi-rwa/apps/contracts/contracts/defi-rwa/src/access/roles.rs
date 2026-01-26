@@ -4,15 +4,15 @@ use soroban_sdk::{contracttype, Address, Env, Vec};
 #[contracttype]
 pub enum Role {
     // Full administrative privileges
-    ADMIN,
+    Admin,
     // Right to Pause/Resume Contracts
-    PAUSER,
+    Pauser,
     // Right to update oracle prices
-    ORACLE,
+    Oracle,
     // Right to verify property
-    VERIFIER,
+    Verifier,
     // Right to execute liquidations
-    LIQUIDATOR,
+    Liquidator,
 }
 
 #[derive(Clone)]

@@ -8,11 +8,13 @@ export const requestLogger = new Elysia()
             requestId: crypto.randomUUID(),
         };
     })
-    .onRequest(({ request }: any) => {
-        logger.debug('Incoming request', { method: request.method, url: request.url });
+    .onRequest(({ request }) => {
+        logger.debug('Incoming request', {
+            method: request.method,
+            url: request.url,
+        });
     })
-    .onAfterResponse((context: any) => {
-        const { request, set, startTime, requestId } = context;
+    .onAfterResponse(({ request, set, startTime, requestId }) => {
         const diff = process.hrtime(startTime);
         const durationMs = (diff[0] * 1e9 + diff[1]) / 1e6;
 
@@ -20,7 +22,7 @@ export const requestLogger = new Elysia()
             requestId,
             method: request.method,
             url: request.url,
-            status: set.status,
+            status: set.status || 200,
             durationMs,
             userAgent: request.headers.get('user-agent'),
         });

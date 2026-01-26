@@ -8,11 +8,22 @@ interface LogEntry {
     error?: unknown;
 }
 
+const LOG_LEVELS: Record<LogLevel, number> = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3,
+};
+
 export class LoggerService {
     private level: LogLevel = 'info';
 
     constructor(level: LogLevel = 'info') {
         this.level = level;
+    }
+
+    private shouldLog(level: LogLevel): boolean {
+        return LOG_LEVELS[level] >= LOG_LEVELS[this.level];
     }
 
     private formatError(error: unknown): Record<string, unknown> {
@@ -28,6 +39,8 @@ export class LoggerService {
     }
 
     private log(level: LogLevel, message: string, context?: Record<string, unknown>, error?: unknown) {
+        if (!this.shouldLog(level)) return;
+
         const entry: LogEntry = {
             level,
             message,
@@ -46,21 +59,15 @@ export class LoggerService {
     }
 
     debug(message: string, context?: Record<string, unknown>) {
-        if (this.level === 'debug') {
-            this.log('debug', message, context);
-        }
+        this.log('debug', message, context);
     }
 
     info(message: string, context?: Record<string, unknown>) {
-        if (this.level === 'debug' || this.level === 'info') {
-            this.log('info', message, context);
-        }
+        this.log('info', message, context);
     }
 
     warn(message: string, context?: Record<string, unknown>) {
-        if (this.level !== 'error') {
-            this.log('warn', message, context);
-        }
+        this.log('warn', message, context);
     }
 
     error(message: string, error?: unknown, context?: Record<string, unknown>) {

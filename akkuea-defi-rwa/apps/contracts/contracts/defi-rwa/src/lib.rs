@@ -4,10 +4,12 @@
 //! This contract enables tokenization of real-world properties on the Stellar/Soroban blockchain.
 //! It provides functionality for property registration, share management, and ownership tracking.
 
+mod access;
 mod events;
 mod lending;
 mod storage;
 
+pub use access::*;
 pub use events::*;
 pub use lending::*;
 pub use storage::*;

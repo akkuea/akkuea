@@ -465,9 +465,9 @@ fn test_deposit_event() {
             &env,
             pool_id.clone(),
             depositor.clone(),
-            1000_000_000,
-            1000_000_000,
-            5000_000_000,
+            1_000_000_000,
+            1_000_000_000,
+            5_000_000_000,
         );
     });
 
@@ -490,7 +490,7 @@ fn test_borrow_event() {
             pool_id.clone(),
             borrower.clone(),
             500_000_000,
-            1000_000_000,
+            1_000_000_000,
             collateral_asset.clone(),
             1500000000,
         );

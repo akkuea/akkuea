@@ -7,8 +7,10 @@ import { userRoutes } from './routes/users';
 import { kycRoutes } from './routes/kyc';
 import { errorHandler } from './middleware/errorHandler';
 import { checkDatabaseHealth, closeDatabaseConnection } from './db';
+import { requestLogger } from './middleware';
 
 const app = new Elysia()
+  .use(requestLogger)
   .use(cors())
   .use(
     swagger({

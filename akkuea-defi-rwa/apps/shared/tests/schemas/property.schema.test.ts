@@ -21,7 +21,7 @@ describe("propertyInfoSchema", () => {
     documents: [],
     verified: true,
     listedAt: "2024-01-15T10:30:00Z",
-    owner: "GBXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    owner: "GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H",
   };
 
   it("should validate a correct property", () => {

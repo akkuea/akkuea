@@ -3,7 +3,7 @@ import { logger } from '../utils/logger';
 import { BadRequestError, NotFoundError, UnauthorizedError, ForbiddenError } from '../utils/errors';
 
 export class PropertyController {
-  static async getProperties(): Promise<PropertyInfo[]> {
+  static async getProperties(_query?: Record<string, unknown>): Promise<PropertyInfo[]> {
     const startTime = Date.now();
     logger.crud.read('property');
 

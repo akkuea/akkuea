@@ -61,8 +61,13 @@ export const borrowPositionSchema = z.object({
 });
 
 /**
- * Type inference
+ * Type inference - Single source of truth
  */
+export type LendingPool = z.infer<typeof lendingPoolSchema>;
+export type DepositPosition = z.infer<typeof depositPositionSchema>;
+export type BorrowPosition = z.infer<typeof borrowPositionSchema>;
+
+// Keep input types for advanced use cases
 export type LendingPoolInput = z.input<typeof lendingPoolSchema>;
 export type DepositPositionInput = z.input<typeof depositPositionSchema>;
 export type BorrowPositionInput = z.input<typeof borrowPositionSchema>;

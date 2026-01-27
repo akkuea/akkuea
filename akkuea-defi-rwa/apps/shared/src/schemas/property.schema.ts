@@ -73,8 +73,14 @@ export const shareOwnershipSchema = z.object({
 });
 
 /**
- * Type inference from schemas
+ * Type inference from schemas - Single source of truth
  */
+export type PropertyLocation = z.infer<typeof propertyLocationSchema>;
+export type PropertyDocument = z.infer<typeof propertyDocumentSchema>;
+export type PropertyInfo = z.infer<typeof propertyInfoSchema>;
+export type ShareOwnership = z.infer<typeof shareOwnershipSchema>;
+
+// Keep input/output types for advanced use cases
 export type PropertyInfoInput = z.input<typeof propertyInfoSchema>;
 export type PropertyInfoOutput = z.output<typeof propertyInfoSchema>;
 export type ShareOwnershipInput = z.input<typeof shareOwnershipSchema>;

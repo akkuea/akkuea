@@ -102,8 +102,16 @@ export const oraclePriceSchema = z.object({
 });
 
 /**
- * Type inference
+ * Type inference - Single source of truth
  */
+export type KycStatus = z.infer<typeof kycStatusSchema>;
+export type KycTier = z.infer<typeof kycTierSchema>;
+export type KycDocument = z.infer<typeof kycDocumentSchema>;
+export type User = z.infer<typeof userSchema>;
+export type Transaction = z.infer<typeof transactionSchema>;
+export type OraclePrice = z.infer<typeof oraclePriceSchema>;
+
+// Keep input types for advanced use cases
 export type UserInput = z.input<typeof userSchema>;
 export type KycDocumentInput = z.input<typeof kycDocumentSchema>;
 export type TransactionInput = z.input<typeof transactionSchema>;

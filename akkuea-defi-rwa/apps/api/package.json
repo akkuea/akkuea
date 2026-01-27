@@ -12,7 +12,11 @@
     "test": "bun test",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,json}\"",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "bun run src/db/migrate.ts",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "elysia": "^1.4.21",
@@ -21,13 +25,16 @@
     "stellar-sdk": "^13.3.0",
     "soroban-client": "^1.0.1",
     "zod": "^3.25.76",
-    "@real-estate-defi/shared": "workspace:*"
+    "@real-estate-defi/shared": "workspace:*",
+    "drizzle-orm": "^0.38.3",
+    "postgres": "^3.4.5"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "complexity-report": "^2.0.0-alpha",
+    "drizzle-kit": "^1.0.0-beta.12-a5629fb",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.2",
     "prettier": "^3.7.4",

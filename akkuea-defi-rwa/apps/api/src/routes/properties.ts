@@ -2,6 +2,7 @@ import { Elysia } from 'elysia';
 import { z } from 'zod';
 import { validate, uuidParamSchema, paginationQuerySchema } from '../middleware';
 import { PropertyController } from '../controllers/PropertyController';
+import { handleError, BadRequestError, UnauthorizedError } from '../utils/errors';
 
 // Property query schema extending pagination
 const propertyQuerySchema = paginationQuerySchema.extend({
@@ -40,42 +41,112 @@ const buySharesSchema = z.object({
 
 export const propertyRoutes = new Elysia({ prefix: '/properties' })
   // GET /properties - list with filters
-  .get('/', ({ validatedQuery }: any) => {
-    return PropertyController.getProperties(validatedQuery);
+  .get('/', async ({ validatedQuery, set }: any) => {
+    try {
+      return await PropertyController.getProperties(validatedQuery);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
   }, validate({ query: propertyQuerySchema }))
 
   // GET /properties/:id - get single property
-  .get('/:id', ({ validatedParams }: any) => {
-    return PropertyController.getProperty(validatedParams.id);
+  .get('/:id', async ({ validatedParams, set }: any) => {
+    try {
+      return await PropertyController.getProperty(validatedParams.id);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
   }, validate({ params: uuidParamSchema }))
 
   // POST /properties - create property
-  .post('/', ({ validatedBody, headers }: any) => {
-    const userId = headers['x-user-id'];
-    // PropertyController.createProperty has been confirmed to exist
-    return PropertyController.createProperty({ ...validatedBody, owner: userId });
+  .post('/', async ({ validatedBody, headers, set }: any) => {
+    try {
+      const userAddress = headers['x-user-address'] as string | undefined;
+      return await PropertyController.createProperty(
+        validatedBody as Partial<import('@real-estate-defi/shared').PropertyInfo>,
+        userAddress,
+      );
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
   }, validate({ body: createPropertySchema }))
 
   // PUT /properties/:id - update property
-  .put('/:id', ({ validatedParams, validatedBody, headers }: any) => {
-    const userId = headers['x-user-id'];
-    // PropertyController fallback since update/delete aren't fully implemented in the existing controller
-    return (PropertyController as any).updateProperty?.(validatedParams.id, validatedBody, userId) ?? 
-           PropertyController.getProperty(validatedParams.id);
+  .put('/:id', async ({ validatedParams, validatedBody, headers, set }: any) => {
+    try {
+      const userAddress = headers['x-user-address'] as string;
+      if (!userAddress) {
+        throw new UnauthorizedError('User address is required for authentication');
+      }
+      return await PropertyController.updateProperty(
+        validatedParams.id,
+        validatedBody as Partial<import('@real-estate-defi/shared').PropertyInfo>,
+        userAddress,
+      );
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
   }, validate({ params: uuidParamSchema, body: updatePropertySchema }))
 
   // DELETE /properties/:id - delete property
-  .delete('/:id', ({ validatedParams, headers }: any) => {
-    const userId = headers['x-user-id'];
-    return (PropertyController as any).deleteProperty?.(validatedParams.id, userId) ?? 
-           PropertyController.getProperty(validatedParams.id);
+  .delete('/:id', async ({ validatedParams, headers, set }: any) => {
+    try {
+      const userAddress = headers['x-user-address'] as string;
+      if (!userAddress) {
+        throw new UnauthorizedError('User address is required for authentication');
+      }
+      return await PropertyController.deleteProperty(validatedParams.id, userAddress);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  }, validate({ params: uuidParamSchema }))
+
+  // POST /properties/:id/tokenize - tokenize property
+  .post('/:id/tokenize', async ({ validatedParams, body, headers, set }: any) => {
+    try {
+      const userAddress = headers['x-user-address'] as string | undefined;
+      return await PropertyController.tokenizeProperty(validatedParams.id, body as unknown, userAddress);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
   }, validate({ params: uuidParamSchema }))
 
   // POST /properties/:id/buy-shares - buy property shares
-  .post('/:id/buy-shares', ({ validatedParams, validatedBody, headers }: any) => {
-    const userId = headers['x-user-id'] ?? 'placeholder-userId';
-    return PropertyController.buyShares(validatedParams.id, {
-      buyer: userId,
-      shares: validatedBody.shares
-    });
-  }, validate({ params: uuidParamSchema, body: buySharesSchema }));
+  .post('/:id/buy-shares', async ({ validatedParams, validatedBody, set }: any) => {
+    try {
+      return await PropertyController.buyShares(validatedParams.id, {
+        buyer: validatedBody.buyer,
+        shares: validatedBody.shares
+      });
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  }, validate({ params: uuidParamSchema, body: buySharesSchema }))
+
+  // GET /properties/:id/shares/:owner - get user shares
+  .get('/:id/shares/:owner', async ({ params: { id, owner }, set }) => {
+    try {
+      if (!id) {
+        throw new BadRequestError('Property ID is required');
+      }
+      return await PropertyController.getUserShares(id, owner);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  });

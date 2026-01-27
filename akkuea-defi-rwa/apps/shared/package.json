@@ -37,7 +37,7 @@
   "dependencies": {
     "soroban-client": "^1.0.1",
     "stellar-sdk": "^13.3.0",
-    "zod": "^4.3.5"
+    "zod": "^3.25.1"
   },
   "resolutions": {
     "stellar-base": "12.1.1"

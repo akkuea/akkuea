@@ -1,5 +1,6 @@
+use super::access::{AdminControl, PauseControl};
 use super::*;
-use soroban_sdk::{contract, contractimpl, testutils::Address as _, Address, Env, String};
+use soroban_sdk::{testutils::Address as _, testutils::Events, Address, Env, String};
 
 // Created this contract just for testing storage
 #[contract]
@@ -10,6 +11,11 @@ impl TestContract {
     pub fn __constructor(_env: Env) {
         // Empty constructor
     }
+}
+
+fn setup() -> (Address, Env) {
+    let env = Env::default();
+    (env.register(TestContract, ()), env)
 }
 
 // Store and retrieve LendingPool
@@ -403,4 +409,159 @@ fn test_multiple_pools_storage() {
     assert!(user_deposits.len() >= 2);
     assert!(user_deposits.contains(&pool_id_1));
     assert!(user_deposits.contains(&pool_id_2));
+}
+
+#[test]
+fn test_admin_initialization() {
+    let (contract_id, env) = setup();
+    let admin = Address::generate(&env);
+    env.as_contract(&contract_id, || {
+        AdminControl::initialize(&env, &admin);
+        let expected_admin = AdminControl::get_admin(&env).unwrap();
+        assert_eq!(admin, expected_admin);
+    })
+}
+
+#[test]
+#[should_panic(expected = "Caller not admin")]
+fn test_require_admin_fails() {
+    let (contract_id, env) = setup();
+    let admin = Address::generate(&env);
+    let other = Address::generate(&env);
+    // AdminControl::initialize(&env.as_contract(&contract_id, f), &admin);
+    env.as_contract(&contract_id, || {
+        AdminControl::require_admin(&env, &admin);
+        AdminControl::require_admin(&env, &other);
+    });
+}
+
+#[test]
+fn test_admin_transfer() {
+    let (contract_id, env) = setup();
+    let admin = Address::generate(&env);
+    let new_admin = Address::generate(&env);
+    env.as_contract(&contract_id, || {
+        AdminControl::initialize(&env, &admin);
+
+        // Start transfer
+        AdminControl::transfer_admin_start(&env, &admin, &new_admin);
+        assert_eq!(
+            AdminControl::get_pending_admin(&env),
+            Some(new_admin.clone())
+        );
+
+        // Accept transfer
+        AdminControl::transfer_admin_accept(&env, &new_admin);
+        assert!(AdminControl::is_admin(&env, &new_admin));
+        assert!(!AdminControl::is_admin(&env, &admin));
+    });
+}
+
+#[test]
+fn test_pause_unpause() {
+    let (contract_id, env) = setup();
+    let admin = Address::generate(&env);
+    env.as_contract(&contract_id, || {
+        AdminControl::initialize(&env, &admin);
+        assert!(!PauseControl::is_paused(&env));
+        PauseControl::pause(&env, &admin);
+        assert!(PauseControl::is_paused(&env));
+        PauseControl::unpause(&env, &admin);
+        assert!(!PauseControl::is_paused(&env));
+    });
+}
+
+// =========================================================================
+// Event Requirements Tests
+// =========================================================================
+
+#[test]
+fn test_property_registration_event() {
+    let env = Env::default();
+    let contract_id = env.register(TestContract, ()); // Fix: Register contract context
+
+    let owner = Address::generate(&env);
+    let property_id = String::from_str(&env, "PROP001");
+    let name = String::from_str(&env, "Test Property");
+
+    // Fix: Execute inside contract context
+    env.as_contract(&contract_id, || {
+        PropertyEvents::property_registered(
+            &env,
+            property_id.clone(),
+            owner.clone(),
+            name.clone(),
+            100_000,
+            1_000,
+        );
+    });
+
+    // Check ONLY count
+    let events = env.events().all();
+    assert_eq!(events.len(), 1);
+}
+
+#[test]
+fn test_share_transfer_event() {
+    let env = Env::default();
+    let contract_id = env.register(TestContract, ());
+
+    let from = Address::generate(&env);
+    let to = Address::generate(&env);
+    let property_id = String::from_str(&env, "PROP001");
+
+    env.as_contract(&contract_id, || {
+        PropertyEvents::share_transfer(&env, property_id.clone(), from.clone(), to.clone(), 500);
+    });
+
+    let events = env.events().all();
+    assert_eq!(events.len(), 1);
+}
+
+#[test]
+fn test_deposit_event() {
+    let env = Env::default();
+    let contract_id = env.register(TestContract, ());
+
+    let depositor = Address::generate(&env);
+    let pool_id = String::from_str(&env, "USDC-POOL");
+
+    env.as_contract(&contract_id, || {
+        LendingEvents::deposit(
+            &env,
+            pool_id.clone(),
+            depositor.clone(),
+            1_000_000_000,
+            1_000_000_000,
+            5_000_000_000,
+        );
+    });
+
+    let events = env.events().all();
+    assert_eq!(events.len(), 1);
+}
+
+#[test]
+fn test_borrow_event() {
+    let env = Env::default();
+    let contract_id = env.register(TestContract, ());
+
+    let borrower = Address::generate(&env);
+    let collateral_asset = Address::generate(&env);
+    let pool_id = String::from_str(&env, "USDC-POOL");
+
+    env.as_contract(&contract_id, || {
+        LendingEvents::borrow(
+            &env,
+            pool_id.clone(),
+            borrower.clone(),
+            500_000_000,
+            1_000_000_000,
+            collateral_asset.clone(),
+            1500000000,
+        );
+    });
+
+    let events = env.events().all();
+    assert_eq!(events.len(), 1);
 }

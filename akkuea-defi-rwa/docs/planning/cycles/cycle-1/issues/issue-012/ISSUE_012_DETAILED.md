@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute | Value |
-|-----------|-------|
-| Issue ID | C1-012 |
-| Title | Add loading skeleton components |
-| Area | WEBAPP |
-| Difficulty | Trivial |
-| Labels | frontend, ui, trivial |
-| Dependencies | None |
-| Estimated Lines | 60-100 |
+| Attribute       | Value                           |
+| --------------- | ------------------------------- |
+| Issue ID        | C1-012                          |
+| Title           | Add loading skeleton components |
+| Area            | WEBAPP                          |
+| Difficulty      | Trivial                         |
+| Labels          | frontend, ui, trivial           |
+| Dependencies    | None                            |
+| Estimated Lines | 60-100                          |
 
 ## Overview
 
@@ -327,14 +327,14 @@ Add to `apps/webapp/src/app/globals.css`:
 Update `apps/webapp/src/components/ui/index.ts`:
 
 ```typescript
-export { Button } from './Button';
-export { Card } from './Card';
-export { Badge } from './Badge';
-export { Input } from './Input';
-export { Modal } from './Modal';
-export { Toggle } from './Toggle';
-export { Stepper } from './Stepper';
-export { Loader } from './Loader';
+export { Button } from "./Button";
+export { Card } from "./Card";
+export { Badge } from "./Badge";
+export { Input } from "./Input";
+export { Modal } from "./Modal";
+export { Toggle } from "./Toggle";
+export { Stepper } from "./Stepper";
+export { Loader } from "./Loader";
 export {
   Skeleton,
   SkeletonText,
@@ -343,7 +343,7 @@ export {
   SkeletonAvatar,
   SkeletonPropertyCard,
   SkeletonPoolCard,
-} from './Skeleton';
+} from "./Skeleton";
 ```
 
 ## Usage Examples
@@ -394,19 +394,19 @@ function TransactionTable({ loading, transactions }) {
 
 ## Related Resources
 
-| Resource | Link |
-|----------|------|
+| Resource            | Link                                                                         |
+| ------------------- | ---------------------------------------------------------------------------- |
 | Skeleton Loading UI | https://uxdesign.cc/what-you-should-know-about-skeleton-screens-a820c45a571a |
-| CSS Animations | https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Animations |
+| CSS Animations      | https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Animations              |
 
 ## Verification Checklist
 
-| Item | Status |
-|------|--------|
-| Base Skeleton component created | |
-| SkeletonText working | |
-| SkeletonCard working | |
-| SkeletonTable working | |
-| Animations smooth | |
-| Accessibility labels added | |
-| Exported from ui index | |
+| Item                            | Status |
+| ------------------------------- | ------ |
+| Base Skeleton component created |        |
+| SkeletonText working            |        |
+| SkeletonCard working            |        |
+| SkeletonTable working           |        |
+| Animations smooth               |        |
+| Accessibility labels added      |        |
+| Exported from ui index          |        |

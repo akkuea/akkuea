@@ -25,8 +25,8 @@ export class ValidationService {
       errors.push("Total shares must be greater than 0");
     }
 
-    if (!property.valuePerShare || property.valuePerShare <= 0) {
-      errors.push("Value per share must be greater than 0");
+    if (!property.pricePerShare || parseFloat(property.pricePerShare) <= 0) {
+      errors.push("Price per share must be greater than 0");
     }
 
     if (
@@ -68,7 +68,7 @@ export class ValidationService {
       errors.push("Number of shares must be greater than 0");
     }
 
-    if (!ownership.purchasePrice || ownership.purchasePrice <= 0) {
+    if (!ownership.purchasePrice || parseFloat(ownership.purchasePrice) <= 0) {
       errors.push("Purchase price must be greater than 0");
     }
 
@@ -88,16 +88,12 @@ export class ValidationService {
       errors.push("Pool ID is required");
     }
 
-    if (!pool.assetSymbol || pool.assetSymbol.trim().length === 0) {
-      errors.push("Asset symbol is required");
+    if (!pool.asset || pool.asset.trim().length === 0) {
+      errors.push("Asset is required");
     }
 
-    if (
-      pool.baseRate === undefined ||
-      pool.baseRate < 0 ||
-      pool.baseRate > 10000
-    ) {
-      errors.push("Base rate must be between 0 and 10000 basis points");
+    if (!pool.assetAddress || !this.validateStellarAddress(pool.assetAddress)) {
+      errors.push("Valid asset address is required");
     }
 
     if (
@@ -108,18 +104,18 @@ export class ValidationService {
       errors.push("Collateral factor must be between 0 and 10000 basis points");
     }
 
-    if (pool.totalDeposits !== undefined && pool.totalDeposits < 0) {
+    if (pool.totalDeposits !== undefined && parseFloat(pool.totalDeposits) < 0) {
       errors.push("Total deposits cannot be negative");
     }
 
-    if (pool.totalBorrows !== undefined && pool.totalBorrows < 0) {
+    if (pool.totalBorrows !== undefined && parseFloat(pool.totalBorrows) < 0) {
       errors.push("Total borrows cannot be negative");
     }
 
     if (
       pool.totalDeposits &&
       pool.totalBorrows &&
-      pool.totalBorrows > pool.totalDeposits
+      parseFloat(pool.totalBorrows) > parseFloat(pool.totalDeposits)
     ) {
       errors.push("Total borrows cannot exceed total deposits");
     }
@@ -153,7 +149,7 @@ export class ValidationService {
       errors.push("Valid transaction type is required");
     }
 
-    if (!tx.amount || tx.amount <= 0) {
+    if (!tx.amount || parseFloat(tx.amount) <= 0) {
       errors.push("Amount must be greater than 0");
     }
 
@@ -161,8 +157,8 @@ export class ValidationService {
       errors.push("Valid from address is required");
     }
 
-    if (!tx.txHash || tx.txHash.trim().length === 0) {
-      errors.push("Transaction hash is required");
+    if (tx.hash && tx.hash.trim().length === 0) {
+      errors.push("Transaction hash cannot be empty");
     }
 
     return {

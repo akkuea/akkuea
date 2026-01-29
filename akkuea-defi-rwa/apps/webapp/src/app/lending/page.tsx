@@ -31,7 +31,7 @@ import {
   Modal,
   Toggle,
 } from "@/components/ui";
-import { useWallet } from "@/context/WalletContext";
+import { useWallet } from "@/components/auth/hooks";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Form, FormInput } from "@/components/forms";
 import {

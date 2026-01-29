@@ -1,4 +1,5 @@
-export { errorHandler } from './errorHandler';
+export * from './errorHandler';
+export * from './requestLogger';
 export {
   validate,
   validateBody,
@@ -7,4 +8,3 @@ export {
   uuidParamSchema,
   paginationQuerySchema,
 } from './validation';
-

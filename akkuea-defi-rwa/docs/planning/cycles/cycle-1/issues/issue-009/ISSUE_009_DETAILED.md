@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute | Value |
-|-----------|-------|
-| Issue ID | C1-009 |
-| Title | Add request validation middleware with Zod |
-| Area | API |
-| Difficulty | Medium |
-| Labels | backend, validation, medium |
-| Dependencies | None |
-| Estimated Lines | 100-150 |
+| Attribute       | Value                                      |
+| --------------- | ------------------------------------------ |
+| Issue ID        | C1-009                                     |
+| Title           | Add request validation middleware with Zod |
+| Area            | API                                        |
+| Difficulty      | Medium                                     |
+| Labels          | backend, validation, medium                |
+| Dependencies    | None                                       |
+| Estimated Lines | 100-150                                    |
 
 ## Overview
 
@@ -38,8 +38,8 @@ bun add zod
 Create `apps/api/src/middleware/validation.ts`:
 
 ```typescript
-import { Elysia, t } from 'elysia';
-import { z, ZodSchema, ZodError } from 'zod';
+import { Elysia, t } from "elysia";
+import { z, ZodSchema, ZodError } from "zod";
 
 /**
  * Format Zod errors into a structured response
@@ -48,7 +48,7 @@ function formatZodErrors(error: ZodError): Record<string, string[]> {
   const formatted: Record<string, string[]> = {};
 
   for (const issue of error.issues) {
-    const path = issue.path.join('.') || '_root';
+    const path = issue.path.join(".") || "_root";
     if (!formatted[path]) {
       formatted[path] = [];
     }
@@ -63,11 +63,11 @@ function formatZodErrors(error: ZodError): Record<string, string[]> {
  */
 function createValidationError(
   errors: Record<string, string[]>,
-  source: 'body' | 'query' | 'params'
+  source: "body" | "query" | "params",
 ) {
   return {
     status: 400,
-    code: 'VALIDATION_ERROR',
+    code: "VALIDATION_ERROR",
     message: `Invalid ${source} parameters`,
     details: {
       source,
@@ -80,7 +80,7 @@ function createValidationError(
  * Body validation plugin
  */
 export function validateBody<T extends ZodSchema>(schema: T) {
-  return new Elysia({ name: 'validate-body' })
+  return new Elysia({ name: "validate-body" })
     .derive(async ({ request, set }) => {
       try {
         const body = await request.json();
@@ -92,7 +92,7 @@ export function validateBody<T extends ZodSchema>(schema: T) {
             validatedBody: null as z.infer<T> | null,
             validationError: createValidationError(
               formatZodErrors(result.error),
-              'body'
+              "body",
             ),
           };
         }
@@ -107,8 +107,8 @@ export function validateBody<T extends ZodSchema>(schema: T) {
           validatedBody: null as z.infer<T> | null,
           validationError: {
             status: 400,
-            code: 'INVALID_JSON',
-            message: 'Request body must be valid JSON',
+            code: "INVALID_JSON",
+            message: "Request body must be valid JSON",
           },
         };
       }
@@ -125,7 +125,7 @@ export function validateBody<T extends ZodSchema>(schema: T) {
  * Query validation plugin
  */
 export function validateQuery<T extends ZodSchema>(schema: T) {
-  return new Elysia({ name: 'validate-query' })
+  return new Elysia({ name: "validate-query" })
     .derive(({ query, set }) => {
       const result = schema.safeParse(query);
 
@@ -134,7 +134,7 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
           validatedQuery: null as z.infer<T> | null,
           queryValidationError: createValidationError(
             formatZodErrors(result.error),
-            'query'
+            "query",
           ),
         };
       }
@@ -156,7 +156,7 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
  * Path params validation plugin
  */
 export function validateParams<T extends ZodSchema>(schema: T) {
-  return new Elysia({ name: 'validate-params' })
+  return new Elysia({ name: "validate-params" })
     .derive(({ params, set }) => {
       const result = schema.safeParse(params);
 
@@ -165,7 +165,7 @@ export function validateParams<T extends ZodSchema>(schema: T) {
           validatedParams: null as z.infer<T> | null,
           paramsValidationError: createValidationError(
             formatZodErrors(result.error),
-            'params'
+            "params",
           ),
         };
       }
@@ -190,17 +190,15 @@ export function validate<
   TBody extends ZodSchema | undefined = undefined,
   TQuery extends ZodSchema | undefined = undefined,
   TParams extends ZodSchema | undefined = undefined,
->(options: {
-  body?: TBody;
-  query?: TQuery;
-  params?: TParams;
-}) {
-  return new Elysia({ name: 'validate' })
+>(options: { body?: TBody; query?: TQuery; params?: TParams }) {
+  return new Elysia({ name: "validate" })
     .derive(async ({ request, query, params, set }) => {
       const result: {
         validatedBody: TBody extends ZodSchema ? z.infer<TBody> : undefined;
         validatedQuery: TQuery extends ZodSchema ? z.infer<TQuery> : undefined;
-        validatedParams: TParams extends ZodSchema ? z.infer<TParams> : undefined;
+        validatedParams: TParams extends ZodSchema
+          ? z.infer<TParams>
+          : undefined;
         validationError: any;
       } = {
         validatedBody: undefined as any,
@@ -218,7 +216,7 @@ export function validate<
           if (!bodyResult.success) {
             result.validationError = createValidationError(
               formatZodErrors(bodyResult.error),
-              'body'
+              "body",
             );
             return result;
           }
@@ -227,8 +225,8 @@ export function validate<
         } catch {
           result.validationError = {
             status: 400,
-            code: 'INVALID_JSON',
-            message: 'Request body must be valid JSON',
+            code: "INVALID_JSON",
+            message: "Request body must be valid JSON",
           };
           return result;
         }
@@ -241,7 +239,7 @@ export function validate<
         if (!queryResult.success) {
           result.validationError = createValidationError(
             formatZodErrors(queryResult.error),
-            'query'
+            "query",
           );
           return result;
         }
@@ -256,7 +254,7 @@ export function validate<
         if (!paramsResult.success) {
           result.validationError = createValidationError(
             formatZodErrors(paramsResult.error),
-            'params'
+            "params",
           );
           return result;
         }
@@ -278,7 +276,7 @@ export function validate<
  * UUID param schema (commonly used)
  */
 export const uuidParamSchema = z.object({
-  id: z.string().uuid('Invalid UUID format'),
+  id: z.string().uuid("Invalid UUID format"),
 });
 
 /**
@@ -288,7 +286,7 @@ export const paginationQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
   sortBy: z.string().optional(),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  sortOrder: z.enum(["asc", "desc"]).default("desc"),
 });
 ```
 
@@ -297,7 +295,7 @@ export const paginationQuerySchema = z.object({
 Update `apps/api/src/middleware/index.ts`:
 
 ```typescript
-export { errorHandler } from './errorHandler';
+export { errorHandler } from "./errorHandler";
 export {
   validate,
   validateBody,
@@ -305,7 +303,7 @@ export {
   validateParams,
   uuidParamSchema,
   paginationQuerySchema,
-} from './validation';
+} from "./validation";
 ```
 
 ### Step 4: Apply Validation to Routes
@@ -313,14 +311,20 @@ export {
 Update `apps/api/src/routes/properties.ts`:
 
 ```typescript
-import { Elysia } from 'elysia';
-import { z } from 'zod';
-import { validate, uuidParamSchema, paginationQuerySchema } from '../middleware';
-import { PropertyController } from '../controllers/PropertyController';
+import { Elysia } from "elysia";
+import { z } from "zod";
+import {
+  validate,
+  uuidParamSchema,
+  paginationQuerySchema,
+} from "../middleware";
+import { PropertyController } from "../controllers/PropertyController";
 
 // Property query schema extending pagination
 const propertyQuerySchema = paginationQuerySchema.extend({
-  propertyType: z.enum(['residential', 'commercial', 'industrial', 'land', 'mixed']).optional(),
+  propertyType: z
+    .enum(["residential", "commercial", "industrial", "land", "mixed"])
+    .optional(),
   country: z.string().optional(),
   minPrice: z.coerce.number().positive().optional(),
   maxPrice: z.coerce.number().positive().optional(),
@@ -332,7 +336,13 @@ const propertyQuerySchema = paginationQuerySchema.extend({
 const createPropertySchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().min(10),
-  propertyType: z.enum(['residential', 'commercial', 'industrial', 'land', 'mixed']),
+  propertyType: z.enum([
+    "residential",
+    "commercial",
+    "industrial",
+    "land",
+    "mixed",
+  ]),
   location: z.object({
     address: z.string().min(1),
     city: z.string().min(1),
@@ -353,54 +363,61 @@ const buySharesSchema = z.object({
   shares: z.number().int().positive(),
 });
 
-export const propertyRoutes = new Elysia({ prefix: '/properties' })
+export const propertyRoutes = new Elysia({ prefix: "/properties" })
   // GET /properties - list with filters
   .use(validate({ query: propertyQuerySchema }))
-  .get('/', async ({ validatedQuery }) => {
+  .get("/", async ({ validatedQuery }) => {
     return PropertyController.getAll(validatedQuery);
   })
 
   // GET /properties/:id - get single property
   .use(validate({ params: uuidParamSchema }))
-  .get('/:id', async ({ validatedParams }) => {
+  .get("/:id", async ({ validatedParams }) => {
     return PropertyController.getById(validatedParams.id);
   })
 
   // POST /properties - create property
   .use(validate({ body: createPropertySchema }))
-  .post('/', async ({ validatedBody, headers }) => {
-    const userId = headers['x-user-id'];
+  .post("/", async ({ validatedBody, headers }) => {
+    const userId = headers["x-user-id"];
     return PropertyController.create(validatedBody, userId);
   })
 
   // PUT /properties/:id - update property
   .use(validate({ params: uuidParamSchema, body: updatePropertySchema }))
-  .put('/:id', async ({ validatedParams, validatedBody, headers }) => {
-    const userId = headers['x-user-id'];
+  .put("/:id", async ({ validatedParams, validatedBody, headers }) => {
+    const userId = headers["x-user-id"];
     return PropertyController.update(validatedParams.id, validatedBody, userId);
   })
 
   // DELETE /properties/:id - delete property
   .use(validate({ params: uuidParamSchema }))
-  .delete('/:id', async ({ validatedParams, headers }) => {
-    const userId = headers['x-user-id'];
+  .delete("/:id", async ({ validatedParams, headers }) => {
+    const userId = headers["x-user-id"];
     return PropertyController.delete(validatedParams.id, userId);
   })
 
   // POST /properties/:id/buy-shares - buy property shares
   .use(validate({ params: uuidParamSchema, body: buySharesSchema }))
-  .post('/:id/buy-shares', async ({ validatedParams, validatedBody, headers }) => {
-    const userId = headers['x-user-id'];
-    return PropertyController.buyShares(validatedParams.id, validatedBody.shares, userId);
-  });
+  .post(
+    "/:id/buy-shares",
+    async ({ validatedParams, validatedBody, headers }) => {
+      const userId = headers["x-user-id"];
+      return PropertyController.buyShares(
+        validatedParams.id,
+        validatedBody.shares,
+        userId,
+      );
+    },
+  );
 ```
 
 ## Usage Example
 
 ```typescript
-import { Elysia } from 'elysia';
-import { z } from 'zod';
-import { validate } from './middleware';
+import { Elysia } from "elysia";
+import { z } from "zod";
+import { validate } from "./middleware";
 
 const userSchema = z.object({
   email: z.string().email(),
@@ -410,7 +427,7 @@ const userSchema = z.object({
 
 const app = new Elysia()
   .use(validate({ body: userSchema }))
-  .post('/users', ({ validatedBody }) => {
+  .post("/users", ({ validatedBody }) => {
     // validatedBody is fully typed as { email: string; name: string; age?: number }
     return {
       message: `Created user ${validatedBody.name}`,
@@ -424,48 +441,48 @@ const app = new Elysia()
 ### Test Example
 
 ```typescript
-import { describe, it, expect } from 'bun:test';
-import { app } from '../src/index';
+import { describe, it, expect } from "bun:test";
+import { app } from "../src/index";
 
-describe('Validation Middleware', () => {
-  it('should reject invalid body', async () => {
+describe("Validation Middleware", () => {
+  it("should reject invalid body", async () => {
     const response = await app.handle(
-      new Request('http://localhost/properties', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: '' }), // name too short
-      })
+      new Request("http://localhost/properties", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "" }), // name too short
+      }),
     );
 
     expect(response.status).toBe(400);
     const body = await response.json();
-    expect(body.code).toBe('VALIDATION_ERROR');
+    expect(body.code).toBe("VALIDATION_ERROR");
     expect(body.details.errors.name).toBeDefined();
   });
 
-  it('should pass valid body', async () => {
+  it("should pass valid body", async () => {
     const response = await app.handle(
-      new Request('http://localhost/properties', {
-        method: 'POST',
+      new Request("http://localhost/properties", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': 'test-user-id',
+          "Content-Type": "application/json",
+          "x-user-id": "test-user-id",
         },
         body: JSON.stringify({
-          name: 'Test Property',
-          description: 'A test property description',
-          propertyType: 'residential',
+          name: "Test Property",
+          description: "A test property description",
+          propertyType: "residential",
           location: {
-            address: '123 Test St',
-            city: 'Test City',
-            country: 'US',
+            address: "123 Test St",
+            city: "Test City",
+            country: "US",
           },
-          totalValue: '100000.00',
+          totalValue: "100000.00",
           totalShares: 100,
-          pricePerShare: '1000.00',
-          images: ['https://example.com/image.jpg'],
+          pricePerShare: "1000.00",
+          images: ["https://example.com/image.jpg"],
         }),
-      })
+      }),
     );
 
     expect(response.status).toBe(201);
@@ -475,20 +492,20 @@ describe('Validation Middleware', () => {
 
 ## Related Resources
 
-| Resource | Link |
-|----------|------|
-| Zod Documentation | https://zod.dev |
-| Elysia Lifecycle | https://elysiajs.com/concept/lifecycle.html |
-| Elysia Plugin | https://elysiajs.com/concept/plugin.html |
+| Resource          | Link                                        |
+| ----------------- | ------------------------------------------- |
+| Zod Documentation | https://zod.dev                             |
+| Elysia Lifecycle  | https://elysiajs.com/concept/lifecycle.html |
+| Elysia Plugin     | https://elysiajs.com/concept/plugin.html    |
 
 ## Verification Checklist
 
-| Item | Status |
-|------|--------|
-| Validation middleware created | |
-| Body validation working | |
-| Query validation working | |
-| Params validation working | |
-| Error format consistent | |
-| Type inference working | |
-| Tests passing | |
+| Item                          | Status |
+| ----------------------------- | ------ |
+| Validation middleware created |        |
+| Body validation working       |        |
+| Query validation working      |        |
+| Params validation working     |        |
+| Error format consistent       |        |
+| Type inference working        |        |
+| Tests passing                 |        |

@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute | Value |
-|-----------|-------|
-| Issue ID | C1-014 |
-| Title | Add pagination types and utilities |
-| Area | SHARED |
-| Difficulty | Trivial |
-| Labels | shared, utilities, trivial |
-| Dependencies | None |
-| Estimated Lines | 40-60 |
+| Attribute       | Value                              |
+| --------------- | ---------------------------------- |
+| Issue ID        | C1-014                             |
+| Title           | Add pagination types and utilities |
+| Area            | SHARED                             |
+| Difficulty      | Trivial                            |
+| Labels          | shared, utilities, trivial         |
+| Dependencies    | None                               |
+| Estimated Lines | 40-60                              |
 
 ## Overview
 
@@ -36,7 +36,7 @@ export interface PaginationParams {
   /** Field to sort by */
   sortBy?: string;
   /** Sort direction */
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 /**
@@ -76,7 +76,7 @@ export interface CursorPaginationParams {
   /** Items per page */
   limit: number;
   /** Sort direction */
-  direction?: 'forward' | 'backward';
+  direction?: "forward" | "backward";
 }
 
 /**
@@ -103,7 +103,7 @@ import type {
   PaginationParams,
   PaginationMeta,
   PaginatedResponse,
-} from '../types/pagination';
+} from "../types/pagination";
 
 /**
  * Default pagination values
@@ -116,7 +116,7 @@ export const PAGINATION_DEFAULTS = {
   /** Maximum items per page */
   maxLimit: 100,
   /** Default sort order */
-  sortOrder: 'desc' as const,
+  sortOrder: "desc" as const,
 } as const;
 
 /**
@@ -137,8 +137,8 @@ export function calculateTotalPages(total: number, limit: number): number {
  * Create pagination metadata from params and total
  */
 export function createPaginationMeta(
-  params: Pick<PaginationParams, 'page' | 'limit'>,
-  total: number
+  params: Pick<PaginationParams, "page" | "limit">,
+  total: number,
 ): PaginationMeta {
   const totalPages = calculateTotalPages(total, params.limit);
 
@@ -157,8 +157,8 @@ export function createPaginationMeta(
  */
 export function createPaginatedResponse<T>(
   data: T[],
-  params: Pick<PaginationParams, 'page' | 'limit'>,
-  total: number
+  params: Pick<PaginationParams, "page" | "limit">,
+  total: number,
 ): PaginatedResponse<T> {
   return {
     data,
@@ -170,13 +170,13 @@ export function createPaginatedResponse<T>(
  * Normalize pagination params with defaults
  */
 export function normalizePaginationParams(
-  params: Partial<PaginationParams>
+  params: Partial<PaginationParams>,
 ): PaginationParams {
   return {
     page: Math.max(1, params.page || PAGINATION_DEFAULTS.page),
     limit: Math.min(
       PAGINATION_DEFAULTS.maxLimit,
-      Math.max(1, params.limit || PAGINATION_DEFAULTS.limit)
+      Math.max(1, params.limit || PAGINATION_DEFAULTS.limit),
     ),
     sortBy: params.sortBy,
     sortOrder: params.sortOrder || PAGINATION_DEFAULTS.sortOrder,
@@ -204,7 +204,7 @@ export function formatPaginationRange(meta: PaginationMeta): string {
   const { start, end, total } = getPaginationRange(meta);
 
   if (total === 0) {
-    return 'No results';
+    return "No results";
   }
 
   return `${start}-${end} of ${total}`;
@@ -216,13 +216,13 @@ export function formatPaginationRange(meta: PaginationMeta): string {
 export function generatePageNumbers(
   currentPage: number,
   totalPages: number,
-  maxVisible: number = 5
-): (number | 'ellipsis')[] {
+  maxVisible: number = 5,
+): (number | "ellipsis")[] {
   if (totalPages <= maxVisible) {
     return Array.from({ length: totalPages }, (_, i) => i + 1);
   }
 
-  const pages: (number | 'ellipsis')[] = [];
+  const pages: (number | "ellipsis")[] = [];
   const halfVisible = Math.floor(maxVisible / 2);
 
   // Always show first page
@@ -241,7 +241,7 @@ export function generatePageNumbers(
 
   // Add ellipsis if needed before range
   if (start > 2) {
-    pages.push('ellipsis');
+    pages.push("ellipsis");
   }
 
   // Add page numbers in range
@@ -251,7 +251,7 @@ export function generatePageNumbers(
 
   // Add ellipsis if needed after range
   if (end < totalPages - 1) {
-    pages.push('ellipsis');
+    pages.push("ellipsis");
   }
 
   // Always show last page
@@ -268,10 +268,10 @@ export function generatePageNumbers(
 Update `apps/shared/src/types/index.ts`:
 
 ```typescript
-export * from './property';
-export * from './lending';
-export * from './user';
-export * from './pagination';
+export * from "./property";
+export * from "./lending";
+export * from "./user";
+export * from "./pagination";
 ```
 
 ### Step 4: Update Utils Index
@@ -279,9 +279,9 @@ export * from './pagination';
 Update `apps/shared/src/utils/index.ts`:
 
 ```typescript
-export * from './validation';
-export * from './format';
-export * from './pagination';
+export * from "./validation";
+export * from "./format";
+export * from "./pagination";
 ```
 
 ## Usage Examples
@@ -293,7 +293,7 @@ import {
   normalizePaginationParams,
   createPaginatedResponse,
   calculateOffset,
-} from '@akkuea/shared';
+} from "@akkuea/shared";
 
 async function getProperties(query: any) {
   const params = normalizePaginationParams(query);
@@ -345,67 +345,67 @@ function Pagination({ meta }: { meta: PaginationMeta }) {
 ### Unit Tests
 
 ```typescript
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect } from "bun:test";
 import {
   calculateOffset,
   calculateTotalPages,
   createPaginationMeta,
   normalizePaginationParams,
   generatePageNumbers,
-} from '../src/utils/pagination';
+} from "../src/utils/pagination";
 
-describe('calculateOffset', () => {
-  it('calculates correct offset for page 1', () => {
+describe("calculateOffset", () => {
+  it("calculates correct offset for page 1", () => {
     expect(calculateOffset(1, 20)).toBe(0);
   });
 
-  it('calculates correct offset for page 2', () => {
+  it("calculates correct offset for page 2", () => {
     expect(calculateOffset(2, 20)).toBe(20);
   });
 
-  it('handles page 0 as page 1', () => {
+  it("handles page 0 as page 1", () => {
     expect(calculateOffset(0, 20)).toBe(0);
   });
 });
 
-describe('calculateTotalPages', () => {
-  it('calculates exact division', () => {
+describe("calculateTotalPages", () => {
+  it("calculates exact division", () => {
     expect(calculateTotalPages(100, 20)).toBe(5);
   });
 
-  it('rounds up for remainder', () => {
+  it("rounds up for remainder", () => {
     expect(calculateTotalPages(101, 20)).toBe(6);
   });
 
-  it('handles zero total', () => {
+  it("handles zero total", () => {
     expect(calculateTotalPages(0, 20)).toBe(0);
   });
 });
 
-describe('generatePageNumbers', () => {
-  it('shows all pages when total is small', () => {
+describe("generatePageNumbers", () => {
+  it("shows all pages when total is small", () => {
     expect(generatePageNumbers(1, 3)).toEqual([1, 2, 3]);
   });
 
-  it('includes ellipsis for large page counts', () => {
+  it("includes ellipsis for large page counts", () => {
     const pages = generatePageNumbers(5, 10);
-    expect(pages).toContain('ellipsis');
+    expect(pages).toContain("ellipsis");
   });
 });
 ```
 
 ## Related Resources
 
-| Resource | Link |
-|----------|------|
+| Resource                      | Link                                                                                               |
+| ----------------------------- | -------------------------------------------------------------------------------------------------- |
 | API Pagination Best Practices | https://www.moesif.com/blog/technical/api-design/REST-API-Design-Filtering-Sorting-and-Pagination/ |
 
 ## Verification Checklist
 
-| Item | Status |
-|------|--------|
-| Types defined | |
-| Utilities implemented | |
-| Default constants set | |
-| Exported from shared | |
-| Tests passing | |
+| Item                  | Status |
+| --------------------- | ------ |
+| Types defined         |        |
+| Utilities implemented |        |
+| Default constants set |        |
+| Exported from shared  |        |
+| Tests passing         |        |

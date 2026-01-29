@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
 import { Card, Button, Textarea, Badge, Stepper } from "@/components/ui";
-import { useWallet } from "@/context/WalletContext";
+import { useWallet } from "@/components/auth/hooks";
 import { formatCurrency } from "@/lib/utils";
 import { Form, FormInput, FormSelect } from "@/components/forms";
 import { tokenizeSchema, type TokenizeFormValues } from "@/schemas/forms";

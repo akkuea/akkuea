@@ -31,24 +31,28 @@ function formatMessage(level: LogLevel, message: string, context?: LogContext): 
 export const logger = {
   debug(message: string, context?: LogContext): void {
     if (shouldLog('debug')) {
+      // eslint-disable-next-line no-console
       console.debug(formatMessage('debug', message, context));
     }
   },
 
   info(message: string, context?: LogContext): void {
     if (shouldLog('info')) {
+      // eslint-disable-next-line no-console
       console.info(formatMessage('info', message, context));
     }
   },
 
   warn(message: string, context?: LogContext): void {
     if (shouldLog('warn')) {
+      // eslint-disable-next-line no-console
       console.warn(formatMessage('warn', message, context));
     }
   },
 
   error(message: string, context?: LogContext): void {
     if (shouldLog('error')) {
+      // eslint-disable-next-line no-console
       console.error(formatMessage('error', message, context));
     }
   },

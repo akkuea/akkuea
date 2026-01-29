@@ -21,8 +21,7 @@ export class UserController {
    * Create new user
    */
   static async create(ctx: Context): Promise<Response> {
-    const body = await ctx.request.json();
-    const validationResult = CreateUserDto.safeParse(body);
+    const validationResult = CreateUserDto.safeParse(ctx.body);
 
     if (!validationResult.success) {
       throw new ApiError(400, 'VALIDATION_ERROR', 'Invalid user data', {
@@ -55,7 +54,7 @@ export class UserController {
    * Get current user profile (authenticated)
    */
   static async getProfile(ctx: Context): Promise<Response> {
-    const userId = ctx.request.headers.get('x-user-id');
+    const userId = ctx.headers['x-user-id'];
 
     if (!userId) {
       throw new ApiError(401, 'UNAUTHORIZED', 'Authentication required');
@@ -128,14 +127,13 @@ export class UserController {
    * Update current user profile
    */
   static async updateProfile(ctx: Context): Promise<Response> {
-    const userId = ctx.request.headers.get('x-user-id');
+    const userId = ctx.headers['x-user-id'];
 
     if (!userId) {
       throw new ApiError(401, 'UNAUTHORIZED', 'Authentication required');
     }
 
-    const body = await ctx.request.json();
-    const validationResult = UpdateUserDto.safeParse(body);
+    const validationResult = UpdateUserDto.safeParse(ctx.body);
 
     if (!validationResult.success) {
       throw new ApiError(400, 'VALIDATION_ERROR', 'Invalid update data', {
@@ -156,8 +154,7 @@ export class UserController {
    * Authenticate user by wallet (get or create)
    */
   static async authenticateByWallet(ctx: Context): Promise<Response> {
-    const body = (await ctx.request.json()) as { walletAddress?: string };
-    const { walletAddress } = body;
+    const { walletAddress } = ctx.body as { walletAddress?: string };
 
     if (!walletAddress || !/^G[A-Z2-7]{55}$/.test(walletAddress)) {
       throw new ApiError(400, 'INVALID_ADDRESS', 'Invalid Stellar address format');

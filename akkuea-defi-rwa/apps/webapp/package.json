@@ -23,7 +23,7 @@
     "react-hook-form": "^7.71.1",
     "zod": "^3.25.76",
     "@hookform/resolvers": "^3.10.0",
-    "@creit.tech/stellar-wallets-kit": "^1.0.0",
+    "@creit.tech/stellar-wallets-kit": "^1.9.5",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

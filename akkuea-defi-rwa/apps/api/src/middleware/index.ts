@@ -7,4 +7,5 @@ export {
   validateParams,
   uuidParamSchema,
   paginationQuerySchema,
+  ownerParamSchema,
 } from './validation';

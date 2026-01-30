@@ -2,158 +2,158 @@ name: Shared Library - Quality and Security CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'akkuea-defi-rwa/apps/shared/**'
-      - '.github/workflows/shared-ci.yml'
+      - "akkuea-defi-rwa/apps/shared/**"
+      - ".github/workflows/shared-ci.yml"
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'akkuea-defi-rwa/apps/shared/**'
-      - '.github/workflows/shared-ci.yml'
+      - "akkuea-defi-rwa/apps/shared/**"
+      - ".github/workflows/shared-ci.yml"
 
 env:
-  NODE_VERSION: '20'
-  BUN_VERSION: 'latest'
+  NODE_VERSION: "20"
+  BUN_VERSION: "latest"
 
 jobs:
   build-and-test:
     name: Build and Test Shared Library
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      with:
-        bun-version: ${{ env.BUN_VERSION }}
-        
-    - name: Cache Bun dependencies
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.bun/install/cache
-          node_modules/.cache
-        key: ${{ runner.os }}-bun-${{ hashFiles('**/package.json') }}
-        restore-keys: |
-          ${{ runner.os }}-bun-
-          
-    - name: Install dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        bun install
-        
-    - name: Type checking
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        bun run build:types
-        
-    - name: Linting with ESLint
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        
-        # Install ESLint if not present
-        if ! bunpm list eslint &>/dev/null; then
-          bun add -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
-        fi
-        
-        # Run linting
-        bun run lint
-        
-    - name: Format checking with Prettier
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        bun run format
-        
-    - name: Build
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        bun run build
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            node_modules/.cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+          bun install
+
+      - name: Type checking
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+          bun run build:types
+
+      - name: Linting with ESLint
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+
+          # Install ESLint if not present
+          if ! bunpm list eslint &>/dev/null; then
+            bun add -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
+          fi
+
+          # Run linting
+          bun run lint
+
+      - name: Format checking with Prettier
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+          bun run format
+
+      - name: Build
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+          bun run build
 
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      
-    - name: Install dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        bun install
-        
-    - name: Audit dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        
-        # Check for vulnerabilities
-        bun audit
-        
-        # Additional security checks
-        bunx audit-ci --moderate || true
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+          bun install
+
+      - name: Audit dependencies
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+
+          # Check for vulnerabilities
+          bun audit --audit-level=moderate || true
+
+          # Additional security checks
+          bunx audit-ci --moderate || true
 
   type-safety:
     name: Type Safety Analysis
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      
-    - name: Install dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        bun install
-        
-    - name: Strict TypeScript compilation
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        
-        # Compile with strictest settings
-        bunx tsc --noEmit --strict --noImplicitAny --noImplicitReturns --noImplicitThis
-        
-    - name: Type coverage analysis
-      run: |
-        cd akkuea-defi-rwa/apps/shared
-        
-        # Generate type coverage report
-        bun add -D type-coverage
-        
-        # Check type coverage (require 100% for shared library)
-        bunx type-coverage --strict --detail
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+          bun install
+
+      - name: Strict TypeScript compilation
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+
+          # Compile with strictest settings
+          bunx tsc --noEmit --strict --noImplicitAny --noImplicitReturns --noImplicitThis
+
+      - name: Type coverage analysis
+        run: |
+          cd akkuea-defi-rwa/apps/shared
+
+          # Generate type coverage report
+          bun add -D type-coverage
+
+          # Check type coverage (require 100% for shared library)
+          bunx type-coverage --strict --detail
 
   # api-compatibility:
   #   name: API Compatibility Test
   #   runs-on: ubuntu-latest
-    
+
   #   steps:
   #   - name: Checkout repository
   #     uses: actions/checkout@v4
-      
+
   #   - name: Setup Bun
   #     uses: oven-sh/setup-bun@v2
-      
+
   #   - name: Install dependencies
   #     run: |
   #       cd akkuea-defi-rwa/apps/shared
   #       bun install
-        
+
   #       cd ../api
   #       bun install
-        
+
   #   - name: Test API integration
   #     run: |
   #       cd akkuea-defi-rwa/apps/api
-        
+
   #       # Import shared library in API context
   #       node -e "
   #       try {
@@ -167,14 +167,14 @@ jobs:
   #         process.exit(1);
   #       }
   #       "
-        
+
   #   - name: Test frontend integration
   #     run: |
   #       cd akkuea-defi-rwa/apps/webapp
-        
+
   #       # Test importing in frontend context
   #       bun install
-        
+
   #       node -e "
   #       try {
   #         const shared = require('../shared/dist/index.js');

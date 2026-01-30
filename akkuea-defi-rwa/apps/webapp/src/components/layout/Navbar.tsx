@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useTheme } from "@/context/ThemeContext";
-import { useWallet } from "@/context/WalletContext";
+import { useWallet } from "@/components/auth/hooks";
 import { cn, truncateAddress } from "@/lib/utils";
 
 const navigation = [

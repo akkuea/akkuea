@@ -1,105 +1,112 @@
 import { Elysia } from 'elysia';
 import { PropertyController } from '../controllers/PropertyController';
-import type { CreatePropertyDto, UpdatePropertyDto } from '../dto/property.dto';
-
-const handleError = (error: unknown, set: any) => {
-  const message = error instanceof Error ? error.message : 'Unknown error';
-
-  if (message.includes('Validation failed')) {
-    set.status = 400;
-    return { error: message };
-  }
-
-  if (message.includes('Unauthorized')) {
-    set.status = 403;
-    return { error: message };
-  }
-
-  if (message.includes('not found') || message.includes('required')) {
-    set.status = 404;
-    return { error: message };
-  }
-
-  set.status = 500;
-  return { error: message };
-};
+import { handleError, BadRequestError, UnauthorizedError } from '../utils/errors';
 
 export const propertyRoutes = new Elysia({ prefix: '/properties' })
-  .get('/', async ({ query }) => {
+  .get('/', async ({ set }) => {
     try {
-      return await PropertyController.getAll(query);
+      return await PropertyController.getProperties();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return {
-        error: message,
-        statusCode: message.includes('not found') ? 404 : 500,
-      };
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
     }
   })
-
   .get('/:id', async ({ params: { id }, set }) => {
     try {
-      return await PropertyController.getById(id);
+      if (!id) {
+        throw new BadRequestError('Property ID is required');
+      }
+      return await PropertyController.getProperty(id);
     } catch (error) {
-      return handleError(error, set);
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
     }
   })
-
-  .post('/', async ({ body, set }) => {
+  .post('/', async ({ body, headers, set }) => {
     try {
-      return await PropertyController.create(body as CreatePropertyDto);
+      const userAddress = headers['x-user-address'] as string | undefined;
+      return await PropertyController.createProperty(
+        body as Partial<import('@real-estate-defi/shared').PropertyInfo>,
+        userAddress,
+      );
     } catch (error) {
-      return handleError(error, set);
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
     }
   })
-
-  .put('/:id', async ({ params: { id }, body, set }) => {
+  .put('/:id', async ({ params: { id }, body, headers, set }) => {
     try {
-      return await PropertyController.update(id, body as UpdatePropertyDto);
+      if (!id) {
+        throw new BadRequestError('Property ID is required');
+      }
+      const userAddress = headers['x-user-address'] as string;
+      if (!userAddress) {
+        throw new UnauthorizedError('User address is required for authentication');
+      }
+      return await PropertyController.updateProperty(
+        id,
+        body as Partial<import('@real-estate-defi/shared').PropertyInfo>,
+        userAddress,
+      );
     } catch (error) {
-      return handleError(error, set);
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
     }
   })
-
-  .patch('/:id', async ({ params: { id }, body, set }) => {
-    try {
-      return await PropertyController.update(id, body as UpdatePropertyDto);
-    } catch (error) {
-      return handleError(error, set);
-    }
-  })
-
   .delete('/:id', async ({ params: { id }, headers, set }) => {
     try {
-      const userAddress = headers.authorization?.replace('Bearer ', '');
-      await PropertyController.delete(id, userAddress);
-      set.status = 204;
-      return null;
+      if (!id) {
+        throw new BadRequestError('Property ID is required');
+      }
+      const userAddress = headers['x-user-address'] as string;
+      if (!userAddress) {
+        throw new UnauthorizedError('User address is required for authentication');
+      }
+      return await PropertyController.deleteProperty(id, userAddress);
     } catch (error) {
-      return handleError(error, set);
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
     }
   })
-
-  .post('/:id/tokenize', async ({ params: { id }, body, set }) => {
+  .post('/:id/tokenize', async ({ params: { id }, body, headers, set }) => {
     try {
-      return await PropertyController.tokenizeProperty(id, body as unknown);
+      if (!id) {
+        throw new BadRequestError('Property ID is required');
+      }
+      const userAddress = headers['x-user-address'] as string | undefined;
+      return await PropertyController.tokenizeProperty(id, body as unknown, userAddress);
     } catch (error) {
-      return handleError(error, set);
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
     }
   })
-
   .post('/:id/buy-shares', async ({ params: { id }, body, set }) => {
     try {
+      if (!id) {
+        throw new BadRequestError('Property ID is required');
+      }
       return await PropertyController.buyShares(id, body as { buyer: string; shares: number });
     } catch (error) {
-      return handleError(error, set);
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
     }
   })
-
   .get('/:id/shares/:owner', async ({ params: { id, owner }, set }) => {
     try {
+      if (!id) {
+        throw new BadRequestError('Property ID is required');
+      }
       return await PropertyController.getUserShares(id, owner);
     } catch (error) {
-      return handleError(error, set);
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
     }
   });

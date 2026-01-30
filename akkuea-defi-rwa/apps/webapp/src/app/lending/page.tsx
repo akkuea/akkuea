@@ -31,8 +31,13 @@ import {
   Modal,
   Toggle,
 } from "@/components/ui";
-import { useWallet } from "@/context/WalletContext";
+import { useWallet } from "@/components/auth/hooks";
 import { formatCurrency, cn } from "@/lib/utils";
+import { Form, FormInput } from "@/components/forms";
+import {
+  createLendingActionSchema,
+  type LendingActionFormValues,
+} from "@/schemas/forms";
 import {
   pageTransition,
   staggerContainer,
@@ -232,9 +237,6 @@ function PoolActionModal({
   isOpen,
   onClose,
 }: PoolActionModalProps) {
-  const [amount, setAmount] = useState("");
-  const [zkPrivacy, setZkPrivacy] = useState(false);
-
   if (!pool) return null;
 
   const actionConfig = {
@@ -265,6 +267,12 @@ function PoolActionModal({
   };
 
   const config = actionConfig[action];
+  const maxAmount =
+    action === "supply" || action === "borrow"
+      ? pool.available
+      : action === "withdraw"
+        ? pool.yourDeposit
+        : pool.yourBorrow;
 
   return (
     <Modal
@@ -273,69 +281,96 @@ function PoolActionModal({
       title={config.title}
       description={config.description}
     >
-      <div className="space-y-6">
-        <div className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#262626] rounded-lg">
-          <span className="text-3xl">{pool.icon}</span>
-          <div>
-            <p className="font-semibold text-white">{pool.name}</p>
-            <p className="text-xs text-neutral-500">{pool.asset}</p>
-          </div>
-          <Badge variant="success" className="ml-auto">
-            {config.apy}% APY
-          </Badge>
-        </div>
+      <Form
+        schema={createLendingActionSchema({
+          maxAmount,
+          asset: pool.asset,
+        })}
+        defaultValues={{ amount: "", zkPrivacy: false }}
+        successMessage="Transaction submitted."
+        onSubmit={async () => {
+          // Simulate an async on-chain call
+          await new Promise((resolve) => setTimeout(resolve, 1200));
+          // Keep success visible briefly, then close
+          setTimeout(() => onClose(), 600);
+        }}
+      >
+        {({ watch, setValue, formState }) => {
+          const zkPrivacy = watch("zkPrivacy");
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#262626] rounded-lg">
+                <span className="text-3xl">{pool.icon}</span>
+                <div>
+                  <p className="font-semibold text-white">{pool.name}</p>
+                  <p className="text-xs text-neutral-500">{pool.asset}</p>
+                </div>
+                <Badge variant="success" className="ml-auto">
+                  {config.apy}% APY
+                </Badge>
+              </div>
 
-        <Input
-          label={`Amount (${pool.asset})`}
-          type="number"
-          placeholder="0.00"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          leftIcon={<Coins className="w-4 h-4" />}
-          hint={`Available: ${formatCurrency(action === "supply" || action === "borrow" ? pool.available : action === "withdraw" ? pool.yourDeposit : pool.yourBorrow)}`}
-        />
+              <FormInput<LendingActionFormValues>
+                name="amount"
+                label={`Amount (${pool.asset})`}
+                type="number"
+                placeholder="0.00"
+                leftIcon={<Coins className="w-4 h-4" />}
+                hint={`Available: ${formatCurrency(maxAmount)}`}
+                disabled={formState.isSubmitting}
+              />
 
-        {/* ZK Privacy Toggle */}
-        <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
-          <Toggle
-            enabled={zkPrivacy}
-            onChange={setZkPrivacy}
-            label="Enable ZK Privacy"
-            description="Hide transaction details using zero-knowledge proofs"
-          />
-          {zkPrivacy && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              className="mt-3 flex items-start gap-2 text-sm text-blue-400"
-            >
-              <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <span className="text-xs">
-                Your transaction amount and balance will be hidden from public
-                view. Only you can see the full details.
-              </span>
-            </motion.div>
-          )}
-        </div>
+              {/* ZK Privacy Toggle */}
+              <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
+                <Toggle
+                  enabled={zkPrivacy}
+                  onChange={(v) => setValue("zkPrivacy", v)}
+                  label="Enable ZK Privacy"
+                  description="Hide transaction details using zero-knowledge proofs"
+                />
+                {zkPrivacy && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="mt-3 flex items-start gap-2 text-sm text-blue-400"
+                  >
+                    <Shield className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <span className="text-xs">
+                      Your transaction amount and balance will be hidden from
+                      public view. Only you can see the full details.
+                    </span>
+                  </motion.div>
+                )}
+              </div>
 
-        {/* Summary */}
-        <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-neutral-500">Transaction Fee</span>
-            <span className="text-white font-mono">~0.001 XLM</span>
-          </div>
-          {zkPrivacy && (
-            <div className="flex justify-between text-sm">
-              <span className="text-neutral-500">ZK Proof Fee</span>
-              <span className="text-white font-mono">~0.01 XLM</span>
+              {/* Summary */}
+              <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-neutral-500">Transaction Fee</span>
+                  <span className="text-white font-mono">~0.001 XLM</span>
+                </div>
+                {zkPrivacy && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-neutral-500">ZK Proof Fee</span>
+                    <span className="text-white font-mono">~0.01 XLM</span>
+                  </div>
+                )}
+              </div>
+
+              <Button
+                className="w-full"
+                size="lg"
+                isSecure
+                type="submit"
+                isLoading={formState.isSubmitting}
+                disabled={!formState.isValid}
+              >
+                {config.buttonText}
+              </Button>
             </div>
-          )}
-        </div>
-
-        <Button className="w-full" size="lg" isSecure>
-          {config.buttonText}
-        </Button>
-      </div>
+          );
+        }}
+      </Form>
     </Modal>
   );
 }

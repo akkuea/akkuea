@@ -4,15 +4,15 @@
 
 ## Issue Metadata
 
-| Attribute | Value |
-|-----------|-------|
-| Issue ID | C1-015 |
-| Title | Implement admin access control module |
-| Area | CONTRACT |
-| Difficulty | Medium |
-| Labels | smart-contract, soroban, security, medium |
-| Dependencies | None |
-| Estimated Lines | 100-150 |
+| Attribute       | Value                                     |
+| --------------- | ----------------------------------------- |
+| Issue ID        | C1-015                                    |
+| Title           | Implement admin access control module     |
+| Area            | CONTRACT                                  |
+| Difficulty      | Medium                                    |
+| Labels          | smart-contract, soroban, security, medium |
+| Dependencies    | None                                      |
+| Estimated Lines | 100-150                                   |
 
 ## Overview
 
@@ -447,18 +447,18 @@ fn test_pause_unpause() {
 
 ## Related Resources
 
-| Resource | Link |
-|----------|------|
-| Soroban Authorization | https://soroban.stellar.org/docs/learn/authorization |
+| Resource                   | Link                                                   |
+| -------------------------- | ------------------------------------------------------ |
+| Soroban Authorization      | https://soroban.stellar.org/docs/learn/authorization   |
 | OpenZeppelin AccessControl | https://docs.openzeppelin.com/contracts/access-control |
 
 ## Verification Checklist
 
-| Item | Status |
-|------|--------|
-| Admin initialization working | |
-| Admin transfer working | |
-| Role management working | |
-| Pause/unpause working | |
-| Authorization checks working | |
-| Unit tests passing | |
+| Item                         | Status |
+| ---------------------------- | ------ |
+| Admin initialization working |        |
+| Admin transfer working       |        |
+| Role management working      |        |
+| Pause/unpause working        |        |
+| Authorization checks working |        |
+| Unit tests passing           |        |

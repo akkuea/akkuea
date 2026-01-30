@@ -1,179 +1,236 @@
 import type { PropertyInfo, Transaction, ShareOwnership } from '@real-estate-defi/shared';
-import { propertyRepository } from '../repositories/PropertyRepository';
-import type {
-  CreatePropertyDto,
-  UpdatePropertyDto,
-  PropertyFilterDto,
-  PaginatedResponse,
-  PaginationDto,
-} from '../dto/property.dto';
-import {
-  validateCreateProperty,
-  validateUpdateProperty,
-  validatePagination,
-} from '../dto/property.dto';
+import { logger } from '../utils/logger';
+import { BadRequestError, NotFoundError, UnauthorizedError, ForbiddenError } from '../utils/errors';
 
 export class PropertyController {
-  static async getAll(query: {
-    page?: string | number;
-    limit?: string | number;
-    owner?: string;
-    city?: string;
-    country?: string;
-    minValuePerShare?: string | number;
-    maxValuePerShare?: string | number;
-    minAvailableShares?: string | number;
-    hasAvailableShares?: string | boolean;
-  }): Promise<PaginatedResponse<PropertyInfo>> {
-    try {
-      const pagination: PaginationDto = validatePagination(query.page, query.limit);
-
-      const filter: PropertyFilterDto = {
-        owner: query.owner,
-        city: query.city,
-        country: query.country,
-        minValuePerShare:
-          query.minValuePerShare !== undefined ? Number(query.minValuePerShare) : undefined,
-        maxValuePerShare:
-          query.maxValuePerShare !== undefined ? Number(query.maxValuePerShare) : undefined,
-        minAvailableShares:
-          query.minAvailableShares !== undefined ? Number(query.minAvailableShares) : undefined,
-        hasAvailableShares:
-          query.hasAvailableShares === 'true' || query.hasAvailableShares === true,
-      };
-
-      Object.keys(filter).forEach((key) => {
-        if (filter[key as keyof PropertyFilterDto] === undefined) {
-          delete filter[key as keyof PropertyFilterDto];
-        }
-      });
-
-      const { properties, total } = propertyRepository.getPaginated(
-        pagination.page,
-        pagination.limit,
-        Object.keys(filter).length > 0 ? filter : undefined,
-      );
-
-      return {
-        data: properties,
-        pagination: {
-          page: pagination.page,
-          limit: pagination.limit,
-          total,
-          totalPages: Math.ceil(total / pagination.limit),
-        },
-      };
-    } catch (error) {
-      throw new Error(`Failed to fetch properties: ${error}`);
-    }
-  }
-
-  static async getById(id: string): Promise<PropertyInfo> {
-    if (!id?.trim()) {
-      throw new Error('Property ID is required');
-    }
-
-    const property = propertyRepository.getById(id);
-
-    if (!property) {
-      throw new Error('Property not found');
-    }
-
-    return property;
-  }
-
-  static async create(data: CreatePropertyDto): Promise<PropertyInfo> {
-    const validation = validateCreateProperty(data);
-    
-    if (!validation.valid) {
-      throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
-    }
-
-    return propertyRepository.create(data);
-  }
-
-  static async update(id: string, data: UpdatePropertyDto): Promise<PropertyInfo> {
-    if (!id?.trim()) {
-      throw new Error('Property ID is required');
-    }
-
-    if (!propertyRepository.exists(id)) {
-      throw new Error('Property not found');
-    }
-
-    const validation = validateUpdateProperty(data);
-    
-    if (!validation.valid) {
-      throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
-    }
-
-    const property = propertyRepository.update(id, data);
-
-    if (!property) {
-      throw new Error('Failed to update property');
-    }
-
-    return property;
-  }
-
-  static async delete(id: string, userAddress?: string): Promise<void> {
-    if (!id?.trim()) {
-      throw new Error('Property ID is required');
-    }
-
-    const property = propertyRepository.getById(id);
-
-    if (!property) {
-      throw new Error('Property not found');
-    }
-
-    if (userAddress && property.owner !== userAddress) {
-      throw new Error('Unauthorized: Only the property owner can delete this property');
-    }
-
-    const deleted = propertyRepository.delete(id);
-
-    if (!deleted) {
-      throw new Error('Failed to delete property');
-    }
-  }
-
   static async getProperties(): Promise<PropertyInfo[]> {
-    return propertyRepository.getAll();
+    const startTime = Date.now();
+    logger.crud.read('property');
+
+    try {
+      // Get all properties from blockchain or database
+      // Implementation to fetch all properties
+      const properties: PropertyInfo[] = []; // Placeholder
+
+      logger.crud.success('READ', 'property', undefined, Date.now() - startTime);
+      return properties;
+    } catch (error) {
+      logger.crud.failure('READ', 'property', error as Error);
+      throw error;
+    }
   }
 
   static async getProperty(id: string): Promise<PropertyInfo> {
-    return this.getById(id);
-  }
+    const startTime = Date.now();
 
-  static async createProperty(data: Partial<PropertyInfo>): Promise<PropertyInfo> {
-    return this.create(data as CreatePropertyDto);
-  }
+    if (!id) {
+      throw new BadRequestError('Property ID is required');
+    }
 
-  static async tokenizeProperty(_id: string, _data: unknown): Promise<{ txHash: string }> {
+    logger.crud.read('property', id);
+
     try {
-      return { txHash: 'placeholder' };
+      // Implementation to fetch specific property
+      // For now, return placeholder - in real implementation, fetch from DB
+      const property = {} as PropertyInfo; // Placeholder
+
+      if (!property) {
+        throw new NotFoundError(`Property with id ${id} not found`);
+      }
+
+      logger.crud.success('READ', 'property', id, Date.now() - startTime);
+      return property;
     } catch (error) {
-      throw new Error(`Failed to tokenize property: ${error}`);
+      logger.crud.failure('READ', 'property', error as Error, id);
+      throw error;
+    }
+  }
+
+  static async createProperty(
+    data: Partial<PropertyInfo>,
+    userAddress?: string,
+  ): Promise<PropertyInfo> {
+    const startTime = Date.now();
+    logger.crud.create('property', data as Record<string, unknown>, userAddress);
+
+    try {
+      // Implementation to create property
+      const property = {} as PropertyInfo; // Placeholder
+
+      logger.crud.success('CREATE', 'property', undefined, Date.now() - startTime);
+      return property;
+    } catch (error) {
+      logger.crud.failure('CREATE', 'property', error as Error);
+      throw error;
+    }
+  }
+
+  static async updateProperty(
+    id: string,
+    data: Partial<PropertyInfo>,
+    userAddress: string,
+  ): Promise<PropertyInfo> {
+    const startTime = Date.now();
+
+    if (!id) {
+      throw new BadRequestError('Property ID is required');
+    }
+
+    if (!userAddress) {
+      throw new UnauthorizedError('User address is required for authentication');
+    }
+
+    logger.crud.update('property', id, data as Record<string, unknown>, userAddress);
+
+    try {
+      // Verify ownership before update
+      const property = await PropertyController.getProperty(id);
+
+      if (property.owner !== userAddress) {
+        throw new ForbiddenError('You do not have permission to update this property');
+      }
+
+      // Implementation to update property
+      const updatedProperty = { ...property, ...data } as PropertyInfo;
+
+      logger.crud.success('UPDATE', 'property', id, Date.now() - startTime);
+      return updatedProperty;
+    } catch (error) {
+      logger.crud.failure('UPDATE', 'property', error as Error, id);
+      throw error;
+    }
+  }
+
+  static async deleteProperty(id: string, userAddress: string): Promise<{ success: boolean }> {
+    const startTime = Date.now();
+
+    if (!id) {
+      throw new BadRequestError('Property ID is required');
+    }
+
+    if (!userAddress) {
+      throw new UnauthorizedError('User address is required for authentication');
+    }
+
+    logger.crud.delete('property', id, userAddress);
+
+    try {
+      // Verify ownership before delete
+      const property = await PropertyController.getProperty(id);
+
+      if (property.owner !== userAddress) {
+        throw new ForbiddenError('You do not have permission to delete this property');
+      }
+
+      // Implementation to delete property
+      // In real implementation, delete from DB
+
+      logger.crud.success('DELETE', 'property', id, Date.now() - startTime);
+      return { success: true };
+    } catch (error) {
+      logger.crud.failure('DELETE', 'property', error as Error, id);
+      throw error;
+    }
+  }
+
+  static async tokenizeProperty(
+    id: string,
+    _data: unknown,
+    userAddress?: string,
+  ): Promise<{ txHash: string }> {
+    const startTime = Date.now();
+
+    if (!id) {
+      throw new BadRequestError('Property ID is required');
+    }
+
+    logger.info('Tokenizing property', {
+      operation: 'TOKENIZE',
+      entity: 'property',
+      entityId: id,
+      userId: userAddress,
+    });
+
+    try {
+      // Implementation to tokenize property on blockchain
+      const result = { txHash: 'placeholder' };
+
+      logger.crud.success('TOKENIZE', 'property', id, Date.now() - startTime);
+      return result;
+    } catch (error) {
+      logger.crud.failure('TOKENIZE', 'property', error as Error, id);
+      throw error;
     }
   }
 
   static async buyShares(
-    _id: string,
-    _data: { buyer: string; shares: number },
+    id: string,
+    data: { buyer: string; shares: number },
   ): Promise<Transaction> {
+    const startTime = Date.now();
+
+    if (!id) {
+      throw new BadRequestError('Property ID is required');
+    }
+
+    if (!data.buyer) {
+      throw new BadRequestError('Buyer address is required');
+    }
+
+    if (!data.shares || data.shares <= 0) {
+      throw new BadRequestError('Number of shares must be greater than 0');
+    }
+
+    logger.info('Buying shares', {
+      operation: 'BUY_SHARES',
+      entity: 'property',
+      entityId: id,
+      userId: data.buyer,
+      shares: data.shares,
+    });
+
     try {
-      return {} as Transaction;
+      // Implementation to handle share purchase
+      const transaction = {} as Transaction; // Placeholder
+
+      logger.crud.success('BUY_SHARES', 'property', id, Date.now() - startTime);
+      return transaction;
     } catch (error) {
-      throw new Error(`Failed to buy shares: ${error}`);
+      logger.crud.failure('BUY_SHARES', 'property', error as Error, id);
+      throw error;
     }
   }
 
-  static async getUserShares(_id: string, _owner: string): Promise<ShareOwnership> {
+  static async getUserShares(id: string, owner: string): Promise<ShareOwnership> {
+    const startTime = Date.now();
+
+    if (!id) {
+      throw new BadRequestError('Property ID is required');
+    }
+
+    if (!owner) {
+      throw new BadRequestError('Owner address is required');
+    }
+
+    logger.info('Fetching user shares', {
+      operation: 'GET_SHARES',
+      entity: 'property',
+      entityId: id,
+      userId: owner,
+    });
+
     try {
-      return {} as ShareOwnership;
+      // Implementation to fetch user shares
+      const shares = {} as ShareOwnership; // Placeholder
+
+      logger.crud.success('GET_SHARES', 'property', id, Date.now() - startTime);
+      return shares;
     } catch (error) {
-      throw new Error(`Failed to fetch user shares: ${error}`);
+      logger.crud.failure('GET_SHARES', 'property', error as Error, id);
+      throw error;
     }
   }
 }
+
+// Export logger for use in routes
+export { logger };

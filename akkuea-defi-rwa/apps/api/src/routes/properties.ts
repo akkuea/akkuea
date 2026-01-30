@@ -3,9 +3,9 @@ import { PropertyController } from '../controllers/PropertyController';
 import { handleError, BadRequestError, UnauthorizedError } from '../utils/errors';
 
 export const propertyRoutes = new Elysia({ prefix: '/properties' })
-  .get('/', async ({ set }) => {
+  .get('/', async ({ query, set }) => {
     try {
-      return await PropertyController.getProperties();
+      return await PropertyController.getProperties(query);
     } catch (error) {
       const errorResponse = handleError(error);
       set.status = errorResponse.statusCode;

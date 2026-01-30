@@ -50,17 +50,17 @@ const app = new Elysia()
     hostname: '0.0.0.0',
   });
 
-// eslint-disable-next-line no-console
+ 
 console.log(`🚀 Real Estate DeFi API is running on port ${process.env.PORT || 3001}`);
-// eslint-disable-next-line no-console
+ 
 console.log(`📚 Swagger docs available at http://localhost:${process.env.PORT || 3001}/swagger`);
 
 // Graceful shutdown handlers
 const shutdown = async (signal: string) => {
-  // eslint-disable-next-line no-console
+   
   console.log(`\n${signal} received, closing database connections...`);
   await closeDatabaseConnection();
-  // eslint-disable-next-line no-console
+   
   console.log('Database connections closed. Exiting...');
   process.exit(0);
 };

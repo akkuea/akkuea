@@ -15,39 +15,65 @@ describe('Property Routes Integration Tests', () => {
   });
 
   describe('GET /properties', () => {
-    it('should return an array of properties', async () => {
+    it('should return paginated properties', async () => {
       const response = await app.handle(new Request('http://localhost/properties'));
 
       expect(response.status).toBe(200);
       const body = await response.json();
-      expect(Array.isArray(body)).toBe(true);
+      expect(body.data).toBeDefined();
+      expect(Array.isArray(body.data)).toBe(true);
+      expect(body.pagination).toBeDefined();
+      expect(body.pagination.page).toBe(1);
+      expect(body.pagination.limit).toBe(10);
+    });
+
+    it('should filter properties by city', async () => {
+      const response = await app.handle(new Request('http://localhost/properties?city=Miami'));
+
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.data).toBeDefined();
+      expect(body.data.length).toBeGreaterThan(0);
+      body.data.forEach((prop: any) => {
+        expect(prop.location.city).toBe('Miami');
+      });
     });
   });
 
   describe('GET /properties/:id', () => {
-    it('should return 400 when id is empty', async () => {
-      // Note: Elysia routing won't match empty id, but controller validates
-      const response = await app.handle(new Request('http://localhost/properties/test-id'));
+    it('should return 404 for non-existent property', async () => {
+      const response = await app.handle(new Request('http://localhost/properties/non-existent-id'));
 
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(404);
     });
 
     it('should return property when id is provided', async () => {
-      const response = await app.handle(new Request('http://localhost/properties/test-id-123'));
+      // Use property_1 from seed data
+      const response = await app.handle(new Request('http://localhost/properties/property_1'));
 
       expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.id).toBe('property_1');
+      expect(body.owner).toBeDefined();
     });
   });
 
   describe('POST /properties', () => {
     it('should create a property successfully', async () => {
       const propertyData = {
-        address: '123 Main St',
-        city: 'Test City',
-        country: 'Test Country',
-        propertyType: 'residential',
-        totalShares: 1000,
-        pricePerShare: '100.00',
+        owner: 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+        totalShares: 500,
+        valuePerShare: 250,
+        metadata: {
+          name: 'Test Property',
+          description: 'A test property for integration testing',
+          propertyType: 'residential',
+        },
+        location: {
+          address: '123 Test St',
+          city: 'Test City',
+          country: 'Test Country',
+        },
       };
 
       const response = await app.handle(
@@ -62,6 +88,26 @@ describe('Property Routes Integration Tests', () => {
       );
 
       expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.id).toBeDefined();
+      expect(body.totalShares).toBe(500);
+    });
+
+    it('should return 400 for invalid property data', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/properties', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-address': 'test-user-address',
+          },
+          body: JSON.stringify({ invalid: 'data' }),
+        }),
+      );
+
+      expect(response.status).toBe(400);
+      const body = await response.json();
+      expect(body.message).toContain('Validation failed');
     });
   });
 
@@ -83,20 +129,36 @@ describe('Property Routes Integration Tests', () => {
     });
 
     it('should update property when authorized', async () => {
+      // Use property_1 and its actual owner from seed data
       const response = await app.handle(
-        new Request('http://localhost/properties/test-id', {
+        new Request('http://localhost/properties/property_1', {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'x-user-address': 'owner-address',
+            'x-user-address': 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
           },
-          body: JSON.stringify({ address: 'Updated Address' }),
+          body: JSON.stringify({ valuePerShare: 150 }),
         }),
       );
 
-      // Will fail authorization check against placeholder data
-      // In real tests, we'd mock the database
-      expect([200, 403]).toContain(response.status);
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.valuePerShare).toBe(150);
+    });
+
+    it('should return 403 when user is not owner', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/properties/property_1', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-address': 'wrong-owner-address',
+          },
+          body: JSON.stringify({ valuePerShare: 150 }),
+        }),
+      );
+
+      expect(response.status).toBe(403);
     });
   });
 
@@ -114,9 +176,9 @@ describe('Property Routes Integration Tests', () => {
       expect(body.message).toBe('User address is required for authentication');
     });
 
-    it('should require authorization for delete', async () => {
+    it('should return 404 for non-existent property', async () => {
       const response = await app.handle(
-        new Request('http://localhost/properties/test-id', {
+        new Request('http://localhost/properties/non-existent-id', {
           method: 'DELETE',
           headers: {
             'x-user-address': 'some-user-address',
@@ -124,9 +186,20 @@ describe('Property Routes Integration Tests', () => {
         }),
       );
 
-      // Will fail authorization check against placeholder data
-      // In real tests, we'd mock the database
-      expect([200, 403]).toContain(response.status);
+      expect(response.status).toBe(404);
+    });
+
+    it('should return 403 when user is not owner', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/properties/property_1', {
+          method: 'DELETE',
+          headers: {
+            'x-user-address': 'wrong-owner-address',
+          },
+        }),
+      );
+
+      expect(response.status).toBe(403);
     });
   });
 

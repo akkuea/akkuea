@@ -1,19 +1,76 @@
 import type { PropertyInfo, Transaction, ShareOwnership } from '@real-estate-defi/shared';
 import { logger } from '../utils/logger';
 import { BadRequestError, NotFoundError, UnauthorizedError, ForbiddenError } from '../utils/errors';
+import { propertyRepository } from '../repositories/PropertyRepository';
+import type {
+  CreatePropertyDto,
+  UpdatePropertyDto,
+  PropertyFilterDto,
+  PaginatedResponse,
+  PaginationDto,
+} from '../dto/property.dto';
+import {
+  validateCreateProperty,
+  validateUpdateProperty,
+  validatePagination,
+} from '../dto/property.dto';
 
 export class PropertyController {
-  static async getProperties(): Promise<PropertyInfo[]> {
+  static async getProperties(query?: {
+    page?: string | number;
+    limit?: string | number;
+    owner?: string;
+    city?: string;
+    country?: string;
+    minValuePerShare?: string | number;
+    maxValuePerShare?: string | number;
+    minAvailableShares?: string | number;
+    hasAvailableShares?: string | boolean;
+  }): Promise<PaginatedResponse<PropertyInfo>> {
     const startTime = Date.now();
     logger.crud.read('property');
 
     try {
-      // Get all properties from blockchain or database
-      // Implementation to fetch all properties
-      const properties: PropertyInfo[] = []; // Placeholder
+      const pagination: PaginationDto = validatePagination(query?.page, query?.limit);
+
+      const filter: PropertyFilterDto = {
+        owner: query?.owner,
+        city: query?.city,
+        country: query?.country,
+        minValuePerShare:
+          query?.minValuePerShare !== undefined ? Number(query.minValuePerShare) : undefined,
+        maxValuePerShare:
+          query?.maxValuePerShare !== undefined ? Number(query.maxValuePerShare) : undefined,
+        minAvailableShares:
+          query?.minAvailableShares !== undefined ? Number(query.minAvailableShares) : undefined,
+        hasAvailableShares:
+          query?.hasAvailableShares === 'true' || query?.hasAvailableShares === true,
+      };
+
+      // Remove undefined values from filter
+      Object.keys(filter).forEach((key) => {
+        if (filter[key as keyof PropertyFilterDto] === undefined) {
+          delete filter[key as keyof PropertyFilterDto];
+        }
+      });
+
+      const { properties, total } = propertyRepository.getPaginated(
+        pagination.page,
+        pagination.limit,
+        Object.keys(filter).length > 0 ? filter : undefined,
+      );
 
       logger.crud.success('READ', 'property', undefined, Date.now() - startTime);
-      return properties;
+
+      return {
+        data: properties,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          totalPages: Math.ceil(total / pagination.limit),
+        },
+      };
     } catch (error) {
       logger.crud.failure('READ', 'property', error as Error);
       throw error;
@@ -30,9 +87,7 @@ export class PropertyController {
     logger.crud.read('property', id);
 
     try {
-      // Implementation to fetch specific property
-      // For now, return placeholder - in real implementation, fetch from DB
-      const property = {} as PropertyInfo; // Placeholder
+      const property = propertyRepository.getById(id);
 
       if (!property) {
         throw new NotFoundError(`Property with id ${id} not found`);
@@ -54,8 +109,15 @@ export class PropertyController {
     logger.crud.create('property', data as Record<string, unknown>, userAddress);
 
     try {
-      // Implementation to create property
-      const property = {} as PropertyInfo; // Placeholder
+      // Validate input
+      const validation = validateCreateProperty(data);
+
+      if (!validation.valid) {
+        throw new BadRequestError(`Validation failed: ${validation.errors.join(', ')}`);
+      }
+
+      // Create property
+      const property = propertyRepository.create(data as CreatePropertyDto);
 
       logger.crud.success('CREATE', 'property', undefined, Date.now() - startTime);
       return property;
@@ -83,15 +145,31 @@ export class PropertyController {
     logger.crud.update('property', id, data as Record<string, unknown>, userAddress);
 
     try {
-      // Verify ownership before update
-      const property = await PropertyController.getProperty(id);
+      // Validate input
+      const validation = validateUpdateProperty(data);
 
+      if (!validation.valid) {
+        throw new BadRequestError(`Validation failed: ${validation.errors.join(', ')}`);
+      }
+
+      // Check if property exists
+      const property = propertyRepository.getById(id);
+
+      if (!property) {
+        throw new NotFoundError(`Property with id ${id} not found`);
+      }
+
+      // Verify ownership
       if (property.owner !== userAddress) {
         throw new ForbiddenError('You do not have permission to update this property');
       }
 
-      // Implementation to update property
-      const updatedProperty = { ...property, ...data } as PropertyInfo;
+      // Update property
+      const updatedProperty = propertyRepository.update(id, data as UpdatePropertyDto);
+
+      if (!updatedProperty) {
+        throw new Error('Failed to update property');
+      }
 
       logger.crud.success('UPDATE', 'property', id, Date.now() - startTime);
       return updatedProperty;
@@ -115,15 +193,24 @@ export class PropertyController {
     logger.crud.delete('property', id, userAddress);
 
     try {
-      // Verify ownership before delete
-      const property = await PropertyController.getProperty(id);
+      // Check if property exists
+      const property = propertyRepository.getById(id);
 
+      if (!property) {
+        throw new NotFoundError(`Property with id ${id} not found`);
+      }
+
+      // Verify ownership
       if (property.owner !== userAddress) {
         throw new ForbiddenError('You do not have permission to delete this property');
       }
 
-      // Implementation to delete property
-      // In real implementation, delete from DB
+      // Delete property
+      const deleted = propertyRepository.delete(id);
+
+      if (!deleted) {
+        throw new Error('Failed to delete property');
+      }
 
       logger.crud.success('DELETE', 'property', id, Date.now() - startTime);
       return { success: true };

@@ -41,7 +41,7 @@ const createPropertySchema = z.object({
 // Update property body schema
 const updatePropertySchema = createPropertySchema.partial();
 
-// Buy shares body schema - includes buyer field required by controller
+// Buy shares body schema
 const buySharesSchema = z.object({
   buyer: z.string().min(1, 'Buyer address is required'),
   shares: z.number().int().positive(),

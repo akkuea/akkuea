@@ -1,6 +1,19 @@
 import { Elysia } from 'elysia';
+import { ApiError } from '../errors/ApiError';
 
 export const errorHandler = new Elysia().onError(({ error, code, set }) => {
+  // Handle custom ApiError instances
+  if (error instanceof ApiError) {
+    set.status = error.statusCode;
+    return {
+      success: false,
+      error: error.code,
+      message: error.message,
+      details: error.details,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
   if (code === 'VALIDATION') {
     set.status = 400;
     return {

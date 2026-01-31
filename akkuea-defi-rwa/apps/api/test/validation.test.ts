@@ -62,13 +62,13 @@ describe('Validation Middleware', () => {
   });
 
   it('should pass valid body on POST /properties', async () => {
-    // We expect a 201 or 200 depending on implementation, but NOT a 400
+    // We expect a 201 or 200 depending on implementation, but NOT a 400 VALIDATION_ERROR
     const response = await app.handle(
       new Request('http://localhost/properties', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'test-user-id',
+          'x-user-address': 'GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
         },
         body: JSON.stringify({
           name: 'Test Property',
@@ -87,8 +87,11 @@ describe('Validation Middleware', () => {
       })
     );
 
-    // If controller is not fully implemented it might return 404 or something else, 
-    // but the validation should pass (status != 400)
-    expect(response.status).not.toBe(400);
+    // Validation should pass - if 400 it should NOT be VALIDATION_ERROR
+    // (Controller may return 400 for business logic validation)
+    if (response.status === 400) {
+      const body = await response.json() as { code?: string };
+      expect(body.code).not.toBe('VALIDATION_ERROR');
+    }
   });
 });

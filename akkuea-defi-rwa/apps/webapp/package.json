@@ -17,13 +17,13 @@
     "stellar-sdk": "^13.3.0",
     "soroban-client": "^1.0.1",
     "@real-estate-defi/shared": "workspace:*",
+    "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.468.0",
-    "clsx": "^2.1.1",
     "react-hook-form": "^7.71.1",
     "zod": "^3.25.76",
     "@hookform/resolvers": "^3.10.0",
-    "@creit.tech/stellar-wallets-kit": "^1.0.0",
+    "@creit.tech/stellar-wallets-kit": "^1.9.5",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

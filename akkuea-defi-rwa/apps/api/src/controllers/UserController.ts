@@ -170,11 +170,15 @@ export class UserController {
       // const stellar = new StellarService();
       // const balance = await stellar.getAccountBalance(address);
 
+      const now = new Date().toISOString();
       return {
-        address,
-        kycStatus: 'pending',
-        reputation: 0,
-        createdAt: new Date(),
+        id: crypto.randomUUID(),
+        walletAddress: address,
+        kycStatus: 'pending' as const,
+        kycTier: 'none' as const,
+        kycDocuments: [],
+        createdAt: now,
+        updatedAt: now,
       };
     } catch (error) {
       throw new Error(`Failed to fetch user ${address}: ${error}`);

@@ -30,15 +30,18 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/bun": "latest",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
+    "@typescript-eslint/eslint-plugin": "^8.52.0",
+    "@typescript-eslint/parser": "^8.52.0",
     "complexity-report": "^2.0.0-alpha",
     "drizzle-kit": "^1.0.0-beta.12-a5629fb",
-    "eslint": "^8.57.1",
+    "eslint": "^9.39.2",
     "eslint-config-prettier": "^9.1.2",
+    "globals": "^17.2.0",
     "prettier": "^3.7.4",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.54.0"
   },
   "peerDependencies": {
     "typescript": "^5"

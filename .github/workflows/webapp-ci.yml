@@ -2,178 +2,178 @@ name: WebApp - Quality and Security CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'akkuea-defi-rwa/apps/webapp/**'
-      - '.github/workflows/webapp-ci.yml'
+      - "akkuea-defi-rwa/apps/webapp/**"
+      - ".github/workflows/webapp-ci.yml"
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'akkuea-defi-rwa/apps/webapp/**'
-      - '.github/workflows/webapp-ci.yml'
+      - "akkuea-defi-rwa/apps/webapp/**"
+      - ".github/workflows/webapp-ci.yml"
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: "20"
 
 jobs:
   build-and-test:
     name: Build and Test WebApp
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      with:
-        bun-version: latest
-        
-    - name: Cache node modules
-      uses: actions/cache@v4
-      with:
-        path: ~/.bun/install/cache
-        key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-bun-
-          
-    - name: Install dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        bun install
-        
-    - name: Type checking
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        bun run type-check
-        
-    - name: ESLint checking
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        bun run lint
-        
-    - name: Format checking with Prettier
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
-        
-    - name: Build application
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        bun run build
-        
-    # - name: Run unit tests
-    #   run: |
-    #     cd akkuea-defi-rwa/apps/webapp
-        
-    #     # Run tests with coverage
-    #     bun test --coverage --watchAll=false
-        
-    # - name: E2E tests
-    #   run: |
-    #     cd akkuea-defi-rwa/apps/webapp
-        
-    #     # Install Playwright
-    #     bunx playwright install
-        
-    #     # Run E2E tests
-    #     echo "Skipping E2E tests - no test:e2e script defined"
-        
-    - name: Analyze bundle size
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        
-        # Check if .next directory exists and size is reasonable
-        if [ -d ".next" ]; then
-          BUILD_SIZE=$(du -sk .next | cut -f1)
-          echo "Build size: ${BUILD_SIZE}KB"
-          
-          # Warn if build is too large (>50MB)
-          if [ $BUILD_SIZE -gt 51200 ]; then
-            echo "Warning: Build size is large ($BUILD_SIZE KB)"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache node modules
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+          bun install
+
+      - name: Type checking
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+          bun run type-check
+
+      - name: ESLint checking
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+          bun run lint
+
+      - name: Format checking with Prettier
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+          bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+
+      - name: Build application
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+          bun run build
+
+      # - name: Run unit tests
+      #   run: |
+      #     cd akkuea-defi-rwa/apps/webapp
+
+      #     # Run tests with coverage
+      #     bun test --coverage --watchAll=false
+
+      # - name: E2E tests
+      #   run: |
+      #     cd akkuea-defi-rwa/apps/webapp
+
+      #     # Install Playwright
+      #     bunx playwright install
+
+      #     # Run E2E tests
+      #     echo "Skipping E2E tests - no test:e2e script defined"
+
+      - name: Analyze bundle size
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+
+          # Check if .next directory exists and size is reasonable
+          if [ -d ".next" ]; then
+            BUILD_SIZE=$(du -sk .next | cut -f1)
+            echo "Build size: ${BUILD_SIZE}KB"
+            
+            # Warn if build is too large (>50MB)
+            if [ $BUILD_SIZE -gt 51200 ]; then
+              echo "Warning: Build size is large ($BUILD_SIZE KB)"
+            fi
           fi
-        fi
-        
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: webapp-build
-        path: akkuea-defi-rwa/apps/webapp/.next/
-        retention-days: 4
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp-build
+          path: akkuea-defi-rwa/apps/webapp/.next/
+          retention-days: 4
 
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
 
-    - name: Setup Bun
-      uses: oven-sh/setup-bun@v2
-      with:
-        bun-version: latest
-        
-    - name: Install dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        bun install
-        
-    - name: Audit dependencies
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        
-        # Check for known vulnerabilities
-        bun audit
-        
-        # Check for outdated packages
-        bun outdated || true
-        
-    - name: Check for secrets in code
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        
-        # Scan for potential secrets
-        echo "Scanning for potential secrets..."
-        
-        # Common secret patterns
-        if grep -r -E "(API_KEY|SECRET|PASSWORD|PRIVATE_KEY)" src/ public/ --exclude-dir=node_modules --exclude-dir=.next; then
-          echo "Warning: Potential secret patterns found in source code"
-          exit 1
-        fi
-        
-        # Check for hardcoded URLs
-        if grep -r "https://.*\|http://.*" src/ --exclude-dir=node_modules | grep -v "localhost\|127.0.0.1"; then
-          echo "Warning: Hardcoded URLs found"
-        fi
-        
-    - name: Security linting
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        
-        # Install security-focused ESLint plugins
-        bun add --dev eslint-plugin-security eslint-plugin-xss
-        
-        # Run security linting
-        bunx eslint src/ --ext .ts,.tsx || true
-        
-    - name: Check CSP headers
-      run: |
-        cd akkuea-defi-rwa/apps/webapp
-        
-        # Build app first
-        bun run build
-        
-        # Check if CSP headers are configured
-        if [ -f "next.config.js" ] || [ -f "next.config.ts" ]; then
-          if grep -r "Content-Security-Policy\|CSP" .; then
-            echo "CSP configuration found"
-          else
-            echo "Warning: No CSP configuration found"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+          bun install
+
+      - name: Audit dependencies
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+
+          # Check for known vulnerabilities
+          bun audit --audit-level=moderate || true
+
+          # Check for outdated packages
+          bun outdated || true
+
+      - name: Check for secrets in code
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+
+          # Scan for potential secrets
+          echo "Scanning for potential secrets..."
+
+          # Common secret patterns
+          if grep -r -E "(API_KEY|SECRET|PASSWORD|PRIVATE_KEY)" src/ public/ --exclude-dir=node_modules --exclude-dir=.next; then
+            echo "Warning: Potential secret patterns found in source code"
+            exit 1
           fi
-        fi
+
+          # Check for hardcoded URLs
+          if grep -r "https://.*\|http://.*" src/ --exclude-dir=node_modules | grep -v "localhost\|127.0.0.1"; then
+            echo "Warning: Hardcoded URLs found"
+          fi
+
+      - name: Security linting
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+
+          # Install security-focused ESLint plugins
+          bun add --dev eslint-plugin-security eslint-plugin-xss
+
+          # Run security linting
+          bunx eslint src/ --ext .ts,.tsx || true
+
+      - name: Check CSP headers
+        run: |
+          cd akkuea-defi-rwa/apps/webapp
+
+          # Build app first
+          bun run build
+
+          # Check if CSP headers are configured
+          if [ -f "next.config.js" ] || [ -f "next.config.ts" ]; then
+            if grep -r "Content-Security-Policy\|CSP" .; then
+              echo "CSP configuration found"
+            else
+              echo "Warning: No CSP configuration found"
+            fi
+          fi

@@ -135,6 +135,93 @@ impl PropertyTokenContract {
         set_lending_admin(&env, &admin);
     }
 
+    // ─── Repay Borrowed Loan ───────────────────
+    pub fn repay(
+    env: Env,
+    borrower: Address,
+    pool_id: String,
+    amount: i128,
+) {
+    // Step 1: authenticate borrower
+    borrower.require_auth();
+
+    if amount <= 0 {
+        panic!("amount must be positive");
+    }
+
+    // Step 2: make sure pool exists
+    let pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
+
+    // Step 3: accrue interest before calculating debt
+    accrue_interest_internal(&env, &pool_id);
+
+    // Step 4: load borrower position
+    let mut position =
+        PositionStorage::get_borrow(&env, &borrower, &pool_id)
+            .expect("position not found");
+
+    // Step 5: calculate current debt (principal + interest)
+    let current_debt =
+        PositionStorage::calculate_current_debt(&env, &position);
+
+    // Step 6: prevent overpayment
+    let repay_amount = if amount > current_debt {
+        current_debt
+    } else {
+        amount
+    };
+
+    // Step 7: transfer repayment tokens to contract
+    let token_client = token::Client::new(&env, &pool.asset_address);
+    token_client.transfer(
+        &borrower,
+        &env.current_contract_address(),
+        &repay_amount,
+    );
+
+    // Step 8: calculate collateral to release
+    let collateral_release =
+        position.collateral_amount * repay_amount / current_debt;
+
+    // Step 9: update borrow position
+    position.principal -= repay_amount;
+    position.collateral_amount -= collateral_release;
+
+    // Step 10: update pool borrow totals
+    let total_borrows = PoolStorage::get_total_borrows(&env, &pool_id);
+    PoolStorage::set_total_borrows(&env, &pool_id, total_borrows - repay_amount);
+
+    // Step 11: return collateral to borrower
+    let collateral_token = token::Client::new(&env, &position.collateral_asset);
+    collateral_token.transfer(
+        &env.current_contract_address(),
+        &borrower,
+        &collateral_release,
+    );
+
+    // Step 12: remove or update position
+    if position.principal == 0 {
+        PositionStorage::remove_borrow(&env, &borrower, &pool_id);
+    } else {
+        PositionStorage::set_borrow(&env, &position);
+    }
+    // Step 13: emit event
+         let remaining_debt = current_debt - repay_amount;
+
+    // Step 14: emit event
+    LendingEvents::repay(
+    &env,
+    pool_id,
+    borrower,
+    repay_amount,
+    remaining_debt,
+    collateral_release,
+);
+}
+
+
+
+
     // ─── Share Management (Admin) ──────────────
 
     pub fn mint_shares(

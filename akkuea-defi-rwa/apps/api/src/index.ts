@@ -5,7 +5,6 @@ import { propertyRoutes } from './routes/properties';
 import { lendingRoutes } from './routes/lending';
 import { userRoutes } from './routes/users';
 import { kycRoutes } from './routes/kyc';
-import { oracleRoutes } from './routes/oracle';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = new Elysia()
@@ -27,7 +26,6 @@ const app = new Elysia()
   .use(lendingRoutes)
   .use(userRoutes)
   .use(kycRoutes)
-  .use(oracleRoutes)
   .get('/health', () => ({
     status: 'ok',
     timestamp: new Date().toISOString(),

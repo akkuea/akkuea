@@ -3,7 +3,6 @@ import {
   ShareOwnership,
   Transaction,
   LendingPool,
-  RealEstateValuationPayload,
 } from "../types";
 import { StrKey } from "stellar-sdk";
 
@@ -193,83 +192,6 @@ export class ValidationService {
   static validateKYCDocument(documentType: string): boolean {
     const validTypes = ["passport", "id_card", "proof_of_address", "other"];
     return validTypes.includes(documentType);
-  }
-
-  static validateValuationPayload(
-    payload: Partial<RealEstateValuationPayload>,
-    maxAgeMs: number = 24 * 60 * 60 * 1000,
-    minPrice: number = 1,
-    maxPrice: number = 1_000_000_000,
-  ): { isValid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    if (!payload.propertyId || payload.propertyId.trim().length === 0) {
-      errors.push("Property ID is required");
-    }
-
-    if (payload.price === undefined || payload.price <= 0) {
-      errors.push("Price must be greater than 0");
-    } else if (payload.price < minPrice || payload.price > maxPrice) {
-      errors.push(
-        `Price must be between ${minPrice} and ${maxPrice}`,
-      );
-    }
-
-    if (!payload.currency || payload.currency.trim().length === 0) {
-      errors.push("Currency is required");
-    }
-
-    if (!payload.sourceId || payload.sourceId.trim().length === 0) {
-      errors.push("Source ID is required");
-    }
-
-    if (!payload.sourceName || payload.sourceName.trim().length === 0) {
-      errors.push("Source name is required");
-    }
-
-    if (!payload.timestamp) {
-      errors.push("Timestamp is required");
-    } else {
-      const age = Date.now() - new Date(payload.timestamp).getTime();
-      if (age > maxAgeMs) {
-        errors.push(
-          `Valuation is stale: timestamp is older than ${maxAgeMs / 3600000} hour(s)`,
-        );
-      }
-      if (age < 0) {
-        errors.push("Timestamp cannot be in the future");
-      }
-    }
-
-    if (
-      payload.confidence === undefined ||
-      payload.confidence < 0 ||
-      payload.confidence > 100
-    ) {
-      errors.push("Confidence must be between 0 and 100");
-    }
-
-    const validMethodologies = [
-      "automated",
-      "manual",
-      "comparable_sales",
-      "income_approach",
-      "cost_approach",
-    ];
-    if (
-      !payload.methodology ||
-      !validMethodologies.includes(payload.methodology)
-    ) {
-      errors.push(
-        `Methodology must be one of: ${validMethodologies.join(", ")}`,
-      );
-    }
-
-    if (!payload.provenance || !payload.provenance.dataProvider) {
-      errors.push("Provenance dataProvider is required");
-    }
-
-    return { isValid: errors.length === 0, errors };
   }
 
   static sanitizeString(input: string): string {

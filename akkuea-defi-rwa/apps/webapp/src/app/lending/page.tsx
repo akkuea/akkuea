@@ -344,7 +344,9 @@ export default function LendingPage() {
             <div className="w-16 h-16 rounded-lg bg-muted border border-border flex items-center justify-center mb-6">
               <Wallet className="w-8 h-8 text-neutral-500" aria-hidden="true" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground mb-3">DeFi Lending</h1>
+            <h1 className="text-2xl font-bold text-foreground mb-3">
+              DeFi Lending
+            </h1>
             <p className="text-sm text-neutral-500 max-w-md mb-8">
               Connect your wallet to access lending pools. Supply liquidity to
               earn yields or borrow against your tokenized real estate
@@ -393,7 +395,9 @@ export default function LendingPage() {
             className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           >
             <div>
-              <h1 className="text-2xl font-bold text-foreground">DeFi Lending</h1>
+              <h1 className="text-2xl font-bold text-foreground">
+                DeFi Lending
+              </h1>
               <p className="text-sm text-neutral-500 mt-1">
                 Supply liquidity to earn yields or borrow against your RWA
                 collateral

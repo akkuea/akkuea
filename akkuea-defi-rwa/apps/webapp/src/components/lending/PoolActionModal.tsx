@@ -264,12 +264,16 @@ export function PoolActionModal({
                 <div className="p-4 bg-card border border-border rounded-lg space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-neutral-500">Transaction Fee</span>
-                    <span className="text-foreground font-mono">~0.001 XLM</span>
+                    <span className="text-foreground font-mono">
+                      ~0.001 XLM
+                    </span>
                   </div>
                   {zkPrivacy && (
                     <div className="flex justify-between text-sm">
                       <span className="text-neutral-500">ZK Proof Fee</span>
-                      <span className="text-foreground font-mono">~0.01 XLM</span>
+                      <span className="text-foreground font-mono">
+                        ~0.01 XLM
+                      </span>
                     </div>
                   )}
                 </div>

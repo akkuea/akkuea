@@ -190,7 +190,9 @@ export function Footer() {
               Built on <span className="text-foreground">Stellar</span>
             </p>
             <span className="text-muted-foreground">|</span>
-            <p className="text-[10px] text-muted-foreground font-mono">v1.0.0</p>
+            <p className="text-[10px] text-muted-foreground font-mono">
+              v1.0.0
+            </p>
           </div>
         </motion.div>
 

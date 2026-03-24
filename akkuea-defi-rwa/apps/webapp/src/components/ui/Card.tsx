@@ -31,8 +31,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
   ) => {
     const variantStyles = {
       default: "bg-card border border-border",
-      elevated:
-        "bg-card border border-border shadow-xl shadow-black/20",
+      elevated: "bg-card border border-border shadow-xl shadow-black/20",
       bordered: "bg-background border border-border hover:border-border-hover",
       accent: "bg-card border border-border hover:border-accent/30",
       gradient:

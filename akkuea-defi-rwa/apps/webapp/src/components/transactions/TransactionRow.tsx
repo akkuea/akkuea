@@ -120,7 +120,9 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
       {/* Details */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-foreground">{cfg.label}</span>
+          <span className="text-sm font-medium text-foreground">
+            {cfg.label}
+          </span>
           <Badge variant={statusVariant} className="text-[10px]">
             {transaction.status}
           </Badge>

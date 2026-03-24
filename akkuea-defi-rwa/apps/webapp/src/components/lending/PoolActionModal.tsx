@@ -167,7 +167,7 @@ export function PoolActionModal({
             <CheckCircle2 className="w-7 h-7 text-[#00ff88]" />
           </div>
           <div>
-            <p className="text-base font-semibold text-white mb-1">
+            <p className="text-base font-semibold text-foreground mb-1">
               Action submitted
             </p>
             <p className="text-xs text-neutral-500 mb-3">{successMessage}</p>
@@ -201,11 +201,11 @@ export function PoolActionModal({
                 ) : null}
 
                 <div
-                  className="flex items-center gap-3 p-4 bg-[#1a1a1a] border border-[#262626] rounded-lg"
+                  className="flex items-center gap-3 p-4 bg-muted border border-border rounded-lg"
                   aria-label={`Pool: ${pool.name}`}
                 >
                   <div
-                    className="w-10 h-10 rounded-lg bg-[#262626] flex items-center justify-center flex-shrink-0"
+                    className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center flex-shrink-0"
                     aria-hidden="true"
                   >
                     <Coins
@@ -214,7 +214,7 @@ export function PoolActionModal({
                     />
                   </div>
                   <div>
-                    <p className="font-semibold text-white">{pool.name}</p>
+                    <p className="font-semibold text-foreground">{pool.name}</p>
                     <p className="text-xs text-neutral-500">{pool.asset}</p>
                   </div>
                   <Badge variant="success" className="ml-auto">
@@ -235,7 +235,7 @@ export function PoolActionModal({
                 />
 
                 {/* ZK Privacy Toggle */}
-                <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
+                <div className="p-4 bg-card border border-border rounded-lg">
                   <Toggle
                     enabled={zkPrivacy}
                     onChange={(v) => setValue("zkPrivacy", v)}
@@ -261,15 +261,15 @@ export function PoolActionModal({
                 </div>
 
                 {/* Fee summary */}
-                <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg space-y-2">
+                <div className="p-4 bg-card border border-border rounded-lg space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-neutral-500">Transaction Fee</span>
-                    <span className="text-white font-mono">~0.001 XLM</span>
+                    <span className="text-foreground font-mono">~0.001 XLM</span>
                   </div>
                   {zkPrivacy && (
                     <div className="flex justify-between text-sm">
                       <span className="text-neutral-500">ZK Proof Fee</span>
-                      <span className="text-white font-mono">~0.01 XLM</span>
+                      <span className="text-foreground font-mono">~0.01 XLM</span>
                     </div>
                   )}
                 </div>

@@ -68,7 +68,7 @@ function ErrorState({ error, onRetry }: ErrorStateProps) {
       className="rounded-2xl border border-red-500/30 bg-red-500/10 p-8 text-center"
     >
       <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-300" />
-      <h2 className="mb-2 text-lg font-semibold text-white">
+      <h2 className="mb-2 text-lg font-semibold text-foreground">
         Could not load the marketplace
       </h2>
       <p className="mx-auto mb-6 max-w-xl text-sm text-red-100/80">{error}</p>
@@ -87,7 +87,7 @@ function EmptyState() {
   return (
     <motion.div variants={staggerItem} className="py-16 text-center">
       <Building2 className="mx-auto mb-4 h-16 w-16 text-neutral-700" />
-      <h3 className="mb-2 text-lg font-semibold text-white">
+      <h3 className="mb-2 text-lg font-semibold text-foreground">
         No properties found
       </h3>
       <p className="text-sm text-neutral-500">
@@ -135,7 +135,7 @@ function PropertyCard({
         <div className="p-5">
           <div className="mb-2 flex items-start justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold text-white transition-colors group-hover:text-[#ff3e00]">
+              <h3 className="text-sm font-semibold text-foreground transition-colors group-hover:text-[#ff3e00]">
                 {property.name}
               </h3>
               <p className="mt-0.5 flex items-center gap-1 text-xs text-neutral-500">
@@ -151,11 +151,11 @@ function PropertyCard({
           <div className="mt-4">
             <div className="mb-1.5 flex items-center justify-between text-xs">
               <span className="text-neutral-500">Funding Progress</span>
-              <span className="font-mono font-medium text-white">
+              <span className="font-mono font-medium text-foreground">
                 {fundingProgress}%
               </span>
             </div>
-            <div className="h-1 overflow-hidden rounded-full bg-[#1a1a1a]">
+            <div className="h-1 overflow-hidden rounded-full bg-muted">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${fundingProgress}%` }}
@@ -165,9 +165,9 @@ function PropertyCard({
             </div>
           </div>
 
-          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-[#1a1a1a] pt-4">
+          <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-4">
             <div className="text-center">
-              <p className="font-mono text-sm font-bold text-white">
+              <p className="font-mono text-sm font-bold text-foreground">
                 {formatCurrency(parseFloat(property.pricePerShare))}
               </p>
               <p className="text-[10px] uppercase tracking-wider text-neutral-600">
@@ -175,7 +175,7 @@ function PropertyCard({
               </p>
             </div>
             <div className="text-center">
-              <p className="font-mono text-sm font-bold text-white">
+              <p className="font-mono text-sm font-bold text-foreground">
                 {soldShares.toLocaleString()}
               </p>
               <p className="text-[10px] uppercase tracking-wider text-neutral-600">
@@ -183,7 +183,7 @@ function PropertyCard({
               </p>
             </div>
             <div className="text-center">
-              <p className="font-mono text-sm font-bold text-white">
+              <p className="font-mono text-sm font-bold text-foreground">
                 {property.availableShares.toLocaleString()}
               </p>
               <p className="text-[10px] uppercase tracking-wider text-neutral-600">
@@ -192,12 +192,12 @@ function PropertyCard({
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between rounded-lg border border-[#1a1a1a] bg-[#0a0a0a] p-3">
+          <div className="mt-4 flex items-center justify-between rounded-lg border border-border bg-card p-3">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-neutral-600">
                 Listed
               </p>
-              <p className="text-xs font-medium text-white">
+              <p className="text-xs font-medium text-foreground">
                 {new Date(property.listedAt).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -252,7 +252,7 @@ export default function MarketplacePage() {
       variants={pageTransition}
       initial="initial"
       animate="animate"
-      className="min-h-screen bg-black"
+      className="min-h-screen bg-background"
     >
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
@@ -263,7 +263,7 @@ export default function MarketplacePage() {
           className="space-y-8"
         >
           <motion.div variants={staggerItem}>
-            <h1 className="text-2xl font-bold text-white">Marketplace</h1>
+            <h1 className="text-2xl font-bold text-foreground">Marketplace</h1>
             <p className="mt-1 text-sm text-neutral-500">
               Discover verified tokenized real estate and invest directly from
               your connected wallet.
@@ -295,7 +295,7 @@ export default function MarketplacePage() {
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="grid gap-4 rounded-lg border border-[#262626] bg-[#0a0a0a] p-4 sm:grid-cols-3"
+                  className="grid gap-4 rounded-lg border border-border bg-card p-4 sm:grid-cols-3"
                 >
                   <div>
                     <label className="mb-2 block text-xs uppercase tracking-wider text-neutral-500">
@@ -306,7 +306,7 @@ export default function MarketplacePage() {
                       onChange={(event) =>
                         setSelectedRegion(event.target.value)
                       }
-                      className="w-full cursor-pointer rounded-lg border border-[#262626] bg-[#0a0a0a] px-3 py-2.5 text-sm text-white focus:border-[#404040] focus:outline-none"
+                      className="w-full cursor-pointer rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:border-[#404040] focus:outline-none"
                     >
                       {regions.map((region) => (
                         <option key={region} value={region}>
@@ -322,7 +322,7 @@ export default function MarketplacePage() {
                     <select
                       value={selectedType}
                       onChange={(event) => setSelectedType(event.target.value)}
-                      className="w-full cursor-pointer rounded-lg border border-[#262626] bg-[#0a0a0a] px-3 py-2.5 text-sm text-white focus:border-[#404040] focus:outline-none"
+                      className="w-full cursor-pointer rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:border-[#404040] focus:outline-none"
                     >
                       {propertyTypes.map((type) => (
                         <option key={type} value={type}>
@@ -340,7 +340,7 @@ export default function MarketplacePage() {
                       onChange={(event) =>
                         setSortBy(event.target.value as MarketplaceSortOption)
                       }
-                      className="w-full cursor-pointer rounded-lg border border-[#262626] bg-[#0a0a0a] px-3 py-2.5 text-sm text-white focus:border-[#404040] focus:outline-none"
+                      className="w-full cursor-pointer rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:border-[#404040] focus:outline-none"
                     >
                       {sortOptions.map((option) => (
                         <option key={option} value={option}>
@@ -360,7 +360,7 @@ export default function MarketplacePage() {
           >
             <p className="font-mono text-xs text-neutral-500">
               Showing{" "}
-              <span className="font-medium text-white">
+              <span className="font-medium text-foreground">
                 {filteredProperties.length}
               </span>{" "}
               properties
@@ -413,7 +413,7 @@ export default function MarketplacePage() {
       )}
 
       {isConnecting && (
-        <div className="pointer-events-none fixed bottom-6 right-6 rounded-full border border-[#262626] bg-[#0a0a0a] px-4 py-2 text-xs text-white shadow-lg">
+        <div className="pointer-events-none fixed bottom-6 right-6 rounded-full border border-border bg-card px-4 py-2 text-xs text-foreground shadow-lg">
           Connecting wallet...
         </div>
       )}

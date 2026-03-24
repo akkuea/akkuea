@@ -32,14 +32,14 @@ function TransactionRowSkeleton() {
       role="status"
       aria-label="Loading transaction"
     >
-      <div className="w-10 h-10 bg-[#262626] rounded-full flex-shrink-0" />
+      <div className="w-10 h-10 bg-muted rounded-full flex-shrink-0" />
       <div className="flex-1 space-y-2">
-        <div className="h-3 bg-[#262626] rounded w-24" />
-        <div className="h-2 bg-[#262626] rounded w-32" />
+        <div className="h-3 bg-muted rounded w-24" />
+        <div className="h-2 bg-muted rounded w-32" />
       </div>
       <div className="space-y-2 text-right">
-        <div className="h-3 bg-[#262626] rounded w-20 ml-auto" />
-        <div className="h-2 bg-[#262626] rounded w-28 ml-auto" />
+        <div className="h-3 bg-muted rounded w-20 ml-auto" />
+        <div className="h-2 bg-muted rounded w-28 ml-auto" />
       </div>
     </div>
   );
@@ -130,7 +130,7 @@ export function TransactionHistory({
 
   return (
     <Card noPadding>
-      <CardHeader className="p-4 border-b border-[#262626]">
+      <CardHeader className="p-4 border-b border-border">
         <button
           onClick={() => setIsExpanded(!isExpanded)}
           className="w-full flex items-center justify-between cursor-pointer"
@@ -164,7 +164,7 @@ export function TransactionHistory({
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <CardContent className="divide-y divide-[#1a1a1a]">
+            <CardContent className="divide-y divide-border">
               {/* Loading state — skeleton rows */}
               {isLoading && transactions.length === 0 && (
                 <>

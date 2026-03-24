@@ -38,9 +38,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={inputId}
             className={cn(
-              "w-full px-3 py-2.5 bg-[#0a0a0a] border border-[#262626] rounded-lg",
-              "text-sm text-white placeholder-neutral-600 font-mono",
-              "focus:outline-none focus:border-[#404040] focus:ring-1 focus:ring-[#404040]",
+              "w-full px-3 py-2.5 bg-card border border-border rounded-lg",
+              "text-sm text-foreground placeholder-muted-foreground font-mono",
+              "focus:outline-none focus:border-border-hover focus:ring-1 focus:ring-border-hover",
               "transition-all duration-200",
               "disabled:opacity-40 disabled:cursor-not-allowed",
               "cursor-text",
@@ -97,9 +97,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           id={inputId}
           className={cn(
-            "w-full px-3 py-2.5 bg-[#0a0a0a] border border-[#262626] rounded-lg",
-            "text-sm text-white placeholder-neutral-600 font-mono",
-            "focus:outline-none focus:border-[#404040] focus:ring-1 focus:ring-[#404040]",
+            "w-full px-3 py-2.5 bg-card border border-border rounded-lg",
+            "text-sm text-foreground placeholder-muted-foreground font-mono",
+            "focus:outline-none focus:border-border-hover focus:ring-1 focus:ring-border-hover",
             "transition-all duration-200 resize-none",
             "disabled:opacity-40 disabled:cursor-not-allowed",
             "cursor-text",

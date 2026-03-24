@@ -109,7 +109,7 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
   const statusVariant = STATUS_VARIANT[transaction.status];
 
   return (
-    <div className="p-4 flex items-center gap-4 hover:bg-[#0a0a0a] transition-colors">
+    <div className="p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors">
       {/* Type icon */}
       <div
         className={`w-10 h-10 rounded-full ${cfg.bg} flex items-center justify-center flex-shrink-0`}
@@ -120,7 +120,7 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
       {/* Details */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-white">{cfg.label}</span>
+          <span className="text-sm font-medium text-foreground">{cfg.label}</span>
           <Badge variant={statusVariant} className="text-[10px]">
             {transaction.status}
           </Badge>
@@ -132,7 +132,7 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
 
       {/* Amount + asset */}
       <div className="text-right flex-shrink-0">
-        <p className="text-sm font-medium text-white font-mono">
+        <p className="text-sm font-medium text-foreground font-mono">
           {formatCurrency(parseFloat(transaction.amount))}{" "}
           <span className="text-neutral-500 text-xs">{transaction.asset}</span>
         </p>

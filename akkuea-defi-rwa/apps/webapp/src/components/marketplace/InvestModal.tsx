@@ -114,7 +114,7 @@ export function InvestModal({
             <CheckCircle2 className="h-7 w-7 text-[#00ff88]" />
           </div>
           <div className="space-y-2">
-            <p className="text-base font-semibold text-white">
+            <p className="text-base font-semibold text-foreground">
               Transaction submitted
             </p>
             <p className="text-sm text-neutral-400">
@@ -137,7 +137,7 @@ export function InvestModal({
         </div>
       ) : (
         <div className="space-y-6">
-          <div className="flex gap-4 rounded-lg border border-[#262626] bg-[#1a1a1a] p-4">
+          <div className="flex gap-4 rounded-lg border border-border bg-muted p-4">
             <Image
               src={getPropertyImage(property)}
               alt={property.name}
@@ -146,7 +146,7 @@ export function InvestModal({
               className="h-20 w-20 rounded-lg object-cover"
             />
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-white">{property.name}</h3>
+              <h3 className="font-semibold text-foreground">{property.name}</h3>
               <p className="text-sm text-neutral-500">
                 {property.location.city}, {property.location.country}
               </p>
@@ -166,7 +166,7 @@ export function InvestModal({
               <div className="flex items-start gap-3">
                 <Wallet className="mt-0.5 h-5 w-5 text-[#ff3e00]" />
                 <div className="space-y-2">
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-sm font-semibold text-foreground">
                     Connect your wallet to invest
                   </p>
                   <p className="text-sm text-neutral-400">
@@ -185,9 +185,9 @@ export function InvestModal({
           )}
 
           {walletAddress && (
-            <div className="rounded-lg border border-[#262626] bg-[#0a0a0a] p-4 text-xs font-mono text-neutral-400">
+            <div className="rounded-lg border border-border bg-card p-4 text-xs font-mono text-neutral-400">
               Connected wallet:{" "}
-              <span className="text-white">
+              <span className="text-foreground">
                 {truncateAddress(walletAddress)}
               </span>
             </div>
@@ -256,10 +256,10 @@ export function InvestModal({
                     "cursor-pointer rounded-lg border-2 p-4 text-left transition-all",
                     paymentMethod === method
                       ? "border-[#00ff88] bg-[#00ff88]/10"
-                      : "border-[#262626] hover:border-[#404040]",
+                      : "border-border hover:border-[#404040]",
                   )}
                 >
-                  <span className="font-medium text-white">
+                  <span className="font-medium text-foreground">
                     {method === "usdc" ? "USDC" : "Fiat"}
                   </span>
                   <p className="mt-1 text-xs text-neutral-500">
@@ -272,16 +272,16 @@ export function InvestModal({
             </div>
           </div>
 
-          <div className="space-y-3 rounded-lg border border-[#262626] bg-[#0a0a0a] p-4">
+          <div className="space-y-3 rounded-lg border border-border bg-card p-4">
             <div className="flex justify-between text-sm">
               <span className="text-neutral-500">Tokens</span>
-              <span className="font-mono text-white">
+              <span className="font-mono text-foreground">
                 {purchaseSummary.tokens}
               </span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-neutral-500">Price per Token</span>
-              <span className="font-mono text-white">
+              <span className="font-mono text-foreground">
                 {formatCurrency(pricePerToken)}
               </span>
             </div>
@@ -289,13 +289,13 @@ export function InvestModal({
               <span className="text-neutral-500">
                 Remaining Shares After Purchase
               </span>
-              <span className="font-mono text-white">
+              <span className="font-mono text-foreground">
                 {purchaseSummary.remainingShares.toLocaleString()}
               </span>
             </div>
-            <div className="flex justify-between border-t border-[#262626] pt-3">
-              <span className="font-medium text-white">Total</span>
-              <span className="font-mono text-xl font-bold text-white">
+            <div className="flex justify-between border-t border-border pt-3">
+              <span className="font-medium text-foreground">Total</span>
+              <span className="font-mono text-xl font-bold text-foreground">
                 {formatCurrency(purchaseSummary.totalCost)}
               </span>
             </div>

@@ -13,7 +13,7 @@ const features = [
 
 export function CTA() {
   return (
-    <section className="py-24 bg-[#0a0a0a] relative overflow-hidden">
+    <section className="py-24 bg-card relative overflow-hidden">
       {/* Background grid */}
       <div className="absolute inset-0 grid-pattern opacity-10" />
 
@@ -29,7 +29,7 @@ export function CTA() {
           className="relative"
         >
           {/* Main card */}
-          <div className="relative p-8 sm:p-12 bg-black border border-[#262626] rounded-2xl overflow-hidden">
+          <div className="relative p-8 sm:p-12 bg-background border border-border rounded-2xl overflow-hidden">
             {/* Corner decorations */}
             <div className="absolute top-0 left-0 w-16 h-16 border-l border-t border-[#ff3e00]/30" />
             <div className="absolute top-0 right-0 w-16 h-16 border-r border-t border-[#ff3e00]/30" />
@@ -44,7 +44,7 @@ export function CTA() {
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: 0.2 }}
-                className="inline-flex items-center gap-2 px-3 py-1.5 bg-[#1a1a1a] border border-[#262626] rounded-full mb-8"
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-muted border border-border rounded-full mb-8"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88]" />
                 <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider">
@@ -53,7 +53,7 @@ export function CTA() {
               </motion.div>
 
               {/* Headline */}
-              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4 tracking-tight">
                 Ready to Build Your
                 <br />
                 <span className="text-[#ff3e00]">Real Estate Portfolio?</span>

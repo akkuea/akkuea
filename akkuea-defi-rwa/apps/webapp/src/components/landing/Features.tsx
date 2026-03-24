@@ -106,7 +106,7 @@ function FeatureCard({
   return (
     <motion.div
       variants={itemVariants}
-      className="group relative p-6 bg-[#0a0a0a] border border-[#262626] rounded-lg hover:border-[#404040] transition-all duration-300 cursor-pointer"
+      className="group relative p-6 bg-card border border-border rounded-lg hover:border-border-hover transition-all duration-300 cursor-pointer"
     >
       {/* Tag */}
       <div className="absolute top-4 right-4 text-[10px] font-mono text-neutral-600">
@@ -118,14 +118,14 @@ function FeatureCard({
 
       {/* Icon */}
       <div className="relative mb-4">
-        <div className="w-10 h-10 rounded-md bg-[#1a1a1a] border border-[#262626] flex items-center justify-center group-hover:border-[#404040] transition-colors">
-          <Icon className="w-5 h-5 text-neutral-400 group-hover:text-white transition-colors" />
+        <div className="w-10 h-10 rounded-md bg-muted border border-border flex items-center justify-center group-hover:border-border-hover transition-colors">
+          <Icon className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
         </div>
       </div>
 
       {/* Content */}
       <div className="relative">
-        <h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
           {title}
           <ArrowUpRight className="w-3.5 h-3.5 text-neutral-600 opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-0.5 -translate-y-0 group-hover:-translate-y-0.5 transition-all" />
         </h3>
@@ -142,7 +142,7 @@ function FeatureCard({
 
 export function Features() {
   return (
-    <section className="py-24 bg-black relative overflow-hidden">
+    <section className="py-24 bg-background relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 dot-pattern opacity-30" />
 
@@ -161,7 +161,7 @@ export function Features() {
               Why Choose Akkuea
             </span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
             Built for the Future
             <br />
             <span className="text-neutral-500">of Finance</span>

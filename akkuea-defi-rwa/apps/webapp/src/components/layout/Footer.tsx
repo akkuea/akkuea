@@ -66,7 +66,7 @@ const itemVariants = {
 
 export function Footer() {
   return (
-    <footer className="bg-black border-t border-[#262626]">
+    <footer className="bg-background border-t border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <motion.div
           variants={containerVariants}
@@ -78,7 +78,7 @@ export function Footer() {
           {/* Brand */}
           <motion.div variants={itemVariants} className="col-span-2">
             <BrandLogo className="mb-4" />
-            <p className="text-xs text-neutral-500 mb-6 max-w-xs leading-relaxed">
+            <p className="text-xs text-muted-foreground mb-6 max-w-xs leading-relaxed">
               Democratizing real estate investment through blockchain
               technology. Fractional ownership for everyone.
             </p>
@@ -87,7 +87,7 @@ export function Footer() {
                 <a
                   key={social.name}
                   href={social.href}
-                  className="p-2 rounded-md bg-[#0a0a0a] border border-[#262626] text-neutral-500 hover:text-white hover:border-[#404040] transition-all cursor-pointer"
+                  className="p-2 rounded-md bg-card border border-border text-muted-foreground hover:text-foreground hover:border-border-hover transition-all cursor-pointer"
                   aria-label={social.name}
                 >
                   <social.icon className="w-4 h-4" />
@@ -98,7 +98,7 @@ export function Footer() {
 
           {/* Links */}
           <motion.div variants={itemVariants}>
-            <h3 className="text-[10px] font-mono text-neutral-600 uppercase tracking-wider mb-4">
+            <h3 className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-4">
               Product
             </h3>
             <ul className="space-y-2.5">
@@ -106,7 +106,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="group flex items-center gap-1 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                    className="group flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   >
                     {link.name}
                     <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -117,7 +117,7 @@ export function Footer() {
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <h3 className="text-[10px] font-mono text-neutral-600 uppercase tracking-wider mb-4">
+            <h3 className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-4">
               Resources
             </h3>
             <ul className="space-y-2.5">
@@ -125,7 +125,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="group flex items-center gap-1 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                    className="group flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   >
                     {link.name}
                     <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -136,7 +136,7 @@ export function Footer() {
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <h3 className="text-[10px] font-mono text-neutral-600 uppercase tracking-wider mb-4">
+            <h3 className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-4">
               Company
             </h3>
             <ul className="space-y-2.5">
@@ -144,7 +144,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="group flex items-center gap-1 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                    className="group flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   >
                     {link.name}
                     <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -155,7 +155,7 @@ export function Footer() {
           </motion.div>
 
           <motion.div variants={itemVariants}>
-            <h3 className="text-[10px] font-mono text-neutral-600 uppercase tracking-wider mb-4">
+            <h3 className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-4">
               Legal
             </h3>
             <ul className="space-y-2.5">
@@ -163,7 +163,7 @@ export function Footer() {
                 <li key={link.name}>
                   <Link
                     href={link.href}
-                    className="group flex items-center gap-1 text-xs text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                    className="group flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                   >
                     {link.name}
                     <ArrowUpRight className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -180,17 +180,17 @@ export function Footer() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true }}
           transition={{ delay: 0.3 }}
-          className="mt-12 pt-8 border-t border-[#1a1a1a] flex flex-col sm:flex-row justify-between items-center gap-4"
+          className="mt-12 pt-8 border-t border-border flex flex-col sm:flex-row justify-between items-center gap-4"
         >
-          <p className="text-[10px] text-neutral-600 font-mono">
+          <p className="text-[10px] text-muted-foreground font-mono">
             &copy; {new Date().getFullYear()} AKKUEA. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
-            <p className="text-[10px] text-neutral-600 font-mono">
-              Built on <span className="text-white">Stellar</span>
+            <p className="text-[10px] text-muted-foreground font-mono">
+              Built on <span className="text-foreground">Stellar</span>
             </p>
-            <span className="text-neutral-700">|</span>
-            <p className="text-[10px] text-neutral-600 font-mono">v1.0.0</p>
+            <span className="text-muted-foreground">|</span>
+            <p className="text-[10px] text-muted-foreground font-mono">v1.0.0</p>
           </div>
         </motion.div>
 
@@ -202,7 +202,7 @@ export function Footer() {
           transition={{ delay: 0.4 }}
           className="mt-8 flex justify-center"
         >
-          <pre className="text-[6px] sm:text-[8px] font-mono text-neutral-800 select-none leading-tight text-center">
+          <pre className="text-[6px] sm:text-[8px] font-mono text-muted-foreground/30 select-none leading-tight text-center">
             {`╔═══════════════════════════════════════════════════════════╗
 ║  █████╗ ██╗  ██╗██╗  ██╗██╗   ██╗███████╗ █████╗          ║
 ║ ██╔══██╗██║ ██╔╝██║ ██╔╝██║   ██║██╔════╝██╔══██╗         ║

@@ -114,7 +114,7 @@ function YieldCalculator({ isOpen, onClose }: YieldCalculatorProps) {
               <p className="text-xs text-neutral-500 mb-1 uppercase tracking-wider">
                 Final Amount
               </p>
-              <p className="text-xl font-bold text-white font-mono">
+              <p className="text-xl font-bold text-foreground font-mono">
                 {formatCurrency(earnings.finalAmount)}
               </p>
             </div>
@@ -283,7 +283,7 @@ export default function LendingPage() {
         ? "bg-amber-500/10 border-amber-500/20"
         : hfStatus === "critical"
           ? "bg-red-500/10 border-red-500/20"
-          : "bg-[#1a1a1a] border-[#262626]";
+          : "bg-muted border-border";
 
   const hfLabel =
     hfStatus === "safe"
@@ -331,7 +331,7 @@ export default function LendingPage() {
         variants={pageTransition}
         initial="initial"
         animate="animate"
-        className="min-h-screen bg-black"
+        className="min-h-screen bg-background"
       >
         <Navbar />
         <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -341,10 +341,10 @@ export default function LendingPage() {
             animate="visible"
             className="flex flex-col items-center justify-center min-h-[60vh] text-center"
           >
-            <div className="w-16 h-16 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center mb-6">
+            <div className="w-16 h-16 rounded-lg bg-muted border border-border flex items-center justify-center mb-6">
               <Wallet className="w-8 h-8 text-neutral-500" aria-hidden="true" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-3">DeFi Lending</h1>
+            <h1 className="text-2xl font-bold text-foreground mb-3">DeFi Lending</h1>
             <p className="text-sm text-neutral-500 max-w-md mb-8">
               Connect your wallet to access lending pools. Supply liquidity to
               earn yields or borrow against your tokenized real estate
@@ -375,7 +375,7 @@ export default function LendingPage() {
       variants={pageTransition}
       initial="initial"
       animate="animate"
-      className="min-h-screen bg-black"
+      className="min-h-screen bg-background"
     >
       <Navbar />
       <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -393,7 +393,7 @@ export default function LendingPage() {
             className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           >
             <div>
-              <h1 className="text-2xl font-bold text-white">DeFi Lending</h1>
+              <h1 className="text-2xl font-bold text-foreground">DeFi Lending</h1>
               <p className="text-sm text-neutral-500 mt-1">
                 Supply liquidity to earn yields or borrow against your RWA
                 collateral
@@ -489,7 +489,7 @@ export default function LendingPage() {
                       <p className="text-xs text-neutral-500 uppercase tracking-wider">
                         Total Supplied
                       </p>
-                      <p className="text-xl font-bold text-white mt-1 font-mono">
+                      <p className="text-xl font-bold text-foreground mt-1 font-mono">
                         {hideBalances
                           ? "••••••"
                           : formatCurrency(totalDeposited)}
@@ -515,7 +515,7 @@ export default function LendingPage() {
                       <p className="text-xs text-neutral-500 uppercase tracking-wider">
                         Total Borrowed
                       </p>
-                      <p className="text-xl font-bold text-white mt-1 font-mono">
+                      <p className="text-xl font-bold text-foreground mt-1 font-mono">
                         {hideBalances
                           ? "••••••"
                           : formatCurrency(totalBorrowed)}
@@ -541,7 +541,7 @@ export default function LendingPage() {
                       <p className="text-xs text-neutral-500 uppercase tracking-wider">
                         Net Worth
                       </p>
-                      <p className="text-xl font-bold text-white mt-1 font-mono">
+                      <p className="text-xl font-bold text-foreground mt-1 font-mono">
                         {hideBalances
                           ? "••••••"
                           : formatCurrency(totalDeposited - totalBorrowed)}
@@ -592,7 +592,7 @@ export default function LendingPage() {
           ---------------------------------------------------------------- */}
           <motion.div variants={staggerItem}>
             <Card noPadding>
-              <CardHeader className="p-4 border-b border-[#262626]">
+              <CardHeader className="p-4 border-b border-border">
                 <div className="flex items-center justify-between">
                   <CardTitle>Lending Pools</CardTitle>
                   {!isLoading && (
@@ -603,7 +603,7 @@ export default function LendingPage() {
                   )}
                 </div>
               </CardHeader>
-              <CardContent className="divide-y divide-[#1a1a1a]">
+              <CardContent className="divide-y divide-border">
                 {isLoading ? (
                   // Loading skeletons
                   Array.from({ length: 3 }).map((_, i) => (
@@ -629,7 +629,7 @@ export default function LendingPage() {
                       return (
                         <div
                           key={pool.id}
-                          className="p-4 hover:bg-[#0a0a0a] transition-colors"
+                          className="p-4 hover:bg-card transition-colors"
                         >
                           <div className="flex flex-col lg:flex-row lg:items-center gap-6">
                             {/* Pool identity */}
@@ -644,7 +644,7 @@ export default function LendingPage() {
                                 />
                               </div>
                               <div>
-                                <h3 className="text-sm font-semibold text-white">
+                                <h3 className="text-sm font-semibold text-foreground">
                                   {pool.name}
                                 </h3>
                                 <p className="text-xs text-neutral-500 font-mono">
@@ -659,7 +659,7 @@ export default function LendingPage() {
                                 <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">
                                   Total Liquidity
                                 </p>
-                                <p className="text-sm font-medium text-white font-mono">
+                                <p className="text-sm font-medium text-foreground font-mono">
                                   {formatCurrency(
                                     parseFloat(pool.totalDeposits),
                                   )}
@@ -695,7 +695,7 @@ export default function LendingPage() {
                                       role="presentation"
                                     />
                                   </div>
-                                  <span className="text-xs text-white font-mono">
+                                  <span className="text-xs text-foreground font-mono">
                                     {pool.utilizationRate.toFixed(1)}%
                                   </span>
                                 </div>
@@ -704,12 +704,12 @@ export default function LendingPage() {
 
                             {/* User position (shown only when non-zero) */}
                             {(deposit > 0 || borrow > 0) && (
-                              <div className="p-3 bg-[#0a0a0a] border border-[#262626] rounded-lg lg:w-48">
+                              <div className="p-3 bg-card border border-border rounded-lg lg:w-48">
                                 <p className="text-[10px] text-neutral-600 mb-2 uppercase tracking-wider">
                                   Your Position
                                 </p>
                                 {deposit > 0 && (
-                                  <p className="text-xs text-white font-mono">
+                                  <p className="text-xs text-foreground font-mono">
                                     Supplied:{" "}
                                     {hideBalances
                                       ? "••••"
@@ -792,7 +792,7 @@ export default function LendingPage() {
                   />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-sm font-semibold text-white mb-2">
+                  <h3 className="text-sm font-semibold text-foreground mb-2">
                     Zero-Knowledge Privacy
                   </h3>
                   <p className="text-xs text-neutral-500 mb-4">

@@ -53,7 +53,7 @@ export function Modal({
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
               className={cn(
-                "relative w-full bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl",
+                "relative w-full bg-card border border-border rounded-2xl shadow-2xl",
                 sizeClasses[size],
               )}
               onClick={(e) => e.stopPropagation()}
@@ -63,12 +63,12 @@ export function Modal({
                 <div className="flex items-start justify-between p-6 pb-0">
                   <div>
                     {title && (
-                      <h2 className="text-xl font-semibold text-white">
+                      <h2 className="text-xl font-semibold text-foreground">
                         {title}
                       </h2>
                     )}
                     {description && (
-                      <p className="text-sm text-zinc-400 mt-1">
+                      <p className="text-sm text-muted-foreground mt-1">
                         {description}
                       </p>
                     )}
@@ -76,7 +76,7 @@ export function Modal({
                   {showCloseButton && (
                     <button
                       onClick={onClose}
-                      className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+                      className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
                       <X className="w-5 h-5" />
                     </button>

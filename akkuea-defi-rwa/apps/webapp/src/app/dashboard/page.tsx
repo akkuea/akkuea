@@ -122,7 +122,7 @@ export default function DashboardPage() {
         variants={pageTransition}
         initial="initial"
         animate="animate"
-        className="min-h-screen bg-black"
+        className="min-h-screen bg-background"
       >
         <Navbar />
         <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -132,10 +132,10 @@ export default function DashboardPage() {
             animate="visible"
             className="flex flex-col items-center justify-center min-h-[60vh] text-center"
           >
-            <div className="w-16 h-16 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center mb-6">
+            <div className="w-16 h-16 rounded-lg bg-muted border border-border flex items-center justify-center mb-6">
               <Wallet className="w-8 h-8 text-neutral-500" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-3">
+            <h1 className="text-2xl font-bold text-foreground mb-3">
               Connect Your Wallet
             </h1>
             <p className="text-sm text-neutral-500 max-w-md mb-8">
@@ -163,7 +163,7 @@ export default function DashboardPage() {
       variants={pageTransition}
       initial="initial"
       animate="animate"
-      className="min-h-screen bg-black"
+      className="min-h-screen bg-background"
     >
       <Navbar />
       <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -179,7 +179,7 @@ export default function DashboardPage() {
             className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
           >
             <div>
-              <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+              <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
               <p className="text-sm text-neutral-500 mt-1">
                 Welcome back! Here&apos;s your portfolio overview.
               </p>
@@ -209,12 +209,12 @@ export default function DashboardPage() {
                     Wallet Address
                   </p>
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm text-white">
+                    <span className="font-mono text-sm text-foreground">
                       {truncateAddress(address || "", 8)}
                     </span>
                     <button
                       onClick={copyAddress}
-                      className="p-1.5 rounded-md hover:bg-[#1a1a1a] text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                      className="p-1.5 rounded-md hover:bg-muted text-neutral-500 hover:text-foreground transition-colors cursor-pointer"
                     >
                       {copied ? (
                         <CheckCircle2 className="w-4 h-4 text-[#00ff88]" />
@@ -224,7 +224,7 @@ export default function DashboardPage() {
                     </button>
                     <a
                       href="#"
-                      className="p-1.5 rounded-md hover:bg-[#1a1a1a] text-neutral-500 hover:text-white transition-colors cursor-pointer"
+                      className="p-1.5 rounded-md hover:bg-muted text-neutral-500 hover:text-foreground transition-colors cursor-pointer"
                     >
                       <ExternalLink className="w-4 h-4" />
                     </a>
@@ -234,7 +234,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">
                     Wallet Balance
                   </p>
-                  <p className="text-xl font-bold text-white font-mono">
+                  <p className="text-xl font-bold text-foreground font-mono">
                     {showBalance
                       ? formatCurrency(parseFloat(balance || "0"))
                       : "******"}
@@ -255,7 +255,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
                     Portfolio Value
                   </p>
-                  <p className="text-xl font-bold text-white mt-1 font-mono">
+                  <p className="text-xl font-bold text-foreground mt-1 font-mono">
                     {showBalance
                       ? formatCurrency(portfolioData.totalValue)
                       : "******"}
@@ -288,7 +288,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
                     Properties Owned
                   </p>
-                  <p className="text-xl font-bold text-white mt-1 font-mono">
+                  <p className="text-xl font-bold text-foreground mt-1 font-mono">
                     {portfolioData.properties.length}
                   </p>
                   <p className="text-xs text-neutral-500 mt-1 font-mono">
@@ -307,7 +307,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
                     Avg. Yield
                   </p>
-                  <p className="text-xl font-bold text-white mt-1 font-mono">
+                  <p className="text-xl font-bold text-foreground mt-1 font-mono">
                     8.3%
                   </p>
                   <p className="text-xs text-[#00ff88] mt-1">
@@ -326,7 +326,7 @@ export default function DashboardPage() {
                   <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
                     Active Loans
                   </p>
-                  <p className="text-xl font-bold text-white mt-1 font-mono">
+                  <p className="text-xl font-bold text-foreground mt-1 font-mono">
                     {portfolioData.loans.length}
                   </p>
                   <p className="text-xs text-neutral-500 mt-1 font-mono">
@@ -345,16 +345,16 @@ export default function DashboardPage() {
             {/* Portfolio */}
             <motion.div variants={staggerItem} className="lg:col-span-2">
               <Card noPadding>
-                <CardHeader className="p-4 border-b border-[#262626]">
+                <CardHeader className="p-4 border-b border-border">
                   <CardTitle>Your Properties</CardTitle>
                 </CardHeader>
-                <CardContent className="divide-y divide-[#1a1a1a]">
+                <CardContent className="divide-y divide-border">
                   {portfolioData.properties.map((property) => (
                     <div
                       key={property.id}
-                      className="p-4 flex items-center gap-4 hover:bg-[#0a0a0a] transition-colors cursor-pointer"
+                      className="p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors cursor-pointer"
                     >
-                      <div className="w-14 h-14 rounded-lg bg-[#1a1a1a] overflow-hidden flex-shrink-0">
+                      <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                         <Image
                           src={property.image}
                           alt={property.name}
@@ -364,7 +364,7 @@ export default function DashboardPage() {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="text-sm font-medium text-white truncate">
+                        <h3 className="text-sm font-medium text-foreground truncate">
                           {property.name}
                         </h3>
                         <p className="text-xs text-neutral-500">
@@ -375,7 +375,7 @@ export default function DashboardPage() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-medium text-white font-mono">
+                        <p className="text-sm font-medium text-foreground font-mono">
                           {showBalance
                             ? formatCurrency(property.value)
                             : "****"}
@@ -420,7 +420,7 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-3 p-3 bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-lg">
                     <Shield className="w-4 h-4 text-[#00ff88]" />
                     <div>
-                      <p className="text-xs font-medium text-white">
+                      <p className="text-xs font-medium text-foreground">
                         Identity Verified
                       </p>
                       <p className="text-[10px] text-neutral-600 font-mono">
@@ -465,13 +465,13 @@ export default function DashboardPage() {
                     {portfolioData.loans.map((loan) => (
                       <div
                         key={loan.id}
-                        className="p-3 bg-[#0a0a0a] border border-[#262626] rounded-lg"
+                        className="p-3 bg-card border border-border rounded-lg"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-[10px] text-neutral-600 uppercase tracking-wider">
                             Collateral
                           </span>
-                          <span className="text-xs text-white">
+                          <span className="text-xs text-foreground">
                             {loan.collateral}
                           </span>
                         </div>
@@ -479,7 +479,7 @@ export default function DashboardPage() {
                           <span className="text-[10px] text-neutral-600 uppercase tracking-wider">
                             Borrowed
                           </span>
-                          <span className="text-xs font-medium text-white font-mono">
+                          <span className="text-xs font-medium text-foreground font-mono">
                             {formatCurrency(loan.borrowed)}
                           </span>
                         </div>
@@ -487,7 +487,7 @@ export default function DashboardPage() {
                           <span className="text-[10px] text-neutral-600 uppercase tracking-wider">
                             Interest
                           </span>
-                          <span className="text-xs text-white font-mono">
+                          <span className="text-xs text-foreground font-mono">
                             {loan.interest}% APR
                           </span>
                         </div>

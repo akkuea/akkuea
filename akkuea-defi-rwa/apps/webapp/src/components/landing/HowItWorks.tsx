@@ -60,7 +60,7 @@ const itemVariants = {
 
 export function HowItWorks() {
   return (
-    <section className="py-24 bg-black relative overflow-hidden">
+    <section className="py-24 bg-background relative overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0 grid-pattern opacity-20" />
 
@@ -79,7 +79,7 @@ export function HowItWorks() {
               Getting Started
             </span>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight">
+          <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 tracking-tight">
             How It Works
           </h2>
           <p className="text-sm text-neutral-500 max-w-md">
@@ -96,7 +96,7 @@ export function HowItWorks() {
           className="relative"
         >
           {/* Connection line */}
-          <div className="absolute left-[23px] top-0 bottom-0 w-px bg-gradient-to-b from-[#262626] via-[#404040] to-[#262626] hidden md:block" />
+          <div className="absolute left-[23px] top-0 bottom-0 w-px bg-gradient-to-b from-border via-border-hover to-border hidden md:block" />
 
           <div className="space-y-6">
             {steps.map((step) => (
@@ -107,20 +107,20 @@ export function HowItWorks() {
               >
                 {/* Step indicator */}
                 <div className="relative z-10 flex-shrink-0">
-                  <div className="w-12 h-12 rounded-lg bg-[#0a0a0a] border border-[#262626] flex items-center justify-center group-hover:border-[#ff3e00] transition-colors">
-                    <step.icon className="w-5 h-5 text-neutral-500 group-hover:text-[#ff3e00] transition-colors" />
+                  <div className="w-12 h-12 rounded-lg bg-card border border-border flex items-center justify-center group-hover:border-accent transition-colors">
+                    <step.icon className="w-5 h-5 text-muted-foreground group-hover:text-accent transition-colors" />
                   </div>
                   {/* Pulse on hover */}
                   <div className="absolute inset-0 rounded-lg bg-[#ff3e00]/20 opacity-0 group-hover:opacity-100 group-hover:animate-ping pointer-events-none" />
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 pb-8 border-b border-[#1a1a1a] group-last:border-0">
+                <div className="flex-1 pb-8 border-b border-border group-last:border-0">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="text-[10px] font-mono text-[#ff3e00]">
                       [{step.step}]
                     </span>
-                    <h3 className="text-lg font-semibold text-white">
+                    <h3 className="text-lg font-semibold text-foreground">
                       {step.title}
                     </h3>
                   </div>
@@ -128,7 +128,7 @@ export function HowItWorks() {
                     {step.description}
                   </p>
                   {/* Terminal command */}
-                  <div className="inline-flex items-center px-3 py-1.5 bg-[#0a0a0a] border border-[#262626] rounded-md">
+                  <div className="inline-flex items-center px-3 py-1.5 bg-card border border-border rounded-md">
                     <code className="text-xs font-mono text-neutral-400">
                       {step.command}
                       <span className="animate-blink ml-0.5">_</span>
@@ -148,7 +148,7 @@ export function HowItWorks() {
           transition={{ delay: 0.6 }}
           className="mt-16 flex items-center justify-center"
         >
-          <div className="flex items-center gap-4 px-6 py-3 bg-[#0a0a0a] border border-[#262626] rounded-lg">
+          <div className="flex items-center gap-4 px-6 py-3 bg-card border border-border rounded-lg">
             <div className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse-subtle" />
             <span className="text-xs font-mono text-neutral-500">
               Ready to start? Connect your wallet above.

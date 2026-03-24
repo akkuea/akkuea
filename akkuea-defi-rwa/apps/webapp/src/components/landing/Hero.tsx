@@ -43,7 +43,7 @@ function MarqueeText() {
   ];
 
   return (
-    <div className="marquee border-y border-[#262626] py-3 bg-[#0a0a0a]">
+    <div className="marquee border-y border-border py-3 bg-card">
       <div className="marquee-content">
         {items.map((item, i) => (
           <span
@@ -97,7 +97,7 @@ export function Hero() {
             transition={{ duration: 0.5 }}
             className="mb-8 flex items-center justify-center sm:justify-start"
           >
-            <div className="inline-flex items-center gap-3 px-4 py-2 bg-[#0a0a0a] border border-[#262626] rounded-full">
+            <div className="inline-flex items-center gap-3 px-4 py-2 bg-card border border-border rounded-full">
               <span className="status-dot status-dot-pulse" />
               <span className="text-xs font-mono text-neutral-400 tracking-wider uppercase">
                 Live on Stellar Testnet
@@ -112,7 +112,7 @@ export function Hero() {
             transition={{ duration: 0.6, delay: 0.1 }}
             className="mb-6"
           >
-            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white leading-[0.9] tracking-tight">
+            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-foreground leading-[0.9] tracking-tight">
               <span className="block">Real Estate.</span>
               <span className="block mt-2">
                 <span className="text-neutral-500">Tokenized.</span>
@@ -152,9 +152,9 @@ export function Hero() {
             Invest in premium real estate across Latin America and Africa.
             <br className="hidden sm:block" />
             <span className="text-neutral-500">Starting from </span>
-            <span className="text-white font-mono">$100</span>
+            <span className="text-foreground font-mono">$100</span>
             <span className="text-neutral-500">. Powered by </span>
-            <span className="text-white">Stellar</span>.
+            <span className="text-foreground">Stellar</span>.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -185,7 +185,7 @@ export function Hero() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="flex flex-wrap items-center gap-8 sm:gap-12 border-t border-[#262626] pt-8"
+            className="flex flex-wrap items-center gap-8 sm:gap-12 border-t border-border pt-8"
           >
             {[
               { value: "$3B", label: "Target AUM" },
@@ -193,7 +193,7 @@ export function Hero() {
               { value: "12.5K", label: "Investors" },
             ].map((stat) => (
               <div key={stat.label} className="group cursor-default">
-                <div className="text-2xl sm:text-3xl font-bold text-white font-mono tracking-tight group-hover:text-[#ff3e00] transition-colors">
+                <div className="text-2xl sm:text-3xl font-bold text-foreground font-mono tracking-tight group-hover:text-accent transition-colors">
                   {stat.value}
                 </div>
                 <div className="text-xs text-neutral-500 uppercase tracking-wider mt-1">

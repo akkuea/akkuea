@@ -87,6 +87,9 @@ body {
     system-ui,
     -apple-system,
     sans-serif;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 /* Cursor pointer for interactive elements */
@@ -220,6 +223,13 @@ input[type="button"],
 /* Gradient text */
 .gradient-text {
   background: linear-gradient(135deg, #fff 0%, #999 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.light .gradient-text {
+  background: linear-gradient(135deg, #0a0a0a 0%, #555 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -369,6 +379,10 @@ input[type="button"],
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
 }
 
+.light .hover-lift:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+}
+
 /* Card hover effect */
 .card-hover {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -491,6 +505,17 @@ input[type="button"],
     rgba(255, 255, 255, 0.05) 0%,
     rgba(255, 255, 255, 0.1) 50%,
     rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.light .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.03) 0%,
+    rgba(0, 0, 0, 0.06) 50%,
+    rgba(0, 0, 0, 0.03) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;

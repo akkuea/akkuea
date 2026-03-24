@@ -54,7 +54,7 @@ export function BrandLogo({
       {showLabel ? (
         <span
           className={cn(
-            "text-sm font-semibold text-white tracking-tight transition-colors group-hover:text-neutral-300",
+            "text-sm font-semibold text-foreground tracking-tight transition-colors group-hover:text-muted-foreground",
             textClassName,
           )}
         >

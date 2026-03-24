@@ -92,7 +92,7 @@ export default function TokenizePage() {
         variants={pageTransition}
         initial="initial"
         animate="animate"
-        className="min-h-screen bg-black"
+        className="min-h-screen bg-background"
       >
         <Navbar />
         <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
@@ -102,10 +102,10 @@ export default function TokenizePage() {
             animate="visible"
             className="flex flex-col items-center justify-center min-h-[60vh] text-center"
           >
-            <div className="w-16 h-16 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center mb-6">
+            <div className="w-16 h-16 rounded-lg bg-muted border border-border flex items-center justify-center mb-6">
               <Wallet className="w-8 h-8 text-neutral-500" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-3">
+            <h1 className="text-2xl font-bold text-foreground mb-3">
               Tokenize Your Property
             </h1>
             <p className="text-sm text-neutral-500 max-w-md mb-8">
@@ -134,7 +134,7 @@ export default function TokenizePage() {
       variants={pageTransition}
       initial="initial"
       animate="animate"
-      className="min-h-screen bg-black"
+      className="min-h-screen bg-background"
     >
       <Navbar />
       <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
@@ -146,7 +146,7 @@ export default function TokenizePage() {
         >
           {/* Header */}
           <motion.div variants={staggerItem} className="text-center">
-            <h1 className="text-2xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-foreground">
               Tokenize Your Property
             </h1>
             <p className="text-sm text-neutral-500 mt-2">
@@ -234,7 +234,7 @@ export default function TokenizePage() {
                                 <Building2 className="w-5 h-5 text-[#ff3e00]" />
                               </div>
                               <div>
-                                <h2 className="text-lg font-semibold text-white">
+                                <h2 className="text-lg font-semibold text-foreground">
                                   Property Details
                                 </h2>
                                 <p className="text-xs text-neutral-500">
@@ -345,7 +345,7 @@ export default function TokenizePage() {
                                 <FileText className="w-5 h-5 text-[#ff3e00]" />
                               </div>
                               <div>
-                                <h2 className="text-lg font-semibold text-white">
+                                <h2 className="text-lg font-semibold text-foreground">
                                   Upload Documents
                                 </h2>
                                 <p className="text-xs text-neutral-500">
@@ -356,14 +356,14 @@ export default function TokenizePage() {
 
                             <div className="space-y-4">
                               {/* Title Deed */}
-                              <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
+                              <div className="p-4 border-2 border-dashed border-border rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-lg bg-muted border border-border flex items-center justify-center">
                                       <FileText className="w-5 h-5 text-neutral-500" />
                                     </div>
                                     <div>
-                                      <p className="text-sm font-medium text-white">
+                                      <p className="text-sm font-medium text-foreground">
                                         Title Deed / Proof of Ownership
                                       </p>
                                       <p className="text-xs text-neutral-600 font-mono">
@@ -388,14 +388,14 @@ export default function TokenizePage() {
                               </div>
 
                               {/* Property Images */}
-                              <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
+                              <div className="p-4 border-2 border-dashed border-border rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-lg bg-muted border border-border flex items-center justify-center">
                                       <ImageIcon className="w-5 h-5 text-neutral-500" />
                                     </div>
                                     <div>
-                                      <p className="text-sm font-medium text-white">
+                                      <p className="text-sm font-medium text-foreground">
                                         Property Images
                                       </p>
                                       <p className="text-xs text-neutral-600 font-mono">
@@ -410,14 +410,14 @@ export default function TokenizePage() {
                               </div>
 
                               {/* Legal Documents */}
-                              <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
+                              <div className="p-4 border-2 border-dashed border-border rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-lg bg-muted border border-border flex items-center justify-center">
                                       <Shield className="w-5 h-5 text-neutral-500" />
                                     </div>
                                     <div>
-                                      <p className="text-sm font-medium text-white">
+                                      <p className="text-sm font-medium text-foreground">
                                         Legal Documents
                                       </p>
                                       <p className="text-xs text-neutral-600 font-mono">
@@ -436,14 +436,14 @@ export default function TokenizePage() {
                               </div>
 
                               {/* Appraisal Report */}
-                              <div className="p-4 border-2 border-dashed border-[#262626] rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
+                              <div className="p-4 border-2 border-dashed border-border rounded-lg hover:border-[#ff3e00]/50 transition-colors cursor-pointer">
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-lg bg-[#1a1a1a] border border-[#262626] flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-lg bg-muted border border-border flex items-center justify-center">
                                       <DollarSign className="w-5 h-5 text-neutral-500" />
                                     </div>
                                     <div>
-                                      <p className="text-sm font-medium text-white">
+                                      <p className="text-sm font-medium text-foreground">
                                         Appraisal Report (Optional)
                                       </p>
                                       <p className="text-xs text-neutral-600 font-mono">
@@ -466,7 +466,7 @@ export default function TokenizePage() {
                               <div className="flex items-start gap-3">
                                 <Link2 className="w-5 h-5 text-blue-400 mt-0.5" />
                                 <div>
-                                  <p className="text-sm font-medium text-white">
+                                  <p className="text-sm font-medium text-foreground">
                                     Chainlink Oracle Integration
                                   </p>
                                   <p className="text-xs text-neutral-500 mt-1">
@@ -495,7 +495,7 @@ export default function TokenizePage() {
                                 <Coins className="w-5 h-5 text-[#ff3e00]" />
                               </div>
                               <div>
-                                <h2 className="text-lg font-semibold text-white">
+                                <h2 className="text-lg font-semibold text-foreground">
                                   Token Configuration
                                 </h2>
                                 <p className="text-xs text-neutral-500">
@@ -524,7 +524,7 @@ export default function TokenizePage() {
                                 <label className="block text-xs font-medium text-neutral-400 mb-2 uppercase tracking-wider">
                                   Price per Token
                                 </label>
-                                <div className="px-3 py-2.5 bg-[#0a0a0a] border border-[#262626] rounded-lg text-white font-mono text-sm">
+                                <div className="px-3 py-2.5 bg-card border border-border rounded-lg text-foreground font-mono text-sm">
                                   {calculatedTokenPrice
                                     ? formatCurrency(calculatedTokenPrice)
                                     : "-"}
@@ -558,7 +558,7 @@ export default function TokenizePage() {
                               <div className="flex items-start gap-3">
                                 <AlertCircle className="w-5 h-5 text-amber-400 mt-0.5" />
                                 <div>
-                                  <p className="text-sm font-medium text-white">
+                                  <p className="text-sm font-medium text-foreground">
                                     Token Standards
                                   </p>
                                   <p className="text-xs text-neutral-500 mt-1">
@@ -588,7 +588,7 @@ export default function TokenizePage() {
                                 <CheckCircle2 className="w-5 h-5 text-[#00ff88]" />
                               </div>
                               <div>
-                                <h2 className="text-lg font-semibold text-white">
+                                <h2 className="text-lg font-semibold text-foreground">
                                   Review & Submit
                                 </h2>
                                 <p className="text-xs text-neutral-500">
@@ -599,8 +599,8 @@ export default function TokenizePage() {
 
                             <div className="space-y-4">
                               {/* Property Summary */}
-                              <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
-                                <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
+                              <div className="p-4 bg-card border border-border rounded-lg">
+                                <h3 className="text-sm font-medium text-foreground mb-3 uppercase tracking-wider">
                                   Property Details
                                 </h3>
                                 <div className="grid sm:grid-cols-2 gap-3 text-sm">
@@ -608,7 +608,7 @@ export default function TokenizePage() {
                                     <span className="text-neutral-500">
                                       Name:
                                     </span>
-                                    <span className="ml-2 text-white">
+                                    <span className="ml-2 text-foreground">
                                       {values.name || "-"}
                                     </span>
                                   </div>
@@ -616,7 +616,7 @@ export default function TokenizePage() {
                                     <span className="text-neutral-500">
                                       Location:
                                     </span>
-                                    <span className="ml-2 text-white">
+                                    <span className="ml-2 text-foreground">
                                       {values.city && values.country
                                         ? `${values.city}, ${values.country}`
                                         : "-"}
@@ -626,7 +626,7 @@ export default function TokenizePage() {
                                     <span className="text-neutral-500">
                                       Type:
                                     </span>
-                                    <span className="ml-2 text-white capitalize">
+                                    <span className="ml-2 text-foreground capitalize">
                                       {values.propertyType || "-"}
                                     </span>
                                   </div>
@@ -634,7 +634,7 @@ export default function TokenizePage() {
                                     <span className="text-neutral-500">
                                       Area:
                                     </span>
-                                    <span className="ml-2 text-white font-mono">
+                                    <span className="ml-2 text-foreground font-mono">
                                       {values.totalArea
                                         ? `${values.totalArea} sq ft`
                                         : "-"}
@@ -644,8 +644,8 @@ export default function TokenizePage() {
                               </div>
 
                               {/* Tokenization Summary */}
-                              <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
-                                <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
+                              <div className="p-4 bg-card border border-border rounded-lg">
+                                <h3 className="text-sm font-medium text-foreground mb-3 uppercase tracking-wider">
                                   Tokenization
                                 </h3>
                                 <div className="grid sm:grid-cols-2 gap-3 text-sm">
@@ -653,7 +653,7 @@ export default function TokenizePage() {
                                     <span className="text-neutral-500">
                                       Total Value:
                                     </span>
-                                    <span className="ml-2 text-white font-mono">
+                                    <span className="ml-2 text-foreground font-mono">
                                       {values.totalValue
                                         ? formatCurrency(
                                             parseFloat(values.totalValue),
@@ -665,7 +665,7 @@ export default function TokenizePage() {
                                     <span className="text-neutral-500">
                                       Total Tokens:
                                     </span>
-                                    <span className="ml-2 text-white font-mono">
+                                    <span className="ml-2 text-foreground font-mono">
                                       {values.totalTokens
                                         ? parseInt(
                                             values.totalTokens,
@@ -677,7 +677,7 @@ export default function TokenizePage() {
                                     <span className="text-neutral-500">
                                       Token Price:
                                     </span>
-                                    <span className="ml-2 text-white font-mono">
+                                    <span className="ml-2 text-foreground font-mono">
                                       {calculatedTokenPrice
                                         ? formatCurrency(calculatedTokenPrice)
                                         : "-"}
@@ -697,8 +697,8 @@ export default function TokenizePage() {
                               </div>
 
                               {/* Fees */}
-                              <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg">
-                                <h3 className="text-sm font-medium text-white mb-3 uppercase tracking-wider">
+                              <div className="p-4 bg-card border border-border rounded-lg">
+                                <h3 className="text-sm font-medium text-foreground mb-3 uppercase tracking-wider">
                                   Fees
                                 </h3>
                                 <div className="space-y-2 text-sm">
@@ -706,7 +706,7 @@ export default function TokenizePage() {
                                     <span className="text-neutral-500">
                                       Platform Fee (2%)
                                     </span>
-                                    <span className="text-white font-mono">
+                                    <span className="text-foreground font-mono">
                                       {values.totalValue
                                         ? formatCurrency(
                                             parseFloat(values.totalValue) *
@@ -719,7 +719,7 @@ export default function TokenizePage() {
                                     <span className="text-neutral-500">
                                       Token Minting
                                     </span>
-                                    <span className="text-white font-mono">
+                                    <span className="text-foreground font-mono">
                                       $50
                                     </span>
                                   </div>
@@ -727,15 +727,15 @@ export default function TokenizePage() {
                                     <span className="text-neutral-500">
                                       Oracle Integration
                                     </span>
-                                    <span className="text-white font-mono">
+                                    <span className="text-foreground font-mono">
                                       $100
                                     </span>
                                   </div>
-                                  <div className="border-t border-[#262626] pt-2 mt-2 flex justify-between font-medium">
-                                    <span className="text-white">
+                                  <div className="border-t border-border pt-2 mt-2 flex justify-between font-medium">
+                                    <span className="text-foreground">
                                       Total Fees
                                     </span>
-                                    <span className="text-white font-mono">
+                                    <span className="text-foreground font-mono">
                                       {values.totalValue
                                         ? formatCurrency(
                                             parseFloat(values.totalValue) *
@@ -753,7 +753,7 @@ export default function TokenizePage() {
                               <div className="flex items-start gap-3">
                                 <Shield className="w-5 h-5 text-[#00ff88] mt-0.5" />
                                 <div>
-                                  <p className="text-sm font-medium text-white">
+                                  <p className="text-sm font-medium text-foreground">
                                     Ready for Review
                                   </p>
                                   <p className="text-xs text-neutral-500 mt-1">
@@ -769,7 +769,7 @@ export default function TokenizePage() {
                       </AnimatePresence>
 
                       {/* Navigation Buttons */}
-                      <div className="flex items-center justify-between mt-8 pt-6 border-t border-[#262626]">
+                      <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
                         <Button
                           type="button"
                           variant="ghost"

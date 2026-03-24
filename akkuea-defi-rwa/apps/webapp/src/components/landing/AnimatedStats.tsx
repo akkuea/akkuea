@@ -119,7 +119,7 @@ const itemVariants = {
 
 export function AnimatedStats() {
   return (
-    <section className="py-20 bg-[#0a0a0a] border-y border-[#262626]">
+    <section className="py-20 bg-card border-y border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
@@ -134,7 +134,7 @@ export function AnimatedStats() {
               [METRICS]
             </span>
           </div>
-          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 tracking-tight">
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 tracking-tight">
             Driving the RWA Revolution
           </h2>
           <p className="text-sm text-neutral-500 max-w-md mx-auto">
@@ -154,7 +154,7 @@ export function AnimatedStats() {
             <motion.div
               key={stat.label}
               variants={itemVariants}
-              className="group relative p-6 bg-black border border-[#262626] rounded-lg hover:border-[#404040] transition-all duration-300 cursor-default"
+              className="group relative p-6 bg-background border border-border rounded-lg hover:border-border-hover transition-all duration-300 cursor-default"
             >
               {/* Index */}
               <div className="absolute top-4 right-4 text-[10px] font-mono text-neutral-700">
@@ -162,12 +162,12 @@ export function AnimatedStats() {
               </div>
 
               {/* Icon */}
-              <div className="w-8 h-8 rounded-md bg-[#1a1a1a] border border-[#262626] flex items-center justify-center mb-4 group-hover:border-[#404040] transition-colors">
-                <stat.icon className="w-4 h-4 text-neutral-500 group-hover:text-[#ff3e00] transition-colors" />
+              <div className="w-8 h-8 rounded-md bg-muted border border-border flex items-center justify-center mb-4 group-hover:border-border-hover transition-colors">
+                <stat.icon className="w-4 h-4 text-muted-foreground group-hover:text-accent transition-colors" />
               </div>
 
               {/* Value */}
-              <div className="text-2xl sm:text-3xl font-bold text-white mb-1 tracking-tight">
+              <div className="text-2xl sm:text-3xl font-bold text-foreground mb-1 tracking-tight">
                 <AnimatedCounter
                   value={stat.value}
                   suffix={stat.suffix}

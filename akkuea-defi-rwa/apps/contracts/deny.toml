@@ -72,6 +72,8 @@ feature-depth = 1
 ignore = [
     { id = "RUSTSEC-2024-0388", reason = "derivative is a transitive dependency via arkworks - waiting for upstream fix" },
     { id = "RUSTSEC-2024-0436", reason = "paste is a transitive dependency via arkworks - waiting for upstream fix" },
+    { id = "RUSTSEC-2026-0009", reason = "time is a transitive dependency via serde_with/stellar-xdr/soroban-sdk - waiting for upstream fix" },
+    { id = "RUSTSEC-2026-0012", reason = "keccak is a transitive dependency via sha3/soroban-env-host - waiting for upstream fix" },
 ]
 # If this is true, then cargo deny will use the git executable to fetch advisory database.
 # If this is false, then it uses a built-in git library.

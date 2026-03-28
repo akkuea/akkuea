@@ -3,17 +3,15 @@ name: Github Actions workflow for Vitest with Bun
 on:
   push:
     branches: [ main, develop ]
-    paths-ignore:
-      - 'akkuea-edu/docs/**'
     paths:
       - 'akkuea-edu/**'
+      - '!akkuea-edu/docs/**'
       - '.github/workflows/test.yml'
   pull_request:
-    branches: [ main, develop]
-    paths-ignore:
-      - 'akkuea-edu/docs/**'
+    branches: [ main, develop ]
     paths:
       - 'akkuea-edu/**'
+      - '!akkuea-edu/docs/**'
       - '.github/workflows/test.yml'
 
 jobs:

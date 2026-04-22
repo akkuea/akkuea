@@ -41,7 +41,7 @@ jobs:
     - name: Type checking
       run: |
         cd akkuea-defi-rwa/apps/api
-        bun run type-check || true
+        bun run type-check
         
     - name: Linting with ESLint
       run: |

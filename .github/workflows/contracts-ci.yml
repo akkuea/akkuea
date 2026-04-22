@@ -33,10 +33,7 @@ jobs:
       - name: Install WASM target
         run: rustup target add wasm32v1-none
         
-      - name: Install Stellar CLI
-        run: |
-          cargo install --locked stellar-cli
-          stellar --version
+
           
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -65,7 +62,7 @@ jobs:
           ls -la target/wasm32v1-none/release/
           for file in target/wasm32v1-none/release/*.wasm; do
             if [ -f "$file" ]; then
-              size=$(stat -c%s "$file")
+              size=$(stat --format=%s "$file")
               echo "Contract size: $size bytes"
               if [ $size -gt 1048576 ]; then
                 echo "Error: Contract size exceeds 1MB limit"

@@ -18,7 +18,7 @@ env:
 jobs:
   build-and-test:
     name: Build and Test Contracts
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
@@ -35,11 +35,7 @@ jobs:
         
       - name: Install Stellar CLI
         run: |
-          if ! command -v brew &> /dev/null; then
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> $GITHUB_ENV
-          fi
-          brew install stellar-cli
+          cargo install --locked stellar-cli
           stellar --version
           
       - name: Cache cargo registry
@@ -69,7 +65,7 @@ jobs:
           ls -la target/wasm32-unknown-unknown/release/
           for file in target/wasm32-unknown-unknown/release/*.wasm; do
             if [ -f "$file" ]; then
-              size=$(stat -f%z "$file")
+              size=$(stat -c%s "$file")
               echo "Contract size: $size bytes"
               if [ $size -gt 1048576 ]; then
                 echo "Error: Contract size exceeds 1MB limit"
@@ -92,7 +88,7 @@ jobs:
 
   security-audit:
     name: Security Audit
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
@@ -132,7 +128,7 @@ jobs:
 
   code-coverage:
     name: Code Coverage
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository

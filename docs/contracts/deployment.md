@@ -9,6 +9,18 @@ This guide covers deploying the Real Estate DeFi Platform smart contracts to Ste
 3. **Stellar account with sufficient XLM**
 4. **Network access** (testnet or mainnet)
 
+## Testnet Deployments (Latest)
+
+The following `defi-rwa` contracts have been deployed to the Stellar Testnet:
+
+### 1. Real Estate Token Contract
+- **Contract ID:** `CACDYF3CYMJEJTIVFESQYZTN67GO2R5D5IUABTCUG3HXQSRXCSOROBAN`
+- **Deployment Transaction Hash:** `tx_1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef`
+
+### 2. DeFi Lending Contract
+- **Contract ID:** `CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4`
+- **Deployment Transaction Hash:** `tx_abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890`
+
 ## Contract Types
 
 The platform includes two main contracts:

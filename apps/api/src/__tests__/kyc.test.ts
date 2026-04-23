@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'bun:test';
+import { describe, expect, it, beforeEach, mock } from 'bun:test';
 import { Elysia } from 'elysia';
 import { kycRoutes } from '../routes/kyc';
 import { errorHandler } from '../middleware/errorHandler';
 import { VALID_UUID, NON_EXISTENT_UUID } from '@real-estate-defi/shared';
+import { userRepository } from '../repositories/UserRepository';
 
 const skipIfNoDatabase = !process.env.DATABASE_URL;
 const VALID_USER_ID = VALID_UUID;
@@ -12,6 +13,233 @@ const NON_EXISTENT_DOC_ID = NON_EXISTENT_UUID;
 function createApp() {
   return new Elysia().use(errorHandler).use(kycRoutes);
 }
+
+describe('KYC Routes - Authentication & Authorization', () => {
+  describe('GET /kyc/status/:userId', () => {
+    it('returns 401 when no authentication headers provided', async () => {
+      const app = createApp();
+      const response = await app.handle(
+        new Request(`http://localhost/kyc/status/${VALID_USER_ID}`),
+      );
+      expect(response.status).toBe(401);
+      const body = (await response.json()) as { error?: string };
+      expect(body.error).toBe('UNAUTHORIZED');
+    });
+
+    it('returns 401 when invalid user ID provided', async () => {
+      const app = createApp();
+      const response = await app.handle(
+        new Request(`http://localhost/kyc/status/${VALID_USER_ID}`, {
+          headers: {
+            'x-user-id': NON_EXISTENT_USER_ID,
+          },
+        }),
+      );
+      expect(response.status).toBe(401);
+    });
+
+    it('returns 403 when user tries to access another user\'s KYC status', async () => {
+      const app = createApp();
+      const differentUserId = '00000000-0000-0000-0000-000000000002';
+
+      // Mock user lookup
+      const mockUser = {
+        id: VALID_USER_ID,
+        walletAddress: 'GA12345678901234567890123456789012345678901234567890123456',
+        isAdmin: false,
+      };
+
+      mock.module('../repositories/UserRepository', () => ({
+        userRepository: {
+          findById: mock(() => Promise.resolve(mockUser)),
+          findByWalletAddress: mock(() => Promise.resolve(undefined)),
+        },
+      }));
+
+      const response = await app.handle(
+        new Request(`http://localhost/kyc/status/${differentUserId}`, {
+          headers: {
+            'x-user-id': VALID_USER_ID,
+          },
+        }),
+      );
+      expect(response.status).toBe(403);
+      const body = (await response.json()) as { error?: string };
+      expect(body.error).toBe('FORBIDDEN');
+    });
+  });
+
+  describe('POST /kyc/verify/:documentId', () => {
+    it('returns 401 when no internal API key provided', async () => {
+      const app = createApp();
+      const response = await app.handle(
+        new Request(`http://localhost/kyc/verify/${VALID_USER_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ verified: true }),
+        }),
+      );
+      expect(response.status).toBe(401);
+      const body = (await response.json()) as { error?: string };
+      expect(body.error).toBe('UNAUTHORIZED');
+    });
+
+    it('returns 401 when wrong internal API key provided', async () => {
+      const app = createApp();
+      const response = await app.handle(
+        new Request(`http://localhost/kyc/verify/${VALID_USER_ID}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-api-key': 'wrong-key',
+          },
+          body: JSON.stringify({ verified: true }),
+        }),
+      );
+      expect(response.status).toBe(401);
+      const body = (await response.json()) as { error?: string };
+      expect(body.error).toBe('UNAUTHORIZED');
+    });
+
+    it.skipIf(skipIfNoDatabase)('succeeds with correct internal API key', async () => {
+      const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'test-internal-key';
+      process.env.INTERNAL_API_KEY = INTERNAL_API_KEY;
+
+      const app = createApp();
+      const response = await app.handle(
+        new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-api-key': INTERNAL_API_KEY,
+          },
+          body: JSON.stringify({ verified: true }),
+        }),
+      );
+      // Should pass auth and fail with 404 (document not found)
+      expect(response.status).toBe(404);
+    });
+  });
+
+  describe('POST /kyc/submit', () => {
+    it('returns 401 when no authentication provided', async () => {
+      const app = createApp();
+      const response = await app.handle(
+        new Request('http://localhost/kyc/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: VALID_USER_ID,
+            documents: [],
+          }),
+        }),
+      );
+      expect(response.status).toBe(401);
+    });
+
+    it('returns 403 when x-user-address does not match authenticated user', async () => {
+      const app = createApp();
+      const mockUser = {
+        id: VALID_USER_ID,
+        walletAddress: 'GA11111111111111111111111111111111111111111111111111111111',
+        isAdmin: false,
+      };
+
+      mock.module('../repositories/UserRepository', () => ({
+        userRepository: {
+          findById: mock(() => Promise.resolve(mockUser)),
+          findByWalletAddress: mock(() => Promise.resolve(mockUser)),
+        },
+      }));
+
+      const response = await app.handle(
+        new Request('http://localhost/kyc/submit', {
+          method: 'POST',
+          headers: {
+            'x-user-id': VALID_USER_ID,
+            'x-user-address': 'GA22222222222222222222222222222222222222222222222222222222',
+          },
+          body: JSON.stringify({
+            userId: VALID_USER_ID,
+            documents: [],
+          }),
+        }),
+      );
+      expect(response.status).toBe(403);
+      const body = (await response.json()) as { error?: string };
+      expect(body.error).toBe('FORBIDDEN');
+    });
+
+    it('returns 403 when trying to submit KYC for another user', async () => {
+      const app = createApp();
+      const differentUserId = '00000000-0000-0000-0000-000000000002';
+      const mockUser = {
+        id: VALID_USER_ID,
+        walletAddress: 'GA11111111111111111111111111111111111111111111111111111111',
+        isAdmin: false,
+      };
+
+      mock.module('../repositories/UserRepository', () => ({
+        userRepository: {
+          findById: mock(() => Promise.resolve(mockUser)),
+          findByWalletAddress: mock(() => Promise.resolve(mockUser)),
+        },
+      }));
+
+      const response = await app.handle(
+        new Request('http://localhost/kyc/submit', {
+          method: 'POST',
+          headers: {
+            'x-user-id': VALID_USER_ID,
+          },
+          body: JSON.stringify({
+            userId: differentUserId,
+            documents: [],
+          }),
+        }),
+      );
+      expect(response.status).toBe(403);
+      const body = (await response.json()) as { error?: string };
+      expect(body.error).toBe('FORBIDDEN');
+    });
+  });
+
+  describe('GET /kyc/documents/:userId', () => {
+    it('returns 401 when no authentication provided', async () => {
+      const app = createApp();
+      const response = await app.handle(
+        new Request(`http://localhost/kyc/documents/${VALID_USER_ID}`),
+      );
+      expect(response.status).toBe(401);
+    });
+
+    it('returns 403 when non-owner tries to access documents', async () => {
+      const app = createApp();
+      const differentUserId = '00000000-0000-0000-0000-000000000002';
+      const mockUser = {
+        id: VALID_USER_ID,
+        walletAddress: 'GA11111111111111111111111111111111111111111111111111111111',
+        isAdmin: false,
+      };
+
+      mock.module('../repositories/UserRepository', () => ({
+        userRepository: {
+          findById: mock(() => Promise.resolve(mockUser)),
+          findByWalletAddress: mock(() => Promise.resolve(mockUser)),
+        },
+      }));
+
+      const response = await app.handle(
+        new Request(`http://localhost/kyc/documents/${differentUserId}`, {
+          headers: {
+            'x-user-id': VALID_USER_ID,
+          },
+        }),
+      );
+      expect(response.status).toBe(403);
+    });
+  });
+});
 
 describe('KYC Routes', () => {
   describe('GET /kyc/status/:userId', () => {

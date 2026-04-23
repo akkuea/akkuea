@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia';
 import { KYCController } from '../controllers/KYCController';
 import { ApiError } from '../errors/ApiError';
-import { rateLimit } from '../middleware';
+import { rateLimit, requireInternalApiKey, requireAuth, requireOwnership } from '../middleware';
 
 const DOCUMENT_TYPES = [
   'passport',
@@ -43,13 +43,24 @@ function handleKycError(error: unknown, set: SetStatus) {
 }
 
 export const kycRoutes = new Elysia({ prefix: '/kyc' })
-  .get('/status/:userId', async ({ params: { userId }, set }) => {
-    try {
-      return await KYCController.getKYCStatus(userId);
-    } catch (error) {
-      return handleKycError(error, set);
-    }
-  })
+  // GET /kyc/status/:userId - Requires authentication and ownership
+  .get(
+    '/status/:userId',
+    async ({ params: { userId }, headers, set }) => {
+      try {
+        // Require authentication
+        const user = await requireAuth({ headers });
+
+        // Enforce ownership or admin access
+        requireOwnership(user, userId);
+
+        return await KYCController.getKYCStatus(userId);
+      } catch (error) {
+        return handleKycError(error, set);
+      }
+    },
+    { beforeHandle: [rateLimit()] },
+  )
   .post(
     '/upload',
     async ({ request, set }) => {
@@ -110,40 +121,70 @@ export const kycRoutes = new Elysia({ prefix: '/kyc' })
   )
   .post(
     '/submit',
-    async ({ body, set }) => {
+    async ({ body, headers, set }) => {
       try {
-        return await KYCController.submitKYC(
-          body as {
-            userId: string;
-            documents: {
-              type: 'passport' | 'id_card' | 'proof_of_address' | 'other';
-              documentUrl: string;
-            }[];
-          },
-        );
+        // Require authentication
+        const user = await requireAuth({ headers });
+
+        // Validate that x-user-address matches authenticated user
+        const bodyData = body as {
+          userId: string;
+          documents: {
+            type: 'passport' | 'id_card' | 'proof_of_address' | 'other';
+            documentUrl: string;
+          }[];
+        };
+
+        if (headers['x-user-address'] && headers['x-user-address'] !== user.walletAddress) {
+          throw ApiError.forbidden('User address mismatch');
+        }
+
+        // Ensure userId in body matches authenticated user
+        if (bodyData.userId !== user.id) {
+          throw ApiError.forbidden('Cannot submit KYC for another user');
+        }
+
+        return await KYCController.submitKYC(bodyData);
       } catch (error) {
         return handleKycError(error, set);
       }
     },
     { beforeHandle: [rateLimit()] },
   )
-  .post('/verify/:documentId', async ({ params: { documentId }, body, set }) => {
-    try {
-      return await KYCController.verifyDocument(
-        documentId,
-        body as { verified: boolean; notes?: string },
-      );
-    } catch (error) {
-      return handleKycError(error, set);
-    }
-  })
-  .get('/documents/:userId', async ({ params: { userId }, set }) => {
-    try {
-      return await KYCController.getUserDocuments(userId);
-    } catch (error) {
-      return handleKycError(error, set);
-    }
-  })
+  // POST /kyc/verify/:documentId - Internal service only
+  .post(
+    '/verify/:documentId',
+    async ({ params: { documentId }, body, headers, set }) => {
+      try {
+        // Require internal API key
+        requireInternalApiKey({ headers });
+
+        return await KYCController.verifyDocument(
+          documentId,
+          body as { verified: boolean; notes?: string },
+        );
+      } catch (error) {
+        return handleKycError(error, set);
+      }
+    },
+  )
+  // GET /kyc/documents/:userId - Requires authentication and ownership
+  .get(
+    '/documents/:userId',
+    async ({ params: { userId }, headers, set }) => {
+      try {
+        // Require authentication
+        const user = await requireAuth({ headers });
+
+        // Enforce ownership or admin access
+        requireOwnership(user, userId);
+
+        return await KYCController.getUserDocuments(userId);
+      } catch (error) {
+        return handleKycError(error, set);
+      }
+    },
+  )
   .get('/file/:documentId', async ({ params: { documentId }, set }) => {
     try {
       const { buffer, contentType, fileName } = await KYCController.getDocumentFile(documentId);

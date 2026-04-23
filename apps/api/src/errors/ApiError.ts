@@ -28,4 +28,12 @@ export class ApiError extends Error {
   static validation(message: string, details?: Record<string, unknown>): ApiError {
     return new ApiError(422, 'VALIDATION_ERROR', message, details);
   }
+
+  static unauthorized(message: string = 'Unauthorized'): ApiError {
+    return new ApiError(401, 'UNAUTHORIZED', message);
+  }
+
+  static forbidden(message: string = 'Forbidden'): ApiError {
+    return new ApiError(403, 'FORBIDDEN', message);
+  }
 }

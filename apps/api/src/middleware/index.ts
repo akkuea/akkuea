@@ -10,3 +10,11 @@ export {
   paginationQuerySchema,
   ownerParamSchema,
 } from './validation';
+export {
+  requireAuth,
+  requireInternalApiKey,
+  requireOwnership,
+  authPlugin,
+  internalKeyPlugin,
+  type AuthenticatedUser,
+} from './auth';

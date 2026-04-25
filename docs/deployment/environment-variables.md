@@ -79,9 +79,19 @@ cp akkuea-defi-rwa/apps/api/.env.example akkuea-defi-rwa/apps/api/.env
 
 ### Stellar / Soroban — Contracts
 
+**IMPORTANT: Contract IDs are production artifacts obtained from actual Stellar deployments. Never hardcode placeholder or test values in the codebase. Always load them from environment variables.**
+
 | Variable | Example Value | Required | Description |
 |---|---|---|---|
-| `REAL_ESTATE_TOKEN_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | Yes | The Soroban contract ID produced after deploying `real_estate_defi_contracts.wasm`. Obtained from the output of `stellar contract deploy`. See `docs/deployment/deploy-contracts.md` |
+| `REAL_ESTATE_TOKEN_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | Yes | The Soroban contract ID produced after deploying the Real Estate Token contract to Stellar. Obtained from `stellar contract deploy` output. See `docs/deployment/deploy-contracts.md` |
+| `DEFI_LENDING_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | Yes | The Soroban contract ID produced after deploying the DeFi Lending contract to Stellar. Obtained from `stellar contract deploy` output. Both contracts use the same WASM file but have separate deployments. See `docs/deployment/deploy-contracts.md` |
+
+#### Verifying Contract IDs
+
+After deployment, verify your contract IDs on Stellar Testnet Explorer:
+- **Testnet Explorer**: https://stellar.expert/explorer/testnet/contract/{CONTRACT_ID}
+- Real contract IDs will show transaction history and the deployed WASM code hash
+- Placeholder values like `CAAAA...` or addresses ending in readable text should be rejected
 
 ---
 

@@ -7,14 +7,36 @@ export const STELLAR_NETWORKS = {
   STANDALONE: "standalone",
 } as const;
 
+/**
+ * Contract IDs are loaded from environment variables.
+ *
+ * These values must be obtained from actual Stellar Testnet/Mainnet deployments.
+ * To deploy contracts:
+ *
+ * 1. Build contracts:
+ *    cd apps/contracts
+ *    cargo build --target wasm32-unknown-unknown --release
+ *
+ * 2. Deploy to Stellar Testnet:
+ *    stellar contract deploy \\
+ *      --wasm target/wasm32-unknown-unknown/release/real_estate_defi_contracts.wasm \\
+ *      --source-account $(stellar keys address) \\
+ *      --network testnet
+ *
+ * 3. Save the returned contract ID to .env.local or production secrets manager:
+ *    REAL_ESTATE_TOKEN_CONTRACT_ID=CXXXXX...
+ *    DEFI_LENDING_CONTRACT_ID=CXXXXX...
+ *
+ * See: docs/deployment/deploy-contracts.md
+ */
 export const CONTRACT_IDS = {
   REAL_ESTATE_TOKEN: {
-    TESTNET: "CACDYF3CYMJEJTIVFESQYZTN67GO2R5D5IUABTCUG3HXQSRXCSOROBAN",
-    MAINNET: "",
+    TESTNET: process.env.REAL_ESTATE_TOKEN_CONTRACT_ID || "",
+    MAINNET: process.env.REAL_ESTATE_TOKEN_CONTRACT_ID_MAINNET || "",
   },
   DEFI_LENDING: {
-    TESTNET: "CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4",
-    MAINNET: "",
+    TESTNET: process.env.DEFI_LENDING_CONTRACT_ID || "",
+    MAINNET: process.env.DEFI_LENDING_CONTRACT_ID_MAINNET || "",
   },
 } as const;
 

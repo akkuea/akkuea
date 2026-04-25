@@ -17,6 +17,7 @@ import {
   propertyRepository,
   type PropertyFilter,
   type PaginatedResult,
+  type PropertyListRow,
 } from '../repositories/PropertyRepository';
 import { userRepository } from '../repositories/UserRepository';
 import {
@@ -91,9 +92,8 @@ async function mapPropertyToPropertyInfo(
   property: Property & { documents?: PropertyDocument[] },
   ownerAddress?: string,
 ): Promise<PropertyInfo> {
-  // Get owner's wallet address if not provided
   let walletAddress = ownerAddress;
-  if (!walletAddress) {
+  if (walletAddress === undefined) {
     const owner = await userRepository.findById(property.ownerId);
     walletAddress = owner?.walletAddress ?? '';
   }
@@ -222,14 +222,15 @@ export class PropertyController {
         return cached;
       }
 
-      const result: PaginatedResult<Property> = await propertyRepository.findPaginated(
+      const result: PaginatedResult<PropertyListRow> = await propertyRepository.findPaginated(
         pagination,
         Object.keys(filter).length > 0 ? filter : undefined,
       );
 
-      // Map properties to PropertyInfo
       const mappedProperties = await Promise.all(
-        result.data.map((property) => mapPropertyToPropertyInfo(property)),
+        result.data.map((row) =>
+          mapPropertyToPropertyInfo(row, row.ownerWalletAddress),
+        ),
       );
 
       const response: PaginatedResponse<PropertyInfo> = {

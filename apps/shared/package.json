@@ -35,7 +35,8 @@
     "typescript-eslint": "^8.57.0"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "^13.3.0"
+    "@stellar/stellar-sdk": "^13.3.0",
+    "zod": "^3.25.76"
   },
   "resolutions": {
     "stellar-base": "12.1.1"

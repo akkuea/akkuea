@@ -9,6 +9,8 @@ import { oracleRoutes } from './routes/oracle';
 import { riskMonitoringRoutes } from './routes/riskMonitoring';
 import { errorHandler } from './middleware/errorHandler';
 import { cacheService } from './services/CacheService';
+import { NotificationService } from './services/NotificationService';
+import { createNotificationWorkerFromEnv } from './workers/notificationWorker';
 
 app
   .use(
@@ -58,9 +60,17 @@ console.log(`📚 Swagger docs available at http://localhost:${process.env.PORT 
 // Connect to Redis (non-blocking — app works without it)
 cacheService.connect();
 
+// Start the notification delivery worker (opt-out via NOTIFICATIONS_ENABLED=false)
+const notificationWorker = createNotificationWorkerFromEnv(new NotificationService());
+notificationWorker?.start();
+
 const shutdown = async (signal: string) => {
   console.log(`\n${signal} received, closing connections...`);
-  await Promise.all([closeDatabaseConnection(), cacheService.disconnect()]);
+  await Promise.all([
+    closeDatabaseConnection(),
+    cacheService.disconnect(),
+    notificationWorker?.stop() ?? Promise.resolve(),
+  ]);
 
   console.log('Connections closed. Exiting...');
   process.exit(0);

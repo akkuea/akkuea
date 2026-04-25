@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, gte } from 'drizzle-orm';
+import { eq, and, desc, sql, lte, or, isNull } from 'drizzle-orm';
 import { db } from '../db';
 import {
   notifications,
@@ -127,14 +127,19 @@ export class NotificationRepository extends BaseRepository<
   }
 
   /**
-   * Find notifications ready for retry
+   * Find notifications ready for retry (FAILED and nextRetryAt is due or null).
    */
   async findReadyForRetry(): Promise<Notification[]> {
     const now = new Date();
     return db
       .select()
       .from(notifications)
-      .where(and(eq(notifications.deliveryStatus, 'FAILED'), gte(notifications.nextRetryAt, now)))
+      .where(
+        and(
+          eq(notifications.deliveryStatus, 'FAILED'),
+          or(lte(notifications.nextRetryAt, now), isNull(notifications.nextRetryAt)),
+        ),
+      )
       .orderBy(notifications.nextRetryAt);
   }
 

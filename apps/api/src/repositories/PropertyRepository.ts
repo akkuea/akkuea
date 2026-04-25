@@ -1,8 +1,9 @@
-import { eq, and, gte, lte, gt, sql, inArray, type SQL } from 'drizzle-orm';
+import { eq, and, gte, lte, gt, sql, inArray, getTableColumns, type SQL } from 'drizzle-orm';
 import { db } from '../db';
 import {
   properties,
   propertyDocuments,
+  users,
   type Property,
   type NewProperty,
   type PropertyDocument,
@@ -53,6 +54,13 @@ export interface PaginatedResult<T> {
     totalPages: number;
   };
 }
+
+/** Property row from paginated list queries with owner joined from `users` (avoids N+1). */
+export type PropertyListRow = Property & {
+  ownerWalletAddress: string;
+  ownerKycStatus: (typeof users.$inferSelect)['kycStatus'];
+  ownerKycTier: (typeof users.$inferSelect)['kycTier'];
+};
 
 export class PropertyRepository extends BaseRepository<typeof properties, Property, NewProperty> {
   constructor() {
@@ -105,7 +113,7 @@ export class PropertyRepository extends BaseRepository<typeof properties, Proper
   async findPaginated(
     options: PaginationOptions,
     filter?: PropertyFilter,
-  ): Promise<PaginatedResult<Property>> {
+  ): Promise<PaginatedResult<PropertyListRow>> {
     const { page, limit } = options;
     const offset = (page - 1) * limit;
 
@@ -119,8 +127,18 @@ export class PropertyRepository extends BaseRepository<typeof properties, Proper
       .where(whereClause);
     const total = countResult[0]?.count ?? 0;
 
-    // Get paginated data
-    const data = await db.select().from(properties).where(whereClause).limit(limit).offset(offset);
+    const data = await db
+      .select({
+        ...getTableColumns(properties),
+        ownerWalletAddress: users.walletAddress,
+        ownerKycStatus: users.kycStatus,
+        ownerKycTier: users.kycTier,
+      })
+      .from(properties)
+      .innerJoin(users, eq(properties.ownerId, users.id))
+      .where(whereClause)
+      .limit(limit)
+      .offset(offset);
 
     return {
       data,

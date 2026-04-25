@@ -114,19 +114,14 @@ export class OperationalPropertyController {
       reviewStatuses ? { reviewStatuses } : undefined,
     );
 
-    const ownerIds = [...new Set(result.data.map((p) => p.ownerId))];
-    const owners = await userRepository.findByIds(ownerIds);
-    const ownerById = new Map(owners.map((u) => [u.id, u]));
-
     const docCounts = await propertyRepository.countDocumentsByPropertyIds(
       result.data.map((p) => p.id),
     );
 
     const data: OperationalPropertyListItem[] = result.data.map((p) => {
-      const owner = ownerById.get(p.ownerId);
-      const wallet = owner?.walletAddress ?? '';
+      const wallet = p.ownerWalletAddress;
       const v = valuationSummary(p.id);
-      const kycApproved = owner?.kycStatus === 'approved';
+      const kycApproved = p.ownerKycStatus === 'approved';
 
       return {
         id: p.id,
@@ -137,8 +132,8 @@ export class OperationalPropertyController {
         reviewStatus: p.reviewStatus,
         verified: p.verified,
         ownerWallet: wallet,
-        ownerKycStatus: owner?.kycStatus ?? 'not_started',
-        ownerKycTier: owner?.kycTier ?? 'none',
+        ownerKycStatus: p.ownerKycStatus,
+        ownerKycTier: p.ownerKycTier,
         tokenized: Boolean(p.tokenAddress),
         sorobanPropertyId: p.sorobanPropertyId ?? null,
         valuationState: v.state,

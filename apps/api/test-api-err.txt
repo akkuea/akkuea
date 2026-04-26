@@ -1,0 +1,150 @@
+﻿bun test v1.3.6 (d530ed99)
+bun : 
+At line:1 char:1
++ bun test src/tests
+/riskApi.test.ts 
+2>&1 | Out-File 
+-Encoding utf8 tes 
+...
++ ~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
+~
+    + CategoryInfo  
+            : NotS  
+  pecified: (:Str   
+ ing) [], Remote    
+Exception
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+src\tests\riskApi.te
+st.ts:
+ 6 |   const app = 
+new Elysia().use(ris
+kMonitoringRoutes);
+ 7 | 
+ 8 |   
+test('Monitoring 
+data is available 
+to internal tools', 
+async () => {
+ 9 |     const 
+response = await 
+app.handle(new Reque
+st('http://localhost
+/internal/risk/posit
+ions'));
+10 | 
+11 |     expect(resp
+onse.status).toBe(20
+0);
+                    
+             ^
+error: expect(receiv
+ed).toBe(expected)
+
+Expected: 200
+Received: 500
+
+      at 
+<anonymous> (C:\User
+s\gtaon\.gemini\anti
+gravity\scratch\akku
+ea\akkuea-defi-rwa\a
+pps\api\src\tests\ri
+skApi.test.ts:11:29)
+(fail) Risk 
+Monitoring API > 
+Monitoring data is 
+available to 
+internal tools 
+[16.00ms]
+16 |   test('Filter 
+positions by risk 
+level', async () => 
+{
+17 |     const 
+response = await 
+app.handle(
+18 |       new Reque
+st('http://localhost
+/internal/risk/posit
+ions/risk/critical')
+,
+19 |     );
+20 | 
+21 |     expect(resp
+onse.status).toBe(20
+0);
+                    
+             ^
+error: expect(receiv
+ed).toBe(expected)
+
+Expected: 200
+Received: 500
+
+      at 
+<anonymous> (C:\User
+s\gtaon\.gemini\anti
+gravity\scratch\akku
+ea\akkuea-defi-rwa\a
+pps\api\src\tests\ri
+skApi.test.ts:21:29)
+(fail) Risk 
+Monitoring API > 
+Filter positions by 
+risk level
+26 |   test('Get 
+liquidation 
+readiness for 
+position', async () 
+=> {
+27 |     const 
+response = await 
+app.handle(
+28 |       new Reque
+st('http://localhost
+/internal/risk/liqui
+dation/pool-1-borrow
+er-1'),
+29 |     );
+30 | 
+31 |     expect(resp
+onse.status).toBeLes
+sThan(500);
+                    
+             ^
+error: expect(receiv
+ed).toBeLessThan(exp
+ected)
+
+Expected: < 500
+Received: 500
+
+      at 
+<anonymous> (C:\User
+s\gtaon\.gemini\anti
+gravity\scratch\akku
+ea\akkuea-defi-rwa\a
+pps\api\src\tests\ri
+skApi.test.ts:31:29)
+(fail) Risk 
+Monitoring API > 
+Get liquidation 
+readiness for 
+position
+(pass) Risk 
+Monitoring API > 
+Get risk transitions
+(pass) Risk 
+Monitoring API > 
+Get transitions for 
+specific position
+
+ 2 pass
+ 3 fail
+ 7 expect() calls
+Ran 5 tests across 
+1 file. [201.00ms]

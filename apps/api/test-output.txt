@@ -1,0 +1,1652 @@
+﻿bun test v1.3.6 (d530ed99)
+bun : 
+At line:1 char:1
++ bun test 2>&1 | 
+Out-File -Encoding 
+utf8 test-output.txt
++ ~~~~~~~~~~~~~
+    + CategoryInfo  
+            : NotS  
+  pecified: (:Str   
+ ing) [], Remote    
+Exception
+    + FullyQualifie 
+   dErrorId : Nati  
+  veCommandError
+ 
+test\validation.test
+.ts:
+(pass) Validation 
+Middleware > should 
+reject invalid body 
+on POST /properties 
+[31.00ms]
+(pass) Validation 
+Middleware > should 
+reject invalid 
+query on GET 
+/properties
+(pass) Validation 
+Middleware > should 
+reject invalid 
+params on GET 
+/properties/:id
+{"level":"info","message":"Creating property","timestamp":"2026-03-27T01:47:58.028Z","context":{"operation":"CREATE","entity":"property","userId":"GXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"}}
+{"level":"error","me
+ssage":"Failed to 
+create property","ti
+mestamp":"2026-03-27
+T01:47:58.042Z","con
+text":{"error":{},"o
+peration":"CREATE","
+entity":"property"}}
+(pass) Validation 
+Middleware > should 
+pass valid body on 
+POST /properties 
+[16.00ms]
+
+src\middleware\rateL
+imit.test.ts:
+(pass) rateLimit 
+middleware > basic 
+rate limiting > 
+should allow 
+requests under the 
+limit
+(pass) rateLimit 
+middleware > basic 
+rate limiting > 
+should block 
+requests over the 
+limit
+(pass) rateLimit 
+middleware > basic 
+rate limiting > 
+should set rate 
+limit headers
+(pass) rateLimit 
+middleware > 
+identifier 
+differentiation > 
+should track 
+anonymous users by 
+IP
+(pass) rateLimit 
+middleware > 
+identifier 
+differentiation > 
+should track 
+authenticated users 
+by x-user-address 
+header
+(pass) rateLimit 
+middleware > 
+identifier 
+differentiation > 
+should prioritize 
+user address over 
+IP for 
+authenticated 
+requests
+(pass) rateLimit 
+middleware > 
+Retry-After header 
+> should set 
+Retry-After header 
+when rate limited
+(pass) rateLimit 
+middleware > custom 
+keyGenerator > 
+should use custom 
+key generator when 
+provided
+(pass) rateLimit 
+middleware > 
+default values > 
+should use default 
+max of 10 and 
+window of 60000ms
+
+src\middleware\reque
+stLogger.test.ts:
+(pass) 
+requestLogger 
+Middleware > should 
+log request details 
+on response 
+[15.00ms]
+(pass) 
+requestLogger 
+Middleware > should 
+log incoming 
+request if debug is 
+enabled
+
+src\services\logger.
+test.ts:
+(pass) 
+LoggerService > 
+should log info 
+messages when level 
+is info
+(pass) 
+LoggerService > 
+should NOT log 
+debug messages when 
+level is info
+(pass) 
+LoggerService > 
+should log debug 
+messages when level 
+is debug
+(pass) 
+LoggerService > 
+should log warn and 
+error messages when 
+level is info
+(pass) 
+LoggerService > 
+should include 
+error details and 
+stack trace in 
+error logs
+(pass) 
+LoggerService > 
+should include 
+context in logs
+
+src\services\Webhook
+Service.test.ts:
+(pass) 
+WebhookService > 
+validateSignature > 
+should return true 
+for valid signature
+(pass) 
+WebhookService > 
+validateSignature > 
+should return false 
+for invalid 
+signature
+(pass) 
+WebhookService > pro
+cessTransactionWebho
+ok > should update 
+transaction status 
+to confirmed
+(pass) 
+WebhookService > pro
+cessTransactionWebho
+ok > should throw 
+NOT_FOUND for 
+unknown transaction
+(pass) 
+WebhookService > pro
+cessTransactionWebho
+ok > should throw 
+CONFLICT for 
+duplicate status 
+update
+
+src\tests\oracle.tes
+t.ts:
+(pass) ValidationSer
+vice.validateValuati
+onPayload > accepts 
+a valid payload
+(pass) ValidationSer
+vice.validateValuati
+onPayload > rejects 
+missing propertyId
+(pass) ValidationSer
+vice.validateValuati
+onPayload > rejects 
+price <= 0
+(pass) ValidationSer
+vice.validateValuati
+onPayload > rejects 
+price exceeding max 
+bound
+(pass) ValidationSer
+vice.validateValuati
+onPayload > rejects 
+stale timestamp
+(pass) ValidationSer
+vice.validateValuati
+onPayload > rejects 
+future timestamp
+(pass) ValidationSer
+vice.validateValuati
+onPayload > rejects 
+confidence out of 
+range
+(pass) ValidationSer
+vice.validateValuati
+onPayload > rejects 
+missing sourceId
+(pass) ValidationSer
+vice.validateValuati
+onPayload > rejects 
+missing provenance 
+dataProvider
+(pass) OracleService
+.ingestValuation > 
+stores a valid 
+valuation and 
+returns it as active
+(pass) OracleService
+.ingestValuation > 
+throws and saves 
+rejected record for 
+stale valuation
+(pass) OracleService
+.ingestValuation > 
+throws for 
+out-of-range price
+(pass) OracleService
+.getLatestValuation 
+> returns current 
+valuation for a 
+known property
+(pass) OracleService
+.getLatestValuation 
+> throws for 
+unknown property
+(pass) OracleService
+.getLatestValuation 
+> latest valuation 
+reflects the most 
+recent submission
+(pass) OracleService
+.getValuationHistory
+ > returns ordered 
+history of 
+valuations
+(pass) OracleService
+.getValuationHistory
+ > respects limit 
+parameter
+(pass) OracleService
+.getValuationHistory
+ > returns empty 
+array for property 
+with no history
+(pass) OracleService
+.buildContractPayloa
+d > returns 
+deterministic 
+contract payload
+(pass) OracleService
+.buildContractPayloa
+d > throws for 
+non-active 
+valuation status
+(pass) OracleService
+.flagForManualReview
+ > sets valuation 
+status to 
+manual_review
+(pass) OracleService
+.flagForManualReview
+ > throws for 
+unknown valuation id
+(pass) OracleService
+.submitManualOverrid
+e > stores override 
+with manual 
+methodology and 
+active status
+
+src\tests\riskApi.te
+st.ts:
+ 6 |   const app = 
+new Elysia().use(ris
+kMonitoringRoutes);
+ 7 | 
+ 8 |   
+test('Monitoring 
+data is available 
+to internal tools', 
+async () => {
+ 9 |     const 
+response = await 
+app.handle(new Reque
+st('http://localhost
+/internal/risk/posit
+ions'));
+10 | 
+11 |     expect(resp
+onse.status).toBe(20
+0);
+                    
+             ^
+error: expect(receiv
+ed).toBe(expected)
+
+Expected: 200
+Received: 500
+
+      at 
+<anonymous> (C:\User
+s\gtaon\.gemini\anti
+gravity\scratch\akku
+ea\akkuea-defi-rwa\a
+pps\api\src\tests\ri
+skApi.test.ts:11:29)
+(fail) Risk 
+Monitoring API > 
+Monitoring data is 
+available to 
+internal tools 
+[16.00ms]
+16 |   test('Filter 
+positions by risk 
+level', async () => 
+{
+17 |     const 
+response = await 
+app.handle(
+18 |       new Reque
+st('http://localhost
+/internal/risk/posit
+ions/risk/critical')
+,
+19 |     );
+20 | 
+21 |     expect(resp
+onse.status).toBe(20
+0);
+                    
+             ^
+error: expect(receiv
+ed).toBe(expected)
+
+Expected: 200
+Received: 500
+
+      at 
+<anonymous> (C:\User
+s\gtaon\.gemini\anti
+gravity\scratch\akku
+ea\akkuea-defi-rwa\a
+pps\api\src\tests\ri
+skApi.test.ts:21:29)
+(fail) Risk 
+Monitoring API > 
+Filter positions by 
+risk level
+26 |   test('Get 
+liquidation 
+readiness for 
+position', async () 
+=> {
+27 |     const 
+response = await 
+app.handle(
+28 |       new Reque
+st('http://localhost
+/internal/risk/liqui
+dation/pool-1-borrow
+er-1'),
+29 |     );
+30 | 
+31 |     expect(resp
+onse.status).toBeLes
+sThan(500);
+                    
+             ^
+error: expect(receiv
+ed).toBeLessThan(exp
+ected)
+
+Expected: < 500
+Received: 500
+
+      at 
+<anonymous> (C:\User
+s\gtaon\.gemini\anti
+gravity\scratch\akku
+ea\akkuea-defi-rwa\a
+pps\api\src\tests\ri
+skApi.test.ts:31:29)
+(fail) Risk 
+Monitoring API > 
+Get liquidation 
+readiness for 
+position
+(pass) Risk 
+Monitoring API > 
+Get risk transitions
+(pass) Risk 
+Monitoring API > 
+Get transitions for 
+specific position
+
+src\tests\riskMonito
+ring.test.ts:
+(pass) RiskMonitorin
+gService > Healthy 
+positions are 
+assessed as safe
+(pass) RiskMonitorin
+gService > Warning 
+threshold breached
+(pass) RiskMonitorin
+gService > Critical 
+threshold breached
+(pass) RiskMonitorin
+gService > No 
+positions exist - 
+empty result 
+returned safely
+(pass) RiskMonitorin
+gService > 
+Liquidation 
+readiness for 
+critical position
+(pass) RiskMonitorin
+gService > 
+Liquidation 
+readiness for safe 
+position
+
+src\tests\riskReposi
+tory.test.ts:
+(pass) RiskMonitorin
+gRepository > 
+Threshold 
+transitions are 
+persisted
+(pass) RiskMonitorin
+gRepository > 
+Multiple 
+transitions for 
+same position
+(pass) RiskMonitorin
+gRepository > Get 
+recent transitions 
+with limit
+
+src\utils\internalOp
+erationsAuth.test.ts
+:
+(pass) isInternalOpe
+rationsAuthorized > 
+returns false when 
+the header is 
+missing
+(pass) isInternalOpe
+rationsAuthorized > 
+returns false when 
+the key does not 
+match
+(pass) isInternalOpe
+rationsAuthorized > 
+returns true when 
+the key matches
+(pass) isInternalOpe
+rationsAuthorized > 
+returns false when O
+PERATIONS_BACKEND_CR
+EDENTIAL is unset
+
+src\__tests__\errors
+.test.ts:
+(pass) Error 
+Utilities > 
+AppError > should 
+create an AppError 
+with default values
+(pass) Error 
+Utilities > 
+AppError > should 
+create an AppError 
+with custom values
+(pass) Error 
+Utilities > 
+BadRequestError > 
+should create a 
+BadRequestError 
+with status 400
+(pass) Error 
+Utilities > 
+NotFoundError > 
+should create a 
+NotFoundError with 
+status 404
+(pass) Error 
+Utilities > 
+UnauthorizedError > 
+should create an 
+UnauthorizedError 
+with status 401
+(pass) Error 
+Utilities > 
+UnauthorizedError > 
+should use default 
+message when not 
+provided
+(pass) Error 
+Utilities > 
+ForbiddenError > 
+should create a 
+ForbiddenError with 
+status 403
+(pass) Error 
+Utilities > 
+ForbiddenError > 
+should use default 
+message when not 
+provided
+(pass) Error 
+Utilities > 
+handleError > 
+should handle 
+AppError correctly
+(pass) Error 
+Utilities > 
+handleError > 
+should handle 
+shared package 
+AppError subclasses
+(pass) Error 
+Utilities > 
+handleError > 
+should handle 
+standard Error 
+correctly
+(pass) Error 
+Utilities > 
+handleError > 
+should handle 
+unknown errors 
+correctly
+(pass) Error 
+Utilities > 
+handleError > 
+should handle 
+null/undefined 
+errors
+
+src\__tests__\kyc.te
+st.ts:
+(skip) KYC Routes > 
+GET 
+/kyc/status/:userId 
+> returns 404 for 
+non-existent user
+(skip) KYC Routes > 
+GET 
+/kyc/status/:userId 
+> returns status 
+and documents for 
+existing user
+(pass) KYC Routes > 
+POST /kyc/upload > 
+returns 400 when 
+Content-Type is not 
+multipart
+(pass) KYC Routes > 
+POST /kyc/upload > 
+returns 400 when 
+file is missing
+(skip) KYC Routes > 
+POST /kyc/upload > 
+returns 400 for 
+invalid file type 
+(.exe)
+(skip) KYC Routes > 
+POST /kyc/upload > 
+returns 400 for 
+oversized file 
+(over 10MB)
+(skip) KYC Routes > 
+POST /kyc/upload > 
+returns 200 with 
+documentId for 
+valid PDF upload
+(skip) KYC Routes > 
+GET /kyc/documents/:
+userId > returns 
+404 for 
+non-existent user
+(skip) KYC Routes > 
+POST /kyc/verify/:do
+cumentId > returns 
+404 for 
+non-existent 
+document
+(skip) KYC Routes > 
+POST /kyc/verify/:do
+cumentId > admin 
+can approve document
+(skip) KYC Routes > 
+POST /kyc/verify/:do
+cumentId > admin 
+can reject with 
+reason
+(skip) KYC Routes > 
+GET /kyc/file/:docum
+entId > returns 404 
+for non-existent 
+document
+(pass) KYC Routes > 
+Rate limiting > 
+returns 429 after 
+exceeding upload 
+rate limit [16.00ms]
+
+src\__tests__\lendin
+g.test.ts:
+(pass) Lending DTO 
+Validation > 
+CreatePoolDto > 
+should accept valid 
+pool data
+(pass) Lending DTO 
+Validation > 
+CreatePoolDto > 
+should reject 
+missing name
+(pass) Lending DTO 
+Validation > 
+CreatePoolDto > 
+should reject 
+invalid Stellar 
+address
+(pass) Lending DTO 
+Validation > 
+DepositDto > should 
+accept valid amount 
+string
+(pass) Lending DTO 
+Validation > 
+DepositDto > should 
+reject zero amount
+(pass) Lending DTO 
+Validation > 
+DepositDto > should 
+reject negative 
+amount
+(pass) Lending DTO 
+Validation > 
+DepositDto > should 
+reject non-numeric 
+string
+(pass) Lending DTO 
+Validation > 
+BorrowDto > should 
+accept valid borrow 
+data
+(pass) Lending DTO 
+Validation > 
+BorrowDto > should 
+reject missing 
+collateral asset
+(pass) Lending DTO 
+Validation > 
+WithdrawDto > 
+should accept valid 
+amount
+(pass) Lending DTO 
+Validation > 
+RepayDto > should 
+accept valid amount
+(pass) Lending 
+Routes > GET 
+/lending/pools > 
+should return 200 
+with paginated 
+structure or handle 
+DB absence
+(pass) Lending 
+Routes > POST 
+/lending/pools 
+(auth) > should 
+return 401 without 
+x-user-id header 
+[15.00ms]
+(pass) Lending 
+Routes > POST 
+/lending/pools 
+(auth) > should 
+reject invalid body 
+with validation 
+error
+(pass) Lending 
+Routes > GET 
+/lending/pools/:id 
+> should return 
+pool when id is 
+provided
+(pass) Lending 
+Routes > POST /lendi
+ng/pools/:id/deposit
+ (auth + 
+validation) > 
+should return 401 
+without auth
+(pass) Lending 
+Routes > POST /lendi
+ng/pools/:id/deposit
+ (auth + 
+validation) > 
+should reject 
+invalid amount
+(pass) Lending 
+Routes > POST /lendi
+ng/pools/:id/withdra
+w (auth) > should 
+return 401 without 
+auth
+(pass) Lending 
+Routes > POST /lendi
+ng/pools/:id/borrow 
+(auth + validation) 
+> should return 401 
+without auth
+(pass) Lending 
+Routes > POST /lendi
+ng/pools/:id/borrow 
+(auth + validation) 
+> should reject 
+invalid body
+(pass) Lending 
+Routes > POST /lendi
+ng/pools/:id/repay 
+(auth) > should 
+return 401 without 
+auth
+(pass) Lending 
+Routes > GET /lendin
+g/pools/:id/user/:ad
+dress/deposits > 
+should return 200 
+or 500 with valid 
+params [16.00ms]
+(pass) Lending 
+Routes > GET /lendin
+g/pools/:id/user/:ad
+dress/borrows > 
+should return 200 
+or 500 with valid 
+params
+(pass) Lending 
+Routes > GET /lendin
+g/pools/:id/user/:ad
+dress/summary > 
+should reject 
+malformed Stellar 
+addresses
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+(unnamed)
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should return 
+paginated pools 
+from database
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should return 404 
+for non-existent 
+pool
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should create pool 
+with valid data and 
+auth
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should get pool by 
+ID
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should deposit and 
+update pool balance
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should borrow and 
+update pool balance
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should repay and 
+reduce borrow 
+position
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should clamp 
+overpayment and 
+close the borrow 
+position cleanly
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should withdraw and 
+update pool balance
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should reject 
+withdraw with 
+insufficient 
+liquidity
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should get user 
+deposits in pool
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should get user 
+borrows in pool
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should return empty 
+array for unknown 
+user deposits
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should return 
+position summary 
+for a seeded user
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+(unnamed)
+
+src\__tests__\Notifi
+cationService.test.t
+s:
+(pass) 
+NotificationService 
+> 
+createNotification 
+> should create a 
+notification
+(pass) 
+NotificationService 
+> 
+createNotification 
+> should create a 
+notification with 
+metadata
+(pass) 
+NotificationService 
+> createBulkNotifica
+tions > should 
+create multiple 
+notifications
+(pass) 
+NotificationService 
+> getUserNotificatio
+ns > should 
+retrieve user 
+notifications
+(pass) 
+NotificationService 
+> getUserNotificatio
+ns > should support 
+pagination
+(pass) 
+NotificationService 
+> getUnreadCount > 
+should return 
+unread count
+(pass) 
+NotificationService 
+> getUnreadNotificat
+ions > should 
+retrieve unread 
+notifications
+(pass) 
+NotificationService 
+> markAsRead > 
+should mark 
+notification as read
+(pass) 
+NotificationService 
+> 
+markMultipleAsRead 
+> should mark 
+multiple 
+notifications as 
+read
+(pass) 
+NotificationService 
+> markAllAsRead > 
+should mark all 
+notifications as 
+read for user
+(pass) 
+NotificationService 
+> markAsSent > 
+should mark 
+notification as sent
+(pass) 
+NotificationService 
+> markAsFailed > 
+should mark 
+notification as 
+failed and schedule 
+retry
+(pass) 
+NotificationService 
+> Notification type 
+helpers > should 
+send verification 
+approved 
+notification
+(pass) 
+NotificationService 
+> Notification type 
+helpers > should 
+send verification 
+rejected 
+notification
+(pass) 
+NotificationService 
+> Notification type 
+helpers > should 
+send valuation 
+updated notification
+(pass) 
+NotificationService 
+> Notification type 
+helpers > should 
+send repayment 
+reminder 
+notification 
+[31.00ms]
+(pass) 
+NotificationService 
+> Notification type 
+helpers > should 
+send repayment 
+overdue notification
+(pass) 
+NotificationService 
+> Notification type 
+helpers > should 
+send risk warning 
+notification
+(pass) 
+NotificationService 
+> Notification type 
+helpers > should 
+send liquidation 
+risk notification
+(pass) 
+NotificationService 
+> Notification type 
+helpers > should 
+send investment 
+opportunity 
+notification
+(pass) 
+NotificationService 
+> Notification type 
+helpers > should 
+send portfolio 
+update notification
+(pass) 
+NotificationService 
+> getPendingNotifica
+tions > should 
+retrieve pending 
+notifications
+(pass) 
+NotificationService 
+> getNotificationsRe
+adyForRetry > 
+should retrieve 
+notifications ready 
+for retry
+(pass) 
+NotificationService 
+> cleanupOldNotifica
+tions > should 
+delete old 
+notifications
+
+src\__tests__\positi
+ons.test.ts:
+(pass) 
+PositionService > 
+computes deposit 
+interest on read
+(pass) 
+PositionService > 
+computes borrow 
+interest and 
+summary metrics on 
+read
+(pass) 
+PositionService > 
+returns an empty 
+snapshot when the 
+wallet has no local 
+user record
+(pass) Lending 
+position routes > 
+rejects malformed 
+Stellar addresses 
+through path 
+validation
+(pass) Lending 
+position routes > 
+exposes the summary 
+endpoint and 
+validates address 
+params before 
+hitting the database
+
+src\__tests__\proper
+ties.test.ts:
+(skip) Property 
+Routes Integration 
+Tests > (unnamed)
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties > 
+should return 
+paginated properties
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties > 
+should filter 
+properties by city
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties > 
+should reject 
+invalid page 
+parameter
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties/:id > 
+should return 400 
+for invalid UUID 
+format
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties/:id > 
+should return 404 
+for non-existent 
+property with valid 
+UUID
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties/:id > 
+should return 
+property when valid 
+UUID is provided
+(skip) Property 
+Routes Integration 
+Tests > POST 
+/properties > 
+should create a 
+property 
+successfully with 
+valid Zod schema 
+data
+(skip) Property 
+Routes Integration 
+Tests > POST 
+/properties > 
+should return 400 
+for invalid 
+property data 
+(missing required 
+fields)
+(skip) Property 
+Routes Integration 
+Tests > PUT 
+/properties/:id > 
+should return 400 
+for invalid UUID
+(skip) Property 
+Routes Integration 
+Tests > PUT 
+/properties/:id > 
+should return 401 
+when x-user-address 
+header is missing 
+with valid UUID
+(skip) Property 
+Routes Integration 
+Tests > PUT 
+/properties/:id > 
+should process 
+update request with 
+valid UUID and user 
+address
+(skip) Property 
+Routes Integration 
+Tests > DELETE 
+/properties/:id > 
+should return 400 
+for invalid UUID
+(skip) Property 
+Routes Integration 
+Tests > DELETE 
+/properties/:id > 
+should return 401 
+when x-user-address 
+header is missing
+(skip) Property 
+Routes Integration 
+Tests > DELETE 
+/properties/:id > 
+should return 404 
+for non-existent 
+property
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/tokenize > 
+should return 400 
+for invalid UUID
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/tokenize > 
+should process 
+tokenize request 
+with valid UUID
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/buy-shares 
+> should return 400 
+for invalid UUID
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/buy-shares 
+> should return 400 
+when buyer is 
+missing
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/buy-shares 
+> should return 400 
+when shares is 
+invalid (zero)
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/buy-shares 
+> should process 
+share purchase when 
+valid
+(skip) Property 
+Routes Integration 
+Tests > GET /propert
+ies/:id/shares/:owne
+r > should return 
+400 for invalid UUID
+(skip) Property 
+Routes Integration 
+Tests > GET /propert
+ies/:id/shares/:owne
+r > should process 
+request with valid 
+UUID and owner
+(skip) Property 
+Routes Integration 
+Tests > (unnamed)
+
+src\__tests__\tokeni
+zation.test.ts:
+(pass) 
+TokenizationService 
+> tokenizes a 
+verified property 
+and returns tx 
+details
+(pass) 
+TokenizationService 
+> rejects 
+unverified 
+properties
+(pass) 
+TokenizationService 
+> rejects already 
+tokenized properties
+(pass) 
+TokenizationService 
+> rejects callers 
+who are neither 
+owner nor admin
+(pass) 
+TokenizationService 
+> does not persist 
+DB changes when 
+Soroban submission 
+fails
+(pass) POST /propert
+ies/:id/tokenize > 
+returns 401 when 
+x-user-address is 
+missing
+
+src\__tests__\webhoo
+ks.test.ts:
+(skip) Webhook 
+Routes Integration 
+Tests > (unnamed)
+(skip) Webhook 
+Routes Integration 
+Tests > POST /webhoo
+ks/transactions > 
+should update 
+transaction status 
+to confirmed
+(skip) Webhook 
+Routes Integration 
+Tests > POST /webhoo
+ks/transactions > 
+should return 400 
+for invalid 
+signature
+(skip) Webhook 
+Routes Integration 
+Tests > POST /webhoo
+ks/transactions > 
+should return 409 
+for duplicate 
+delivery (already 
+confirmed)
+(skip) Webhook 
+Routes Integration 
+Tests > POST /webhoo
+ks/transactions > 
+should return 404 
+for unknown 
+transaction hash
+(skip) Webhook 
+Routes Integration 
+Tests > (unnamed)
+
+56 tests skipped:
+(skip) KYC Routes > 
+GET 
+/kyc/status/:userId 
+> returns 404 for 
+non-existent user
+(skip) KYC Routes > 
+GET 
+/kyc/status/:userId 
+> returns status 
+and documents for 
+existing user
+(skip) KYC Routes > 
+POST /kyc/upload > 
+returns 400 for 
+invalid file type 
+(.exe)
+(skip) KYC Routes > 
+POST /kyc/upload > 
+returns 400 for 
+oversized file 
+(over 10MB)
+(skip) KYC Routes > 
+POST /kyc/upload > 
+returns 200 with 
+documentId for 
+valid PDF upload
+(skip) KYC Routes > 
+GET /kyc/documents/:
+userId > returns 
+404 for 
+non-existent user
+(skip) KYC Routes > 
+POST /kyc/verify/:do
+cumentId > returns 
+404 for 
+non-existent 
+document
+(skip) KYC Routes > 
+POST /kyc/verify/:do
+cumentId > admin 
+can approve document
+(skip) KYC Routes > 
+POST /kyc/verify/:do
+cumentId > admin 
+can reject with 
+reason
+(skip) KYC Routes > 
+GET /kyc/file/:docum
+entId > returns 404 
+for non-existent 
+document
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+(unnamed)
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should return 
+paginated pools 
+from database
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should return 404 
+for non-existent 
+pool
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should create pool 
+with valid data and 
+auth
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should get pool by 
+ID
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should deposit and 
+update pool balance
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should borrow and 
+update pool balance
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should repay and 
+reduce borrow 
+position
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should clamp 
+overpayment and 
+close the borrow 
+position cleanly
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should withdraw and 
+update pool balance
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should reject 
+withdraw with 
+insufficient 
+liquidity
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should get user 
+deposits in pool
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should get user 
+borrows in pool
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should return empty 
+array for unknown 
+user deposits
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+should return 
+position summary 
+for a seeded user
+(skip) Lending 
+Integration Tests 
+(DB required) > 
+(unnamed)
+(skip) Property 
+Routes Integration 
+Tests > (unnamed)
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties > 
+should return 
+paginated properties
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties > 
+should filter 
+properties by city
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties > 
+should reject 
+invalid page 
+parameter
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties/:id > 
+should return 400 
+for invalid UUID 
+format
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties/:id > 
+should return 404 
+for non-existent 
+property with valid 
+UUID
+(skip) Property 
+Routes Integration 
+Tests > GET 
+/properties/:id > 
+should return 
+property when valid 
+UUID is provided
+(skip) Property 
+Routes Integration 
+Tests > POST 
+/properties > 
+should create a 
+property 
+successfully with 
+valid Zod schema 
+data
+(skip) Property 
+Routes Integration 
+Tests > POST 
+/properties > 
+should return 400 
+for invalid 
+property data 
+(missing required 
+fields)
+(skip) Property 
+Routes Integration 
+Tests > PUT 
+/properties/:id > 
+should return 400 
+for invalid UUID
+(skip) Property 
+Routes Integration 
+Tests > PUT 
+/properties/:id > 
+should return 401 
+when x-user-address 
+header is missing 
+with valid UUID
+(skip) Property 
+Routes Integration 
+Tests > PUT 
+/properties/:id > 
+should process 
+update request with 
+valid UUID and user 
+address
+(skip) Property 
+Routes Integration 
+Tests > DELETE 
+/properties/:id > 
+should return 400 
+for invalid UUID
+(skip) Property 
+Routes Integration 
+Tests > DELETE 
+/properties/:id > 
+should return 401 
+when x-user-address 
+header is missing
+(skip) Property 
+Routes Integration 
+Tests > DELETE 
+/properties/:id > 
+should return 404 
+for non-existent 
+property
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/tokenize > 
+should return 400 
+for invalid UUID
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/tokenize > 
+should process 
+tokenize request 
+with valid UUID
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/buy-shares 
+> should return 400 
+for invalid UUID
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/buy-shares 
+> should return 400 
+when buyer is 
+missing
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/buy-shares 
+> should return 400 
+when shares is 
+invalid (zero)
+(skip) Property 
+Routes Integration 
+Tests > POST /proper
+ties/:id/buy-shares 
+> should process 
+share purchase when 
+valid
+(skip) Property 
+Routes Integration 
+Tests > GET /propert
+ies/:id/shares/:owne
+r > should return 
+400 for invalid UUID
+(skip) Property 
+Routes Integration 
+Tests > GET /propert
+ies/:id/shares/:owne
+r > should process 
+request with valid 
+UUID and owner
+(skip) Property 
+Routes Integration 
+Tests > (unnamed)
+(skip) Webhook 
+Routes Integration 
+Tests > (unnamed)
+(skip) Webhook 
+Routes Integration 
+Tests > POST /webhoo
+ks/transactions > 
+should update 
+transaction status 
+to confirmed
+(skip) Webhook 
+Routes Integration 
+Tests > POST /webhoo
+ks/transactions > 
+should return 400 
+for invalid 
+signature
+(skip) Webhook 
+Routes Integration 
+Tests > POST /webhoo
+ks/transactions > 
+should return 409 
+for duplicate 
+delivery (already 
+confirmed)
+(skip) Webhook 
+Routes Integration 
+Tests > POST /webhoo
+ks/transactions > 
+should return 404 
+for unknown 
+transaction hash
+(skip) Webhook 
+Routes Integration 
+Tests > (unnamed)
+
+
+3 tests failed:
+(fail) Risk 
+Monitoring API > 
+Monitoring data is 
+available to 
+internal tools 
+[16.00ms]
+(fail) Risk 
+Monitoring API > 
+Filter positions by 
+risk level
+(fail) Risk 
+Monitoring API > 
+Get liquidation 
+readiness for 
+position
+
+ 139 pass
+ 56 skip
+ 3 fail
+ 280 expect() calls
+Ran 198 tests 
+across 18 files. 
+[812.00ms]

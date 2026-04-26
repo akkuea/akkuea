@@ -4,12 +4,12 @@ on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'akkuea-defi-rwa/apps/contracts/**'
+      - 'apps/contracts/**'
       - '.github/workflows/contracts-ci.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'akkuea-defi-rwa/apps/contracts/**'
+      - 'apps/contracts/**'
       - '.github/workflows/contracts-ci.yml'
 
 env:
@@ -31,7 +31,7 @@ jobs:
           components: rustfmt, clippy
           
       - name: Install WASM target
-        run: rustup target add wasm32-unknown-unknown
+        run: rustup target add wasm32v1-none
         
       - name: Install Stellar CLI
         run: |
@@ -54,20 +54,20 @@ jobs:
             
       - name: Check Rust formatting
         run: |
-          cd akkuea-defi-rwa/apps/contracts
+          cd apps/contracts
           cargo fmt --all -- --check
           
       - name: Run Clippy lints
         run: |
-          cd akkuea-defi-rwa/apps/contracts
+          cd apps/contracts
           cargo clippy --all-targets --all-features -- -D warnings
           
       - name: Build contracts
         run: |
-          cd akkuea-defi-rwa/apps/contracts
-          cargo build --target wasm32-unknown-unknown --release
-          ls -la target/wasm32-unknown-unknown/release/
-          for file in target/wasm32-unknown-unknown/release/*.wasm; do
+          cd apps/contracts
+          cargo build --target wasm32v1-none --release
+          ls -la target/wasm32v1-none/release/
+          for file in target/wasm32v1-none/release/*.wasm; do
             if [ -f "$file" ]; then
               size=$(stat -f%z "$file")
               echo "Contract size: $size bytes"
@@ -80,14 +80,14 @@ jobs:
           
       - name: Run unit tests
         run: |
-          cd akkuea-defi-rwa/apps/contracts
+          cd apps/contracts
           cargo test --lib
           
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: contract-wasm
-          path: akkuea-defi-rwa/apps/contracts/target/wasm32-unknown-unknown/release/*.wasm
+          path: apps/contracts/target/wasm32v1-none/release/*.wasm
           retention-days: 4
 
   security-audit:
@@ -117,13 +117,13 @@ jobs:
           
       - name: Run security audit
         run: |
-          cd akkuea-defi-rwa/apps/contracts
+          cd apps/contracts
           cargo audit
           cargo deny check
           
       - name: Check for sensitive data
         run: |
-          cd akkuea-defi-rwa/apps/contracts
+          cd apps/contracts
           echo "Scanning for potential secrets..."
           if grep -r -i "secret\|password\|key\|token" src/ --exclude-dir=target; then
             echo "Warning: Potential sensitive data found in source code"
@@ -156,13 +156,13 @@ jobs:
           
       - name: Generate coverage report
         run: |
-          cd akkuea-defi-rwa/apps/contracts
+          cd apps/contracts
           cargo llvm-cov --lib --workspace --lcov --output-path lcov.info
           cargo llvm-cov --lib --workspace --html
           
       - name: Verify coverage threshold
         run: |
-          cd akkuea-defi-rwa/apps/contracts
+          cd apps/contracts
           COVERAGE=$(cargo llvm-cov --lib --workspace --text | grep -o '[0-9]*\.[0-9]*%' | head -1 | tr -d '%')
           if (( $(echo "$COVERAGE < 80" | bc -l) )); then
             echo "Error: Coverage $COVERAGE% is below required 80%"
@@ -173,7 +173,7 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          file: ./akkuea-defi-rwa/apps/contracts/lcov.info
+          file: ./apps/contracts/lcov.info
           flags: contracts
           name: smart-contracts-coverage
           
@@ -181,5 +181,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: akkuea-defi-rwa/apps/contracts/target/llvm-cov/html/
+          path: apps/contracts/target/llvm-cov/html/
           retention-days: 7

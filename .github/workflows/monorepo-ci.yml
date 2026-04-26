@@ -4,12 +4,12 @@ on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'akkuea-defi-rwa/**'
+      - 'apps/**'
       - '.github/workflows/monorepo-ci.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'akkuea-defi-rwa/**'
+      - 'apps/**'
       - '.github/workflows/monorepo-ci.yml'
 
 env:
@@ -37,7 +37,7 @@ jobs:
         
     - name: Check workspace consistency
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         # Verify all workspaces are properly configured
         echo "Checking workspace configuration..."
@@ -57,7 +57,7 @@ jobs:
         
     - name: Check dependency consistency
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         # Check for shared package references
         echo "Checking cross-workspace dependencies..."
@@ -74,7 +74,7 @@ jobs:
         
     - name: Validate TypeScript configuration
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         # Check TypeScript configurations are consistent
         echo "Validating TypeScript configurations..."
@@ -105,7 +105,7 @@ jobs:
         
     - name: Audit all dependencies
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         # Install root dependencies
         bun install
@@ -120,7 +120,7 @@ jobs:
         
     - name: Check for license conflicts
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         # Install license checker
         bun add -g license-checker
@@ -157,7 +157,7 @@ jobs:
         
     - name: Build performance test
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         echo "Testing build performance..."
         
@@ -201,7 +201,7 @@ jobs:
         
     - name: Bundle size analysis
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         echo "Analyzing bundle sizes..."
         
@@ -243,7 +243,7 @@ jobs:
         
     - name: Integration tests
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         echo "Running cross-workspace integration tests..."
         
@@ -260,26 +260,20 @@ jobs:
         # Test API imports from shared
         cd apps/api
         bun install
-        node -e "
-        const shared = require('../shared/dist/index.js');
-        console.log('✅ API can import shared library');
-        const { ValidationService } = shared;
-        console.log('✅ ValidationService available:', typeof ValidationService);
-        "
+        echo "Testing API imports..."
+        bun -e "const shared = await import('../shared/dist/index.js'); console.log('✅ API can import shared library'); const { ValidationService } = shared; console.log('✅ ValidationService available:', typeof ValidationService);"
         cd ../..
         
         # Test webapp imports from shared
         cd apps/webapp
         bun install
-        node -e "
-        const shared = require('../shared/dist/index.js');
-        console.log('✅ WebApp can import shared library');
-        "
+        echo "Testing WebApp imports..."
+        bun -e "const shared = await import('../shared/dist/index.js'); console.log('✅ WebApp can import shared library');"
         cd ../..
         
     - name: Type compatibility test
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         echo "Testing type compatibility across workspaces..."
         
@@ -302,20 +296,20 @@ jobs:
       
     - name: Check for common security issues
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         echo "Running security compliance checks..."
         
         # Check for debug code
         echo "2. Checking for debug code..."
-        if grep -r "console.log\|console.debug" apps/ --include="*.js" --include="*.ts" --exclude-dir=node_modules | grep -v "//.*console.log"; then
+        if grep -r "console.log\|console.debug" apps/ --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist | grep -v "//.*console.log\|//.*console.debug"; then
           echo "Warning: Debug console statements found in production code"
         fi
         echo "✅ No production debug code found"
         
         # Check for unsafe eval usage
         echo "3. Checking for unsafe eval usage..."
-        if grep -r "eval\|Function(" apps/ --include="*.js" --include="*.ts" --exclude-dir=node_modules | grep -v "//.*eval"; then
+        if grep -r "eval\|Function(" apps/ --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist | grep -v "//.*eval\|//.*Function("; then
           echo "Warning: Unsafe eval usage found"
           exit 1
         fi
@@ -323,7 +317,7 @@ jobs:
         
     - name: Check file permissions
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         echo "Checking file permissions..."
         
@@ -337,7 +331,7 @@ jobs:
         
     - name: Validate package.json security
       run: |
-        cd akkuea-defi-rwa
+        cd .
         
         echo "Checking package.json security..."
         

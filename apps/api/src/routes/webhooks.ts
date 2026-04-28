@@ -4,12 +4,15 @@ import type { WebhookPayload } from '../services/WebhookService';
 import { rateLimit } from '../middleware';
 import { errorHandler } from '../middleware/errorHandler';
 
-export const webhookRoutes = new Elysia({ prefix: '/webhooks' })
+export const webhookRoutes = new Elysia({
+  prefix: '/webhooks',
+  tags: ['Webhooks'],
+})
   .use(errorHandler)
   .post(
     '/transactions',
     async ({ body, headers }) => {
-      return await webhookController.handleTransactionWebhook({
+      return webhookController.handleTransactionWebhook({
         body: body as WebhookPayload,
         headers,
       });
@@ -21,11 +24,10 @@ export const webhookRoutes = new Elysia({ prefix: '/webhooks' })
         network: t.Optional(t.String()),
         timestamp: t.Optional(t.String()),
       }),
-      beforeHandle: [rateLimit()],
+      beforeHandle: rateLimit(), // ✅ FIX: no array
       detail: {
         summary: 'Handle transaction webhooks',
         description: 'Receives notifications from Stellar network and updates transaction status',
-        tags: ['Webhooks'],
       },
     },
   );

@@ -12,7 +12,8 @@ import {
 import { PropertyController } from '../controllers/PropertyController';
 import { handleError, UnauthorizedError } from '../utils/errors';
 
-// Property query schema extending pagination
+// ------------------ Schemas ------------------
+
 const propertyQuerySchema = paginationQuerySchema.extend({
   propertyType: z.enum(['residential', 'commercial', 'industrial', 'land', 'mixed']).optional(),
   country: z.string().optional(),
@@ -22,194 +23,241 @@ const propertyQuerySchema = paginationQuerySchema.extend({
   owner: z.string().length(56).optional(),
 });
 
-// Create property body schema
 const createPropertySchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().min(10),
   propertyType: z.enum(['residential', 'commercial', 'industrial', 'land', 'mixed']),
   location: z.object({
-    address: z.string().min(1),
-    city: z.string().min(1),
-    country: z.string().min(1),
+    address: z.string(),
+    city: z.string(),
+    country: z.string(),
     postalCode: z.string().optional(),
   }),
-  totalValue: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  totalValue: z.string(),
   totalShares: z.number().int().positive(),
-  pricePerShare: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  pricePerShare: z.string(),
   images: z.array(z.string().url()).min(1),
 });
 
-// Update property body schema
 const updatePropertySchema = createPropertySchema.partial();
 
-// Buy shares body schema
 const buySharesSchema = z.object({
-  buyer: z.string().min(1, 'Buyer address is required'),
+  buyer: z.string(),
   shares: z.number().int().positive(),
 });
 
-// GET /properties - list with filters
-const listPropertiesRoute = new Elysia()
+// ------------------ Routes ------------------
+
+export const propertyRoutes = new Elysia({ prefix: '/properties', tags: ['Properties'] })
+
+  /**
+   * GET /properties
+   */
   .use(validateQuery(propertyQuerySchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/', async ({ validatedQuery, set }: any) => {
-    try {
-      return await PropertyController.getProperties(validatedQuery!);
-    } catch (error) {
-      const errorResponse = handleError(error);
-      set.status = errorResponse.statusCode;
-      return errorResponse;
-    }
-  });
-
-// GET /properties/:id - get single property
-const getPropertyRoute = new Elysia()
-  .use(validateParams(uuidParamSchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/:id', async ({ validatedParams, set }: any) => {
-    try {
-      return await PropertyController.getProperty(validatedParams!.id);
-    } catch (error) {
-      const errorResponse = handleError(error);
-      set.status = errorResponse.statusCode;
-      return errorResponse;
-    }
-  });
-
-// POST /properties - create property
-const createPropertyRoute = new Elysia().use(validateBody(createPropertySchema)).post(
-  '/',
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async ({ validatedBody, headers, set }: any) => {
-    try {
-      const userAddress = headers['x-user-address'] as string | undefined;
-      if (!userAddress) {
-        throw new UnauthorizedError('User address is required for authentication');
+  .get(
+    '/',
+    async ({ validatedQuery, set }) => {
+      try {
+        return await PropertyController.getProperties(validatedQuery!);
+      } catch (error) {
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
       }
-      return await PropertyController.createProperty(validatedBody!, userAddress);
-    } catch (error) {
-      const errorResponse = handleError(error);
-      set.status = errorResponse.statusCode;
-      return errorResponse;
-    }
-  },
-  { beforeHandle: [rateLimit()] },
-);
+    },
+    {
+      query: propertyQuerySchema,
+      detail: {
+        summary: 'List properties',
+        description: 'Fetch properties with filters and pagination',
+      },
+    },
+  )
 
-// PUT /properties/:id - update property
-const updatePropertyRoute = new Elysia()
+  /**
+   * GET /properties/:id
+   */
+  .use(validateParams(uuidParamSchema))
+  .get(
+    '/:id',
+    async ({ validatedParams, set }) => {
+      try {
+        return await PropertyController.getProperty(validatedParams!.id);
+      } catch (error) {
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
+      }
+    },
+    {
+      params: uuidParamSchema,
+      detail: {
+        summary: 'Get property by ID',
+      },
+    },
+  )
+
+  /**
+   * POST /properties
+   */
+  .use(validateBody(createPropertySchema))
+  .post(
+    '/',
+    async ({ validatedBody, headers, set }) => {
+      try {
+        const userAddress = headers['x-user-address'];
+        if (!userAddress) throw new UnauthorizedError('User address required');
+
+        return await PropertyController.createProperty(validatedBody!, userAddress);
+      } catch (error) {
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
+      }
+    },
+    {
+      body: createPropertySchema,
+      beforeHandle: rateLimit(),
+      detail: {
+        summary: 'Create property',
+      },
+    },
+  )
+
+  /**
+   * PUT /properties/:id
+   */
   .use(validateParams(uuidParamSchema))
   .use(validateBody(updatePropertySchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .put('/:id', async ({ validatedParams, validatedBody, headers, set }: any) => {
-    try {
-      const userAddress = headers['x-user-address'] as string;
-      if (!userAddress) {
-        throw new UnauthorizedError('User address is required for authentication');
-      }
-      return await PropertyController.updateProperty(
-        validatedParams!.id,
-        validatedBody!,
-        userAddress,
-      );
-    } catch (error) {
-      const errorResponse = handleError(error);
-      set.status = errorResponse.statusCode;
-      return errorResponse;
-    }
-  });
+  .put(
+    '/:id',
+    async ({ validatedParams, validatedBody, headers, set }) => {
+      try {
+        const userAddress = headers['x-user-address'];
+        if (!userAddress) throw new UnauthorizedError('User address required');
 
-// DELETE /properties/:id - delete property
-const deletePropertyRoute = new Elysia()
+        return await PropertyController.updateProperty(
+          validatedParams!.id,
+          validatedBody!,
+          userAddress,
+        );
+      } catch (error) {
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
+      }
+    },
+    {
+      params: uuidParamSchema,
+      body: updatePropertySchema,
+      detail: {
+        summary: 'Update property',
+      },
+    },
+  )
+
+  /**
+   * DELETE /properties/:id
+   */
   .use(validateParams(uuidParamSchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .delete('/:id', async ({ validatedParams, headers, set }: any) => {
-    try {
-      const userAddress = headers['x-user-address'] as string;
-      if (!userAddress) {
-        throw new UnauthorizedError('User address is required for authentication');
+  .delete(
+    '/:id',
+    async ({ validatedParams, headers, set }) => {
+      try {
+        const userAddress = headers['x-user-address'];
+        if (!userAddress) throw new UnauthorizedError('User address required');
+
+        return await PropertyController.deleteProperty(validatedParams!.id, userAddress);
+      } catch (error) {
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
       }
-      return await PropertyController.deleteProperty(validatedParams!.id, userAddress);
-    } catch (error) {
-      const errorResponse = handleError(error);
-      set.status = errorResponse.statusCode;
-      return errorResponse;
-    }
-  });
+    },
+    {
+      params: uuidParamSchema,
+      detail: {
+        summary: 'Delete property',
+      },
+    },
+  )
 
-// POST /properties/:id/tokenize - tokenize property
-const tokenizePropertyRoute = new Elysia().use(validateParams(uuidParamSchema)).post(
-  '/:id/tokenize',
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async ({ validatedParams, body, headers, set }: any) => {
-    try {
-      const userAddress = headers['x-user-address'] as string | undefined;
-      return await PropertyController.tokenizeProperty(
-        validatedParams!.id,
-        body as unknown,
-        userAddress,
-      );
-    } catch (error) {
-      const errorResponse = handleError(error);
-      set.status = errorResponse.statusCode;
-      return errorResponse;
-    }
-  },
-  { beforeHandle: [rateLimit()] },
-);
+  /**
+   * POST /properties/:id/tokenize
+   */
+  .use(validateParams(uuidParamSchema))
+  .post(
+    '/:id/tokenize',
+    async ({ validatedParams, body, headers, set }) => {
+      try {
+        return await PropertyController.tokenizeProperty(
+          validatedParams!.id,
+          body,
+          headers['x-user-address'],
+        );
+      } catch (error) {
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
+      }
+    },
+    {
+      params: uuidParamSchema,
+      beforeHandle: rateLimit(),
+      detail: {
+        summary: 'Tokenize property',
+      },
+    },
+  )
 
-// POST /properties/:id/buy-shares - buy property shares
-const buySharesRoute = new Elysia()
+  /**
+   * POST /properties/:id/buy-shares
+   */
   .use(validateParams(uuidParamSchema))
   .use(validateBody(buySharesSchema))
   .post(
     '/:id/buy-shares',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async ({ validatedParams, validatedBody, headers, set }: any) => {
+    async ({ validatedParams, validatedBody, headers, set }) => {
       try {
-        const userAddress = headers['x-user-address'] as string | undefined;
-        if (!userAddress) {
-          throw new UnauthorizedError('User address is required for authentication');
-        }
+        const userAddress = headers['x-user-address'];
+        if (!userAddress) throw new UnauthorizedError('User address required');
 
-        return await PropertyController.buyShares(
-          validatedParams!.id,
-          {
-            buyer: validatedBody!.buyer,
-            shares: validatedBody!.shares,
-          },
-          userAddress,
-        );
+        return await PropertyController.buyShares(validatedParams!.id, validatedBody!, userAddress);
       } catch (error) {
-        const errorResponse = handleError(error);
-        set.status = errorResponse.statusCode;
-        return errorResponse;
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
       }
     },
-    { beforeHandle: [rateLimit()] },
-  );
+    {
+      params: uuidParamSchema,
+      body: buySharesSchema,
+      beforeHandle: rateLimit(),
+      detail: {
+        summary: 'Buy property shares',
+      },
+    },
+  )
 
-// GET /properties/:id/shares/:owner - get user shares
-const getUserSharesRoute = new Elysia()
+  /**
+   * GET /properties/:id/shares/:owner
+   */
   .use(validateParams(ownerParamSchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/:id/shares/:owner', async ({ validatedParams, set }: any) => {
-    try {
-      return await PropertyController.getUserShares(validatedParams!.id, validatedParams!.owner);
-    } catch (error) {
-      const errorResponse = handleError(error);
-      set.status = errorResponse.statusCode;
-      return errorResponse;
-    }
-  });
-
-// Combine all routes
-export const propertyRoutes = new Elysia({ prefix: '/properties' })
-  .use(listPropertiesRoute)
-  .use(getPropertyRoute)
-  .use(createPropertyRoute)
-  .use(updatePropertyRoute)
-  .use(deletePropertyRoute)
-  .use(tokenizePropertyRoute)
-  .use(buySharesRoute)
-  .use(getUserSharesRoute);
+  .get(
+    '/:id/shares/:owner',
+    async ({ validatedParams, set }) => {
+      try {
+        return await PropertyController.getUserShares(validatedParams!.id, validatedParams!.owner);
+      } catch (error) {
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
+      }
+    },
+    {
+      params: ownerParamSchema,
+      detail: {
+        summary: 'Get user shares',
+      },
+    },
+  );

@@ -12,36 +12,77 @@ const markMultipleAsReadSchema = z.object({
   notificationIds: z.array(z.string().uuid()),
 });
 
-export const notificationRoutes = new Elysia({ prefix: '/notifications' })
-  // GET /notifications - Get user's notifications
+export const notificationRoutes = new Elysia({ prefix: '/notifications', tags: ['Notifications'] })
+
+  /**
+   * GET /notifications
+   */
   .use(validate({ query: notificationQuerySchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/', async (ctx: any) => NotificationController.getUserNotifications(ctx))
+  .get('/', async (ctx) => NotificationController.getUserNotifications(ctx), {
+    query: notificationQuerySchema,
+    detail: {
+      summary: 'Get user notifications',
+    },
+  })
 
-  // GET /notifications/unread-count - Get unread count
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/unread-count', async (ctx: any) => NotificationController.getUnreadCount(ctx))
+  /**
+   * GET /notifications/unread-count
+   */
+  .get('/unread-count', async (ctx) => NotificationController.getUnreadCount(ctx), {
+    detail: {
+      summary: 'Get unread notification count',
+    },
+  })
 
-  // GET /notifications/:id - Get a specific notification
+  /**
+   * GET /notifications/:id
+   */
   .use(validate({ params: uuidParamSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/:id', async (ctx: any) => NotificationController.getNotificationById(ctx))
+  .get('/:id', async (ctx) => NotificationController.getNotificationById(ctx), {
+    params: uuidParamSchema,
+    detail: {
+      summary: 'Get notification by ID',
+    },
+  })
 
-  // PATCH /notifications/:id/read - Mark as read
+  /**
+   * PATCH /notifications/:id/read
+   */
   .use(validate({ params: uuidParamSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .patch('/:id/read', async (ctx: any) => NotificationController.markAsRead(ctx))
+  .patch('/:id/read', async (ctx) => NotificationController.markAsRead(ctx), {
+    params: uuidParamSchema,
+    detail: {
+      summary: 'Mark notification as read',
+    },
+  })
 
-  // POST /notifications/read-multiple - Mark multiple as read
+  /**
+   * POST /notifications/read-multiple
+   */
   .use(validate({ body: markMultipleAsReadSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/read-multiple', async (ctx: any) => NotificationController.markMultipleAsRead(ctx))
+  .post('/read-multiple', async (ctx) => NotificationController.markMultipleAsRead(ctx), {
+    body: markMultipleAsReadSchema,
+    detail: {
+      summary: 'Mark multiple notifications as read',
+    },
+  })
 
-  // POST /notifications/read-all - Mark all as read
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/read-all', async (ctx: any) => NotificationController.markAllAsRead(ctx))
+  /**
+   * POST /notifications/read-all
+   */
+  .post('/read-all', async (ctx) => NotificationController.markAllAsRead(ctx), {
+    detail: {
+      summary: 'Mark all notifications as read',
+    },
+  })
 
-  // DELETE /notifications/:id - Delete notification
+  /**
+   * DELETE /notifications/:id
+   */
   .use(validate({ params: uuidParamSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .delete('/:id', async (ctx: any) => NotificationController.deleteNotification(ctx));
+  .delete('/:id', async (ctx) => NotificationController.deleteNotification(ctx), {
+    params: uuidParamSchema,
+    detail: {
+      summary: 'Delete notification',
+    },
+  });

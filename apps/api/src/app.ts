@@ -10,8 +10,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware';
 
 /**
- * Base Elysia app without swagger
- * This allows tests to import the app without triggering @scalar/themes Zod incompatibility
+ * Base Elysia app (NO swagger, NO side effects)
  */
 const app = new Elysia()
   .use(requestLogger)

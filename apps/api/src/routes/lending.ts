@@ -10,135 +10,137 @@ const poolQuerySchema = paginationQuerySchema.extend({
   isActive: z.coerce.boolean().optional(),
 });
 
-const poolIdParamSchema = uuidParamSchema;
-
-const stellarAddressSchema = z
-  .string()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .refine((value: any) => positionService.validateAddress(value), 'Invalid Stellar address format');
-
 const poolUserParamsSchema = z.object({
-  id: z.string().uuid('Invalid UUID format'),
-  address: stellarAddressSchema,
+  id: z.string().uuid(),
+  address: z.string().refine((v) => positionService.validateAddress(v)),
 });
 
 const liquidationParamsSchema = z.object({
-  id: z.string().uuid('Invalid pool UUID format'),
-  borrowerId: z.string().uuid('Invalid borrower UUID format'),
+  id: z.string().uuid(),
+  borrowerId: z.string().uuid(),
 });
 
-const liquidatorAuth = new Elysia({ name: 'liquidator-auth' }).onBeforeHandle(
-  ({ headers, set }) => {
-    if (!isLiquidatorAuthorized(headers as Record<string, string | undefined>)) {
-      set.status = 403;
-      return {
-        success: false,
-        error: 'FORBIDDEN',
-        message: 'Liquidator access required',
-        timestamp: new Date().toISOString(),
-      };
-    }
-  },
-);
-
 const depositSchema = z.object({
-  amount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
+  amount: z.string(),
 });
 
 const withdrawSchema = z.object({
-  amount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
+  amount: z.string(),
 });
 
 const borrowSchema = z.object({
-  borrowAmount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
-  collateralAmount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
-  collateralAsset: stellarAddressSchema,
+  borrowAmount: z.string(),
+  collateralAmount: z.string(),
+  collateralAsset: z.string(),
 });
 
 const repaySchema = z.object({
-  amount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
+  amount: z.string(),
 });
 
 const createPoolSchema = z.object({
-  name: z.string().min(1).max(255),
-  asset: z.string().min(1).max(20),
-  assetAddress: stellarAddressSchema,
-  collateralFactor: z.string().regex(/^\d+(\.\d+)?$/),
-  liquidationThreshold: z.string().regex(/^\d+(\.\d+)?$/),
-  liquidationPenalty: z.string().regex(/^\d+(\.\d+)?$/),
-  reserveFactor: z.coerce.number().int().nonnegative().optional(),
+  name: z.string(),
+  asset: z.string(),
+  assetAddress: z.string(),
+  collateralFactor: z.string(),
+  liquidationThreshold: z.string(),
+  liquidationPenalty: z.string(),
+  reserveFactor: z.number().optional(),
 });
 
-export const lendingRoutes = new Elysia({ prefix: '/lending' })
-  // GET /pools - List pools with pagination and filters
+const liquidatorAuth = new Elysia().onBeforeHandle(({ headers, set }) => {
+  if (!isLiquidatorAuthorized(headers as Record<string, string | undefined>)) {
+    set.status = 403;
+    return { error: 'FORBIDDEN', message: 'Liquidator access required' };
+  }
+});
+
+export const lendingRoutes = new Elysia({ prefix: '/lending', tags: ['Lending'] })
+
+  /**
+   * GET /lending/pools
+   */
   .use(validate({ query: poolQuerySchema }))
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/pools', async (ctx: any) => LendingController.getPools(ctx))
+  .get('/pools', async (ctx: any) => LendingController.getPools(ctx), {
+    query: poolQuerySchema,
+    detail: { summary: 'List lending pools' },
+  })
 
-  // POST /pools - Create pool (auth required)
+  /**
+   * POST /lending/pools
+   */
   .use(validate({ body: createPoolSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/pools', async (ctx: any) => LendingController.createPool(ctx), {
-    beforeHandle: [rateLimit()],
+  .post('/pools', async (ctx) => LendingController.createPool(ctx), {
+    body: createPoolSchema,
+    beforeHandle: rateLimit(),
+    detail: { summary: 'Create lending pool' },
   })
 
-  // GET /pools/:id - Get single pool
-  .use(validate({ params: poolIdParamSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/pools/:id', async (ctx: any) => LendingController.getPool(ctx))
+  /**
+   * GET /lending/pools/:id
+   */
+  .use(validate({ params: uuidParamSchema }))
+  .get('/pools/:id', async (ctx) => LendingController.getPool(ctx), {
+    params: uuidParamSchema,
+    detail: { summary: 'Get pool by ID' },
+  })
 
-  // POST /pools/:id/deposit - Deposit into pool (auth required)
+  /**
+   * Deposit / Withdraw / Borrow / Repay
+   */
   .use(validate({ body: depositSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/pools/:id/deposit', async (ctx: any) => LendingController.deposit(ctx), {
-    beforeHandle: [rateLimit()],
+  .post('/pools/:id/deposit', async (ctx) => LendingController.deposit(ctx), {
+    body: depositSchema,
+    beforeHandle: rateLimit(),
+    detail: { summary: 'Deposit into pool' },
   })
 
-  // POST /pools/:id/withdraw - Withdraw from pool (auth required)
   .use(validate({ body: withdrawSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/pools/:id/withdraw', async (ctx: any) => LendingController.withdraw(ctx), {
-    beforeHandle: [rateLimit()],
+  .post('/pools/:id/withdraw', async (ctx) => LendingController.withdraw(ctx), {
+    body: withdrawSchema,
+    beforeHandle: rateLimit(),
+    detail: { summary: 'Withdraw from pool' },
   })
 
-  // POST /pools/:id/borrow - Borrow from pool (auth required)
   .use(validate({ body: borrowSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/pools/:id/borrow', async (ctx: any) => LendingController.borrow(ctx), {
-    beforeHandle: [rateLimit()],
+  .post('/pools/:id/borrow', async (ctx) => LendingController.borrow(ctx), {
+    body: borrowSchema,
+    beforeHandle: rateLimit(),
+    detail: { summary: 'Borrow from pool' },
   })
 
-  // POST /pools/:id/repay - Repay loan (auth required)
   .use(validate({ body: repaySchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/pools/:id/repay', async (ctx: any) => LendingController.repay(ctx), {
-    beforeHandle: [rateLimit()],
+  .post('/pools/:id/repay', async (ctx) => LendingController.repay(ctx), {
+    body: repaySchema,
+    beforeHandle: rateLimit(),
+    detail: { summary: 'Repay loan' },
   })
 
-  // GET /pools/:id/user/:address/deposits - Get user deposits
+  /**
+   * User positions
+   */
   .use(validate({ params: poolUserParamsSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/pools/:id/user/:address/deposits', async (ctx: any) =>
-    LendingController.getUserDeposits(ctx),
-  )
+  .get('/pools/:id/user/:address/deposits', async (ctx) => LendingController.getUserDeposits(ctx))
 
-  // GET /pools/:id/user/:address/borrows - Get user borrows
   .use(validate({ params: poolUserParamsSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/pools/:id/user/:address/borrows', async (ctx: any) =>
-    LendingController.getUserBorrows(ctx),
-  )
+  .get('/pools/:id/user/:address/borrows', async (ctx) => LendingController.getUserBorrows(ctx))
 
-  // GET /pools/:id/user/:address/summary - Get user position summary
   .use(validate({ params: poolUserParamsSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/pools/:id/user/:address/summary', async (ctx: any) =>
+  .get('/pools/:id/user/:address/summary', async (ctx) =>
     LendingController.getUserPositionSummary(ctx),
   )
 
-  // POST /pools/:id/positions/:borrowerId/liquidate - Execute liquidation (liquidator role required)
+  /**
+   * Liquidation
+   */
   .use(liquidatorAuth)
   .use(validate({ params: liquidationParamsSchema }))
-  .post('/pools/:id/positions/:borrowerId/liquidate', async (ctx) =>
-    LendingController.liquidate(ctx as Parameters<typeof LendingController.liquidate>[0]),
+  .post(
+    '/pools/:id/positions/:borrowerId/liquidate',
+    async (ctx) => LendingController.liquidate(ctx),
+    {
+      params: liquidationParamsSchema,
+      detail: { summary: 'Execute liquidation' },
+    },
   );

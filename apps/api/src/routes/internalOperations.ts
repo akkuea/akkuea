@@ -25,8 +25,7 @@ const reviewBodySchema = z.object({
 });
 
 const internalKeyAuth = new Elysia({ name: 'internal-operations-auth' }).onBeforeHandle(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ({ headers, set }: any) => {
+  ({ headers, set }) => {
     if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
       set.status = 403;
       return {
@@ -39,60 +38,88 @@ const internalKeyAuth = new Elysia({ name: 'internal-operations-auth' }).onBefor
   },
 );
 
-const listPropertiesRoute = new Elysia()
+export const internalOperationsRoutes = new Elysia({
+  prefix: '/internal/operations',
+  tags: ['Internal Operations'],
+})
+
+  /**
+   * GET /internal/operations/properties
+   */
   .use(internalKeyAuth)
   .use(validateQuery(listQuerySchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/properties', async ({ validatedQuery, set }: any) => {
-    try {
-      const result = await OperationalPropertyController.listProperties({
-        queue: validatedQuery!.queue as OperationsQueue | undefined,
-        page: validatedQuery!.page,
-        limit: validatedQuery!.limit,
-      });
-      return { success: true, ...result };
-    } catch (error) {
-      const errorResponse = handleError(error);
-      set.status = errorResponse.statusCode;
-      return errorResponse;
-    }
-  });
+  .get(
+    '/properties',
+    async ({ validatedQuery, set }) => {
+      try {
+        const result = await OperationalPropertyController.listProperties({
+          queue: validatedQuery!.queue as OperationsQueue | undefined,
+          page: validatedQuery!.page,
+          limit: validatedQuery!.limit,
+        });
+        return { success: true, ...result };
+      } catch (error) {
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
+      }
+    },
+    {
+      query: listQuerySchema,
+      detail: {
+        summary: 'List properties for operations review',
+      },
+    },
+  )
 
-const getPropertyOperationsRoute = new Elysia()
-  .use(internalKeyAuth)
+  /**
+   * GET /internal/operations/properties/:id
+   */
   .use(validateParams(uuidParamSchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/properties/:id', async ({ validatedParams, set }: any) => {
-    try {
-      const data = await OperationalPropertyController.getPropertyDetail(validatedParams!.id);
-      return { success: true, data };
-    } catch (error) {
-      const errorResponse = handleError(error);
-      set.status = errorResponse.statusCode;
-      return errorResponse;
-    }
-  });
+  .get(
+    '/properties/:id',
+    async ({ validatedParams, set }) => {
+      try {
+        const data = await OperationalPropertyController.getPropertyDetail(validatedParams!.id);
+        return { success: true, data };
+      } catch (error) {
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
+      }
+    },
+    {
+      params: uuidParamSchema,
+      detail: {
+        summary: 'Get property operational detail',
+      },
+    },
+  )
 
-const reviewPropertyRoute = new Elysia()
-  .use(internalKeyAuth)
-  .use(validateParams(uuidParamSchema))
+  /**
+   * POST /internal/operations/properties/:id/review
+   */
   .use(validateBody(reviewBodySchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/properties/:id/review', async ({ validatedParams, validatedBody, set }: any) => {
-    try {
-      const data = await OperationalPropertyController.applyReviewAction(
-        validatedParams!.id,
-        validatedBody!,
-      );
-      return { success: true, data };
-    } catch (error) {
-      const errorResponse = handleError(error);
-      set.status = errorResponse.statusCode;
-      return errorResponse;
-    }
-  });
-
-export const internalOperationsRoutes = new Elysia({ prefix: '/internal/operations' })
-  .use(listPropertiesRoute)
-  .use(getPropertyOperationsRoute)
-  .use(reviewPropertyRoute);
+  .post(
+    '/properties/:id/review',
+    async ({ validatedParams, validatedBody, set }) => {
+      try {
+        const data = await OperationalPropertyController.applyReviewAction(
+          validatedParams!.id,
+          validatedBody!,
+        );
+        return { success: true, data };
+      } catch (error) {
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
+      }
+    },
+    {
+      params: uuidParamSchema,
+      body: reviewBodySchema,
+      detail: {
+        summary: 'Apply review action to property',
+      },
+    },
+  );

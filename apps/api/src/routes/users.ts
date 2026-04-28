@@ -28,34 +28,70 @@ const authWalletSchema = z.object({
     .regex(/^G[A-Z2-7]{55}$/),
 });
 
-export const userRoutes = new Elysia({ prefix: '/users' })
-  // POST /users - Create user
+export const userRoutes = new Elysia({ prefix: '/users', tags: ['Users'] })
+
+  /**
+   * POST /users
+   */
   .use(validate({ body: createUserSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/', async (ctx: any) => UserController.create(ctx))
+  .post('/', async (ctx) => UserController.create(ctx), {
+    body: createUserSchema,
+    detail: {
+      summary: 'Create user',
+      description: 'Create a new user with wallet address',
+    },
+  })
 
-  // GET /users/me - Get current user profile
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/me', async (ctx: any) => UserController.getProfile(ctx))
+  /**
+   * GET /users/me
+   */
+  .get('/me', async (ctx) => UserController.getProfile(ctx), {
+    detail: {
+      summary: 'Get current user profile',
+    },
+  })
 
-  // PATCH /users/me - Update current user profile
+  /**
+   * PATCH /users/me
+   */
   .use(validate({ body: updateUserSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .patch('/me', async (ctx: any) => UserController.updateProfile(ctx))
+  .patch('/me', async (ctx) => UserController.updateProfile(ctx), {
+    body: updateUserSchema,
+    detail: {
+      summary: 'Update current user profile',
+    },
+  })
 
-  // GET /users/:id - Get user by ID
+  /**
+   * GET /users/:id
+   */
   .use(validate({ params: uuidParamSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/:id', async (ctx: any) => UserController.getById(ctx))
+  .get('/:id', async (ctx) => UserController.getById(ctx), {
+    params: uuidParamSchema,
+    detail: {
+      summary: 'Get user by ID',
+    },
+  })
 
-  // GET /users/wallet/:address - Get user by wallet address
+  /**
+   * GET /users/wallet/:address
+   */
   .use(validate({ params: walletParamSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/wallet/:address', async (ctx: any) => UserController.getByWallet(ctx))
+  .get('/wallet/:address', async (ctx) => UserController.getByWallet(ctx), {
+    params: walletParamSchema,
+    detail: {
+      summary: 'Get user by wallet address',
+    },
+  })
 
-  // POST /users/auth - Authenticate by wallet (get or create)
+  /**
+   * POST /users/auth
+   */
   .use(validate({ body: authWalletSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/auth', async (ctx: any) => UserController.authenticateByWallet(ctx), {
+  .post('/auth', async (ctx) => UserController.authenticateByWallet(ctx), {
+    body: authWalletSchema,
+    detail: {
+      summary: 'Authenticate or create user by wallet',
+    },
     beforeHandle: [rateLimit()],
   });

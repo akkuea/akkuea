@@ -1,71 +1,77 @@
-import { swagger } from '@elysiajs/swagger';
-import app from './app';
+import baseApp from './app';
 import { checkDatabaseHealth, closeDatabaseConnection } from './db';
-import { propertyRoutes } from './routes/properties';
-import { lendingRoutes } from './routes/lending';
-import { userRoutes } from './routes/users';
-import { kycRoutes } from './routes/kyc';
-import { oracleRoutes } from './routes/oracle';
-import { riskMonitoringRoutes } from './routes/riskMonitoring';
-import { errorHandler } from './middleware/errorHandler';
 import { cacheService } from './services/CacheService';
 import { NotificationService } from './services/NotificationService';
 import { createNotificationWorkerFromEnv } from './workers/notificationWorker';
+import { swaggerPlugin } from './swagger';
 
-app
-  .use(
-    swagger({
-      documentation: {
-        info: {
-          title: 'Real Estate DeFi API',
-          version: '1.0.0',
-          description:
-            'Backend API for Real Estate Tokenization and DeFi Lending Platform on Stellar',
-        },
+/**
+ * Attach Swagger ONLY in development
+ */
+
+const app = baseApp.use(swaggerPlugin);
+
+/**
+ * Health route (safe, no duplication)
+ */
+app.get('/health', async () => {
+  const dbHealth = await checkDatabaseHealth();
+
+  return {
+    status: dbHealth.healthy ? 'healthy' : 'unhealthy',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    services: {
+      database: {
+        healthy: dbHealth.healthy,
+        latency: dbHealth.latency,
+        ...(dbHealth.error && { error: dbHealth.error }),
       },
-    }),
-  )
-  .use(errorHandler)
-  .use(propertyRoutes)
-  .use(lendingRoutes)
-  .use(userRoutes)
-  .use(kycRoutes)
-  .use(oracleRoutes)
-  .use(riskMonitoringRoutes)
-  .get('/health', async () => {
-    const dbHealth = await checkDatabaseHealth();
+    },
+  };
+});
 
-    return {
-      status: dbHealth.healthy ? 'healthy' : 'unhealthy',
-      timestamp: new Date().toISOString(),
-      version: '1.0.0',
-      services: {
-        database: {
-          healthy: dbHealth.healthy,
-          latency: dbHealth.latency,
-          ...(dbHealth.error && { error: dbHealth.error }),
-        },
-      },
-    };
-  })
+/**
+ * Start server
+ */
+const port = Number(process.env.PORT) || 3001;
 
-  .listen({
-    port: Number(process.env.PORT) || 3001,
-    hostname: '0.0.0.0',
-  });
+app.listen({
+  port,
+  hostname: '0.0.0.0',
+});
 
-console.log(`🚀 Real Estate DeFi API is running on port ${process.env.PORT || 3001}`);
-console.log(`📚 Swagger docs available at http://localhost:${process.env.PORT || 3001}/swagger`);
+console.log(`🚀 API running on port ${port}`);
 
-// Connect to Redis (non-blocking — app works without it)
+if (process.env.NODE_ENV !== 'production') {
+  console.log(`📚 Swagger docs: http://localhost:${port}/docs`);
+}
+
+/**
+ * Optional services (safe guards added)
+ */
+
+// Redis (non-blocking)
 cacheService.connect();
 
-// Start the notification delivery worker (opt-out via NOTIFICATIONS_ENABLED=false)
-const notificationWorker = createNotificationWorkerFromEnv(new NotificationService());
-notificationWorker?.start();
+/**
+ * ⚠️ FIX: Prevent worker crash spam when DATABASE_URL missing
+ */
+let notificationWorker: ReturnType<typeof createNotificationWorkerFromEnv> | null = null;
 
+if (process.env.DATABASE_URL) {
+  notificationWorker = createNotificationWorkerFromEnv(new NotificationService());
+  notificationWorker?.start();
+} else {
+  console.warn('[notificationWorker] Skipped start — DATABASE_URL not set (dev mode)');
+}
+
+/**
+ * Graceful shutdown
+ */
 const shutdown = async (signal: string) => {
   console.log(`\n${signal} received, closing connections...`);
+
   await Promise.all([
     closeDatabaseConnection(),
     cacheService.disconnect(),

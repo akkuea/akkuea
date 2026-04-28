@@ -17,7 +17,9 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "bun run src/db/migrate.ts",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "generate:openapi": "bun scripts/generate-openapi.ts",
+    "check:openapi": "npm run generate:openapi && git diff --exit-code docs/api/openapi.json"
   },
   "dependencies": {
     "@elysiajs/cors": "^1.4.1",

@@ -8,7 +8,7 @@ const stellarAddressRegex = /^G[A-Z2-7]{55}$/;
 const positiveDecimalString = z
   .string()
   .regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string')
-  .refine((val) => parseFloat(val) > 0, 'Amount must be greater than 0');
+  .refine((val: string) => parseFloat(val) > 0, 'Amount must be greater than 0');
 
 /**
  * Decimal string that allows zero (for rates/factors)

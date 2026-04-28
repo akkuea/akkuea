@@ -14,7 +14,7 @@ export const stellarAddressSchema = z
 export const positiveAmountSchema = z
   .string()
   .regex(/^\d+(\.\d+)?$/, "Must be a valid positive number")
-  .refine((val) => parseFloat(val) > 0, "Amount must be greater than 0");
+  .refine((val: string) => parseFloat(val) > 0, "Amount must be greater than 0");
 
 /**
  * Schema for non-negative decimal amounts (allows zero)
@@ -22,7 +22,7 @@ export const positiveAmountSchema = z
 export const nonNegativeAmountSchema = z
   .string()
   .regex(/^\d+(\.\d+)?$/, "Must be a valid number")
-  .refine((val) => parseFloat(val) >= 0, "Amount cannot be negative");
+  .refine((val: string) => parseFloat(val) >= 0, "Amount cannot be negative");
 
 /**
  * Schema for percentage values (0-100)

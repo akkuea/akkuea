@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import type {
   PropertyInfo,
   ShareOwnership as SharedShareOwnership,
@@ -13,6 +12,7 @@ import { and, eq } from 'drizzle-orm';
 import { logger } from '../services/logger';
 import { db } from '../db';
 import { tokenizationService, type TokenizationResponse } from '../services/TokenizationService';
+import { stellarService } from '../services/StellarService';
 import {
   propertyRepository,
   type PropertyFilter,
@@ -110,7 +110,7 @@ async function mapPropertyToPropertyInfo(
     availableShares: property.availableShares,
     pricePerShare: property.pricePerShare, // Already a string in DB
     images: property.images,
-    documents: (property.documents ?? []).map((doc) => ({
+    documents: (property.documents ?? []).map((doc: PropertyDocument) => ({
       id: doc.id,
       type: doc.type,
       name: doc.name,
@@ -136,10 +136,6 @@ function mapShareOwnershipToShared(
     purchasedAt: ownership.purchasedAt.toISOString(),
     lastDividendClaimed: ownership.lastDividendClaimed?.toISOString(),
   };
-}
-
-function generateTransactionHash(): string {
-  return randomBytes(32).toString('hex');
 }
 
 /**
@@ -228,9 +224,7 @@ export class PropertyController {
       );
 
       const mappedProperties = await Promise.all(
-        result.data.map((row) =>
-          mapPropertyToPropertyInfo(row, row.ownerWalletAddress),
-        ),
+        result.data.map((row) => mapPropertyToPropertyInfo(row, row.ownerWalletAddress)),
       );
 
       const response: PaginatedResponse<PropertyInfo> = {
@@ -573,23 +567,50 @@ export class PropertyController {
         ]);
       }
 
+      if (!property.tokenAddress || property.sorobanPropertyId === null) {
+        throw new ValidationError('Property must be tokenized before shares can be purchased', [
+          {
+            field: 'id',
+            message: 'Property must be tokenized on-chain before buyShares can execute',
+          },
+        ]);
+      }
+
+      const owner = await userRepository.findById(property.ownerId);
+      if (!owner) {
+        throw new NotFoundError('Property owner', property.ownerId);
+      }
+
       const buyer = await userRepository.getOrCreateByWallet(data.buyer);
       const totalPurchasePrice = (parseFloat(property.pricePerShare) * data.shares).toFixed(2);
-      const transactionHash = generateTransactionHash();
+      const { adminPublicKey, adminSecret } = stellarService.getMintingConfig();
+      const { txHash: transactionHash } = await stellarService.mintPropertyShares({
+        contractId: property.tokenAddress,
+        adminPublicKey,
+        adminSecret,
+        sorobanPropertyId: property.sorobanPropertyId,
+        recipient: data.buyer,
+        amount: data.shares,
+      });
+
+      const propertyId = property.id;
+      const propertyOwnerId = property.ownerId;
+      const propertyTokenAddress = property.tokenAddress;
+      const propertyAvailableShares = property.availableShares;
 
       const result = await db.transaction(async (tx) => {
         const [existingOwnership] = await tx
           .select()
           .from(shareOwnerships)
           .where(
-            and(eq(shareOwnerships.propertyId, property.id), eq(shareOwnerships.ownerId, buyer.id)),
+            and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyer.id)),
           )
           .limit(1);
 
         const [updatedProperty] = await tx
           .update(properties)
-          .set({ availableShares: property.availableShares - data.shares })
-          .where(eq(properties.id, property.id))
+          .set({ availableShares: propertyAvailableShares - data.shares })
+          .where(eq(properties.id, propertyId))
           .returning();
 
         if (!updatedProperty) {
@@ -610,7 +631,7 @@ export class PropertyController {
           : await tx
               .insert(shareOwnerships)
               .values({
-                propertyId: property.id,
+                propertyId: propertyId,
                 ownerId: buyer.id,
                 shares: data.shares,
                 purchasePrice: totalPurchasePrice,
@@ -625,12 +646,12 @@ export class PropertyController {
           type: 'buy_shares',
           hash: transactionHash,
           fromUserId: buyer.id,
-          toUserId: property.ownerId,
+          toUserId: propertyOwnerId,
           amount: totalPurchasePrice,
-          asset: property.tokenAddress ?? 'USDC',
-          status: 'pending',
+          asset: propertyTokenAddress ?? 'USDC',
+          status: 'confirmed',
           metadata: {
-            propertyId: property.id,
+            propertyId: propertyId,
             shares: data.shares,
           },
         });

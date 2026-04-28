@@ -4,9 +4,21 @@ interface RateLimitOptions {
   keyGenerator?: (request: Request) => string;
 }
 
-interface RateLimitEntry {
-  count: number;
+interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
   resetAt: number;
+  retryAfter?: number;
+}
+
+export interface RateLimitRedisClient {
+  incr(key: string): Promise<number>;
+  expire(key: string, seconds: number): Promise<number>;
+  ttl(key: string): Promise<number>;
+}
+
+export interface RateLimitStore {
+  checkLimit(identifier: string, windowMs: number, max: number): Promise<RateLimitResult>;
 }
 
 const DEFAULT_WINDOW_MS = 60000;
@@ -31,60 +43,85 @@ function getIdentifier(request: Request, keyGenerator?: (request: Request) => st
   return `ip:${getClientIP(request)}`;
 }
 
-function createRateLimitStore() {
-  const store = new Map<string, RateLimitEntry>();
+export function createRedisStore(client: RateLimitRedisClient): RateLimitStore {
+  return {
+    async checkLimit(identifier: string, windowMs: number, max: number): Promise<RateLimitResult> {
+      const key = `ratelimit:${identifier}`;
+      const ttlSeconds = Math.ceil(windowMs / 1000);
 
-  function cleanup() {
-    const now = Date.now();
-    for (const [key, entry] of store.entries()) {
-      if (now >= entry.resetAt) {
-        store.delete(key);
+      const count = await client.incr(key);
+      if (count === 1) {
+        await client.expire(key, ttlSeconds);
       }
-    }
-  }
 
-  function checkLimit(
-    identifier: string,
-    windowMs: number,
-    max: number,
-  ): {
-    allowed: boolean;
-    remaining: number;
-    resetAt: number;
-    retryAfter?: number;
-  } {
-    cleanup();
-    const now = Date.now();
-    const entry = store.get(identifier);
+      const ttl = await client.ttl(key);
+      const resetAt = Date.now() + Math.max(0, ttl) * 1000;
+      const remaining = Math.max(0, max - count);
 
-    if (!entry || now >= entry.resetAt) {
-      const resetAt = now + windowMs;
-      store.set(identifier, { count: 1, resetAt });
-      return { allowed: true, remaining: max - 1, resetAt };
-    }
+      if (count > max) {
+        return { allowed: false, remaining: 0, resetAt, retryAfter: Math.max(0, ttl) };
+      }
 
-    entry.count += 1;
-    const remaining = Math.max(0, max - entry.count);
+      return { allowed: true, remaining, resetAt };
+    },
+  };
+}
 
-    if (entry.count > max) {
-      const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
-      return { allowed: false, remaining: 0, resetAt: entry.resetAt, retryAfter };
-    }
+export function createMemoryStore(): RateLimitStore {
+  const store = new Map<string, { count: number; resetAt: number }>();
 
-    return { allowed: true, remaining, resetAt: entry.resetAt };
-  }
+  return {
+    async checkLimit(identifier: string, windowMs: number, max: number): Promise<RateLimitResult> {
+      const now = Date.now();
+      const entry = store.get(identifier);
 
-  return { checkLimit };
+      if (!entry || now >= entry.resetAt) {
+        const resetAt = now + windowMs;
+        store.set(identifier, { count: 1, resetAt });
+        return { allowed: true, remaining: max - 1, resetAt };
+      }
+
+      entry.count += 1;
+      const remaining = Math.max(0, max - entry.count);
+
+      if (entry.count > max) {
+        const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+        return { allowed: false, remaining: 0, resetAt: entry.resetAt, retryAfter };
+      }
+
+      return { allowed: true, remaining, resetAt: entry.resetAt };
+    },
+  };
 }
 
 export function rateLimit(options: RateLimitOptions = {}) {
   const { windowMs = DEFAULT_WINDOW_MS, max = DEFAULT_MAX, keyGenerator } = options;
-  const store = createRateLimitStore();
+
+  const redisUrl = process.env.REDIS_URL;
+  let storeReady: Promise<RateLimitStore>;
+
+  if (redisUrl) {
+    storeReady = import('ioredis').then(({ default: Redis }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const client = new (Redis as any)(redisUrl, {
+        enableOfflineQueue: false,
+        maxRetriesPerRequest: 1,
+        connectTimeout: 3000,
+      });
+      return createRedisStore(client);
+    });
+  } else {
+    console.warn(
+      '[rateLimit] REDIS_URL not set — using in-memory rate limiting (not safe for multi-instance deployments)',
+    );
+    storeReady = Promise.resolve(createMemoryStore());
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return function rateLimitMiddleware({ request, set }: any) {
+  return async function rateLimitMiddleware({ request, set }: any) {
     const identifier = getIdentifier(request, keyGenerator);
-    const result = store.checkLimit(identifier, windowMs, max);
+    const store = await storeReady;
+    const result = await store.checkLimit(identifier, windowMs, max);
 
     set.headers = {
       ...(set.headers ?? {}),

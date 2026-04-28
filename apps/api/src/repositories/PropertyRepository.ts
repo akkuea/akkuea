@@ -215,7 +215,8 @@ export class PropertyRepository extends BaseRepository<typeof properties, Proper
     id: string,
     data: { tokenAddress: string; sorobanPropertyId: number },
   ): Promise<Property | undefined> {
-    return db.transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return db.transaction(async (tx: any) => {
       const [property] = await tx.select().from(properties).where(eq(properties.id, id)).limit(1);
 
       if (!property) {
@@ -256,7 +257,9 @@ export class PropertyRepository extends BaseRepository<typeof properties, Proper
       .where(inArray(propertyDocuments.propertyId, propertyIds))
       .groupBy(propertyDocuments.propertyId);
 
-    return Object.fromEntries(rows.map((r) => [r.propertyId, r.count]));
+    return Object.fromEntries(
+      rows.map((r: { propertyId: string; count: number }) => [r.propertyId, r.count]),
+    );
   }
 
   /**

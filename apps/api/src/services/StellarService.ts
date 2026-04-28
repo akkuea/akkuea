@@ -60,7 +60,9 @@ export class StellarService {
     try {
       this.assertValidAddress(address);
       const account = await this.server.accounts().accountId(address).call();
-      const nativeBalance = account.balances.find((balance) => balance.asset_type === 'native');
+      const nativeBalance = account.balances.find(
+        (balance: { asset_type: string; balance?: string }) => balance.asset_type === 'native',
+      );
       return nativeBalance?.balance ?? '0';
     } catch (error) {
       throw new Error('Failed to get account balance', { cause: error });
@@ -124,6 +126,20 @@ export class StellarService {
     } catch (error) {
       throw new Error('Failed to call contract', { cause: error });
     }
+  }
+
+  async callAndSubmitContract(
+    contractId: string,
+    method: string,
+    args: unknown[],
+    signerSecret: string,
+    sourceAccount: string,
+  ): Promise<string> {
+    const unsignedXdr = await this.callContract(contractId, method, args, sourceAccount);
+    const transaction = TransactionBuilder.fromXDR(unsignedXdr, this.networkPassphrase);
+    const signer = Keypair.fromSecret(signerSecret);
+    transaction.sign(signer);
+    return this.submitTransaction(transaction.toXDR());
   }
 
   async mintPropertyShares(params: MintSharesParams): Promise<MintSharesResult> {

@@ -43,7 +43,7 @@ export class StellarService {
       this.validateAddress(address);
       const account = await this.server.accounts().accountId(address).call();
       const nativeBalance = account.balances.find(
-        (b) => b.asset_type === "native",
+        (b: { asset_type: string; balance?: string }) => b.asset_type === "native",
       );
       return nativeBalance?.balance ?? "0";
     } catch (error) {

@@ -12,10 +12,17 @@ import {
 import { ErrorCode } from "./codes";
 
 /**
- * Check if value is an AppError
+ * Check if value is an AppError (uses duck-typing for cross-workspace compatibility)
  */
 export function isAppError(error: unknown): error is AppError {
-  return error instanceof AppError;
+  return (
+    error instanceof AppError ||
+    (typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      "code" in error &&
+      "message" in error)
+  );
 }
 
 /**

@@ -94,7 +94,8 @@ export const shareOwnerships = pgTable('share_ownerships', {
   lastDividendClaimed: timestamp('last_dividend_claimed', { withTimezone: true }),
 });
 
-export const propertiesRelations = relations(properties, ({ one, many }) => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const propertiesRelations = relations(properties, ({ one, many }: any) => ({
   owner: one(users, {
     fields: [properties.ownerId],
     references: [users.id],
@@ -103,14 +104,16 @@ export const propertiesRelations = relations(properties, ({ one, many }) => ({
   shareOwnerships: many(shareOwnerships),
 }));
 
-export const propertyDocumentsRelations = relations(propertyDocuments, ({ one }) => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const propertyDocumentsRelations = relations(propertyDocuments, ({ one }: any) => ({
   property: one(properties, {
     fields: [propertyDocuments.propertyId],
     references: [properties.id],
   }),
 }));
 
-export const shareOwnershipsRelations = relations(shareOwnerships, ({ one }) => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const shareOwnershipsRelations = relations(shareOwnerships, ({ one }: any) => ({
   property: one(properties, {
     fields: [shareOwnerships.propertyId],
     references: [properties.id],

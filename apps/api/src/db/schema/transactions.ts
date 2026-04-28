@@ -34,7 +34,8 @@ export const transactions = pgTable('transactions', {
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
 });
 
-export const transactionsRelations = relations(transactions, ({ one }) => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const transactionsRelations = relations(transactions, ({ one }: any) => ({
   fromUser: one(users, {
     fields: [transactions.fromUserId],
     references: [users.id],

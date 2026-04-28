@@ -372,6 +372,28 @@ export class NotificationService {
   }
 
   /**
+   * Notify liquidation executed
+   */
+  async notifyLiquidationExecuted(
+    userId: string,
+    positionId: string,
+    debtCovered: number,
+    collateralSeized: number,
+    channel: NotificationChannel = 'IN_APP',
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId,
+      eventType: 'LIQUIDATION_EXECUTED',
+      title: 'Position Liquidated',
+      message: `Your position has been liquidated. Debt covered: $${debtCovered.toFixed(2)}, collateral seized: ${collateralSeized.toFixed(7)}.`,
+      channel,
+      relatedEntityType: 'loan',
+      relatedEntityId: positionId,
+      metadata: { debtCovered, collateralSeized },
+    });
+  }
+
+  /**
    * Notify investment opportunity
    */
   async notifyInvestmentOpportunity(

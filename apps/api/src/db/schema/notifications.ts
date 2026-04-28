@@ -11,6 +11,7 @@ export const notificationEventTypeEnum = pgEnum('notification_event_type', [
   'REPAYMENT_PROCESSED',
   'RISK_WARNING',
   'LIQUIDATION_RISK',
+  'LIQUIDATION_EXECUTED',
   'SYSTEM_ALERT',
   'INVESTMENT_OPPORTUNITY',
   'PORTFOLIO_UPDATE',
@@ -52,7 +53,8 @@ export const notifications = pgTable('notifications', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const notificationsRelations = relations(notifications, ({ one }) => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const notificationsRelations = relations(notifications, ({ one }: any) => ({
   user: one(users, {
     fields: [notifications.userId],
     references: [users.id],

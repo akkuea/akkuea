@@ -3,12 +3,15 @@ import { RiskMonitoringController } from '../controllers/RiskMonitoringControlle
 
 export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
   .get('/positions', () => RiskMonitoringController.assessAllPositions())
-  .get('/positions/risk/:level', ({ params: { level } }) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .get('/positions/risk/:level', ({ params: { level } }: any) =>
     RiskMonitoringController.getPositionsByRisk(level),
   )
-  .get('/liquidation/:positionId', ({ params: { positionId } }) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .get('/liquidation/:positionId', ({ params: { positionId } }: any) =>
     RiskMonitoringController.getLiquidationReadiness(positionId),
   )
-  .get('/transitions', ({ query }) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .get('/transitions', ({ query }: any) =>
     RiskMonitoringController.getRiskTransitions(query.positionId as string | undefined),
   );

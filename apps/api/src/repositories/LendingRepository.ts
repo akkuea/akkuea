@@ -96,7 +96,8 @@ export class LendingRepository extends BaseRepository<
     amount: string,
     shares: string,
   ): Promise<DepositPosition> {
-    return await db.transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return await db.transaction(async (tx: any) => {
       const results = await tx
         .insert(depositPositions)
         .values({
@@ -127,7 +128,8 @@ export class LendingRepository extends BaseRepository<
     depositorId: string,
     amount: string,
   ): Promise<DepositPosition | undefined> {
-    return await db.transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return await db.transaction(async (tx: any) => {
       const [existing] = await tx
         .select()
         .from(depositPositions)
@@ -168,7 +170,8 @@ export class LendingRepository extends BaseRepository<
     borrowerId: string,
     data: { borrowAmount: string; collateralAmount: string; collateralAsset: string },
   ): Promise<BorrowPosition> {
-    return await db.transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return await db.transaction(async (tx: any) => {
       const results = await tx
         .insert(borrowPositions)
         .values({
@@ -201,7 +204,8 @@ export class LendingRepository extends BaseRepository<
     borrowerId: string,
     amount: string,
   ): Promise<BorrowPosition | undefined> {
-    return await db.transaction(async (tx) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return await db.transaction(async (tx: any) => {
       const [existing] = await tx
         .select()
         .from(borrowPositions)
@@ -261,6 +265,35 @@ export class LendingRepository extends BaseRepository<
         .where(eq(lendingPools.id, poolId));
 
       return updated;
+    });
+  }
+
+  async liquidate(poolId: string, borrowerId: string): Promise<BorrowPosition | undefined> {
+    return await db.transaction(async (tx) => {
+      const [position] = await tx
+        .select()
+        .from(borrowPositions)
+        .where(and(eq(borrowPositions.poolId, poolId), eq(borrowPositions.borrowerId, borrowerId)))
+        .limit(1);
+
+      if (!position) return undefined;
+
+      const principal = parseFloat(position.principal);
+      const accruedInterest = parseFloat(position.accruedInterest);
+      const totalDebt = principal + accruedInterest;
+
+      await tx.delete(borrowPositions).where(eq(borrowPositions.id, position.id));
+
+      await tx
+        .update(lendingPools)
+        .set({
+          totalBorrows: sql`GREATEST(${lendingPools.totalBorrows}::numeric - ${totalDebt.toFixed(7)}::numeric, 0)`,
+          availableLiquidity: sql`${lendingPools.availableLiquidity}::numeric + ${principal.toFixed(7)}::numeric`,
+          utilizationRate: sql`CASE WHEN ${lendingPools.totalDeposits}::numeric = 0 THEN 0 ELSE (GREATEST(${lendingPools.totalBorrows}::numeric - ${totalDebt.toFixed(7)}::numeric, 0) / ${lendingPools.totalDeposits}::numeric) * 100 END`,
+        })
+        .where(eq(lendingPools.id, poolId));
+
+      return position;
     });
   }
 

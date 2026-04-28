@@ -1,4 +1,4 @@
-import { isAppError } from '@real-estate-defi/shared';
+// No unused imports
 import { ApiError } from '../errors/ApiError';
 
 export class AppError extends Error {
@@ -61,22 +61,22 @@ export function handleError(error: unknown): ErrorResponse {
     };
   }
 
-  if (isAppError(error)) {
-    return {
-      success: false,
-      error: String(error.code),
-      message: error.message,
-      statusCode: error.status,
-      timestamp,
-    };
-  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const err = error as any;
+  const code = err?.code ?? err?.errorCode ?? 'INTERNAL_ERROR';
+  const statusCode = Number(err?.status ?? err?.statusCode ?? 500);
+  const message = err?.message ?? 'An unexpected error occurred';
 
-  if (error instanceof AppError) {
+  // If it's something that looks like our app errors (from local or shared)
+  if (err && typeof err === 'object' && ('code' in err || 'errorCode' in err)) {
+    if (process.env.CI) {
+      console.error('[CI-DEBUG] Handled AppError:', { code, statusCode, message });
+    }
     return {
       success: false,
-      error: error.code,
-      message: error.message,
-      statusCode: error.statusCode,
+      error: String(code),
+      message: String(message),
+      statusCode: statusCode <= 0 ? 500 : statusCode,
       timestamp,
     };
   }

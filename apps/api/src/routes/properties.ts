@@ -51,7 +51,8 @@ const buySharesSchema = z.object({
 // GET /properties - list with filters
 const listPropertiesRoute = new Elysia()
   .use(validateQuery(propertyQuerySchema))
-  .get('/', async ({ validatedQuery, set }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .get('/', async ({ validatedQuery, set }: any) => {
     try {
       return await PropertyController.getProperties(validatedQuery!);
     } catch (error) {
@@ -64,7 +65,8 @@ const listPropertiesRoute = new Elysia()
 // GET /properties/:id - get single property
 const getPropertyRoute = new Elysia()
   .use(validateParams(uuidParamSchema))
-  .get('/:id', async ({ validatedParams, set }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .get('/:id', async ({ validatedParams, set }: any) => {
     try {
       return await PropertyController.getProperty(validatedParams!.id);
     } catch (error) {
@@ -77,7 +79,8 @@ const getPropertyRoute = new Elysia()
 // POST /properties - create property
 const createPropertyRoute = new Elysia().use(validateBody(createPropertySchema)).post(
   '/',
-  async ({ validatedBody, headers, set }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async ({ validatedBody, headers, set }: any) => {
     try {
       const userAddress = headers['x-user-address'] as string | undefined;
       if (!userAddress) {
@@ -97,7 +100,8 @@ const createPropertyRoute = new Elysia().use(validateBody(createPropertySchema))
 const updatePropertyRoute = new Elysia()
   .use(validateParams(uuidParamSchema))
   .use(validateBody(updatePropertySchema))
-  .put('/:id', async ({ validatedParams, validatedBody, headers, set }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .put('/:id', async ({ validatedParams, validatedBody, headers, set }: any) => {
     try {
       const userAddress = headers['x-user-address'] as string;
       if (!userAddress) {
@@ -118,7 +122,8 @@ const updatePropertyRoute = new Elysia()
 // DELETE /properties/:id - delete property
 const deletePropertyRoute = new Elysia()
   .use(validateParams(uuidParamSchema))
-  .delete('/:id', async ({ validatedParams, headers, set }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .delete('/:id', async ({ validatedParams, headers, set }: any) => {
     try {
       const userAddress = headers['x-user-address'] as string;
       if (!userAddress) {
@@ -135,7 +140,8 @@ const deletePropertyRoute = new Elysia()
 // POST /properties/:id/tokenize - tokenize property
 const tokenizePropertyRoute = new Elysia().use(validateParams(uuidParamSchema)).post(
   '/:id/tokenize',
-  async ({ validatedParams, body, headers, set }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async ({ validatedParams, body, headers, set }: any) => {
     try {
       const userAddress = headers['x-user-address'] as string | undefined;
       return await PropertyController.tokenizeProperty(
@@ -158,7 +164,8 @@ const buySharesRoute = new Elysia()
   .use(validateBody(buySharesSchema))
   .post(
     '/:id/buy-shares',
-    async ({ validatedParams, validatedBody, headers, set }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async ({ validatedParams, validatedBody, headers, set }: any) => {
       try {
         const userAddress = headers['x-user-address'] as string | undefined;
         if (!userAddress) {
@@ -185,7 +192,8 @@ const buySharesRoute = new Elysia()
 // GET /properties/:id/shares/:owner - get user shares
 const getUserSharesRoute = new Elysia()
   .use(validateParams(ownerParamSchema))
-  .get('/:id/shares/:owner', async ({ validatedParams, set }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .get('/:id/shares/:owner', async ({ validatedParams, set }: any) => {
     try {
       return await PropertyController.getUserShares(validatedParams!.id, validatedParams!.owner);
     } catch (error) {

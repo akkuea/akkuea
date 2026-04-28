@@ -31,25 +31,31 @@ const authWalletSchema = z.object({
 export const userRoutes = new Elysia({ prefix: '/users' })
   // POST /users - Create user
   .use(validate({ body: createUserSchema }))
-  .post('/', async (ctx) => UserController.create(ctx))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .post('/', async (ctx: any) => UserController.create(ctx))
 
   // GET /users/me - Get current user profile
-  .get('/me', async (ctx) => UserController.getProfile(ctx))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .get('/me', async (ctx: any) => UserController.getProfile(ctx))
 
   // PATCH /users/me - Update current user profile
   .use(validate({ body: updateUserSchema }))
-  .patch('/me', async (ctx) => UserController.updateProfile(ctx))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .patch('/me', async (ctx: any) => UserController.updateProfile(ctx))
 
   // GET /users/:id - Get user by ID
   .use(validate({ params: uuidParamSchema }))
-  .get('/:id', async (ctx) => UserController.getById(ctx))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .get('/:id', async (ctx: any) => UserController.getById(ctx))
 
   // GET /users/wallet/:address - Get user by wallet address
   .use(validate({ params: walletParamSchema }))
-  .get('/wallet/:address', async (ctx) => UserController.getByWallet(ctx))
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .get('/wallet/:address', async (ctx: any) => UserController.getByWallet(ctx))
 
   // POST /users/auth - Authenticate by wallet (get or create)
   .use(validate({ body: authWalletSchema }))
-  .post('/auth', async (ctx) => UserController.authenticateByWallet(ctx), {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  .post('/auth', async (ctx: any) => UserController.authenticateByWallet(ctx), {
     beforeHandle: [rateLimit()],
   });

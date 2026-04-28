@@ -4,6 +4,7 @@ import { useCallback, useEffect } from "react";
 import { WalletNetwork } from "@creit.tech/stellar-wallets-kit";
 import { useAuthenticationStore } from "../store/data/slices/authentication.slice";
 import { initializeWalletKit, getWalletKit } from "../constant/walletKit";
+import { fetchBalance } from "@/lib/stellar";
 
 export const useWallet = () => {
   const store = useAuthenticationStore();
@@ -36,9 +37,8 @@ export const useWallet = () => {
             store.setAddress(address);
             store.setIsConnected(true);
 
-            // TODO: Fetch balance usando stellar-sdk
-            // const balance = await fetchBalance(address);
-            // store.setBalance(balance);
+            const balance = await fetchBalance(address, store.network);
+            store.setBalance(balance);
           } catch (error) {
             console.error("Error connecting wallet:", error);
             store.reset();
@@ -68,6 +68,12 @@ export const useWallet = () => {
     [store],
   );
 
+  const refreshBalance = useCallback(async () => {
+    if (!store.address) return;
+    const balance = await fetchBalance(store.address, store.network);
+    store.setBalance(balance);
+  }, [store]);
+
   return {
     address: store.address,
     balance: store.balance,
@@ -78,5 +84,6 @@ export const useWallet = () => {
     connect,
     disconnect,
     switchNetwork,
+    refreshBalance,
   };
 };

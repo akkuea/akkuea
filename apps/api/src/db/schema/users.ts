@@ -52,11 +52,13 @@ export const kycDocuments = pgTable('kyc_documents', {
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
 });
 
-export const usersRelations = relations(users, ({ many }) => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const usersRelations = relations(users, ({ many }: any) => ({
   kycDocuments: many(kycDocuments),
 }));
 
-export const kycDocumentsRelations = relations(kycDocuments, ({ one }) => ({
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const kycDocumentsRelations = relations(kycDocuments, ({ one }: any) => ({
   user: one(users, {
     fields: [kycDocuments.userId],
     references: [users.id],

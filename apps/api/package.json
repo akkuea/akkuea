@@ -10,6 +10,7 @@
     "build": "bun build src/index.ts --target bun --outdir dist",
     "start": "bun run dist/index.js",
     "test": "bun test",
+    "test:ci": "bun test --max-concurrency=1",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{ts,json}\"",
     "type-check": "tsc --noEmit",

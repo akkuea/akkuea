@@ -21,6 +21,7 @@ export interface BorrowPositionView extends BorrowPosition {
   computedAccruedInterest: string;
   computedHealthFactor: string | null;
   dataSource: 'database' | 'hybrid';
+  collateralAmount: string;
 }
 
 export interface PositionSummary {

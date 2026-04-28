@@ -41,7 +41,7 @@ function createValidationError(
  */
 export function validateBody<T extends ZodSchema>(schema: T) {
   return new Elysia({ name: 'validate-body' })
-    .derive({ as: 'scoped' }, async ({ request }) => {
+    .derive({ as: 'scoped' }, async ({ request }: { request: Request }) => {
       try {
         const body = await request.clone().json();
         const result = schema.safeParse(body);
@@ -68,12 +68,24 @@ export function validateBody<T extends ZodSchema>(schema: T) {
         };
       }
     })
-    .onBeforeHandle({ as: 'scoped' }, ({ bodyValidationError, set }) => {
-      if (bodyValidationError) {
-        set.status = 400;
-        return bodyValidationError;
-      }
-    });
+    .onBeforeHandle(
+      { as: 'scoped' },
+      ({
+        bodyValidationError,
+        set,
+      }: {
+        bodyValidationError:
+          | ReturnType<typeof createValidationError>
+          | { status: number; code: string; message: string }
+          | null;
+        set: { status?: number | string };
+      }) => {
+        if (bodyValidationError) {
+          set.status = 400;
+          return bodyValidationError;
+        }
+      },
+    );
 }
 
 /**
@@ -81,7 +93,7 @@ export function validateBody<T extends ZodSchema>(schema: T) {
  */
 export function validateQuery<T extends ZodSchema>(schema: T) {
   return new Elysia({ name: 'validate-query' })
-    .derive({ as: 'scoped' }, ({ query }) => {
+    .derive({ as: 'scoped' }, ({ query }: { query: Record<string, string | undefined> }) => {
       const result = schema.safeParse(query);
 
       if (!result.success) {
@@ -96,12 +108,21 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
         queryValidationError: null as null,
       };
     })
-    .onBeforeHandle({ as: 'scoped' }, ({ queryValidationError, set }) => {
-      if (queryValidationError) {
-        set.status = 400;
-        return queryValidationError;
-      }
-    });
+    .onBeforeHandle(
+      { as: 'scoped' },
+      ({
+        queryValidationError,
+        set,
+      }: {
+        queryValidationError: ReturnType<typeof createValidationError> | null;
+        set: { status?: number | string };
+      }) => {
+        if (queryValidationError) {
+          set.status = 400;
+          return queryValidationError;
+        }
+      },
+    );
 }
 
 /**
@@ -109,7 +130,7 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
  */
 export function validateParams<T extends ZodSchema>(schema: T) {
   return new Elysia({ name: 'validate-params' })
-    .derive({ as: 'scoped' }, ({ params }) => {
+    .derive({ as: 'scoped' }, ({ params }: { params: Record<string, string | undefined> }) => {
       const result = schema.safeParse(params);
 
       if (!result.success) {
@@ -124,12 +145,21 @@ export function validateParams<T extends ZodSchema>(schema: T) {
         paramsValidationError: null as null,
       };
     })
-    .onBeforeHandle({ as: 'scoped' }, ({ paramsValidationError, set }) => {
-      if (paramsValidationError) {
-        set.status = 400;
-        return paramsValidationError;
-      }
-    });
+    .onBeforeHandle(
+      { as: 'scoped' },
+      ({
+        paramsValidationError,
+        set,
+      }: {
+        paramsValidationError: ReturnType<typeof createValidationError> | null;
+        set: { status?: number | string };
+      }) => {
+        if (paramsValidationError) {
+          set.status = 400;
+          return paramsValidationError;
+        }
+      },
+    );
 }
 
 /**
@@ -142,85 +172,108 @@ export function validate<
   TParams extends ZodSchema | undefined = undefined,
 >(options: { body?: TBody; query?: TQuery; params?: TParams }) {
   return new Elysia({ name: 'validate' })
-    .derive({ as: 'scoped' }, async ({ request, query, params }) => {
-      const result: {
-        validatedBody: TBody extends ZodSchema ? z.infer<TBody> : undefined;
-        validatedQuery: TQuery extends ZodSchema ? z.infer<TQuery> : undefined;
-        validatedParams: TParams extends ZodSchema ? z.infer<TParams> : undefined;
-        validationError:
-          | ReturnType<typeof createValidationError>
-          | { status: number; code: string; message: string }
-          | null;
-      } = {
-        validatedBody: undefined as TBody extends ZodSchema ? z.infer<TBody> : undefined,
-        validatedQuery: undefined as TQuery extends ZodSchema ? z.infer<TQuery> : undefined,
-        validatedParams: undefined as TParams extends ZodSchema ? z.infer<TParams> : undefined,
-        validationError: null,
-      };
+    .derive(
+      { as: 'scoped' },
+      async ({
+        request,
+        query,
+        params,
+      }: {
+        request: Request;
+        query: Record<string, string | undefined>;
+        params: Record<string, string | undefined>;
+      }) => {
+        const result: {
+          validatedBody: TBody extends ZodSchema ? z.infer<TBody> : undefined;
+          validatedQuery: TQuery extends ZodSchema ? z.infer<TQuery> : undefined;
+          validatedParams: TParams extends ZodSchema ? z.infer<TParams> : undefined;
+          validationError:
+            | ReturnType<typeof createValidationError>
+            | { status: number; code: string; message: string }
+            | null;
+        } = {
+          validatedBody: undefined as TBody extends ZodSchema ? z.infer<TBody> : undefined,
+          validatedQuery: undefined as TQuery extends ZodSchema ? z.infer<TQuery> : undefined,
+          validatedParams: undefined as TParams extends ZodSchema ? z.infer<TParams> : undefined,
+          validationError: null,
+        };
 
-      // Validate body
-      if (options.body) {
-        try {
-          const body = await request.clone().json();
-          const bodyResult = options.body.safeParse(body);
+        // Validate body
+        if (options.body) {
+          try {
+            const body = await request.clone().json();
+            const bodyResult = options.body.safeParse(body);
 
-          if (!bodyResult.success) {
+            if (!bodyResult.success) {
+              result.validationError = createValidationError(
+                formatZodErrors(bodyResult.error),
+                'body',
+              );
+              return result;
+            }
+
+            result.validatedBody = bodyResult.data;
+          } catch {
+            result.validationError = {
+              status: 400,
+              code: 'INVALID_JSON',
+              message: 'Request body must be valid JSON',
+            };
+            return result;
+          }
+        }
+
+        // Validate query
+        if (options.query) {
+          const queryResult = options.query.safeParse(query);
+
+          if (!queryResult.success) {
             result.validationError = createValidationError(
-              formatZodErrors(bodyResult.error),
-              'body',
+              formatZodErrors(queryResult.error),
+              'query',
             );
             return result;
           }
 
-          result.validatedBody = bodyResult.data;
-        } catch {
-          result.validationError = {
-            status: 400,
-            code: 'INVALID_JSON',
-            message: 'Request body must be valid JSON',
-          };
-          return result;
-        }
-      }
-
-      // Validate query
-      if (options.query) {
-        const queryResult = options.query.safeParse(query);
-
-        if (!queryResult.success) {
-          result.validationError = createValidationError(
-            formatZodErrors(queryResult.error),
-            'query',
-          );
-          return result;
+          result.validatedQuery = queryResult.data;
         }
 
-        result.validatedQuery = queryResult.data;
-      }
+        // Validate params
+        if (options.params) {
+          const paramsResult = options.params.safeParse(params);
 
-      // Validate params
-      if (options.params) {
-        const paramsResult = options.params.safeParse(params);
+          if (!paramsResult.success) {
+            result.validationError = createValidationError(
+              formatZodErrors(paramsResult.error),
+              'params',
+            );
+            return result;
+          }
 
-        if (!paramsResult.success) {
-          result.validationError = createValidationError(
-            formatZodErrors(paramsResult.error),
-            'params',
-          );
-          return result;
+          result.validatedParams = paramsResult.data;
         }
 
-        result.validatedParams = paramsResult.data;
-      }
-
-      return result;
-    })
-    .onBeforeHandle({ as: 'scoped' }, ({ validationError, set }) => {
-      if (validationError) {
-        set.status = 400;
-        return validationError;
-      }
-    });
+        return result;
+      },
+    )
+    .onBeforeHandle(
+      { as: 'scoped' },
+      ({
+        validationError,
+        set,
+      }: {
+        validationError:
+          | ReturnType<typeof createValidationError>
+          | { status: number; code: string; message: string }
+          | null;
+        set: { status?: number | string };
+      }) => {
+        if (validationError) {
+          set.status = 400;
+          return validationError;
+        }
+      },
+    );
 }
 
 export const uuidParamSchema = z.object({

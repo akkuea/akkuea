@@ -127,7 +127,11 @@ describe('CacheService', () => {
     it('get() swallows the error and returns null', async () => {
       const cache = new CacheService();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (cache as any).client = { get: async () => { throw new Error('network error'); } };
+      (cache as any).client = {
+        get: async () => {
+          throw new Error('network error');
+        },
+      };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (cache as any).available = true;
 
@@ -138,7 +142,11 @@ describe('CacheService', () => {
     it('set() swallows the error silently', async () => {
       const cache = new CacheService();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (cache as any).client = { set: async () => { throw new Error('network error'); } };
+      (cache as any).client = {
+        set: async () => {
+          throw new Error('network error');
+        },
+      };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (cache as any).available = true;
 
@@ -148,7 +156,11 @@ describe('CacheService', () => {
     it('invalidate() swallows the error silently', async () => {
       const cache = new CacheService();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (cache as any).client = { keys: async () => { throw new Error('network error'); } };
+      (cache as any).client = {
+        keys: async () => {
+          throw new Error('network error');
+        },
+      };
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (cache as any).available = true;
 

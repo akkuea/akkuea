@@ -7,6 +7,8 @@ import { transactions, users, type Transaction, type User } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import type { WebhookPayload } from '../services/WebhookService';
 
+import { errorHandler } from '../middleware/errorHandler';
+
 // Skip tests if DATABASE_URL is not set
 const skipIfNoDatabase = !process.env.DATABASE_URL;
 
@@ -23,7 +25,7 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
   let testTx: Transaction;
 
   beforeAll(async () => {
-    app = new Elysia().use(webhookRoutes);
+    app = new Elysia().use(errorHandler).use(webhookRoutes);
 
     // Create a test user
     const userResults = await db
@@ -69,7 +71,7 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
       const signature = generateSignature(payload);
 
       const response = await (app as Elysia).handle(
-        new Request('http://localhost:3001/webhooks/transactions', {
+        new Request('http://localhost/webhooks/transactions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -99,7 +101,7 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
       };
 
       const response = await (app as Elysia).handle(
-        new Request('http://localhost:3001/webhooks/transactions', {
+        new Request('http://localhost/webhooks/transactions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -126,7 +128,7 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
       const signature = generateSignature(payload);
 
       const response = await (app as Elysia).handle(
-        new Request('http://localhost:3001/webhooks/transactions', {
+        new Request('http://localhost/webhooks/transactions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -147,7 +149,7 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
       const signature = generateSignature(payload);
 
       const response = await (app as Elysia).handle(
-        new Request('http://localhost:3001/webhooks/transactions', {
+        new Request('http://localhost/webhooks/transactions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -195,7 +195,8 @@ function StatCardSkeleton() {
 // ---------------------------------------------------------------------------
 
 export default function LendingPage() {
-  const { isConnected, connect, isConnecting, address } = useWallet();
+  const { isConnected, connect, isConnecting, address, refreshBalance } =
+    useWallet();
 
   const {
     pools,
@@ -853,7 +854,10 @@ export default function LendingPage() {
         isOpen={!!selectedPool}
         onClose={() => setSelectedPool(null)}
         userAddress={address}
-        onSuccess={refetch}
+        onSuccess={() => {
+          refetch();
+          void refreshBalance();
+        }}
       />
     </motion.div>
   );

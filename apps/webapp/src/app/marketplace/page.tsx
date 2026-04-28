@@ -228,7 +228,8 @@ export default function MarketplacePage() {
     lastUpdatedAt,
     isPolling,
   } = useProperties();
-  const { isConnected, connect, isConnecting, address } = useWallet();
+  const { isConnected, connect, isConnecting, address, refreshBalance } =
+    useWallet();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState(MARKETPLACE_ALL_REGIONS);
@@ -425,7 +426,10 @@ export default function MarketplacePage() {
           isConnected={isConnected}
           walletAddress={address}
           onConnectWallet={connect}
-          onInvestmentSuccess={refetch}
+          onInvestmentSuccess={() => {
+            refetch();
+            void refreshBalance();
+          }}
         />
       )}
 

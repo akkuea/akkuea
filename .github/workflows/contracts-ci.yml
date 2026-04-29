@@ -174,3 +174,29 @@ jobs:
           name: coverage-report
           path: apps/contracts/target/llvm-cov/html/
           retention-days: 7
+
+  stellar-contract-build:
+    name: Stellar Contract Build (macOS)
+    runs-on: macos-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          
+      - name: Install WASM target
+        run: rustup target add wasm32-unknown-unknown
+        
+      - name: Install Stellar CLI
+        run: |
+          brew install stellar-cli
+          
+      - name: Build with Stellar CLI
+        run: |
+          cd apps/contracts
+          stellar contract build
+          echo "✓ Stellar contract build completed successfully"

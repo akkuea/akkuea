@@ -1,11 +1,56 @@
-import { describe, test, expect } from 'bun:test';
+import { describe, test, expect, mock, beforeEach } from 'bun:test';
 import { OracleService } from '../services/OracleService';
 import { ValuationRepository } from '../repositories/ValuationRepository';
-import type { RealEstateValuationPayload } from '@real-estate-defi/shared';
+import type { RealEstateValuationPayload, ValuationRecord } from '@real-estate-defi/shared';
 import { ValidationService } from '@real-estate-defi/shared';
 
-// Reset in-memory store between tests by re-importing won't work cleanly,
-// so we test each scenario with unique propertyIds.
+// Mock the ValuationRepository to avoid needing a real DB in unit tests
+const store = new Map<string, ValuationRecord[]>();
+
+mock.module('../repositories/ValuationRepository', () => ({
+  ValuationRepository: {
+    save: async (record: ValuationRecord) => {
+      const list = store.get(record.propertyId) ?? [];
+      const idx = list.findIndex((r) => r.id === record.id);
+      if (idx >= 0) {
+        list[idx] = record;
+      } else {
+        list.push(record);
+      }
+      store.set(record.propertyId, list);
+      return record;
+    },
+    findLatest: async (propertyId: string) => {
+      const list = store.get(propertyId) ?? [];
+      return list.length ? list[list.length - 1] : undefined;
+    },
+    findHistory: async (propertyId: string, limit?: number) => {
+      const list = [...(store.get(propertyId) ?? [])].reverse();
+      return limit ? list.slice(0, limit) : list;
+    },
+    findAll: async () => {
+      return Array.from(store.values()).map((list) => list[list.length - 1]!);
+    },
+    updateStatus: async (
+      id: string,
+      propertyId: string,
+      status: ValuationRecord['status'],
+      rejectionReason?: string,
+    ) => {
+      const list = store.get(propertyId);
+      if (!list) return undefined;
+      const record = list.find((r) => r.id === id);
+      if (!record) return undefined;
+      record.status = status;
+      if (rejectionReason) record.rejectionReason = rejectionReason;
+      return record;
+    },
+  },
+}));
+
+beforeEach(() => {
+  store.clear();
+});
 
 const makePayload = (
   overrides: Partial<RealEstateValuationPayload> = {},
@@ -61,7 +106,7 @@ describe('ValidationService.validateValuationPayload', () => {
   });
 
   test('rejects stale timestamp', () => {
-    const staleDate = new Date(Date.now() - 25 * 60 * 60 * 1000); // 25 hours ago
+    const staleDate = new Date(Date.now() - 25 * 60 * 60 * 1000);
     const result = ValidationService.validateValuationPayload(
       makePayload({ timestamp: staleDate }),
     );
@@ -100,9 +145,9 @@ describe('ValidationService.validateValuationPayload', () => {
 });
 
 describe('OracleService.ingestValuation', () => {
-  test('stores a valid valuation and returns it as active', () => {
+  test('stores a valid valuation and returns it as active', async () => {
     const payload = makePayload();
-    const { record, warnings } = OracleService.ingestValuation(payload);
+    const { record, warnings } = await OracleService.ingestValuation(payload);
 
     expect(record.status).toBe('active');
     expect(record.id).toBeTruthy();
@@ -111,110 +156,108 @@ describe('OracleService.ingestValuation', () => {
     expect(typeof warnings).toBe('object');
   });
 
-  test('throws and saves rejected record for stale valuation', () => {
+  test('throws and saves rejected record for stale valuation', async () => {
     const stalePayload = makePayload({
       timestamp: new Date(Date.now() - 25 * 60 * 60 * 1000),
     });
 
-    expect(() => OracleService.ingestValuation(stalePayload)).toThrow(/rejected/i);
+    await expect(OracleService.ingestValuation(stalePayload)).rejects.toThrow(/rejected/i);
   });
 
-  test('throws for out-of-range price', () => {
+  test('throws for out-of-range price', async () => {
     const badPayload = makePayload({ price: -500 });
-    expect(() => OracleService.ingestValuation(badPayload)).toThrow(/rejected/i);
+    await expect(OracleService.ingestValuation(badPayload)).rejects.toThrow(/rejected/i);
   });
 });
 
 describe('OracleService.getLatestValuation', () => {
-  test('returns current valuation for a known property', () => {
+  test('returns current valuation for a known property', async () => {
     const payload = makePayload();
-    OracleService.ingestValuation(payload);
+    await OracleService.ingestValuation(payload);
 
-    const record = OracleService.getLatestValuation(payload.propertyId);
+    const record = await OracleService.getLatestValuation(payload.propertyId);
     expect(record.propertyId).toBe(payload.propertyId);
     expect(record.price).toBe(payload.price);
   });
 
-  test('throws for unknown property', () => {
-    expect(() => OracleService.getLatestValuation('nonexistent_prop')).toThrow();
+  test('throws for unknown property', async () => {
+    await expect(OracleService.getLatestValuation('nonexistent_prop')).rejects.toThrow();
   });
 
-  test('latest valuation reflects the most recent submission', () => {
+  test('latest valuation reflects the most recent submission', async () => {
     const propertyId = `prop_update_${Date.now()}`;
-    OracleService.ingestValuation(makePayload({ propertyId, price: 200_000 }));
-    OracleService.ingestValuation(makePayload({ propertyId, price: 210_000 }));
+    await OracleService.ingestValuation(makePayload({ propertyId, price: 200_000 }));
+    await OracleService.ingestValuation(makePayload({ propertyId, price: 210_000 }));
 
-    const latest = OracleService.getLatestValuation(propertyId);
+    const latest = await OracleService.getLatestValuation(propertyId);
     expect(latest.price).toBe(210_000);
   });
 });
 
 describe('OracleService.getValuationHistory', () => {
-  test('returns ordered history of valuations', () => {
+  test('returns ordered history of valuations', async () => {
     const propertyId = `prop_hist_${Date.now()}`;
-    OracleService.ingestValuation(makePayload({ propertyId, price: 100_000 }));
-    OracleService.ingestValuation(makePayload({ propertyId, price: 110_000 }));
-    OracleService.ingestValuation(makePayload({ propertyId, price: 120_000 }));
+    await OracleService.ingestValuation(makePayload({ propertyId, price: 100_000 }));
+    await OracleService.ingestValuation(makePayload({ propertyId, price: 110_000 }));
+    await OracleService.ingestValuation(makePayload({ propertyId, price: 120_000 }));
 
-    const history = OracleService.getValuationHistory(propertyId);
+    const history = await OracleService.getValuationHistory(propertyId);
     expect(history.length).toBe(3);
-    // Should be sorted most recent first
     expect(history[0]!.price).toBe(120_000);
   });
 
-  test('respects limit parameter', () => {
+  test('respects limit parameter', async () => {
     const propertyId = `prop_limit_${Date.now()}`;
     for (let i = 0; i < 5; i++) {
-      OracleService.ingestValuation(makePayload({ propertyId, price: 100_000 + i * 10_000 }));
+      await OracleService.ingestValuation(makePayload({ propertyId, price: 100_000 + i * 10_000 }));
     }
 
-    const history = OracleService.getValuationHistory(propertyId, 2);
+    const history = await OracleService.getValuationHistory(propertyId, 2);
     expect(history.length).toBe(2);
   });
 
-  test('returns empty array for property with no history', () => {
-    const history = OracleService.getValuationHistory('prop_never_existed');
+  test('returns empty array for property with no history', async () => {
+    const history = await OracleService.getValuationHistory('prop_never_existed');
     expect(history).toEqual([]);
   });
 });
 
 describe('OracleService.buildContractPayload', () => {
-  test('returns deterministic contract payload', () => {
+  test('returns deterministic contract payload', async () => {
     const payload = makePayload({ price: 500_000 });
-    OracleService.ingestValuation(payload);
+    await OracleService.ingestValuation(payload);
 
-    const contractPayload = OracleService.buildContractPayload(payload.propertyId);
+    const contractPayload = await OracleService.buildContractPayload(payload.propertyId);
     expect(contractPayload.propertyId).toBe(payload.propertyId);
     expect(contractPayload.priceMicroUsd).toBe(500_000 * 1_000_000);
     expect(typeof contractPayload.timestamp).toBe('number');
     expect(typeof contractPayload.sourceHash).toBe('string');
     expect(contractPayload.sourceHash.length).toBeGreaterThan(0);
 
-    // Determinism: same call returns same values
-    const second = OracleService.buildContractPayload(payload.propertyId);
+    const second = await OracleService.buildContractPayload(payload.propertyId);
     expect(second.priceMicroUsd).toBe(contractPayload.priceMicroUsd);
     expect(second.sourceHash).toBe(contractPayload.sourceHash);
   });
 
-  test('throws for non-active valuation status', () => {
+  test('throws for non-active valuation status', async () => {
     const payload = makePayload();
-    OracleService.ingestValuation(payload);
+    await OracleService.ingestValuation(payload);
 
-    const record = ValuationRepository.findLatest(payload.propertyId)!;
-    ValuationRepository.updateStatus(record.id, payload.propertyId, 'manual_review', 'test');
+    const record = await ValuationRepository.findLatest(payload.propertyId);
+    await ValuationRepository.updateStatus(record!.id, payload.propertyId, 'manual_review', 'test');
 
-    expect(() => OracleService.buildContractPayload(payload.propertyId)).toThrow(
+    await expect(OracleService.buildContractPayload(payload.propertyId)).rejects.toThrow(
       /cannot build contract payload/i,
     );
   });
 });
 
 describe('OracleService.flagForManualReview', () => {
-  test('sets valuation status to manual_review', () => {
+  test('sets valuation status to manual_review', async () => {
     const payload = makePayload();
-    const { record } = OracleService.ingestValuation(payload);
+    const { record } = await OracleService.ingestValuation(payload);
 
-    const updated = OracleService.flagForManualReview(
+    const updated = await OracleService.flagForManualReview(
       record.id,
       payload.propertyId,
       'Suspicious value',
@@ -223,20 +266,20 @@ describe('OracleService.flagForManualReview', () => {
     expect(updated.rejectionReason).toBe('Suspicious value');
   });
 
-  test('throws for unknown valuation id', () => {
+  test('throws for unknown valuation id', async () => {
     const payload = makePayload();
-    OracleService.ingestValuation(payload);
+    await OracleService.ingestValuation(payload);
 
-    expect(() =>
+    await expect(
       OracleService.flagForManualReview('bad_id', payload.propertyId, 'reason'),
-    ).toThrow();
+    ).rejects.toThrow();
   });
 });
 
 describe('OracleService.submitManualOverride', () => {
-  test('stores override with manual methodology and active status', () => {
+  test('stores override with manual methodology and active status', async () => {
     const payload = makePayload({ methodology: 'comparable_sales' });
-    const record = OracleService.submitManualOverride({
+    const record = await OracleService.submitManualOverride({
       ...payload,
       overrideReason: 'Manual appraisal after dispute',
     });

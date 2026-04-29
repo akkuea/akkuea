@@ -202,47 +202,6 @@ describe('rateLimit middleware', () => {
 
       expect(result2).toBeUndefined();
     });
-
-    it('should track authenticated users by x-user-address header', async () => {
-      const middleware = rateLimit({ max: 2, windowMs: 60000 });
-
-      const req1 = createMockRequest({
-        headers: { 'x-user-address': 'GAAAAAAA123456789', 'x-forwarded-for': '192.0.2.1' },
-      });
-      const req2 = createMockRequest({
-        headers: { 'x-user-address': 'GBBBBBB987654321', 'x-forwarded-for': '192.0.2.1' },
-      });
-      const set1 = createMockSet();
-      const set2 = createMockSet();
-
-      await middleware({ request: req1, set: set1 }); // 1st for user A
-      await middleware({ request: req1, set: set1 }); // 2nd for user A — blocked
-      const result2 = await middleware({ request: req2, set: set2 }); // 1st for user B
-
-      expect(result2).toBeUndefined();
-    });
-
-    it('should prioritize user address over IP for authenticated requests', async () => {
-      const middleware = rateLimit({ max: 1, windowMs: 60000 });
-
-      const request = createMockRequest({
-        headers: {
-          'x-user-address': 'GCCCCCC555555555',
-          'x-forwarded-for': '192.0.2.100',
-        },
-      });
-      const set1 = createMockSet();
-      const set2 = createMockSet();
-
-      await middleware({ request, set: set1 }); // 1st request
-      const result = await middleware({ request, set: set2 }); // 2nd — blocked
-
-      expect(result).toEqual({
-        success: false,
-        error: 'RATE_LIMITED',
-        message: 'Too many requests. Please try again later.',
-      });
-    });
   });
 
   describe('Retry-After header', () => {

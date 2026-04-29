@@ -74,7 +74,7 @@ export class RiskMonitoringController {
 
     for (const assetAddress of assetAddresses) {
       try {
-        const valuation = OracleService.getLatestValuation(assetAddress);
+        const valuation = await OracleService.getLatestValuation(assetAddress);
         prices.set(assetAddress, valuation.price);
       } catch {
         prices.set(assetAddress, 1.0); // fallback when no oracle data exists for this asset

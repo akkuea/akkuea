@@ -5,6 +5,20 @@ import { LendingController } from '../controllers/LendingController';
 import { positionService } from '../services/PositionService';
 import { isLiquidatorAuthorized } from '../utils/liquidatorAuth';
 
+function requireAuth(headers: Record<string, string | undefined>) {
+  const auth = headers['authorization'];
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return {
+      status: 401,
+      body: {
+        error: 'UNAUTHORIZED',
+        code: 'UNAUTHORIZED',
+        message: 'Authentication required',
+      },
+    };
+  }
+}
+
 const poolQuerySchema = paginationQuerySchema.extend({
   asset: z.string().optional(),
   isActive: z.coerce.boolean().optional(),
@@ -51,7 +65,11 @@ const createPoolSchema = z.object({
 const liquidatorAuth = new Elysia().onBeforeHandle(({ headers, set }) => {
   if (!isLiquidatorAuthorized(headers as Record<string, string | undefined>)) {
     set.status = 403;
-    return { error: 'FORBIDDEN', message: 'Liquidator access required' };
+    return {
+      error: 'FORBIDDEN',
+      code: 'FORBIDDEN',
+      message: 'Liquidator access required',
+    };
   }
 });
 
@@ -71,11 +89,23 @@ export const lendingRoutes = new Elysia({ prefix: '/lending', tags: ['Lending'] 
    * POST /lending/pools
    */
   .use(validate({ body: createPoolSchema }))
-  .post('/pools', async (ctx) => LendingController.createPool(ctx), {
-    body: createPoolSchema,
-    beforeHandle: rateLimit(),
-    detail: { summary: 'Create lending pool' },
-  })
+  .post(
+    '/pools',
+    async (ctx) => {
+      const authError = requireAuth(ctx.headers);
+      if (authError) {
+        ctx.set.status = 401;
+        return authError.body;
+      }
+
+      return LendingController.createPool(ctx);
+    },
+    {
+      body: createPoolSchema,
+      beforeHandle: rateLimit(),
+      detail: { summary: 'Create lending pool' },
+    },
+  )
 
   /**
    * GET /lending/pools/:id
@@ -90,32 +120,76 @@ export const lendingRoutes = new Elysia({ prefix: '/lending', tags: ['Lending'] 
    * Deposit / Withdraw / Borrow / Repay
    */
   .use(validate({ body: depositSchema }))
-  .post('/pools/:id/deposit', async (ctx) => LendingController.deposit(ctx), {
-    body: depositSchema,
-    beforeHandle: rateLimit(),
-    detail: { summary: 'Deposit into pool' },
-  })
+  .post(
+    '/pools/:id/deposit',
+    async (ctx) => {
+      const authError = requireAuth(ctx.headers);
+      if (authError) {
+        ctx.set.status = 401;
+        return authError.body;
+      }
+      return LendingController.deposit(ctx);
+    },
+    {
+      body: depositSchema,
+      beforeHandle: rateLimit(),
+      detail: { summary: 'Deposit into pool' },
+    },
+  )
 
   .use(validate({ body: withdrawSchema }))
-  .post('/pools/:id/withdraw', async (ctx) => LendingController.withdraw(ctx), {
-    body: withdrawSchema,
-    beforeHandle: rateLimit(),
-    detail: { summary: 'Withdraw from pool' },
-  })
+  .post(
+    '/pools/:id/withdraw',
+    async (ctx) => {
+      const authError = requireAuth(ctx.headers);
+      if (authError) {
+        ctx.set.status = 401;
+        return authError.body;
+      }
+      return LendingController.withdraw(ctx);
+    },
+    {
+      body: withdrawSchema,
+      beforeHandle: rateLimit(),
+      detail: { summary: 'Withdraw from pool' },
+    },
+  )
 
   .use(validate({ body: borrowSchema }))
-  .post('/pools/:id/borrow', async (ctx) => LendingController.borrow(ctx), {
-    body: borrowSchema,
-    beforeHandle: rateLimit(),
-    detail: { summary: 'Borrow from pool' },
-  })
+  .post(
+    '/pools/:id/borrow',
+    async (ctx) => {
+      const authError = requireAuth(ctx.headers);
+      if (authError) {
+        ctx.set.status = 401;
+        return authError.body;
+      }
+      return LendingController.borrow(ctx);
+    },
+    {
+      body: borrowSchema,
+      beforeHandle: rateLimit(),
+      detail: { summary: 'Borrow from pool' },
+    },
+  )
 
   .use(validate({ body: repaySchema }))
-  .post('/pools/:id/repay', async (ctx) => LendingController.repay(ctx), {
-    body: repaySchema,
-    beforeHandle: rateLimit(),
-    detail: { summary: 'Repay loan' },
-  })
+  .post(
+    '/pools/:id/repay',
+    async (ctx) => {
+      const authError = requireAuth(ctx.headers);
+      if (authError) {
+        ctx.set.status = 401;
+        return authError.body;
+      }
+      return LendingController.repay(ctx);
+    },
+    {
+      body: repaySchema,
+      beforeHandle: rateLimit(),
+      detail: { summary: 'Repay loan' },
+    },
+  )
 
   /**
    * User positions

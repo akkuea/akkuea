@@ -38,9 +38,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     initializedRef.current = true;
 
     // Read theme from localStorage after mount to avoid hydration mismatch
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setThemeState(getStoredTheme());
-    setMounted(true);
+    const timer = setTimeout(() => {
+      setThemeState(getStoredTheme());
+      setMounted(true);
+    }, 0);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => {

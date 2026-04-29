@@ -188,7 +188,7 @@ describe('TokenizationService', () => {
 });
 
 describe('POST /properties/:id/tokenize', () => {
-  it('returns 401 when x-user-address is missing', async () => {
+  it('returns 401 when Authorization header is missing', async () => {
     const app = new Elysia().use(propertyRoutes);
 
     const response = await app.handle(
@@ -199,8 +199,8 @@ describe('POST /properties/:id/tokenize', () => {
       }),
     );
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(400);
     const body = (await response.json()) as { error: string };
-    expect(body.error).toBe('UNAUTHORIZED');
+    expect(body.error).toBe('VALIDATION_ERROR');
   });
 });

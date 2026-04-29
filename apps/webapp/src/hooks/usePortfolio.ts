@@ -60,11 +60,13 @@ export function usePortfolio(userAddress?: string | null): UsePortfolioReturn {
 
   useEffect(() => {
     if (!userAddress) {
-      setProperties([]);
-      setBorrows([]);
-      setDeposits([]);
-      setSummary(EMPTY_SUMMARY);
-      return;
+      const timer = setTimeout(() => {
+        setProperties([]);
+        setBorrows([]);
+        setDeposits([]);
+        setSummary(EMPTY_SUMMARY);
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
     let cancelled = false;
@@ -181,8 +183,11 @@ export function usePortfolio(userAddress?: string | null): UsePortfolioReturn {
       }
     }
 
-    load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
     return () => {
+      clearTimeout(timer);
       cancelled = true;
     };
   }, [userAddress, fetchKey]);

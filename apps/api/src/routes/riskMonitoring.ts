@@ -74,7 +74,6 @@ export const riskMonitoringRoutes = new Elysia({
     ({ query }: { query: { positionId: string } }) =>
       RiskMonitoringController.getRiskTransitions(query.positionId),
     {
-      query: transitionsQuerySchema,
       detail: {
         summary: 'Get risk transitions',
         description: 'Retrieve risk transitions for all positions or a specific position',

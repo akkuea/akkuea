@@ -13,10 +13,8 @@ import {
 } from "lucide-react";
 import type { Transaction } from "@real-estate-defi/shared";
 import { Badge } from "@/components/ui";
-import { formatCurrency } from "@/lib/utils";
-
-/** Stellar Expert explorer base URL (testnet) */
-const STELLAR_EXPERT_BASE = "https://stellar.expert/explorer/testnet/tx";
+import { formatCurrency, getExplorerUrl } from "@/lib/utils";
+import { useWallet } from "@/components/auth/hooks";
 
 /** Config for each transaction type — icon, colour, label */
 const TYPE_CONFIG: Record<
@@ -104,6 +102,7 @@ export interface TransactionRowProps {
  * timestamp, and a clickable hash linking to Stellar Expert.
  */
 export function TransactionRow({ transaction }: TransactionRowProps) {
+  const { network } = useWallet();
   const cfg = TYPE_CONFIG[transaction.type];
   const Icon = cfg.icon;
   const statusVariant = STATUS_VARIANT[transaction.status];
@@ -140,7 +139,7 @@ export function TransactionRow({ transaction }: TransactionRowProps) {
         {/* Hash → Stellar Expert link */}
         {transaction.hash ? (
           <a
-            href={`${STELLAR_EXPERT_BASE}/${transaction.hash}`}
+            href={getExplorerUrl(network, "tx", transaction.hash)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-[10px] text-[#ff3e00] hover:underline font-mono mt-0.5"

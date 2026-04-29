@@ -13,7 +13,8 @@
     "clean": "rm -rf dist",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "keywords": [
     "stellar",
@@ -31,6 +32,7 @@
     "eslint": "^9.39.2",
     "globals": "^17.0.0",
     "prettier": "^3.7.4",
+    "type-coverage": "^2.29.7",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.57.0"
   },

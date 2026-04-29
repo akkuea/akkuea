@@ -628,15 +628,13 @@ export class PropertyController {
               })
               .where(eq(shareOwnerships.id, existingOwnership.id))
               .returning()
-          : await tx
-              .insert(shareOwnerships)
-              .values({
-                propertyId: propertyId,
-                ownerId: buyer.id,
-                shares: data.shares,
-                purchasePrice: totalPurchasePrice,
-              })
-              .returning();
+          : (await tx.insert(shareOwnerships).values({
+              propertyId: propertyId,
+              ownerId: buyer.id,
+              shares: data.shares,
+              purchasePrice: totalPurchasePrice,
+            }),
+            [{ shares: data.shares }]);
 
         if (!ownership) {
           throw new Error('Failed to persist share ownership');

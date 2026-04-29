@@ -36,7 +36,12 @@ import {
   StatsSkeleton,
   PropertiesListSkeleton,
 } from "@/components/portfolio";
-import { formatCurrency, cn, truncateAddress } from "@/lib/utils";
+import {
+  formatCurrency,
+  cn,
+  truncateAddress,
+  getExplorerUrl,
+} from "@/lib/utils";
 import {
   pageTransition,
   staggerContainer,
@@ -45,7 +50,8 @@ import {
 } from "@/lib/animations";
 
 export default function DashboardPage() {
-  const { address, balance, isConnected, connect, isConnecting } = useWallet();
+  const { address, balance, isConnected, connect, isConnecting, network } =
+    useWallet();
   const [showBalance, setShowBalance] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -214,7 +220,7 @@ export default function DashboardPage() {
                       )}
                     </button>
                     <a
-                      href={`https://stellar.expert/explorer/public/account/${address}`}
+                      href={getExplorerUrl(network, "account", address || "")}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1.5 rounded-md hover:bg-[#1a1a1a] text-neutral-500 hover:text-white transition-colors"

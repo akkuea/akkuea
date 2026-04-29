@@ -1,7 +1,7 @@
 import type { Context } from 'elysia';
 import { ApiError } from '../errors/ApiError';
 import { lendingRepository } from '../repositories/LendingRepository';
-import { userRepository } from '../repositories/UserRepository';
+
 import { CreatePoolDto, DepositDto, WithdrawDto, BorrowDto, RepayDto } from '../dto/lending.dto';
 import { positionService } from '../services/PositionService';
 import { NotificationService } from '../services/NotificationService';
@@ -17,19 +17,8 @@ export class LendingController {
   private static async resolveAuthenticatedUser(
     ctx: Context,
   ): Promise<{ id: string; walletAddress?: string }> {
-    const userId = ctx.headers['x-user-id'];
-    if (userId) {
-      return { id: userId };
-    }
-
-    const walletAddress = ctx.headers['x-user-address'];
-    if (walletAddress) {
-      const user = await userRepository.getOrCreateByWallet(walletAddress);
-
-      return { id: user.id, walletAddress: user.walletAddress };
-    }
-
-    throw new ApiError(401, 'UNAUTHORIZED', 'Authentication required');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return await (ctx as any).getAuthenticatedUser();
   }
 
   /**
@@ -286,7 +275,9 @@ export class LendingController {
 
     const position = await lendingRepository.liquidate(poolId, borrowerId);
     if (!position) {
-      throw ApiError.notFound(`Borrow position for borrower ${borrowerId} in pool ${poolId} not found`);
+      throw ApiError.notFound(
+        `Borrow position for borrower ${borrowerId} in pool ${poolId} not found`,
+      );
     }
 
     await cacheService.invalidate(`${POOLS_CACHE_PREFIX}*`);

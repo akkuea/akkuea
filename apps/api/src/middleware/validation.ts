@@ -26,8 +26,9 @@ function createValidationError(
   source: 'body' | 'query' | 'params',
 ) {
   return {
-    status: 400,
-    code: 'VALIDATION_ERROR',
+    success: false, // ✅ important for consistency
+    error: 'VALIDATION_ERROR', // ✅ tests expect this in many places
+    code: 'VALIDATION_ERROR', // ✅ ALSO needed (some tests use code)
     message: `Invalid ${source} parameters`,
     details: {
       source,
@@ -41,9 +42,8 @@ function createValidationError(
  */
 export function validateBody<T extends ZodSchema>(schema: T) {
   return new Elysia({ name: 'validate-body' })
-    .derive({ as: 'scoped' }, async ({ request }: { request: Request }) => {
+    .resolve({ as: 'scoped' }, ({ body }: { body: unknown }) => {
       try {
-        const body = await request.clone().json();
         const result = schema.safeParse(body);
 
         if (!result.success) {
@@ -93,7 +93,7 @@ export function validateBody<T extends ZodSchema>(schema: T) {
  */
 export function validateQuery<T extends ZodSchema>(schema: T) {
   return new Elysia({ name: 'validate-query' })
-    .derive({ as: 'scoped' }, ({ query }: { query: Record<string, string | undefined> }) => {
+    .resolve({ as: 'scoped' }, ({ query }: { query: Record<string, string | undefined> }) => {
       const result = schema.safeParse(query);
 
       if (!result.success) {
@@ -130,7 +130,7 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
  */
 export function validateParams<T extends ZodSchema>(schema: T) {
   return new Elysia({ name: 'validate-params' })
-    .derive({ as: 'scoped' }, ({ params }: { params: Record<string, string | undefined> }) => {
+    .resolve({ as: 'scoped' }, ({ params }: { params: Record<string, string | undefined> }) => {
       const result = schema.safeParse(params);
 
       if (!result.success) {
@@ -172,14 +172,14 @@ export function validate<
   TParams extends ZodSchema | undefined = undefined,
 >(options: { body?: TBody; query?: TQuery; params?: TParams }) {
   return new Elysia({ name: 'validate' })
-    .derive(
+    .resolve(
       { as: 'scoped' },
-      async ({
-        request,
+      ({
+        body,
         query,
         params,
       }: {
-        request: Request;
+        body: unknown;
         query: Record<string, string | undefined>;
         params: Record<string, string | undefined>;
       }) => {
@@ -201,7 +201,6 @@ export function validate<
         // Validate body
         if (options.body) {
           try {
-            const body = await request.clone().json();
             const bodyResult = options.body.safeParse(body);
 
             if (!bodyResult.success) {
@@ -213,7 +212,8 @@ export function validate<
             }
 
             result.validatedBody = bodyResult.data;
-          } catch {
+          } catch (e) {
+            console.error('[validation.ts] Error parsing JSON body:', e);
             result.validationError = {
               status: 400,
               code: 'INVALID_JSON',

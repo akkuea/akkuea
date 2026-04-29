@@ -11,7 +11,13 @@ import {
 } from "lucide-react";
 import type { PropertyInfo } from "@real-estate-defi/shared";
 import { Badge, Button, Input, Modal } from "@/components/ui";
-import { formatCurrency, truncateAddress, cn } from "@/lib/utils";
+import {
+  formatCurrency,
+  truncateAddress,
+  cn,
+  getExplorerUrl,
+} from "@/lib/utils";
+import { useWallet } from "@/components/auth/hooks";
 import { propertyApi } from "@/services/api/properties";
 import { getPropertyImage, getPropertyTypeLabel } from "./marketplace.utils";
 
@@ -42,6 +48,7 @@ export function InvestModal({
   onConnectWallet,
   onInvestmentSuccess,
 }: InvestModalProps) {
+  const { network } = useWallet();
   const [tokens, setTokens] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<"usdc" | "fiat">("usdc");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,11 +60,15 @@ export function InvestModal({
       return;
     }
 
-    setTokens(1);
-    setPaymentMethod("usdc");
-    setIsSubmitting(false);
-    setError(null);
-    setTxHash(null);
+    const timer = setTimeout(() => {
+      setTokens(1);
+      setPaymentMethod("usdc");
+      setIsSubmitting(false);
+      setError(null);
+      setTxHash(null);
+    }, 0);
+
+    return () => clearTimeout(timer);
   }, [isOpen, property.id]);
 
   const maxTokens = property.availableShares;
@@ -123,7 +134,7 @@ export function InvestModal({
             </p>
           </div>
           <a
-            href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+            href={getExplorerUrl(network, "tx", txHash)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 text-xs font-mono text-[#ff3e00] hover:underline"

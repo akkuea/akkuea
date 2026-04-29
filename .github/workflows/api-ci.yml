@@ -47,20 +47,7 @@ jobs:
         
     - name: Install dependencies
       run: |
-
-        if bun install --frozen-lockfile; then
-          echo "Dependencies installed successfully with frozen lockfile"
-        else
-          echo "Frozen lockfile install failed, trying without frozen lockfile..."
-          bun install || {
-            echo "Installation failed. Debugging info:"
-            echo "=== Root package.json ==="
-            cat package.json
-            echo "=== bun version ==="
-            bun --version
-            exit 1
-          }
-        fi
+        bun install --frozen-lockfile
 
     - name: Type checking
       run: |
@@ -74,7 +61,7 @@ jobs:
     - name: Format checking with Prettier
       run: |
         cd apps/api
-        bun run format
+        bun run format:check
         
     - name: Build application
       run: |
@@ -110,8 +97,7 @@ jobs:
       
     - name: Install dependencies
       run: |
-
-        bun install
+        bun install --frozen-lockfile
 
     - name: Audit dependencies
       run: |
@@ -136,8 +122,7 @@ jobs:
       
     - name: Install dependencies
       run: |
-
-        bun install
+        bun install --frozen-lockfile
 
     - name: Complexity analysis
       run: |

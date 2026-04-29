@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { propertyApi } from "../properties";
 import { setupMockFetch, wrapFetchMock } from "./helpers";
-import type { PropertyInfo, ShareOwnership } from "@real-estate-defi/shared";
+import type { ShareOwnership } from "@real-estate-defi/shared";
 import {
   VALID_STELLAR_ADDRESS,
   VALID_UUID,

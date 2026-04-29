@@ -49,11 +49,8 @@ export class UserController {
    * Get current user profile (authenticated)
    */
   static async getProfile(ctx: Context): Promise<Response> {
-    const userId = ctx.headers['x-user-id'];
-
-    if (!userId) {
-      throw new ApiError(401, 'UNAUTHORIZED', 'Authentication required');
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { id: userId } = await (ctx as any).getAuthenticatedUser();
 
     const user = await userRepository.findById(userId);
 
@@ -121,11 +118,8 @@ export class UserController {
    * Update current user profile
    */
   static async updateProfile(ctx: Context): Promise<Response> {
-    const userId = ctx.headers['x-user-id'];
-
-    if (!userId) {
-      throw new ApiError(401, 'UNAUTHORIZED', 'Authentication required');
-    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { id: userId } = await (ctx as any).getAuthenticatedUser();
 
     const validationResult = UpdateUserDto.safeParse(ctx.body);
 

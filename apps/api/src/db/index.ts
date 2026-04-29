@@ -26,7 +26,7 @@ function getDb() {
   if (!dbInstance) {
     const connectionString = process.env.DATABASE_URL;
     if (!connectionString) {
-      throw new Error('DATABASE_URL environment variable is required');
+      return null;
     }
     client = postgres(connectionString, getPoolConfig());
     dbInstance = drizzle(client, { schema });
@@ -46,13 +46,24 @@ function getClient() {
   return client;
 }
 
-// Proxy that only initializes the database when accessed
-export const db = new Proxy({} as ReturnType<typeof drizzle<typeof schema>>, {
-  get(_, prop) {
+// Proxy that only initializes the database when accessed.
+// Supports test-time overrides: `(db as any).method = mockFn` stores the override
+// on the target object and is returned before touching the real DB connection.
+const _dbTarget: Record<string | symbol, unknown> = {};
+export const db = new Proxy(_dbTarget as unknown as ReturnType<typeof drizzle<typeof schema>>, {
+  get(_target, prop) {
+    if (Object.prototype.hasOwnProperty.call(_dbTarget, prop)) {
+      return _dbTarget[prop];
+    }
     const instance = getDb();
+    if (!instance) return undefined;
     const value = instance[prop as keyof typeof instance];
     // Bind functions to preserve 'this' context
     return typeof value === 'function' ? value.bind(instance) : value;
+  },
+  set(_target, prop, value) {
+    _dbTarget[prop] = value;
+    return true;
   },
 });
 

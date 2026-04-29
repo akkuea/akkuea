@@ -62,7 +62,7 @@ export function useProperties(
     }
   }, []);
 
-  const { connectionStatus, isPolling, data, refresh } = useLiveUpdates(
+  const { connectionStatus, isPolling, refresh } = useLiveUpdates(
     async () => {
       const response = await propertyApi.getAll({ limit: 100 });
       return response.data;
@@ -79,14 +79,11 @@ export function useProperties(
   );
 
   useEffect(() => {
-    void fetchProperties();
+    const timer = setTimeout(() => {
+      void fetchProperties();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchProperties]);
-
-  useEffect(() => {
-    if (data && data.length > 0) {
-      setProperties(data);
-    }
-  }, [data]);
 
   const refetch = useCallback(async () => {
     await fetchProperties();

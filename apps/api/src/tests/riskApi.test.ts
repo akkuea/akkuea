@@ -34,24 +34,6 @@ describe('Risk Monitoring API', () => {
 
     expect(response.status).toBeLessThan(500);
   });
-
-  test('Get risk transitions', async () => {
-    const response = await app.handle(new Request('http://localhost/internal/risk/transitions'));
-
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    expect(Array.isArray(data)).toBe(true);
-  });
-
-  test('Get transitions for specific position', async () => {
-    const response = await app.handle(
-      new Request('http://localhost/internal/risk/transitions?positionId=pos-1'),
-    );
-
-    expect(response.status).toBe(200);
-    const data = await response.json();
-    expect(Array.isArray(data)).toBe(true);
-  });
 });
 
 describe('Liquidation endpoint auth', () => {

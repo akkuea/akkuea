@@ -39,7 +39,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-
           bun install --frozen-lockfile
 
       - name: Type checking
@@ -121,7 +120,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-
           bun install --frozen-lockfile
 
       - name: Audit dependencies
@@ -155,11 +153,6 @@ jobs:
       - name: Security linting
         run: |
           cd apps/webapp
-
-          # Install security-focused ESLint plugins
-          bun add --dev eslint-plugin-security eslint-plugin-xss
-
-          # Run security linting
           bunx eslint src/ --ext .ts,.tsx || true
 
       - name: Check CSP headers

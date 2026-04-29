@@ -42,7 +42,24 @@ bun install
 bun install --workspaces
 ```
 
-### 3. Set Up Stellar CLI
+### 3. Configure Environment Variables
+
+Use the provided example files as your starting point:
+
+```bash
+# API variables
+cp apps/api/.env.example apps/api/.env.local
+
+# Webapp variables (local defaults included)
+cp apps/webapp/.env.local.example apps/webapp/.env.local
+```
+
+For production-like values and variable descriptions, see:
+
+- `apps/api/.env.example`
+- `apps/webapp/.env.example`
+
+### 4. Set Up Stellar CLI
 
 ```bash
 # Install Stellar CLI (if not already installed)
@@ -55,7 +72,7 @@ stellar keys generate --network testnet
 stellar keys address
 ```
 
-### 4. Start Development Environment
+### 5. Start Development Environment
 
 ```bash
 # Start all services
@@ -149,25 +166,10 @@ bun install:all
 
 ## Environment Variables
 
-Create a `.env.local` file in the root directory:
+Use workspace-specific environment files:
 
-```env
-# Stellar Configuration
-STELLAR_NETWORK=testnet
-STELLAR_RPC_URL=https://soroban-testnet.stellar.org
-STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
-
-# API Configuration
-API_PORT=3001
-API_HOST=localhost
-
-# Frontend Configuration
-NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_STELLAR_NETWORK=testnet
-
-# Optional: KYC Provider
-KYC_PROVIDER_API_KEY=your_api_key_here
-KYC_WEBHOOK_SECRET=your_webhook_secret
-```
+- API: copy `apps/api/.env.example` to `apps/api/.env.local`
+- Webapp local development: copy `apps/webapp/.env.local.example` to `apps/webapp/.env.local`
+- Webapp variable reference: `apps/webapp/.env.example`
 
 Congratulations! You're now ready to start developing with the Real Estate DeFi Platform. 🎉

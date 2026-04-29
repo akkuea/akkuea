@@ -1,6 +1,6 @@
-import { Elysia } from 'elysia';
+import { Elysia, type Context } from 'elysia';
 import { z } from 'zod';
-import { validate, uuidParamSchema, rateLimit } from '../middleware';
+import { validate, uuidParamSchema, rateLimit, authPlugin } from '../middleware';
 import { UserController } from '../controllers/UserController';
 
 const walletParamSchema = z.object({
@@ -94,4 +94,13 @@ export const userRoutes = new Elysia({ prefix: '/users', tags: ['Users'] })
       summary: 'Authenticate or create user by wallet',
     },
     beforeHandle: [rateLimit()],
-  });
+  })
+
+  // Protected Routes
+  .use(authPlugin)
+  // GET /users/me - Get current user profile
+  .get('/me', async (ctx: Context) => UserController.getProfile(ctx))
+
+  // PATCH /users/me - Update current user profile
+  .use(validate({ body: updateUserSchema }))
+  .patch('/me', async (ctx) => UserController.updateProfile(ctx));

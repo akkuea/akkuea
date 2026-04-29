@@ -117,7 +117,10 @@ export function PropertyOperationsWorkspace({
   }, [operatorWallet, queue, page, limit]);
 
   useEffect(() => {
-    void loadList();
+    const timer = setTimeout(() => {
+      void loadList();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadList]);
 
   const loadDetail = useCallback(
@@ -140,11 +143,14 @@ export function PropertyOperationsWorkspace({
   );
 
   useEffect(() => {
-    if (selectedId) {
-      void loadDetail(selectedId);
-    } else {
-      setDetail(null);
-    }
+    const timer = setTimeout(() => {
+      if (selectedId) {
+        void loadDetail(selectedId);
+      } else {
+        setDetail(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [selectedId, loadDetail]);
 
   const onConfirmAction = async () => {

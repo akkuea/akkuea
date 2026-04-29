@@ -155,14 +155,17 @@ stellar contract invoke \
 
 ### 1. Environment Variables
 
-Update your environment files with contract IDs:
+After running `stellar contract deploy`, the CLI prints the contract ID (`C…`, 56 characters).
+Copy each address and add it to your `.env.local`:
 
 ```bash
-# .env.local
-REAL_ESTATE_TOKEN_CONTRACT_ID=your_contract_id_here
-DEFI_LENDING_CONTRACT_ID=your_lending_contract_id_here
+NEXT_PUBLIC_CONTRACT_REAL_ESTATE_TOKEN_TESTNET=<paste C... address here>
+NEXT_PUBLIC_CONTRACT_DEFI_LENDING_TESTNET=<paste C... address here>
 STELLAR_NETWORK=testnet
 ```
+
+Then record both addresses and their transaction hashes in the
+**Deployment History** table at the bottom of this file.
 
 ### 2. Frontend Configuration
 
@@ -320,11 +323,12 @@ stellar transaction --id $TRANSACTION_ID --network testnet
 ## Best Practices
 
 1. **Test thoroughly** on testnet before mainnet deployment
-2. **Use environment variables** for contract IDs
+2. **Use environment variables** for contract IDs — never hardcode them in source files
 3. **Implement proper error handling** in frontend integration
 4. **Monitor contract usage** and performance
 5. **Keep backup** of deployment scripts and configurations
 6. **Document any custom contract modifications**
+7. **Record every deployment** in the Deployment History table below
 
 ## Security Considerations
 
@@ -333,5 +337,30 @@ stellar transaction --id $TRANSACTION_ID --network testnet
 - **Regular audits** of contract code
 - **Monitor for suspicious activity**
 - **Keep admin keys secure** and use hardware wallets
+
+---
+
+## Deployment History
+
+Fill in this table immediately after each `stellar contract deploy` run.
+Contract IDs are 56-character base32 strings beginning with `C`, printed
+directly by the CLI. Transaction hashes are 64-character hex strings — find
+them by searching the contract ID on
+[Stellar Expert (Testnet)](https://stellar.expert/explorer/testnet) and
+copying the hash from the originating transaction.
+
+### Testnet
+
+| Date | Contract | Contract ID | Transaction hash | Deployer |
+|---|---|---|---|---|
+| <!-- YYYY-MM-DD --> | `real_estate_token` | <!-- C… 56-char address from CLI --> | <!-- 64-char hex from Stellar Expert --> | <!-- G… deployer public key --> |
+| <!-- YYYY-MM-DD --> | `defi_lending` | <!-- C… 56-char address from CLI --> | <!-- 64-char hex from Stellar Expert --> | <!-- G… deployer public key --> |
+
+### Mainnet
+
+| Date | Contract | Contract ID | Transaction hash | Deployer |
+|---|---|---|---|---|
+| — | `real_estate_token` | *(not yet deployed)* | — | — |
+| — | `defi_lending` | *(not yet deployed)* | — | — |
 
 This deployment process ensures your smart contracts are properly deployed and integrated with the entire Real Estate DeFi Platform.

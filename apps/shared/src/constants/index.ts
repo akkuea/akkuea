@@ -1,5 +1,4 @@
 // Removed unused imports
-
 export const STELLAR_NETWORKS = {
   MAINNET: "public",
   TESTNET: "testnet",
@@ -9,14 +8,48 @@ export const STELLAR_NETWORKS = {
 
 export const CONTRACT_IDS = {
   REAL_ESTATE_TOKEN: {
-    TESTNET: "",
-    MAINNET: "",
+    TESTNET: process.env.NEXT_PUBLIC_CONTRACT_REAL_ESTATE_TOKEN_TESTNET ?? "",
+    MAINNET: process.env.NEXT_PUBLIC_CONTRACT_REAL_ESTATE_TOKEN_MAINNET ?? "",
   },
   DEFI_LENDING: {
-    TESTNET: "",
-    MAINNET: "",
+    TESTNET: process.env.NEXT_PUBLIC_CONTRACT_DEFI_LENDING_TESTNET ?? "",
+    MAINNET: process.env.NEXT_PUBLIC_CONTRACT_DEFI_LENDING_MAINNET ?? "",
   },
 } as const;
+
+/**
+ * Retrieve a contract ID for the given contract and network.
+ * Throws a descriptive error if the environment variable is not set,
+ * so callers get an actionable message instead of a silent empty-string
+ * failure at the RPC call site.
+ *
+ * @example
+ *   const id = getContractId('REAL_ESTATE_TOKEN', 'TESTNET');
+ */
+export function getContractId(
+  contract: keyof typeof CONTRACT_IDS,
+  network: keyof (typeof CONTRACT_IDS)[typeof contract],
+): string {
+  const id = CONTRACT_IDS[contract][network];
+  if (!id) {
+    const varNames: Record<string, Record<string, string>> = {
+      REAL_ESTATE_TOKEN: {
+        TESTNET: "NEXT_PUBLIC_CONTRACT_REAL_ESTATE_TOKEN_TESTNET",
+        MAINNET: "NEXT_PUBLIC_CONTRACT_REAL_ESTATE_TOKEN_MAINNET",
+      },
+      DEFI_LENDING: {
+        TESTNET: "NEXT_PUBLIC_CONTRACT_DEFI_LENDING_TESTNET",
+        MAINNET: "NEXT_PUBLIC_CONTRACT_DEFI_LENDING_MAINNET",
+      },
+    };
+    throw new Error(
+      `${varNames[contract][network]} is not set. ` +
+        `Deploy the contract and add the resulting C… address to your ` +
+        `.env.local — see docs/contracts/deployment.md.`,
+    );
+  }
+  return id;
+}
 
 export const ASSETS = {
   XLM: {

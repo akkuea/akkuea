@@ -1,3 +1,4 @@
+# Updated .github/workflows/contracts-ci.yml
 name: Smart Contracts CI/CD
 
 on:
@@ -18,7 +19,7 @@ env:
 jobs:
   build-and-test:
     name: Build and Test Contracts
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
@@ -33,15 +34,6 @@ jobs:
       - name: Install WASM target
         run: rustup target add wasm32v1-none
         
-      - name: Install Stellar CLI
-        run: |
-          if ! command -v brew &> /dev/null; then
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> $GITHUB_ENV
-          fi
-          brew install stellar-cli
-          stellar --version
-          
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -69,7 +61,7 @@ jobs:
           ls -la target/wasm32v1-none/release/
           for file in target/wasm32v1-none/release/*.wasm; do
             if [ -f "$file" ]; then
-              size=$(stat -f%z "$file")
+              size=$(stat -c%s "$file")
               echo "Contract size: $size bytes"
               if [ $size -gt 1048576 ]; then
                 echo "Error: Contract size exceeds 1MB limit"
@@ -92,7 +84,7 @@ jobs:
 
   security-audit:
     name: Security Audit
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
@@ -101,11 +93,10 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-
-      - name: Install cargo-deny
-        run: cargo install --locked cargo-deny
+      - name: Install security tools
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit,cargo-deny
         
       - name: Cache cargo registry
         uses: actions/cache@v4
@@ -132,7 +123,7 @@ jobs:
 
   code-coverage:
     name: Code Coverage
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout repository
@@ -144,7 +135,9 @@ jobs:
           components: llvm-tools-preview
           
       - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
         
       - name: Cache cargo registry
         uses: actions/cache@v4

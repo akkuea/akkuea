@@ -8,7 +8,7 @@ import {
   Transaction,
   TransactionBuilder,
   xdr,
-} from 'stellar-sdk';
+} from '@stellar/stellar-sdk';
 import { ApiError } from '../errors/ApiError';
 
 export interface MintSharesParams {

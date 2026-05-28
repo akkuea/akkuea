@@ -32,8 +32,7 @@
     "install": "^0.13.0",
     "ioredis": "^5.4.2",
     "postgres": "^3.4.8",
-    "soroban-client": "^1.0.1",
-    "stellar-sdk": "^13.3.0",
+    "@stellar/stellar-sdk": "^13.3.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

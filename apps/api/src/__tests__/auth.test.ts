@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, afterEach } from 'bun:test';
 import { Elysia } from 'elysia';
 import { authRoutes } from '../routes/auth';
-import { Keypair } from 'stellar-sdk';
+import { Keypair } from '@stellar/stellar-sdk';
 import { jwt } from '@elysiajs/jwt';
 import { spyOn } from 'bun:test';
 import { userRepository } from '../repositories/UserRepository';

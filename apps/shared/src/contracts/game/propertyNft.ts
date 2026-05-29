@@ -1,46 +1,28 @@
-// Generated from WASM using Stellar SDK
-// Contract: PropertyNFT
-// DO NOT EDIT - Regenerate using /tmp/generate_clients.js if contract changes
-
-import { Buffer } from "buffer";
-import { Address } from "@stellar/stellar-sdk";
+// Generated from WASM using Stellar SDK — contract: game-property-nft
+// Post-processing: renamed Client → PropertyNftClient to avoid barrel-export collisions.
+// The ContractSpec XDR was extracted from the compiled WASM artifact via
+// WebAssembly.Module.customSections(module, "contractspecv0").
+// Declaration merging (interface + class) is the standard Stellar SDK pattern for
+// typed contract clients; the interface provides method types, the class provides
+// the runtime implementation injected by ContractClient's constructor.
 import { Client as ContractClient, Spec as ContractSpec } from "@stellar/stellar-sdk/contract";
-import type { AssembledTransaction, ClientOptions as ContractClientOptions, MethodOptions, Result } from "@stellar/stellar-sdk/contract";
 import type {
-  u32,
-  i32,
-  u64,
-  i64,
-  u128,
-  i128,
-  u256,
-  i256,
-  Option,
-  Duration,
+    AssembledTransaction,
+    ClientOptions as ContractClientOptions,
+    MethodOptions,
 } from "@stellar/stellar-sdk/contract";
 
-
-
-
+/* eslint-disable @typescript-eslint/no-unsafe-declaration-merging */
 export interface PropertyNftClient {
+    init: (options?: MethodOptions) => Promise<AssembledTransaction<null>>;
 }
-export class PropertyNftClient extends ContractClient {
-  static async deploy<T = PropertyNftClient>(
-    args: Record<string, any> | null,
-    deployOptions: MethodOptions &
-      Omit<ContractClientOptions, "contractId"> & {
-        wasmHash: Buffer | string;
-        salt?: Buffer | Uint8Array;
-        format?: "hex" | "base64";
-      }
-  ): Promise<AssembledTransaction<T>> {
-    return ContractClient.deploy(args, deployOptions);
-  }
 
-  constructor(override readonly options: ContractClientOptions) {
-    super(
-      new ContractSpec([]),
-      options
-    );
-  }
+export class PropertyNftClient extends ContractClient {
+    constructor(options: ContractClientOptions) {
+        super(
+            new ContractSpec(["AAAAAAAAAAAAAAAEaW5pdAAAAAAAAAAA"]),
+            options
+        );
+    }
 }
+/* eslint-enable @typescript-eslint/no-unsafe-declaration-merging */

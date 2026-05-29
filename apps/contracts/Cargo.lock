@@ -8,7 +8,7 @@ version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a15f179cd60c4584b8a8c596927aadc462e27f2ca70c04e0071964a73ba7a75"
 dependencies = [
- "cfg-if",
+ "cfg-if 1.0.4",
  "once_cell",
  "version_check",
  "zerocopy",
@@ -230,6 +230,12 @@ dependencies = [
 
 [[package]]
 name = "cfg-if"
+version = "0.1.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4785bdd1c96b2a846b2bd7cc02e86b6b3dbf14e7e53446c4f54c92a361040822"
+
+[[package]]
+name = "cfg-if"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
@@ -268,6 +274,16 @@ name = "core-foundation-sys"
 version = "0.8.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "773648b94d0e5d620f64f280777445740e61fe701025087ec8b57f45c791888b"
+
+[[package]]
+name = "cougr-core"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee5f72b6d594ecb5ea5d42340cced45bbf8e13bf1506e48209eab64a4d7a931d"
+dependencies = [
+ "soroban-sdk",
+ "wee_alloc",
+]
 
 [[package]]
 name = "cpufeatures"
@@ -333,7 +349,7 @@ version = "4.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fb8b7c4503de7d6ae7b42ab72a5a59857b4c937ec27a3d4539dba95b5ab2be"
 dependencies = [
- "cfg-if",
+ "cfg-if 1.0.4",
  "cpufeatures",
  "curve25519-dalek-derive",
  "digest",
@@ -620,6 +636,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
+name = "game-marketplace"
+version = "0.0.0"
+dependencies = [
+ "cougr-core",
+ "soroban-sdk",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -636,7 +660,7 @@ version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff2abc00be7fca6ebc474524697ae276ad847ad0a6b3faa4bcb027e9a4614ad0"
 dependencies = [
- "cfg-if",
+ "cfg-if 1.0.4",
  "js-sys",
  "libc",
  "wasi",
@@ -814,7 +838,7 @@ version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f6e3919bbaa2945715f0bb6d3934a173d1e9a59ac23767fbaaef277265a7411b"
 dependencies = [
- "cfg-if",
+ "cfg-if 1.0.4",
  "ecdsa",
  "elliptic-curve",
  "sha2",
@@ -863,6 +887,12 @@ name = "memchr"
 version = "2.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8ca58f447f06ed17d5fc4043ce1b10dd205e060fb3ce5b979b8ed8e59ff3f79"
+
+[[package]]
+name = "memory_units"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
 
 [[package]]
 name = "num-bigint"
@@ -1223,7 +1253,7 @@ version = "0.10.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
 dependencies = [
- "cfg-if",
+ "cfg-if 1.0.4",
  "cpufeatures",
  "digest",
 ]
@@ -1647,7 +1677,7 @@ version = "0.2.111"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec1adf1535672f5b7824f817792b1afd731d7e843d2d04ec8f27e8cb51edd8ac"
 dependencies = [
- "cfg-if",
+ "cfg-if 1.0.4",
  "once_cell",
  "rustversion",
  "wasm-bindgen-macro",
@@ -1722,6 +1752,40 @@ checksum = "d5a015fe95f3504a94bb1462c717aae75253e39b9dd6c3fb1062c934535c64aa"
 dependencies = [
  "indexmap-nostd",
 ]
+
+[[package]]
+name = "wee_alloc"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dbb3b5a6b2bb17cb6ad44a2e68a43e8d2722c997da10e928665c72ec6c0a0b8e"
+dependencies = [
+ "cfg-if 0.1.10",
+ "libc",
+ "memory_units",
+ "winapi",
+]
+
+[[package]]
+name = "winapi"
+version = "0.3.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c839a674fcd7a98952e593242ea400abe93992746761e38641405d28b00f419"
+dependencies = [
+ "winapi-i686-pc-windows-gnu",
+ "winapi-x86_64-pc-windows-gnu",
+]
+
+[[package]]
+name = "winapi-i686-pc-windows-gnu"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
+
+[[package]]
+name = "winapi-x86_64-pc-windows-gnu"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "windows-core"

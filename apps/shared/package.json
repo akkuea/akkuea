@@ -38,6 +38,7 @@
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^13.3.0",
+    "quasar": "^2.19.3",
     "zod": "^3.25.76"
   },
   "resolutions": {

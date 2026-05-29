@@ -62,12 +62,10 @@ jobs:
           cd apps/webapp
           bun run build
 
-      # - name: Run unit tests
-      #   run: |
-      #     cd apps/webapp
-
-      #     # Run tests with coverage
-      #     bun test --coverage --watchAll=false
+      - name: Run unit tests
+        run: |
+          cd apps/webapp
+          bun test --coverage
 
       # - name: E2E tests
       #   run: |

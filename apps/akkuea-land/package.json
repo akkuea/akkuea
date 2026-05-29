@@ -14,7 +14,7 @@
     "next": "16.1.7",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "stellar-sdk": "^13.3.0",
+    "@stellar/stellar-sdk": "^13.3.0",
     "@akkuea/shared": "workspace:*",
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",

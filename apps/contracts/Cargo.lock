@@ -620,6 +620,35 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
+name = "game-engine"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "game-land-token"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+ "soroban-token-sdk",
+]
+
+[[package]]
+name = "game-marketplace"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "game-property-nft"
+version = "0.0.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1438,6 +1467,15 @@ dependencies = [
  "stellar-xdr",
  "syn 2.0.117",
  "thiserror",
+]
+
+[[package]]
+name = "soroban-token-sdk"
+version = "25.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7257d888e42da01d031cfc388d4c9c10e4e13388a4e04deabf812fa7d33f0af3"
+dependencies = [
+ "soroban-sdk",
 ]
 
 [[package]]

@@ -1,0 +1,70 @@
+{
+  "network": "testnet",
+  "deployment_date": "2026-05-27",
+  "cycle": 5,
+  "contracts": {
+    "game_land_token": {
+      "name": "GameLandToken",
+      "description": "SEP-41 fungible token for in-game currency",
+      "contract_id": "CA4HN74IK476XF2WBUMIELDNU4XXGW27L7Q3ADZPP67YS5HGHIATN4V6",
+      "deployment_tx_hash": "002cbdf7dd92b29cacf199e97f97c244ef23e4b410be96903da8d698d4647b2f",
+      "verified": true,
+      "verification_method": "balance_of call",
+      "dependencies": []
+    },
+    "game_property_nft": {
+      "name": "GamePropertyNFT",
+      "description": "ECS-based NFT contract for property ownership (400 properties in 20x20 grid)",
+      "contract_id": "CBUX5WAEFMMHMOYURWB5TEG6H2XDOVEOT6AGZD5SRQETPKJ4FMCI4X4S",
+      "deployment_tx_hash": "adeac139a4f3e5c79ec59f9cbd74634b6e715b85b8d40d249bdb9cc68376af8f",
+      "verified": false,
+      "verification_method": "get_owner call",
+      "dependencies": []
+    },
+    "game_marketplace": {
+      "name": "GameMarketplace",
+      "description": "P2P property trading with atomic LAND ↔ NFT swaps",
+      "contract_id": "CDTZGXF5YIG4FJBXVOU3LSZJ6HVSWNSGKL2F5MTBQYB4GB23YJO6ODUE",
+      "deployment_tx_hash": "e82f7f63ccd4f5a18a28eb59c37ca7913c32576f5c4d3f79ed462e9b936ca842",
+      "verified": false,
+      "verification_method": "get_listing call",
+      "dependencies": ["game_land_token", "game_property_nft"]
+    },
+    "game_engine": {
+      "name": "GameEngine",
+      "description": "Core game rules: building improvements, rental income calculation, property purchases",
+      "contract_id": "CBGOTNTNNFKXISD6UHNTHKCSYTUC5FL5SRB2ARXDCCL2FV5LN2LUH5U7",
+      "deployment_tx_hash": "c177b241e416ee2bbf0bf3f779e9e17196a104fea245b2c8ea57be5e777d50da",
+      "verified": false,
+      "verification_method": "get_accrued_income call",
+      "dependencies": [
+        "game_land_token",
+        "game_property_nft",
+        "game_marketplace"
+      ]
+    }
+  },
+  "deployment_info": {
+    "admin_account": "to_be_filled_from_env",
+    "treasury_account": "to_be_filled_from_env",
+    "network_passphrase": "Test SDF Network ; September 2015",
+    "initialization_args": {
+      "game_land_token": {
+        "admin": "treasury_account"
+      },
+      "game_property_nft": {
+        "treasury": "treasury_account",
+        "game_engine": "engine_contract_id"
+      },
+      "game_marketplace": {
+        "token_contract": "token_contract_id",
+        "nft_contract": "nft_contract_id"
+      },
+      "game_engine": {
+        "treasury": "treasury_account",
+        "token_contract": "token_contract_id",
+        "nft_contract": "nft_contract_id"
+      }
+    }
+  }
+}

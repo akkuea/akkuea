@@ -72,6 +72,7 @@ feature-depth = 1
 ignore = [
     { id = "RUSTSEC-2024-0388", reason = "derivative is a transitive dependency via arkworks - waiting for upstream fix" },
     { id = "RUSTSEC-2024-0436", reason = "paste is a transitive dependency via arkworks - waiting for upstream fix" },
+    { id = "RUSTSEC-2022-0054", reason = "transitive dependency via cougr-core; tracked upstream, no maintained replacement in this stack yet" },
 ]
 # If this is true, then cargo deny will use the git executable to fetch advisory database.
 # If this is false, then it uses a built-in git library.
@@ -108,6 +109,8 @@ exceptions = [
     # Each entry is the crate and version constraint, and its specific allow
     # list
     #{ allow = ["Zlib"], crate = "adler32" },
+    { allow = ["MPL-2.0"], crate = "wee_alloc" },
+    { allow = ["MPL-2.0"], crate = "memory_units" },
 ]
 
 # Some crates don't have (easily) machine readable licensing information,

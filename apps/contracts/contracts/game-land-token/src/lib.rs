@@ -1,5 +1,6 @@
 #![no_std]
 
+
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Symbol};
 
 /// GameLandToken - SEP-41 Fungible Token for Akkuea Land
@@ -194,11 +195,13 @@ impl GameLandTokenContract {
 
         true
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use soroban_sdk::testutils::Address as TestAddress;
 
     #[test]
@@ -242,5 +245,6 @@ mod tests {
 
         // Second claim fails
         assert!(!contract.faucet(env.clone(), user));
+
     }
 }

@@ -1,0 +1,54 @@
+name: WebApp – Preview CI Checks
+
+# Runs quality checks on pull requests targeting develop.
+# Vercel preview deployments are handled automatically by the Vercel GitHub
+# integration — no CLI steps needed here.
+
+on:
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - "apps/webapp/**"
+      - ".github/workflows/vercel-preview.yml"
+
+concurrency:
+  group: vercel-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  quality-checks:
+    name: Type-check, Lint & Format
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Cache Bun install
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Type checking
+        working-directory: apps/webapp
+        run: bun run type-check
+
+      - name: ESLint
+        working-directory: apps/webapp
+        run: bun run lint
+
+      - name: Prettier format check
+        working-directory: apps/webapp
+        run: bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"

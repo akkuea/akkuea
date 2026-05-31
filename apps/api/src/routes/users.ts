@@ -31,23 +31,19 @@ const authWalletSchema = z.object({
 export const userRoutes = new Elysia({ prefix: '/users' })
   // POST /users - Create user
   .use(validate({ body: createUserSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/', async (ctx: any) => UserController.create(ctx))
+  .post('/', async (ctx) => UserController.create(ctx))
 
   // GET /users/:id - Get user by ID
   .use(validate({ params: uuidParamSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/:id', async (ctx: any) => UserController.getById(ctx))
+  .get('/:id', async (ctx) => UserController.getById(ctx))
 
   // GET /users/wallet/:address - Get user by wallet address
   .use(validate({ params: walletParamSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/wallet/:address', async (ctx: any) => UserController.getByWallet(ctx))
+  .get('/wallet/:address', async (ctx) => UserController.getByWallet(ctx))
 
   // POST /users/auth - Authenticate by wallet (get or create)
   .use(validate({ body: authWalletSchema }))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/auth', async (ctx: any) => UserController.authenticateByWallet(ctx), {
+  .post('/auth', async (ctx) => UserController.authenticateByWallet(ctx), {
     beforeHandle: [rateLimit()],
   })
 

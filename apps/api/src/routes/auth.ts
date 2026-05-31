@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { z } from 'zod';
+import { jwt } from '@elysiajs/jwt';
 import { validate, rateLimit } from '../middleware';
 import { AuthController } from '../controllers/AuthController';
 
@@ -18,7 +19,10 @@ const sessionSchema = z.object({
   signature: z.string().min(1),
 });
 
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';
+
 export const authRoutes = new Elysia({ prefix: '/auth' })
+  .use(jwt({ name: 'jwt', secret: JWT_SECRET }))
   // POST /auth/challenge - Get a nonce to sign
   .use(validate({ body: challengeSchema }))
   .post('/challenge', async (ctx) => AuthController.getChallenge(ctx), {

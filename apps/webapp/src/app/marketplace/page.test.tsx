@@ -126,6 +126,20 @@ mock.module("@/components/auth/hooks", () => ({
   }),
 }));
 
+const liveUpdatesModule = await import("@/hooks/useLiveUpdates");
+
+mock.module("@/hooks/useLiveUpdates", () => ({
+  getTimeSinceUpdate: liveUpdatesModule.getTimeSinceUpdate,
+  useLiveUpdates: () => ({
+    connectionStatus: "disconnected" as const,
+    lastUpdatedAt: null,
+    isPolling: false,
+    data: null,
+    refresh: () => {},
+    reconnect: () => {},
+  }),
+}));
+
 const { default: MarketplacePage } = await import("./page");
 
 const property: PropertyInfo = {
@@ -156,6 +170,12 @@ describe("MarketplacePage", () => {
     propertyApi.getAll = mockGetAll;
     propertyApi.buyShares = mockBuyShares;
     mockGetAll.mockClear();
+    mockGetAll.mockImplementation(() =>
+      Promise.resolve({
+        data: [property],
+        pagination: { page: 1, limit: 100, total: 1, totalPages: 1 },
+      }),
+    );
     mockBuyShares.mockClear();
     connectMock.mockClear();
   });
@@ -179,6 +199,8 @@ describe("MarketplacePage", () => {
     expect(view.getAllByLabelText(/Loading property/i).length).toBeGreaterThan(
       0,
     );
+
+    await waitFor(() => expect(mockGetAll).toHaveBeenCalled());
 
     await act(async () => {
       resolveRequest?.({

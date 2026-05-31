@@ -1,5 +1,5 @@
-import type { Context } from 'elysia';
 import type { User, Transaction, PropertyInfo } from '@real-estate-defi/shared';
+import type { AuthContext } from '../middleware/auth';
 import { userRepository } from '../repositories/UserRepository';
 import { ApiError } from '../errors/ApiError';
 import { CreateUserDto, UpdateUserDto } from '../dto/user.dto';
@@ -19,7 +19,7 @@ export class UserController {
   /**
    * Create new user
    */
-  static async create(ctx: Context): Promise<Response> {
+  static async create(ctx: { body: unknown }): Promise<Response> {
     const validationResult = CreateUserDto.safeParse(ctx.body);
 
     if (!validationResult.success) {
@@ -48,9 +48,8 @@ export class UserController {
   /**
    * Get current user profile (authenticated)
    */
-  static async getProfile(ctx: Context): Promise<Response> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { id: userId } = await (ctx as any).getAuthenticatedUser();
+  static async getProfile(ctx: AuthContext): Promise<Response> {
+    const { id: userId } = await ctx.getAuthenticatedUser();
 
     const user = await userRepository.findById(userId);
 
@@ -64,7 +63,7 @@ export class UserController {
   /**
    * Get user by ID
    */
-  static async getById(ctx: Context<{ params: { id: string } }>): Promise<Response> {
+  static async getById(ctx: { params: { id: string } }): Promise<Response> {
     const { id } = ctx.params;
 
     const user = await userRepository.findById(id);
@@ -88,7 +87,7 @@ export class UserController {
   /**
    * Get user by wallet address
    */
-  static async getByWallet(ctx: Context<{ params: { address: string } }>): Promise<Response> {
+  static async getByWallet(ctx: { params: { address: string } }): Promise<Response> {
     const { address } = ctx.params;
 
     // Validate wallet address format
@@ -117,9 +116,8 @@ export class UserController {
   /**
    * Update current user profile
    */
-  static async updateProfile(ctx: Context): Promise<Response> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { id: userId } = await (ctx as any).getAuthenticatedUser();
+  static async updateProfile(ctx: AuthContext & { body: unknown }): Promise<Response> {
+    const { id: userId } = await ctx.getAuthenticatedUser();
 
     const validationResult = UpdateUserDto.safeParse(ctx.body);
 
@@ -141,7 +139,7 @@ export class UserController {
   /**
    * Authenticate user by wallet (get or create)
    */
-  static async authenticateByWallet(ctx: Context): Promise<Response> {
+  static async authenticateByWallet(ctx: { body: unknown }): Promise<Response> {
     const { walletAddress } = ctx.body as { walletAddress?: string };
 
     if (!walletAddress || !/^G[A-Z2-7]{55}$/.test(walletAddress)) {

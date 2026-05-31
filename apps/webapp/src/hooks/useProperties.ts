@@ -56,7 +56,6 @@ export function useProperties(
       return response.data;
     } catch (fetchError) {
       setError(getErrorMessage(fetchError));
-      throw fetchError;
     } finally {
       setIsLoading(false);
     }

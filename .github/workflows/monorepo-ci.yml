@@ -244,32 +244,25 @@ jobs:
     - name: Integration tests
       run: |
         cd .
-        
+
         echo "Running cross-workspace integration tests..."
-        
-        # Install all dependencies
-        bun install
-        bun install --workspaces
-        
+
         # Build shared library first
         cd apps/shared
         bun install
         bun run build
         cd ../..
-        
+
         # Test API imports from shared
         cd apps/api
         bun install
         echo "Testing API imports..."
         bun -e "const shared = await import('../shared/dist/index.js'); console.log('✅ API can import shared library'); const { ValidationService } = shared; console.log('✅ ValidationService available:', typeof ValidationService);"
         cd ../..
-        
-        # Test webapp imports from shared
-        cd apps/webapp
-        bun install
+
+        # Test webapp imports from shared (no webapp install needed; only shared dist is required)
         echo "Testing WebApp imports..."
-        bun -e "const shared = await import('../shared/dist/index.js'); console.log('✅ WebApp can import shared library');"
-        cd ../..
+        bun -e "const shared = await import('./apps/shared/dist/index.js'); console.log('✅ WebApp can import shared library');"
         
     - name: Type compatibility test
       run: |
@@ -309,7 +302,7 @@ jobs:
         
         # Check for unsafe eval usage
         echo "3. Checking for unsafe eval usage..."
-        if grep -r "eval\|Function(" apps/ --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist | grep -v "//.*eval\|//.*Function("; then
+        if grep -r "eval\|Function(" apps/ --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.next | grep -v "//.*eval\|//.*Function("; then
           echo "Warning: Unsafe eval usage found"
           exit 1
         fi

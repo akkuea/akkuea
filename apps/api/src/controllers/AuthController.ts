@@ -1,4 +1,3 @@
-import type { Context } from 'elysia';
 import { Keypair } from 'stellar-sdk';
 import { ApiError } from '../errors/ApiError';
 import { userRepository } from '../repositories/UserRepository';
@@ -9,6 +8,26 @@ import { userRepository } from '../repositories/UserRepository';
 export const challengeStore = new Map<string, { nonce: string; expiresAt: number }>();
 
 const CHALLENGE_EXPIRATION_MS = 1000 * 60 * 5; // 5 minutes
+
+/**
+ * Minimal shape of the jwt property added to context by @elysiajs/jwt.
+ * Only the members actually used by AuthController are declared.
+ */
+type JwtPlugin = {
+  sign: (payload: Record<string, string | number>) => Promise<string>;
+  verify: (token: string) => Promise<false | Record<string, unknown>>;
+};
+
+/** Minimal context shape consumed by getChallenge. */
+type ChallengeContext = {
+  body: unknown;
+};
+
+/** Minimal context shape consumed by verifySession. */
+type SessionContext = {
+  body: unknown;
+  jwt: JwtPlugin;
+};
 
 export class AuthController {
   /**
@@ -24,7 +43,7 @@ export class AuthController {
   /**
    * Generate a challenge for a given Stellar address
    */
-  static async getChallenge(ctx: Context): Promise<Response> {
+  static async getChallenge(ctx: ChallengeContext): Promise<Response> {
     const { stellarAddress } = ctx.body as { stellarAddress: string };
 
     if (!stellarAddress || !/^G[A-Z2-7]{55}$/.test(stellarAddress)) {
@@ -43,12 +62,10 @@ export class AuthController {
   /**
    * Verify session signature and issue JWT
    */
-  static async verifySession(ctx: Context): Promise<Response> {
+  static async verifySession(ctx: SessionContext): Promise<Response> {
     const { stellarAddress, signature } = ctx.body as { stellarAddress: string; signature: string };
 
-    // Using any for the jwt method provided by the @elysiajs/jwt plugin
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const jwt = (ctx as any).jwt;
+    const jwt = ctx.jwt;
 
     if (!stellarAddress || !/^G[A-Z2-7]{55}$/.test(stellarAddress)) {
       throw new ApiError(400, 'INVALID_ADDRESS', 'Invalid Stellar address format');

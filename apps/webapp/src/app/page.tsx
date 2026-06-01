@@ -9,6 +9,7 @@ import {
   HowItWorks,
   CTA,
 } from "@/components/landing";
+import { ErrorBoundary } from "@/components/ui";
 import { pageTransition } from "@/lib/animations";
 
 export default function Home() {
@@ -22,11 +23,13 @@ export default function Home() {
     >
       <Navbar />
       <main>
-        <Hero />
-        <AnimatedStats />
-        <Features />
-        <HowItWorks />
-        <CTA />
+        <ErrorBoundary>
+          <Hero />
+          <AnimatedStats />
+          <Features />
+          <HowItWorks />
+          <CTA />
+        </ErrorBoundary>
       </main>
       <Footer />
     </motion.div>

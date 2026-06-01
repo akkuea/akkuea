@@ -33,6 +33,7 @@ import {
   Badge,
   Button,
   Card,
+  ErrorBoundary,
   FreshnessIndicator,
   Input,
   SkeletonPropertyCard,
@@ -228,8 +229,7 @@ export default function MarketplacePage() {
     lastUpdatedAt,
     isPolling,
   } = useProperties();
-  const { isConnected, connect, isConnecting, address, refreshBalance } =
-    useWallet();
+  const { isConnected, connect, address, refreshBalance } = useWallet();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState(MARKETPLACE_ALL_REGIONS);
@@ -266,155 +266,161 @@ export default function MarketplacePage() {
     >
       <Navbar />
       <main className="mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 lg:px-8">
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="space-y-8"
-        >
-          <motion.div variants={staggerItem}>
-            <h1 className="text-2xl font-bold text-white">Marketplace</h1>
-            <p className="mt-1 text-sm text-neutral-500">
-              Discover verified tokenized real estate and invest directly from
-              your connected wallet.
-            </p>
-          </motion.div>
+        <ErrorBoundary>
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="space-y-8"
+          >
+            <motion.div variants={staggerItem}>
+              <h1 className="text-2xl font-bold text-white">Marketplace</h1>
+              <p className="mt-1 text-sm text-neutral-500">
+                Discover verified tokenized real estate and invest directly from
+                your connected wallet.
+              </p>
+            </motion.div>
 
-          <motion.div variants={staggerItem} className="space-y-4">
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <div className="flex-1">
-                <Input
-                  placeholder="Search properties..."
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  leftIcon={<Search className="h-5 w-5" />}
+            <motion.div variants={staggerItem} className="space-y-4">
+              <div className="flex flex-col gap-4 sm:flex-row">
+                <div className="flex-1">
+                  <Input
+                    placeholder="Search properties..."
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    leftIcon={<Search className="h-5 w-5" />}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters((current) => !current)}
+                  leftIcon={<SlidersHorizontal className="h-4 w-4" />}
+                >
+                  Filters
+                </Button>
+              </div>
+
+              <AnimatePresence>
+                {showFilters && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="grid gap-4 rounded-lg border border-[#262626] bg-[#0a0a0a] p-4 sm:grid-cols-3"
+                  >
+                    <div>
+                      <label className="mb-2 block text-xs uppercase tracking-wider text-neutral-500">
+                        Region
+                      </label>
+                      <select
+                        value={selectedRegion}
+                        onChange={(event) =>
+                          setSelectedRegion(event.target.value)
+                        }
+                        className="w-full cursor-pointer rounded-lg border border-[#262626] bg-[#0a0a0a] px-3 py-2.5 text-sm text-white focus:border-[#404040] focus:outline-none"
+                      >
+                        {regions.map((region) => (
+                          <option key={region} value={region}>
+                            {region}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs uppercase tracking-wider text-neutral-500">
+                        Property Type
+                      </label>
+                      <select
+                        value={selectedType}
+                        onChange={(event) =>
+                          setSelectedType(event.target.value)
+                        }
+                        className="w-full cursor-pointer rounded-lg border border-[#262626] bg-[#0a0a0a] px-3 py-2.5 text-sm text-white focus:border-[#404040] focus:outline-none"
+                      >
+                        {propertyTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-xs uppercase tracking-wider text-neutral-500">
+                        Sort By
+                      </label>
+                      <select
+                        value={sortBy}
+                        onChange={(event) =>
+                          setSortBy(event.target.value as MarketplaceSortOption)
+                        }
+                        className="w-full cursor-pointer rounded-lg border border-[#262626] bg-[#0a0a0a] px-3 py-2.5 text-sm text-white focus:border-[#404040] focus:outline-none"
+                      >
+                        {sortOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            <motion.div
+              variants={staggerItem}
+              className="flex flex-wrap items-center justify-between gap-4"
+            >
+              <div className="flex items-center gap-4">
+                <p className="font-mono text-xs text-neutral-500">
+                  Showing{" "}
+                  <span className="font-medium text-white">
+                    {filteredProperties.length}
+                  </span>{" "}
+                  properties
+                </p>
+                <FreshnessIndicator
+                  lastUpdatedAt={lastUpdatedAt}
+                  connectionStatus={connectionStatus}
+                  isPolling={isPolling}
+                  onRefresh={() => void refetch()}
                 />
               </div>
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters((current) => !current)}
-                leftIcon={<SlidersHorizontal className="h-4 w-4" />}
-              >
-                Filters
-              </Button>
-            </div>
-
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="grid gap-4 rounded-lg border border-[#262626] bg-[#0a0a0a] p-4 sm:grid-cols-3"
-                >
-                  <div>
-                    <label className="mb-2 block text-xs uppercase tracking-wider text-neutral-500">
-                      Region
-                    </label>
-                    <select
-                      value={selectedRegion}
-                      onChange={(event) =>
-                        setSelectedRegion(event.target.value)
-                      }
-                      className="w-full cursor-pointer rounded-lg border border-[#262626] bg-[#0a0a0a] px-3 py-2.5 text-sm text-white focus:border-[#404040] focus:outline-none"
-                    >
-                      {regions.map((region) => (
-                        <option key={region} value={region}>
-                          {region}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-xs uppercase tracking-wider text-neutral-500">
-                      Property Type
-                    </label>
-                    <select
-                      value={selectedType}
-                      onChange={(event) => setSelectedType(event.target.value)}
-                      className="w-full cursor-pointer rounded-lg border border-[#262626] bg-[#0a0a0a] px-3 py-2.5 text-sm text-white focus:border-[#404040] focus:outline-none"
-                    >
-                      {propertyTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-xs uppercase tracking-wider text-neutral-500">
-                      Sort By
-                    </label>
-                    <select
-                      value={sortBy}
-                      onChange={(event) =>
-                        setSortBy(event.target.value as MarketplaceSortOption)
-                      }
-                      className="w-full cursor-pointer rounded-lg border border-[#262626] bg-[#0a0a0a] px-3 py-2.5 text-sm text-white focus:border-[#404040] focus:outline-none"
-                    >
-                      {sortOptions.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </motion.div>
+              {!isConnected && (
+                <p className="text-xs text-neutral-500">
+                  Connect your wallet to unlock investing.
+                </p>
               )}
-            </AnimatePresence>
-          </motion.div>
+            </motion.div>
 
-          <motion.div
-            variants={staggerItem}
-            className="flex flex-wrap items-center justify-between gap-4"
-          >
-            <div className="flex items-center gap-4">
-              <p className="font-mono text-xs text-neutral-500">
-                Showing{" "}
-                <span className="font-medium text-white">
-                  {filteredProperties.length}
-                </span>{" "}
-                properties
-              </p>
-              <FreshnessIndicator
-                lastUpdatedAt={lastUpdatedAt}
-                connectionStatus={connectionStatus}
-                isPolling={isPolling}
-                onRefresh={() => void refetch()}
-              />
-            </div>
-            {!isConnected && (
-              <p className="text-xs text-neutral-500">
-                Connect your wallet to unlock investing.
-              </p>
+            {error ? (
+              <ErrorState error={error} onRetry={refetch} />
+            ) : (
+              <>
+                <motion.div
+                  variants={staggerContainer}
+                  className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                  {isLoading ? (
+                    <PropertyGridSkeleton />
+                  ) : (
+                    filteredProperties.map((property) => (
+                      <PropertyCard
+                        key={property.id}
+                        property={property}
+                        onSelect={setSelectedProperty}
+                      />
+                    ))
+                  )}
+                </motion.div>
+
+                {!isLoading && filteredProperties.length === 0 && (
+                  <EmptyState />
+                )}
+              </>
             )}
           </motion.div>
-
-          {error ? (
-            <ErrorState error={error} onRetry={refetch} />
-          ) : (
-            <>
-              <motion.div
-                variants={staggerContainer}
-                className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-              >
-                {isLoading ? (
-                  <PropertyGridSkeleton />
-                ) : (
-                  filteredProperties.map((property) => (
-                    <PropertyCard
-                      key={property.id}
-                      property={property}
-                      onSelect={setSelectedProperty}
-                    />
-                  ))
-                )}
-              </motion.div>
-
-              {!isLoading && filteredProperties.length === 0 && <EmptyState />}
-            </>
-          )}
-        </motion.div>
+        </ErrorBoundary>
       </main>
       <Footer />
 
@@ -431,12 +437,6 @@ export default function MarketplacePage() {
             void refreshBalance();
           }}
         />
-      )}
-
-      {isConnecting && (
-        <div className="pointer-events-none fixed bottom-6 right-6 rounded-full border border-[#262626] bg-[#0a0a0a] px-4 py-2 text-xs text-white shadow-lg">
-          Connecting wallet...
-        </div>
       )}
     </motion.div>
   );

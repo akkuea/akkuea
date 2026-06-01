@@ -25,8 +25,7 @@ const reviewBodySchema = z.object({
 });
 
 const internalKeyAuth = new Elysia({ name: 'internal-operations-auth' }).onBeforeHandle(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ({ headers, set }: any) => {
+  ({ headers, set }) => {
     if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
       set.status = 403;
       return {
@@ -42,8 +41,7 @@ const internalKeyAuth = new Elysia({ name: 'internal-operations-auth' }).onBefor
 const listPropertiesRoute = new Elysia()
   .use(internalKeyAuth)
   .use(validateQuery(listQuerySchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/properties', async ({ validatedQuery, set }: any) => {
+  .get('/properties', async ({ validatedQuery, set }) => {
     try {
       const result = await OperationalPropertyController.listProperties({
         queue: validatedQuery!.queue as OperationsQueue | undefined,
@@ -61,8 +59,7 @@ const listPropertiesRoute = new Elysia()
 const getPropertyOperationsRoute = new Elysia()
   .use(internalKeyAuth)
   .use(validateParams(uuidParamSchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/properties/:id', async ({ validatedParams, set }: any) => {
+  .get('/properties/:id', async ({ validatedParams, set }) => {
     try {
       const data = await OperationalPropertyController.getPropertyDetail(validatedParams!.id);
       return { success: true, data };
@@ -77,8 +74,7 @@ const reviewPropertyRoute = new Elysia()
   .use(internalKeyAuth)
   .use(validateParams(uuidParamSchema))
   .use(validateBody(reviewBodySchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/properties/:id/review', async ({ validatedParams, validatedBody, set }: any) => {
+  .post('/properties/:id/review', async ({ validatedParams, validatedBody, set }) => {
     try {
       const data = await OperationalPropertyController.applyReviewAction(
         validatedParams!.id,

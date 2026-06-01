@@ -52,8 +52,7 @@ const buySharesSchema = z.object({
 // GET /properties - list with filters
 const listPropertiesRoute = new Elysia()
   .use(validateQuery(propertyQuerySchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/', async ({ validatedQuery, set }: any) => {
+  .get('/', async ({ validatedQuery, set }) => {
     try {
       return await PropertyController.getProperties(validatedQuery!);
     } catch (error) {
@@ -66,8 +65,7 @@ const listPropertiesRoute = new Elysia()
 // GET /properties/:id - get single property
 const getPropertyRoute = new Elysia()
   .use(validateParams(uuidParamSchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/:id', async ({ validatedParams, set }: any) => {
+  .get('/:id', async ({ validatedParams, set }) => {
     try {
       return await PropertyController.getProperty(validatedParams!.id);
     } catch (error) {
@@ -83,8 +81,7 @@ const createPropertyRoute = new Elysia()
   .use(validateBody(createPropertySchema))
   .post(
     '/',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async ({ validatedBody, set, getAuthenticatedUser }: any) => {
+    async ({ validatedBody, set, getAuthenticatedUser }) => {
       try {
         const { walletAddress: userAddress } = await getAuthenticatedUser();
         if (!userAddress) {
@@ -105,8 +102,7 @@ const updatePropertyRoute = new Elysia()
   .use(authPlugin)
   .use(validateParams(uuidParamSchema))
   .use(validateBody(updatePropertySchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .put('/:id', async ({ validatedParams, validatedBody, set, getAuthenticatedUser }: any) => {
+  .put('/:id', async ({ validatedParams, validatedBody, set, getAuthenticatedUser }) => {
     try {
       const { walletAddress: userAddress } = await getAuthenticatedUser();
       if (!userAddress) {
@@ -128,8 +124,7 @@ const updatePropertyRoute = new Elysia()
 const deletePropertyRoute = new Elysia()
   .use(authPlugin)
   .use(validateParams(uuidParamSchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .delete('/:id', async ({ validatedParams, set, getAuthenticatedUser }: any) => {
+  .delete('/:id', async ({ validatedParams, set, getAuthenticatedUser }) => {
     try {
       const { walletAddress: userAddress } = await getAuthenticatedUser();
       if (!userAddress) {
@@ -149,8 +144,7 @@ const tokenizePropertyRoute = new Elysia()
   .use(validateParams(uuidParamSchema))
   .post(
     '/:id/tokenize',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async ({ validatedParams, body, set, getAuthenticatedUser }: any) => {
+    async ({ validatedParams, body, set, getAuthenticatedUser }) => {
       try {
         const { walletAddress: userAddress } = await getAuthenticatedUser();
         return await PropertyController.tokenizeProperty(
@@ -174,8 +168,7 @@ const buySharesRoute = new Elysia()
   .use(validateBody(buySharesSchema))
   .post(
     '/:id/buy-shares',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async ({ validatedParams, validatedBody, set, getAuthenticatedUser }: any) => {
+    async ({ validatedParams, validatedBody, set, getAuthenticatedUser }) => {
       try {
         const { walletAddress: userAddress } = await getAuthenticatedUser();
         if (!userAddress) {
@@ -202,8 +195,7 @@ const buySharesRoute = new Elysia()
 // GET /properties/:id/shares/:owner - get user shares
 const getUserSharesRoute = new Elysia()
   .use(validateParams(ownerParamSchema))
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/:id/shares/:owner', async ({ validatedParams, set }: any) => {
+  .get('/:id/shares/:owner', async ({ validatedParams, set }) => {
     try {
       return await PropertyController.getUserShares(validatedParams!.id, validatedParams!.owner);
     } catch (error) {

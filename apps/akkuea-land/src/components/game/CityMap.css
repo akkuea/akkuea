@@ -1,0 +1,361 @@
+/* ─── City Map Grid ──────────────────────────────────────────────────────── */
+
+.city-map-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+}
+
+.city-grid {
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap: 3px;
+  min-width: 400px;
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ─── Base Tile ──────────────────────────────────────────────────────────── */
+
+.city-tile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--tile-radius, 8px);
+  cursor: pointer;
+  transition:
+    transform 0.15s ease-out,
+    box-shadow 0.15s ease-out,
+    z-index 0s;
+  will-change: transform;
+  overflow: visible;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── Hover ──────────────────────────────────────────────────────────────── */
+
+.city-tile:hover {
+  transform: scale(1.15);
+  z-index: 10;
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 0 16px rgba(0, 0, 0, 0.5),
+    0 0 8px var(--tile-glow-color, rgba(255, 255, 255, 0.1));
+}
+
+/* ─── Selection Ring ─────────────────────────────────────────────────────── */
+
+.tile-selected {
+  box-shadow:
+    0 0 0 2px var(--land-accent, #00d4ff),
+    0 0 16px var(--land-accent-glow, rgba(0, 212, 255, 0.35));
+  border-color: var(--land-accent, #00d4ff);
+  z-index: 5;
+}
+
+.tile-selected:hover {
+  box-shadow:
+    0 0 0 2px var(--land-accent, #00d4ff),
+    0 0 24px var(--land-accent-glow, rgba(0, 212, 255, 0.35));
+}
+
+/* ─── Building Badge ─────────────────────────────────────────────────────── */
+
+.tile-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.tile-badge-0 {
+  background: rgba(61, 90, 128, 0.4);
+  color: rgba(232, 240, 254, 0.35);
+}
+
+.tile-badge-1 {
+  background: rgba(0, 230, 118, 0.2);
+  color: rgba(0, 230, 118, 0.85);
+}
+
+.tile-badge-2 {
+  background: rgba(0, 212, 255, 0.2);
+  color: rgba(0, 212, 255, 0.85);
+}
+
+.tile-badge-3 {
+  background: rgba(179, 136, 255, 0.25);
+  color: rgba(179, 136, 255, 0.95);
+  box-shadow: 0 0 6px rgba(179, 136, 255, 0.2);
+}
+
+/* ─── Listed Indicator (pulsing amber dot) ───────────────────────────────── */
+
+.tile-listed-dot {
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--land-gold, #f5a623);
+  box-shadow: 0 0 6px var(--land-gold-glow, rgba(245, 166, 35, 0.35));
+  animation: pulse-glow 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ─── CSS Tooltip ────────────────────────────────────────────────────────── */
+
+.city-tile[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) scale(0.92);
+  background: rgba(8, 12, 20, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--land-fg, #e8f0fe);
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  line-height: 1.5;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--land-border, #1e2d47);
+  white-space: pre;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+  z-index: 100;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  min-width: 140px;
+  text-align: left;
+}
+
+.city-tile[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
+/* Reposition tooltip for bottom rows so it doesn't overflow */
+.city-grid .city-tile:nth-child(n + 341)[data-tooltip]::after {
+  bottom: auto;
+  top: calc(100% + 8px);
+}
+
+/* Reposition tooltip for left-edge tiles */
+.city-grid .city-tile:nth-child(20n + 1)[data-tooltip]::after {
+  left: 0;
+  transform: translateX(0) scale(0.92);
+}
+.city-grid .city-tile:nth-child(20n + 1)[data-tooltip]:hover::after {
+  transform: translateX(0) scale(1);
+}
+
+/* Reposition tooltip for right-edge tiles */
+.city-grid .city-tile:nth-child(20n)[data-tooltip]::after {
+  left: auto;
+  right: 0;
+  transform: translateX(0) scale(0.92);
+}
+.city-grid .city-tile:nth-child(20n)[data-tooltip]:hover::after {
+  transform: translateX(0) scale(1);
+}
+
+/* ─── Flash Animation (real-time events) ─────────────────────────────────── */
+
+@keyframes tile-flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.8);
+  }
+  30% {
+    box-shadow: 0 0 24px 6px rgba(0, 212, 255, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
+  }
+}
+
+.tile-flash {
+  animation: tile-flash 0.7s ease-out;
+}
+
+/* ─── Map Header ─────────────────────────────────────────────────────────── */
+
+.map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.map-header h1 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--land-fg, #e8f0fe);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.map-stats {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.map-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.map-stat-value {
+  font-size: 14px;
+  font-weight: 800;
+  font-family: var(--font-mono, monospace);
+  color: var(--land-fg, #e8f0fe);
+}
+
+.map-stat-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--land-fg-subtle, #3d5a80);
+  font-weight: 600;
+}
+
+/* ─── Legend ──────────────────────────────────────────────────────────────── */
+
+.map-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--land-fg-muted, #7a9cc4);
+  font-weight: 500;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+/* Small phones */
+@media (max-width: 480px) {
+  .city-map-wrapper {
+    padding: 8px;
+  }
+
+  .city-grid {
+    gap: 2px;
+    min-width: 320px;
+  }
+
+  .tile-badge {
+    width: 12px;
+    height: 12px;
+    font-size: 7px;
+    top: 1px;
+    right: 1px;
+    border-radius: 3px;
+  }
+
+  .tile-listed-dot {
+    width: 5px;
+    height: 5px;
+    bottom: 2px;
+    left: 2px;
+  }
+
+  .map-stats {
+    display: none;
+  }
+
+  .map-legend {
+    gap: 8px;
+    padding: 6px 8px;
+  }
+
+  .legend-item {
+    font-size: 9px;
+  }
+
+  /* Disable tooltip on very small screens — use click instead */
+  .city-tile[data-tooltip]::after {
+    display: none;
+  }
+}
+
+/* Tablets */
+@media (min-width: 481px) and (max-width: 1023px) {
+  .city-grid {
+    gap: 2px;
+    max-width: 700px;
+  }
+
+  .tile-badge {
+    width: 14px;
+    height: 14px;
+    font-size: 8px;
+    top: 2px;
+    right: 2px;
+  }
+}
+
+/* Desktop / ultrawide */
+@media (min-width: 1024px) {
+  .city-grid {
+    gap: 3px;
+  }
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .city-tile {
+    transition: none;
+  }
+  .city-tile:hover {
+    transform: none;
+  }
+  .tile-listed-dot {
+    animation: none;
+  }
+  .tile-flash {
+    animation: none;
+  }
+}

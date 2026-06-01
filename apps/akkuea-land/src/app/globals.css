@@ -1,0 +1,193 @@
+@import "tailwindcss";
+
+/* ─── Akkuea Land Design System ─────────────────────────────────────────── */
+/* Dark-first game palette, distinct from the main Akkuea investment platform */
+
+:root {
+  /* Brand */
+  --land-bg: #080c14;
+  --land-surface: #0d1420;
+  --land-surface-raised: #111b2e;
+  --land-border: #1e2d47;
+  --land-border-hover: #2e4470;
+
+  /* Foreground */
+  --land-fg: #e8f0fe;
+  --land-fg-muted: #7a9cc4;
+  --land-fg-subtle: #3d5a80;
+
+  /* Accent – electric cyan (game energy) */
+  --land-accent: #00d4ff;
+  --land-accent-dim: rgba(0, 212, 255, 0.15);
+  --land-accent-glow: rgba(0, 212, 255, 0.35);
+
+  /* Secondary accent – amber (LAND token / gold) */
+  --land-gold: #f5a623;
+  --land-gold-dim: rgba(245, 166, 35, 0.15);
+  --land-gold-glow: rgba(245, 166, 35, 0.35);
+
+  /* Status */
+  --land-success: #00e676;
+  --land-warning: #ffab40;
+  --land-danger: #ff5252;
+
+  /* Tile ownership states */
+  --tile-owned: #00e676;
+  --tile-treasury: #f5a623;
+  --tile-listed: #b388ff;
+  --tile-empty: #3d5a80;
+
+  /* Typography */
+  --font-game: "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SFMono-Regular", monospace;
+
+  /* Grid / tile sizing */
+  --tile-size: 80px;
+  --tile-gap: 4px;
+  --tile-radius: 8px;
+}
+
+@theme inline {
+  --color-land-bg: var(--land-bg);
+  --color-land-surface: var(--land-surface);
+  --color-land-surface-raised: var(--land-surface-raised);
+  --color-land-border: var(--land-border);
+  --color-land-border-hover: var(--land-border-hover);
+  --color-land-fg: var(--land-fg);
+  --color-land-fg-muted: var(--land-fg-muted);
+  --color-land-fg-subtle: var(--land-fg-subtle);
+  --color-land-accent: var(--land-accent);
+  --color-land-accent-dim: var(--land-accent-dim);
+  --color-land-gold: var(--land-gold);
+  --color-land-gold-dim: var(--land-gold-dim);
+  --color-land-success: var(--land-success);
+  --color-land-warning: var(--land-warning);
+  --color-land-danger: var(--land-danger);
+  --color-tile-owned: var(--tile-owned);
+  --color-tile-treasury: var(--tile-treasury);
+  --color-tile-listed: var(--tile-listed);
+  --color-tile-empty: var(--tile-empty);
+  --font-game: var(--font-game);
+  --font-mono: var(--font-mono);
+  --spacing-tile: var(--tile-size);
+  --spacing-tile-gap: var(--tile-gap);
+  --radius-tile: var(--tile-radius);
+}
+
+* {
+  border-color: var(--land-border);
+}
+
+body {
+  background: var(--land-bg);
+  color: var(--land-fg);
+  font-family: var(--font-game);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--land-border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--land-border-hover);
+}
+
+/* Focus */
+:focus-visible {
+  outline: 2px solid var(--land-accent);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background: var(--land-accent-dim);
+  color: var(--land-accent);
+}
+
+/* Tile grid utility */
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--tile-size));
+  gap: var(--tile-gap);
+}
+
+/* Glow utilities */
+.glow-accent {
+  box-shadow: 0 0 20px var(--land-accent-glow);
+}
+.glow-gold {
+  box-shadow: 0 0 20px var(--land-gold-glow);
+}
+
+/* Glass surface */
+.glass {
+  background: rgba(13, 20, 32, 0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+/* Scanline overlay for game feel */
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.04) 2px,
+    rgba(0, 0, 0, 0.04) 4px
+  );
+  pointer-events: none;
+}
+
+/* Animations */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+.animate-slide-up {
+  animation: slide-up 0.2s ease-out;
+}
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.03) 0%,
+    rgba(255,255,255,0.08) 50%,
+    rgba(255,255,255,0.03) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Tile real-time event flash */
+@keyframes tile-flash {
+  0% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.8); }
+  30% { box-shadow: 0 0 24px 6px rgba(0, 212, 255, 0.5); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0); }
+}
+.animate-tile-flash {
+  animation: tile-flash 0.7s ease-out;
+}

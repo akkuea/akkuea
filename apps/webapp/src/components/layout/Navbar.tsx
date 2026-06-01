@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -17,8 +17,10 @@ import {
 import { Button } from "@/components/ui/Button";
 import { useTheme } from "@/context/ThemeContext";
 import { useWallet } from "@/components/auth/hooks";
+import { useAutoClearError } from "@/components/auth/hooks/useAutoClearError.hook";
 import { cn, truncateAddress } from "@/lib/utils";
 import { BrandLogo } from "@/components/layout/BrandLogo";
+import { WalletProviderModal } from "@/components/auth/WalletProviderModal";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -30,10 +32,15 @@ const navigation = [
 export function Navbar() {
   const pathname = usePathname();
   useTheme();
-  const { address, isConnected, isConnecting, connect, disconnect } =
+  const { address, isConnected, connectWith, disconnect, providers } =
     useWallet();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [walletMenuOpen, setWalletMenuOpen] = useState(false);
+  const [providerModalOpen, setProviderModalOpen] = useState(false);
+  const [connectError, setConnectError] = useState<string | null>(null);
+
+  const clearConnectError = useCallback(() => setConnectError(null), []);
+  useAutoClearError(connectError, clearConnectError);
 
   return (
     <motion.header
@@ -44,10 +51,8 @@ export function Navbar() {
     >
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
-          {/* Logo */}
           <BrandLogo animateIcon textClassName="hidden sm:block" />
 
-          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
@@ -82,20 +87,7 @@ export function Navbar() {
             })}
           </div>
 
-          {/* Right Side Actions */}
           <div className="flex items-center gap-2">
-            {/* Theme Toggle
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleTheme}
-              className="p-2 rounded-md text-neutral-500 hover:text-white hover:bg-[#1a1a1a] transition-colors cursor-pointer"
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </motion.button> */}
-
-            {/* Wallet Button */}
             {isConnected ? (
               <div className="relative">
                 <Button
@@ -159,15 +151,16 @@ export function Navbar() {
               <Button
                 variant="primary"
                 size="sm"
-                onClick={connect}
-                isLoading={isConnecting}
+                onClick={() => {
+                  setConnectError(null);
+                  setProviderModalOpen(true);
+                }}
                 leftIcon={<Wallet className="w-3.5 h-3.5" />}
               >
                 Connect
               </Button>
             )}
 
-            {/* Mobile Menu Toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-md text-neutral-500 hover:text-white hover:bg-[#1a1a1a] transition-colors cursor-pointer"
@@ -182,7 +175,6 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Navigation */}
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
@@ -217,6 +209,27 @@ export function Navbar() {
           )}
         </AnimatePresence>
       </nav>
+
+      <WalletProviderModal
+        open={providerModalOpen}
+        error={connectError}
+        providers={providers}
+        onClose={() => {
+          setConnectError(null);
+          setProviderModalOpen(false);
+        }}
+        onSelect={async (providerId) => {
+          setConnectError(null);
+          try {
+            await connectWith(providerId);
+          } catch (err) {
+            setConnectError(
+              err instanceof Error ? err.message : "Connection failed",
+            );
+            throw err;
+          }
+        }}
+      />
     </motion.header>
   );
 }

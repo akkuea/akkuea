@@ -164,7 +164,7 @@ jobs:
 
           # Check if CSP headers are configured
           if [ -f "next.config.js" ] || [ -f "next.config.ts" ]; then
-            if grep -r "Content-Security-Policy\|CSP" .; then
+            if grep -r "Content-Security-Policy\|CSP" . --exclude-dir=.next; then
               echo "CSP configuration found"
             else
               echo "Warning: No CSP configuration found"

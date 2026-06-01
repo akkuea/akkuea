@@ -18,8 +18,8 @@
 
 <!-- Step-by-step instructions so a reviewer can verify the change. -->
 
-1. 
-2. 
+1.
+2.
 
 ## Checklist
 
@@ -32,4 +32,3 @@
 ## Related Issues
 
 <!-- Closes #<issue_number> -->
-

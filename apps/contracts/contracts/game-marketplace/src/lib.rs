@@ -12,11 +12,13 @@ pub struct Listing {
     pub created_ledger: u32,
 }
 
+
 #[contract]
 pub struct GameMarketplace;
 
 #[contractimpl]
 impl GameMarketplace {
+
     /// Initialize the marketplace
     pub fn initialize(env: Env, token_contract: Address, nft_contract: Address) -> bool {
         let storage_key = Symbol::new(&env, "initialized");
@@ -192,11 +194,13 @@ impl GameMarketplace {
             .get(&seller_listings_key)
             .unwrap_or_else(|| Vec::new(&env))
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use soroban_sdk::testutils::Address as TestAddress;
 
     #[test]
@@ -227,5 +231,6 @@ mod tests {
         assert_eq!(listing.property_id, 0);
         assert_eq!(listing.price_land, 1000);
         assert_eq!(listing.seller, seller);
+
     }
 }

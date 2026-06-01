@@ -1,4 +1,4 @@
-import type { Context } from 'elysia';
+import type { AuthContext } from '../middleware/auth';
 import { NotificationService } from '../services/NotificationService';
 import { ApiError } from '../errors/ApiError';
 
@@ -26,10 +26,9 @@ export class NotificationController {
    * Get notifications for authenticated user
    */
   static async getUserNotifications(
-    ctx: Context<{ query: { limit?: string; offset?: string } }>,
+    ctx: AuthContext & { query: { limit?: string; offset?: string } },
   ): Promise<Response> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { id: userId } = await (ctx as any).getAuthenticatedUser();
+    const { id: userId } = await ctx.getAuthenticatedUser();
 
     const limit = ctx.query.limit ? parseInt(ctx.query.limit) : 20;
     const offset = ctx.query.offset ? parseInt(ctx.query.offset) : 0;
@@ -62,9 +61,8 @@ export class NotificationController {
   /**
    * Get unread notifications count
    */
-  static async getUnreadCount(ctx: Context): Promise<Response> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { id: userId } = await (ctx as any).getAuthenticatedUser();
+  static async getUnreadCount(ctx: AuthContext): Promise<Response> {
+    const { id: userId } = await ctx.getAuthenticatedUser();
 
     try {
       const count = await this.notificationService.getUnreadCount(userId);
@@ -79,9 +77,10 @@ export class NotificationController {
   /**
    * Get a single notification by ID
    */
-  static async getNotificationById(ctx: Context<{ params: { id: string } }>): Promise<Response> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { id: userId } = await (ctx as any).getAuthenticatedUser();
+  static async getNotificationById(
+    ctx: AuthContext & { params: { id: string } },
+  ): Promise<Response> {
+    const { id: userId } = await ctx.getAuthenticatedUser();
     const { id } = ctx.params;
 
     try {
@@ -112,9 +111,8 @@ export class NotificationController {
   /**
    * Mark a notification as read
    */
-  static async markAsRead(ctx: Context<{ params: { id: string } }>): Promise<Response> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { id: userId } = await (ctx as any).getAuthenticatedUser();
+  static async markAsRead(ctx: AuthContext & { params: { id: string } }): Promise<Response> {
+    const { id: userId } = await ctx.getAuthenticatedUser();
     const { id } = ctx.params;
 
     try {
@@ -146,9 +144,8 @@ export class NotificationController {
   /**
    * Mark multiple notifications as read
    */
-  static async markMultipleAsRead(ctx: Context): Promise<Response> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { id: userId } = await (ctx as any).getAuthenticatedUser();
+  static async markMultipleAsRead(ctx: AuthContext & { request: Request }): Promise<Response> {
+    const { id: userId } = await ctx.getAuthenticatedUser();
 
     let body: NotificationBody;
     try {
@@ -190,9 +187,8 @@ export class NotificationController {
   /**
    * Mark all notifications as read for the user
    */
-  static async markAllAsRead(ctx: Context): Promise<Response> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { id: userId } = await (ctx as any).getAuthenticatedUser();
+  static async markAllAsRead(ctx: AuthContext): Promise<Response> {
+    const { id: userId } = await ctx.getAuthenticatedUser();
 
     try {
       const count = await this.notificationService.markAllAsRead(userId);
@@ -210,9 +206,10 @@ export class NotificationController {
   /**
    * Delete a notification
    */
-  static async deleteNotification(ctx: Context<{ params: { id: string } }>): Promise<Response> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { id: userId } = await (ctx as any).getAuthenticatedUser();
+  static async deleteNotification(
+    ctx: AuthContext & { params: { id: string } },
+  ): Promise<Response> {
+    const { id: userId } = await ctx.getAuthenticatedUser();
     const { id } = ctx.params;
 
     try {

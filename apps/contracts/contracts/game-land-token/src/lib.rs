@@ -178,11 +178,13 @@ impl GameLandTokenContract {
 
         true
     }
+
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
     use soroban_sdk::testutils::Address as TestAddress;
 
     #[test]
@@ -226,5 +228,6 @@ mod tests {
 
         // Second claim fails
         assert!(!contract.faucet(env.clone(), user));
+
     }
 }

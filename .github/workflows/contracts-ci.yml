@@ -27,7 +27,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.81.0
+          toolchain: 1.89.0
           components: rustfmt, clippy
 
       - name: Install WASM target
@@ -101,10 +101,10 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.81.0
+          toolchain: 1.89.0
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit
+        run: cargo install cargo-audit --version 0.21.2
 
       - name: Install cargo-deny
         run: cargo install --locked cargo-deny
@@ -143,7 +143,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.81.0
+          toolchain: 1.89.0
           components: llvm-tools-preview
 
       - name: Install cargo-llvm-cov

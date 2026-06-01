@@ -1,5 +1,4 @@
 #![no_std]
-
 use soroban_sdk::{contract, contractimpl, Address, Env, Symbol};
 
 /// GameEngine - Core game rules and state management
@@ -100,10 +99,10 @@ impl GameEngine {
 
         // Multiplier by level
         let (multiplier_num, multiplier_den) = match level {
-            0 => (1i128, 1i128),   // Vacant: 1.0x
-            1 => (3i128, 2i128),   // Residential: 1.5x
-            2 => (3i128, 1i128),   // Commercial: 3.0x
-            3 => (6i128, 1i128),   // Skyscraper: 6.0x
+            0 => (1i128, 1i128), // Vacant: 1.0x
+            1 => (3i128, 2i128), // Residential: 1.5x
+            2 => (3i128, 1i128), // Commercial: 3.0x
+            3 => (6i128, 1i128), // Skyscraper: 6.0x
             _ => (1i128, 1i128),
         };
 
@@ -132,10 +131,10 @@ impl GameEngine {
     /// Get the improvement cost to upgrade from current level to next
     pub fn get_improvement_cost(_env: Env, current_level: u32) -> i128 {
         let cost = match current_level {
-            0 => 200i128, // Vacant → Residential
-            1 => 600i128, // Residential → Commercial
+            0 => 200i128,  // Vacant → Residential
+            1 => 600i128,  // Residential → Commercial
             2 => 1800i128, // Commercial → Skyscraper
-            _ => 0i128,   // Already at max
+            _ => 0i128,    // Already at max
         };
 
         cost * 10_000_000 // Convert to stroops (7 decimals)
@@ -143,11 +142,7 @@ impl GameEngine {
 
     /// Transfer ownership of a property to marketplace for listing
     /// Only callable by marketplace
-    pub fn approve_property_transfer(
-        env: Env,
-        property_id: u32,
-        to: Address,
-    ) -> bool {
+    pub fn approve_property_transfer(env: Env, property_id: u32, to: Address) -> bool {
         // Note: In production, verify caller is marketplace via auth
         // Then call NFT contract to transfer
 

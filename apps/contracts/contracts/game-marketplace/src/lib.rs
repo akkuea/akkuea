@@ -1,5 +1,4 @@
 #![no_std]
-
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Symbol, Vec};
 
 /// GameMarketplace - P2P property trading
@@ -37,12 +36,7 @@ impl GameMarketplace {
 
     /// List a property for sale
     /// Seller must approve NFT transfer first
-    pub fn list(
-        env: Env,
-        seller: Address,
-        property_id: u32,
-        price_land: i128,
-    ) -> bool {
+    pub fn list(env: Env, seller: Address, property_id: u32, price_land: i128) -> bool {
         assert!(price_land > 0, "Price must be positive");
         assert!(property_id < 400, "Invalid property ID");
 

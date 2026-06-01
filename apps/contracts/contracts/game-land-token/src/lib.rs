@@ -1,5 +1,4 @@
 #![no_std]
-
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Symbol};
 
 /// GameLandToken - SEP-41 Fungible Token for Akkuea Land
@@ -42,11 +41,7 @@ impl GameLandTokenContract {
 
         // Get total supply
         let supply_key = Symbol::new(&env, "total_supply");
-        let current_supply: i128 = env
-            .storage()
-            .persistent()
-            .get(&supply_key)
-            .unwrap_or(0i128);
+        let current_supply: i128 = env.storage().persistent().get(&supply_key).unwrap_or(0i128);
 
         // Update balances
         let balance_key = (Symbol::new(&env, "balance"), &to);
@@ -90,11 +85,7 @@ impl GameLandTokenContract {
 
         // Update total supply
         let supply_key = Symbol::new(&env, "total_supply");
-        let current_supply: i128 = env
-            .storage()
-            .persistent()
-            .get(&supply_key)
-            .unwrap_or(0i128);
+        let current_supply: i128 = env.storage().persistent().get(&supply_key).unwrap_or(0i128);
 
         env.storage()
             .persistent()
@@ -115,10 +106,7 @@ impl GameLandTokenContract {
     /// Get total supply
     pub fn total_supply(env: Env) -> i128 {
         let supply_key = Symbol::new(&env, "total_supply");
-        env.storage()
-            .persistent()
-            .get(&supply_key)
-            .unwrap_or(0i128)
+        env.storage().persistent().get(&supply_key).unwrap_or(0i128)
     }
 
     /// Faucet: Claim 1000 LAND (testnet only, one per address)
@@ -148,11 +136,7 @@ impl GameLandTokenContract {
             .set(&balance_key, &(current_balance + amount));
 
         let supply_key = Symbol::new(&env, "total_supply");
-        let current_supply: i128 = env
-            .storage()
-            .persistent()
-            .get(&supply_key)
-            .unwrap_or(0i128);
+        let current_supply: i128 = env.storage().persistent().get(&supply_key).unwrap_or(0i128);
 
         env.storage()
             .persistent()

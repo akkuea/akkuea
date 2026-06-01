@@ -2,15 +2,15 @@ name: Smart Contracts CI/CD
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'apps/contracts/**'
-      - '.github/workflows/contracts-ci.yml'
+      - "apps/contracts/**"
+      - ".github/workflows/contracts-ci.yml"
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'apps/contracts/**'
-      - '.github/workflows/contracts-ci.yml'
+      - "apps/contracts/**"
+      - ".github/workflows/contracts-ci.yml"
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,20 +19,20 @@ jobs:
   build-and-test:
     name: Build and Test Contracts
     runs-on: macos-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
+          toolchain: 1.81.0
           components: rustfmt, clippy
-          
+
       - name: Install WASM target
         run: rustup target add wasm32v1-none
-        
+
       - name: Install Stellar CLI
         run: |
           if ! command -v brew &> /dev/null; then
@@ -41,7 +41,7 @@ jobs:
           fi
           brew install stellar-cli
           stellar --version
-          
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -51,17 +51,17 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
-            
+
       - name: Check Rust formatting
         run: |
           cd apps/contracts
           cargo fmt --all -- --check
-          
+
       - name: Run Clippy lints
         run: |
           cd apps/contracts
           cargo clippy --all-targets --all-features -- -D warnings
-          
+
       - name: Build contracts
         run: |
           cd apps/contracts
@@ -77,12 +77,12 @@ jobs:
               fi
             fi
           done
-          
+
       - name: Run unit tests
         run: |
           cd apps/contracts
           cargo test --lib
-          
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -93,20 +93,22 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: macos-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        
+        with:
+          toolchain: 1.81.0
+
       - name: Install cargo-audit
         run: cargo install cargo-audit
 
       - name: Install cargo-deny
         run: cargo install --locked cargo-deny
-        
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -114,13 +116,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-audit-${{ hashFiles('**/Cargo.lock') }}
-          
+
       - name: Run security audit
         run: |
           cd apps/contracts
           cargo audit
           cargo deny check
-          
+
       - name: Check for sensitive data
         run: |
           cd apps/contracts
@@ -133,19 +135,20 @@ jobs:
   code-coverage:
     name: Code Coverage
     runs-on: macos-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: 1.81.0
           components: llvm-tools-preview
-          
+
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
-        
+
       - name: Cache cargo registry
         uses: actions/cache@v4
         with:
@@ -153,13 +156,13 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
-          
+
       - name: Generate coverage report
         run: |
           cd apps/contracts
           cargo llvm-cov --lib --workspace --lcov --output-path lcov.info
           cargo llvm-cov --lib --workspace --html
-          
+
       - name: Verify coverage threshold
         run: |
           cd apps/contracts
@@ -169,14 +172,14 @@ jobs:
             exit 1
           fi
           echo "Coverage: $COVERAGE%"
-          
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
           file: ./apps/contracts/lcov.info
           flags: contracts
           name: smart-contracts-coverage
-          
+
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@v4
         with:

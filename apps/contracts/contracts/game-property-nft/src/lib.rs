@@ -1,5 +1,4 @@
 #![no_std]
-
 use soroban_sdk::{contract, contractimpl, contracttype, Address, Env, Symbol};
 
 /// GamePropertyNFT - Property ownership and state management
@@ -171,11 +170,7 @@ impl GamePropertyNFT {
     pub fn owns_property(env: Env, account: Address) -> bool {
         for property_id in 0..400 {
             let prop_key = (Symbol::new(&env, "property"), property_id);
-            if let Some(property) = env
-                .storage()
-                .persistent()
-                .get::<_, PropertyData>(&prop_key)
-            {
+            if let Some(property) = env.storage().persistent().get::<_, PropertyData>(&prop_key) {
                 if property.owner == account {
                     return true;
                 }

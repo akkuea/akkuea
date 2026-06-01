@@ -31,7 +31,7 @@ jobs:
           components: rustfmt, clippy
 
       - name: Install WASM target
-        run: rustup target add wasm32v1-none
+        run: rustup target add wasm32-unknown-unknown
 
       - name: Install Stellar CLI
         run: |
@@ -65,9 +65,9 @@ jobs:
       - name: Build contracts
         run: |
           cd apps/contracts
-          cargo build --target wasm32v1-none --release
-          ls -la target/wasm32v1-none/release/
-          for file in target/wasm32v1-none/release/*.wasm; do
+          cargo build --target wasm32-unknown-unknown --release
+          ls -la target/wasm32-unknown-unknown/release/
+          for file in target/wasm32-unknown-unknown/release/*.wasm; do
             if [ -f "$file" ]; then
               size=$(stat -f%z "$file")
               echo "Contract size: $size bytes"
@@ -87,7 +87,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: contract-wasm
-          path: apps/contracts/target/wasm32v1-none/release/*.wasm
+          path: apps/contracts/target/wasm32-unknown-unknown/release/*.wasm
           retention-days: 4
 
   security-audit:

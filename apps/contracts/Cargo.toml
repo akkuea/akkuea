@@ -6,6 +6,7 @@ members = [
 
 [workspace.dependencies]
 soroban-sdk = { version = "25.3.0", features = ["alloc"] }
+base64ct = "=1.6.0"
 
 [profile.release]
 opt-level = "z"

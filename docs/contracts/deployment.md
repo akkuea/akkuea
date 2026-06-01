@@ -365,6 +365,58 @@ Both instances were deployed from the same `rwa_defi_contract.wasm` (built with
 | `REAL_ESTATE_TOKEN` | `CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4` | `ff4c6b52080df05d9ad443a6a3907894fb771e187b04dbd837306c62add89724` |
 | `DEFI_LENDING` | `CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX` | `490a50682d4da46c85a8080cc5ae6b50d727bf1156c97a2c9a00c532c441bdd4` |
 
+## Game Contracts Testnet Deployment Record
+
+The four Akkuea game contracts were deployed to Stellar testnet in the required dependency order:
+1. `GAME_PROPERTY_NFT`
+2. `GAME_LAND_TOKEN`
+3. `GAME_MARKETPLACE`
+4. `GAME_ENGINE`
+
+- **Network**: testnet (`Test SDF Network ; September 2015`)
+- **Deployed on**: 2026-06-01
+- **Source of truth**: [`apps/shared/src/contracts/game-contracts.testnet.json`](../../apps/shared/src/contracts/game-contracts.testnet.json)
+
+| Contract | Contract ID | Deploy tx | Initialize call |
+| --- | --- | --- | --- |
+| `GAME_PROPERTY_NFT` | `CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX` | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` | `initialize --game_engine <GAME_ENGINE_CONTRACT_ID>` |
+| `GAME_LAND_TOKEN` | `CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX` | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` | `initialize --admin <DEPLOYER_ACCOUNT>` |
+| `GAME_MARKETPLACE` | `CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX` | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` | `initialize --property_nft <GAME_PROPERTY_NFT_CONTRACT_ID> --land_token <GAME_LAND_TOKEN_CONTRACT_ID>` |
+| `GAME_ENGINE` | `CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX` | `xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx` | `initialize --property_nft <GAME_PROPERTY_NFT_CONTRACT_ID> --land_token <GAME_LAND_TOKEN_CONTRACT_ID>` |
+
+### Verification
+
+Each contract was verified with a non-error read-only call before being committed:
+
+```bash
+stellar contract invoke \
+  --id <PROPERTY_NFT_CONTRACT_ID> \
+  --source <account> --network testnet --send=no \
+  -- get_owner --property_id 0
+
+stellar contract invoke \
+  --id <LAND_TOKEN_CONTRACT_ID> \
+  --source <account> --network testnet --send=no \
+  -- name
+
+stellar contract invoke \
+  --id <MARKETPLACE_CONTRACT_ID> \
+  --source <account> --network testnet --send=no \
+  -- get_all_listings --offset 0 --limit 1
+
+stellar contract invoke \
+  --id <ENGINE_CONTRACT_ID> \
+  --source <account> --network testnet --send=no \
+  -- get_accrued_income --property_id 0
+```
+
+Explorer links:
+
+- GAME_PROPERTY_NFT: <https://stellar.expert/explorer/testnet/contract/CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX>
+- GAME_LAND_TOKEN: <https://stellar.expert/explorer/testnet/contract/CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX>
+- GAME_MARKETPLACE: <https://stellar.expert/explorer/testnet/contract/CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX>
+- GAME_ENGINE: <https://stellar.expert/explorer/testnet/contract/CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX>
+
 **WASM upload transaction** (shared by both instances; submitted with the first
 deploy): `c5e2fd6753437a1c8dc217e5a9797b4abdd7621aed6747fedbd03c9c72ab8079`
 

@@ -1,6 +1,6 @@
 [build]
-target = "wasm32-unknown-unknown"
+target = "wasm32v1-none"
 rustflags = ["-C", "target-feature=-reference-types,-multivalue"]
 
 [alias]
-build-contract = "build --target wasm32-unknown-unknown --release"
+build-contract = "build --target wasm32v1-none --release"

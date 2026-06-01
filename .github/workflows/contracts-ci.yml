@@ -104,7 +104,7 @@ jobs:
           toolchain: 1.89.0
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit --version 0.21.3
+        run: cargo install cargo-audit --version 0.21.0
 
       - name: Install cargo-deny
         run: cargo install --locked cargo-deny

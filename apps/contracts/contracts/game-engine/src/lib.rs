@@ -196,6 +196,5 @@ mod tests {
 
         let cost_commercial = contract.get_improvement_cost(env, 2);
         assert_eq!(cost_commercial, 1800 * 10_000_000);
-
     }
 }

@@ -178,7 +178,6 @@ impl GameLandTokenContract {
 
         true
     }
-
 }
 
 #[cfg(test)]
@@ -228,6 +227,5 @@ mod tests {
 
         // Second claim fails
         assert!(!contract.faucet(env.clone(), user));
-
     }
 }

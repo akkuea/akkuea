@@ -26,7 +26,7 @@
       "description": "P2P property trading with atomic LAND ↔ NFT swaps",
       "contract_id": "CDTZGXF5YIG4FJBXVOU3LSZJ6HVSWNSGKL2F5MTBQYB4GB23YJO6ODUE",
       "deployment_tx_hash": "e82f7f63ccd4f5a18a28eb59c37ca7913c32576f5c4d3f79ed462e9b936ca842",
-      "verified": false,
+      "verified": true,
       "verification_method": "get_listing call",
       "dependencies": ["game_land_token", "game_property_nft"]
     },
@@ -35,7 +35,7 @@
       "description": "Core game rules: building improvements, rental income calculation, property purchases",
       "contract_id": "CBGOTNTNNFKXISD6UHNTHKCSYTUC5FL5SRB2ARXDCCL2FV5LN2LUH5U7",
       "deployment_tx_hash": "c177b241e416ee2bbf0bf3f779e9e17196a104fea245b2c8ea57be5e777d50da",
-      "verified": false,
+      "verified": true,
       "verification_method": "get_accrued_income call",
       "dependencies": [
         "game_land_token",

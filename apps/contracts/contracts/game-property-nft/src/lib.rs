@@ -23,7 +23,7 @@ pub struct GamePropertyNFT;
 
 #[contractimpl]
 impl GamePropertyNFT {
-    /// Initialize the contract and mint all 400 properties to treasury
+    /// Initialize the contract with treasury and engine addresses
     pub fn initialize(env: Env, treasury: Address, game_engine: Address) -> bool {
         let storage_key = Symbol::new(&env, "initialized");
         if env.storage().persistent().has(&storage_key) {
@@ -35,9 +35,20 @@ impl GamePropertyNFT {
         let engine_key = Symbol::new(&env, "game_engine");
         env.storage().persistent().set(&treasury_key, &treasury);
         env.storage().persistent().set(&engine_key, &game_engine);
+        env.storage().persistent().set(&storage_key, &true);
 
-        // Mint all 400 properties to treasury
-        for property_id in 0..400 {
+        true
+    }
+
+    /// Initialize properties in batches (call multiple times to init all 400)
+    /// batch_start: inclusive start (0-399)
+    /// batch_end: exclusive end (1-400)
+    pub fn initialize_batch(env: Env, batch_start: u32, batch_end: u32, treasury: Address) -> bool {
+        assert!(batch_start < 400, "Batch start out of range");
+        assert!(batch_end <= 400, "Batch end out of range");
+        assert!(batch_start < batch_end, "Invalid batch range");
+
+        for property_id in batch_start..batch_end {
             let coords = PropertyCoords {
                 x: property_id % 20,
                 y: property_id / 20,
@@ -55,7 +66,6 @@ impl GamePropertyNFT {
             env.storage().persistent().set(&coords_key, &coords);
         }
 
-        env.storage().persistent().set(&storage_key, &true);
         true
     }
 

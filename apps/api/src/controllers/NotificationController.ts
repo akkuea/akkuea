@@ -1,6 +1,7 @@
 import type { AuthContext } from '../middleware/auth';
 import { NotificationService } from '../services/NotificationService';
 import { ApiError } from '../errors/ApiError';
+import { logger } from '../services/logger';
 
 type NotificationBody = {
   email?: string;
@@ -52,7 +53,7 @@ export class NotificationController {
         pagination: { limit, offset },
       });
     } catch (error) {
-      console.error(error);
+      logger.error('Failed to retrieve notifications', { operation: 'getUserNotifications', userId });
 
       throw new ApiError(500, 'INTERNAL_ERROR', 'Failed to retrieve notifications');
     }
@@ -68,7 +69,10 @@ export class NotificationController {
       const count = await this.notificationService.getUnreadCount(userId);
       return this.jsonResponse({ unreadCount: count });
     } catch (error) {
-      console.error(error);
+      logger.error('Failed to retrieve unread notification count', {
+        operation: 'getUnreadCount',
+        userId,
+      });
 
       throw new ApiError(500, 'INTERNAL_ERROR', 'Failed to retrieve unread count');
     }
@@ -197,7 +201,10 @@ export class NotificationController {
         count,
       });
     } catch (error) {
-      console.error(error);
+      logger.error('Failed to mark all notifications as read', {
+        operation: 'markAllAsRead',
+        userId,
+      });
 
       throw new ApiError(500, 'INTERNAL_ERROR', 'Failed to update notifications');
     }

@@ -63,12 +63,12 @@ jobs:
         echo "Checking cross-workspace dependencies..."
         
         # Check if webapp references shared
-        if grep -q "@real-estate-defi/shared" apps/webapp/package.json; then
+        if grep -q "@akkuea/shared" apps/webapp/package.json; then
           echo "✅ Webapp references shared package"
         fi
         
         # Check if API references shared
-        if grep -q "@real-estate-defi/shared" apps/api/package.json; then
+        if grep -q "@akkuea/shared" apps/api/package.json; then
           echo "✅ API references shared package"
         fi
         

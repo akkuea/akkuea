@@ -2,6 +2,15 @@
 
 This guide covers deploying the Real Estate DeFi Platform smart contracts to Stellar networks using Stellar CLI.
 
+> **Where contract IDs live.** Deployed contract addresses are stored as JSON
+> deployment artifacts at `apps/shared/src/contracts.testnet.json` and
+> `apps/shared/src/contracts.mainnet.json`. The shared `CONTRACT_IDS` constant
+> (`apps/shared/src/constants/index.ts`) and the API
+> (`apps/api/src/config/contracts.ts`) read contract IDs from these files, so
+> recording a new deployment is a data change, not a code change. The current
+> testnet deployment is at the [Testnet Deployment Record](#testnet-deployment-record)
+> section below.
+
 ## Prerequisites
 
 1. **Stellar CLI installed**
@@ -11,11 +20,14 @@ This guide covers deploying the Real Estate DeFi Platform smart contracts to Ste
 
 ## Contract Types
 
-The platform includes two main contracts:
+The `defi-rwa` crate (`apps/contracts/contracts/defi-rwa`, package
+`rwa-defi-contract`) compiles to a **single** WASM that exposes both property
+tokenization and lending. The platform deploys that one WASM as **two
+independent contract instances**, each with its own contract ID and admin:
 
-### 1. Real Estate Token Contract
+### 1. Real Estate Token Contract (instance)
 
-- **File**: `apps/contracts/src/real_estate_token.rs`
+- **Source**: `apps/contracts/contracts/defi-rwa` (`PropertyTokenContract`)
 - **Purpose**: Property tokenization and share management
 - **Key Features**:
   - Property tokenization
@@ -23,9 +35,9 @@ The platform includes two main contracts:
   - Transfer controls
   - Metadata management
 
-### 2. DeFi Lending Contract
+### 2. DeFi Lending Contract (instance)
 
-- **File**: `apps/contracts/src/defi_lending.rs`
+- **Source**: `apps/contracts/contracts/defi-rwa` (same WASM, separate instance)
 - **Purpose**: Lending pools and borrowing operations
 - **Key Features**:
   - Pool creation and management
@@ -44,22 +56,23 @@ rustup target add wasm32-unknown-unknown
 ### 2. Build Contracts
 
 ```bash
-cd apps/contracts
+cd apps/contracts/contracts/defi-rwa
 
-# Build release version
-cargo build --target wasm32-unknown-unknown --release
+# Build with the Stellar CLI. This targets wasm32v1-none and produces a WASM
+# the Soroban VM accepts. A plain `cargo build --target wasm32-unknown-unknown`
+# with recent Rust toolchains enables the `reference-types` feature, which the
+# Soroban VM rejects at deploy time ("reference-types not enabled"), so prefer
+# `stellar contract build`.
+stellar contract build
 
-# Output will be in target/wasm32-unknown-unknown/release/
+# Output: apps/contracts/target/wasm32v1-none/release/rwa_defi_contract.wasm
 ```
 
 ### 3. Verify Build
 
 ```bash
-# Check if WASM files were created
-ls -la target/wasm32-unknown-unknown/release/
-
-# You should see files like:
-# real_estate_defi_contracts.wasm
+# Check that the WASM was created
+ls -la apps/contracts/target/wasm32v1-none/release/rwa_defi_contract.wasm
 ```
 
 ## Network Setup
@@ -614,3 +627,71 @@ All contract IDs and deployment transaction hashes recorded in:
 This deployment achieves Issue #847 requirements for all four game contracts on Stellar testnet.
 
 This deployment process ensures your smart contracts are properly deployed and integrated with the entire Real Estate DeFi Platform.
+
+## Testnet Deployment Record
+
+Both instances were deployed from the same `rwa_defi_contract.wasm` (built with
+`stellar contract build`, target `wasm32v1-none`) on **Stellar testnet**.
+
+- **Network**: testnet (`Test SDF Network ; September 2015`)
+- **Deployer / admin account**: `GBN4ABG3ES6NHKY4BURL3EMP5RA6EFQJDR4EET6U66M6YIRADPWJ7OQ6`
+- **Uploaded WASM hash**: `c13878bd0845d4965a5eb26138b77db617fdccbb70a70dc47acd8c460af6a0b1`
+- **Deployed on**: 2026-05-31
+- **Source of truth**: [`apps/shared/src/contracts.testnet.json`](../../apps/shared/src/contracts.testnet.json)
+
+| Contract            | Contract ID                                                | Deploy (create) tx                                                 |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
+| `REAL_ESTATE_TOKEN` | `CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4` | `ff4c6b52080df05d9ad443a6a3907894fb771e187b04dbd837306c62add89724` |
+| `DEFI_LENDING`      | `CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX` | `490a50682d4da46c85a8080cc5ae6b50d727bf1156c97a2c9a00c532c441bdd4` |
+
+**WASM upload transaction** (shared by both instances; submitted with the first
+deploy): `c5e2fd6753437a1c8dc217e5a9797b4abdd7621aed6747fedbd03c9c72ab8079`
+
+### Verification
+
+Each contract ID was verified **before being committed** by invoking the
+read-only `get_oracle_config` view, which returned the contract defaults
+`(max_age = 3600, min_price = 0)` — confirming the WASM is live and executing:
+
+```bash
+stellar contract invoke \
+  --id CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4 \
+  --source <account> --network testnet --send=no \
+  -- get_oracle_config
+# => [3600,"0"]
+
+stellar contract invoke \
+  --id CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX \
+  --source <account> --network testnet --send=no \
+  -- get_oracle_config
+# => [3600,"0"]
+```
+
+Explorer links:
+
+- REAL_ESTATE_TOKEN: <https://stellar.expert/explorer/testnet/contract/CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4>
+- DEFI_LENDING: <https://stellar.expert/explorer/testnet/contract/CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX>
+
+### Reproducing this deployment
+
+```bash
+# 1. Build a Soroban-compatible WASM
+cd apps/contracts/contracts/defi-rwa
+stellar contract build
+
+# 2. Fund a testnet deployer key
+stellar keys generate akkuea-deployer --network testnet --fund
+
+# 3. Deploy two instances (constructor takes the admin address)
+ADMIN=$(stellar keys address akkuea-deployer)
+WASM=../../target/wasm32v1-none/release/rwa_defi_contract.wasm
+stellar contract deploy --wasm "$WASM" --source akkuea-deployer --network testnet -- --admin "$ADMIN"
+stellar contract deploy --wasm "$WASM" --source akkuea-deployer --network testnet -- --admin "$ADMIN"
+
+# 4. Record the printed contract IDs in apps/shared/src/contracts.testnet.json
+#    and verify each with `get_oracle_config` before committing.
+```
+
+> **Mainnet** values in `apps/shared/src/contracts.mainnet.json` are intentionally
+> empty placeholders; populate them with the same process against
+> `--network mainnet` when a mainnet deployment is performed.

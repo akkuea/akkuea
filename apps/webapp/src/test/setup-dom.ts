@@ -8,6 +8,7 @@ Object.defineProperty(globalThis, "window", {
   value: dom.window,
   writable: true,
 });
+globalThis.window.fetch = fetch;
 
 Object.defineProperty(globalThis, "document", {
   value: dom.window.document,

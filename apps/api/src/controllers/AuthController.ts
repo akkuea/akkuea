@@ -1,4 +1,4 @@
-import { Keypair } from 'stellar-sdk';
+import { Keypair } from '@stellar/stellar-sdk';
 import { ApiError } from '../errors/ApiError';
 import { userRepository } from '../repositories/UserRepository';
 

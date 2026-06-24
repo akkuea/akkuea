@@ -17,7 +17,11 @@ import {
   ShieldCheck,
   Percent,
 } from "lucide-react";
-import { GameProperty, BuildingLevel, PropertyOwnershipState } from "../../types/game.types";
+import {
+  GameProperty,
+  BuildingLevel,
+  PropertyOwnershipState,
+} from "../../types/game.types";
 import { usePropertyActions } from "../../hooks/usePropertyActions";
 
 export interface PropertyPanelProps {
@@ -36,7 +40,7 @@ export interface PropertyPanelProps {
 export const getOwnershipState = (
   property: GameProperty,
   viewerAddress: string | null | undefined,
-  isConnected: boolean
+  isConnected: boolean,
 ): PropertyOwnershipState => {
   if (!isConnected || !viewerAddress) {
     return { type: "not_connected", property };
@@ -59,7 +63,9 @@ export const getOwnershipState = (
 /**
  * 9. Building development level progression bar (4 steps)
  */
-export const BuildingLevelBar: React.FC<{ buildingLevel: BuildingLevel }> = ({ buildingLevel }) => {
+export const BuildingLevelBar: React.FC<{ buildingLevel: BuildingLevel }> = ({
+  buildingLevel,
+}) => {
   const steps = [
     { label: "Vacant", desc: "Level 0" },
     { label: "Residential", desc: "Level 1" },
@@ -94,8 +100,8 @@ export const BuildingLevelBar: React.FC<{ buildingLevel: BuildingLevel }> = ({ b
                   isCurrent
                     ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white ring-4 ring-indigo-950/60 scale-110 shadow-lg shadow-indigo-500/30"
                     : isActive
-                    ? "bg-indigo-600 text-indigo-100"
-                    : "bg-slate-900 text-slate-500 border border-slate-800"
+                      ? "bg-indigo-600 text-indigo-100"
+                      : "bg-slate-900 text-slate-500 border border-slate-800"
                 }`}
               >
                 {idx}
@@ -105,8 +111,8 @@ export const BuildingLevelBar: React.FC<{ buildingLevel: BuildingLevel }> = ({ b
                   isCurrent
                     ? "text-indigo-400 font-bold"
                     : isActive
-                    ? "text-slate-300"
-                    : "text-slate-600"
+                      ? "text-slate-300"
+                      : "text-slate-600"
                 }`}
               >
                 {step.label}
@@ -130,7 +136,9 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
 }) => {
   // Use either the explicitly passed prop or fallback to the property state
   const buildingLevel =
-    buildingLevelProp !== undefined ? buildingLevelProp : property.buildingLevel;
+    buildingLevelProp !== undefined
+      ? buildingLevelProp
+      : property.buildingLevel;
 
   const [copied, setCopied] = useState(false);
   const [listPrice, setListPrice] = useState("");
@@ -156,7 +164,12 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
     error,
     success,
     clearStates,
-  } = usePropertyActions(property, onPropertyUpdate, viewerAddress, isConnected);
+  } = usePropertyActions(
+    property,
+    onPropertyUpdate,
+    viewerAddress,
+    isConnected,
+  );
 
   const state = getOwnershipState(property, viewerAddress, isConnected);
 
@@ -324,7 +337,9 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
               {/* Grid Location / Coords Bar */}
               <div className="flex justify-between items-center bg-slate-950/60 p-2.5 rounded-lg border border-slate-900/60 text-xs mt-1">
                 <span className="text-slate-400 font-medium">Coordinates</span>
-                <span className="font-mono text-indigo-400 font-semibold">{coordinates}</span>
+                <span className="font-mono text-indigo-400 font-semibold">
+                  {coordinates}
+                </span>
               </div>
 
               {/* Owner Address Section with Copy Option */}
@@ -343,7 +358,11 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
                       className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800/80 transition-colors"
                       title="Copy Address"
                     >
-                      {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                      {copied ? (
+                        <Check size={11} className="text-emerald-400" />
+                      ) : (
+                        <Copy size={11} />
+                      )}
                     </button>
                   )}
                 </div>
@@ -367,7 +386,9 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
                   {/* Guarded internally but reachable because isConnected === true */}
                   <button
                     onClick={claimIncome}
-                    disabled={!!pendingAction || (property.earnedIncome ?? 0) <= 0}
+                    disabled={
+                      !!pendingAction || (property.earnedIncome ?? 0) <= 0
+                    }
                     className="text-xs font-bold bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500 text-slate-950 px-3 py-1.5 rounded-lg border border-emerald-400/30 transition-all duration-200 shadow-md shadow-emerald-500/10 flex items-center gap-1"
                   >
                     Claim
@@ -382,8 +403,12 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
             <div className="bg-rose-950/40 border border-rose-500/20 text-rose-300 text-xs p-3.5 rounded-xl flex items-start gap-2.5 animate-fadeIn">
               <span className="w-2 h-2 mt-1.5 rounded-full bg-rose-500 shrink-0" />
               <div>
-                <span className="font-bold text-rose-200 block mb-0.5">Transaction Error</span>
-                <span className="text-rose-300/90 leading-relaxed">{error}</span>
+                <span className="font-bold text-rose-200 block mb-0.5">
+                  Transaction Error
+                </span>
+                <span className="text-rose-300/90 leading-relaxed">
+                  {error}
+                </span>
               </div>
             </div>
           )}
@@ -392,8 +417,12 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
             <div className="bg-emerald-950/40 border border-emerald-500/20 text-emerald-300 text-xs p-3.5 rounded-xl flex items-start gap-2.5 animate-fadeIn">
               <span className="w-2 h-2 mt-1.5 rounded-full bg-emerald-500 shrink-0" />
               <div>
-                <span className="font-bold text-emerald-200 block mb-0.5">Success!</span>
-                <span className="text-emerald-300/90 leading-relaxed">{success}</span>
+                <span className="font-bold text-emerald-200 block mb-0.5">
+                  Success!
+                </span>
+                <span className="text-emerald-300/90 leading-relaxed">
+                  {success}
+                </span>
               </div>
             </div>
           )}
@@ -407,7 +436,9 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
                   Processing Blockchain Tx
                 </span>
                 {/* 7. Pending state displays descriptive string */}
-                <p className="text-[11px] text-slate-400 font-medium px-4">{pendingAction}</p>
+                <p className="text-[11px] text-slate-400 font-medium px-4">
+                  {pendingAction}
+                </p>
               </div>
             </div>
           )}
@@ -424,7 +455,8 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
                   Stellar Wallet Required
                 </span>
                 <p className="text-[10px] text-slate-500 leading-normal">
-                  Connect your Stellar wallet to purchase tiles, make improvements, or claim rental incomes.
+                  Connect your Stellar wallet to purchase tiles, make
+                  improvements, or claim rental incomes.
                 </p>
               </div>
               <button
@@ -440,7 +472,9 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
               {state.type === "unowned" && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-xl border border-slate-800">
-                    <span className="text-xs text-slate-400 font-medium">Treasury Cost</span>
+                    <span className="text-xs text-slate-400 font-medium">
+                      Treasury Cost
+                    </span>
                     <span className="text-sm font-extrabold text-white flex items-center gap-1">
                       <Coins size={14} className="text-amber-400" />
                       {property.pricePerShare} LAND
@@ -459,7 +493,9 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
               {state.type === "listed_by_other" && (
                 <div className="space-y-3">
                   <div className="flex justify-between items-center bg-slate-900/50 p-3 rounded-xl border border-slate-800">
-                    <span className="text-xs text-slate-400 font-medium">Asking Price</span>
+                    <span className="text-xs text-slate-400 font-medium">
+                      Asking Price
+                    </span>
                     <span className="text-sm font-extrabold text-white flex items-center gap-1">
                       <Coins size={14} className="text-purple-400" />
                       {property.pricePerShare} LAND
@@ -533,7 +569,11 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
                       </div>
                       <button
                         type="submit"
-                        disabled={!!pendingAction || !listPrice || parseFloat(listPrice) <= 0}
+                        disabled={
+                          !!pendingAction ||
+                          !listPrice ||
+                          parseFloat(listPrice) <= 0
+                        }
                         className="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 text-slate-200 hover:text-white font-semibold text-xs px-3.5 rounded-lg border border-slate-750 transition-colors"
                       >
                         List

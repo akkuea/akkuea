@@ -1,4 +1,4 @@
-import { describe, expect, it, spyOn, beforeEach } from 'bun:test';
+import { describe, expect, it, spyOn, beforeEach, afterEach, mock } from 'bun:test';
 import { webhookService, type WebhookPayload } from './WebhookService';
 import { transactionRepository } from '../repositories/TransactionRepository';
 import type { Transaction } from '../db/schema/transactions';
@@ -15,6 +15,11 @@ describe('WebhookService', () => {
     spyOn(logger, 'error').mockImplementation(() => {});
     spyOn(logger.crud, 'success').mockImplementation(() => {});
     spyOn(logger.crud, 'failure').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    // Restore spies on shared singletons (e.g. transactionRepository) so DB integration tests are not affected
+    mock.restore();
   });
 
   describe('validateSignature', () => {

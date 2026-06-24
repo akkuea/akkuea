@@ -3,7 +3,15 @@
 import React, { useState } from "react";
 import { PropertyPanel } from "../components/game/PropertyPanel";
 import { GameProperty, BuildingLevel } from "../types/game.types";
-import { Wallet, Sparkles, MapPin, Grid, Layers, Shield, HelpCircle } from "lucide-react";
+import {
+  Wallet,
+  Sparkles,
+  MapPin,
+  Grid,
+  Layers,
+  Shield,
+  HelpCircle,
+} from "lucide-react";
 import { useGameWallet } from "../hooks/useGameWallet";
 
 // Mock coordinates and details
@@ -11,13 +19,14 @@ const mockPropertiesList: GameProperty[] = [
   {
     id: "tile-1-treasury",
     name: "Neo Tokyo Treasury Sector",
-    description: "Highly coveted unowned sector in the central business district.",
+    description:
+      "Highly coveted unowned sector in the central business district.",
     propertyType: "residential",
     location: {
       address: "District 1A",
       city: "Neo Tokyo",
       country: "Japan",
-      coordinates: { latitude: 35.6762, longitude: 139.6503 }
+      coordinates: { latitude: 35.6762, longitude: 139.6503 },
     },
     totalValue: "850000",
     tokenAddress: "GCTREASURYXXXXXX",
@@ -36,13 +45,14 @@ const mockPropertiesList: GameProperty[] = [
   {
     id: "tile-2-owned",
     name: "Akkuea Oasis Ridge",
-    description: "Your primary residential estate with beautiful panoramic views.",
+    description:
+      "Your primary residential estate with beautiful panoramic views.",
     propertyType: "residential",
     location: {
       address: "Ridge Drive 12",
       city: "Oasis City",
       country: "Stellar Core",
-      coordinates: { latitude: 4.7128, longitude: -74.006 }
+      coordinates: { latitude: 4.7128, longitude: -74.006 },
     },
     totalValue: "1200000",
     tokenAddress: "GCOWNEDXXXXXX",
@@ -61,13 +71,14 @@ const mockPropertiesList: GameProperty[] = [
   {
     id: "tile-3-listed",
     name: "Commercial Plaza West",
-    description: "Premium retail lot currently listed for sale by another player.",
+    description:
+      "Premium retail lot currently listed for sale by another player.",
     propertyType: "commercial",
     location: {
       address: "West End Boulevard",
       city: "Metropolis",
       country: "Akkuea Land",
-      coordinates: { latitude: 51.5074, longitude: -0.1278 }
+      coordinates: { latitude: 51.5074, longitude: -0.1278 },
     },
     totalValue: "2500000",
     tokenAddress: "GCLISTEDXXXXXX",
@@ -87,30 +98,41 @@ const mockPropertiesList: GameProperty[] = [
 ];
 
 export default function SandboxPage() {
-  const [properties, setProperties] = useState<GameProperty[]>(mockPropertiesList);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
-  
+  const [properties, setProperties] =
+    useState<GameProperty[]>(mockPropertiesList);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(
+    null,
+  );
+
   // Consuming global simulated wallet hook
   const { isConnected, address, login, logout } = useGameWallet();
 
   const handlePropertyUpdate = (updated: GameProperty) => {
-    setProperties((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    setProperties((prev) =>
+      prev.map((p) => (p.id === updated.id ? updated : p)),
+    );
   };
 
   const selectedProperty = properties.find((p) => p.id === selectedPropertyId);
 
   // Helper to determine tile color on the map grid
   const getTileBorderClass = (p: GameProperty) => {
-    if (!isConnected) return "border-slate-800 hover:border-slate-700 bg-slate-900/40";
-    if (p.owner === address) return "border-emerald-500/40 hover:border-emerald-400 bg-emerald-950/20";
-    if (p.owner === "GBTREASURY") return "border-amber-500/40 hover:border-amber-400 bg-amber-950/20";
+    if (!isConnected)
+      return "border-slate-800 hover:border-slate-700 bg-slate-900/40";
+    if (p.owner === address)
+      return "border-emerald-500/40 hover:border-emerald-400 bg-emerald-950/20";
+    if (p.owner === "GBTREASURY")
+      return "border-amber-500/40 hover:border-amber-400 bg-amber-950/20";
     return "border-purple-500/40 hover:border-purple-400 bg-purple-950/20";
   };
 
   const getTileBadge = (p: GameProperty) => {
-    if (!isConnected) return <span className="text-slate-500">Not Connected</span>;
-    if (p.owner === address) return <span className="text-emerald-400">Owned by You</span>;
-    if (p.owner === "GBTREASURY") return <span className="text-amber-400">Treasury</span>;
+    if (!isConnected)
+      return <span className="text-slate-500">Not Connected</span>;
+    if (p.owner === address)
+      return <span className="text-emerald-400">Owned by You</span>;
+    if (p.owner === "GBTREASURY")
+      return <span className="text-amber-400">Treasury</span>;
     return <span className="text-purple-400">Listed (Other)</span>;
   };
 
@@ -129,7 +151,8 @@ export default function SandboxPage() {
             Akkuea Land Grid Panel
           </h1>
           <p className="text-slate-400 text-sm mt-1">
-            Test and interact with property panels across all four dynamic blockchain ownership states.
+            Test and interact with property panels across all four dynamic
+            blockchain ownership states.
           </p>
         </div>
 
@@ -137,17 +160,21 @@ export default function SandboxPage() {
         <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex items-center gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-emerald-500" : "bg-rose-500"}`} />
+              <div
+                className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-emerald-500" : "bg-rose-500"}`}
+              />
               <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                 Stellar Connection Emulator
               </span>
             </div>
             <p className="text-xs font-mono text-slate-400">
-              {isConnected && address ? `${address.slice(0, 8)}...${address.slice(-8)}` : "Disconnected"}
+              {isConnected && address
+                ? `${address.slice(0, 8)}...${address.slice(-8)}`
+                : "Disconnected"}
             </p>
           </div>
           <button
-            onClick={() => isConnected ? logout() : login()}
+            onClick={() => (isConnected ? logout() : login())}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 border ${
               isConnected
                 ? "bg-slate-800 hover:bg-slate-700 text-white border-slate-750"
@@ -178,7 +205,7 @@ export default function SandboxPage() {
                     key={p.id}
                     onClick={() => setSelectedPropertyId(p.id)}
                     className={`text-left p-5 rounded-2xl border transition-all duration-300 flex flex-col gap-4 relative overflow-hidden group ${getTileBorderClass(
-                      p
+                      p,
                     )} ${isSelected ? "ring-2 ring-indigo-500 scale-102 shadow-xl shadow-indigo-950/20" : ""}`}
                   >
                     <div>
@@ -186,7 +213,9 @@ export default function SandboxPage() {
                         <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-950/80 px-2 py-0.5 rounded border border-slate-900/60">
                           Level {p.buildingLevel}
                         </span>
-                        <span className="text-[10px] font-semibold">{getTileBadge(p)}</span>
+                        <span className="text-[10px] font-semibold">
+                          {getTileBadge(p)}
+                        </span>
                       </div>
                       <h4 className="font-bold text-white group-hover:text-indigo-300 transition-colors mt-3 text-sm">
                         {p.name}
@@ -217,16 +246,28 @@ export default function SandboxPage() {
               </h4>
               <ul className="text-xs text-slate-400 space-y-2 mt-2 list-disc list-inside">
                 <li>
-                  <strong className="text-slate-200">Unowned State</strong>: Click the Amber tile. Connect wallet to purchase from the treasury.
+                  <strong className="text-slate-200">Unowned State</strong>:
+                  Click the Amber tile. Connect wallet to purchase from the
+                  treasury.
                 </li>
                 <li>
-                  <strong className="text-slate-200">Owned State</strong>: Click the Green tile. Upgrading building level or creating a sale listing triggers the signature simulator.
+                  <strong className="text-slate-200">Owned State</strong>: Click
+                  the Green tile. Upgrading building level or creating a sale
+                  listing triggers the signature simulator.
                 </li>
                 <li>
-                  <strong className="text-slate-200">Listed State</strong>: Click the Purple tile. If wallet is connected, purchase is available.
+                  <strong className="text-slate-200">Listed State</strong>:
+                  Click the Purple tile. If wallet is connected, purchase is
+                  available.
                 </li>
                 <li>
-                  <strong className="text-slate-200">Signature Guard State</strong>: Click <strong className="text-slate-200">Disconnect Wallet</strong> at the top. Notice that all transaction buttons are strictly hidden behind the wallet connect guard!
+                  <strong className="text-slate-200">
+                    Signature Guard State
+                  </strong>
+                  : Click{" "}
+                  <strong className="text-slate-200">Disconnect Wallet</strong>{" "}
+                  at the top. Notice that all transaction buttons are strictly
+                  hidden behind the wallet connect guard!
                 </li>
               </ul>
             </div>
@@ -236,9 +277,12 @@ export default function SandboxPage() {
         {/* Right Info Space */}
         <div className="lg:col-span-1 bg-slate-900/20 p-8 rounded-3xl border border-slate-900/60 text-center min-h-[300px] flex flex-col items-center justify-center gap-3">
           <Layers className="text-slate-700 animate-pulse" size={42} />
-          <h4 className="font-bold text-slate-400 text-sm">No Property Selected</h4>
+          <h4 className="font-bold text-slate-400 text-sm">
+            No Property Selected
+          </h4>
           <p className="text-xs text-slate-500 max-w-[200px] mx-auto leading-relaxed">
-            Click on any land tile in the grid to slide in the real-time interaction property panel.
+            Click on any land tile in the grid to slide in the real-time
+            interaction property panel.
           </p>
         </div>
       </div>

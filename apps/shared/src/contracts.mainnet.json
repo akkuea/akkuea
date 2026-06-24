@@ -1,0 +1,10 @@
+{
+  "network": "mainnet",
+  "networkPassphrase": "Public Global Stellar Network ; September 2015",
+  "rpcUrl": "https://rpc.mainnet.stellar.org",
+  "description": "Deployed Soroban contract IDs for the akkuea defi-rwa platform on Stellar mainnet. This file is a deployment artifact: it is updated by the deploy pipeline (see docs/contracts/deployment.md), not by the build. Values are empty placeholders until the contracts are deployed to mainnet; when populated, each value is a Soroban contract address and starts with 'C'.",
+  "contracts": {
+    "REAL_ESTATE_TOKEN": "",
+    "DEFI_LENDING": ""
+  }
+}

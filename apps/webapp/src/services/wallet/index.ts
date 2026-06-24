@@ -6,4 +6,5 @@ export {
   type SmartAccountKitProviderConfig,
 } from "./smart-account-kit.provider";
 export { PrivyWalletProvider, privyProvider } from "./privy.provider";
+export { PollarProvider, pollarProvider } from "./providers/pollar";
 export { walletRegistry } from "./registry";

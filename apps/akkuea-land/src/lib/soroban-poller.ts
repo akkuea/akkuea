@@ -1,4 +1,4 @@
-import { SorobanRpc, xdr } from "@stellar/stellar-sdk";
+import { rpc as SorobanRpc, xdr } from "@stellar/stellar-sdk";
 import type {
   GameEvent,
   PropertyBoughtEvent,
@@ -10,27 +10,19 @@ import type {
 const RPC_URL =
   process.env.STELLAR_RPC_URL ?? "https://soroban-testnet.stellar.org";
 
-const CONTRACT_IDS: string[] = (
-  process.env.GAME_CONTRACT_IDS ?? ""
-)
+const CONTRACT_IDS: string[] = (process.env.GAME_CONTRACT_IDS ?? "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 
 /** Parse a raw Soroban event into a typed GameEvent, or null if unrecognised. */
 function parseEvent(
-  raw: SorobanRpc.Api.RawEventResponse,
+  raw: SorobanRpc.Api.EventResponse,
   index: number,
 ): GameEvent | null {
   if (raw.type !== "contract") return null;
 
-  const topics = raw.topic.map((t) => {
-    try {
-      return xdr.ScVal.fromXDR(t, "base64");
-    } catch {
-      return null;
-    }
-  });
+  const topics = raw.topic;
 
   const eventTypeTopic = topics[0];
   if (!eventTypeTopic || eventTypeTopic.switch().name !== "scvSymbol")
@@ -41,7 +33,7 @@ function parseEvent(
   const base = {
     ledger: raw.ledger,
     timestamp: raw.ledgerClosedAt,
-    contractId: raw.contractId ?? "",
+    contractId: raw.contractId?.toString() ?? "",
     id: `${raw.ledger}-${raw.txHash}-${index}`,
   };
 
@@ -49,10 +41,8 @@ function parseEvent(
     if (!v) return "";
     if (v.switch().name === "scvString") return v.str().toString();
     if (v.switch().name === "scvSymbol") return v.sym().toString();
-    if (v.switch().name === "scvAddress")
-      return v.address().toScAddress().toString();
-    if (v.switch().name === "scvI128")
-      return v.i128().lo().toString();
+    if (v.switch().name === "scvAddress") return v.address().toString();
+    if (v.switch().name === "scvI128") return v.i128().lo().toString();
     return "";
   };
 
@@ -113,7 +103,10 @@ export async function pollGameEvents(startLedger: number): Promise<PollResult> {
 
   const filters: SorobanRpc.Server.GetEventsRequest["filters"] =
     CONTRACT_IDS.length > 0
-      ? CONTRACT_IDS.map((contractId) => ({ type: "contract" as const, contractIds: [contractId] }))
+      ? CONTRACT_IDS.map((contractId) => ({
+          type: "contract" as const,
+          contractIds: [contractId],
+        }))
       : [{ type: "contract" as const }];
 
   const response = await server.getEvents({
@@ -126,7 +119,7 @@ export async function pollGameEvents(startLedger: number): Promise<PollResult> {
   let maxLedger = startLedger;
 
   for (let i = 0; i < response.events.length; i++) {
-    const raw = response.events[i] as SorobanRpc.Api.RawEventResponse;
+    const raw = response.events[i];
     if (raw.ledger > maxLedger) maxLedger = raw.ledger;
     const parsed = parseEvent(raw, i);
     if (parsed) events.push(parsed);

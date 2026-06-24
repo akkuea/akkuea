@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import React, {
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from "react";
 import { AnimatePresence } from "framer-motion";
 import "./CityMap.css";
 import { GameProperty } from "../../types/game.types";
@@ -32,7 +38,8 @@ export function CityMap() {
 
   // ── Derived ──────────────────────────────────────────────────────────────
   const selectedProperty = useMemo(
-    () => (selectedId ? properties.find((p) => p.id === selectedId) ?? null : null),
+    () =>
+      selectedId ? (properties.find((p) => p.id === selectedId) ?? null) : null,
     [selectedId, properties],
   );
 
@@ -92,20 +99,17 @@ export function CityMap() {
   }, []);
 
   // ── Event delegation click handler ───────────────────────────────────────
-  const handleGridClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const target = (e.target as HTMLElement).closest<HTMLElement>(
-        "[data-property-id]",
-      );
-      if (!target) return;
+  const handleGridClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = (e.target as HTMLElement).closest<HTMLElement>(
+      "[data-property-id]",
+    );
+    if (!target) return;
 
-      const propertyId = target.dataset.propertyId!;
+    const propertyId = target.dataset.propertyId!;
 
-      // Toggle selection: clicking same tile deselects
-      setSelectedId((prev) => (prev === propertyId ? null : propertyId));
-    },
-    [],
-  );
+    // Toggle selection: clicking same tile deselects
+    setSelectedId((prev) => (prev === propertyId ? null : propertyId));
+  }, []);
 
   // ── Close panel ──────────────────────────────────────────────────────────
   const handleClosePanel = useCallback(() => {
@@ -194,8 +198,7 @@ export function CityMap() {
             const bgColor = addressToHSL(prop.owner);
             const glowColor = addressToGlow(prop.owner);
             const isSelected = prop.id === selectedId;
-            const isTreasury =
-              !prop.owner || prop.owner === "GBTREASURY";
+            const isTreasury = !prop.owner || prop.owner === "GBTREASURY";
             const isUnowned = !prop.owner;
 
             // Build tooltip text
@@ -209,10 +212,7 @@ export function CityMap() {
             }
             const tooltip = tooltipLines.join("\n");
 
-            const tileClasses = [
-              "city-tile",
-              isSelected && "tile-selected",
-            ]
+            const tileClasses = ["city-tile", isSelected && "tile-selected"]
               .filter(Boolean)
               .join(" ");
 
@@ -224,9 +224,7 @@ export function CityMap() {
                 className={tileClasses}
                 style={
                   {
-                    backgroundColor: isUnowned
-                      ? "var(--tile-empty)"
-                      : bgColor,
+                    backgroundColor: isUnowned ? "var(--tile-empty)" : bgColor,
                     "--tile-glow-color": glowColor,
                     opacity: isUnowned ? 0.45 : isTreasury ? 0.7 : 1,
                   } as React.CSSProperties

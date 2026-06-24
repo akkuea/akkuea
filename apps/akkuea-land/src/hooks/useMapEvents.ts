@@ -29,11 +29,7 @@ export function useMapEvents(
   onPropertyChange: (updated: GameProperty) => void,
   options: UseMapEventsOptions = {},
 ) {
-  const {
-    minInterval = 8000,
-    maxInterval = 15000,
-    enabled = true,
-  } = options;
+  const { minInterval = 8000, maxInterval = 15000, enabled = true } = options;
 
   const [lastEvent, setLastEvent] = useState<MapEvent | null>(null);
   const propertiesRef = useRef(properties);

@@ -4,7 +4,7 @@ import { fetchBalance, type HorizonServerLike } from "../stellar";
 function makeServer(
   result: Promise<{ balances: Array<{ asset_type: string; balance: string }> }>,
 ): HorizonServerLike {
-  return { loadAccount: (_address: string) => result };
+  return { loadAccount: () => result };
 }
 
 describe("fetchBalance", () => {

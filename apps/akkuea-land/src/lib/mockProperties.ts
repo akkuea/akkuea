@@ -169,7 +169,10 @@ export function generateMockGrid(): GameProperty[] {
 /**
  * Get grid coordinates from a property ID like "prop-3-7"
  */
-export function getGridCoords(propertyId: string): { row: number; col: number } {
+export function getGridCoords(propertyId: string): {
+  row: number;
+  col: number;
+} {
   const parts = propertyId.split("-");
   return {
     row: parseInt(parts[1], 10),

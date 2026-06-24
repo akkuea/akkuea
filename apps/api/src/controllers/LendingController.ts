@@ -9,6 +9,7 @@ import { cacheService } from '../services/CacheService';
 import { RiskMonitoringController } from './RiskMonitoringController';
 import { stellarService } from '../services/StellarService';
 import { isLiquidatorAuthorized } from '../utils/liquidatorAuth';
+import { getDefiRwaContractId } from '../config/contracts';
 
 const POOLS_CACHE_TTL = 10; // seconds
 const POOLS_CACHE_PREFIX = 'lending:pools:';
@@ -276,7 +277,7 @@ export class LendingController {
 
     // Best-effort on-chain liquidation - proceeds even if contract call fails
     let txHash: string | null = null;
-    const contractId = process.env.DEFI_RWA_CONTRACT_ID;
+    const contractId = getDefiRwaContractId();
     const adminPublicKey = process.env.STELLAR_ADMIN_PUBLIC_KEY;
     const adminSecret = process.env.STELLAR_ADMIN_SECRET;
     if (contractId && adminPublicKey && adminSecret) {

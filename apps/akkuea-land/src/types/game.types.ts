@@ -8,8 +8,8 @@ export type BuildingLevel = 0 | 1 | 2 | 3;
 export interface GamePropertyFields {
   buildingLevel: BuildingLevel;
   earnedIncome?: number; // Accrued rental income
-  improveCost?: number;  // Cost in LAND to improve to next level
-  isListed?: boolean;    // Whether the property is listed for sale by a player
+  improveCost?: number; // Cost in LAND to improve to next level
+  isListed?: boolean; // Whether the property is listed for sale by a player
 }
 
 /**

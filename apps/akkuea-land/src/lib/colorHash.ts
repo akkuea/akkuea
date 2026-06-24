@@ -5,12 +5,7 @@
  * produces the same tile color across sessions and devices.
  */
 
-const TREASURY_ADDRESSES = new Set([
-  "",
-  "gbtreasury",
-  "treasury",
-  "system",
-]);
+const TREASURY_ADDRESSES = new Set(["", "gbtreasury", "treasury", "system"]);
 
 /**
  * DJB2 hash – fast, low-collision string hash.

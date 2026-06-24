@@ -57,7 +57,11 @@ export default function OnboardingPage() {
               />
             )}
             {step === "claim-property" && (
-              <ClaimPropertyStep key="claim-property" onComplete={complete} onSkip={complete} />
+              <ClaimPropertyStep
+                key="claim-property"
+                onComplete={complete}
+                onSkip={complete}
+              />
             )}
           </AnimatePresence>
         </div>

@@ -12,7 +12,10 @@ export function GET(req: NextRequest): NextResponse {
 
   const player = searchParams.get("player") ?? undefined;
   const cursor = searchParams.get("cursor") ?? undefined;
-  const limitParam = parseInt(searchParams.get("limit") ?? String(DEFAULT_LIMIT), 10);
+  const limitParam = parseInt(
+    searchParams.get("limit") ?? String(DEFAULT_LIMIT),
+    10,
+  );
   const limit = Number.isFinite(limitParam)
     ? Math.min(Math.max(1, limitParam), MAX_LIMIT)
     : DEFAULT_LIMIT;

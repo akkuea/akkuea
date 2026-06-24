@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Loader2 } from 'lucide-react';
-import { Listing, LEVEL_LABELS } from './types';
-import { Button } from '@/components/ui/button';
+import { useEffect, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { X, Loader2 } from "lucide-react";
+import { Listing, LEVEL_LABELS } from "./types";
+import { Button } from "@/components/ui/button";
 
 interface BuyModalProps {
   listing: Listing;
@@ -13,7 +13,12 @@ interface BuyModalProps {
   onConfirm: () => Promise<void>;
 }
 
-export function BuyModal({ listing, balance, onClose, onConfirm }: BuyModalProps) {
+export function BuyModal({
+  listing,
+  balance,
+  onClose,
+  onConfirm,
+}: BuyModalProps) {
   const [loading, setLoading] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const canAfford = balance >= listing.price;
@@ -22,12 +27,14 @@ export function BuyModal({ listing, balance, onClose, onConfirm }: BuyModalProps
   // Focus close button on open; close on Escape
   useEffect(() => {
     closeRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    document.body.style.overflow = 'hidden';
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
     return () => {
-      document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
     };
   }, [onClose]);
 
@@ -69,7 +76,7 @@ export function BuyModal({ listing, balance, onClose, onConfirm }: BuyModalProps
           initial={{ scale: 0.95, y: 16 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.95, y: 16 }}
-          transition={{ type: 'spring', duration: 0.35, bounce: 0.2 }}
+          transition={{ type: "spring", duration: 0.35, bounce: 0.2 }}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Close */}
@@ -88,7 +95,17 @@ export function BuyModal({ listing, balance, onClose, onConfirm }: BuyModalProps
             style={{ backgroundColor: listing.tileColor }}
             aria-hidden="true"
           >
-            {listing.level === 0 ? '🏕' : listing.level === 1 ? '🏠' : listing.level === 2 ? '🏡' : listing.level === 3 ? '🏛' : listing.level === 4 ? '🏢' : '🏙'}
+            {listing.level === 0
+              ? "🏕"
+              : listing.level === 1
+                ? "🏠"
+                : listing.level === 2
+                  ? "🏡"
+                  : listing.level === 3
+                    ? "🏛"
+                    : listing.level === 4
+                      ? "🏢"
+                      : "🏙"}
           </div>
 
           <div className="p-5 space-y-4">
@@ -100,7 +117,9 @@ export function BuyModal({ listing, balance, onClose, onConfirm }: BuyModalProps
             <dl className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Location</dt>
-                <dd className="font-mono">({listing.coords.x}, {listing.coords.y})</dd>
+                <dd className="font-mono">
+                  ({listing.coords.x}, {listing.coords.y})
+                </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Building</dt>
@@ -108,7 +127,11 @@ export function BuyModal({ listing, balance, onClose, onConfirm }: BuyModalProps
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Income</dt>
-                <dd>{listing.incomeRate > 0 ? `+${listing.incomeRate} LAND/hr` : 'None'}</dd>
+                <dd>
+                  {listing.incomeRate > 0
+                    ? `+${listing.incomeRate} LAND/hr`
+                    : "None"}
+                </dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-muted-foreground">Seller</dt>
@@ -119,23 +142,33 @@ export function BuyModal({ listing, balance, onClose, onConfirm }: BuyModalProps
             <div className="border-t border-border pt-3 space-y-1.5">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Your balance</span>
-                <span className={canAfford ? 'text-green-500' : 'text-destructive'}>
+                <span
+                  className={canAfford ? "text-green-500" : "text-destructive"}
+                >
                   {balance.toLocaleString()} LAND
                 </span>
               </div>
               <div className="flex justify-between font-semibold">
                 <span>Price</span>
-                <span className="text-primary">{listing.price.toLocaleString()} LAND</span>
+                <span className="text-primary">
+                  {listing.price.toLocaleString()} LAND
+                </span>
               </div>
               {!canAfford && (
                 <p className="text-xs text-destructive" role="alert">
-                  You need {deficit.toLocaleString()} more LAND to buy this property.
+                  You need {deficit.toLocaleString()} more LAND to buy this
+                  property.
                 </p>
               )}
             </div>
 
             <div className="flex gap-2 pt-1">
-              <Button variant="outline" className="flex-1" onClick={onClose} disabled={loading}>
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={onClose}
+                disabled={loading}
+              >
                 Cancel
               </Button>
               <Button
@@ -150,7 +183,7 @@ export function BuyModal({ listing, balance, onClose, onConfirm }: BuyModalProps
                     Buying…
                   </>
                 ) : (
-                  'Confirm Purchase'
+                  "Confirm Purchase"
                 )}
               </Button>
             </div>

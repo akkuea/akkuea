@@ -14,3 +14,5 @@ soroban-sdk = { workspace = true }
 
 [dev-dependencies]
 soroban-sdk = { workspace = true, features = ["testutils"] }
+game-property-nft = { path = "../game-property-nft" }
+game-land-token = { path = "../game-land-token" }

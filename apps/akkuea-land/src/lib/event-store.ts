@@ -24,7 +24,11 @@ export interface HistoryResult {
   total: number;
 }
 
-export function queryHistory({ player, limit, cursor }: HistoryQuery): HistoryResult {
+export function queryHistory({
+  player,
+  limit,
+  cursor,
+}: HistoryQuery): HistoryResult {
   let filtered = player
     ? store.filter((e) => {
         if (e.type === "PropertyBought") return e.buyer === player;
@@ -39,9 +43,7 @@ export function queryHistory({ player, limit, cursor }: HistoryQuery): HistoryRe
   // newest first
   filtered = filtered.reverse();
 
-  const startIdx = cursor
-    ? filtered.findIndex((e) => e.id === cursor) + 1
-    : 0;
+  const startIdx = cursor ? filtered.findIndex((e) => e.id === cursor) + 1 : 0;
 
   const page = filtered.slice(startIdx, startIdx + limit);
   const nextCursor = page.length === limit ? page[page.length - 1].id : null;

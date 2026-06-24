@@ -62,9 +62,7 @@ export function CityMap() {
         pulse(event.tileId);
       } else if (event.type === "PropertyListed") {
         setTiles((prev) =>
-          prev.map((t) =>
-            t.id === event.tileId ? { ...t, listed: true } : t,
-          ),
+          prev.map((t) => (t.id === event.tileId ? { ...t, listed: true } : t)),
         );
         pulse(event.tileId);
       }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Transaction, Keypair, xdr } from "stellar-sdk";
+import { Transaction, Keypair, xdr } from "@stellar/stellar-sdk";
 import { verifyPrivyWalletOwnership } from "@/lib/privy-server";
 import { PRIVY_APP_CREDENTIAL_ENV, PRIVY_APP_ID_ENV } from "@/lib/privy-env";
 

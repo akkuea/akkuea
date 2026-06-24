@@ -1,4 +1,9 @@
-// Removed unused imports
+// Contract IDs are loaded from per-network JSON deployment artifacts rather than
+// hard-coded here. These files are updated by the deploy pipeline (see
+// docs/contracts/deployment.md), not by the build, so application code can stay
+// untouched when contracts are (re)deployed.
+import testnetContracts from "../contracts.testnet.json";
+import mainnetContracts from "../contracts.mainnet.json";
 
 export const STELLAR_NETWORKS = {
   MAINNET: "public",
@@ -7,14 +12,19 @@ export const STELLAR_NETWORKS = {
   STANDALONE: "standalone",
 } as const;
 
+/**
+ * Soroban contract IDs per network, derived from the `contracts.<network>.json`
+ * deployment artifacts. An empty string means the contract has not been deployed
+ * to that network yet.
+ */
 export const CONTRACT_IDS = {
   REAL_ESTATE_TOKEN: {
-    TESTNET: "",
-    MAINNET: "",
+    TESTNET: testnetContracts.contracts.REAL_ESTATE_TOKEN,
+    MAINNET: mainnetContracts.contracts.REAL_ESTATE_TOKEN,
   },
   DEFI_LENDING: {
-    TESTNET: "",
-    MAINNET: "",
+    TESTNET: testnetContracts.contracts.DEFI_LENDING,
+    MAINNET: mainnetContracts.contracts.DEFI_LENDING,
   },
 } as const;
 

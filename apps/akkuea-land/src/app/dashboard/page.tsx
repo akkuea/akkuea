@@ -25,7 +25,7 @@ import {
   APARTMENT_MULTIPLIER,
   SKYSCRAPER_MULTIPLIER,
 } from "@akkuea/shared";
-import { SorobanRpc } from "stellar-sdk";
+import { rpc as SorobanRpc } from "@stellar/stellar-sdk";
 import { GameProperty, BuildingLevel } from "@/types/game.types";
 import { getWalletKit } from "@/lib/walletKit";
 
@@ -408,9 +408,7 @@ export default function DashboardPage() {
         // Reset lastClaimedLedger so income display zeroes out immediately.
         setProperties((prev) =>
           prev.map((p) =>
-            p.id === prop.id
-              ? { ...p, lastClaimedLedger: currentLedger }
-              : p,
+            p.id === prop.id ? { ...p, lastClaimedLedger: currentLedger } : p,
           ),
         );
       } catch {
@@ -508,7 +506,10 @@ export default function DashboardPage() {
               {/* Progress indicator while claiming */}
               {isClaimRunning && claimProgress && (
                 <div className="text-xs text-slate-300 flex items-center gap-2">
-                  <RefreshCw size={12} className="animate-spin text-indigo-400 shrink-0" />
+                  <RefreshCw
+                    size={12}
+                    className="animate-spin text-indigo-400 shrink-0"
+                  />
                   Claiming {claimProgress.current + 1} of {claimProgress.total}…
                 </div>
               )}
@@ -525,7 +526,9 @@ export default function DashboardPage() {
                     <>
                       <div className="flex items-center gap-1.5 text-xs text-emerald-400">
                         <CheckCircle2 size={13} />
-                        {claimProgress.total - claimProgress.failures.length} claimed
+                        {claimProgress.total -
+                          claimProgress.failures.length}{" "}
+                        claimed
                       </div>
                       <div className="flex items-start gap-1.5 text-xs text-rose-400">
                         <XCircle size={13} className="mt-0.5 shrink-0" />

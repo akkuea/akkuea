@@ -33,13 +33,15 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
       <h1 className="mb-4 text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-300 bg-clip-text text-transparent">
         Welcome to Akkuea Land
       </h1>
-      
+
       <div className="space-y-4 mb-8 max-w-sm mx-auto">
         <p className="text-sm text-slate-400 leading-relaxed">
-          Explore and buy virtual properties in a dynamic, live city grid. Earn steady rental income in real-time as the city thrives.
+          Explore and buy virtual properties in a dynamic, live city grid. Earn
+          steady rental income in real-time as the city thrives.
         </p>
         <p className="text-sm text-slate-400 leading-relaxed">
-          Your Stellar wallet has been set up securely through Pollar. You don't need any prior blockchain experience or fees to play.
+          Your Stellar wallet has been set up securely through Pollar. You don't
+          need any prior blockchain experience or fees to play.
         </p>
       </div>
 
@@ -57,9 +59,29 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
 
 // Curated harmonious neon city palette
 const SAMPLE_TILES = [
-  "#1e1b4b", "#312e81", "#1e1b4b", "#3730a3", "#1e1b4b",
-  "#3730a3", "#4338ca", "#312e81", "#1e1b4b", "#4338ca",
-  "#1e1b4b", "#3730a3", "#312e81", "#4338ca", "#3730a3",
-  "#4338ca", "#1e1b4b", "#3730a3", "#312e81", "#1e1b4b",
-  "#312e81", "#4338ca", "#1e1b4b", "#3730a3", "#4338ca"
+  "#1e1b4b",
+  "#312e81",
+  "#1e1b4b",
+  "#3730a3",
+  "#1e1b4b",
+  "#3730a3",
+  "#4338ca",
+  "#312e81",
+  "#1e1b4b",
+  "#4338ca",
+  "#1e1b4b",
+  "#3730a3",
+  "#312e81",
+  "#4338ca",
+  "#3730a3",
+  "#4338ca",
+  "#1e1b4b",
+  "#3730a3",
+  "#312e81",
+  "#1e1b4b",
+  "#312e81",
+  "#4338ca",
+  "#1e1b4b",
+  "#3730a3",
+  "#4338ca",
 ];

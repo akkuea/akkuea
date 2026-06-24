@@ -7,13 +7,16 @@ import { Sparkles, MapPin, CheckCircle, RefreshCw } from "lucide-react";
 
 // Generate a 5x5 grid of properties (coordinates 0,0 to 4,4)
 const GRID_SIZE = 5;
-const STARTER_PROPERTIES = Array.from({ length: GRID_SIZE * GRID_SIZE }, (_, i) => ({
-  id: i,
-  x: i % GRID_SIZE,
-  y: Math.floor(i / GRID_SIZE),
-  isTreasury: (i * 7 + 3) % 2 === 0, // Mock some treasury properties (highlighted)
-  name: `Sector ${i % GRID_SIZE},${Math.floor(i / GRID_SIZE)}`
-}));
+const STARTER_PROPERTIES = Array.from(
+  { length: GRID_SIZE * GRID_SIZE },
+  (_, i) => ({
+    id: i,
+    x: i % GRID_SIZE,
+    y: Math.floor(i / GRID_SIZE),
+    isTreasury: (i * 7 + 3) % 2 === 0, // Mock some treasury properties (highlighted)
+    name: `Sector ${i % GRID_SIZE},${Math.floor(i / GRID_SIZE)}`,
+  }),
+);
 
 export function ClaimPropertyStep({
   onComplete,
@@ -24,7 +27,9 @@ export function ClaimPropertyStep({
 }) {
   const { signAndSubmitTx } = useGameWallet();
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [status, setStatus] = useState<"idle" | "pending" | "celebrating">("idle");
+  const [status, setStatus] = useState<"idle" | "pending" | "celebrating">(
+    "idle",
+  );
 
   const handleClaim = async () => {
     if (selectedId === null) return;
@@ -57,7 +62,8 @@ export function ClaimPropertyStep({
           Claim your first property
         </h2>
         <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
-          Tap on any highlighted treasury tile on the grid below. It is yours completely free as a starting bonus!
+          Tap on any highlighted treasury tile on the grid below. It is yours
+          completely free as a starting bonus!
         </p>
       </div>
 
@@ -84,10 +90,12 @@ export function ClaimPropertyStep({
                       : "bg-slate-900/40 border border-slate-950/60 opacity-20 cursor-not-allowed"
                 }`}
               >
-                <span className={`text-[10px] font-mono ${isSelected ? "text-white font-bold" : "text-slate-500"}`}>
+                <span
+                  className={`text-[10px] font-mono ${isSelected ? "text-white font-bold" : "text-slate-500"}`}
+                >
                   {prop.x},{prop.y}
                 </span>
-                
+
                 {canClaim && !isSelected && (
                   <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
                 )}
@@ -95,7 +103,7 @@ export function ClaimPropertyStep({
             );
           })}
         </div>
-        
+
         <div className="mt-3 flex justify-between text-[10px] text-slate-400 px-1">
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-700/50" />
@@ -110,8 +118,12 @@ export function ClaimPropertyStep({
 
       <div className="space-y-3">
         <motion.button
-          whileHover={selectedId !== null && status !== "pending" ? { scale: 1.02 } : {}}
-          whileTap={selectedId !== null && status !== "pending" ? { scale: 0.98 } : {}}
+          whileHover={
+            selectedId !== null && status !== "pending" ? { scale: 1.02 } : {}
+          }
+          whileTap={
+            selectedId !== null && status !== "pending" ? { scale: 0.98 } : {}
+          }
           onClick={handleClaim}
           disabled={selectedId === null || status === "pending"}
           className={`w-full rounded-xl py-3.5 text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-lg ${
@@ -122,10 +134,14 @@ export function ClaimPropertyStep({
                 : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20"
           }`}
         >
-          {status === "pending" && <RefreshCw size={14} className="animate-spin" />}
-          {status === "pending" ? "Acquiring property..." : "Claim Free Property"}
+          {status === "pending" && (
+            <RefreshCw size={14} className="animate-spin" />
+          )}
+          {status === "pending"
+            ? "Acquiring property..."
+            : "Claim Free Property"}
         </motion.button>
-        
+
         {status !== "pending" && (
           <button
             onClick={onSkip}
@@ -152,24 +168,24 @@ function CelebrationScreen() {
               y: "50%",
               scale: 0.2,
               opacity: 1,
-              rotate: 0
+              rotate: 0,
             }}
             animate={{
               x: `${50 + (Math.random() - 0.5) * 160}%`,
               y: [`50%`, `${10 + Math.random() * 80}%`, `120%`],
               scale: [0.2, 1, 0.4],
               opacity: [1, 1, 0],
-              rotate: [0, 360 * (Math.random() > 0.5 ? 2 : -2)]
+              rotate: [0, 360 * (Math.random() > 0.5 ? 2 : -2)],
             }}
             transition={{
               duration: 2.5 + Math.random() * 0.8,
               ease: "easeOut",
-              delay: Math.random() * 0.2
+              delay: Math.random() * 0.2,
             }}
             className="absolute rounded-sm w-3.5 h-3.5"
             style={{
               backgroundColor: particle.color,
-              borderRadius: particle.shape === "circle" ? "50%" : "4px"
+              borderRadius: particle.shape === "circle" ? "50%" : "4px",
             }}
           />
         ))}
@@ -184,13 +200,14 @@ function CelebrationScreen() {
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-2xl">
           <CheckCircle className="h-10 w-10 text-emerald-400" />
         </div>
-        
+
         <div>
           <h2 className="text-3xl font-black tracking-tight text-white bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
             Welcome, Landowner!
           </h2>
           <p className="mt-2 text-sm text-slate-400 leading-relaxed max-w-xs mx-auto">
-            You successfully claimed your first property on Stellar! We are loading the real-time city map for you now...
+            You successfully claimed your first property on Stellar! We are
+            loading the real-time city map for you now...
           </p>
         </div>
       </motion.div>
@@ -199,8 +216,16 @@ function CelebrationScreen() {
 }
 
 // Generate 40 vibrant, multi-colored confetti particles with randomized properties
-const CONFETTI_COLORS = ["#10b981", "#3b82f6", "#f59e0b", "#ec4899", "#8b5cf6", "#14b8a6", "#f43f5e"];
+const CONFETTI_COLORS = [
+  "#10b981",
+  "#3b82f6",
+  "#f59e0b",
+  "#ec4899",
+  "#8b5cf6",
+  "#14b8a6",
+  "#f43f5e",
+];
 const CONFETTI_PARTICLES = Array.from({ length: 45 }, (_, i) => ({
   color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-  shape: i % 2 === 0 ? "circle" : "square"
+  shape: i % 2 === 0 ? "circle" : "square",
 }));

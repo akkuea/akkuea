@@ -1,3 +1,5 @@
+import type { xdr } from '@stellar/stellar-sdk';
+
 import {
   Keypair,
   Horizon,
@@ -114,12 +116,11 @@ export class StellarService {
       // Convert AccountRecord to Account
       const account = new Account(accountRecord.id, accountRecord.sequence);
 
-      const transaction = new TransactionBuilder(account, {
+     const transaction = new TransactionBuilder(account, {
         fee: "100",
         networkPassphrase: this.networkPassphrase,
       })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .addOperation(contract.call(method, ...args) as any)
+        .addOperation(contract.call(method, ...args) as unknown as xdr.Operation)
         .setTimeout(30)
         .build();
 
@@ -148,12 +149,11 @@ export class StellarService {
       // Convert AccountRecord to Account
       const account = new Account(accountRecord.id, accountRecord.sequence);
 
-      const transaction = new TransactionBuilder(account, {
+     const transaction = new TransactionBuilder(account, {
         fee: "100",
         networkPassphrase: this.networkPassphrase,
       })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .addOperation(operation as any)
+        .addOperation(operation as unknown as xdr.Operation)
         .setTimeout(30)
         .build();
 

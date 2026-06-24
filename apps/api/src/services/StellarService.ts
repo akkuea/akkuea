@@ -1,3 +1,5 @@
+import type { xdr } from '@stellar/stellar-sdk';
+
 import {
   Account,
   Contract,
@@ -232,12 +234,11 @@ export class StellarService {
     const account = new Account(accountRecord.id, accountRecord.sequence);
     const contract = new Contract(contractId);
 
-    const transaction = new TransactionBuilder(account, {
+   const transaction = new TransactionBuilder(account, {
       fee: '100',
       networkPassphrase: this.networkPassphrase,
     })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .addOperation(contract.call(method, ...(args as any[])) as any)
+      .addOperation(contract.call(method, ...(args as any[])) as unknown as xdr.Operation)
       .setTimeout(30)
       .build();
 

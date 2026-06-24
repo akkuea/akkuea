@@ -413,6 +413,52 @@ stellar contract deploy --wasm "$WASM" --source akkuea-deployer --network testne
 #    and verify each with `get_oracle_config` before committing.
 ```
 
-> **Mainnet** values in `apps/shared/src/contracts.mainnet.json` are intentionally
-> empty placeholders; populate them with the same process against
-> `--network mainnet` when a mainnet deployment is performed.
+## Mainnet Deployment
+
+Deploying smart contracts to Stellar mainnet requires a rigorous process to ensure security, compliance, and platform integrity.
+
+### 1. Required Approvals
+Mainnet deployments are restricted and must be formally approved by:
+- **Lead Smart Contract Engineer**: Verifies code correctness and alignment with architectural specifications.
+- **Lead Security Auditor**: Confirms all vulnerabilities identified in audits have been resolved.
+- **Product / Governance Multisig Signers**: Requires M-of-N signatures from the authorized multisig key holders to authorize transaction submission and execute initial setup.
+
+### 2. Pre-Deployment Checklist
+Before initiating a mainnet deployment, ensure all items on this checklist are met:
+- [ ] **Security Audit**: An external security audit of the smart contracts must be completed with all critical and high-severity issues fixed and verified.
+- [ ] **Test Coverage**: Contract code must have 100% unit and integration test coverage. All test suites in the monorepo must pass successfully.
+- [ ] **Smoke Tests**: Run the full smoke test suite on testnet to verify end-to-end integration with the API and frontend.
+- [ ] **Multisig Wallet Setup**: A mainnet multisig account (e.g., M-of-N configuration) must be established to act as the contract admin/owner.
+- [ ] **Account Funding**: Ensure the deployer account has sufficient XLM balance (at least 20-50 XLM to cover fee surges and storage deposits).
+
+### 3. Post-Deployment: Populating contracts.mainnet.json
+Once the contracts are deployed on mainnet, record the contract IDs in the mainnet artifact:
+1. Locate `apps/shared/src/contracts.mainnet.json`.
+2. Populate the keys with the generated contract IDs (ensuring they start with `C` and are 56 characters long):
+   ```json
+   {
+     "_note": "Populate after mainnet deployment - see docs/contracts/deployment.md",
+     "REAL_ESTATE_TOKEN": "C...",
+     "DEFI_LENDING": "C...",
+     "GAME_ENGINE": "C...",
+     "GAME_LAND_TOKEN": "C...",
+     "GAME_PROPERTY_NFT": "C...",
+     "GAME_MARKETPLACE": "C..."
+   }
+   ```
+3. Commit the changes and open a pull request.
+
+### 4. Verifying Mainnet Contracts
+To verify the contract is successfully deployed and running on mainnet:
+1. Invoke a read-only getter function to ensure the contract executes properly on the mainnet network:
+   ```bash
+   stellar contract invoke \
+     --id <CONTRACT_ID> \
+     --source <your_account> \
+     --network mainnet \
+     --send=no \
+     -- get_oracle_config
+   ```
+2. Verify the contract's uploaded WASM hash and instance configuration on a public Stellar explorer such as:
+   - Stellar Expert: `https://stellar.expert/explorer/public/contract/<CONTRACT_ID>`
+

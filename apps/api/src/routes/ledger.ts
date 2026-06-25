@@ -11,7 +11,9 @@ export interface LedgerEvent {
 }
 
 class LedgerBroadcaster {
-  private server = new SorobanRpc.Server(SOROBAN_RPC_URL);
+  // Lazily constructed so that mock.module() replacements are in effect before
+  // the real SorobanRpc.Server constructor is ever called.
+  private server: InstanceType<typeof SorobanRpc.Server> | null = null;
   private listeners = new Set<(evt: LedgerEvent) => void>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastSequence = 0;
@@ -23,6 +25,19 @@ class LedgerBroadcaster {
       this.listeners.delete(cb);
       if (this.listeners.size === 0) this.stop();
     };
+  }
+
+  /** Call in beforeEach to prevent cross-test lastSequence contamination. */
+  _resetForTest() {
+    this.lastSequence = 0;
+    this.server = null;
+  }
+
+  private getServer(): InstanceType<typeof SorobanRpc.Server> {
+    if (!this.server) {
+      this.server = new SorobanRpc.Server(SOROBAN_RPC_URL);
+    }
+    return this.server;
   }
 
   private start() {
@@ -40,7 +55,7 @@ class LedgerBroadcaster {
 
   private async poll() {
     try {
-      const { sequence } = await this.server.getLatestLedger();
+      const { sequence } = await this.getServer().getLatestLedger();
       if (sequence === this.lastSequence) return;
       this.lastSequence = sequence;
       const event: LedgerEvent = { sequence, timestamp: new Date().toISOString() };

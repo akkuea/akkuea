@@ -116,7 +116,7 @@ export class StellarService {
       // Convert AccountRecord to Account
       const account = new Account(accountRecord.id, accountRecord.sequence);
 
-     const transaction = new TransactionBuilder(account, {
+      const transaction = new TransactionBuilder(account, {
         fee: "100",
         networkPassphrase: this.networkPassphrase,
       })
@@ -149,7 +149,7 @@ export class StellarService {
       // Convert AccountRecord to Account
       const account = new Account(accountRecord.id, accountRecord.sequence);
 
-     const transaction = new TransactionBuilder(account, {
+      const transaction = new TransactionBuilder(account, {
         fee: "100",
         networkPassphrase: this.networkPassphrase,
       })

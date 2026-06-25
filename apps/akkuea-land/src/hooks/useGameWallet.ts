@@ -7,8 +7,7 @@ interface WalletStore {
   setAddress: (address: string | null) => void;
 }
 
-const DEFAULT_ADDRESS =
-  "GDVIEWER1234567890123456789012345678901234567890123456";
+const DEFAULT_ADDRESS = process.env.NEXT_PUBLIC_DEFAULT_VIEWER_ADDRESS ?? '';
 
 export const useWalletStore = create<WalletStore>((set) => ({
   isConnected: true, // Default to true for the sandbox environment

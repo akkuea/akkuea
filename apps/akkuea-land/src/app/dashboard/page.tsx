@@ -83,8 +83,8 @@ const EVENT_LABELS: Record<EventType, string> = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VIEWER_ADDRESS = "GDVIEWER1234567890123456789012345678901234567890123456";
-const SOROBAN_RPC_URL = "https://soroban-testnet.stellar.org";
+const VIEWER_ADDRESS = process.env.NEXT_PUBLIC_DEFAULT_VIEWER_ADDRESS ?? '';
+const SOROBAN_RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? 'https://soroban-testnet.stellar.org';
 const EVENTS_PAGE_SIZE = 5;
 
 // ─── Mock data ─────────────────────────────────────────────────────────────────

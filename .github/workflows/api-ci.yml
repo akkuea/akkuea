@@ -75,14 +75,14 @@ jobs:
         cd apps/api
         bun run db:migrate
 
-    - name: Run integration tests
+    - name: Run tests
       env:
         DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
         TEST_DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
       run: |
         cd apps/api
         # Run tests sequentially to avoid database race conditions in the shared service container
-        bun test --max-concurrency=1
+        bun test --coverage --coverage-threshold=60 --max-concurrency=1
 
   security-audit:
     name: Security Audit

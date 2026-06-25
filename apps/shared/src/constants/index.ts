@@ -20,11 +20,11 @@ export const STELLAR_NETWORKS = {
 export const CONTRACT_IDS = {
   REAL_ESTATE_TOKEN: {
     TESTNET: testnetContracts.contracts.REAL_ESTATE_TOKEN,
-    MAINNET: mainnetContracts.contracts.REAL_ESTATE_TOKEN,
+    MAINNET: mainnetContracts.REAL_ESTATE_TOKEN,
   },
   DEFI_LENDING: {
     TESTNET: testnetContracts.contracts.DEFI_LENDING,
-    MAINNET: mainnetContracts.contracts.DEFI_LENDING,
+    MAINNET: mainnetContracts.DEFI_LENDING,
   },
 } as const;
 

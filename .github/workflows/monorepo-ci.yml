@@ -14,7 +14,7 @@ on:
 
 env:
   NODE_VERSION: '20'
-  BUN_VERSION: 'latest'
+  BUN_VERSION: '1.x'
 
 jobs:
   monorepo-integrity:
@@ -106,17 +106,16 @@ jobs:
     - name: Audit all dependencies
       run: |
         cd .
-        
+
         # Install root dependencies
-        bun install
-        bun install --workspaces
-        
+        bun install --frozen-lockfile
+        bun install --workspaces --frozen-lockfile
+
         # Audit Bun workspaces
         bun audit --workspaces || true
-        
-        # Audit Bun workspaces
-        cd apps/api && bun install && bun audit || true
-        cd ../shared && bun install && bun audit || true
+
+        cd apps/api && bun install --frozen-lockfile && bun audit || true
+        cd ../shared && bun install --frozen-lockfile && bun audit || true
         
     - name: Check for license conflicts
       run: |
@@ -158,27 +157,38 @@ jobs:
     - name: Build performance test
       run: |
         cd .
-        
+
         echo "Testing build performance..."
-        
+
+        # Retry helper — platform-specific binaries (e.g. @next/swc-linux-x64-gnu)
+        # can fail on transient registry/CDN errors; three attempts is enough.
+        bun_install() {
+          for i in 1 2 3; do
+            bun install --frozen-lockfile && return 0
+            echo "bun install attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          return 1
+        }
+
         # Record build times
         START_TIME=$(date +%s)
-        
+
         # Build webapp
         cd apps/webapp
-        bun install
+        bun_install
         bun run build
         WEBAPP_BUILD_TIME=$(date +%s)
-        
+
         # Build API
         cd ../api
-        bun install
+        bun_install
         bun run build
         API_BUILD_TIME=$(date +%s)
-        
+
         # Build shared
         cd ../shared
-        bun install
+        bun_install
         bun run build
         SHARED_BUILD_TIME=$(date +%s)
         
@@ -249,13 +259,13 @@ jobs:
 
         # Build shared library first
         cd apps/shared
-        bun install
+        bun install --frozen-lockfile
         bun run build
         cd ../..
 
         # Test API imports from shared
         cd apps/api
-        bun install
+        bun install --frozen-lockfile
         echo "Testing API imports..."
         bun -e "const shared = await import('../shared/dist/index.js'); console.log('✅ API can import shared library'); const { ValidationService } = shared; console.log('✅ ValidationService available:', typeof ValidationService);"
         cd ../..

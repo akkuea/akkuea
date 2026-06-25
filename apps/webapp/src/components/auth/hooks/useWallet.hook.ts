@@ -6,14 +6,12 @@ import { useAuthenticationStore } from "../store/data/slices/authentication.slic
 import { initializeWalletKit, getWalletKit } from "../constant/walletKit";
 import { isSignableWalletProvider, walletRegistry } from "@/services/wallet";
 import { fetchBalance, type BalanceResult } from "@/lib/stellar";
+import type { AuthenticationStore } from "../store/data/@types/authentication.entity";
 
 /**
  * Helper to update balance state from a BalanceResult
  */
-function applyBalanceResult(
-  result: BalanceResult,
-  store: ReturnType<typeof useAuthenticationStore>,
-) {
+function applyBalanceResult(result: BalanceResult, store: AuthenticationStore) {
   switch (result.status) {
     case "ok":
       store.setBalance(result.balance);

@@ -126,59 +126,32 @@ User requests loan → Frontend calculates available collateral
 
 ### Prerequisites
 
-| Tool                                                                                     | Version       | Notes                                  |
-| ---------------------------------------------------------------------------------------- | ------------- | -------------------------------------- |
-| [Bun](https://bun.sh)                                                                    | 1.2+          | Primary runtime and package manager    |
-| [Node.js](https://nodejs.org)                                                            | 18+           | Required by some tooling               |
-| [Rust](https://rustup.rs)                                                                | latest stable | Required only for contract development |
-| [Stellar CLI](https://developers.stellar.org/docs/tools/developer-tools/cli/stellar-cli) | latest        | Required for contract deployment       |
-| [Git](https://git-scm.com)                                                               | any           | Version control                        |
+- [Bun](https://bun.sh) >= 1.0
+- Docker (for PostgreSQL + Redis)
 
-### Installation
+### Install
 
 ```bash
-# 1. Fork and clone the repository (see CONTRIBUTING.md for the fork workflow)
-git clone https://github.com/<your-username>/akkuea.git
+git clone https://github.com/akkuea/akkuea.git
 cd akkuea
+bun install
+```
 
-# 2. Install all workspace dependencies
-bun run install:all
+### Run
 
-# 3. Configure environment variables
+```bash
+# Copy environment variables
 cp apps/api/.env.example apps/api/.env
-# Edit apps/api/.env with your values (see docs/deployment/environment-variables.md)
-```
+cp apps/webapp/.env.example apps/webapp/.env.local
 
-### Running the Platform Locally
+# Start services
+docker compose -f docker-compose.dev.yml up -d
 
-```bash
-# Start both frontend and API in parallel
+# Start all apps
 bun run dev
-
-# Or run each workspace individually
-bun run dev:webapp   # → http://localhost:3000
-bun run dev:api      # → http://localhost:3001
 ```
 
-Verify your setup:
-
-- **Frontend** - visit `http://localhost:3000`
-- **API health** - visit `http://localhost:3001/health`
-- **API docs (Swagger)** - visit `http://localhost:3001/swagger`
-
-### Smart Contract Development
-
-```bash
-cd apps/contracts
-
-# Build contracts (WASM output)
-cargo build --target wasm32-unknown-unknown --release
-
-# Run contract unit tests
-cargo test
-```
-
-For deploying contracts to Stellar Testnet, see [`docs/deployment/deploy-contracts.md`](docs/deployment/deploy-contracts.md).
+See [docs/local-setup.md](docs/local-setup.md) for full setup instructions.
 
 ---
 

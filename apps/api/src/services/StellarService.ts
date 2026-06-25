@@ -234,7 +234,7 @@ export class StellarService {
     const account = new Account(accountRecord.id, accountRecord.sequence);
     const contract = new Contract(contractId);
 
-   const transaction = new TransactionBuilder(account, {
+    const transaction = new TransactionBuilder(account, {
       fee: '100',
       networkPassphrase: this.networkPassphrase,
     })

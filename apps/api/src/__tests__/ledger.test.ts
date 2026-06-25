@@ -13,14 +13,14 @@ mock.module('@stellar/stellar-sdk', () => ({
   },
 }));
 
-const { ledgerRoutes } = (await import('../routes/ledger')) as {
-  ledgerRoutes: import('elysia').Elysia;
-};
+const { ledgerRoutes } = await import('../routes/ledger');
 
 const { Elysia } = (await import('elysia')) as typeof import('elysia');
 
 function makeApp() {
-  return new Elysia().use(ledgerRoutes as unknown as Parameters<InstanceType<typeof Elysia>['use']>[0]);
+  return new Elysia().use(
+    ledgerRoutes as unknown as Parameters<InstanceType<typeof Elysia>['use']>[0],
+  );
 }
 
 type AppWithHandle = { handle: (req: Request) => Promise<Response> };
@@ -40,7 +40,9 @@ async function readFirstEvent(body: ReadableStream<Uint8Array>): Promise<string>
 }
 
 describe('GET /api/ledger/stream', () => {
-  beforeEach(() => { mockSequence = 100; });
+  beforeEach(() => {
+    mockSequence = 100;
+  });
 
   test('returns 200 with correct SSE headers', async () => {
     const app = makeApp();

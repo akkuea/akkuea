@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Coins,
@@ -334,7 +340,7 @@ export default function DashboardPage() {
   const MAX_SSE_RETRIES = 3;
   const SSE_RETRY_DELAY_MS = 2_000;
   const FALLBACK_POLL_MS = 5_000;
-  const SSE_ENDPOINT = '/api/ledger/stream';
+  const SSE_ENDPOINT = "/api/ledger/stream";
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -348,7 +354,9 @@ export default function DashboardPage() {
       try {
         const { sequence } = await server.getLatestLedger();
         setCurrentLedger(sequence);
-      } catch { /* keep current value */ }
+      } catch {
+        /* keep current value */
+      }
     }
 
     function startPolling() {
@@ -373,7 +381,10 @@ export default function DashboardPage() {
 
     function connectSSE() {
       closeSSE();
-      if (typeof window === 'undefined') { startPolling(); return; }
+      if (typeof window === "undefined") {
+        startPolling();
+        return;
+      }
 
       try {
         const es = new EventSource(SSE_ENDPOINT);
@@ -388,14 +399,19 @@ export default function DashboardPage() {
           try {
             const data = JSON.parse(event.data) as { sequence: number };
             setCurrentLedger(data.sequence);
-          } catch { /* ignore malformed */ }
+          } catch {
+            /* ignore malformed */
+          }
         };
 
         es.onerror = () => {
           closeSSE();
           if (sseRetriesRef.current < MAX_SSE_RETRIES) {
             sseRetriesRef.current += 1;
-            retryTimeoutRef.current = setTimeout(connectSSE, SSE_RETRY_DELAY_MS);
+            retryTimeoutRef.current = setTimeout(
+              connectSSE,
+              SSE_RETRY_DELAY_MS,
+            );
           } else {
             startPolling(); // fallback after max retries
           }
@@ -415,7 +431,6 @@ export default function DashboardPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
 
   // Recompute accrued income on every ledger tick
   const propertiesWithIncome = useMemo(

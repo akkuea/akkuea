@@ -1,5 +1,8 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
-import { getTimeSinceUpdate, type LiveUpdateOptions } from "@/hooks/useLiveUpdates";
+import {
+  getTimeSinceUpdate,
+  type LiveUpdateOptions,
+} from "@/hooks/useLiveUpdates";
 
 describe("useLiveUpdates - utility functions", () => {
   describe("getTimeSinceUpdate", () => {
@@ -115,7 +118,8 @@ describe("useLiveUpdates - SSE option shape", () => {
   it("maxReconnectAttempts defaults to 3 in SSE error path", () => {
     const DEFAULT_MAX_RECONNECT_ATTEMPTS = 3;
     const opts: LiveUpdateOptions<unknown> = {};
-    const effective = opts.maxReconnectAttempts ?? DEFAULT_MAX_RECONNECT_ATTEMPTS;
+    const effective =
+      opts.maxReconnectAttempts ?? DEFAULT_MAX_RECONNECT_ATTEMPTS;
     expect(effective).toBe(3);
   });
 

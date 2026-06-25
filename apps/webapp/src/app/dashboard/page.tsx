@@ -63,17 +63,16 @@ export default function DashboardPage() {
   const { healthFactor, status: hfStatus } = useHealthFactor(borrows);
 
   // SSE ledger stream — falls back to 30 s polling on failure
-  const onLedgerUpdate = useCallback(() => { refetch(); }, [refetch]);
+  const onLedgerUpdate = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
-  const { connectionStatus } = useLiveUpdates(
-    async () => ({ ledger: true }),
-    {
-      endpoint: '/api/ledger/stream',
-      pollingInterval: 30_000,
-      onUpdate: onLedgerUpdate,
-      enabled: isConnected,
-    },
-  );
+  const { connectionStatus } = useLiveUpdates(async () => ({ ledger: true }), {
+    endpoint: "/api/ledger/stream",
+    pollingInterval: 30_000,
+    onUpdate: onLedgerUpdate,
+    enabled: isConnected,
+  });
 
   const copyAddress = () => {
     if (address) {
@@ -174,11 +173,11 @@ export default function DashboardPage() {
                 {/* Live-connection indicator */}
                 <div
                   className={`w-2 h-2 rounded-full shrink-0 ${
-                    connectionStatus === 'connected'
-                      ? 'bg-[#00ff88] shadow-[0_0_4px_#00ff88]'
-                      : connectionStatus === 'connecting'
-                        ? 'bg-amber-400 animate-pulse'
-                        : 'bg-neutral-600'
+                    connectionStatus === "connected"
+                      ? "bg-[#00ff88] shadow-[0_0_4px_#00ff88]"
+                      : connectionStatus === "connecting"
+                        ? "bg-amber-400 animate-pulse"
+                        : "bg-neutral-600"
                   }`}
                   title={`Ledger stream: ${connectionStatus}`}
                 />

@@ -1,8 +1,7 @@
 import { Elysia } from 'elysia';
 import { rpc as SorobanRpc } from '@stellar/stellar-sdk';
 
-const SOROBAN_RPC_URL =
-  process.env.SOROBAN_RPC_URL ?? 'https://soroban-testnet.stellar.org';
+const SOROBAN_RPC_URL = process.env.SOROBAN_RPC_URL ?? 'https://soroban-testnet.stellar.org';
 
 const LEDGER_POLL_MS = Number(process.env.LEDGER_POLL_MS ?? 3_000);
 
@@ -55,8 +54,9 @@ class LedgerBroadcaster {
 const broadcaster = new LedgerBroadcaster();
 
 // GET /api/ledger/stream — SSE stream, emits { sequence, timestamp } on each new ledger
-export const ledgerRoutes = new Elysia({ prefix: '/api/ledger' })
-  .get('/stream', ({ set, request }) => {
+export const ledgerRoutes = new Elysia({ prefix: '/api/ledger' }).get(
+  '/stream',
+  ({ set, request }) => {
     set.headers['Content-Type'] = 'text/event-stream';
     set.headers['Cache-Control'] = 'no-cache';
     set.headers['X-Accel-Buffering'] = 'no';
@@ -71,7 +71,11 @@ export const ledgerRoutes = new Elysia({ prefix: '/api/ledger' })
           if (closed) return;
           closed = true;
           unsubscribe();
-          try { controller.close(); } catch { /* already closed */ }
+          try {
+            controller.close();
+          } catch {
+            /* already closed */
+          }
         };
 
         const unsubscribe = broadcaster.subscribe((evt: LedgerEvent) => {
@@ -85,7 +89,10 @@ export const ledgerRoutes = new Elysia({ prefix: '/api/ledger' })
 
         // 25 s heartbeat keeps proxy connections alive
         const heartbeatId = setInterval(() => {
-          if (closed) { clearInterval(heartbeatId); return; }
+          if (closed) {
+            clearInterval(heartbeatId);
+            return;
+          }
           try {
             controller.enqueue(new TextEncoder().encode(': heartbeat\n\n'));
           } catch {
@@ -100,4 +107,5 @@ export const ledgerRoutes = new Elysia({ prefix: '/api/ledger' })
         });
       },
     });
-  });
+  },
+);

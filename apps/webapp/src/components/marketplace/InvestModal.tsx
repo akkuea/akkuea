@@ -151,7 +151,7 @@ export function InvestModal({
           <div className="flex gap-4 rounded-lg border border-[#262626] bg-[#1a1a1a] p-4">
             <Image
               src={getPropertyImage(property)}
-              alt={property.name}
+              alt={`${property.name} - ${property.location.city}, ${property.location.country}`}
               width={80}
               height={80}
               className="h-20 w-20 rounded-lg object-cover"

@@ -19,27 +19,37 @@ export interface HorizonServerLike {
   loadAccount(address: string): Promise<AccountRecord>;
 }
 
+/** Discriminated union result type for fetchBalance */
+export type BalanceResult =
+  | { status: "ok"; balance: string }
+  | { status: "not_found" }
+  | { status: "error"; message: string };
+
 /**
  * Fetches the native XLM balance for a Stellar address from Horizon.
- * Returns "0" for accounts not yet on-chain (unfunded) and for network errors.
+ * Returns a discriminated union to distinguish between:
+ * - ok: Account exists and balance was fetched successfully
+ * - not_found: Account does not exist on-chain (unfunded)
+ * - error: Network or other error occurred
  */
 export async function fetchBalance(
   address: string,
   network: "testnet" | "mainnet" = "testnet",
   server?: HorizonServerLike,
-): Promise<string> {
+): Promise<BalanceResult> {
   const srv: HorizonServerLike =
     server ??
     (new Horizon.Server(HORIZON_URLS[network]) as unknown as HorizonServerLike);
   try {
     const account = await srv.loadAccount(address);
     const native = account.balances.find((b) => b.asset_type === "native");
-    return native?.balance ?? "0";
+    return { status: "ok", balance: native?.balance ?? "0" };
   } catch (error) {
     const res = (error as { response?: { status?: number } }).response;
-    if (res?.status !== 404) {
-      console.warn("[fetchBalance] Failed to fetch balance:", error);
+    if (res?.status === 404) {
+      return { status: "not_found" };
     }
-    return "0";
+    console.warn("[fetchBalance] Failed to fetch balance:", error);
+    return { status: "error", message: (error as Error).message };
   }
 }

@@ -5,7 +5,33 @@ import { WalletNetwork } from "@creit.tech/stellar-wallets-kit";
 import { useAuthenticationStore } from "../store/data/slices/authentication.slice";
 import { initializeWalletKit, getWalletKit } from "../constant/walletKit";
 import { isSignableWalletProvider, walletRegistry } from "@/services/wallet";
-import { fetchBalance } from "@/lib/stellar";
+import { fetchBalance, type BalanceResult } from "@/lib/stellar";
+
+/**
+ * Helper to update balance state from a BalanceResult
+ */
+function applyBalanceResult(
+  result: BalanceResult,
+  store: ReturnType<typeof useAuthenticationStore>,
+) {
+  switch (result.status) {
+    case "ok":
+      store.setBalance(result.balance);
+      store.setBalanceStatus("ok");
+      store.setBalanceError(null);
+      break;
+    case "not_found":
+      store.setBalance(null);
+      store.setBalanceStatus("not_found");
+      store.setBalanceError(null);
+      break;
+    case "error":
+      store.setBalance(null);
+      store.setBalanceStatus("error");
+      store.setBalanceError(result.message);
+      break;
+  }
+}
 
 export const useWallet = () => {
   const store = useAuthenticationStore();
@@ -48,8 +74,8 @@ export const useWallet = () => {
             store.setAddress(address);
             store.setIsConnected(true);
 
-            const balance = await fetchBalance(address, store.network);
-            store.setBalance(balance);
+            const result = await fetchBalance(address, store.network);
+            applyBalanceResult(result, store);
           } catch (error) {
             console.error("Error connecting wallet:", error);
             store.reset();
@@ -83,8 +109,8 @@ export const useWallet = () => {
         store.setSelectedWalletId(providerId);
         store.setIsConnected(true);
 
-        const balance = await fetchBalance(address, store.network);
-        store.setBalance(balance);
+        const result = await fetchBalance(address, store.network);
+        applyBalanceResult(result, store);
       } catch (error) {
         console.error("Error connecting wallet:", error);
         store.reset();
@@ -113,8 +139,8 @@ export const useWallet = () => {
 
   const refreshBalance = useCallback(async () => {
     if (!store.address) return;
-    const balance = await fetchBalance(store.address, store.network);
-    store.setBalance(balance);
+    const result = await fetchBalance(store.address, store.network);
+    applyBalanceResult(result, store);
   }, [store]);
 
   const signTransaction = useCallback(
@@ -133,6 +159,8 @@ export const useWallet = () => {
   return {
     address: store.address,
     balance: store.balance,
+    balanceStatus: store.balanceStatus,
+    balanceError: store.balanceError,
     isConnected: store.isConnected,
     isConnecting: store.isConnecting,
     network: store.network,

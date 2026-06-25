@@ -8,7 +8,7 @@ function makeServer(
 }
 
 describe("fetchBalance", () => {
-  it("returns the native XLM balance for a funded account", async () => {
+  it("returns status 'ok' with the native XLM balance for a funded account", async () => {
     const server = makeServer(
       Promise.resolve({
         balances: [
@@ -18,24 +18,24 @@ describe("fetchBalance", () => {
       }),
     );
     const result = await fetchBalance("GABC1234", "testnet", server);
-    expect(result).toBe("100.5000000");
+    expect(result).toEqual({ status: "ok", balance: "100.5000000" });
   });
 
-  it("returns '0' for an account not yet on-chain (404)", async () => {
+  it("returns status 'not_found' for an account not yet on-chain (404)", async () => {
     const notFoundError = Object.assign(new Error("Not Found"), {
       response: { status: 404 },
     });
     const server = makeServer(Promise.reject(notFoundError));
     const result = await fetchBalance("GNOTFOUND", "testnet", server);
-    expect(result).toBe("0");
+    expect(result).toEqual({ status: "not_found" });
   });
 
-  it("returns '0' and emits a warning on a network error", async () => {
+  it("returns status 'error' with message on a network error", async () => {
     const warn = spyOn(console, "warn").mockImplementation(() => {});
     const networkError = new Error("Network timeout");
     const server = makeServer(Promise.reject(networkError));
     const result = await fetchBalance("GABC1234", "testnet", server);
-    expect(result).toBe("0");
+    expect(result).toEqual({ status: "error", message: "Network timeout" });
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("[fetchBalance]"),
       networkError,

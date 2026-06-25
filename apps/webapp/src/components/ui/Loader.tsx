@@ -99,8 +99,3 @@ export function AnimatedSkeleton({ className }: AnimatedSkeletonProps) {
     />
   );
 }
-
-/**
- * @deprecated Use AnimatedSkeleton instead, or import Skeleton from './Skeleton'
- */
-export const Skeleton = AnimatedSkeleton;

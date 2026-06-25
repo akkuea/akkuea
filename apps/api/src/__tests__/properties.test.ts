@@ -22,7 +22,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
     }
     testToken = jwt.sign(
       { id: VALID_UUID, walletAddress: TEST_WALLET },
-      process.env.JWT_SECRET || 'super-secret-default-key-for-dev'
+      process.env.JWT_SECRET || 'super-secret-default-key-for-dev',
     );
   });
 
@@ -121,7 +121,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${testToken}`,
+            Authorization: `Bearer ${testToken}`,
           },
           body: JSON.stringify(propertyData),
         }),
@@ -140,7 +140,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer invalid-token',
+            Authorization: 'Bearer invalid-token',
           },
           body: JSON.stringify({ name: '' }),
         }),
@@ -160,7 +160,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer invalid-token',
+            Authorization: 'Bearer invalid-token',
           },
           body: JSON.stringify({ name: 'Updated Name' }),
         }),
@@ -191,7 +191,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${testToken}`,
+            Authorization: `Bearer ${testToken}`,
           },
           body: JSON.stringify({ name: 'Updated Property Name' }),
         }),
@@ -210,7 +210,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
         new Request('http://localhost/properties/invalid-id', {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${testToken}`,
+            Authorization: `Bearer ${testToken}`,
           },
         }),
       );
@@ -235,7 +235,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
         new Request(`http://localhost/properties/${NON_EXISTENT_UUID}`, {
           method: 'DELETE',
           headers: {
-            'Authorization': `Bearer ${testToken}`,
+            Authorization: `Bearer ${testToken}`,
           },
         }),
       );
@@ -267,7 +267,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${testToken}`,
+            Authorization: `Bearer ${testToken}`,
           },
           body: JSON.stringify({}),
         }),
@@ -336,7 +336,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${testToken}`,
+            Authorization: `Bearer ${testToken}`,
           },
           body: JSON.stringify({ buyer: 'buyer-address', shares: 10 }),
         }),

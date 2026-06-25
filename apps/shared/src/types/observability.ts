@@ -5,7 +5,7 @@
  */
 
 // ---------------------------------------------------------------------------
-// Metric names — single source of truth for event naming conventions
+// Metric names - single source of truth for event naming conventions
 // ---------------------------------------------------------------------------
 
 /**
@@ -49,7 +49,7 @@ export type OperationStatus = "success" | "error" | "timeout";
  * Represents a single timing observation with enough context for APM ingestion.
  */
 export interface TimingMetric {
-  /** Standardized event name — use MetricName constants. */
+  /** Standardized event name - use MetricName constants. */
   name: MetricName | string;
   /** Wall-clock duration in milliseconds. */
   durationMs: number;
@@ -71,6 +71,6 @@ export interface MetricPayload {
   metric: TimingMetric;
   /** Service or app that produced the metric. */
   source: string;
-  /** Schema version — bump when the shape changes. */
+  /** Schema version - bump when the shape changes. */
   schemaVersion: "1.0";
 }

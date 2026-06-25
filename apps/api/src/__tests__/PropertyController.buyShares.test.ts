@@ -13,6 +13,7 @@ const skipIfNoDatabase = !process.env.DATABASE_URL;
 describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
   const propertyOwnerAddress = 'GOWNERADDRESSXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
   const buyerAddress = 'GBUYERADDRESSXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+  const purchaseTxHash = 'd'.repeat(64);
   let propertyId: string;
   let buyerId: string;
   let propertySorobanId: number;
@@ -22,7 +23,7 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
 
   beforeAll(async () => {
     if (skipIfNoDatabase) return;
-    
+
     // Create users
     const owner = await userRepository.getOrCreateByWallet(propertyOwnerAddress);
     const buyer = await userRepository.getOrCreateByWallet(buyerAddress);
@@ -42,15 +43,18 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
       verified: true,
       ownerId: owner.id,
     });
-    
+
     propertySorobanId = await propertyRepository.allocateSorobanPropertyId();
 
     // Tokenize it so we can buy shares
-    await db.update(properties).set({
-      tokenAddress: 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
-      sorobanPropertyId: propertySorobanId
-    }).where(eq(properties.id, prop.id));
-    
+    await db
+      .update(properties)
+      .set({
+        tokenAddress: 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+        sorobanPropertyId: propertySorobanId,
+      })
+      .where(eq(properties.id, prop.id));
+
     propertyId = prop.id;
   });
 
@@ -76,19 +80,23 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
     (stellarService as any).mintPropertyShares = async (params: any) => {
       mintParams = params;
       return {
-        txHash: 'a'.repeat(64),
+        txHash: purchaseTxHash,
         contractId: params.contractId,
       };
     };
 
-    const result = await PropertyController.buyShares(propertyId, {
-      buyer: buyerAddress,
-      shares: 2,
-    }, buyerAddress);
+    const result = await PropertyController.buyShares(
+      propertyId,
+      {
+        buyer: buyerAddress,
+        shares: 2,
+      },
+      buyerAddress,
+    );
 
-    expect(result.transactionHash).toBe('a'.repeat(64));
+    expect(result.transactionHash).toBe(purchaseTxHash);
     expect(result.newBalance).toBe(2);
-    
+
     expect(mintParams).toEqual({
       contractId: 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
       adminPublicKey: 'GADMINADDRESSXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
@@ -101,15 +109,18 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
     // verify DB state
     const prop = await propertyRepository.findById(propertyId);
     expect(prop!.availableShares).toBe(8);
-    
-    const [ownership] = await db.select().from(shareOwnerships).where(and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyerId)));
+
+    const [ownership] = await db
+      .select()
+      .from(shareOwnerships)
+      .where(and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyerId)));
     expect(ownership).toBeDefined();
     expect(ownership!.shares).toBe(2);
 
-    const [tx] = await db.select().from(transactions).where(eq(transactions.hash, 'a'.repeat(64)));
+    const [tx] = await db.select().from(transactions).where(eq(transactions.hash, purchaseTxHash));
     expect(tx).toBeDefined();
     expect(tx!.status).toBe('confirmed');
-    expect(tx!.amount).toBe('200.00'); // 2 shares * 100.00
+    expect(parseFloat(tx!.amount)).toBe(200); // 2 shares * 100.00
   });
 
   it('does not persist a pending transaction when Soroban submission fails', async () => {
@@ -132,4 +143,3 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
     expect(prop!.availableShares).toBe(8);
   });
 });
-

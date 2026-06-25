@@ -1,5 +1,5 @@
 /**
- * Test factories — `create<Type>(overrides?)` functions that return
+ * Test factories - `create<Type>(overrides?)` functions that return
  * schema-compliant objects with realistic defaults.
  */
 import type {

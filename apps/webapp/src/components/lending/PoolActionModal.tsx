@@ -20,7 +20,7 @@ export interface PoolActionModalProps {
   action: PoolAction;
   isOpen: boolean;
   onClose: () => void;
-  /** Connected wallet address — required for real TX submission */
+  /** Connected wallet address - required for real TX submission */
   userAddress?: string | null;
   /** Callback fired after a successful transaction so the parent can refetch */
   onSuccess?: () => void;
@@ -160,7 +160,7 @@ export function PoolActionModal({
       title={cfg.title}
       description={cfg.description}
     >
-      {/* Success state — show TX hash */}
+      {/* Success state - show TX hash */}
       {txHash ? (
         <div className="flex flex-col items-center gap-4 py-6 text-center">
           <div className="w-14 h-14 rounded-full bg-[#00ff88]/10 border border-[#00ff88]/30 flex items-center justify-center">

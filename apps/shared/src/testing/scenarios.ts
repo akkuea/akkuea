@@ -1,5 +1,5 @@
 /**
- * Staging scenarios — pre-built fixtures that represent realistic
+ * Staging scenarios - pre-built fixtures that represent realistic
  * launch-grade data flows for smoke testing and integration tests.
  */
 import {

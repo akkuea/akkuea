@@ -10,7 +10,7 @@ export class ValuationController {
     body: RealEstateValuationPayload,
   ): Promise<{ success: true; record: ValuationRecord; warnings: string[] }> {
     try {
-      const { record, warnings } = OracleService.ingestValuation(body);
+      const { record, warnings } = await OracleService.ingestValuation(body);
       return { success: true, record, warnings };
     } catch (error) {
       throw new Error(`Failed to ingest valuation: ${error}`);
@@ -21,7 +21,7 @@ export class ValuationController {
     propertyId: string,
   ): Promise<{ success: true; record: ValuationRecord }> {
     try {
-      const record = OracleService.getLatestValuation(propertyId);
+      const record = await OracleService.getLatestValuation(propertyId);
       return { success: true, record };
     } catch (error) {
       throw new Error(`Failed to fetch valuation: ${error}`);
@@ -33,7 +33,7 @@ export class ValuationController {
     limit?: number,
   ): Promise<{ success: true; history: ValuationRecord[]; total: number }> {
     try {
-      const history = OracleService.getValuationHistory(propertyId, limit);
+      const history = await OracleService.getValuationHistory(propertyId, limit);
       return { success: true, history, total: history.length };
     } catch (error) {
       throw new Error(`Failed to fetch valuation history: ${error}`);
@@ -44,7 +44,7 @@ export class ValuationController {
     propertyId: string,
   ): Promise<{ success: true; payload: ContractValuationPayload }> {
     try {
-      const payload = OracleService.buildContractPayload(propertyId);
+      const payload = await OracleService.buildContractPayload(propertyId);
       return { success: true, payload };
     } catch (error) {
       throw new Error(`Failed to build contract payload: ${error}`);
@@ -57,7 +57,7 @@ export class ValuationController {
     reason: string,
   ): Promise<{ success: true; record: ValuationRecord }> {
     try {
-      const record = OracleService.flagForManualReview(id, propertyId, reason);
+      const record = await OracleService.flagForManualReview(id, propertyId, reason);
       return { success: true, record };
     } catch (error) {
       throw new Error(`Failed to flag valuation for review: ${error}`);
@@ -68,7 +68,7 @@ export class ValuationController {
     body: RealEstateValuationPayload & { overrideReason: string },
   ): Promise<{ success: true; record: ValuationRecord }> {
     try {
-      const record = OracleService.submitManualOverride(body);
+      const record = await OracleService.submitManualOverride(body);
       return { success: true, record };
     } catch (error) {
       throw new Error(`Failed to submit manual override: ${error}`);

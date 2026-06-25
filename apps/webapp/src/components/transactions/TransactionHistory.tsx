@@ -22,7 +22,7 @@ import { TransactionRow } from "./TransactionRow";
 import { useState } from "react";
 
 // ---------------------------------------------------------------------------
-// Skeleton Row — shown while loading
+// Skeleton Row - shown while loading
 // ---------------------------------------------------------------------------
 
 function TransactionRowSkeleton() {
@@ -165,7 +165,7 @@ export function TransactionHistory({
             transition={{ duration: 0.2 }}
           >
             <CardContent className="divide-y divide-[#1a1a1a]">
-              {/* Loading state — skeleton rows */}
+              {/* Loading state - skeleton rows */}
               {isLoading && transactions.length === 0 && (
                 <>
                   {Array.from({ length: 3 }).map((_, i) => (

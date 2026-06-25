@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { propertyApi } from "../properties";
 import { setupMockFetch, wrapFetchMock } from "./helpers";
-import type { PropertyInfo, ShareOwnership } from "@real-estate-defi/shared";
+import type { ShareOwnership } from "@real-estate-defi/shared";
 import {
   VALID_STELLAR_ADDRESS,
   VALID_UUID,
@@ -182,7 +182,7 @@ describe("Property API", () => {
 
       expect(result).toEqual(mockResponse);
       expect(calls[0].url).toBe(
-        "http://localhost:3001/properties/550e8400-e29b-41d4-a716-446655440001/tokenize",
+        "http://localhost:3001/properties/550e8400-e29b-41d4-a716-446655440000/tokenize",
       );
       expect(calls[0].options.method).toBe("POST");
     });
@@ -209,7 +209,7 @@ describe("Property API", () => {
 
       expect(result).toEqual(mockResponse);
       expect(calls[0].url).toBe(
-        "http://localhost:3001/properties/550e8400-e29b-41d4-a716-446655440001/buy-shares",
+        "http://localhost:3001/properties/550e8400-e29b-41d4-a716-446655440000/buy-shares",
       );
       expect(calls[0].options.method).toBe("POST");
       expect(JSON.parse(calls[0].options.body as string)).toEqual({
@@ -245,7 +245,7 @@ describe("Property API", () => {
 
       expect(result).toEqual(mockShareOwnership);
       expect(calls[0].url).toBe(
-        `http://localhost:3001/properties/550e8400-e29b-41d4-a716-446655440001/shares/${VALID_STELLAR_ADDRESS}`,
+        `http://localhost:3001/properties/550e8400-e29b-41d4-a716-446655440000/shares/${VALID_STELLAR_ADDRESS}`,
       );
       expect(calls[0].options.method).toBe("GET");
     });

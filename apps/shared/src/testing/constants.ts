@@ -1,5 +1,5 @@
 /**
- * Shared test constants — canonical values to eliminate duplication across test suites.
+ * Shared test constants - canonical values to eliminate duplication across test suites.
  */
 
 /** Valid Stellar public key (ed25519, G-prefix, base32) */

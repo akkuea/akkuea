@@ -7,14 +7,14 @@ import { handleError } from '../utils/errors';
  */
 export const errorHandler = new Elysia().onError({ as: 'global' }, ({ error, code, set }) => {
   const result = handleError(error);
-  
+
   // Ensure VALIDATION errors from Elysia/Zod are returned as 400
   if (code === 'VALIDATION') {
     set.status = 400;
     return {
       ...result,
       error: 'Validation Error',
-      statusCode: 400
+      statusCode: 400,
     };
   }
 
@@ -24,7 +24,7 @@ export const errorHandler = new Elysia().onError({ as: 'global' }, ({ error, cod
     return {
       ...result,
       error: 'Not Found',
-      statusCode: 404
+      statusCode: 404,
     };
   }
 

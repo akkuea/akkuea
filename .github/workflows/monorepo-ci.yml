@@ -14,7 +14,7 @@ on:
 
 env:
   NODE_VERSION: '20'
-  BUN_VERSION: 'latest'
+  BUN_VERSION: '1.x'
 
 jobs:
   monorepo-integrity:
@@ -63,12 +63,12 @@ jobs:
         echo "Checking cross-workspace dependencies..."
         
         # Check if webapp references shared
-        if grep -q "@real-estate-defi/shared" apps/webapp/package.json; then
+        if grep -q "@akkuea/shared" apps/webapp/package.json; then
           echo "✅ Webapp references shared package"
         fi
         
         # Check if API references shared
-        if grep -q "@real-estate-defi/shared" apps/api/package.json; then
+        if grep -q "@akkuea/shared" apps/api/package.json; then
           echo "✅ API references shared package"
         fi
         
@@ -106,17 +106,16 @@ jobs:
     - name: Audit all dependencies
       run: |
         cd .
-        
+
         # Install root dependencies
-        bun install
-        bun install --workspaces
-        
+        bun install --frozen-lockfile
+        bun install --workspaces --frozen-lockfile
+
         # Audit Bun workspaces
         bun audit --workspaces || true
-        
-        # Audit Bun workspaces
-        cd apps/api && bun install && bun audit || true
-        cd ../shared && bun install && bun audit || true
+
+        cd apps/api && bun install --frozen-lockfile && bun audit || true
+        cd ../shared && bun install --frozen-lockfile && bun audit || true
         
     - name: Check for license conflicts
       run: |
@@ -158,27 +157,38 @@ jobs:
     - name: Build performance test
       run: |
         cd .
-        
+
         echo "Testing build performance..."
-        
+
+        # Retry helper — platform-specific binaries (e.g. @next/swc-linux-x64-gnu)
+        # can fail on transient registry/CDN errors; three attempts is enough.
+        bun_install() {
+          for i in 1 2 3; do
+            bun install --frozen-lockfile && return 0
+            echo "bun install attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          return 1
+        }
+
         # Record build times
         START_TIME=$(date +%s)
-        
+
         # Build webapp
         cd apps/webapp
-        bun install
+        bun_install
         bun run build
         WEBAPP_BUILD_TIME=$(date +%s)
-        
+
         # Build API
         cd ../api
-        bun install
+        bun_install
         bun run build
         API_BUILD_TIME=$(date +%s)
-        
+
         # Build shared
         cd ../shared
-        bun install
+        bun_install
         bun run build
         SHARED_BUILD_TIME=$(date +%s)
         
@@ -244,32 +254,25 @@ jobs:
     - name: Integration tests
       run: |
         cd .
-        
+
         echo "Running cross-workspace integration tests..."
-        
-        # Install all dependencies
-        bun install
-        bun install --workspaces
-        
+
         # Build shared library first
         cd apps/shared
-        bun install
+        bun install --frozen-lockfile
         bun run build
         cd ../..
-        
+
         # Test API imports from shared
         cd apps/api
-        bun install
+        bun install --frozen-lockfile
         echo "Testing API imports..."
         bun -e "const shared = await import('../shared/dist/index.js'); console.log('✅ API can import shared library'); const { ValidationService } = shared; console.log('✅ ValidationService available:', typeof ValidationService);"
         cd ../..
-        
-        # Test webapp imports from shared
-        cd apps/webapp
-        bun install
+
+        # Test webapp imports from shared (no webapp install needed; only shared dist is required)
         echo "Testing WebApp imports..."
-        bun -e "const shared = await import('../shared/dist/index.js'); console.log('✅ WebApp can import shared library');"
-        cd ../..
+        bun -e "const shared = await import('./apps/shared/dist/index.js'); console.log('✅ WebApp can import shared library');"
         
     - name: Type compatibility test
       run: |
@@ -309,7 +312,7 @@ jobs:
         
         # Check for unsafe eval usage
         echo "3. Checking for unsafe eval usage..."
-        if grep -r "eval\|Function(" apps/ --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist | grep -v "//.*eval\|//.*Function("; then
+        if grep -r "eval\|Function(" apps/ --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.next | grep -v "//.*eval\|//.*Function("; then
           echo "Warning: Unsafe eval usage found"
           exit 1
         fi

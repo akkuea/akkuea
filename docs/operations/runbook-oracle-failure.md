@@ -1,6 +1,6 @@
 # Runbook: Oracle Failure and Price Feed Incidents
 
-**Severity:** High — lending operations fully blocked when triggered
+**Severity:** High - lending operations fully blocked when triggered
 **Audience:** On-call operators with `Admin` role
 **Related contract source:** `apps/contracts/contracts/defi-rwa/src/lending/oracle.rs`
 
@@ -8,23 +8,23 @@
 
 ## Symptoms
 
-An oracle incident manifests as one of four panics in the Soroban contract (Issue #729 merged — `oracle.rs` updated):
+An oracle incident manifests as one of four panics in the Soroban contract (Issue #729 merged - `oracle.rs` updated):
 
-| Panic message | Location | Meaning |
-|---|---|---|
-| `"Oracle address not configured"` | `oracle.rs` — `get_oracle_address` | `set_oracle` was never called, or the oracle address was wiped |
-| `"Price not available for asset"` | `oracle.rs` — `get_price` | Oracle returned `None` for the requested asset |
-| `"Invalid price: price must be positive"` | `oracle.rs` — `get_price` | Oracle returned a zero or negative raw price |
-| `"Price data is stale"` | `oracle.rs` — `get_price` | Price timestamp exceeds the configured `max_age` threshold |
-| `"Price below minimum threshold"` | `oracle.rs` — `get_price` | Normalized price is below the configured `min_price` floor |
+| Panic message                             | Location                           | Meaning                                                        |
+| ----------------------------------------- | ---------------------------------- | -------------------------------------------------------------- |
+| `"Oracle address not configured"`         | `oracle.rs` - `get_oracle_address` | `set_oracle` was never called, or the oracle address was wiped |
+| `"Price not available for asset"`         | `oracle.rs` - `get_price`          | Oracle returned `None` for the requested asset                 |
+| `"Invalid price: price must be positive"` | `oracle.rs` - `get_price`          | Oracle returned a zero or negative raw price                   |
+| `"Price data is stale"`                   | `oracle.rs` - `get_price`          | Price timestamp exceeds the configured `max_age` threshold     |
+| `"Price below minimum threshold"`         | `oracle.rs` - `get_price`          | Normalized price is below the configured `min_price` floor     |
 
-All five panics terminate every `borrow()` call. `deposit()`, `withdraw()`, and `repay()` are **not** affected — existing depositors and borrowers can still exit positions. Only new borrowing is blocked.
+All five panics terminate every `borrow()` call. `deposit()`, `withdraw()`, and `repay()` are **not** affected - existing depositors and borrowers can still exit positions. Only new borrowing is blocked.
 
-> **Issue #729 — merged.** The staleness threshold is now **configurable** via `set_oracle_config(caller, max_age, min_price)`. The default is `DEFAULT_MAX_AGE = 3600` seconds if `set_oracle_config` has not been called. Run `get_oracle_config()` on your deployed contract to confirm the active values before citing any specific threshold in an incident report.
+> **Issue #729 - merged.** The staleness threshold is now **configurable** via `set_oracle_config(caller, max_age, min_price)`. The default is `DEFAULT_MAX_AGE = 3600` seconds if `set_oracle_config` has not been called. Run `get_oracle_config()` on your deployed contract to confirm the active values before citing any specific threshold in an incident report.
 
 ---
 
-## Phase 1 — Triage (first 5 minutes)
+## Phase 1 - Triage (first 5 minutes)
 
 ### 1. Confirm the panic type
 
@@ -44,6 +44,7 @@ stellar contract invoke \
 ```
 
 Read the error:
+
 - `"Oracle address not configured"` → go to **Scenario A**
 - `"Price not available for asset"` → go to **Scenario B1** (oracle outage)
 - `"Invalid price: price must be positive"` → go to **Scenario C** (bad price feed)
@@ -63,7 +64,7 @@ stellar contract invoke \
 # Example: (3600, 0) = default staleness, no price floor active
 ```
 
-Keep this output in your incident notes — it tells you the exact thresholds the contract is enforcing.
+Keep this output in your incident notes - it tells you the exact thresholds the contract is enforcing.
 
 ### 2. Check oracle address on-chain
 
@@ -79,7 +80,7 @@ stellar contract events \
 
 ---
 
-## Scenario A — Oracle address not configured
+## Scenario A - Oracle address not configured
 
 ### Cause
 
@@ -103,7 +104,7 @@ stellar contract invoke \
 ### Verify
 
 ```bash
-# Retry the borrow probe — it should now fail with a different error
+# Retry the borrow probe - it should now fail with a different error
 # (e.g., "pool not found" or collateral validation) rather than oracle errors
 stellar contract invoke \
   --contract-id $CONTRACT_ID \
@@ -117,7 +118,7 @@ stellar contract invoke \
 
 ---
 
-## Scenario B — Price data is stale
+## Scenario B - Price data is stale
 
 ### Decision tree
 
@@ -126,21 +127,21 @@ Price data is stale
         |
         ├── Is oracle provider experiencing an outage?
         │         |
-        │    YES  └─── [B1] Wait and monitor — do not pause unless exploit confirmed
+        │    YES  └─── [B1] Wait and monitor - do not pause unless exploit confirmed
         │         |
         │    NO   └─── Is the oracle address pointing to the correct contract?
         │                     |
         │                YES  └─── [B2] Oracle is publishing but contract disagrees
         │                     |         (clock skew, timestamp format bug)
-        │                NO   └─── [B3] Oracle address was changed — possible exploit
+        │                NO   └─── [B3] Oracle address was changed - possible exploit
         │                          → Escalate immediately, consider emergency pause
 ```
 
-### B1 — Oracle provider outage (most common case)
+### B1 - Oracle provider outage (most common case)
 
 1. Confirm the outage with the oracle provider.
 2. Monitor the event stream for price publication resumption.
-3. No contract action required — once the oracle publishes a fresh price, `borrow()` resumes automatically.
+3. No contract action required - once the oracle publishes a fresh price, `borrow()` resumes automatically.
 4. If the outage exceeds 2 hours and the protocol has active liquidatable positions, consider calling `emergency_pause` to prevent undercollateralized borrowing from continuing. See `docs/operations/runbook-emergency-pause.md`.
 
 ```bash
@@ -156,7 +157,7 @@ stellar contract invoke \
 # Check the `timestamp` field in the response
 ```
 
-### B2 — Oracle publishing but contract rejects it
+### B2 - Oracle publishing but contract rejects it
 
 Check the raw price data returned by the oracle:
 
@@ -179,11 +180,11 @@ stellar ledger --network $NETWORK
 
 If the difference is within threshold but the contract still panics, this indicates a potential clock skew or timestamp normalization bug. Open an incident investigation ticket and monitor for recurrence. Do not pause for this scenario unless fund loss is confirmed.
 
-### B3 — Oracle address changed without authorization
+### B3 - Oracle address changed without authorization
 
 If `set_oracle` events appear in the contract history that were not issued by your admin key, treat this as a **critical security incident**:
 
-1. **Immediately call `emergency_pause`** — do not wait. An attacker controlling the oracle can set arbitrary prices to drain all collateral via liquidation.
+1. **Immediately call `emergency_pause`** - do not wait. An attacker controlling the oracle can set arbitrary prices to drain all collateral via liquidation.
 2. Follow `docs/operations/runbook-emergency-pause.md` from Phase 1.
 3. After pausing, use the 24-hour investigation window to confirm the oracle address change.
 4. During recovery, call `set_oracle` to point back to the legitimate oracle before executing recovery.
@@ -247,7 +248,7 @@ stellar contract invoke \
   --function get_oracle_config
 ```
 
-Verify the backup oracle returns prices with `decimals()` and `lastprice()` responses compatible with the contract's decimal normalization logic (`oracle.rs` — `normalize_price`). A backup oracle with unexpected decimal precision will cause price scaling errors in borrow health factor calculations.
+Verify the backup oracle returns prices with `decimals()` and `lastprice()` responses compatible with the contract's decimal normalization logic (`oracle.rs` - `normalize_price`). A backup oracle with unexpected decimal precision will cause price scaling errors in borrow health factor calculations.
 
 ## Adjusting guardrail parameters (non-incident)
 
@@ -288,23 +289,23 @@ stellar contract invoke \
 
 ## Reference
 
-| Item | Source | Notes |
-|---|---|---|
-| `set_oracle(oracle_address, caller)` | `lib.rs` | Sets SEP-40 oracle address. Admin only |
-| `set_oracle_config(caller, max_age, min_price)` | `lib.rs` | Configures staleness threshold and price floor. Admin only. `max_age=0` preserves current value |
-| `get_oracle_config()` | `lib.rs` | Returns `(max_age, min_price)` tuple — use to confirm active guardrail values |
-| `DEFAULT_MAX_AGE` | `oracle.rs` | `3600` seconds — applied when `set_oracle_config` has never been called |
-| `"Oracle address not configured"` | `oracle.rs` — `get_oracle_address` | `set_oracle` not called post-deploy |
-| `"Price not available for asset"` | `oracle.rs` — `get_price` | Oracle returned `None` |
-| `"Invalid price: price must be positive"` | `oracle.rs` — `get_price` | Raw price ≤ 0 |
-| `"Price data is stale"` | `oracle.rs` — `get_price` | Age exceeds `max_age` |
-| `"Price below minimum threshold"` | `oracle.rs` — `get_price` | Normalized price < `min_price` |
-| Affected operations | All | `borrow()` only — `deposit`, `withdraw`, `repay` unaffected |
+| Item                                            | Source                             | Notes                                                                                           |
+| ----------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `set_oracle(oracle_address, caller)`            | `lib.rs`                           | Sets SEP-40 oracle address. Admin only                                                          |
+| `set_oracle_config(caller, max_age, min_price)` | `lib.rs`                           | Configures staleness threshold and price floor. Admin only. `max_age=0` preserves current value |
+| `get_oracle_config()`                           | `lib.rs`                           | Returns `(max_age, min_price)` tuple - use to confirm active guardrail values                   |
+| `DEFAULT_MAX_AGE`                               | `oracle.rs`                        | `3600` seconds - applied when `set_oracle_config` has never been called                         |
+| `"Oracle address not configured"`               | `oracle.rs` - `get_oracle_address` | `set_oracle` not called post-deploy                                                             |
+| `"Price not available for asset"`               | `oracle.rs` - `get_price`          | Oracle returned `None`                                                                          |
+| `"Invalid price: price must be positive"`       | `oracle.rs` - `get_price`          | Raw price ≤ 0                                                                                   |
+| `"Price data is stale"`                         | `oracle.rs` - `get_price`          | Age exceeds `max_age`                                                                           |
+| `"Price below minimum threshold"`               | `oracle.rs` - `get_price`          | Normalized price < `min_price`                                                                  |
+| Affected operations                             | All                                | `borrow()` only - `deposit`, `withdraw`, `repay` unaffected                                     |
 
 ---
 
 ## See also
 
-- `docs/operations/runbook-emergency-pause.md` — if oracle manipulation confirms active exploit
-- `docs/deployment/deploy-contracts.md` — Step 3: oracle setup including `set_oracle_config`
-- `docs/deployment/post-deploy-checklist.md` — Step 2: oracle verification at launch
+- `docs/operations/runbook-emergency-pause.md` - if oracle manipulation confirms active exploit
+- `docs/deployment/deploy-contracts.md` - Step 3: oracle setup including `set_oracle_config`
+- `docs/deployment/post-deploy-checklist.md` - Step 2: oracle verification at launch

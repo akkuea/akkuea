@@ -82,7 +82,7 @@ impl PriceOracle {
         let oracle_address = Self::get_oracle_address(env);
         let price_feed_client = PriceFeedClient::new(env, &oracle_address);
 
-        // 1. Fetch price — reject if missing
+        // 1. Fetch price - reject if missing
         let asset_enum = Asset::Stellar(asset.clone());
         let price_data: PriceData = price_feed_client
             .lastprice(&asset_enum)
@@ -93,7 +93,7 @@ impl PriceOracle {
             panic!("Invalid price: price must be positive");
         }
 
-        // 3. Staleness check — configurable max age
+        // 3. Staleness check - configurable max age
         let current_time = env.ledger().timestamp();
         let max_age = Self::get_max_age(env);
         if current_time > price_data.timestamp && (current_time - price_data.timestamp) > max_age {
@@ -113,7 +113,7 @@ impl PriceOracle {
         normalized_price
     }
 
-    /// Canonical safe entry point — alias for [`get_price`].
+    /// Canonical safe entry point - alias for [`get_price`].
     ///
     /// Provided for readability at call sites that want to emphasise the
     /// guarded nature of the price fetch.
@@ -125,7 +125,7 @@ impl PriceOracle {
     ///
     /// This still rejects missing prices but does **not** apply staleness,
     /// validity, or floor checks. Use only for informational / diagnostic
-    /// purposes — never in risk-sensitive code paths.
+    /// purposes - never in risk-sensitive code paths.
     pub fn get_raw_price_data(env: &Env, asset: &Address) -> PriceData {
         let oracle_address = Self::get_oracle_address(env);
         let price_feed_client = PriceFeedClient::new(env, &oracle_address);

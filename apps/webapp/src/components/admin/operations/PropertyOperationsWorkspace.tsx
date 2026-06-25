@@ -117,7 +117,10 @@ export function PropertyOperationsWorkspace({
   }, [operatorWallet, queue, page, limit]);
 
   useEffect(() => {
-    void loadList();
+    const timer = setTimeout(() => {
+      void loadList();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [loadList]);
 
   const loadDetail = useCallback(
@@ -140,11 +143,14 @@ export function PropertyOperationsWorkspace({
   );
 
   useEffect(() => {
-    if (selectedId) {
-      void loadDetail(selectedId);
-    } else {
-      setDetail(null);
-    }
+    const timer = setTimeout(() => {
+      if (selectedId) {
+        void loadDetail(selectedId);
+      } else {
+        setDetail(null);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [selectedId, loadDetail]);
 
   const onConfirmAction = async () => {
@@ -428,7 +434,7 @@ export function PropertyOperationsWorkspace({
                       {detail.valuation.record?.price != null && (
                         <span className="text-zinc-500">
                           {" "}
-                          — {formatCurrency(detail.valuation.record.price)}{" "}
+                          - {formatCurrency(detail.valuation.record.price)}{" "}
                           {detail.valuation.record.currency}
                         </span>
                       )}
@@ -444,7 +450,7 @@ export function PropertyOperationsWorkspace({
                       <span className="text-zinc-500">Last reviewer: </span>
                       {detail.audit.lastActorWallet
                         ? truncateAddress(detail.audit.lastActorWallet)
-                        : "—"}
+                        : "-"}
                       {detail.audit.lastActionAt && (
                         <span className="text-zinc-600">
                           {" "}

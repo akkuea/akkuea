@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import { STELLAR_NETWORKS } from "@real-estate-defi/shared";
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);
@@ -31,4 +32,20 @@ export function truncateAddress(address: string, chars = 4): string {
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Generates a Stellar Expert explorer URL based on the network.
+ * @param network - The active network ("mainnet" or "testnet").
+ * @param type - The type of link ("account" or "tx").
+ * @param value - The address or transaction hash.
+ */
+export function getExplorerUrl(
+  network: "mainnet" | "testnet",
+  type: "account" | "tx",
+  value: string,
+): string {
+  const networkSegment =
+    network === "mainnet" ? STELLAR_NETWORKS.MAINNET : STELLAR_NETWORKS.TESTNET;
+  return `https://stellar.expert/explorer/${networkSegment}/${type}/${value}`;
 }

@@ -1,6 +1,6 @@
 # Contract Deployment Guide
 
-This guide covers the complete deployment of the Akkuea smart contracts to Stellar/Soroban networks. Read it fully before executing any command — the order of steps is mandatory.
+This guide covers the complete deployment of the Akkuea smart contracts to Stellar/Soroban networks. Read it fully before executing any command - the order of steps is mandatory.
 
 **Contract source:** `apps/contracts/contracts/defi-rwa/src/lib.rs`
 **Output WASM:** `apps/contracts/target/wasm32-unknown-unknown/release/real_estate_defi_contracts.wasm`
@@ -12,7 +12,7 @@ This guide covers the complete deployment of the Akkuea smart contracts to Stell
 
 ## Architecture overview
 
-Akkuea deploys a **single WASM binary** that contains both the property tokenization and DeFi lending logic. There are not two separate contracts — there is one contract, one contract ID, one deployment.
+Akkuea deploys a **single WASM binary** that contains both the property tokenization and DeFi lending logic. There are not two separate contracts - there is one contract, one contract ID, one deployment.
 
 ```
 real_estate_defi_contracts.wasm
@@ -49,7 +49,7 @@ stellar keys import --name mainnet-deployer
 
 ---
 
-## Step 1 — Build the WASM binary
+## Step 1 - Build the WASM binary
 
 ```bash
 cd akkuea-defi-rwa/apps/contracts
@@ -68,7 +68,7 @@ If the file is missing, the build failed. Check `cargo build` output for compile
 
 ---
 
-## Step 2 — Deploy the contract
+## Step 2 - Deploy the contract
 
 The Soroban CLI `deploy` command uploads the WASM and calls the `__constructor(admin: Address)` in a single atomic transaction. There is no separate `initialize` step.
 
@@ -85,7 +85,7 @@ CONTRACT_ID=$(stellar contract deploy \
   --admin $ADMIN_ADDRESS)
 
 echo "Contract ID: $CONTRACT_ID"
-# Save this value — it goes into REAL_ESTATE_TOKEN_CONTRACT_ID
+# Save this value - it goes into REAL_ESTATE_TOKEN_CONTRACT_ID
 ```
 
 For mainnet, replace `--network testnet` with `--network mainnet`.
@@ -94,7 +94,7 @@ For mainnet, replace `--network testnet` with `--network mainnet`.
 
 ---
 
-## Step 3 — Set the price oracle (MANDATORY before any lending)
+## Step 3 - Set the price oracle (MANDATORY before any lending)
 
 > **This step is not optional.** The oracle address must be configured before any `borrow()` call is made. If this step is skipped, every borrow attempt will panic with: `Oracle address not configured` (`oracle.rs:19`).
 
@@ -124,7 +124,7 @@ stellar contract invoke \
 # A panic here signals a deeper initialization problem.
 ```
 
-> **Oracle guardrails (Issue #729 — merged):** The contract rejects price data older than `max_age` seconds. The default is **3600 seconds (1 hour)** (`oracle.rs` — `DEFAULT_MAX_AGE`), but this value is now **configurable per deployment** via `set_oracle_config`. After setting the oracle address, call `set_oracle_config` to tune the staleness threshold and optional price floor for your production environment. See `docs/operations/runbook-oracle-failure.md` for incident response.
+> **Oracle guardrails (Issue #729 - merged):** The contract rejects price data older than `max_age` seconds. The default is **3600 seconds (1 hour)** (`oracle.rs` - `DEFAULT_MAX_AGE`), but this value is now **configurable per deployment** via `set_oracle_config`. After setting the oracle address, call `set_oracle_config` to tune the staleness threshold and optional price floor for your production environment. See `docs/operations/runbook-oracle-failure.md` for incident response.
 
 After `set_oracle`, configure the guardrail parameters:
 
@@ -152,7 +152,7 @@ stellar contract invoke \
 
 ---
 
-## Step 4 — Create lending pool(s)
+## Step 4 - Create lending pool(s)
 
 Each asset that users can deposit or borrow against requires its own pool. Pools are created by the admin.
 
@@ -176,16 +176,16 @@ stellar contract invoke \
 
 Parameter notes:
 
-| Parameter | Scale | Example | Meaning |
-|---|---|---|---|
-| `collateral_factor` | 1e18 = 100% | `750000000000000000` | 75% — borrower can borrow up to 75% of collateral value |
-| `liquidation_threshold` | 1e18 = 100% | `800000000000000000` | 80% — position liquidatable when debt/collateral exceeds 80% |
-| `liquidation_penalty` | 1e18 = 100% | `100000000000000000` | 10% — liquidator bonus |
-| `reserve_factor` | basis points | `100` | 1% of interest goes to protocol reserve |
+| Parameter               | Scale        | Example              | Meaning                                                      |
+| ----------------------- | ------------ | -------------------- | ------------------------------------------------------------ |
+| `collateral_factor`     | 1e18 = 100%  | `750000000000000000` | 75% - borrower can borrow up to 75% of collateral value      |
+| `liquidation_threshold` | 1e18 = 100%  | `800000000000000000` | 80% - position liquidatable when debt/collateral exceeds 80% |
+| `liquidation_penalty`   | 1e18 = 100%  | `100000000000000000` | 10% - liquidator bonus                                       |
+| `reserve_factor`        | basis points | `100`                | 1% of interest goes to protocol reserve                      |
 
 ---
 
-## Step 5 — Grant operational roles
+## Step 5 - Grant operational roles
 
 Assign roles to operators before opening the platform to users. Role definitions are in `apps/contracts/contracts/defi-rwa/src/access/roles.rs`.
 
@@ -200,7 +200,7 @@ stellar contract invoke \
   --admin $ADMIN_ADDRESS \
   --target $OPERATOR_ADDRESS
 
-# To grant Pauser role (not exposed as a standalone function — use grant_role if needed)
+# To grant Pauser role (not exposed as a standalone function - use grant_role if needed)
 # See docs/operations/runbook-role-management.md
 ```
 
@@ -208,7 +208,7 @@ Available roles: `Admin`, `Pauser`, `Oracle`, `Verifier`, `Liquidator`, `Emergen
 
 ---
 
-## Step 6 — Configure the API
+## Step 6 - Configure the API
 
 Update `akkuea-defi-rwa/apps/api/.env`:
 
@@ -252,10 +252,10 @@ stellar contract invoke \
   -- \
   --property_id 0 \
   --owner $ADMIN_ADDRESS
-# Returns 0 — confirms contract is responsive
+# Returns 0 - confirms contract is responsive
 
 # 3. Oracle is configured (no panic)
-# Attempt a read that triggers oracle path — any get_pool call suffices.
+# Attempt a read that triggers oracle path - any get_pool call suffices.
 
 # 4. API health
 curl http://localhost:3001/health
@@ -324,14 +324,14 @@ stellar contract invoke \
 
 ## Troubleshooting
 
-| Error | Cause | Fix |
-|---|---|---|
-| `Oracle address not configured` | Step 3 was skipped | Run `set_oracle` before any `borrow()` |
-| `Price data is stale` | Oracle hasn't published within `max_age` seconds (default 3600s, configurable via `set_oracle_config`) | See `docs/operations/runbook-oracle-failure.md` |
-| `Invalid price: price must be positive` | Oracle returned a zero or negative price | Investigate oracle feed; consider switching to backup oracle |
-| `Price below minimum threshold` | Normalized price is below the configured `min_price` floor | Review `set_oracle_config` min_price value or investigate price feed anomaly |
-| `pool already exists` | `create_pool` called twice with same `pool_id` | Use a unique `pool_id` per pool |
-| `Authorization failed` | Wrong signing key or `--source-account` mismatch | Verify `STELLAR_ADMIN_SECRET` matches `ADMIN_ADDRESS` |
-| `Insufficient fee` | Account balance too low | Fund account; testnet: `stellar account fund $ADMIN_ADDRESS --network testnet` |
-| `Contract not found` | Wrong `CONTRACT_ID` or wrong `--network` | Verify both match the deployment target |
-| `wasm file not found` | Build output missing | Re-run `cargo build` and check for compile errors |
+| Error                                   | Cause                                                                                                  | Fix                                                                            |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `Oracle address not configured`         | Step 3 was skipped                                                                                     | Run `set_oracle` before any `borrow()`                                         |
+| `Price data is stale`                   | Oracle hasn't published within `max_age` seconds (default 3600s, configurable via `set_oracle_config`) | See `docs/operations/runbook-oracle-failure.md`                                |
+| `Invalid price: price must be positive` | Oracle returned a zero or negative price                                                               | Investigate oracle feed; consider switching to backup oracle                   |
+| `Price below minimum threshold`         | Normalized price is below the configured `min_price` floor                                             | Review `set_oracle_config` min_price value or investigate price feed anomaly   |
+| `pool already exists`                   | `create_pool` called twice with same `pool_id`                                                         | Use a unique `pool_id` per pool                                                |
+| `Authorization failed`                  | Wrong signing key or `--source-account` mismatch                                                       | Verify `STELLAR_ADMIN_SECRET` matches `ADMIN_ADDRESS`                          |
+| `Insufficient fee`                      | Account balance too low                                                                                | Fund account; testnet: `stellar account fund $ADMIN_ADDRESS --network testnet` |
+| `Contract not found`                    | Wrong `CONTRACT_ID` or wrong `--network`                                                               | Verify both match the deployment target                                        |
+| `wasm file not found`                   | Build output missing                                                                                   | Re-run `cargo build` and check for compile errors                              |

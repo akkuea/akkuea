@@ -87,7 +87,7 @@ export function PropertyReportCard({
             {formatPercentage(yieldRate)} APY
           </Badge>
         ) : (
-          <span className="text-[10px] text-neutral-600">—</span>
+          <span className="text-[10px] text-neutral-600">-</span>
         )}
       </div>
     </div>

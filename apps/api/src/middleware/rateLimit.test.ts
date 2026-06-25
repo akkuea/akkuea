@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'bun:test';
 import { rateLimit, createRedisStore, createMemoryStore } from './rateLimit';
 import type { RateLimitRedisClient } from './rateLimit';
+import type { Context } from 'elysia';
 
 function createMockRequest(options: { headers?: Record<string, string> } = {}) {
   const headers = new Headers(options.headers ?? {});
   return { headers } as unknown as Request;
 }
 
-function createMockSet() {
+function createMockSet(): Context['set'] {
   return {
-    status: undefined as number | string | undefined,
-    headers: undefined as Record<string, string> | undefined,
+    headers: {},
   };
 }
 
@@ -139,7 +139,7 @@ describe('createRedisStore', () => {
 });
 
 // ---------------------------------------------------------------------------
-// rateLimit middleware (in-memory mode — no REDIS_URL in tests)
+// rateLimit middleware (in-memory mode - no REDIS_URL in tests)
 // ---------------------------------------------------------------------------
 
 describe('rateLimit middleware', () => {
@@ -163,7 +163,7 @@ describe('rateLimit middleware', () => {
       await middleware({ request, set }); // 1st
       await middleware({ request, set }); // 2nd
       await middleware({ request, set }); // 3rd
-      const result = await middleware({ request, set }); // 4th — blocked
+      const result = await middleware({ request, set }); // 4th - blocked
 
       expect(result).toEqual({
         success: false,
@@ -197,13 +197,11 @@ describe('rateLimit middleware', () => {
       const set2 = createMockSet();
 
       await middleware({ request: req1, set: set1 }); // 1st for IP1
-      await middleware({ request: req1, set: set1 }); // 2nd for IP1 — blocked
+      await middleware({ request: req1, set: set1 }); // 2nd for IP1 - blocked
       const result2 = await middleware({ request: req2, set: set2 }); // 1st for IP2
 
       expect(result2).toBeUndefined();
     });
-
-
   });
 
   describe('Retry-After header', () => {
@@ -213,7 +211,7 @@ describe('rateLimit middleware', () => {
       const set = createMockSet();
 
       await middleware({ request, set }); // 1st
-      await middleware({ request, set }); // 2nd — blocked
+      await middleware({ request, set }); // 2nd - blocked
 
       expect(set.headers!['Retry-After']).toBeDefined();
       expect(Number(set.headers!['Retry-After'])).toBeGreaterThan(0);

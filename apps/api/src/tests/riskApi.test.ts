@@ -4,7 +4,7 @@ import { errorHandler } from '../middleware/errorHandler';
 import { riskMonitoringRoutes } from '../routes/riskMonitoring';
 import { lendingRoutes } from '../routes/lending';
 
-// Risk monitoring routes — RiskMonitoringRepository is in-memory; LendingRepository falls back
+// Risk monitoring routes - RiskMonitoringRepository is in-memory; LendingRepository falls back
 // to returning [] when DATABASE_URL is absent (assessAllPositions catches the DB error).
 describe('Risk Monitoring API', () => {
   const app = new Elysia().use(errorHandler).use(riskMonitoringRoutes);

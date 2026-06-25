@@ -74,20 +74,18 @@ export function useLendingPools(
     return fetchedPools;
   }, []);
 
-  const {
-    connectionStatus,
-    isPolling,
-    data: livePoolData,
-    refresh,
-  } = useLiveUpdates(fetchPoolsOnly, {
-    endpoint: SSE_ENDPOINT,
-    pollingInterval,
-    enabled: enableLiveUpdates && !isLoading,
-    onUpdate: (updatedPools) => {
-      setPools(updatedPools);
-      setLastUpdatedAt(new Date());
+  const { connectionStatus, isPolling, refresh } = useLiveUpdates(
+    fetchPoolsOnly,
+    {
+      endpoint: SSE_ENDPOINT,
+      pollingInterval,
+      enabled: enableLiveUpdates && !isLoading,
+      onUpdate: (updatedPools) => {
+        setPools(updatedPools);
+        setLastUpdatedAt(new Date());
+      },
     },
-  });
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -138,18 +136,15 @@ export function useLendingPools(
       }
     }
 
-    load();
+    const timer = setTimeout(() => {
+      void load();
+    }, 0);
 
     return () => {
+      clearTimeout(timer);
       cancelled = true;
     };
   }, [userAddress, fetchKey]);
-
-  useEffect(() => {
-    if (livePoolData && livePoolData.length > 0) {
-      setPools(livePoolData);
-    }
-  }, [livePoolData]);
 
   const refetchWithLive = useCallback(() => {
     refetch();

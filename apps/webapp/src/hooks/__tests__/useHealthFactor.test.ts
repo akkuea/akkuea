@@ -4,7 +4,7 @@ import type { BorrowPosition } from "@real-estate-defi/shared";
 import { createBorrowPosition } from "@real-estate-defi/shared";
 
 /**
- * useHealthFactor is a pure useMemo hook — calling it with a React ref is
+ * useHealthFactor is a pure useMemo hook - calling it with a React ref is
  * unnecessary. We test its computation logic by invoking the internal
  * calculation directly via a thin wrapper that replicates the memo logic,
  * keeping tests free of @testing-library/react.

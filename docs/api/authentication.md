@@ -1,4 +1,4 @@
-# Authentication Flow — Stellar Wallet Challenge-Response
+# Authentication Flow - Stellar Wallet Challenge-Response
 
 ## Overview
 
@@ -9,7 +9,7 @@ The Akkuea API uses a **challenge-response authentication flow** that leverages 
 - Users prove they own a Stellar wallet by signing a server-issued nonce
 - The server verifies the Ed25519 signature using the Stellar public key
 - A short-lived JWT is issued upon successful verification
-- All protected routes validate the JWT — no raw headers are trusted
+- All protected routes validate the JWT - no raw headers are trusted
 
 ---
 
@@ -29,8 +29,8 @@ Request a cryptographic nonce (challenge) for a given Stellar address. The nonce
 
 **Validation Rules:**
 
-| Field            | Type   | Constraints                        |
-|------------------|--------|------------------------------------|
+| Field            | Type   | Constraints                                 |
+| ---------------- | ------ | ------------------------------------------- |
 | `stellarAddress` | string | Exactly 56 chars, matches `^G[A-Z2-7]{55}$` |
 
 **Response (200):**
@@ -44,10 +44,10 @@ Request a cryptographic nonce (challenge) for a given Stellar address. The nonce
 
 **Errors:**
 
-| Status | Code               | Cause                                  |
-|--------|--------------------|----------------------------------------|
-| 400    | `INVALID_ADDRESS`  | Malformed Stellar address              |
-| 429    | `RATE_LIMITED`     | Too many challenge requests            |
+| Status | Code              | Cause                       |
+| ------ | ----------------- | --------------------------- |
+| 400    | `INVALID_ADDRESS` | Malformed Stellar address   |
+| 429    | `RATE_LIMITED`    | Too many challenge requests |
 
 ---
 
@@ -66,8 +66,8 @@ Submit the signed nonce to verify wallet ownership and receive a JWT.
 
 **Validation Rules:**
 
-| Field            | Type   | Constraints                              |
-|------------------|--------|------------------------------------------|
+| Field            | Type   | Constraints                                 |
+| ---------------- | ------ | ------------------------------------------- |
 | `stellarAddress` | string | Exactly 56 chars, matches `^G[A-Z2-7]{55}$` |
 | `signature`      | string | Non-empty, base64-encoded Ed25519 signature |
 
@@ -86,14 +86,14 @@ Submit the signed nonce to verify wallet ownership and receive a JWT.
 
 **Errors:**
 
-| Status | Code                  | Cause                                                |
-|--------|-----------------------|------------------------------------------------------|
-| 400    | `INVALID_ADDRESS`     | Malformed Stellar address                            |
-| 400    | `MISSING_SIGNATURE`   | Signature field is empty                             |
-| 401    | `CHALLENGE_NOT_FOUND` | No active challenge for this address (or already used)|
-| 401    | `CHALLENGE_EXPIRED`   | Challenge nonce has expired (>5 minutes)             |
-| 401    | `INVALID_SIGNATURE`   | Ed25519 verification failed                          |
-| 429    | `RATE_LIMITED`        | Too many session requests                            |
+| Status | Code                  | Cause                                                  |
+| ------ | --------------------- | ------------------------------------------------------ |
+| 400    | `INVALID_ADDRESS`     | Malformed Stellar address                              |
+| 400    | `MISSING_SIGNATURE`   | Signature field is empty                               |
+| 401    | `CHALLENGE_NOT_FOUND` | No active challenge for this address (or already used) |
+| 401    | `CHALLENGE_EXPIRED`   | Challenge nonce has expired (>5 minutes)               |
+| 401    | `INVALID_SIGNATURE`   | Ed25519 verification failed                            |
+| 429    | `RATE_LIMITED`        | Too many session requests                              |
 
 ---
 
@@ -102,9 +102,9 @@ Submit the signed nonce to verify wallet ownership and receive a JWT.
 ### JavaScript / TypeScript (using `stellar-sdk`)
 
 ```typescript
-import { Keypair } from 'stellar-sdk';
+import { Keypair } from "stellar-sdk";
 
-const API_BASE = 'https://api.akkuea.com';
+const API_BASE = "https://api.akkuea.com";
 
 async function authenticate(secretKey: string): Promise<string> {
   const keypair = Keypair.fromSecret(secretKey);
@@ -112,20 +112,20 @@ async function authenticate(secretKey: string): Promise<string> {
 
   // Step 1: Request challenge
   const challengeRes = await fetch(`${API_BASE}/auth/challenge`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ stellarAddress }),
   });
   const { nonce } = await challengeRes.json();
 
   // Step 2: Sign the nonce with the private key
   const signatureBuffer = keypair.sign(Buffer.from(nonce));
-  const signature = signatureBuffer.toString('base64');
+  const signature = signatureBuffer.toString("base64");
 
   // Step 3: Submit signature to obtain JWT
   const sessionRes = await fetch(`${API_BASE}/auth/session`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ stellarAddress, signature }),
   });
   const { token } = await sessionRes.json();
@@ -140,12 +140,14 @@ Include the JWT in the `Authorization` header of all protected requests:
 
 ```typescript
 const response = await fetch(`${API_BASE}/lending/pools`, {
-  method: 'POST',
+  method: "POST",
   headers: {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
   },
-  body: JSON.stringify({ /* pool data */ }),
+  body: JSON.stringify({
+    /* pool data */
+  }),
 });
 ```
 
@@ -153,12 +155,12 @@ const response = await fetch(`${API_BASE}/lending/pools`, {
 
 ## JWT Token Details
 
-| Property         | Value                                    |
-|------------------|------------------------------------------|
-| Algorithm        | HS256                                    |
-| Lifetime         | 24 hours                                 |
-| Payload fields   | `id` (user UUID), `walletAddress`, `exp` |
-| Header name      | `Authorization: Bearer <token>`          |
+| Property       | Value                                    |
+| -------------- | ---------------------------------------- |
+| Algorithm      | HS256                                    |
+| Lifetime       | 24 hours                                 |
+| Payload fields | `id` (user UUID), `walletAddress`, `exp` |
+| Header name    | `Authorization: Bearer <token>`          |
 
 ### Token Payload Example
 
@@ -178,35 +180,35 @@ All the following routes require a valid JWT in the `Authorization` header:
 
 ### Lending
 
-| Method | Route                        | Description                |
-|--------|------------------------------|----------------------------|
-| POST   | `/lending/pools`             | Create lending pool        |
-| POST   | `/lending/pools/:id/deposit` | Deposit into pool          |
-| POST   | `/lending/pools/:id/withdraw`| Withdraw from pool         |
-| POST   | `/lending/pools/:id/borrow`  | Borrow from pool           |
-| POST   | `/lending/pools/:id/repay`   | Repay loan                 |
+| Method | Route                         | Description         |
+| ------ | ----------------------------- | ------------------- |
+| POST   | `/lending/pools`              | Create lending pool |
+| POST   | `/lending/pools/:id/deposit`  | Deposit into pool   |
+| POST   | `/lending/pools/:id/withdraw` | Withdraw from pool  |
+| POST   | `/lending/pools/:id/borrow`   | Borrow from pool    |
+| POST   | `/lending/pools/:id/repay`    | Repay loan          |
 
 ### Properties
 
-| Method | Route                            | Description              |
-|--------|----------------------------------|--------------------------|
-| POST   | `/properties`                    | Create property          |
-| PUT    | `/properties/:id`                | Update property          |
-| DELETE | `/properties/:id`                | Delete property          |
-| POST   | `/properties/:id/tokenize`       | Tokenize property        |
-| POST   | `/properties/:id/buy-shares`     | Buy property shares      |
+| Method | Route                        | Description         |
+| ------ | ---------------------------- | ------------------- |
+| POST   | `/properties`                | Create property     |
+| PUT    | `/properties/:id`            | Update property     |
+| DELETE | `/properties/:id`            | Delete property     |
+| POST   | `/properties/:id/tokenize`   | Tokenize property   |
+| POST   | `/properties/:id/buy-shares` | Buy property shares |
 
 ### Notifications
 
-| Method | Route                               | Description                    |
-|--------|---------------------------------------|--------------------------------|
-| GET    | `/notifications`                     | Get user notifications         |
-| GET    | `/notifications/unread-count`        | Get unread count               |
-| GET    | `/notifications/:id`                | Get specific notification      |
-| PATCH  | `/notifications/:id/read`           | Mark as read                   |
-| POST   | `/notifications/read-multiple`       | Mark multiple as read          |
-| POST   | `/notifications/read-all`            | Mark all as read               |
-| DELETE | `/notifications/:id`                | Delete notification            |
+| Method | Route                          | Description               |
+| ------ | ------------------------------ | ------------------------- |
+| GET    | `/notifications`               | Get user notifications    |
+| GET    | `/notifications/unread-count`  | Get unread count          |
+| GET    | `/notifications/:id`           | Get specific notification |
+| PATCH  | `/notifications/:id/read`      | Mark as read              |
+| POST   | `/notifications/read-multiple` | Mark multiple as read     |
+| POST   | `/notifications/read-all`      | Mark all as read          |
+| DELETE | `/notifications/:id`           | Delete notification       |
 
 ---
 
@@ -214,8 +216,8 @@ All the following routes require a valid JWT in the `Authorization` header:
 
 ### Nonce Lifecycle
 
-- Each nonce is **single-use** — it is deleted from the store after successful verification
-- Nonces expire after **5 minutes** — expired nonces are rejected and cleaned up
+- Each nonce is **single-use** - it is deleted from the store after successful verification
+- Nonces expire after **5 minutes** - expired nonces are rejected and cleaned up
 - A new challenge for the same address **overwrites** the previous one
 
 ### Signature Verification
@@ -235,15 +237,15 @@ All the following routes require a valid JWT in the `Authorization` header:
 
 ### Recommendations for Production
 
-1. **Set `JWT_SECRET`** — The default development secret must be replaced with a cryptographically strong random value via the `JWT_SECRET` environment variable
-2. **Use HTTPS** — JWTs are bearer tokens; transmit them only over TLS
-3. **Token rotation** — Consider implementing refresh tokens for long-lived sessions
-4. **Challenge store** — The current in-memory store does not survive restarts. For multi-instance deployments, use Redis or a similar shared store
+1. **Set `JWT_SECRET`** - The default development secret must be replaced with a cryptographically strong random value via the `JWT_SECRET` environment variable
+2. **Use HTTPS** - JWTs are bearer tokens; transmit them only over TLS
+3. **Token rotation** - Consider implementing refresh tokens for long-lived sessions
+4. **Challenge store** - The current in-memory store does not survive restarts. For multi-instance deployments, use Redis or a similar shared store
 
 ---
 
 ## Environment Variables
 
-| Variable     | Default                              | Description            |
-|--------------|--------------------------------------|------------------------|
-| `JWT_SECRET` | `super-secret-default-key-for-dev`   | Secret key for signing JWTs. **Must** be changed in production. |
+| Variable     | Default                            | Description                                                     |
+| ------------ | ---------------------------------- | --------------------------------------------------------------- |
+| `JWT_SECRET` | `super-secret-default-key-for-dev` | Secret key for signing JWTs. **Must** be changed in production. |

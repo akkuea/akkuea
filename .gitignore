@@ -98,3 +98,6 @@ Thumbs.db
 
 # Bun specific
 bun.lockb
+
+# Snapshot files (generated test artifacts)
+*.snap

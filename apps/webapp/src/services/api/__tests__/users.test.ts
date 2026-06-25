@@ -144,7 +144,7 @@ describe("User API", () => {
 
       expect(result).toEqual(mockKycStatus);
       expect(calls[0].url).toBe(
-        "http://localhost:3001/kyc/status/550e8400-e29b-41d4-a716-446655440001",
+        "http://localhost:3001/kyc/status/550e8400-e29b-41d4-a716-446655440000",
       );
       expect(calls[0].options.method).toBe("GET");
     });
@@ -198,7 +198,7 @@ describe("User API", () => {
 
       expect(result).toEqual(mockDocuments);
       expect(calls[0].url).toBe(
-        "http://localhost:3001/kyc/documents/550e8400-e29b-41d4-a716-446655440001",
+        "http://localhost:3001/kyc/documents/550e8400-e29b-41d4-a716-446655440000",
       );
       expect(calls[0].options.method).toBe("GET");
     });

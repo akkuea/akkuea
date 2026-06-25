@@ -82,11 +82,14 @@ export function useTransactions(
 
   /** Initial fetch (and re-fetch when filter/key changes) */
   useEffect(() => {
-    fetchPage();
+    const timer = setTimeout(() => {
+      void fetchPage();
+    }, 0);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchKey, filterKey]);
 
-  /** Load more — appends next page */
+  /** Load more - appends next page */
   const loadMore = useCallback(() => {
     if (!isLoading && hasMore && cursor) {
       fetchPage(cursor, true);

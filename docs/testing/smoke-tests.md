@@ -2,9 +2,10 @@
 
 ## What are smoke tests?
 
-Smoke tests verify that the most critical user flows work end-to-end after a deployment. They are **not** exhaustive — they confirm the app boots, connects to dependencies, and can handle a "happy path" request.
+Smoke tests verify that the most critical user flows work end-to-end after a deployment. They are **not** exhaustive - they confirm the app boots, connects to dependencies, and can handle a "happy path" request.
 
 Run smoke tests:
+
 - After every deploy to staging/production
 - Before a release candidate is tagged
 - When infrastructure changes (DB migrations, env vars, new services)
@@ -45,9 +46,13 @@ These replace locally-duplicated values like `const VALID_STELLAR_ADDRESS = "G..
 Each factory returns a schema-compliant object with realistic defaults and accepts `Partial<T>` overrides:
 
 ```ts
-import { createUser, createProperty, createLendingPool } from "@real-estate-defi/shared";
+import {
+  createUser,
+  createProperty,
+  createLendingPool,
+} from "@real-estate-defi/shared";
 
-// Defaults — approved KYC user with Miami address
+// Defaults - approved KYC user with Miami address
 const user = createUser();
 
 // Override specific fields
@@ -61,6 +66,7 @@ const property = createProperty({ totalValue: "5000000" });
 ```
 
 Available factories:
+
 - `createUser(overrides?)`
 - `createKycDocument(overrides?)`
 - `createPropertyLocation(overrides?)`
@@ -91,7 +97,8 @@ const { owner, property, investors, transactions } = MIAMI_PROPERTY_SCENARIO;
 const { pool, depositors, borrowers } = USDC_LENDING_SCENARIO;
 
 // User progression: new -> pending -> verified -> rejected
-const { newUser, pendingUser, verifiedUser, rejectedUser } = USER_ONBOARDING_SCENARIO;
+const { newUser, pendingUser, verifiedUser, rejectedUser } =
+  USER_ONBOARDING_SCENARIO;
 ```
 
 ## Example: API route test
@@ -111,7 +118,10 @@ describe("GET /users/:id", () => {
 ## Example: Webapp component test
 
 ```ts
-import { createProperty, MIAMI_PROPERTY_SCENARIO } from "@real-estate-defi/shared";
+import {
+  createProperty,
+  MIAMI_PROPERTY_SCENARIO,
+} from "@real-estate-defi/shared";
 
 test("PropertyCard renders price", () => {
   const property = createProperty({ totalValue: "3500000" });

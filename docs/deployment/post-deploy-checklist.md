@@ -3,6 +3,7 @@
 Execute these steps in order immediately after `stellar contract deploy` succeeds. Do not open the platform to users until every step is checked off.
 
 **Prerequisites:**
+
 - Contract deployed, `CONTRACT_ID` in hand
 - `.env` file updated with `REAL_ESTATE_TOKEN_CONTRACT_ID`
 - API server running (`bun run start`)
@@ -17,7 +18,7 @@ export NETWORK="mainnet"   # or testnet
 
 ---
 
-## Step 1 — Contract liveness check
+## Step 1 - Contract liveness check
 
 Verify the contract is deployed and responding before doing anything else.
 
@@ -34,19 +35,20 @@ stellar contract invoke \
 **Expected result:** `0` (no shares exist yet)
 
 **If this fails:**
-- `"Contract not found"` — wrong `CONTRACT_ID` or wrong `--network`. Verify both.
-- `"Authorization failed"` — `ADMIN_ADDRESS` does not match the key in your Stellar CLI config.
-- Any panic — the contract binary has an initialization bug. Re-deploy.
+
+- `"Contract not found"` - wrong `CONTRACT_ID` or wrong `--network`. Verify both.
+- `"Authorization failed"` - `ADMIN_ADDRESS` does not match the key in your Stellar CLI config.
+- Any panic - the contract binary has an initialization bug. Re-deploy.
 
 - [ ] `get_total_shares` returns `0` without error
 
 ---
 
-## Step 2 — Oracle setup (MANDATORY)
+## Step 2 - Oracle setup (MANDATORY)
 
 > **Do not skip this step.** Without a configured oracle, every `borrow()` call will panic with `"Oracle address not configured"` (`oracle.rs:19`). The oracle must be set before any lending pool is created or advertised to users.
 
-See `docs/deployment/deploy-contracts.md` — Step 3 for full context.
+See `docs/deployment/deploy-contracts.md` - Step 3 for full context.
 
 ```bash
 # ORACLE_ADDRESS: Soroban contract ID of a SEP-40 compatible price feed
@@ -62,11 +64,11 @@ stellar contract invoke \
   --caller $ADMIN_ADDRESS
 ```
 
-**Verify the oracle is reachable** — attempt a call that traverses the oracle code path:
+**Verify the oracle is reachable** - attempt a call that traverses the oracle code path:
 
 ```bash
 # The simplest oracle-path validation is an attempted borrow simulation.
-# Since no pools exist yet, this will return "pool not found" — NOT an oracle panic.
+# Since no pools exist yet, this will return "pool not found" - NOT an oracle panic.
 # An oracle panic here means set_oracle was not applied.
 stellar contract invoke \
   --contract-id $CONTRACT_ID \
@@ -86,13 +88,13 @@ stellar contract invoke \
 
 ---
 
-## Step 3 — Role assignments
+## Step 3 - Role assignments
 
 Assign operational roles before any external activity. The role definitions are in `apps/contracts/contracts/defi-rwa/src/access/roles.rs`.
 
-### 3a — EmergencyGuard role
+### 3a - EmergencyGuard role
 
-Assign this to every on-call operator who should be able to trigger an emergency pause without needing the Admin key. The Admin key should be kept offline (hardware wallet or HSM) in production — EmergencyGuard enables rapid incident response without exposing it.
+Assign this to every on-call operator who should be able to trigger an emergency pause without needing the Admin key. The Admin key should be kept offline (hardware wallet or HSM) in production - EmergencyGuard enables rapid incident response without exposing it.
 
 ```bash
 export ONCALL_OPERATOR_ADDRESS="<Stellar public key of on-call operator>"
@@ -110,17 +112,18 @@ stellar contract invoke \
 Repeat for each on-call operator. Recommended minimum: 2 operators (primary + backup).
 
 **Who should receive EmergencyGuard:**
+
 - Primary on-call engineer
 - Secondary on-call engineer (backup)
 - NOT: automated bots (the 24h timelock means pause is a human decision)
 - NOT: external parties or contractors without incident response training
 
-### 3b — Verify admin identity on-chain
+### 3b - Verify admin identity on-chain
 
 Confirm the correct address was recorded as admin during `__constructor`:
 
 ```bash
-# There is no get_admin view function — verify indirectly:
+# There is no get_admin view function - verify indirectly:
 # Call an admin-only function with a known NON-admin address.
 # It must fail with "Caller not admin".
 
@@ -133,7 +136,7 @@ stellar contract invoke \
   --oracle_address $ORACLE_ADDRESS \
   --caller $ONCALL_OPERATOR_ADDRESS
 # Expected: error "Caller not admin"
-# If this SUCCEEDS, the EmergencyGuard address was accidentally set as admin — investigate immediately.
+# If this SUCCEEDS, the EmergencyGuard address was accidentally set as admin - investigate immediately.
 ```
 
 - [ ] EmergencyGuard granted to primary on-call operator
@@ -142,9 +145,9 @@ stellar contract invoke \
 
 ---
 
-## Step 4 — Create the first lending pool
+## Step 4 - Create the first lending pool
 
-A pool must exist before users can deposit or borrow. Pools are permanent — there is no delete operation. Choose `pool_id` values carefully; they cannot be reused.
+A pool must exist before users can deposit or borrow. Pools are permanent - there is no delete operation. Choose `pool_id` values carefully; they cannot be reused.
 
 ```bash
 # Example: XLM lending pool
@@ -170,12 +173,12 @@ stellar contract invoke \
 
 Parameter reference (all rate values use 1e18 = 100%):
 
-| Parameter | Value used | Meaning |
-|---|---|---|
-| `collateral_factor` | `750000000000000000` | 75%: borrowers can access 75% of collateral value |
-| `liquidation_threshold` | `800000000000000000` | 80%: position becomes liquidatable at 80% LTV |
-| `liquidation_penalty` | `100000000000000000` | 10%: liquidator bonus on seized collateral |
-| `reserve_factor` | `100` | 1% (basis points): protocol fee on interest earned |
+| Parameter               | Value used           | Meaning                                            |
+| ----------------------- | -------------------- | -------------------------------------------------- |
+| `collateral_factor`     | `750000000000000000` | 75%: borrowers can access 75% of collateral value  |
+| `liquidation_threshold` | `800000000000000000` | 80%: position becomes liquidatable at 80% LTV      |
+| `liquidation_penalty`   | `100000000000000000` | 10%: liquidator bonus on seized collateral         |
+| `reserve_factor`        | `100`                | 1% (basis points): protocol fee on interest earned |
 
 **Verify the pool was created:**
 
@@ -196,7 +199,7 @@ stellar contract invoke \
 
 ---
 
-## Step 5 — API integration verification
+## Step 5 - API integration verification
 
 ```bash
 # 1. API health endpoint
@@ -218,7 +221,7 @@ curl http://localhost:3001/kyc/status/00000000-0000-0000-0000-000000000000
 
 ---
 
-## Step 6 — Stellar event stream confirmation
+## Step 6 - Stellar event stream confirmation
 
 Verify on-chain events are being emitted correctly. You should see at least the events from the oracle setup and pool creation steps above.
 
@@ -237,8 +240,8 @@ stellar contract events \
 ## Day 0 completion checklist
 
 ```
-[ ] 1. Contract liveness — get_total_shares returns 0
-[ ] 2. Oracle configured — set_oracle confirmed, probe call clean
+[ ] 1. Contract liveness - get_total_shares returns 0
+[ ] 2. Oracle configured - set_oracle confirmed, probe call clean
 [ ] 3. Oracle update frequency verified (< 60 min interval)
 [ ] 4. EmergencyGuard assigned to primary on-call
 [ ] 5. EmergencyGuard assigned to secondary on-call
@@ -255,6 +258,6 @@ Do not proceed to user onboarding until all 10 items are checked.
 
 ## See also
 
-- `docs/deployment/deploy-contracts.md` — full deployment procedure with constructor details
-- `docs/deployment/environment-variables.md` — complete `.env` reference
-- `docs/operations/runbook-emergency-pause.md` — brief the on-call operators on this before going live
+- `docs/deployment/deploy-contracts.md` - full deployment procedure with constructor details
+- `docs/deployment/environment-variables.md` - complete `.env` reference
+- `docs/operations/runbook-emergency-pause.md` - brief the on-call operators on this before going live

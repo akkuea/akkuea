@@ -2065,7 +2065,7 @@ fn test_approve_and_transfer_from() {
 // Oracle Guardrails Tests (Issue #729 / C3-013)
 // =========================================================================
 
-// Mock Oracle with configurable decimals — needed for normalization tests
+// Mock Oracle with configurable decimals - needed for normalization tests
 #[contract]
 pub struct MockOracleWithDecimals;
 
@@ -2235,13 +2235,13 @@ fn test_oracle_negative_price() {
 fn test_oracle_missing_price() {
     let t = setup_oracle_test();
 
-    // Do NOT set any price — oracle will return None
+    // Do NOT set any price - oracle will return None
     t.env.as_contract(&t.contract_id, || {
         PriceOracle::get_price(&t.env, &t.asset_address);
     });
 }
 
-// ─── Test 6: Decimal normalization — scale UP ──────────
+// ─── Test 6: Decimal normalization - scale UP ──────────
 // Oracle has 8 decimals → price should be scaled to 18 decimals
 
 #[test]
@@ -2281,7 +2281,7 @@ fn test_oracle_decimal_normalization_up() {
     );
 }
 
-// ─── Test 7: Decimal normalization — scale DOWN ────────
+// ─── Test 7: Decimal normalization - scale DOWN ────────
 // Oracle has 24 decimals → price should be scaled down to 18 decimals
 
 #[test]
@@ -2406,7 +2406,7 @@ fn test_oracle_min_price_floor() {
         MockOracleContract::set_price(
             env.clone(),
             asset_address.clone(),
-            PRECISION / 100, // 0.01 — below minimum of 0.5
+            PRECISION / 100, // 0.01 - below minimum of 0.5
             now,
         );
     });
@@ -2556,7 +2556,7 @@ fn test_borrow_with_stale_oracle() {
         PriceOracle::set_oracle_address(&env, &oracle_id);
     });
 
-    // Set XLM price with timestamp 2 hours ago — STALE
+    // Set XLM price with timestamp 2 hours ago - STALE
     let now = env.ledger().timestamp();
     let stale_ts = now - 7200;
     env.as_contract(&oracle_id, || {
@@ -2635,7 +2635,7 @@ fn test_borrow_with_zero_oracle_price() {
         PriceOracle::set_oracle_address(&env, &oracle_id);
     });
 
-    // Set XLM price to ZERO — invalid
+    // Set XLM price to ZERO - invalid
     let now = env.ledger().timestamp();
     env.as_contract(&oracle_id, || {
         MockOracleContract::set_price(env.clone(), xlm_contract.address().clone(), 0, now);

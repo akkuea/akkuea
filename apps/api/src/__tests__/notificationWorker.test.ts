@@ -141,7 +141,7 @@ describe('NotificationWorker', () => {
   });
 
   describe('permanent failure', () => {
-    it('still calls markAsFailed on the last attempt — the service decides the terminal state', async () => {
+    it('still calls markAsFailed on the last attempt - the service decides the terminal state', async () => {
       // This notification is on its 3rd attempt (retryCount=2, maxRetries=3).
       // NotificationService.markAsFailed is responsible for flipping to permanent FAILED;
       // the worker must always delegate retry accounting to it.
@@ -210,7 +210,7 @@ describe('NotificationWorker', () => {
       expect(worker.isRunning()).toBe(false);
     });
 
-    it('overlapping ticks are prevented — a second tick is a no-op while the first is running', async () => {
+    it('overlapping ticks are prevented - a second tick is a no-op while the first is running', async () => {
       let resolveFetch: ((value: Response) => void) | null = null;
       const service = makeService({
         getPendingNotifications: mock(() => Promise.resolve([sampleNotification()])),

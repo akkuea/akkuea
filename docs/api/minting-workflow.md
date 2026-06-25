@@ -1,12 +1,13 @@
 # Minting Workflow: Property Tokenization
 
-This document describes the complete journey of turning a real estate property into on-chain tokens — from the HTTP request through the API layer to the `mint_shares` invocation on the Soroban contract.
+This document describes the complete journey of turning a real estate property into on-chain tokens - from the HTTP request through the API layer to the `mint_shares` invocation on the Soroban contract.
 
 **Key files:**
-- `apps/api/src/services/TokenizationService.ts` — orchestrator
-- `apps/api/src/services/StellarService.ts` — blockchain transport
-- `apps/api/src/controllers/PropertyController.ts:487` — HTTP entry point
-- `apps/contracts/contracts/defi-rwa/src/lib.rs:141` — on-chain mint
+
+- `apps/api/src/services/TokenizationService.ts` - orchestrator
+- `apps/api/src/services/StellarService.ts` - blockchain transport
+- `apps/api/src/controllers/PropertyController.ts:487` - HTTP entry point
+- `apps/contracts/contracts/defi-rwa/src/lib.rs:141` - on-chain mint
 
 ---
 
@@ -14,10 +15,10 @@ This document describes the complete journey of turning a real estate property i
 
 Before reading further, understand that the codebase has two separate share-related flows that are often confused:
 
-| Operation | Function | What it does | Writes on-chain? |
-|---|---|---|---|
-| **Tokenization** | `POST /properties/:id/tokenize` | Mints the initial supply of shares for a property. One-time, irreversible. | **Yes** — calls `mint_shares` on the contract |
-| **Share purchase** | `POST /properties/:id/shares` | Transfers share ownership between buyer and seller within the platform. | **No** — DB-only transaction (`shareOwnerships` table) |
+| Operation          | Function                        | What it does                                                               | Writes on-chain?                                       |
+| ------------------ | ------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **Tokenization**   | `POST /properties/:id/tokenize` | Mints the initial supply of shares for a property. One-time, irreversible. | **Yes** - calls `mint_shares` on the contract          |
+| **Share purchase** | `POST /properties/:id/shares`   | Transfers share ownership between buyer and seller within the platform.    | **No** - DB-only transaction (`shareOwnerships` table) |
 
 This document covers **tokenization only**. The share purchase flow is a database operation and does not invoke the Stellar contract.
 
@@ -114,11 +115,11 @@ This document covers **tokenization only**. The share purchase flow is a databas
 
 Before touching the blockchain, the service enforces three hard preconditions:
 
-| Check | Condition | Error if failed |
-|---|---|---|
-| Property exists | `property !== null` | `404 NOT_FOUND` |
-| Property verified | `property.verified === true` | `400 VALIDATION_ERROR` |
-| Not already tokenized | `property.tokenAddress === null && property.sorobanPropertyId === null` | `409 CONFLICT` |
+| Check                 | Condition                                                               | Error if failed        |
+| --------------------- | ----------------------------------------------------------------------- | ---------------------- |
+| Property exists       | `property !== null`                                                     | `404 NOT_FOUND`        |
+| Property verified     | `property.verified === true`                                            | `400 VALIDATION_ERROR` |
+| Not already tokenized | `property.tokenAddress === null && property.sorobanPropertyId === null` | `409 CONFLICT`         |
 
 The third guard is the idempotency check. Once a property is tokenized, this endpoint becomes a no-op barrier. You cannot re-tokenize.
 
@@ -137,8 +138,9 @@ If any of the three is missing or malformed (contract ID must match `/^C[A-Z2-7]
 ### Step 7: Authorization (TokenizationService.ts:57–59)
 
 The caller (`x-user-address` header) must be one of:
-- `owner.walletAddress` — the property owner calls their own tokenization
-- `adminPublicKey` (`STELLAR_ADMIN_PUBLIC_KEY`) — the platform admin triggers it on their behalf
+
+- `owner.walletAddress` - the property owner calls their own tokenization
+- `adminPublicKey` (`STELLAR_ADMIN_PUBLIC_KEY`) - the platform admin triggers it on their behalf
 
 Anyone else receives `403 FORBIDDEN`. This check is enforced in the service, not at the contract level.
 
@@ -150,7 +152,8 @@ Properties in PostgreSQL have UUIDs. The Soroban contract uses `u64` integers as
 
 This is the two-phase Stellar transaction pattern:
 
-**Phase A — Build** (`callContract`, StellarService.ts:96–127):
+**Phase A - Build** (`callContract`, StellarService.ts:96–127):
+
 1. Fetches the admin account's current sequence number from Horizon.
 2. Constructs a `TransactionBuilder` pointing at the contract.
 3. Adds a `contract.call("mint_shares", ...)` operation with arguments in this exact order:
@@ -161,13 +164,15 @@ This is the two-phase Stellar transaction pattern:
 4. Sets timeout to 30 seconds.
 5. Returns unsigned XDR.
 
-**Phase B — Sign and submit** (`mintPropertyShares`, StellarService.ts:148–159):
+**Phase B - Sign and submit** (`mintPropertyShares`, StellarService.ts:148–159):
+
 1. Deserializes the XDR back into a `Transaction` object.
 2. Signs with `Keypair.fromSecret(adminSecret)`.
 3. Submits via `server.submitTransaction()` to Horizon.
 4. Returns `txHash` on success.
 
 **On-chain execution** (`lib.rs:141–162`):
+
 ```
 mint_shares(env, admin, property_id, recipient, amount)
   admin.require_auth()           ← Stellar signature verification
@@ -183,6 +188,7 @@ mint_shares(env, admin, property_id, recipient, amount)
 **The DB write happens only after the on-chain transaction succeeds.** This is an intentional design: a failed blockchain submission leaves the property unchanged in the database, making the operation safe to retry.
 
 After `setTokenizationResult()`, the property record gains:
+
 - `tokenAddress` = the contract ID (used as the token's canonical address)
 - `sorobanPropertyId` = the u64 numeric identifier
 
@@ -201,12 +207,15 @@ Content-Type: application/json
 ```
 
 **Path parameter:**
-- `id` — UUID of the property in PostgreSQL
+
+- `id` - UUID of the property in PostgreSQL
 
 **Required header:**
-- `x-user-address` — the Stellar public key of the caller. Must match the property owner or the platform admin key. Missing this header returns `401 UNAUTHORIZED`.
+
+- `x-user-address` - the Stellar public key of the caller. Must match the property owner or the platform admin key. Missing this header returns `401 UNAUTHORIZED`.
 
 **Success response (200):**
+
 ```json
 {
   "txHash": "a3f9c...64-char hex...",
@@ -220,14 +229,14 @@ Content-Type: application/json
 
 **Error responses:**
 
-| Status | Code | Cause |
-|---|---|---|
-| `400` | `VALIDATION_ERROR` | Property not verified, or Soroban config env vars missing |
-| `401` | `UNAUTHORIZED` | `x-user-address` header missing |
-| `403` | `FORBIDDEN` | Caller is neither the property owner nor the admin |
-| `404` | `NOT_FOUND` | Property ID does not exist |
-| `409` | `CONFLICT` | Property has already been tokenized |
-| `500` | `INTERNAL_ERROR` | On-chain submission failed, or DB update failed after successful mint |
+| Status | Code               | Cause                                                                 |
+| ------ | ------------------ | --------------------------------------------------------------------- |
+| `400`  | `VALIDATION_ERROR` | Property not verified, or Soroban config env vars missing             |
+| `401`  | `UNAUTHORIZED`     | `x-user-address` header missing                                       |
+| `403`  | `FORBIDDEN`        | Caller is neither the property owner nor the admin                    |
+| `404`  | `NOT_FOUND`        | Property ID does not exist                                            |
+| `409`  | `CONFLICT`         | Property has already been tokenized                                   |
+| `500`  | `INTERNAL_ERROR`   | On-chain submission failed, or DB update failed after successful mint |
 
 ---
 
@@ -252,7 +261,7 @@ Rare but possible. The contract has already minted shares for `sorobanPropertyId
 }
 ```
 
-**Manual recovery:** Call `propertyRepository.setTokenizationResult(propertyId, { tokenAddress, sorobanPropertyId })` directly via a database migration or admin script. The on-chain state is authoritative; the DB must be updated to match it. Do not re-run the tokenize endpoint — it will hit the `allocateSorobanPropertyId` step and create a new ID, producing a duplicate on-chain mint.
+**Manual recovery:** Call `propertyRepository.setTokenizationResult(propertyId, { tokenAddress, sorobanPropertyId })` directly via a database migration or admin script. The on-chain state is authoritative; the DB must be updated to match it. Do not re-run the tokenize endpoint - it will hit the `allocateSorobanPropertyId` step and create a new ID, producing a duplicate on-chain mint.
 
 ### Contract is paused
 
@@ -262,6 +271,6 @@ If `emergency_pause` has been called, the `mint_shares` invocation will succeed 
 
 ## See also
 
-- `docs/operations/runbook-emergency-pause.md` — what happens if the contract is paused during a tokenization
-- `docs/deployment/deploy-contracts.md` — contract deployment and role setup
-- `docs/deployment/environment-variables.md` — `STELLAR_ADMIN_SECRET` security warning
+- `docs/operations/runbook-emergency-pause.md` - what happens if the contract is paused during a tokenization
+- `docs/deployment/deploy-contracts.md` - contract deployment and role setup
+- `docs/deployment/environment-variables.md` - `STELLAR_ADMIN_SECRET` security warning

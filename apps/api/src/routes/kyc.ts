@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia';
 import { KYCController } from '../controllers/KYCController';
 import { ApiError } from '../errors/ApiError';
-import { rateLimit } from '../middleware';
+import { rateLimit, authPlugin } from '../middleware';
 
 const DOCUMENT_TYPES = [
   'passport',
@@ -42,19 +42,56 @@ function handleKycError(error: unknown, set: SetStatus) {
   };
 }
 
-export const kycRoutes = new Elysia({ prefix: '/kyc' })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/status/:userId', async ({ params: { userId }, set }: any) => {
+// User-scoped routes (require JWT + ownership)
+const userScoped = new Elysia()
+  .use(authPlugin)
+  .get('/status/:userId', async ({ params: { userId }, set, getAuthenticatedUser }) => {
     try {
-      return await KYCController.getKYCStatus(userId);
+      const status = await KYCController.getKYCStatus(userId);
+
+      const { id } = await getAuthenticatedUser();
+      if (id !== userId) throw new ApiError(403, 'FORBIDDEN', 'Access denied');
+      return status;
     } catch (error) {
       return handleKycError(error, set);
     }
   })
   .post(
+    '/submit',
+    async ({ body, set, getAuthenticatedUser }) => {
+      try {
+        const { id } = await getAuthenticatedUser();
+        const payload = body as {
+          userId: string;
+          documents: {
+            type: 'passport' | 'id_card' | 'proof_of_address' | 'other';
+            documentUrl: string;
+          }[];
+        };
+        if (payload.userId !== id) throw new ApiError(403, 'FORBIDDEN', 'Access denied');
+        return await KYCController.submitKYC(payload);
+      } catch (error) {
+        return handleKycError(error, set);
+      }
+    },
+    { beforeHandle: [rateLimit()] },
+  )
+  .get('/documents/:userId', async ({ params: { userId }, set, getAuthenticatedUser }) => {
+    try {
+      const { id } = await getAuthenticatedUser();
+      if (id !== userId) throw new ApiError(403, 'FORBIDDEN', 'Access denied');
+      return await KYCController.getUserDocuments(userId);
+    } catch (error) {
+      return handleKycError(error, set);
+    }
+  });
+
+// Unauthenticated routes (require JWT but no ownership)
+const jwtScoped = new Elysia()
+  .use(authPlugin)
+  .post(
     '/upload',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async ({ request, set }: any) => {
+    async ({ request, set }) => {
       try {
         const contentType = request.headers.get('content-type') ?? '';
         if (!contentType.includes('multipart/form-data')) {
@@ -110,47 +147,7 @@ export const kycRoutes = new Elysia({ prefix: '/kyc' })
     },
     { beforeHandle: [rateLimit()] },
   )
-  .post(
-    '/submit',
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    async ({ body, set }: any) => {
-      try {
-        return await KYCController.submitKYC(
-          body as {
-            userId: string;
-            documents: {
-              type: 'passport' | 'id_card' | 'proof_of_address' | 'other';
-              documentUrl: string;
-            }[];
-          },
-        );
-      } catch (error) {
-        return handleKycError(error, set);
-      }
-    },
-    { beforeHandle: [rateLimit()] },
-  )
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .post('/verify/:documentId', async ({ params: { documentId }, body, set }: any) => {
-    try {
-      return await KYCController.verifyDocument(
-        documentId,
-        body as { verified: boolean; notes?: string },
-      );
-    } catch (error) {
-      return handleKycError(error, set);
-    }
-  })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/documents/:userId', async ({ params: { userId }, set }: any) => {
-    try {
-      return await KYCController.getUserDocuments(userId);
-    } catch (error) {
-      return handleKycError(error, set);
-    }
-  })
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  .get('/file/:documentId', async ({ params: { documentId }, set }: any) => {
+  .get('/file/:documentId', async ({ params: { documentId }, set }) => {
     try {
       const { buffer, contentType, fileName } = await KYCController.getDocumentFile(documentId);
       set.headers['Content-Type'] = contentType;
@@ -170,3 +167,38 @@ export const kycRoutes = new Elysia({ prefix: '/kyc' })
       });
     }
   });
+// Internal-only routes (require INTERNAL_API_KEY header and reject user JWTs)
+const internalScoped = new Elysia().post(
+  '/verify/:documentId',
+  async ({ params: { documentId }, body, set, headers }) => {
+    try {
+      // Reject requests bearing a user JWT
+      if (headers['authorization']) {
+        throw new ApiError(401, 'UNAUTHORIZED', 'Internal key required');
+      }
+
+      const key =
+        headers['internal-api-key'] || headers['x-internal-api-key'] || headers['internal_api_key'];
+      const expected = process.env.INTERNAL_API_KEY;
+      if (!expected) {
+        console.error('INTERNAL_API_KEY is not configured for /kyc/verify');
+        throw new ApiError(500, 'INTERNAL_SERVER_ERROR', 'Internal key configuration missing');
+      }
+      if (key !== expected) {
+        throw new ApiError(401, 'UNAUTHORIZED', 'Internal key required');
+      }
+
+      return await KYCController.verifyDocument(
+        documentId,
+        body as { verified: boolean; notes?: string },
+      );
+    } catch (error) {
+      return handleKycError(error, set);
+    }
+  },
+);
+
+export const kycRoutes = new Elysia({ prefix: '/kyc' })
+  .use(userScoped)
+  .use(jwtScoped)
+  .use(internalScoped);

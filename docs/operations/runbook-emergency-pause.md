@@ -42,20 +42,20 @@ The cost of a 5-minute investigation is 5 minutes.
 
 Source: `apps/contracts/contracts/defi-rwa/src/access/admin.rs:92-97`
 
-| Role | Can call `emergency_pause` |
-|---|---|
-| `Admin` | Yes |
-| `Pauser` | Yes |
-| `EmergencyGuard` | Yes |
-| `Oracle` | No |
-| `Verifier` | No |
-| `Liquidator` | No |
+| Role             | Can call `emergency_pause` |
+| ---------------- | -------------------------- |
+| `Admin`          | Yes                        |
+| `Pauser`         | Yes                        |
+| `EmergencyGuard` | Yes                        |
+| `Oracle`         | No                         |
+| `Verifier`       | No                         |
+| `Liquidator`     | No                         |
 
 Only `Admin` can call `schedule_recovery`, `cancel_recovery`, and `execute_recovery`.
 
 ---
 
-## Phase 1 — Immediate Pause
+## Phase 1 - Immediate Pause
 
 ### Prerequisites
 
@@ -87,7 +87,7 @@ stellar contract invoke \
 ### Verify the pause is active
 
 ```bash
-# Attempt any user operation — it must fail with "Contract paused"
+# Attempt any user operation - it must fail with "Contract paused"
 stellar contract invoke \
   --contract-id $CONTRACT_ID \
   --source-account $CALLER_ADDRESS \
@@ -100,7 +100,7 @@ stellar contract invoke \
   --payment_token $CALLER_ADDRESS
 
 # Expected error: "Contract paused"
-# If the call succeeds, the pause did NOT take effect — check the tx hash for failure reason
+# If the call succeeds, the pause did NOT take effect - check the tx hash for failure reason
 ```
 
 ### Immediately after pausing
@@ -112,7 +112,7 @@ stellar contract invoke \
 
 ---
 
-## Phase 2 — Investigation window (0–24 hours)
+## Phase 2 - Investigation window (0–24 hours)
 
 While the contract is paused:
 
@@ -139,18 +139,18 @@ stellar contract invoke \
   --pool_id "<your-pool-id>"
 
 # Check admin is still the legitimate key
-# If admin was transferred, the attacker controls recovery — escalate immediately
+# If admin was transferred, the attacker controls recovery - escalate immediately
 ```
 
 ---
 
-## Phase 3 — Recovery (24-hour timelock)
+## Phase 3 - Recovery (24-hour timelock)
 
 Recovery requires three sequential admin-only transactions.
 
 > Only `Admin` can execute these steps. `Pauser` and `EmergencyGuard` cannot initiate recovery.
 
-### Step 3a — Schedule recovery
+### Step 3a - Schedule recovery
 
 This starts the 24-hour clock. It can only be called while the contract is paused.
 
@@ -165,6 +165,7 @@ stellar contract invoke \
 ```
 
 The contract stores:
+
 - `scheduled_by`: your admin address
 - `scheduled_at`: current ledger timestamp
 - `earliest_execution`: `scheduled_at + 86400` (seconds)
@@ -179,11 +180,12 @@ stellar ledger --network $NETWORK
 ```
 
 **Common errors:**
-- `"Contract not paused"` — the contract is not actually paused; verify Phase 1 succeeded.
-- `"Recovery already scheduled"` — a prior schedule_recovery already ran; proceed to Step 3c.
-- `"Caller not admin"` — you are not using the Admin key; Pauser/EmergencyGuard cannot recover.
 
-### Step 3b — Optional: Cancel recovery
+- `"Contract not paused"` - the contract is not actually paused; verify Phase 1 succeeded.
+- `"Recovery already scheduled"` - a prior schedule_recovery already ran; proceed to Step 3c.
+- `"Caller not admin"` - you are not using the Admin key; Pauser/EmergencyGuard cannot recover.
+
+### Step 3b - Optional: Cancel recovery
 
 If the incident was resolved during the investigation window and you decide recovery is unsafe or premature, cancel before executing.
 
@@ -199,7 +201,7 @@ stellar contract invoke \
 
 After cancellation, the contract remains paused indefinitely. You must call `schedule_recovery` again to restart the 24-hour clock.
 
-### Step 3c — Execute recovery (after 24 hours)
+### Step 3c - Execute recovery (after 24 hours)
 
 Only callable after `earliest_execution` timestamp has passed.
 
@@ -218,16 +220,18 @@ stellar contract invoke \
 ```
 
 **What this does** (source: `access/emergency.rs:53-67`):
+
 1. Validates `scheduled_by` is present (not cancelled).
 2. Validates `current_time >= earliest_execution`. If not: `panic!("Timelock not expired")`.
-3. Removes `RoleKey::Paused` from contract storage — contract is live again.
-4. Removes `RoleKey::PendingRecovery` — cleanup.
+3. Removes `RoleKey::Paused` from contract storage - contract is live again.
+4. Removes `RoleKey::PendingRecovery` - cleanup.
 5. Emits `EmergencyEvents::recovery_executed`.
 
 **Common errors:**
-- `"No recovery scheduled"` — Step 3a was not executed, or Step 3b cancelled it.
-- `"Timelock not expired"` — 24 hours have not passed since `schedule_recovery`; check `earliest_execution`.
-- `"Caller not admin"` — wrong signing key.
+
+- `"No recovery scheduled"` - Step 3a was not executed, or Step 3b cancelled it.
+- `"Timelock not expired"` - 24 hours have not passed since `schedule_recovery`; check `earliest_execution`.
+- `"Caller not admin"` - wrong signing key.
 
 ### Verify the contract is live
 
@@ -270,22 +274,22 @@ T+24:xx   execute_recovery called.
 
 ## Post-recovery actions
 
-1. **Verify event stream** — monitor for anomalous activity for at least 1 hour.
-2. **Rotate admin key** — if compromise is suspected, use the two-step `transfer_admin_start → transfer_admin_accept` flow.
-3. **Re-verify oracle** — confirm the oracle address still points to the legitimate price feed.
-4. **Incident report** — document: what triggered the pause, root cause, timeline, remediation.
+1. **Verify event stream** - monitor for anomalous activity for at least 1 hour.
+2. **Rotate admin key** - if compromise is suspected, use the two-step `transfer_admin_start → transfer_admin_accept` flow.
+3. **Re-verify oracle** - confirm the oracle address still points to the legitimate price feed.
+4. **Incident report** - document: what triggered the pause, root cause, timeline, remediation.
 
 ---
 
 ## Reference: contract functions and source locations
 
-| Function | Source | Required role |
-|---|---|---|
-| `emergency_pause(caller)` | `lib.rs:592` | Admin, Pauser, or EmergencyGuard |
-| `schedule_recovery(caller)` | `lib.rs:599` / `emergency.rs:15` | Admin only |
-| `cancel_recovery(caller)` | `lib.rs:604` / `emergency.rs:41` | Admin only |
-| `execute_recovery(caller)` | `lib.rs:609` / `emergency.rs:53` | Admin only |
-| `TIMELOCK_DURATION` | `roles.rs:4` | 86,400 seconds (24 hours) — confirmed final |
+| Function                    | Source                           | Required role                               |
+| --------------------------- | -------------------------------- | ------------------------------------------- |
+| `emergency_pause(caller)`   | `lib.rs:592`                     | Admin, Pauser, or EmergencyGuard            |
+| `schedule_recovery(caller)` | `lib.rs:599` / `emergency.rs:15` | Admin only                                  |
+| `cancel_recovery(caller)`   | `lib.rs:604` / `emergency.rs:41` | Admin only                                  |
+| `execute_recovery(caller)`  | `lib.rs:609` / `emergency.rs:53` | Admin only                                  |
+| `TIMELOCK_DURATION`         | `roles.rs:4`                     | 86,400 seconds (24 hours) - confirmed final |
 
 > **Note:** Issue #729 (Oracle & Price Guardrails) has been merged. Its scope was limited to oracle consumer logic (`oracle.rs`) and the new `set_oracle_config` / `get_oracle_config` functions. The emergency timelock (`TIMELOCK_DURATION = 86_400`) was **not modified** by that PR and remains 24 hours as a fixed constant.
 
@@ -293,7 +297,7 @@ T+24:xx   execute_recovery called.
 
 ## See also
 
-- `docs/operations/runbook-oracle-failure.md` — oracle-specific incident
-- `docs/operations/runbook-role-management.md` — granting/revoking EmergencyGuard
-- `docs/operations/runbook-dividends-placeholder.md` — future dividend/cashflow operations (Issue #722)
-- `docs/deployment/deploy-contracts.md` — admin key setup
+- `docs/operations/runbook-oracle-failure.md` - oracle-specific incident
+- `docs/operations/runbook-role-management.md` - granting/revoking EmergencyGuard
+- `docs/operations/runbook-dividends-placeholder.md` - future dividend/cashflow operations (Issue #722)
+- `docs/deployment/deploy-contracts.md` - admin key setup

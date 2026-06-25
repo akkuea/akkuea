@@ -35,7 +35,7 @@ const mockPool2 = createLendingPool({
 });
 
 // ---------------------------------------------------------------------------
-// Direct tests of lendingApi — mirrors the unit-test approach used by the
+// Direct tests of lendingApi - mirrors the unit-test approach used by the
 // existing services/api/__tests__/lending.test.ts in the project
 // ---------------------------------------------------------------------------
 
@@ -55,7 +55,7 @@ const originalGetPools = lendingApi.getPools;
 const originalGetUserDeposits = lendingApi.getUserDeposits;
 const originalGetUserBorrows = lendingApi.getUserBorrows;
 
-describe("useLendingPools — service integration", () => {
+describe("useLendingPools - service integration", () => {
   beforeEach(() => {
     lendingApi.getPools = mockGetPools;
     lendingApi.getUserDeposits = mockGetUserDeposits;
@@ -79,7 +79,7 @@ describe("useLendingPools — service integration", () => {
     expect(pools[1].name).toBe("XLM Native Pool");
   });
 
-  it("getPools returns empty list when API throws — error state scenario", async () => {
+  it("getPools returns empty list when API throws - error state scenario", async () => {
     mockGetPools.mockImplementationOnce(async () => {
       throw new Error("Network error: unable to reach server");
     });
@@ -141,7 +141,7 @@ describe("useLendingPools — service integration", () => {
   it("aggregates positions across multiple pools", async () => {
     const pools = await lendingApi.getPools();
 
-    // Both calls succeed — simulating what refetch does
+    // Both calls succeed - simulating what refetch does
     const calls = await Promise.all(
       pools.map((pool) =>
         lendingApi.getUserDeposits(pool.id, VALID_STELLAR_ADDRESS),

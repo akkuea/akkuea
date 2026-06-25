@@ -28,7 +28,7 @@ const originalGetTransactions = transactionsApi.getTransactions;
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("TransactionHistory — service integration", () => {
+describe("TransactionHistory - service integration", () => {
   beforeEach(() => {
     transactionsApi.getTransactions = mockGetTransactions;
     mockGetTransactions.mockClear();
@@ -53,7 +53,7 @@ describe("TransactionHistory — service integration", () => {
     expect(tx.hash).toMatch(/^[a-f0-9]{64}$/);
   });
 
-  it("loading state — API returns result after async call", async () => {
+  it("loading state - API returns result after async call", async () => {
     // Simulate slow API
     mockGetTransactions.mockImplementationOnce(async () => {
       await new Promise((r) => setTimeout(r, 50));
@@ -76,7 +76,7 @@ describe("TransactionHistory — service integration", () => {
     expect(result.total).toBe(0);
   });
 
-  it("error state on failure — error message and retry", async () => {
+  it("error state on failure - error message and retry", async () => {
     mockGetTransactions.mockImplementationOnce(async () => {
       throw new Error("Network error: unable to reach server");
     });
@@ -91,13 +91,13 @@ describe("TransactionHistory — service integration", () => {
 
     expect(errorMessage).toBe("Network error: unable to reach server");
 
-    // Retry — second call should succeed (mock reset to default)
+    // Retry - second call should succeed (mock reset to default)
     const retryResult = await transactionsApi.getTransactions({});
     expect(retryResult.items).toHaveLength(2);
   });
 
   it("load more fetches next page with cursor", async () => {
-    // Page 1 — has nextCursor
+    // Page 1 - has nextCursor
     mockGetTransactions.mockImplementationOnce(async () => ({
       items: [createTransaction({ id: "page1-001" })],
       nextCursor: "cursor_after_page1",
@@ -108,7 +108,7 @@ describe("TransactionHistory — service integration", () => {
     expect(page1.items).toHaveLength(1);
     expect(page1.nextCursor).toBe("cursor_after_page1");
 
-    // Page 2 — uses cursor from page 1
+    // Page 2 - uses cursor from page 1
     mockGetTransactions.mockImplementationOnce(async () => ({
       items: [
         createTransaction({ id: "page2-001" }),

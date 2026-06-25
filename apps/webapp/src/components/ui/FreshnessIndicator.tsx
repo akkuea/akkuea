@@ -55,10 +55,11 @@ export function FreshnessIndicator({
   }, []);
 
   // Derive timeSince from lastUpdatedAt and tick (tick forces recalculation)
-  const timeSince = useMemo(
-    () => getTimeSinceUpdate(lastUpdatedAt),
-    [lastUpdatedAt, tick],
-  );
+  const timeSince = useMemo(() => {
+    // Reference tick to ensure periodic recalculation
+    void tick;
+    return getTimeSinceUpdate(lastUpdatedAt);
+  }, [lastUpdatedAt, tick]);
 
   const config = statusConfig[connectionStatus];
   const StatusIcon =

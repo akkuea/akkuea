@@ -42,8 +42,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd apps/shared
-          bun install
+          bun install --frozen-lockfile
 
       - name: Type checking
         run: |
@@ -53,19 +52,12 @@ jobs:
       - name: Linting with ESLint
         run: |
           cd apps/shared
-
-          # Install ESLint if not present
-          if ! bunpm list eslint &>/dev/null; then
-            bun add -D eslint @typescript-eslint/parser @typescript-eslint/eslint-plugin
-          fi
-
-          # Run linting
           bun run lint
 
       - name: Format checking with Prettier
         run: |
           cd apps/shared
-          bun run format
+          bun run format:check
 
       - name: Build
         run: |
@@ -85,8 +77,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd apps/shared
-          bun install
+          bun install --frozen-lockfile
 
       - name: Audit dependencies
         run: |
@@ -111,8 +102,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd apps/shared
-          bun install
+          bun install --frozen-lockfile
 
       - name: Strict TypeScript compilation
         run: |
@@ -124,11 +114,6 @@ jobs:
       - name: Type coverage analysis
         run: |
           cd apps/shared
-
-          # Generate type coverage report
-          bun add -D type-coverage
-
-          # Check type coverage (require 100% for shared library)
           bunx type-coverage --strict --detail
 
   # api-compatibility:

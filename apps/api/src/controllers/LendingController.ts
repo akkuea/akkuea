@@ -1,4 +1,4 @@
-import type { Context } from 'elysia';
+import type { AuthContext } from '../middleware/auth';
 import { ApiError } from '../errors/ApiError';
 import { lendingRepository } from '../repositories/LendingRepository';
 
@@ -9,16 +9,16 @@ import { cacheService } from '../services/CacheService';
 import { RiskMonitoringController } from './RiskMonitoringController';
 import { stellarService } from '../services/StellarService';
 import { isLiquidatorAuthorized } from '../utils/liquidatorAuth';
+import { getDefiRwaContractId } from '../config/contracts';
 
 const POOLS_CACHE_TTL = 10; // seconds
 const POOLS_CACHE_PREFIX = 'lending:pools:';
 
 export class LendingController {
   private static async resolveAuthenticatedUser(
-    ctx: Context,
+    ctx: AuthContext,
   ): Promise<{ id: string; walletAddress?: string }> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await (ctx as any).getAuthenticatedUser();
+    return await ctx.getAuthenticatedUser();
   }
 
   /**
@@ -34,7 +34,7 @@ export class LendingController {
   /**
    * Get paginated list of lending pools (cached for 10 seconds)
    */
-  static async getPools(ctx: Context): Promise<Response> {
+  static async getPools(ctx: { query: Record<string, string | undefined> }): Promise<Response> {
     const query = ctx.query as Record<string, string | undefined>;
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 20;
@@ -55,7 +55,7 @@ export class LendingController {
   /**
    * Get a single lending pool by ID
    */
-  static async getPool(ctx: Context<{ params: { id: string } }>): Promise<Response> {
+  static async getPool(ctx: { params: { id: string } }): Promise<Response> {
     const { id } = ctx.params;
 
     const pool = await lendingRepository.findById(id);
@@ -70,7 +70,7 @@ export class LendingController {
   /**
    * Create a new lending pool (auth required)
    */
-  static async createPool(ctx: Context): Promise<Response> {
+  static async createPool(ctx: AuthContext & { body: unknown }): Promise<Response> {
     await this.resolveAuthenticatedUser(ctx);
 
     const validationResult = CreatePoolDto.safeParse(ctx.body);
@@ -99,7 +99,12 @@ export class LendingController {
   /**
    * Deposit into a lending pool (auth required)
    */
-  static async deposit(ctx: Context<{ params: { id: string } }>): Promise<Response> {
+  static async deposit(
+    ctx: AuthContext & {
+      params: { id: string };
+      body: unknown;
+    },
+  ): Promise<Response> {
     const { id: poolId } = ctx.params;
     const user = await this.resolveAuthenticatedUser(ctx);
 
@@ -126,7 +131,12 @@ export class LendingController {
   /**
    * Withdraw from a lending pool (auth required)
    */
-  static async withdraw(ctx: Context<{ params: { id: string } }>): Promise<Response> {
+  static async withdraw(
+    ctx: AuthContext & {
+      params: { id: string };
+      body: unknown;
+    },
+  ): Promise<Response> {
     const { id: poolId } = ctx.params;
     const user = await this.resolveAuthenticatedUser(ctx);
 
@@ -160,7 +170,12 @@ export class LendingController {
   /**
    * Borrow from a lending pool (auth required)
    */
-  static async borrow(ctx: Context<{ params: { id: string } }>): Promise<Response> {
+  static async borrow(
+    ctx: AuthContext & {
+      params: { id: string };
+      body: unknown;
+    },
+  ): Promise<Response> {
     const { id: poolId } = ctx.params;
     const user = await this.resolveAuthenticatedUser(ctx);
 
@@ -195,7 +210,12 @@ export class LendingController {
   /**
    * Repay a loan (auth required)
    */
-  static async repay(ctx: Context<{ params: { id: string } }>): Promise<Response> {
+  static async repay(
+    ctx: AuthContext & {
+      params: { id: string };
+      body: unknown;
+    },
+  ): Promise<Response> {
     const { id: poolId } = ctx.params;
     const user = await this.resolveAuthenticatedUser(ctx);
 
@@ -235,10 +255,11 @@ export class LendingController {
   /**
    * Execute liquidation of an underwater borrow position (liquidator role required)
    */
-  static async liquidate(
-    ctx: Context<{ params: { id: string; borrowerId: string } }>,
-  ): Promise<Response> {
-    if (!isLiquidatorAuthorized(ctx.headers as Record<string, string | undefined>)) {
+  static async liquidate(ctx: {
+    params: { id: string; borrowerId: string };
+    headers: Record<string, string | undefined>;
+  }): Promise<Response> {
+    if (!isLiquidatorAuthorized(ctx.headers)) {
       throw new ApiError(403, 'FORBIDDEN', 'Liquidator access required');
     }
 
@@ -254,9 +275,9 @@ export class LendingController {
       );
     }
 
-    // Best-effort on-chain liquidation — proceeds even if contract call fails
+    // Best-effort on-chain liquidation - proceeds even if contract call fails
     let txHash: string | null = null;
-    const contractId = process.env.DEFI_RWA_CONTRACT_ID;
+    const contractId = getDefiRwaContractId();
     const adminPublicKey = process.env.STELLAR_ADMIN_PUBLIC_KEY;
     const adminSecret = process.env.STELLAR_ADMIN_SECRET;
     if (contractId && adminPublicKey && adminSecret) {
@@ -275,7 +296,9 @@ export class LendingController {
 
     const position = await lendingRepository.liquidate(poolId, borrowerId);
     if (!position) {
-      throw ApiError.notFound(`Borrow position for borrower ${borrowerId} in pool ${poolId} not found`);
+      throw ApiError.notFound(
+        `Borrow position for borrower ${borrowerId} in pool ${poolId} not found`,
+      );
     }
 
     await cacheService.invalidate(`${POOLS_CACHE_PREFIX}*`);
@@ -303,9 +326,9 @@ export class LendingController {
   /**
    * Get user's deposit positions in a pool
    */
-  static async getUserDeposits(
-    ctx: Context<{ params: { id: string; address: string } }>,
-  ): Promise<Response> {
+  static async getUserDeposits(ctx: {
+    params: { id: string; address: string };
+  }): Promise<Response> {
     const { id: poolId, address } = ctx.params;
     if (!positionService.validateAddress(address)) {
       throw new ApiError(400, 'INVALID_ADDRESS', 'Invalid Stellar address format');
@@ -319,9 +342,7 @@ export class LendingController {
   /**
    * Get user's borrow positions in a pool
    */
-  static async getUserBorrows(
-    ctx: Context<{ params: { id: string; address: string } }>,
-  ): Promise<Response> {
+  static async getUserBorrows(ctx: { params: { id: string; address: string } }): Promise<Response> {
     const { id: poolId, address } = ctx.params;
     if (!positionService.validateAddress(address)) {
       throw new ApiError(400, 'INVALID_ADDRESS', 'Invalid Stellar address format');
@@ -335,9 +356,9 @@ export class LendingController {
   /**
    * Get user position summary in a pool
    */
-  static async getUserPositionSummary(
-    ctx: Context<{ params: { id: string; address: string } }>,
-  ): Promise<Response> {
+  static async getUserPositionSummary(ctx: {
+    params: { id: string; address: string };
+  }): Promise<Response> {
     const { id: poolId, address } = ctx.params;
     if (!positionService.validateAddress(address)) {
       throw new ApiError(400, 'INVALID_ADDRESS', 'Invalid Stellar address format');

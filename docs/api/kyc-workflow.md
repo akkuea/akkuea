@@ -1,19 +1,20 @@
 # KYC Workflow: Off-Chain Compliance
 
-Akkuea's compliance layer is entirely off-chain. There are no whitelist addresses on the Soroban contract — investor eligibility is controlled through a state machine stored in PostgreSQL and enforced (or intended to be enforced) at the API layer.
+Akkuea's compliance layer is entirely off-chain. There are no whitelist addresses on the Soroban contract - investor eligibility is controlled through a state machine stored in PostgreSQL and enforced (or intended to be enforced) at the API layer.
 
 **Key files:**
-- `apps/api/src/controllers/KYCController.ts` — all KYC business logic
-- `apps/api/src/repositories/KYCRepository.ts` — database operations
-- `apps/api/src/routes/kyc.ts` — HTTP endpoints
-- `apps/api/src/db/schema/users.ts` — `users.kycStatus` column
-- `apps/api/src/db/schema/kyc.ts` — `kycDocuments` table
+
+- `apps/api/src/controllers/KYCController.ts` - all KYC business logic
+- `apps/api/src/repositories/KYCRepository.ts` - database operations
+- `apps/api/src/routes/kyc.ts` - HTTP endpoints
+- `apps/api/src/db/schema/users.ts` - `users.kycStatus` column
+- `apps/api/src/db/schema/kyc.ts` - `kycDocuments` table
 
 ---
 
 ## The 'Admin as Oracle' pattern
 
-KYC in this system works like a manual oracle: an off-chain human operator (the admin) observes uploaded documents and decides whether to approve or reject them. The system has no automated identity verification provider — the admin IS the compliance decision-maker.
+KYC in this system works like a manual oracle: an off-chain human operator (the admin) observes uploaded documents and decides whether to approve or reject them. The system has no automated identity verification provider - the admin IS the compliance decision-maker.
 
 ```
   Investor (user)          Platform Admin              Database
@@ -75,10 +76,10 @@ The `users.kycStatus` column (`KYCRepository.ts:78-86`) holds the user-level com
 
 **Rules governing state transitions** (source: `KYCController.ts:191-209`):
 
-| Condition after a `verifyDocument()` call | `users.kycStatus` result |
-|---|---|
-| Any document in `rejected` state | `rejected` |
-| ALL documents in `approved` state | `approved` |
+| Condition after a `verifyDocument()` call          | `users.kycStatus` result    |
+| -------------------------------------------------- | --------------------------- |
+| Any document in `rejected` state                   | `rejected`                  |
+| ALL documents in `approved` state                  | `approved`                  |
 | Some `approved`, none `rejected`, others `pending` | unchanged (still `pending`) |
 
 A user with a single rejected document blocks approval even if all other documents pass. Every document must reach `approved` for the user-level status to flip.
@@ -89,10 +90,10 @@ A user with a single rejected document blocks approval even if all other documen
 
 These are two separate concepts stored in two separate tables:
 
-| Level | Table | Column | Values |
-|---|---|---|---|
-| Document | `kycDocuments` | `status` | `pending`, `approved`, `rejected` |
-| User | `users` | `kycStatus` | `not_started`, `pending`, `approved`, `rejected`, `expired` |
+| Level    | Table          | Column      | Values                                                      |
+| -------- | -------------- | ----------- | ----------------------------------------------------------- |
+| Document | `kycDocuments` | `status`    | `pending`, `approved`, `rejected`                           |
+| User     | `users`        | `kycStatus` | `not_started`, `pending`, `approved`, `rejected`, `expired` |
 
 The user-level status is the compliance gate. Per-document statuses are intermediate signals used to compute it.
 
@@ -116,11 +117,13 @@ Fields:
 ```
 
 Behavior:
+
 - If a document of the same `documentType` already exists for this user, it is replaced (old file deleted, new file stored).
 - Sets the document's `status` to `pending`.
 - Sets `users.kycStatus` to `pending` regardless of previous value.
 
 Response (200):
+
 ```json
 { "documentId": "<uuid>", "submissionId": "<userId>" }
 ```
@@ -148,6 +151,7 @@ GET /kyc/status/:userId
 ```
 
 Response:
+
 ```json
 {
   "status": "pending" | "verified" | "rejected",
@@ -158,12 +162,12 @@ Response:
 Note: the public-facing status vocabulary differs from the DB vocabulary:
 
 | `users.kycStatus` (DB) | `status` returned by API |
-|---|---|
-| `not_started` | `pending` |
-| `pending` | `pending` |
-| `approved` | `verified` |
-| `rejected` | `rejected` |
-| `expired` | `rejected` |
+| ---------------------- | ------------------------ |
+| `not_started`          | `pending`                |
+| `pending`              | `pending`                |
+| `approved`             | `verified`               |
+| `rejected`             | `rejected`               |
+| `expired`              | `rejected`               |
 
 ### Get all documents for a user
 
@@ -194,6 +198,7 @@ Content-Type: application/json
 ```
 
 This is the admin's oracle action. Calling it:
+
 1. Sets `kycDocuments.status` to `approved` or `rejected`.
 2. Sets `kycDocuments.rejectionReason` (if rejected, uses `notes` value).
 3. Sets `kycDocuments.reviewedAt` to current timestamp.
@@ -201,6 +206,7 @@ This is the admin's oracle action. Calling it:
 5. Sends an in-app notification to the user.
 
 Response (200):
+
 ```json
 { "success": true }
 ```
@@ -211,11 +217,11 @@ Response (200):
 
 Source: `KYCController.ts:196-210`
 
-| Outcome | Notification sent |
-|---|---|
-| Any doc rejected | `notificationService.notifyVerificationRejected(userId, notes, 'IN_APP')` |
-| All docs approved | `notificationService.notifyVerificationApproved(userId, 'IN_APP')` |
-| Partially approved (no rejections yet) | No notification |
+| Outcome                                | Notification sent                                                         |
+| -------------------------------------- | ------------------------------------------------------------------------- |
+| Any doc rejected                       | `notificationService.notifyVerificationRejected(userId, notes, 'IN_APP')` |
+| All docs approved                      | `notificationService.notifyVerificationApproved(userId, 'IN_APP')`        |
+| Partially approved (no rejections yet) | No notification                                                           |
 
 ---
 
@@ -238,8 +244,8 @@ The `users.kycStatus = 'approved'` field exists in the schema and is correctly m
 ```typescript
 // Pseudocode for the intended guard in buyShares
 const kycStatus = await kycRepository.getUserKycStatus(buyer.id);
-if (kycStatus !== 'approved') {
-  throw new AuthorizationError('KYC verification required to purchase shares');
+if (kycStatus !== "approved") {
+  throw new AuthorizationError("KYC verification required to purchase shares");
 }
 ```
 
@@ -249,7 +255,7 @@ Until this guard is implemented, KYC approval is advisory, not enforced.
 
 ## Audit & Compliance Logging
 
-> **Stability Note — Issue #725:** Structured audit logging, tamper-evident event trails, and compliance export utilities for KYC actions are currently under design and development in [Issue #725 — Audit Log Models & Compliance Export](https://github.com/akkuea/akkuea/issues/725). The section below documents the **current** logging state. This section will be expanded significantly once Issue #725 is merged.
+> **Stability Note - Issue #725:** Structured audit logging, tamper-evident event trails, and compliance export utilities for KYC actions are currently under design and development in [Issue #725 - Audit Log Models & Compliance Export](https://github.com/akkuea/akkuea/issues/725). The section below documents the **current** logging state. This section will be expanded significantly once Issue #725 is merged.
 
 ### Current logging state
 
@@ -257,13 +263,13 @@ Admin actions on the KYC flow currently produce structured application-level log
 
 Events that currently emit log entries:
 
-| Action | Log level | Fields logged |
-|---|---|---|
-| Document uploaded | `info` (implicit via `uploadDocument`) | `userId`, `documentType`, `documentId` |
-| Document verified (approved/rejected) | `info` / `error` not explicitly logged in `verifyDocument` | *(no explicit audit log call — see gap below)* |
-| KYC status updated | via `updateUserKycStatus` DB write | timestamp recorded in `users.updatedAt` |
+| Action                                | Log level                                                  | Fields logged                                  |
+| ------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------- |
+| Document uploaded                     | `info` (implicit via `uploadDocument`)                     | `userId`, `documentType`, `documentId`         |
+| Document verified (approved/rejected) | `info` / `error` not explicitly logged in `verifyDocument` | _(no explicit audit log call - see gap below)_ |
+| KYC status updated                    | via `updateUserKycStatus` DB write                         | timestamp recorded in `users.updatedAt`        |
 
-**Current gap:** `KYCController.verifyDocument()` (`KYCController.ts:178-217`) does not emit an explicit audit log entry recording *who* made the verification decision, *when*, and *what notes were provided*. Only the DB columns `kycDocuments.reviewedAt` and `kycDocuments.rejectionReason` capture partial state.
+**Current gap:** `KYCController.verifyDocument()` (`KYCController.ts:178-217`) does not emit an explicit audit log entry recording _who_ made the verification decision, _when_, and _what notes were provided_. Only the DB columns `kycDocuments.reviewedAt` and `kycDocuments.rejectionReason` capture partial state.
 
 ### What Issue #725 will add
 
@@ -271,7 +277,7 @@ Once closed, Issue #725 is expected to deliver:
 
 - A dedicated `auditLogs` table recording every state transition with: actor identity, timestamp, previous state, new state, and reason.
 - Structured log entries on all admin actions (`verifyDocument`, `updateUserKycStatus`, manual status overrides).
-- A compliance export endpoint (format TBD) for regulatory reporting — list of approved/rejected investors with timestamps and document references.
+- A compliance export endpoint (format TBD) for regulatory reporting - list of approved/rejected investors with timestamps and document references.
 - Retention policy configuration for KYC documents and audit records.
 
 **When Issue #725 is merged:** Replace this placeholder section with the actual audit log schema, the new export endpoint reference, and the updated `verifyDocument` flow that includes the actor-identity log call.
@@ -310,7 +316,7 @@ Repeat Step 3a for every document the user uploaded. The user-level status only 
 
 ## See also
 
-- `docs/api/minting-workflow.md` — how `property.verified` (separate from user KYC) gates tokenization
-- `docs/deployment/environment-variables.md` — `OPERATIONS_BACKEND_CREDENTIAL` and `OPERATIONS_ALLOWED_WALLETS`
-- Issue #725 — Audit Log Models & Compliance Export (pending — will expand the Audit & Compliance Logging section above)
-- Issue #722 — Dividend & Cashflow Distribution (pending — adds new investor payout workflows; see `docs/operations/runbook-dividends-placeholder.md`)
+- `docs/api/minting-workflow.md` - how `property.verified` (separate from user KYC) gates tokenization
+- `docs/deployment/environment-variables.md` - `OPERATIONS_BACKEND_CREDENTIAL` and `OPERATIONS_ALLOWED_WALLETS`
+- Issue #725 - Audit Log Models & Compliance Export (pending - will expand the Audit & Compliance Logging section above)
+- Issue #722 - Dividend & Cashflow Distribution (pending - adds new investor payout workflows; see `docs/operations/runbook-dividends-placeholder.md`)

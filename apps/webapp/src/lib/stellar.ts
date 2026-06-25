@@ -1,4 +1,4 @@
-import { Horizon } from "stellar-sdk";
+import { Horizon } from "@stellar/stellar-sdk";
 
 const HORIZON_URLS: Record<"testnet" | "mainnet", string> = {
   testnet: "https://horizon-testnet.stellar.org",
@@ -14,7 +14,7 @@ interface AccountRecord {
   balances: BalanceLine[];
 }
 
-/** Minimal Horizon server interface — satisfied by Horizon.Server and injectable mocks */
+/** Minimal Horizon server interface - satisfied by Horizon.Server and injectable mocks */
 export interface HorizonServerLike {
   loadAccount(address: string): Promise<AccountRecord>;
 }

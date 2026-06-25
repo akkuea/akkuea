@@ -7,6 +7,7 @@ import { userRoutes } from './routes/users';
 import { kycRoutes } from './routes/kyc';
 import { oracleRoutes } from './routes/oracle';
 import { riskMonitoringRoutes } from './routes/riskMonitoring';
+import { notificationRoutes } from './routes/notifications';
 import { errorHandler } from './middleware/errorHandler';
 import { cacheService } from './services/CacheService';
 import { NotificationService } from './services/NotificationService';
@@ -32,6 +33,7 @@ app
   .use(kycRoutes)
   .use(oracleRoutes)
   .use(riskMonitoringRoutes)
+  .use(notificationRoutes)
   .get('/health', async () => {
     const dbHealth = await checkDatabaseHealth();
 
@@ -57,7 +59,7 @@ app
 console.log(`🚀 Real Estate DeFi API is running on port ${process.env.PORT || 3001}`);
 console.log(`📚 Swagger docs available at http://localhost:${process.env.PORT || 3001}/swagger`);
 
-// Connect to Redis (non-blocking — app works without it)
+// Connect to Redis (non-blocking - app works without it)
 cacheService.connect();
 
 // Start the notification delivery worker (opt-out via NOTIFICATIONS_ENABLED=false)

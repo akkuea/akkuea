@@ -11,7 +11,7 @@ End-to-end HTTP sequences for the three critical launch-day operations. Each wor
 
 Goal: take an investor from zero to `kycStatus: approved` so they are compliance-cleared to purchase shares.
 
-### A1 — Upload identity document
+### A1 - Upload identity document
 
 ```http
 POST /kyc/upload
@@ -31,6 +31,7 @@ curl -X POST http://localhost:3001/kyc/upload \
 ```
 
 **Response 200:**
+
 ```json
 {
   "documentId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
@@ -39,6 +40,7 @@ curl -X POST http://localhost:3001/kyc/upload \
 ```
 
 **Response 400 (wrong file type):**
+
 ```json
 {
   "success": false,
@@ -51,7 +53,7 @@ Accepted `documentType` values: `passport`, `id_card`, `national_id`, `drivers_l
 
 ---
 
-### A2 — Upload proof of address
+### A2 - Upload proof of address
 
 Repeat A1 with a second document type. Each document type is stored independently.
 
@@ -63,6 +65,7 @@ curl -X POST http://localhost:3001/kyc/upload \
 ```
 
 **Response 200:**
+
 ```json
 {
   "documentId": "a87ff679-42d4-41de-b44b-f07ac1f90be8",
@@ -72,7 +75,7 @@ curl -X POST http://localhost:3001/kyc/upload \
 
 ---
 
-### A3 — Declare submission ready for review
+### A3 - Declare submission ready for review
 
 ```http
 POST /kyc/submit
@@ -92,23 +95,25 @@ curl -X POST http://localhost:3001/kyc/submit \
 ```
 
 **Response 200:**
+
 ```json
 {
   "submissionId": "550e8400-e29b-41d4-a716-446655440001"
 }
 ```
 
-This sets `users.kycStatus = 'pending'`. It is a soft signal — no documents are verified by this call.
+This sets `users.kycStatus = 'pending'`. It is a soft signal - no documents are verified by this call.
 
 ---
 
-### A4 — Admin: retrieve documents for review
+### A4 - Admin: retrieve documents for review
 
 ```bash
 curl http://localhost:3001/kyc/documents/550e8400-e29b-41d4-a716-446655440001
 ```
 
 **Response 200:**
+
 ```json
 [
   {
@@ -140,9 +145,9 @@ curl http://localhost:3001/kyc/documents/550e8400-e29b-41d4-a716-446655440001
 
 ---
 
-### A5 — Admin: approve each document
+### A5 - Admin: approve each document
 
-> **Security gap (known):** This endpoint currently has no authentication middleware. See `docs/api/kyc-workflow.md` — Known gaps. Protect before production.
+> **Security gap (known):** This endpoint currently has no authentication middleware. See `docs/api/kyc-workflow.md` - Known gaps. Protect before production.
 
 ```bash
 # Approve passport
@@ -157,11 +162,13 @@ curl -X POST http://localhost:3001/kyc/verify/a87ff679-42d4-41de-b44b-f07ac1f90b
 ```
 
 **Response 200 (each call):**
+
 ```json
 { "success": true }
 ```
 
 **To reject a document with reason:**
+
 ```bash
 curl -X POST http://localhost:3001/kyc/verify/7c9e6679-7425-40de-944b-e07fc1f90ae7 \
   -H "Content-Type: application/json" \
@@ -170,19 +177,30 @@ curl -X POST http://localhost:3001/kyc/verify/7c9e6679-7425-40de-944b-e07fc1f90a
 
 ---
 
-### A6 — Verify investor is compliance-cleared
+### A6 - Verify investor is compliance-cleared
 
 ```bash
 curl http://localhost:3001/kyc/status/550e8400-e29b-41d4-a716-446655440001
 ```
 
 **Response 200 (all documents approved):**
+
 ```json
 {
   "status": "verified",
   "documents": [
-    { "id": "7c9e6679...", "type": "passport",         "status": "approved", "reviewedAt": "2026-03-28T10:15:00.000Z" },
-    { "id": "a87ff679...", "type": "proof_of_address", "status": "approved", "reviewedAt": "2026-03-28T10:16:00.000Z" }
+    {
+      "id": "7c9e6679...",
+      "type": "passport",
+      "status": "approved",
+      "reviewedAt": "2026-03-28T10:15:00.000Z"
+    },
+    {
+      "id": "a87ff679...",
+      "type": "proof_of_address",
+      "status": "approved",
+      "reviewedAt": "2026-03-28T10:16:00.000Z"
+    }
   ]
 }
 ```
@@ -197,7 +215,7 @@ curl http://localhost:3001/kyc/status/550e8400-e29b-41d4-a716-446655440001
 
 Goal: take a property from creation to on-chain tokenization. The property owner's wallet acts as the caller.
 
-### B1 — Create a property listing
+### B1 - Create a property listing
 
 ```http
 POST /properties
@@ -227,6 +245,7 @@ curl -X POST http://localhost:3001/properties \
 ```
 
 **Response 201:**
+
 ```json
 {
   "id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
@@ -242,11 +261,11 @@ curl -X POST http://localhost:3001/properties \
 }
 ```
 
-`verified: false` and `tokenAddress: null` — the property is in the review queue.
+`verified: false` and `tokenAddress: null` - the property is in the review queue.
 
 ---
 
-### B2 — Admin: review the property (internal operations endpoint)
+### B2 - Admin: review the property (internal operations endpoint)
 
 > This endpoint requires the `OPERATIONS_BACKEND_CREDENTIAL` secret in the `Authorization` header (`apps/api/src/utils/internalOperationsAuth.ts`).
 
@@ -257,6 +276,7 @@ curl http://localhost:3001/internal/operations/properties?queue=pending \
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -285,6 +305,7 @@ curl -X POST http://localhost:3001/internal/operations/properties/d290f1ee-6c54-
 ```
 
 **Response 200:**
+
 ```json
 {
   "success": true,
@@ -302,7 +323,7 @@ Valid `action` values: `"approve"`, `"reject"`, `"request_changes"`, `"hold"`.
 
 ---
 
-### B3 — Owner tokenizes the property on-chain
+### B3 - Owner tokenizes the property on-chain
 
 ```http
 POST /properties/:id/tokenize
@@ -315,6 +336,7 @@ curl -X POST http://localhost:3001/properties/d290f1ee-6c54-4b01-90e6-d701748f08
 ```
 
 **Response 200:**
+
 ```json
 {
   "txHash": "a3f9c2d1e8b4f7a6c3e9d2b5f8a1c4e7b0d3f6a9c2e5b8d1f4a7c0e3b6d9f2a5",
@@ -327,6 +349,7 @@ curl -X POST http://localhost:3001/properties/d290f1ee-6c54-4b01-90e6-d701748f08
 ```
 
 **Response 400 (property not verified):**
+
 ```json
 {
   "statusCode": 400,
@@ -336,6 +359,7 @@ curl -X POST http://localhost:3001/properties/d290f1ee-6c54-4b01-90e6-d701748f08
 ```
 
 **Response 409 (already tokenized):**
+
 ```json
 {
   "statusCode": 409,
@@ -348,13 +372,14 @@ curl -X POST http://localhost:3001/properties/d290f1ee-6c54-4b01-90e6-d701748f08
 
 ---
 
-### B4 — Verify the tokenized state
+### B4 - Verify the tokenized state
 
 ```bash
 curl http://localhost:3001/properties/d290f1ee-6c54-4b01-90e6-d701748f0851
 ```
 
 **Response 200:**
+
 ```json
 {
   "id": "d290f1ee-6c54-4b01-90e6-d701748f0851",
@@ -373,9 +398,9 @@ curl http://localhost:3001/properties/d290f1ee-6c54-4b01-90e6-d701748f0851
 
 ## Workflow C: Share Purchase
 
-Goal: investor buys shares in a tokenized property. This is a database-level operation — it does not invoke the Soroban contract. See `docs/api/minting-workflow.md` for the architectural distinction.
+Goal: investor buys shares in a tokenized property. This is a database-level operation - it does not invoke the Soroban contract. See `docs/api/minting-workflow.md` for the architectural distinction.
 
-### C1 — Buy shares
+### C1 - Buy shares
 
 ```http
 POST /properties/:id/buy-shares
@@ -394,6 +419,7 @@ curl -X POST http://localhost:3001/properties/d290f1ee-6c54-4b01-90e6-d701748f08
 ```
 
 **Response 200:**
+
 ```json
 {
   "transactionHash": "tx_d290f1ee6c544b0190e6d701748f0851a3f9c2d1",
@@ -402,36 +428,52 @@ curl -X POST http://localhost:3001/properties/d290f1ee-6c54-4b01-90e6-d701748f08
 ```
 
 **Response 400 (insufficient shares):**
+
 ```json
 {
   "statusCode": 400,
   "code": "VALIDATION_ERROR",
   "message": "Not enough shares available",
-  "details": [{ "field": "shares", "message": "Requested shares exceed available inventory" }]
+  "details": [
+    {
+      "field": "shares",
+      "message": "Requested shares exceed available inventory"
+    }
+  ]
 }
 ```
 
 **Response 401 (missing address header):**
+
 ```json
-{ "error": "UNAUTHORIZED", "message": "User address is required for authentication" }
+{
+  "error": "UNAUTHORIZED",
+  "message": "User address is required for authentication"
+}
 ```
 
 **Response 403 (address mismatch):**
+
 ```json
-{ "statusCode": 403, "code": "FORBIDDEN", "message": "Authenticated wallet does not match buyer address" }
+{
+  "statusCode": 403,
+  "code": "FORBIDDEN",
+  "message": "Authenticated wallet does not match buyer address"
+}
 ```
 
 **Smoke test pass criteria:** `newBalance` equals the number of shares requested.
 
 ---
 
-### C2 — Verify share ownership
+### C2 - Verify share ownership
 
 ```bash
 curl http://localhost:3001/properties/d290f1ee-6c54-4b01-90e6-d701748f0851/shares/GINVESTOR_STELLAR_ADDRESS_56_CHARS_LONG_XXXXX
 ```
 
 **Response 200:**
+
 ```json
 {
   "propertyId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
@@ -461,21 +503,21 @@ All five checks passing = launch workflows are operational.
 
 ## Error reference
 
-| HTTP status | Code | Meaning |
-|---|---|---|
-| `400` | `VALIDATION_ERROR` | Invalid input — check request body against schema |
-| `400` | `BAD_REQUEST` | Constraint violation (e.g., file type, zero shares) |
-| `401` | `UNAUTHORIZED` | `x-user-address` header missing |
-| `403` | `FORBIDDEN` | Caller address does not match required identity |
-| `404` | `NOT_FOUND` | Resource (property, user, document) not found |
-| `409` | `CONFLICT` | Operation already performed (property already tokenized) |
-| `429` | *(rate limit)* | Too many requests — back off and retry |
-| `500` | `INTERNAL_ERROR` | On-chain transaction failed or DB write failed post-mint |
+| HTTP status | Code               | Meaning                                                  |
+| ----------- | ------------------ | -------------------------------------------------------- |
+| `400`       | `VALIDATION_ERROR` | Invalid input - check request body against schema        |
+| `400`       | `BAD_REQUEST`      | Constraint violation (e.g., file type, zero shares)      |
+| `401`       | `UNAUTHORIZED`     | `x-user-address` header missing                          |
+| `403`       | `FORBIDDEN`        | Caller address does not match required identity          |
+| `404`       | `NOT_FOUND`        | Resource (property, user, document) not found            |
+| `409`       | `CONFLICT`         | Operation already performed (property already tokenized) |
+| `429`       | _(rate limit)_     | Too many requests - back off and retry                   |
+| `500`       | `INTERNAL_ERROR`   | On-chain transaction failed or DB write failed post-mint |
 
 ---
 
 ## See also
 
-- `docs/api/minting-workflow.md` — deep dive on the tokenization on-chain path
-- `docs/api/kyc-workflow.md` — full KYC state machine and admin procedure
-- `docs/deployment/post-deploy-checklist.md` — Day 0 smoke test checklist
+- `docs/api/minting-workflow.md` - deep dive on the tokenization on-chain path
+- `docs/api/kyc-workflow.md` - full KYC state machine and admin procedure
+- `docs/deployment/post-deploy-checklist.md` - Day 0 smoke test checklist

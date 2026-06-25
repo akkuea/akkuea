@@ -1,0 +1,10 @@
+{
+  "network": "testnet",
+  "networkPassphrase": "Test SDF Network ; September 2015",
+  "rpcUrl": "https://soroban-testnet.stellar.org",
+  "description": "Deployed Soroban contract IDs for the akkuea defi-rwa platform on Stellar testnet. This file is a deployment artifact: it is updated by the deploy pipeline (see docs/contracts/deployment.md), not by the build. Each value is a Soroban contract address and starts with 'C'.",
+  "contracts": {
+    "REAL_ESTATE_TOKEN": "CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4",
+    "DEFI_LENDING": "CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX"
+  }
+}

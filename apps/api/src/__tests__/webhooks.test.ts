@@ -13,6 +13,7 @@ import { errorHandler } from '../middleware/errorHandler';
 const skipIfNoDatabase = !process.env.DATABASE_URL;
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'default-secret-for-dev';
+const TEST_TRANSACTION_HASH = 'e'.repeat(64);
 
 function generateSignature(payload: WebhookPayload): string {
   const hmac = createHmac('sha256', WEBHOOK_SECRET);
@@ -42,7 +43,7 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
       .insert(transactions)
       .values({
         type: 'deposit',
-        hash: 'a'.repeat(64),
+        hash: TEST_TRANSACTION_HASH,
         fromUserId: testUser.id,
         amount: '100.0000000',
         asset: 'native',
@@ -65,7 +66,7 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
   describe('POST /webhooks/transactions', () => {
     it('should update transaction status to confirmed', async () => {
       const payload: WebhookPayload = {
-        transactionHash: testTx.hash as string,
+        transactionHash: TEST_TRANSACTION_HASH,
         status: 'confirmed',
       };
       const signature = generateSignature(payload);
@@ -96,7 +97,7 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
 
     it('should return 400 for invalid signature', async () => {
       const payload: WebhookPayload = {
-        transactionHash: testTx.hash as string,
+        transactionHash: TEST_TRANSACTION_HASH,
         status: 'confirmed',
       };
 
@@ -122,7 +123,7 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
         .where(eq(transactions.id, testTx.id));
 
       const payload: WebhookPayload = {
-        transactionHash: testTx.hash as string,
+        transactionHash: TEST_TRANSACTION_HASH,
         status: 'confirmed',
       };
       const signature = generateSignature(payload);

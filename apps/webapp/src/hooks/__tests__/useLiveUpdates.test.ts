@@ -1,7 +1,7 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
 import { getTimeSinceUpdate } from "@/hooks/useLiveUpdates";
 
-describe("useLiveUpdates — utility functions", () => {
+describe("useLiveUpdates - utility functions", () => {
   describe("getTimeSinceUpdate", () => {
     it("returns 'Never' for null date", () => {
       expect(getTimeSinceUpdate(null)).toBe("Never");
@@ -33,7 +33,7 @@ describe("useLiveUpdates — utility functions", () => {
   });
 });
 
-describe("useLiveUpdates — polling behavior", () => {
+describe("useLiveUpdates - polling behavior", () => {
   let mockFetch: ReturnType<typeof mock>;
 
   beforeEach(() => {
@@ -69,7 +69,7 @@ describe("useLiveUpdates — polling behavior", () => {
   });
 });
 
-describe("useLiveUpdates — connection status types", () => {
+describe("useLiveUpdates - connection status types", () => {
   it("connection status type values are valid", () => {
     const validStatuses = ["connected", "connecting", "disconnected"];
     validStatuses.forEach((status) => {

@@ -1,61 +1,96 @@
+import { desc, eq } from 'drizzle-orm';
 import type { ValuationRecord } from '@real-estate-defi/shared';
+import { db } from '../db';
+import { valuations } from '../db/schema/valuations';
 
-// In-memory store for valuation history (REQ-003)
-const latestValuations = new Map<string, ValuationRecord>();
-const valuationHistory = new Map<string, ValuationRecord[]>();
+function toRecord(row: typeof valuations.$inferSelect): ValuationRecord {
+  return {
+    id: row.id,
+    propertyId: row.propertyId,
+    sourceId: row.sourceId,
+    sourceName: row.sourceName,
+    price: Number(row.price),
+    currency: row.currency,
+    confidence: Number(row.confidence),
+    methodology: row.methodology as ValuationRecord['methodology'],
+    status: row.status as ValuationRecord['status'],
+    rejectionReason: row.rejectionReason ?? undefined,
+    provenance: row.provenance as ValuationRecord['provenance'],
+    metadata: row.metadata as ValuationRecord['metadata'],
+    timestamp: row.timestamp,
+    receivedAt: row.receivedAt,
+  };
+}
 
 export class ValuationRepository {
-  static save(record: ValuationRecord): ValuationRecord {
-    latestValuations.set(record.propertyId, record);
-
-    const history = valuationHistory.get(record.propertyId) ?? [];
-    history.push(record);
-    valuationHistory.set(record.propertyId, history);
-
-    return record;
-  }
-
-  static findLatest(propertyId: string): ValuationRecord | undefined {
-    return latestValuations.get(propertyId);
-  }
-
-  static findHistory(propertyId: string, limit?: number): ValuationRecord[] {
-    const history = valuationHistory.get(propertyId) ?? [];
-    const sorted = history
-      .map((record, index) => ({ record, index }))
-      .sort((a, b) => {
-        const timeDiff =
-          new Date(b.record.receivedAt).getTime() - new Date(a.record.receivedAt).getTime();
-        return timeDiff !== 0 ? timeDiff : b.index - a.index;
+  static async save(record: ValuationRecord): Promise<ValuationRecord> {
+    const [row] = await db
+      .insert(valuations)
+      .values({
+        id: record.id,
+        propertyId: record.propertyId,
+        sourceId: record.sourceId,
+        sourceName: record.sourceName,
+        price: String(record.price),
+        currency: record.currency,
+        confidence: String(record.confidence),
+        methodology: record.methodology,
+        status: record.status,
+        rejectionReason: record.rejectionReason ?? null,
+        provenance: record.provenance,
+        metadata: record.metadata,
+        timestamp: record.timestamp instanceof Date ? record.timestamp : new Date(record.timestamp),
+        receivedAt:
+          record.receivedAt instanceof Date ? record.receivedAt : new Date(record.receivedAt),
       })
-      .map(({ record }) => record);
-    return limit ? sorted.slice(0, limit) : sorted;
+      .onConflictDoUpdate({
+        target: valuations.id,
+        set: { status: record.status, rejectionReason: record.rejectionReason ?? null },
+      })
+      .returning();
+    if (!row) throw new Error(`Failed to persist valuation ${record.id}: no row returned`);
+    return toRecord(row);
   }
 
-  static findAll(): ValuationRecord[] {
-    return Array.from(latestValuations.values());
+  static async findLatest(propertyId: string): Promise<ValuationRecord | undefined> {
+    const [row] = await db
+      .select()
+      .from(valuations)
+      .where(eq(valuations.propertyId, propertyId))
+      .orderBy(desc(valuations.timestamp))
+      .limit(1);
+    return row ? toRecord(row) : undefined;
   }
 
-  static updateStatus(
+  static async findHistory(propertyId: string, limit?: number): Promise<ValuationRecord[]> {
+    const query = db
+      .select()
+      .from(valuations)
+      .where(eq(valuations.propertyId, propertyId))
+      .orderBy(desc(valuations.timestamp));
+    const rows = limit ? await query.limit(limit) : await query;
+    return rows.map(toRecord);
+  }
+
+  static async findAll(): Promise<ValuationRecord[]> {
+    const rows = await db
+      .selectDistinctOn([valuations.propertyId])
+      .from(valuations)
+      .orderBy(valuations.propertyId, desc(valuations.timestamp));
+    return rows.map(toRecord);
+  }
+
+  static async updateStatus(
     id: string,
-    propertyId: string,
+    _propertyId: string,
     status: ValuationRecord['status'],
     rejectionReason?: string,
-  ): ValuationRecord | undefined {
-    const history = valuationHistory.get(propertyId);
-    if (!history) return undefined;
-
-    const record = history.find((r) => r.id === id);
-    if (!record) return undefined;
-
-    record.status = status;
-    if (rejectionReason) record.rejectionReason = rejectionReason;
-
-    const latest = latestValuations.get(propertyId);
-    if (latest?.id === id) {
-      latestValuations.set(propertyId, record);
-    }
-
-    return record;
+  ): Promise<ValuationRecord | undefined> {
+    const [row] = await db
+      .update(valuations)
+      .set({ status, rejectionReason: rejectionReason ?? null })
+      .where(eq(valuations.id, id))
+      .returning();
+    return row ? toRecord(row) : undefined;
   }
 }

@@ -38,10 +38,10 @@ export class OracleService {
   }
 
   // REQ-001, REQ-002, REQ-003, REQ-006: Ingest and store a valuation
-  static ingestValuation(payload: RealEstateValuationPayload): {
+  static async ingestValuation(payload: RealEstateValuationPayload): Promise<{
     record: ValuationRecord;
     warnings: string[];
-  } {
+  }> {
     const { isValid, errors } = this.validatePayload(payload);
 
     if (!isValid) {
@@ -52,7 +52,7 @@ export class OracleService {
         receivedAt: new Date(),
         rejectionReason: errors.join('; '),
       };
-      ValuationRepository.save(record);
+      await ValuationRepository.save(record);
       throw new Error(`Valuation rejected: ${errors.join('; ')}`);
     }
 
@@ -69,13 +69,13 @@ export class OracleService {
       receivedAt: new Date(),
     };
 
-    ValuationRepository.save(record);
+    await ValuationRepository.save(record);
     return { record, warnings };
   }
 
   // REQ-004: Get latest valuation for a property
-  static getLatestValuation(propertyId: string): ValuationRecord {
-    const record = ValuationRepository.findLatest(propertyId);
+  static async getLatestValuation(propertyId: string): Promise<ValuationRecord> {
+    const record = await ValuationRepository.findLatest(propertyId);
     if (!record) {
       throw new Error(`No valuation found for property: ${propertyId}`);
     }
@@ -83,13 +83,17 @@ export class OracleService {
   }
 
   // REQ-004: Get valuation history for a property
-  static getValuationHistory(propertyId: string, limit?: number): ValuationRecord[] {
+  static async getValuationHistory(propertyId: string, limit?: number): Promise<ValuationRecord[]> {
     return ValuationRepository.findHistory(propertyId, limit);
   }
 
   // REQ-005: Flag a valuation for manual review
-  static flagForManualReview(id: string, propertyId: string, reason: string): ValuationRecord {
-    const updated = ValuationRepository.updateStatus(id, propertyId, 'manual_review', reason);
+  static async flagForManualReview(
+    id: string,
+    propertyId: string,
+    reason: string,
+  ): Promise<ValuationRecord> {
+    const updated = await ValuationRepository.updateStatus(id, propertyId, 'manual_review', reason);
     if (!updated) {
       throw new Error(`Valuation ${id} not found for property ${propertyId}`);
     }
@@ -97,9 +101,9 @@ export class OracleService {
   }
 
   // REQ-005: Submit a manual override valuation
-  static submitManualOverride(
+  static async submitManualOverride(
     payload: RealEstateValuationPayload & { overrideReason: string },
-  ): ValuationRecord {
+  ): Promise<ValuationRecord> {
     const record: ValuationRecord = {
       ...payload,
       id: generateId(),
@@ -107,13 +111,12 @@ export class OracleService {
       status: 'active',
       receivedAt: new Date(),
     };
-    ValuationRepository.save(record);
-    return record;
+    return ValuationRepository.save(record);
   }
 
   // REQ-007: Build contract-ready payload from latest valuation
-  static buildContractPayload(propertyId: string): ContractValuationPayload {
-    const record = this.getLatestValuation(propertyId);
+  static async buildContractPayload(propertyId: string): Promise<ContractValuationPayload> {
+    const record = await this.getLatestValuation(propertyId);
 
     if (record.status !== 'active') {
       throw new Error(`Cannot build contract payload: valuation status is '${record.status}'`);

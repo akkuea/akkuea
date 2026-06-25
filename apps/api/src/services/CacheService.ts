@@ -20,7 +20,7 @@ export class CacheService {
   async connect(): Promise<void> {
     const redisUrl = process.env.REDIS_URL;
     if (!redisUrl) {
-      logger.info('REDIS_URL not set — caching disabled');
+      logger.info('REDIS_URL not set - caching disabled');
       return;
     }
 
@@ -37,23 +37,23 @@ export class CacheService {
       await redis.connect();
       this.client = redis as unknown as RedisClient;
       this.available = true;
-      logger.info('Redis connected — caching enabled');
+      logger.info('Redis connected - caching enabled');
 
       redis.on('error', (err: Error) => {
         if (this.available) {
-          logger.warn('Redis error — falling back to DB queries', { error: err.message });
+          logger.warn('Redis error - falling back to DB queries', { error: err.message });
           this.available = false;
         }
       });
 
       redis.on('connect', () => {
         if (!this.available) {
-          logger.info('Redis reconnected — caching re-enabled');
+          logger.info('Redis reconnected - caching re-enabled');
           this.available = true;
         }
       });
     } catch (err) {
-      logger.warn('Redis unavailable — caching disabled', {
+      logger.warn('Redis unavailable - caching disabled', {
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -74,7 +74,7 @@ export class CacheService {
     try {
       await this.client.set(key, JSON.stringify(value), 'EX', ttlSeconds);
     } catch {
-      // silent — cache write failure is non-fatal
+      // silent - cache write failure is non-fatal
     }
   }
 

@@ -7,7 +7,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 
-export type FormRenderProps<TSchema extends z.ZodSchema> = UseFormReturn<
+export type FormRenderProps<TSchema extends z.ZodTypeAny> = UseFormReturn<
   z.infer<TSchema>
 > & {
   formError: string | null;
@@ -16,7 +16,7 @@ export type FormRenderProps<TSchema extends z.ZodSchema> = UseFormReturn<
   setFormSuccess: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
-export interface FormProps<TSchema extends z.ZodSchema> {
+export interface FormProps<TSchema extends z.ZodTypeAny> {
   schema: TSchema;
   defaultValues?: DefaultValues<z.infer<TSchema>>;
   onSubmit: (values: z.infer<TSchema>) => void | Promise<void>;
@@ -29,7 +29,7 @@ export interface FormProps<TSchema extends z.ZodSchema> {
   showFeedback?: boolean;
 }
 
-export function Form<TSchema extends z.ZodSchema>({
+export function Form<TSchema extends z.ZodTypeAny>({
   schema,
   defaultValues,
   onSubmit,
@@ -40,8 +40,7 @@ export function Form<TSchema extends z.ZodSchema>({
   showFeedback = true,
 }: FormProps<TSchema>) {
   const methods = useForm<z.infer<TSchema>>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(schema as any),
+    resolver: zodResolver(schema),
     defaultValues,
     mode: "onBlur",
     reValidateMode: "onBlur",

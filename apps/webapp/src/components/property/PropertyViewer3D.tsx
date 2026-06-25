@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { AlertCircle, Maximize2, RotateCcw, Copy } from "lucide-react";
+import { AlertCircle, Maximize2, RotateCcw, Copy, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui";
 
 export interface PropertyViewer3DProps {
@@ -36,6 +36,8 @@ export function PropertyViewer3D({
     loadProgress: 0,
   });
 
+  const [retryTrigger, setRetryTrigger] = useState(0);
+
   const checkWebGLSupport = useCallback((): boolean => {
     try {
       const canvas = document.createElement("canvas");
@@ -61,15 +63,31 @@ export function PropertyViewer3D({
       return;
     }
 
+    let active = true;
+    const controller = new AbortController();
+
+    const handleResize = () => {
+      if (canvasRef.current && containerRef.current) {
+        const newRect = containerRef.current.getBoundingClientRect();
+        canvasRef.current.width = newRect.width;
+        canvasRef.current.height = newRect.height;
+
+        const newGl = canvasRef.current.getContext("webgl2");
+        if (newGl) {
+          newGl.viewport(0, 0, newRect.width, newRect.height);
+        }
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+
     const initializeViewer = async () => {
       try {
-        setState((prev) => ({ ...prev, isLoading: true, hasError: false }));
+        setState((prev) => ({ ...prev, isLoading: true, hasError: false, errorMessage: "" }));
 
-        const canvas = document.createElement("canvas");
-        if (containerRef.current) {
-          containerRef.current.innerHTML = "";
-          containerRef.current.appendChild(canvas);
-          canvasRef.current = canvas;
+        const canvas = canvasRef.current;
+        if (!canvas) {
+          throw new Error("Canvas element not found");
         }
 
         const rect = containerRef.current?.getBoundingClientRect();
@@ -86,7 +104,6 @@ export function PropertyViewer3D({
         gl.clearColor(0.05, 0.05, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 120000);
 
         try {
@@ -115,22 +132,28 @@ export function PropertyViewer3D({
 
           const chunks: Uint8Array[] = [];
 
-          while (true) {
+          while (active) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            chunks.push(value);
-            receivedLength += value.length;
+            if (value) {
+              chunks.push(value);
+              receivedLength += value.length;
+            }
 
             const progress =
               contentLength > 0
                 ? Math.round((receivedLength / contentLength) * 100)
                 : 0;
-            setState((prev) => ({
-              ...prev,
-              loadProgress: Math.min(progress, 95),
-            }));
+            if (active) {
+              setState((prev) => ({
+                ...prev,
+                loadProgress: Math.min(progress, 95),
+              }));
+            }
           }
+
+          if (!active) return;
 
           const arrayBuffer = new ArrayBuffer(receivedLength);
           const view = new Uint8Array(arrayBuffer);
@@ -140,39 +163,22 @@ export function PropertyViewer3D({
             offset += chunk.length;
           }
 
-          setState((prev) => ({
-            ...prev,
-            loadProgress: 100,
-            isLoading: false,
-          }));
-
-          onLoadComplete?.();
+          if (active) {
+            setState((prev) => ({
+              ...prev,
+              loadProgress: 100,
+              isLoading: false,
+            }));
+            onLoadComplete?.();
+          }
         } catch (fetchError) {
           if (fetchError instanceof Error && fetchError.name === "AbortError") {
             throw new Error("Loading took too long. Please try again.");
           }
           throw fetchError;
         }
-
-        const handleResize = () => {
-          if (canvasRef.current && containerRef.current) {
-            const newRect = containerRef.current.getBoundingClientRect();
-            canvasRef.current.width = newRect.width;
-            canvasRef.current.height = newRect.height;
-
-            const newGl = canvasRef.current.getContext("webgl2");
-            if (newGl) {
-              newGl.viewport(0, 0, newRect.width, newRect.height);
-            }
-          }
-        };
-
-        window.addEventListener("resize", handleResize);
-
-        return () => {
-          window.removeEventListener("resize", handleResize);
-        };
       } catch (error) {
+        if (!active) return;
         const message =
           error instanceof Error ? error.message : "Failed to load 3D viewer";
         setState((prev) => ({
@@ -181,13 +187,24 @@ export function PropertyViewer3D({
           hasError: true,
           errorMessage: message,
         }));
-        onError?.(message);
+        const isWebGLOrCanvasError =
+          error instanceof Error &&
+          (error.message.includes("WebGL") || error.message.includes("Canvas"));
+        if (isWebGLOrCanvasError) {
+          onError?.(message);
+        }
         console.error("PropertyViewer3D initialization error:", error);
       }
     };
 
     initializeViewer();
-  }, [splatUrl, onLoadComplete, onError, checkWebGLSupport]);
+
+    return () => {
+      active = false;
+      controller.abort();
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [splatUrl, onLoadComplete, onError, checkWebGLSupport, retryTrigger]);
 
   const handleFullscreen = useCallback(() => {
     if (canvasRef.current) {
@@ -216,7 +233,7 @@ export function PropertyViewer3D({
 
   if (state.hasError) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 rounded-lg border border-red-500/30 bg-red-500/10 p-6">
+      <div className="flex w-full aspect-video flex-col items-center justify-center gap-4 rounded-lg border border-red-500/30 bg-red-500/10 p-6">
         <AlertCircle className="h-12 w-12 text-red-400" />
         <div className="text-center">
           <h3 className="font-semibold text-white">
@@ -224,10 +241,22 @@ export function PropertyViewer3D({
           </h3>
           <p className="mt-1 text-sm text-red-200/80">{state.errorMessage}</p>
         </div>
-        <p className="text-xs text-red-200/60">
-          For best experience, use a modern browser with hardware acceleration
-          enabled.
-        </p>
+        <div className="flex flex-col items-center gap-3">
+          <Button
+            onClick={() => {
+              setRetryTrigger((prev) => prev + 1);
+            }}
+            variant="outline"
+            size="sm"
+            leftIcon={<RefreshCw className="h-4 w-4" />}
+          >
+            Retry Loading
+          </Button>
+          <p className="text-xs text-red-200/60">
+            For best experience, use a modern browser with hardware acceleration
+            enabled.
+          </p>
+        </div>
       </div>
     );
   }
@@ -241,6 +270,8 @@ export function PropertyViewer3D({
           : "aspect-video overflow-hidden rounded-lg"
       }`}
     >
+      <canvas ref={canvasRef} className="w-full h-full block" />
+
       {state.isLoading && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-gradient-to-br from-[#0a0a0a] to-[#1a1a1a] z-40">
           <div className="w-32 h-1 bg-[#1a1a1a] rounded-full overflow-hidden">
@@ -260,35 +291,37 @@ export function PropertyViewer3D({
         </div>
       )}
 
-      <div className="absolute right-3 top-3 z-30 flex gap-2">
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={handleReset}
-          title="Reset view"
-          className="h-8 w-8 p-0 hover:bg-white/10"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={handleCopyUrl}
-          title="Copy URL"
-          className="h-8 w-8 p-0 hover:bg-white/10"
-        >
-          <Copy className="h-4 w-4" />
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={handleFullscreen}
-          title="Fullscreen"
-          className="h-8 w-8 p-0 hover:bg-white/10"
-        >
-          <Maximize2 className="h-4 w-4" />
-        </Button>
-      </div>
+      {!state.isLoading && !state.hasError && (
+        <div className="absolute right-3 top-3 z-30 flex gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleReset}
+            title="Reset view"
+            className="h-8 w-8 p-0 hover:bg-white/10"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleCopyUrl}
+            title="Copy URL"
+            className="h-8 w-8 p-0 hover:bg-white/10"
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={handleFullscreen}
+            title="Fullscreen"
+            className="h-8 w-8 p-0 hover:bg-white/10"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 export default function KYCForm() {
   const FORM_STORAGE_KEY = "kyc_form";
-  const [currentStep, setCurrentStep] = useState(() => {
+  const [currentStep, setCurrentStep] = useState<number>(() => {
     try {
       const saved = localStorage.getItem(FORM_STORAGE_KEY);
       if (saved) {

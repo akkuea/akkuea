@@ -76,7 +76,7 @@ function StepDots({ current, steps }: { current: Step; steps: Step[] }) {
     <div className="flex gap-2">
       {steps.map((stepName, i) => (
         <div
-          key={i}
+          key={stepName}
           className={[
             "h-1.5 rounded-full transition-all duration-300",
             i <= idx ? "w-6 bg-indigo-500" : "w-1.5 bg-slate-800",

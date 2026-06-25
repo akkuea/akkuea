@@ -171,16 +171,16 @@ function CelebrationScreen() {
               rotate: 0,
             }}
             animate={{
-              x: `${50 + (Math.random() - 0.5) * 160}%`,
-              y: [`50%`, `${10 + Math.random() * 80}%`, `120%`],
+              x: particle.x,
+              y: particle.y,
               scale: [0.2, 1, 0.4],
               opacity: [1, 1, 0],
-              rotate: [0, 360 * (Math.random() > 0.5 ? 2 : -2)],
+              rotate: [0, particle.rotate],
             }}
             transition={{
-              duration: 2.5 + Math.random() * 0.8,
+              duration: particle.duration,
               ease: "easeOut",
-              delay: Math.random() * 0.2,
+              delay: particle.delay,
             }}
             className="absolute rounded-sm w-3.5 h-3.5"
             style={{
@@ -225,7 +225,24 @@ const CONFETTI_COLORS = [
   "#14b8a6",
   "#f43f5e",
 ];
-const CONFETTI_PARTICLES = Array.from({ length: 45 }, (_, i) => ({
-  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-  shape: i % 2 === 0 ? "circle" : "square",
-}));
+interface ConfettiParticle {
+  color: string;
+  shape: string;
+  x: string;
+  y: string[];
+  rotate: number;
+  duration: number;
+  delay: number;
+}
+const CONFETTI_PARTICLES: ConfettiParticle[] = Array.from(
+  { length: 45 },
+  (_, i) => ({
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    shape: i % 2 === 0 ? "circle" : "square",
+    x: `${50 + (Math.random() - 0.5) * 160}%`,
+    y: [`50%`, `${10 + Math.random() * 80}%`, `120%`],
+    rotate: 360 * (Math.random() > 0.5 ? 2 : -2),
+    duration: 2.5 + Math.random() * 0.8,
+    delay: Math.random() * 0.2,
+  }),
+);

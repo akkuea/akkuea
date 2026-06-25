@@ -11,6 +11,7 @@ import {
   type BorrowPosition,
   type NewBorrowPosition,
 } from '../db/schema';
+import type { DbTransaction } from '../db/types';
 import { BaseRepository } from './BaseRepository';
 
 export interface LendingPoolFilter {
@@ -96,8 +97,7 @@ export class LendingRepository extends BaseRepository<
     amount: string,
     shares: string,
   ): Promise<DepositPosition> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await db.transaction(async (tx: any) => {
+    return await db.transaction(async (tx: DbTransaction) => {
       const results = await tx
         .insert(depositPositions)
         .values({
@@ -128,8 +128,7 @@ export class LendingRepository extends BaseRepository<
     depositorId: string,
     amount: string,
   ): Promise<DepositPosition | undefined> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await db.transaction(async (tx: any) => {
+    return await db.transaction(async (tx: DbTransaction) => {
       const [existing] = await tx
         .select()
         .from(depositPositions)
@@ -170,8 +169,7 @@ export class LendingRepository extends BaseRepository<
     borrowerId: string,
     data: { borrowAmount: string; collateralAmount: string; collateralAsset: string },
   ): Promise<BorrowPosition> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await db.transaction(async (tx: any) => {
+    return await db.transaction(async (tx: DbTransaction) => {
       const results = await tx
         .insert(borrowPositions)
         .values({
@@ -204,8 +202,7 @@ export class LendingRepository extends BaseRepository<
     borrowerId: string,
     amount: string,
   ): Promise<BorrowPosition | undefined> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return await db.transaction(async (tx: any) => {
+    return await db.transaction(async (tx: DbTransaction) => {
       const [existing] = await tx
         .select()
         .from(borrowPositions)

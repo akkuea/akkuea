@@ -1,3 +1,5 @@
+import type { Context } from 'elysia';
+
 interface RateLimitOptions {
   windowMs?: number;
   max?: number;
@@ -98,8 +100,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
 
   if (redisUrl) {
     storeReady = import('ioredis').then(({ default: Redis }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const client = new (Redis as any)(redisUrl, {
+      const client = new Redis(redisUrl, {
         enableOfflineQueue: false,
         maxRetriesPerRequest: 1,
         connectTimeout: 3000,
@@ -113,8 +114,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
     storeReady = Promise.resolve(createMemoryStore());
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return async function rateLimitMiddleware({ request, set }: any) {
+  return async function rateLimitMiddleware({ request, set }: Pick<Context, 'request' | 'set'>) {
     if (request.headers.get('x-test-bypass-ratelimit') === 'true') {
       return;
     }
@@ -123,12 +123,12 @@ export function rateLimit(options: RateLimitOptions = {}) {
     const store = await storeReady;
     const result = await store.checkLimit(identifier, windowMs, max);
 
-    set.headers = {
-      ...(set.headers ?? {}),
-      'X-RateLimit-Limit': String(max),
-      'X-RateLimit-Remaining': String(result.remaining),
-      'X-RateLimit-Reset': String(Math.ceil(result.resetAt / 1000)),
-    };
+    if (!set.headers) {
+      set.headers = {};
+    }
+    set.headers['X-RateLimit-Limit'] = String(max);
+    set.headers['X-RateLimit-Remaining'] = String(result.remaining);
+    set.headers['X-RateLimit-Reset'] = String(Math.ceil(result.resetAt / 1000));
 
     if (!result.allowed) {
       set.status = 429;

@@ -56,14 +56,12 @@ export const borrowPositions = pgTable('borrow_positions', {
   lastAccrualAt: timestamp('last_accrual_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const lendingPoolsRelations = relations(lendingPools, ({ many }: any) => ({
+export const lendingPoolsRelations = relations(lendingPools, ({ many }) => ({
   depositPositions: many(depositPositions),
   borrowPositions: many(borrowPositions),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const depositPositionsRelations = relations(depositPositions, ({ one }: any) => ({
+export const depositPositionsRelations = relations(depositPositions, ({ one }) => ({
   pool: one(lendingPools, {
     fields: [depositPositions.poolId],
     references: [lendingPools.id],
@@ -74,8 +72,7 @@ export const depositPositionsRelations = relations(depositPositions, ({ one }: a
   }),
 }));
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const borrowPositionsRelations = relations(borrowPositions, ({ one }: any) => ({
+export const borrowPositionsRelations = relations(borrowPositions, ({ one }) => ({
   pool: one(lendingPools, {
     fields: [borrowPositions.poolId],
     references: [lendingPools.id],

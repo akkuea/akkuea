@@ -349,6 +349,95 @@ stellar transaction --id $TRANSACTION_ID --network testnet
 
 This deployment process ensures your smart contracts are properly deployed and integrated with the entire Real Estate DeFi Platform.
 
+## Game Contracts Testnet Deployment Record (2026-06-24)
+
+All four Akkuea Land game contracts were built with `stellar contract build` (target `wasm32v1-none`) and deployed to Stellar testnet. Deployment order: PropertyNFT and LandToken first (no inter-dependencies), then GameMarketplace and GameEngine (both depend on the first two).
+
+- **Network**: testnet (`Test SDF Network ; September 2015`)
+- **Deployer / admin account**: `GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M`
+- **Deployed on**: 2026-06-24
+- **Source of truth**: [`apps/shared/src/contracts/game-contracts.testnet.json`](../../apps/shared/src/contracts/game-contracts.testnet.json)
+
+| Contract             | Contract ID                                                  | Deploy tx                                                          | Init tx                                                            |
+| -------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `GAME_PROPERTY_NFT`  | `CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE`  | `2b982bdbc7e29c7f334d35d57f9566d124fd9b30722f551fff23df310d298fc5` | `889d9a0f7da7c543cc6abeb913506eb55b6b31f67177c4d3f2fc18670c81bbb2` |
+| `GAME_LAND_TOKEN`    | `CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K`  | `3a7619ea0d637ac60f2d6c43dfac10cc7810c663b3ea65b84f54d7b1f07cbdf7` | `1e3d8961cce31d0d5016705ef1f8aecf78761ef1203136cb41ccc6c08729be53` |
+| `GAME_MARKETPLACE`   | `CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3`  | `a84eabafffc0bf75bb75676c8add0616ff970cda82c75f2ebf439ca14528fbbb` | `4fbaa0df4a51c266fb3258490b202cd962209b04c495264d85096da5ef623560` |
+| `GAME_ENGINE`        | `CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH`  | `fc8bcb20360d909ea4fbd7187edadadf3ed25f3aa29810e5b806917318d0cafa` | `33641f100f7c6d23452a417b2d4d16a111554398c69aa5cab969f224a98a7714` |
+
+### Initialization arguments
+
+```bash
+# 1. PropertyNFT: initialize(treasury, game_engine)
+stellar contract invoke --id CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE \
+  --source akkuea-game-deployer --network testnet \
+  -- initialize \
+  --treasury GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M \
+  --game_engine CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH
+
+# 2. LandToken: initialize(treasury, engine, is_testnet)
+stellar contract invoke --id CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K \
+  --source akkuea-game-deployer --network testnet \
+  -- initialize \
+  --treasury GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M \
+  --engine CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH \
+  --is_testnet true
+
+# 3. GameMarketplace: initialize(nft_contract, land_token)
+stellar contract invoke --id CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3 \
+  --source akkuea-game-deployer --network testnet \
+  -- initialize \
+  --nft_contract CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE \
+  --land_token CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K
+
+# 4. GameEngine: initialize(nft_contract, token_contract, treasury)
+stellar contract invoke --id CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH \
+  --source akkuea-game-deployer --network testnet \
+  -- initialize \
+  --nft_contract CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE \
+  --token_contract CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K \
+  --treasury GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M
+```
+
+### Verification
+
+Each contract ID was verified before being committed by invoking a read-only function:
+
+```bash
+# PropertyNFT — get_property(0) returns tile 0 owned by treasury
+stellar contract invoke --id CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE \
+  --source akkuea-game-deployer --network testnet --send=no \
+  -- get_property --property_id 0
+# => {"approved":null,"id":0,"last_claimed_ledger":3265536,"level":0,"owner":"GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M","x":0,"y":0}
+
+# LandToken — name() returns token name
+stellar contract invoke --id CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K \
+  --source akkuea-game-deployer --network testnet --send=no \
+  -- name
+# => "Akkuea Land Token"
+
+# GameMarketplace — get_all_listings(0,10) returns empty list
+stellar contract invoke --id CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3 \
+  --source akkuea-game-deployer --network testnet --send=no \
+  -- get_all_listings --offset 0 --limit 10
+# => []
+
+# GameEngine — get_accrued_income(0) returns 0 (no epochs elapsed)
+stellar contract invoke --id CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH \
+  --source akkuea-game-deployer --network testnet --send=no \
+  -- get_accrued_income --property_id 0
+# => "0"
+```
+
+Explorer links:
+
+- GAME_PROPERTY_NFT: <https://stellar.expert/explorer/testnet/contract/CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE>
+- GAME_LAND_TOKEN: <https://stellar.expert/explorer/testnet/contract/CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K>
+- GAME_MARKETPLACE: <https://stellar.expert/explorer/testnet/contract/CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3>
+- GAME_ENGINE: <https://stellar.expert/explorer/testnet/contract/CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH>
+
+---
+
 ## Testnet Deployment Record
 
 Both instances were deployed from the same `rwa_defi_contract.wasm` (built with

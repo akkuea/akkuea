@@ -40,7 +40,7 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
           steady rental income in real-time as the city thrives.
         </p>
         <p className="text-sm text-slate-400 leading-relaxed">
-          Your Stellar wallet has been set up securely through Pollar. You don't
+          Your Stellar wallet has been set up securely through Pollar. You don&apos;t
           need any prior blockchain experience or fees to play.
         </p>
       </div>

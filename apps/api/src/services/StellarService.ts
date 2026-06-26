@@ -17,6 +17,11 @@ import {
 import { ApiError } from '../errors/ApiError';
 import { getRealEstateTokenContractId } from '../config/contracts';
 
+function toOperation(op: ReturnType<Contract['call']>): xdr.Operation {
+  // The Stellar SDK types are correct here — single cast with comment
+  return op as unknown as xdr.Operation;
+}
+
 export interface MintSharesParams {
   contractId: string;
   adminSecret: string;
@@ -236,8 +241,7 @@ export class StellarService {
       fee: '100',
       networkPassphrase: this.networkPassphrase,
     })
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .addOperation(contract.call(method, ...(args as any[])) as any)
+      .addOperation(toOperation(contract.call(method, ...(args as any[]))))
       .setTimeout(30)
       .build();
 

@@ -2,6 +2,15 @@
 
 This guide covers deploying the Real Estate DeFi Platform smart contracts to Stellar networks using Stellar CLI.
 
+> **Where contract IDs live.** Deployed contract addresses are stored as JSON
+> deployment artifacts at `apps/shared/src/contracts.testnet.json` and
+> `apps/shared/src/contracts.mainnet.json`. The shared `CONTRACT_IDS` constant
+> (`apps/shared/src/constants/index.ts`) and the API
+> (`apps/api/src/config/contracts.ts`) read contract IDs from these files, so
+> recording a new deployment is a data change, not a code change. The current
+> testnet deployment is at the [Testnet Deployment Record](#testnet-deployment-record)
+> section below.
+
 ## Prerequisites
 
 1. **Stellar CLI installed**
@@ -11,11 +20,14 @@ This guide covers deploying the Real Estate DeFi Platform smart contracts to Ste
 
 ## Contract Types
 
-The platform includes two main contracts:
+The `defi-rwa` crate (`apps/contracts/contracts/defi-rwa`, package
+`rwa-defi-contract`) compiles to a **single** WASM that exposes both property
+tokenization and lending. The platform deploys that one WASM as **two
+independent contract instances**, each with its own contract ID and admin:
 
-### 1. Real Estate Token Contract
+### 1. Real Estate Token Contract (instance)
 
-- **File**: `apps/contracts/src/real_estate_token.rs`
+- **Source**: `apps/contracts/contracts/defi-rwa` (`PropertyTokenContract`)
 - **Purpose**: Property tokenization and share management
 - **Key Features**:
   - Property tokenization
@@ -23,9 +35,9 @@ The platform includes two main contracts:
   - Transfer controls
   - Metadata management
 
-### 2. DeFi Lending Contract
+### 2. DeFi Lending Contract (instance)
 
-- **File**: `apps/contracts/src/defi_lending.rs`
+- **Source**: `apps/contracts/contracts/defi-rwa` (same WASM, separate instance)
 - **Purpose**: Lending pools and borrowing operations
 - **Key Features**:
   - Pool creation and management
@@ -44,22 +56,23 @@ rustup target add wasm32-unknown-unknown
 ### 2. Build Contracts
 
 ```bash
-cd apps/contracts
+cd apps/contracts/contracts/defi-rwa
 
-# Build release version
-cargo build --target wasm32-unknown-unknown --release
+# Build with the Stellar CLI. This targets wasm32v1-none and produces a WASM
+# the Soroban VM accepts. A plain `cargo build --target wasm32-unknown-unknown`
+# with recent Rust toolchains enables the `reference-types` feature, which the
+# Soroban VM rejects at deploy time ("reference-types not enabled"), so prefer
+# `stellar contract build`.
+stellar contract build
 
-# Output will be in target/wasm32-unknown-unknown/release/
+# Output: apps/contracts/target/wasm32v1-none/release/rwa_defi_contract.wasm
 ```
 
 ### 3. Verify Build
 
 ```bash
-# Check if WASM files were created
-ls -la target/wasm32-unknown-unknown/release/
-
-# You should see files like:
-# real_estate_defi_contracts.wasm
+# Check that the WASM was created
+ls -la apps/contracts/target/wasm32v1-none/release/rwa_defi_contract.wasm
 ```
 
 ## Network Setup
@@ -335,3 +348,206 @@ stellar transaction --id $TRANSACTION_ID --network testnet
 - **Keep admin keys secure** and use hardware wallets
 
 This deployment process ensures your smart contracts are properly deployed and integrated with the entire Real Estate DeFi Platform.
+
+## Game Contracts Testnet Deployment Record (2026-06-24)
+
+All four Akkuea Land game contracts were built with `stellar contract build` (target `wasm32v1-none`) and deployed to Stellar testnet. Deployment order: PropertyNFT and LandToken first (no inter-dependencies), then GameMarketplace and GameEngine (both depend on the first two).
+
+- **Network**: testnet (`Test SDF Network ; September 2015`)
+- **Deployer / admin account**: `GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M`
+- **Deployed on**: 2026-06-24
+- **Source of truth**: [`apps/shared/src/contracts/game-contracts.testnet.json`](../../apps/shared/src/contracts/game-contracts.testnet.json)
+
+| Contract             | Contract ID                                                  | Deploy tx                                                          | Init tx                                                            |
+| -------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `GAME_PROPERTY_NFT`  | `CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE`  | `2b982bdbc7e29c7f334d35d57f9566d124fd9b30722f551fff23df310d298fc5` | `889d9a0f7da7c543cc6abeb913506eb55b6b31f67177c4d3f2fc18670c81bbb2` |
+| `GAME_LAND_TOKEN`    | `CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K`  | `3a7619ea0d637ac60f2d6c43dfac10cc7810c663b3ea65b84f54d7b1f07cbdf7` | `1e3d8961cce31d0d5016705ef1f8aecf78761ef1203136cb41ccc6c08729be53` |
+| `GAME_MARKETPLACE`   | `CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3`  | `a84eabafffc0bf75bb75676c8add0616ff970cda82c75f2ebf439ca14528fbbb` | `4fbaa0df4a51c266fb3258490b202cd962209b04c495264d85096da5ef623560` |
+| `GAME_ENGINE`        | `CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH`  | `fc8bcb20360d909ea4fbd7187edadadf3ed25f3aa29810e5b806917318d0cafa` | `33641f100f7c6d23452a417b2d4d16a111554398c69aa5cab969f224a98a7714` |
+
+### Initialization arguments
+
+```bash
+# 1. PropertyNFT: initialize(treasury, game_engine)
+stellar contract invoke --id CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE \
+  --source akkuea-game-deployer --network testnet \
+  -- initialize \
+  --treasury GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M \
+  --game_engine CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH
+
+# 2. LandToken: initialize(treasury, engine, is_testnet)
+stellar contract invoke --id CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K \
+  --source akkuea-game-deployer --network testnet \
+  -- initialize \
+  --treasury GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M \
+  --engine CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH \
+  --is_testnet true
+
+# 3. GameMarketplace: initialize(nft_contract, land_token)
+stellar contract invoke --id CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3 \
+  --source akkuea-game-deployer --network testnet \
+  -- initialize \
+  --nft_contract CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE \
+  --land_token CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K
+
+# 4. GameEngine: initialize(nft_contract, token_contract, treasury)
+stellar contract invoke --id CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH \
+  --source akkuea-game-deployer --network testnet \
+  -- initialize \
+  --nft_contract CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE \
+  --token_contract CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K \
+  --treasury GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M
+```
+
+### Verification
+
+Each contract ID was verified before being committed by invoking a read-only function:
+
+```bash
+# PropertyNFT — get_property(0) returns tile 0 owned by treasury
+stellar contract invoke --id CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE \
+  --source akkuea-game-deployer --network testnet --send=no \
+  -- get_property --property_id 0
+# => {"approved":null,"id":0,"last_claimed_ledger":3265536,"level":0,"owner":"GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M","x":0,"y":0}
+
+# LandToken — name() returns token name
+stellar contract invoke --id CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K \
+  --source akkuea-game-deployer --network testnet --send=no \
+  -- name
+# => "Akkuea Land Token"
+
+# GameMarketplace — get_all_listings(0,10) returns empty list
+stellar contract invoke --id CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3 \
+  --source akkuea-game-deployer --network testnet --send=no \
+  -- get_all_listings --offset 0 --limit 10
+# => []
+
+# GameEngine — get_accrued_income(0) returns 0 (no epochs elapsed)
+stellar contract invoke --id CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH \
+  --source akkuea-game-deployer --network testnet --send=no \
+  -- get_accrued_income --property_id 0
+# => "0"
+```
+
+Explorer links:
+
+- GAME_PROPERTY_NFT: <https://stellar.expert/explorer/testnet/contract/CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE>
+- GAME_LAND_TOKEN: <https://stellar.expert/explorer/testnet/contract/CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K>
+- GAME_MARKETPLACE: <https://stellar.expert/explorer/testnet/contract/CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3>
+- GAME_ENGINE: <https://stellar.expert/explorer/testnet/contract/CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH>
+
+---
+
+## Testnet Deployment Record
+
+Both instances were deployed from the same `rwa_defi_contract.wasm` (built with
+`stellar contract build`, target `wasm32v1-none`) on **Stellar testnet**.
+
+- **Network**: testnet (`Test SDF Network ; September 2015`)
+- **Deployer / admin account**: `GBN4ABG3ES6NHKY4BURL3EMP5RA6EFQJDR4EET6U66M6YIRADPWJ7OQ6`
+- **Uploaded WASM hash**: `c13878bd0845d4965a5eb26138b77db617fdccbb70a70dc47acd8c460af6a0b1`
+- **Deployed on**: 2026-05-31
+- **Source of truth**: [`apps/shared/src/contracts.testnet.json`](../../apps/shared/src/contracts.testnet.json)
+
+| Contract            | Contract ID                                                | Deploy (create) tx                                                 |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
+| `REAL_ESTATE_TOKEN` | `CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4` | `ff4c6b52080df05d9ad443a6a3907894fb771e187b04dbd837306c62add89724` |
+| `DEFI_LENDING`      | `CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX` | `490a50682d4da46c85a8080cc5ae6b50d727bf1156c97a2c9a00c532c441bdd4` |
+
+**WASM upload transaction** (shared by both instances; submitted with the first
+deploy): `c5e2fd6753437a1c8dc217e5a9797b4abdd7621aed6747fedbd03c9c72ab8079`
+
+### Verification
+
+Each contract ID was verified **before being committed** by invoking the
+read-only `get_oracle_config` view, which returned the contract defaults
+`(max_age = 3600, min_price = 0)` — confirming the WASM is live and executing:
+
+```bash
+stellar contract invoke \
+  --id CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4 \
+  --source <account> --network testnet --send=no \
+  -- get_oracle_config
+# => [3600,"0"]
+
+stellar contract invoke \
+  --id CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX \
+  --source <account> --network testnet --send=no \
+  -- get_oracle_config
+# => [3600,"0"]
+```
+
+Explorer links:
+
+- REAL_ESTATE_TOKEN: <https://stellar.expert/explorer/testnet/contract/CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4>
+- DEFI_LENDING: <https://stellar.expert/explorer/testnet/contract/CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX>
+
+### Reproducing this deployment
+
+```bash
+# 1. Build a Soroban-compatible WASM
+cd apps/contracts/contracts/defi-rwa
+stellar contract build
+
+# 2. Fund a testnet deployer key
+stellar keys generate akkuea-deployer --network testnet --fund
+
+# 3. Deploy two instances (constructor takes the admin address)
+ADMIN=$(stellar keys address akkuea-deployer)
+WASM=../../target/wasm32v1-none/release/rwa_defi_contract.wasm
+stellar contract deploy --wasm "$WASM" --source akkuea-deployer --network testnet -- --admin "$ADMIN"
+stellar contract deploy --wasm "$WASM" --source akkuea-deployer --network testnet -- --admin "$ADMIN"
+
+# 4. Record the printed contract IDs in apps/shared/src/contracts.testnet.json
+#    and verify each with `get_oracle_config` before committing.
+```
+
+## Mainnet Deployment
+
+Deploying smart contracts to Stellar mainnet requires a rigorous process to ensure security, compliance, and platform integrity.
+
+### 1. Required Approvals
+Mainnet deployments are restricted and must be formally approved by:
+- **Lead Smart Contract Engineer**: Verifies code correctness and alignment with architectural specifications.
+- **Lead Security Auditor**: Confirms all vulnerabilities identified in audits have been resolved.
+- **Product / Governance Multisig Signers**: Requires M-of-N signatures from the authorized multisig key holders to authorize transaction submission and execute initial setup.
+
+### 2. Pre-Deployment Checklist
+Before initiating a mainnet deployment, ensure all items on this checklist are met:
+- [ ] **Security Audit**: An external security audit of the smart contracts must be completed with all critical and high-severity issues fixed and verified.
+- [ ] **Test Coverage**: Contract code must have 100% unit and integration test coverage. All test suites in the monorepo must pass successfully.
+- [ ] **Smoke Tests**: Run the full smoke test suite on testnet to verify end-to-end integration with the API and frontend.
+- [ ] **Multisig Wallet Setup**: A mainnet multisig account (e.g., M-of-N configuration) must be established to act as the contract admin/owner.
+- [ ] **Account Funding**: Ensure the deployer account has sufficient XLM balance (at least 20-50 XLM to cover fee surges and storage deposits).
+
+### 3. Post-Deployment: Populating contracts.mainnet.json
+Once the contracts are deployed on mainnet, record the contract IDs in the mainnet artifact:
+1. Locate `apps/shared/src/contracts.mainnet.json`.
+2. Populate the keys with the generated contract IDs (ensuring they start with `C` and are 56 characters long):
+   ```json
+   {
+     "_note": "Populate after mainnet deployment - see docs/contracts/deployment.md",
+     "REAL_ESTATE_TOKEN": "C...",
+     "DEFI_LENDING": "C...",
+     "GAME_ENGINE": "C...",
+     "GAME_LAND_TOKEN": "C...",
+     "GAME_PROPERTY_NFT": "C...",
+     "GAME_MARKETPLACE": "C..."
+   }
+   ```
+3. Commit the changes and open a pull request.
+
+### 4. Verifying Mainnet Contracts
+To verify the contract is successfully deployed and running on mainnet:
+1. Invoke a read-only getter function to ensure the contract executes properly on the mainnet network:
+   ```bash
+   stellar contract invoke \
+     --id <CONTRACT_ID> \
+     --source <your_account> \
+     --network mainnet \
+     --send=no \
+     -- get_oracle_config
+   ```
+2. Verify the contract's uploaded WASM hash and instance configuration on a public Stellar explorer such as:
+   - Stellar Expert: `https://stellar.expert/explorer/public/contract/<CONTRACT_ID>`
+

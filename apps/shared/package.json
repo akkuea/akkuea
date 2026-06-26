@@ -4,6 +4,14 @@
   "description": "Shared utilities and types for Real Estate DeFi platform",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./contracts.testnet.json": "./src/contracts.testnet.json",
+    "./contracts.mainnet.json": "./src/contracts.mainnet.json"
+  },
   "scripts": {
     "build": "tsc",
     "build:types": "tsc",

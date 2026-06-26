@@ -120,7 +120,7 @@ function PropertyCard({
         <div className="relative h-48 overflow-hidden">
           <Image
             src={getPropertyImage(property)}
-            alt={property.name}
+            alt={`${property.name} - ${property.location.city}, ${property.location.country}`}
             fill
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -229,8 +229,7 @@ export default function MarketplacePage() {
     lastUpdatedAt,
     isPolling,
   } = useProperties();
-  const { isConnected, connect, isConnecting, address, refreshBalance } =
-    useWallet();
+  const { isConnected, connect, address, refreshBalance } = useWallet();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState(MARKETPLACE_ALL_REGIONS);
@@ -438,12 +437,6 @@ export default function MarketplacePage() {
             void refreshBalance();
           }}
         />
-      )}
-
-      {isConnecting && (
-        <div className="pointer-events-none fixed bottom-6 right-6 rounded-full border border-[#262626] bg-[#0a0a0a] px-4 py-2 text-xs text-white shadow-lg">
-          Connecting wallet...
-        </div>
       )}
     </motion.div>
   );

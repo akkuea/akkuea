@@ -1,16 +1,16 @@
 import { describe, it, expect } from 'bun:test';
 import { rateLimit, createRedisStore, createMemoryStore } from './rateLimit';
 import type { RateLimitRedisClient } from './rateLimit';
+import type { Context } from 'elysia';
 
 function createMockRequest(options: { headers?: Record<string, string> } = {}) {
   const headers = new Headers(options.headers ?? {});
   return { headers } as unknown as Request;
 }
 
-function createMockSet() {
+function createMockSet(): Context['set'] {
   return {
-    status: undefined as number | string | undefined,
-    headers: undefined as Record<string, string> | undefined,
+    headers: {},
   };
 }
 

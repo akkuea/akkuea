@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { motion } from 'framer-motion';
-import { formatDistanceToNow } from 'date-fns';
-import { Listing, LEVEL_LABELS } from './types';
+import { motion } from "framer-motion";
+import { formatDistanceToNow } from "date-fns";
+import { Listing, LEVEL_LABELS } from "./types";
 
 interface ListingCardProps {
   listing: Listing;
@@ -10,7 +10,8 @@ interface ListingCardProps {
 }
 
 export function ListingCard({ listing, onClick }: ListingCardProps) {
-  const { coords, level, incomeRate, price, seller, listedAt, tileColor } = listing;
+  const { coords, level, incomeRate, price, seller, listedAt, tileColor } =
+    listing;
 
   return (
     <motion.button
@@ -29,7 +30,17 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
         style={{ backgroundColor: tileColor }}
         aria-hidden="true"
       >
-        {level === 0 ? '🏕' : level === 1 ? '🏠' : level === 2 ? '🏡' : level === 3 ? '🏛' : level === 4 ? '🏢' : '🏙'}
+        {level === 0
+          ? "🏕"
+          : level === 1
+            ? "🏠"
+            : level === 2
+              ? "🏡"
+              : level === 3
+                ? "🏛"
+                : level === 4
+                  ? "🏢"
+                  : "🏙"}
       </div>
 
       <div className="p-3 space-y-1.5">
@@ -50,13 +61,17 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
           />
           <span className="text-sm font-medium">{LEVEL_LABELS[level]}</span>
           <span className="text-xs text-muted-foreground ml-auto">
-            {incomeRate > 0 ? `+${incomeRate} LAND/hr` : 'No income'}
+            {incomeRate > 0 ? `+${incomeRate} LAND/hr` : "No income"}
           </span>
         </div>
 
         <div className="flex items-center justify-between pt-1 border-t border-border">
-          <span className="font-semibold text-primary">{price.toLocaleString()} LAND</span>
-          <span className="text-xs text-muted-foreground truncate max-w-[80px]">{seller}</span>
+          <span className="font-semibold text-primary">
+            {price.toLocaleString()} LAND
+          </span>
+          <span className="text-xs text-muted-foreground truncate max-w-[80px]">
+            {seller}
+          </span>
         </div>
       </div>
     </motion.button>

@@ -29,7 +29,8 @@ import {
   Stepper,
   ErrorBoundary,
 } from "@/components/ui";
-import { useWallet } from "@/components/auth/hooks";
+import { useWallet, useWalletConnectModal } from "@/components/auth/hooks";
+import { WalletProviderModal } from "@/components/auth/WalletProviderModal";
 import { formatCurrency } from "@/lib/utils";
 import { Form, FormInput, FormSelect } from "@/components/forms";
 import { tokenizeSchema, type TokenizeFormValues } from "@/schemas/forms";
@@ -78,7 +79,8 @@ const initialFormData: TokenizeFormValues = {
 };
 
 export default function TokenizePage() {
-  const { isConnected, connect, isConnecting } = useWallet();
+  const { isConnected } = useWallet();
+  const { openConnectModal, connectModalProps } = useWalletConnectModal();
   const [currentStep, setCurrentStep] = useState(0);
 
   const nextStep = () => {
@@ -122,8 +124,7 @@ export default function TokenizePage() {
             </p>
             <Button
               size="lg"
-              onClick={connect}
-              isLoading={isConnecting}
+              onClick={openConnectModal}
               leftIcon={<Wallet className="w-4 h-4" />}
               isSecure
             >
@@ -131,6 +132,7 @@ export default function TokenizePage() {
             </Button>
           </motion.div>
         </main>
+        <WalletProviderModal {...connectModalProps} />
         <Footer />
       </motion.div>
     );

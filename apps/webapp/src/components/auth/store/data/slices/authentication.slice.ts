@@ -25,6 +25,34 @@ export const useAuthenticationStore = create<AuthenticationStore>()(
     }),
     {
       name: "akkuea-wallet-storage",
+      version: 1,
+      migrate: (persisted) => {
+        const state = persisted as {
+          address?: string | null;
+          balance?: string | null;
+          isConnected?: boolean;
+          selectedWalletId?: string | null;
+          network?: "testnet" | "mainnet";
+        };
+        return {
+          address: state.address ?? null,
+          balance: state.balance ?? null,
+          isConnected: state.isConnected ?? false,
+          selectedWalletId: state.selectedWalletId ?? null,
+          network: state.network ?? "testnet",
+        };
+      },
+      // Never persist transient UI state — a stale true leaves Connect stuck loading.
+      partialize: (state) => ({
+        address: state.address,
+        balance: state.balance,
+        isConnected: state.isConnected,
+        selectedWalletId: state.selectedWalletId,
+        network: state.network,
+      }),
+      onRehydrateStorage: () => (state) => {
+        state?.setIsConnecting(false);
+      },
     },
   ),
 );

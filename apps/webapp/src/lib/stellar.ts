@@ -1,4 +1,4 @@
-import { Horizon } from "stellar-sdk";
+import { Horizon } from "@stellar/stellar-sdk";
 
 const HORIZON_URLS: Record<"testnet" | "mainnet", string> = {
   testnet: "https://horizon-testnet.stellar.org",

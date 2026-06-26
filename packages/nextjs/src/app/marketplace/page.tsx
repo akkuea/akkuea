@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { toast, Toaster } from 'sonner';
-import Link from 'next/link';
-import { MapPin, SlidersHorizontal } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState, useMemo } from "react";
+import { AnimatePresence } from "framer-motion";
+import { toast, Toaster } from "sonner";
+import Link from "next/link";
+import { MapPin, SlidersHorizontal } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { ListingCard } from './ListingCard';
-import { BuyModal } from './BuyModal';
+} from "@/components/ui/select";
+import { ListingCard } from "./ListingCard";
+import { BuyModal } from "./BuyModal";
 import {
   Listing,
   BuildingLevel,
@@ -22,7 +22,7 @@ import {
   LEVEL_LABELS,
   MOCK_LISTINGS,
   MOCK_BALANCE,
-} from './types';
+} from "./types";
 
 // Simulates pollar.signAndSubmitTx()
 async function signAndSubmitTx(_listingId: string): Promise<void> {
@@ -33,8 +33,10 @@ const ALL_LEVELS: BuildingLevel[] = [0, 1, 2, 3, 4, 5];
 
 export default function MarketplacePage() {
   const [listings, setListings] = useState<Listing[]>(MOCK_LISTINGS);
-  const [selectedLevels, setSelectedLevels] = useState<Set<BuildingLevel>>(new Set());
-  const [sort, setSort] = useState<SortOption>('newest');
+  const [selectedLevels, setSelectedLevels] = useState<Set<BuildingLevel>>(
+    new Set(),
+  );
+  const [sort, setSort] = useState<SortOption>("newest");
   const [activeListing, setActiveListing] = useState<Listing | null>(null);
 
   const toggleLevel = (level: BuildingLevel) => {
@@ -48,13 +50,14 @@ export default function MarketplacePage() {
   const clearFilters = () => setSelectedLevels(new Set());
 
   const filtered = useMemo(() => {
-    let result = selectedLevels.size > 0
-      ? listings.filter((l) => selectedLevels.has(l.level))
-      : listings;
+    let result =
+      selectedLevels.size > 0
+        ? listings.filter((l) => selectedLevels.has(l.level))
+        : listings;
 
     return [...result].sort((a, b) => {
-      if (sort === 'price-asc') return a.price - b.price;
-      if (sort === 'price-desc') return b.price - a.price;
+      if (sort === "price-asc") return a.price - b.price;
+      if (sort === "price-desc") return b.price - a.price;
       return b.listedAt.getTime() - a.listedAt.getTime(); // newest
     });
   }, [listings, selectedLevels, sort]);
@@ -84,7 +87,11 @@ export default function MarketplacePage() {
         {/* Controls */}
         <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
           {/* Filter chips */}
-          <div className="flex flex-wrap gap-2 flex-1" role="group" aria-label="Filter by building level">
+          <div
+            className="flex flex-wrap gap-2 flex-1"
+            role="group"
+            aria-label="Filter by building level"
+          >
             <span className="flex items-center gap-1 text-sm text-muted-foreground self-center">
               <SlidersHorizontal className="h-3.5 w-3.5" />
               Filter:
@@ -96,8 +103,8 @@ export default function MarketplacePage() {
                 aria-pressed={selectedLevels.has(level)}
                 className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                   selectedLevels.has(level)
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-background text-foreground border-border hover:border-primary/50'
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-foreground border-border hover:border-primary/50"
                 }`}
               >
                 {LEVEL_LABELS[level]}
@@ -122,7 +129,10 @@ export default function MarketplacePage() {
         {listings.length === 0 ? (
           // No listings at all
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-            <MapPin className="h-12 w-12 text-muted-foreground/40" aria-hidden="true" />
+            <MapPin
+              className="h-12 w-12 text-muted-foreground/40"
+              aria-hidden="true"
+            />
             <div>
               <p className="font-semibold text-lg">No listings yet</p>
               <p className="text-sm text-muted-foreground mt-1">
@@ -136,7 +146,10 @@ export default function MarketplacePage() {
         ) : filtered.length === 0 ? (
           // Filters produce no results
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-            <SlidersHorizontal className="h-12 w-12 text-muted-foreground/40" aria-hidden="true" />
+            <SlidersHorizontal
+              className="h-12 w-12 text-muted-foreground/40"
+              aria-hidden="true"
+            />
             <div>
               <p className="font-semibold text-lg">No listings match</p>
               <p className="text-sm text-muted-foreground mt-1">

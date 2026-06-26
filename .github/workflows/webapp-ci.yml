@@ -61,12 +61,10 @@ jobs:
           cd apps/webapp
           bun run build
 
-      # - name: Run unit tests
-      #   run: |
-      #     cd apps/webapp
-
-      #     # Run tests with coverage
-      #     bun test --coverage --watchAll=false
+      - name: Run unit tests
+        run: |
+          cd apps/webapp
+          bun test --coverage --coverage-threshold=60
 
       # - name: E2E tests
       #   run: |
@@ -164,7 +162,7 @@ jobs:
 
           # Check if CSP headers are configured
           if [ -f "next.config.js" ] || [ -f "next.config.ts" ]; then
-            if grep -r "Content-Security-Policy\|CSP" .; then
+            if grep -r "Content-Security-Policy\|CSP" . --exclude-dir=.next; then
               echo "CSP configuration found"
             else
               echo "Warning: No CSP configuration found"

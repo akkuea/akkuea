@@ -1,18 +1,16 @@
 import { GameShell } from "@/components/layout/GameShell";
+import { CityMap } from "@/components/game/CityMap";
 
 export const metadata = {
   title: "City Map | Akkuea Land",
+  description:
+    "Explore the 20×20 Akkuea City grid. Discover, select, and trade virtual land parcels.",
 };
 
 export default function MapPage() {
   return (
     <GameShell>
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <h1 className="text-2xl font-bold text-land-fg">City Map</h1>
-        <p className="text-land-fg-muted">
-          The interactive tile grid will render here.
-        </p>
-      </div>
+      <CityMap />
     </GameShell>
   );
 }

@@ -1,0 +1,34 @@
+{
+  "network": "testnet",
+  "networkPassphrase": "Test SDF Network ; September 2015",
+  "rpcUrl": "https://soroban-testnet.stellar.org",
+  "description": "Deployed Soroban contract IDs for the Akkuea Land game contracts on Stellar testnet. Updated by the deploy pipeline (see docs/contracts/deployment.md). Each contract ID starts with 'C'.",
+  "deployedBy": "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M",
+  "deployedOn": "2026-06-24",
+  "contracts": {
+    "GAME_PROPERTY_NFT": {
+      "contractId": "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE",
+      "deployTx": "2b982bdbc7e29c7f334d35d57f9566d124fd9b30722f551fff23df310d298fc5",
+      "initializeTx": "889d9a0f7da7c543cc6abeb913506eb55b6b31f67177c4d3f2fc18670c81bbb2",
+      "wasmHash": "b944946b65564da7695fdb0bf10d437923c6c243aff8a042b5c0b835abddbc6b"
+    },
+    "GAME_LAND_TOKEN": {
+      "contractId": "CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K",
+      "deployTx": "3a7619ea0d637ac60f2d6c43dfac10cc7810c663b3ea65b84f54d7b1f07cbdf7",
+      "initializeTx": "1e3d8961cce31d0d5016705ef1f8aecf78761ef1203136cb41ccc6c08729be53",
+      "wasmHash": "d3490f518f2fb7361be646f80f67e3d8cbecffef5bc3d43e0c5bbff8fb5537a3"
+    },
+    "GAME_MARKETPLACE": {
+      "contractId": "CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3",
+      "deployTx": "a84eabafffc0bf75bb75676c8add0616ff970cda82c75f2ebf439ca14528fbbb",
+      "initializeTx": "4fbaa0df4a51c266fb3258490b202cd962209b04c495264d85096da5ef623560",
+      "wasmHash": "af0da63d3de31be65c8a6e53e5e9948991e545f9e2584eb7c37095341a819fb0"
+    },
+    "GAME_ENGINE": {
+      "contractId": "CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH",
+      "deployTx": "fc8bcb20360d909ea4fbd7187edadadf3ed25f3aa29810e5b806917318d0cafa",
+      "initializeTx": "33641f100f7c6d23452a417b2d4d16a111554398c69aa5cab969f224a98a7714",
+      "wasmHash": "dc0fc784f2d78a1de82cc5b1bcb7eb202df1f01d91ea5b6ada0ee4af39edb3f6"
+    }
+  }
+}

@@ -31,7 +31,8 @@ import {
   Input,
   Modal,
 } from "@/components/ui";
-import { useWallet } from "@/components/auth/hooks";
+import { useWallet, useWalletConnectModal } from "@/components/auth/hooks";
+import { WalletProviderModal } from "@/components/auth/WalletProviderModal";
 import { formatCurrency } from "@/lib/utils";
 import {
   pageTransition,
@@ -196,8 +197,8 @@ function StatCardSkeleton() {
 // ---------------------------------------------------------------------------
 
 export default function LendingPage() {
-  const { isConnected, connect, isConnecting, address, refreshBalance } =
-    useWallet();
+  const { isConnected, address, refreshBalance } = useWallet();
+  const { openConnectModal, connectModalProps } = useWalletConnectModal();
 
   const {
     pools,
@@ -362,8 +363,7 @@ export default function LendingPage() {
             </p>
             <Button
               size="lg"
-              onClick={connect}
-              isLoading={isConnecting}
+              onClick={openConnectModal}
               leftIcon={<Wallet className="w-4 h-4" aria-hidden="true" />}
               isSecure
               aria-label="Connect your wallet to access DeFi Lending"
@@ -372,6 +372,7 @@ export default function LendingPage() {
             </Button>
           </motion.div>
         </main>
+        <WalletProviderModal {...connectModalProps} />
         <Footer />
       </motion.div>
     );

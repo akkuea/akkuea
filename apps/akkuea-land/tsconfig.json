@@ -1,11 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ],
+    "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -17,23 +13,12 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "types": [
-      "bun-types",
-      "node",
-      "react",
-      "react-dom"
-    ],
+    "types": ["bun-types", "node", "react", "react-dom"],
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./src/*"
-      ],
-      "@akkuea/shared": [
-        "../shared/src"
-      ],
-      "@webapp/*": [
-        "../webapp/src/*"
-      ]
+      "@/*": ["./src/*"],
+      "@akkuea/shared": ["../shared/src"],
+      "@webapp/*": ["../webapp/src/*"]
     },
     "plugins": [
       {
@@ -47,7 +32,5 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

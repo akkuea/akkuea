@@ -1,24 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
   X,
-  Wallet,
   Building2,
   LayoutDashboard,
   Store,
   Landmark,
-  ChevronDown,
 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
 import { useTheme } from "@/context/ThemeContext";
-import { useWallet } from "@/components/auth/hooks";
-import { cn, truncateAddress } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/layout/BrandLogo";
+import { WalletStatusWidget } from "@/components/layout/WalletStatusWidget";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -30,10 +27,7 @@ const navigation = [
 export function Navbar() {
   const pathname = usePathname();
   useTheme();
-  const { address, isConnected, isConnecting, connect, disconnect } =
-    useWallet();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [walletMenuOpen, setWalletMenuOpen] = useState(false);
 
   return (
     <motion.header
@@ -84,88 +78,7 @@ export function Navbar() {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-2">
-            {/* Theme Toggle
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleTheme}
-              className="p-2 rounded-md text-neutral-500 hover:text-white hover:bg-[#1a1a1a] transition-colors cursor-pointer"
-              aria-label="Toggle theme"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </motion.button> */}
-
-            {/* Wallet Button */}
-            {isConnected ? (
-              <div className="relative">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setWalletMenuOpen(!walletMenuOpen)}
-                  leftIcon={<Wallet className="w-3.5 h-3.5" />}
-                  rightIcon={
-                    <ChevronDown
-                      className={cn(
-                        "w-3.5 h-3.5 transition-transform",
-                        walletMenuOpen && "rotate-180",
-                      )}
-                    />
-                  }
-                >
-                  <span className="font-mono">
-                    {truncateAddress(address || "")}
-                  </span>
-                </Button>
-                <AnimatePresence>
-                  {walletMenuOpen && (
-                    <>
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-10"
-                        onClick={() => setWalletMenuOpen(false)}
-                      />
-                      <motion.div
-                        initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                        transition={{ duration: 0.15 }}
-                        className="absolute right-0 mt-2 w-52 bg-[#0a0a0a] border border-[#262626] rounded-lg shadow-2xl overflow-hidden z-20"
-                      >
-                        <div className="p-3 border-b border-[#262626]">
-                          <p className="text-[10px] text-neutral-500 uppercase tracking-wider mb-1">
-                            Connected
-                          </p>
-                          <p className="text-xs text-white font-mono">
-                            {truncateAddress(address || "", 6)}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            disconnect();
-                            setWalletMenuOpen(false);
-                          }}
-                          className="w-full px-3 py-2.5 text-left text-xs text-red-400 hover:bg-[#1a1a1a] transition-colors cursor-pointer"
-                        >
-                          Disconnect Wallet
-                        </button>
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
-              </div>
-            ) : (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={connect}
-                isLoading={isConnecting}
-                leftIcon={<Wallet className="w-3.5 h-3.5" />}
-              >
-                Connect
-              </Button>
-            )}
+            <WalletStatusWidget />
 
             {/* Mobile Menu Toggle */}
             <button

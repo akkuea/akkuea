@@ -54,6 +54,11 @@ export const propertyInfoSchema = z.object({
   availableShares: z.number().int().min(0),
   pricePerShare: positiveAmountSchema,
   images: z.array(z.string().url()).min(1, "At least one image required"),
+  splatUrl: z
+    .string()
+    .url()
+    .optional()
+    .describe("URL to 3D Gaussian Splatting file (.splat)"),
   documents: z.array(propertyDocumentSchema),
   verified: z.boolean(),
   listedAt: isoDateSchema,

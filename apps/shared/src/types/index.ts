@@ -79,6 +79,16 @@ export interface ContractValuationPayload {
 }
 export * from "./risk";
 export * from "./pagination";
+export * from "./api";
+export type {
+  GameEvent,
+  GameEventType,
+  PaginatedGameEvents,
+  PropertyBoughtEvent,
+  PropertyListedEvent,
+  PropertyTransferredEvent,
+  RentCollectedEvent,
+} from "./game-events";
 
 // ─── Akkuea Land game types (Cycle 5) ────────────────────────────────────────
 export type {
@@ -91,11 +101,8 @@ export type {
   Property,
   Player,
   Listing,
-  PropertyBoughtEvent,
-  PropertyListedEvent,
   PropertyImprovedEvent,
   RentalClaimedEvent,
-  GameEvent,
 } from "./game";
 
 export {

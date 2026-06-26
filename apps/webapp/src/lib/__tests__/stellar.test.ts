@@ -4,7 +4,7 @@ import { fetchBalance, type HorizonServerLike } from "../stellar";
 function makeServer(
   result: Promise<{ balances: Array<{ asset_type: string; balance: string }> }>,
 ): HorizonServerLike {
-  return { loadAccount: (_address: string) => result };
+  return { loadAccount: () => result };
 }
 
 describe("fetchBalance", () => {
@@ -35,11 +35,11 @@ describe("fetchBalance", () => {
     const networkError = new Error("Network timeout");
     const server = makeServer(Promise.reject(networkError));
     const result = await fetchBalance("GABC1234", "testnet", server);
-    warn.mockRestore();
     expect(result).toBe("0");
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining("[fetchBalance]"),
       networkError,
     );
+    warn.mockRestore();
   });
 });

@@ -48,8 +48,7 @@
     "eslint": "^9.39.2",
     "jest": "^30.2.0",
     "react-hook-form": "^7.71.2",
-    "soroban-client": "^1.0.1",
-    "stellar-sdk": "^13.3.0"
+    "@stellar/stellar-sdk": "^13.3.0"
   },
   "engines": {
     "node": ">=18.0.0"

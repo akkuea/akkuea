@@ -93,49 +93,22 @@ jobs:
   dependency-audit:
     name: Dependency Security Audit
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      
+
     - name: Setup Bun
       uses: oven-sh/setup-bun@v2
       with:
         bun-version: ${{ env.BUN_VERSION }}
-        
-    - name: Audit all dependencies
-      run: |
-        cd .
-        
-        # Install root dependencies
-        bun install
-        bun install --workspaces
-        
-        # Audit Bun workspaces
-        bun audit --workspaces || true
-        
-        # Audit Bun workspaces
-        cd apps/api && bun install && bun audit || true
-        cd ../shared && bun install && bun audit || true
-        
-    - name: Check for license conflicts
-      run: |
-        cd .
-        
-        # Install license checker
-        bun add -g license-checker
-        
-        # Check for license conflicts
-        echo "Checking license compatibility..."
-        
-        for workspace in apps/*/; do
-          if [ -f "$workspace/package.json" ]; then
-            echo "Checking $workspace"
-            cd "$workspace"
-            license-checker --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC' || true
-            cd ../..
-          fi
-        done
+
+    - name: Install dependencies
+      run: bun install
+
+    - name: Security audit
+      run: npx audit-ci --critical
+      continue-on-error: false
 
   performance-benchmark:
     name: Performance Benchmark

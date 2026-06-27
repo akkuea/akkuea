@@ -34,6 +34,7 @@ import {
 import { rpc as SorobanRpc } from "@stellar/stellar-sdk";
 import { GameProperty, BuildingLevel } from "@/types/game.types";
 import { getWalletKit } from "@/lib/walletKit";
+import { TIMEOUTS } from "@/lib/constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -339,7 +340,7 @@ export default function DashboardPage() {
   // SSE primary, 5 s RPC poll fallback
   const MAX_SSE_RETRIES = 3;
   const SSE_RETRY_DELAY_MS = 2_000;
-  const FALLBACK_POLL_MS = 5_000;
+  const FALLBACK_POLL_MS = TIMEOUTS.LEDGER_POLL_MS;
   const SSE_ENDPOINT = "/api/ledger/stream";
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);

@@ -8,7 +8,7 @@
  *  3. The optimistic UI update is applied immediately and rolled back on error.
  */
 
-import { describe, it, expect, vi, beforeEach } from "bun:test";
+import { describe, it, expect, vi, beforeEach, mock } from "bun:test";
 
 // ── Shared mock data ─────────────────────────────────────────────────────────
 
@@ -38,9 +38,17 @@ const mockSignTransaction = vi
   .fn()
   .mockResolvedValue({ signedTxXdr: MOCK_SIGNED_XDR });
 
+const mockGetWalletKit = vi.fn(() => ({
+  signTransaction: mockSignTransaction,
+}));
+
+const mockInitializeWalletKit = vi.fn();
+const mockResetWalletKit = vi.fn();
+
 vi.mock("@/lib/walletKit", () => ({
-  getWalletKit: () => ({ signTransaction: mockSignTransaction }),
-  initializeWalletKit: vi.fn(),
+  getWalletKit: mockGetWalletKit,
+  initializeWalletKit: mockInitializeWalletKit,
+  resetWalletKit: mockResetWalletKit,
 }));
 
 // ── Import after mocks are set up ────────────────────────────────────────────
@@ -256,6 +264,9 @@ describe("buyFromTreasury — XDR is not a hardcoded placeholder string", () => 
     expect(xdr).not.toBe(OLD_PLACEHOLDER);
     // And the builder must have been called with real arguments
     expect(buildBuyFromTreasuryXdr).toHaveBeenCalled();
+  });
+});
+
 // @ts-expect-error: jsdom types not fully compatible with bun runtime
 import { JSDOM } from "jsdom";
 
@@ -270,9 +281,7 @@ globalThis.HTMLElement = dom.window.HTMLElement as any;
 globalThis.MutationObserver = dom.window.MutationObserver as any;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
-import { type GameProperty, type BuildingLevel } from "../../types/game.types";
 
 // Preventive: hook doesn't import stellar-sdk today, but will when mockXdr stubs are replaced.
 mock.module("@stellar/stellar-sdk", () => ({
@@ -297,26 +306,13 @@ mock.module("@stellar/stellar-sdk", () => ({
   },
 }));
 
-const mockSignTransaction = vi
-  .fn()
-  .mockResolvedValue({ signedTxXdr: "signed-mock-xdr" });
-
-const mockGetWalletKit = vi.fn(() => ({
-  signTransaction: mockSignTransaction,
-}));
-
-vi.mock("@/lib/walletKit", () => ({
-  getWalletKit: mockGetWalletKit,
-  initializeWalletKit: vi.fn(),
-  resetWalletKit: vi.fn(),
-}));
 
 import { usePropertyActions } from "../usePropertyActions";
 
 const VIEWER_ADDRESS = "GDVIEWER1234567890123456789012345678901234567890123456";
 const TREASURY_ADDRESS = "GBTREASURY";
 const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
-const STUB_XDR = "AAAAAgAAAAD5r+Hl5S94D......";
+const STUB_XDR = MOCK_UNSIGNED_XDR;
 
 const baseProperty: GameProperty = {
   id: "550e8400-e29b-41d4-a716-446655440001",
@@ -443,7 +439,7 @@ describe("usePropertyActions", () => {
 
   describe("TC3 — WalletKit Initialization Drop", () => {
     it("surfaces exact init error and rolls back the optimistic update when getWalletKit returns null", async () => {
-      mockGetWalletKit.mockReturnValueOnce(null);
+      mockGetWalletKit.mockReturnValueOnce(null as any);
 
       const onPropertyUpdate = vi.fn();
 

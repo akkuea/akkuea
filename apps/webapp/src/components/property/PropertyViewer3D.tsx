@@ -88,7 +88,10 @@ export function PropertyViewer3D({
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), TIMEOUTS.FETCH_ABORT_MS);
+        const timeout = setTimeout(
+          () => controller.abort(),
+          TIMEOUTS.FETCH_ABORT_MS,
+        );
 
         try {
           const response = await fetch(splatUrl, {

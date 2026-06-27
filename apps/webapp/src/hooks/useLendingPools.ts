@@ -54,7 +54,10 @@ export function useLendingPools(
   userAddress?: string | null,
   options: UseLendingPoolsOptions = {},
 ): UseLendingPoolsReturn {
-  const { enableLiveUpdates = true, pollingInterval = TIMEOUTS.LENDING_POLL_MS } = options;
+  const {
+    enableLiveUpdates = true,
+    pollingInterval = TIMEOUTS.LENDING_POLL_MS,
+  } = options;
 
   const [pools, setPools] = useState<LendingPool[]>([]);
   const [userPositions, setUserPositions] = useState<

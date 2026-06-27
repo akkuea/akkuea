@@ -306,7 +306,6 @@ mock.module("@stellar/stellar-sdk", () => ({
   },
 }));
 
-
 import { usePropertyActions } from "../usePropertyActions";
 
 const VIEWER_ADDRESS = "GDVIEWER1234567890123456789012345678901234567890123456";
@@ -357,7 +356,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -388,7 +392,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       expect(result.current.pendingAction).toBeNull();
@@ -444,7 +453,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -471,7 +485,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -527,7 +546,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -545,7 +569,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -571,7 +600,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(level1Property, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          level1Property,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -589,7 +623,9 @@ describe("usePropertyActions", () => {
         address: VIEWER_ADDRESS,
       });
 
-      expect(result.current.success).toBe("Improve Property completed successfully!");
+      expect(result.current.success).toBe(
+        "Improve Property completed successfully!",
+      );
       expect(result.current.error).toBeNull();
       expect(result.current.pendingAction).toBeNull();
     });
@@ -600,7 +636,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -618,7 +659,9 @@ describe("usePropertyActions", () => {
         address: VIEWER_ADDRESS,
       });
 
-      expect(result.current.success).toBe("List for Sale completed successfully!");
+      expect(result.current.success).toBe(
+        "List for Sale completed successfully!",
+      );
       expect(result.current.error).toBeNull();
       expect(result.current.pendingAction).toBeNull();
     });
@@ -633,7 +676,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(incomeProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          incomeProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -650,7 +698,9 @@ describe("usePropertyActions", () => {
         address: VIEWER_ADDRESS,
       });
 
-      expect(result.current.success).toBe("Claim Income completed successfully!");
+      expect(result.current.success).toBe(
+        "Claim Income completed successfully!",
+      );
       expect(result.current.error).toBeNull();
       expect(result.current.pendingAction).toBeNull();
     });
@@ -659,7 +709,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -683,7 +738,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(listedProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          listedProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -701,7 +761,9 @@ describe("usePropertyActions", () => {
         address: VIEWER_ADDRESS,
       });
 
-      expect(result.current.success).toBe("Buy Property completed successfully!");
+      expect(result.current.success).toBe(
+        "Buy Property completed successfully!",
+      );
       expect(result.current.error).toBeNull();
       expect(result.current.pendingAction).toBeNull();
     });
@@ -712,7 +774,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {
@@ -733,7 +800,12 @@ describe("usePropertyActions", () => {
       const onPropertyUpdate = vi.fn();
 
       const { result } = renderHook(() =>
-        usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
       );
 
       await act(async () => {

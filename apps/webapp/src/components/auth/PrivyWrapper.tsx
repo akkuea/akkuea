@@ -48,7 +48,10 @@ async function ensureStellarWallet(
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TIMEOUTS.AUTH_REFRESH_MS);
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    TIMEOUTS.AUTH_REFRESH_MS,
+  );
 
   try {
     const res = await fetch("/api/privy/create-wallet", {

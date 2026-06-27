@@ -8,6 +8,7 @@ import type {
 } from "@real-estate-defi/shared";
 import { lendingApi } from "@/services/api";
 import { useLiveUpdates, type ConnectionStatus } from "@/hooks/useLiveUpdates";
+import { TIMEOUTS } from "@/lib/constants";
 
 export interface UserPositions {
   deposits: DepositPosition[];
@@ -53,7 +54,7 @@ export function useLendingPools(
   userAddress?: string | null,
   options: UseLendingPoolsOptions = {},
 ): UseLendingPoolsReturn {
-  const { enableLiveUpdates = true, pollingInterval = 30000 } = options;
+  const { enableLiveUpdates = true, pollingInterval = TIMEOUTS.LENDING_POLL_MS } = options;
 
   const [pools, setPools] = useState<LendingPool[]>([]);
   const [userPositions, setUserPositions] = useState<

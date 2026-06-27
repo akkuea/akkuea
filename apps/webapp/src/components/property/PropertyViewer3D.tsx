@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { AlertCircle, Maximize2, RotateCcw, Copy } from "lucide-react";
 import { Button } from "@/components/ui";
+import { TIMEOUTS } from "@/lib/constants";
 
 export interface PropertyViewer3DProps {
   splatUrl: string;
@@ -87,7 +88,7 @@ export function PropertyViewer3D({
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 120000);
+        const timeout = setTimeout(() => controller.abort(), TIMEOUTS.FETCH_ABORT_MS);
 
         try {
           const response = await fetch(splatUrl, {

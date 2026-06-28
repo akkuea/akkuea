@@ -46,7 +46,7 @@ export function PropertyDetail({
           <PropertyViewer3DDynamic
             splatUrl={property.splatUrl}
             propertyName={property.name}
-            onError={(error) => {
+            onError={(error: string) => {
               console.error("3D viewer error:", error);
               setViewer3DEnabled(false);
             }}

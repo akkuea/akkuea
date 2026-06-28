@@ -51,6 +51,17 @@ export function PropertyViewer3D({
   }, []);
 
   useEffect(() => {
+    setState((prev) => ({
+      ...prev,
+      hasError: false,
+      isLoading: true,
+      errorMessage: "",
+    }));
+  }, [retryTrigger, splatUrl]);
+
+  useEffect(() => {
+    if (!state.isLoading || state.hasError) return;
+
     if (!containerRef.current || !checkWebGLSupport()) {
       setState((prev) => ({
         ...prev,
@@ -83,8 +94,6 @@ export function PropertyViewer3D({
 
     const initializeViewer = async () => {
       try {
-        setState((prev) => ({ ...prev, isLoading: true, hasError: false, errorMessage: "" }));
-
         const canvas = canvasRef.current;
         if (!canvas) {
           throw new Error("Canvas element not found");
@@ -204,7 +213,14 @@ export function PropertyViewer3D({
       controller.abort();
       window.removeEventListener("resize", handleResize);
     };
-  }, [splatUrl, onLoadComplete, onError, checkWebGLSupport, retryTrigger]);
+  }, [
+    state.isLoading,
+    state.hasError,
+    splatUrl,
+    onLoadComplete,
+    onError,
+    checkWebGLSupport,
+  ]);
 
   const handleFullscreen = useCallback(() => {
     if (canvasRef.current) {

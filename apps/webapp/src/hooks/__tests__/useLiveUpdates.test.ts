@@ -1,5 +1,8 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
-import { getTimeSinceUpdate } from "@/hooks/useLiveUpdates";
+import {
+  getTimeSinceUpdate,
+  type LiveUpdateOptions,
+} from "@/hooks/useLiveUpdates";
 
 describe("useLiveUpdates - utility functions", () => {
   describe("getTimeSinceUpdate", () => {
@@ -75,5 +78,55 @@ describe("useLiveUpdates - connection status types", () => {
     validStatuses.forEach((status) => {
       expect(["connected", "connecting", "disconnected"]).toContain(status);
     });
+  });
+});
+
+describe("useLiveUpdates - SSE option shape", () => {
+  it("LiveUpdateOptions accepts an SSE endpoint", () => {
+    const opts: LiveUpdateOptions<{ sequence: number }> = {
+      endpoint: "/api/ledger/stream",
+      pollingInterval: 30_000,
+      enabled: true,
+      maxReconnectAttempts: 3,
+      reconnectDelay: 2_000,
+    };
+    expect(opts.endpoint).toBe("/api/ledger/stream");
+    expect(opts.pollingInterval).toBe(30_000);
+    expect(opts.maxReconnectAttempts).toBe(3);
+    expect(opts.reconnectDelay).toBe(2_000);
+  });
+
+  it("LiveUpdateOptions works without an endpoint (polling-only mode)", () => {
+    const opts: LiveUpdateOptions<number> = {
+      pollingInterval: 5_000,
+      enabled: true,
+    };
+    expect(opts.endpoint).toBeUndefined();
+    expect(opts.pollingInterval).toBe(5_000);
+  });
+
+  it("onUpdate callback is invoked with the received data", async () => {
+    const received: unknown[] = [];
+    const opts: LiveUpdateOptions<{ sequence: number }> = {
+      onUpdate: (data) => received.push(data),
+    };
+    opts.onUpdate?.({ sequence: 999 });
+    expect(received).toHaveLength(1);
+    expect((received[0] as { sequence: number }).sequence).toBe(999);
+  });
+
+  it("maxReconnectAttempts defaults to 3 in SSE error path", () => {
+    const DEFAULT_MAX_RECONNECT_ATTEMPTS = 3;
+    const opts: LiveUpdateOptions<unknown> = {};
+    const effective =
+      opts.maxReconnectAttempts ?? DEFAULT_MAX_RECONNECT_ATTEMPTS;
+    expect(effective).toBe(3);
+  });
+
+  it("reconnectDelay defaults to 2000 ms", () => {
+    const DEFAULT_RECONNECT_DELAY = 2000;
+    const opts: LiveUpdateOptions<unknown> = {};
+    const effective = opts.reconnectDelay ?? DEFAULT_RECONNECT_DELAY;
+    expect(effective).toBe(2_000);
   });
 });

@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   Coins,
@@ -28,6 +34,7 @@ import {
 import { rpc as SorobanRpc } from "@stellar/stellar-sdk";
 import { GameProperty, BuildingLevel } from "@/types/game.types";
 import { getWalletKit } from "@/lib/walletKit";
+import { TIMEOUTS } from "@/lib/constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,8 +90,10 @@ const EVENT_LABELS: Record<EventType, string> = {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const VIEWER_ADDRESS = process.env.NEXT_PUBLIC_DEFAULT_VIEWER_ADDRESS ?? '';
-const SOROBAN_RPC_URL = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ?? 'https://soroban-testnet.stellar.org';
+const VIEWER_ADDRESS = process.env.NEXT_PUBLIC_DEFAULT_VIEWER_ADDRESS ?? "";
+const SOROBAN_RPC_URL =
+  process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
+  "https://soroban-testnet.stellar.org";
 const EVENTS_PAGE_SIZE = 5;
 
 // ─── Mock data ─────────────────────────────────────────────────────────────────
@@ -330,8 +339,17 @@ export default function DashboardPage() {
   );
   const [eventPage, setEventPage] = useState(1);
 
-  // Poll the Soroban RPC for the latest ledger every 5 s so accrued income
-  // is always computed against a fresh on-chain sequence number.
+  // SSE primary, 5 s RPC poll fallback
+  const MAX_SSE_RETRIES = 3;
+  const SSE_RETRY_DELAY_MS = 2_000;
+  const FALLBACK_POLL_MS = TIMEOUTS.LEDGER_POLL_MS;
+  const SSE_ENDPOINT = "/api/ledger/stream";
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const sseRetriesRef = useRef(0);
+  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     const server = new SorobanRpc.Server(SOROBAN_RPC_URL);
 
@@ -340,16 +358,84 @@ export default function DashboardPage() {
         const { sequence } = await server.getLatestLedger();
         setCurrentLedger(sequence);
       } catch {
-        // keep the current value on transient network errors
+        /* keep current value */
       }
     }
 
-    fetchLatestLedger();
-    const id = setInterval(fetchLatestLedger, 5_000);
-    return () => clearInterval(id);
+    function startPolling() {
+      if (intervalRef.current) return;
+      void fetchLatestLedger();
+      intervalRef.current = setInterval(fetchLatestLedger, FALLBACK_POLL_MS);
+    }
+
+    function stopPolling() {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+
+    function closeSSE() {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    }
+
+    function connectSSE() {
+      closeSSE();
+      if (typeof window === "undefined") {
+        startPolling();
+        return;
+      }
+
+      try {
+        const es = new EventSource(SSE_ENDPOINT);
+        eventSourceRef.current = es;
+
+        es.onopen = () => {
+          sseRetriesRef.current = 0;
+          stopPolling();
+        };
+
+        es.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data) as { sequence: number };
+            setCurrentLedger(data.sequence);
+          } catch {
+            /* ignore malformed */
+          }
+        };
+
+        es.onerror = () => {
+          closeSSE();
+          if (sseRetriesRef.current < MAX_SSE_RETRIES) {
+            sseRetriesRef.current += 1;
+            retryTimeoutRef.current = setTimeout(
+              connectSSE,
+              SSE_RETRY_DELAY_MS,
+            );
+          } else {
+            startPolling(); // fallback after max retries
+          }
+        };
+      } catch {
+        startPolling();
+      }
+    }
+
+    void fetchLatestLedger();
+    connectSSE();
+
+    return () => {
+      closeSSE();
+      stopPolling();
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Recompute accrued income from lastClaimedLedger on every ledger tick.
+  // Recompute accrued income on every ledger tick
   const propertiesWithIncome = useMemo(
     () =>
       properties.map((p) => ({

@@ -122,9 +122,7 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
               <span className="font-bold text-rose-200 block mb-0.5">
                 Transaction Error
               </span>
-              <span className="text-rose-300/90 leading-relaxed">
-                {error}
-              </span>
+              <span className="text-rose-300/90 leading-relaxed">{error}</span>
             </div>
           </div>
         )}

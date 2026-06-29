@@ -5,11 +5,13 @@ on:
     branches: [main, develop]
     paths:
       - "apps/webapp/**"
+      - "apps/akkuea-land/**"
       - ".github/workflows/webapp-ci.yml"
   pull_request:
     branches: [main, develop]
     paths:
       - "apps/webapp/**"
+      - "apps/akkuea-land/**"
       - ".github/workflows/webapp-ci.yml"
 
 env:

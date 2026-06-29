@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { z, ZodSchema, ZodError } from 'zod';
+import { logger } from '../services/logger';
 
 /**
  * Format Zod errors into a structured response
@@ -212,7 +213,7 @@ export function validate<
 
             result.validatedBody = bodyResult.data;
           } catch (e) {
-            console.error('[validation.ts] Error parsing JSON body:', e);
+            logger.error('Error parsing JSON body', e);
             result.validationError = {
               status: 400,
               code: 'INVALID_JSON',

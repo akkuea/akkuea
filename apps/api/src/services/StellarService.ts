@@ -241,7 +241,7 @@ export class StellarService {
       fee: '100',
       networkPassphrase: this.networkPassphrase,
     })
-      .addOperation(toOperation(contract.call(method, ...(args as any[]))))
+      .addOperation(toOperation(contract.call(method, ...(args as xdr.ScVal[]))))
       .setTimeout(30)
       .build();
 

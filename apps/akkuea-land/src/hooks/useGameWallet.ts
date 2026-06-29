@@ -32,7 +32,6 @@ export function useGameWallet() {
   const signAndSubmitTx = async (xdr: string) => {
     // Simulate transaction submission delay
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log("Simulating transaction submission for XDR:", xdr);
   };
 
   return {

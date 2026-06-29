@@ -114,8 +114,6 @@ export default function KYCForm() {
     try {
       setIsSubmitting(true);
 
-      console.log("Submitting data:", data);
-
       //send to API
       const formData = new FormData();
 

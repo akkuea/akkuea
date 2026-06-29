@@ -1,8 +1,8 @@
 import { db } from '../db';
 import { eq, type SQL, type InferSelectModel, type InferInsertModel } from 'drizzle-orm';
-import type { PgTable, PgColumn } from 'drizzle-orm/pg-core';
+import { type AnyPgTable, type PgColumn } from 'drizzle-orm/pg-core';
 
-type TableWithId = PgTable & {
+type TableWithId = AnyPgTable & {
   id: PgColumn;
 };
 
@@ -14,16 +14,14 @@ export abstract class BaseRepository<
   constructor(protected readonly table: TTable) {}
 
   async findAll(): Promise<TSelect[]> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const results = await db.select().from(this.table as any);
+    const results = await db.select().from(this.table as AnyPgTable);
     return results as TSelect[];
   }
 
   async findById(id: string): Promise<TSelect | undefined> {
     const results = await db
       .select()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .from(this.table as any)
+      .from(this.table as AnyPgTable)
       .where(eq(this.table.id, id));
     return results[0] as TSelect | undefined;
   }
@@ -31,8 +29,7 @@ export abstract class BaseRepository<
   async findWhere(condition: SQL): Promise<TSelect[]> {
     const results = await db
       .select()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .from(this.table as any)
+      .from(this.table as AnyPgTable)
       .where(condition);
     return results as TSelect[];
   }
@@ -40,8 +37,7 @@ export abstract class BaseRepository<
   async create(data: TInsert): Promise<TSelect> {
     const results = await db
       .insert(this.table)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .values(data as any)
+      .values(data as InferInsertModel<TTable>)
       .returning();
     return results[0] as TSelect;
   }
@@ -49,8 +45,7 @@ export abstract class BaseRepository<
   async createMany(data: TInsert[]): Promise<TSelect[]> {
     const results = await db
       .insert(this.table)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .values(data as any)
+      .values(data as InferInsertModel<TTable>[])
       .returning();
     return results as TSelect[];
   }
@@ -58,8 +53,7 @@ export abstract class BaseRepository<
   async update(id: string, data: Partial<TInsert>): Promise<TSelect | undefined> {
     const results = await db
       .update(this.table)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .set(data as any)
+      .set(data as Partial<InferInsertModel<TTable>>)
       .where(eq(this.table.id, id))
       .returning();
     return results[0] as TSelect | undefined;
@@ -71,8 +65,7 @@ export abstract class BaseRepository<
   }
 
   async count(): Promise<number> {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const results = await db.select().from(this.table as any);
+    const results = await db.select().from(this.table as AnyPgTable);
     return results.length;
   }
 }

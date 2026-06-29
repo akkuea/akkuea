@@ -12,7 +12,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 export default function KYCForm() {
   const FORM_STORAGE_KEY = "kyc_form";
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(FORM_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.currentStep === "number") return parsed.currentStep;
+      }
+    } catch {
+      localStorage.removeItem(FORM_STORAGE_KEY);
+    }
+    return 1;
+  });
   const [stepError, setStepError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -26,29 +37,18 @@ export default function KYCForm() {
   const { handleSubmit, control, reset, trigger, getValues } = methods;
   const formValues = useWatch({ control });
 
-  // load saved component on mount
+  // restore saved form values on mount
   useEffect(() => {
     const saved = localStorage.getItem(FORM_STORAGE_KEY);
-
     if (!saved) return;
-
-    const timer = setTimeout(() => {
-      try {
-        const parsed = JSON.parse(saved);
-
-        if (parsed.formValues) {
-          reset(parsed.formValues);
-        }
-
-        if (typeof parsed.currentStep === "number") {
-          setCurrentStep(parsed.currentStep);
-        }
-      } catch {
-        console.error("Invalid form data");
+    try {
+      const parsed = JSON.parse(saved);
+      if (parsed.formValues) {
+        reset(parsed.formValues);
       }
-    }, 0);
-
-    return () => clearTimeout(timer);
+    } catch {
+      localStorage.removeItem(FORM_STORAGE_KEY);
+    }
   }, [reset]);
 
   // Auto-save form changes

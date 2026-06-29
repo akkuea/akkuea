@@ -7,7 +7,7 @@ interface WalletStore {
   setAddress: (address: string | null) => void;
 }
 
-const DEFAULT_ADDRESS = process.env.NEXT_PUBLIC_DEFAULT_VIEWER_ADDRESS ?? '';
+const DEFAULT_ADDRESS = process.env.NEXT_PUBLIC_DEFAULT_VIEWER_ADDRESS ?? "";
 
 export const useWalletStore = create<WalletStore>((set) => ({
   isConnected: true, // Default to true for the sandbox environment

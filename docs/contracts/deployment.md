@@ -358,12 +358,12 @@ All four Akkuea Land game contracts were built with `stellar contract build` (ta
 - **Deployed on**: 2026-06-24
 - **Source of truth**: [`apps/shared/src/contracts/game-contracts.testnet.json`](../../apps/shared/src/contracts/game-contracts.testnet.json)
 
-| Contract             | Contract ID                                                  | Deploy tx                                                          | Init tx                                                            |
-| -------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| `GAME_PROPERTY_NFT`  | `CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE`  | `2b982bdbc7e29c7f334d35d57f9566d124fd9b30722f551fff23df310d298fc5` | `889d9a0f7da7c543cc6abeb913506eb55b6b31f67177c4d3f2fc18670c81bbb2` |
-| `GAME_LAND_TOKEN`    | `CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K`  | `3a7619ea0d637ac60f2d6c43dfac10cc7810c663b3ea65b84f54d7b1f07cbdf7` | `1e3d8961cce31d0d5016705ef1f8aecf78761ef1203136cb41ccc6c08729be53` |
-| `GAME_MARKETPLACE`   | `CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3`  | `a84eabafffc0bf75bb75676c8add0616ff970cda82c75f2ebf439ca14528fbbb` | `4fbaa0df4a51c266fb3258490b202cd962209b04c495264d85096da5ef623560` |
-| `GAME_ENGINE`        | `CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH`  | `fc8bcb20360d909ea4fbd7187edadadf3ed25f3aa29810e5b806917318d0cafa` | `33641f100f7c6d23452a417b2d4d16a111554398c69aa5cab969f224a98a7714` |
+| Contract            | Contract ID                                                | Deploy tx                                                          | Init tx                                                            |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `GAME_PROPERTY_NFT` | `CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE` | `2b982bdbc7e29c7f334d35d57f9566d124fd9b30722f551fff23df310d298fc5` | `889d9a0f7da7c543cc6abeb913506eb55b6b31f67177c4d3f2fc18670c81bbb2` |
+| `GAME_LAND_TOKEN`   | `CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K` | `3a7619ea0d637ac60f2d6c43dfac10cc7810c663b3ea65b84f54d7b1f07cbdf7` | `1e3d8961cce31d0d5016705ef1f8aecf78761ef1203136cb41ccc6c08729be53` |
+| `GAME_MARKETPLACE`  | `CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3` | `a84eabafffc0bf75bb75676c8add0616ff970cda82c75f2ebf439ca14528fbbb` | `4fbaa0df4a51c266fb3258490b202cd962209b04c495264d85096da5ef623560` |
+| `GAME_ENGINE`       | `CBTPPGX6LT2EPKR7JD7LLUB23E6HI5EFQRXKV3VQNZ6QWJTJ3EZ76RSH` | `fc8bcb20360d909ea4fbd7187edadadf3ed25f3aa29810e5b806917318d0cafa` | `33641f100f7c6d23452a417b2d4d16a111554398c69aa5cab969f224a98a7714` |
 
 ### Initialization arguments
 
@@ -507,13 +507,17 @@ stellar contract deploy --wasm "$WASM" --source akkuea-deployer --network testne
 Deploying smart contracts to Stellar mainnet requires a rigorous process to ensure security, compliance, and platform integrity.
 
 ### 1. Required Approvals
+
 Mainnet deployments are restricted and must be formally approved by:
+
 - **Lead Smart Contract Engineer**: Verifies code correctness and alignment with architectural specifications.
 - **Lead Security Auditor**: Confirms all vulnerabilities identified in audits have been resolved.
 - **Product / Governance Multisig Signers**: Requires M-of-N signatures from the authorized multisig key holders to authorize transaction submission and execute initial setup.
 
 ### 2. Pre-Deployment Checklist
+
 Before initiating a mainnet deployment, ensure all items on this checklist are met:
+
 - [ ] **Security Audit**: An external security audit of the smart contracts must be completed with all critical and high-severity issues fixed and verified.
 - [ ] **Test Coverage**: Contract code must have 100% unit and integration test coverage. All test suites in the monorepo must pass successfully.
 - [ ] **Smoke Tests**: Run the full smoke test suite on testnet to verify end-to-end integration with the API and frontend.
@@ -521,7 +525,9 @@ Before initiating a mainnet deployment, ensure all items on this checklist are m
 - [ ] **Account Funding**: Ensure the deployer account has sufficient XLM balance (at least 20-50 XLM to cover fee surges and storage deposits).
 
 ### 3. Post-Deployment: Populating contracts.mainnet.json
+
 Once the contracts are deployed on mainnet, record the contract IDs in the mainnet artifact:
+
 1. Locate `apps/shared/src/contracts.mainnet.json`.
 2. Populate the keys with the generated contract IDs (ensuring they start with `C` and are 56 characters long):
    ```json
@@ -538,7 +544,9 @@ Once the contracts are deployed on mainnet, record the contract IDs in the mainn
 3. Commit the changes and open a pull request.
 
 ### 4. Verifying Mainnet Contracts
+
 To verify the contract is successfully deployed and running on mainnet:
+
 1. Invoke a read-only getter function to ensure the contract executes properly on the mainnet network:
    ```bash
    stellar contract invoke \
@@ -550,4 +558,3 @@ To verify the contract is successfully deployed and running on mainnet:
    ```
 2. Verify the contract's uploaded WASM hash and instance configuration on a public Stellar explorer such as:
    - Stellar Expert: `https://stellar.expert/explorer/public/contract/<CONTRACT_ID>`
-

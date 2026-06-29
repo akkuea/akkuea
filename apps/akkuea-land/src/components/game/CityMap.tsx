@@ -25,6 +25,72 @@ import { useMapEvents } from "../../hooks/useMapEvents";
 
 const FLASH_DURATION = 700; // ms — matches CSS animation duration
 
+// ── PropertyTile ─────────────────────────────────────────────────────────────
+
+interface PropertyTileProps {
+    property: GameProperty;
+    isSelected: boolean;
+}
+
+const PropertyTile = React.memo(function PropertyTile({
+    property,
+    isSelected,
+}: PropertyTileProps) {
+    const { row, col } = getGridCoords(property.id);
+    const bgColor = addressToHSL(property.owner);
+    const glowColor = addressToGlow(property.owner);
+    const isTreasury = !property.owner || property.owner === "GBTREASURY";
+    const isUnowned = !property.owner;
+
+    const tooltipLines = [
+        `📍 (${row}, ${col})`,
+        `👤 ${abbreviateAddress(property.owner)}`,
+        `🏗 ${BUILDING_NAMES[property.buildingLevel]}`,
+    ];
+    if (property.isListed) {
+        tooltipLines.push(`💰 ${property.pricePerShare} LAND`);
+    }
+    const tooltip = tooltipLines.join("\n");
+
+    const tileClasses = ["city-tile", isSelected && "tile-selected"]
+        .filter(Boolean)
+        .join(" ");
+
+    return (
+        <div
+            key={property.id}
+            data-property-id={property.id}
+            data-tooltip={tooltip}
+            className={tileClasses}
+            style={
+                {
+                    backgroundColor: isUnowned ? "var(--tile-empty)" : bgColor,
+                    "--tile-glow-color": glowColor,
+                    opacity: isUnowned ? 0.45 : isTreasury ? 0.7 : 1,
+                } as React.CSSProperties
+            }
+            role="gridcell"
+            aria-label={`Tile ${row},${col} — ${abbreviateAddress(property.owner)} — ${BUILDING_NAMES[property.buildingLevel]}${property.isListed ? " — For Sale" : ""}`}
+        >
+            {property.buildingLevel > 0 && (
+                <span
+                    className={`tile-badge tile-badge-${property.buildingLevel}`}
+                >
+                    {BUILDING_LABELS[property.buildingLevel]}
+                </span>
+            )}
+
+            {property.buildingLevel === 0 && !isUnowned && !isTreasury && (
+                <span className="tile-badge tile-badge-0">
+                    {BUILDING_LABELS[0]}
+                </span>
+            )}
+
+            {property.isListed && <span className="tile-listed-dot" />}
+        </div>
+    );
+});
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function CityMap() {

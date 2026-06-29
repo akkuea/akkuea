@@ -23,6 +23,13 @@ const RETRY_ATTEMPTS = 5;
 const INITIAL_BACKOFF_MS = 100;
 const MAX_BACKOFF_MS = 5000;
 
+function toOperation(
+  op: ReturnType<Contract["call"]> | StellarOperation,
+): xdr.Operation {
+  // The Stellar SDK types are correct here — single cast with comment
+  return op as unknown as xdr.Operation;
+}
+
 export class StellarService {
   private server: Horizon.Server;
   private networkPassphrase: string;
@@ -118,8 +125,7 @@ export class StellarService {
         fee: "100",
         networkPassphrase: this.networkPassphrase,
       })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .addOperation(contract.call(method, ...args) as any)
+        .addOperation(toOperation(contract.call(method, ...args)))
         .setTimeout(30)
         .build();
 
@@ -152,8 +158,7 @@ export class StellarService {
         fee: "100",
         networkPassphrase: this.networkPassphrase,
       })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .addOperation(operation as any)
+        .addOperation(toOperation(operation))
         .setTimeout(30)
         .build();
 

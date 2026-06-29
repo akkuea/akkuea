@@ -162,7 +162,7 @@ export async function buildSorobanTx(opts: BuildTxOptions): Promise<string> {
   }
 
   // 4. Assemble — injects soroban data + resource fee bump
-  const assembled = SorobanRpc.assembleTransaction(tx, simResult);
+  const assembled = SorobanRpc.assembleTransaction(tx, simResult) as any;
   return assembled.toXDR();
 }
 

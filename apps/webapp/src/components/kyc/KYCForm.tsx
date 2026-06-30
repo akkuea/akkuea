@@ -29,8 +29,7 @@ export default function KYCForm() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const methods = useForm<KycFormData>({
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(kycSchema as any),
+    resolver: zodResolver(kycSchema),
     mode: "onBlur",
   });
 

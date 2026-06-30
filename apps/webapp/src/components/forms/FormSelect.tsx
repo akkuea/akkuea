@@ -1,21 +1,30 @@
 "use client";
 
 import React from "react";
-import type { FieldErrors, FieldValues, Path } from "react-hook-form";
+import type { FieldError, FieldErrors, FieldValues, Path } from "react-hook-form";
 import { useFormContext } from "react-hook-form";
 import { cn } from "@/lib/utils";
+
+interface NestedErrorMap {
+  [key: string]: FieldError | NestedErrorMap | undefined;
+}
+
+type NestedErrorNode = FieldError | NestedErrorMap;
 
 function getErrorMessage<TFieldValues extends FieldValues>(
   errors: FieldErrors<TFieldValues>,
   name: Path<TFieldValues>,
 ) {
   const parts = String(name).split(".");
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let current: any = errors;
+  let current: NestedErrorNode | undefined = errors as NestedErrorNode;
   for (const part of parts) {
-    current = current?.[part];
+    if (!current || "message" in current) {
+      return undefined;
+    }
+
+    current = (current as NestedErrorMap)[part];
   }
-  const msg = current?.message;
+  const msg = current && "message" in current ? current.message : undefined;
   return typeof msg === "string" ? msg : undefined;
 }
 

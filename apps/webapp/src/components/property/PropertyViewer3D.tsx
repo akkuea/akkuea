@@ -114,8 +114,6 @@ export function PropertyViewer3D({
         gl.clearColor(0.05, 0.05, 0.05, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-        const timeout = setTimeout(() => controller.abort(), 120000);
-        const controller = new AbortController();
         const timeout = setTimeout(
           () => controller.abort(),
           TIMEOUTS.FETCH_ABORT_MS,

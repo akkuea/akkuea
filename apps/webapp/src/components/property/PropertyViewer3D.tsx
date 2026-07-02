@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { AlertCircle, Maximize2, RotateCcw, Copy, RefreshCw } from "lucide-react";
+import {
+  AlertCircle,
+  Maximize2,
+  RotateCcw,
+  Copy,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui";
 import { TIMEOUTS } from "@/lib/constants";
 
@@ -39,6 +45,17 @@ export function PropertyViewer3D({
 
   const [retryTrigger, setRetryTrigger] = useState(0);
 
+  const [prevResetKey, setPrevResetKey] = useState([retryTrigger, splatUrl]);
+  if (prevResetKey[0] !== retryTrigger || prevResetKey[1] !== splatUrl) {
+    setPrevResetKey([retryTrigger, splatUrl]);
+    setState((prev) => ({
+      ...prev,
+      hasError: false,
+      isLoading: true,
+      errorMessage: "",
+    }));
+  }
+
   const checkWebGLSupport = useCallback((): boolean => {
     try {
       const canvas = document.createElement("canvas");
@@ -50,15 +67,6 @@ export function PropertyViewer3D({
       return false;
     }
   }, []);
-
-  useEffect(() => {
-    setState((prev) => ({
-      ...prev,
-      hasError: false,
-      isLoading: true,
-      errorMessage: "",
-    }));
-  }, [retryTrigger, splatUrl]);
 
   useEffect(() => {
     if (!state.isLoading || state.hasError) return;

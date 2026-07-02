@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { AlertCircle, Maximize2, RotateCcw, Copy, RefreshCw } from "lucide-react";
+import {
+  AlertCircle,
+  Maximize2,
+  RotateCcw,
+  Copy,
+  RefreshCw,
+} from "lucide-react";
 import { Button } from "@/components/ui";
 import { TIMEOUTS } from "@/lib/constants";
 

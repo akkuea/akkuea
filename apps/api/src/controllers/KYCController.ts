@@ -107,7 +107,10 @@ export class KYCController {
         throw ApiError.notFound('User not found');
       }
 
-      const typeCheck = StorageService.isAllowedFileType(file.name, file.type);
+      // Read the file buffer first so it can be used for magic-byte inspection
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const typeCheck = await StorageService.isAllowedFileType(file.name, file.type, buffer);
       if (!typeCheck.allowed) {
         throw ApiError.badRequest(typeCheck.error!);
       }
@@ -122,8 +125,6 @@ export class KYCController {
 
       const existing = await kycRepository.findByUserIdAndType(userId, dbDocType);
       let documentId: string;
-
-      const buffer = Buffer.from(await file.arrayBuffer());
 
       if (existing) {
         await storage.deleteByRelativePath(existing.fileUrl);

@@ -139,6 +139,60 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       expect(body.message?.toLowerCase()).toMatch(/invalid file type|only pdf|jpg|png/);
     });
 
+    it('returns 400 for a renamed EXE with a .pdf extension (magic-byte check)', async () => {
+      // The file has a valid .pdf extension and MIME type but EXE magic bytes.
+      // Without magic-byte validation this would have slipped through.
+      const app = createApp();
+      const formData = new FormData();
+      formData.set('userId', testUserId);
+      formData.set('documentType', 'passport');
+      // MZ header — Windows PE executable
+      const exeMagic = new Uint8Array([
+        0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00,
+        0x04, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00,
+      ]);
+      formData.set(
+        'file',
+        new File([exeMagic], 'passport.pdf', { type: 'application/pdf' }),
+      );
+      const response = await app.handle(
+        new Request('http://localhost/kyc/upload', {
+          method: 'POST',
+          headers: { 'x-test-bypass-ratelimit': 'true', Authorization: `Bearer ${testToken}` },
+          body: formData,
+        }),
+      );
+      expect(response.status).toBe(400);
+      const body = (await response.json()) as { message?: string };
+      expect(body.message?.toLowerCase()).toMatch(/invalid file type|only pdf|jpg|png/);
+    });
+
+    it('returns 400 for a renamed ZIP with a .jpg extension (magic-byte check)', async () => {
+      const app = createApp();
+      const formData = new FormData();
+      formData.set('userId', testUserId);
+      formData.set('documentType', 'passport');
+      // PK header — ZIP archive
+      const zipMagic = new Uint8Array([
+        0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      ]);
+      formData.set(
+        'file',
+        new File([zipMagic], 'photo.jpg', { type: 'image/jpeg' }),
+      );
+      const response = await app.handle(
+        new Request('http://localhost/kyc/upload', {
+          method: 'POST',
+          headers: { 'x-test-bypass-ratelimit': 'true', Authorization: `Bearer ${testToken}` },
+          body: formData,
+        }),
+      );
+      expect(response.status).toBe(400);
+      const body = (await response.json()) as { message?: string };
+      expect(body.message?.toLowerCase()).toMatch(/invalid file type|only pdf|jpg|png/);
+    });
+
     it.skipIf(skipIfNoDatabase)('returns 400 for oversized file (over 10MB)', async () => {
       const app = createApp();
       const formData = new FormData();

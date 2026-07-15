@@ -28,67 +28,90 @@ const FLASH_DURATION = 700; // ms — matches CSS animation duration
 // ── PropertyTile ─────────────────────────────────────────────────────────────
 
 interface PropertyTileProps {
-    property: GameProperty;
-    isSelected: boolean;
+  property: GameProperty;
+  isSelected: boolean;
+  isFocusable: boolean;
+  onFocus: (propertyId: string) => void;
+}
+
+const GRID_SIZE = 20;
+
+function getTileStatus(property: GameProperty): string {
+  if (!property.owner) return "Unowned";
+  if (property.owner === "GBTREASURY") return "Treasury";
+  return `Owned by ${abbreviateAddress(property.owner)}`;
+}
+
+function getTileAriaLabel(property: GameProperty): string {
+  const { row, col } = getGridCoords(property.id);
+  const status = getTileStatus(property);
+  const saleStatus = property.isListed
+    ? `, listed for ${property.pricePerShare} LAND per share`
+    : ", not listed for sale";
+
+  return `${property.name}, row ${row + 1}, column ${col + 1}, ${status}, ${BUILDING_NAMES[property.buildingLevel]}${saleStatus}`;
 }
 
 const PropertyTile = React.memo(function PropertyTile({
-    property,
-    isSelected,
+  property,
+  isSelected,
+  isFocusable,
+  onFocus,
 }: PropertyTileProps) {
-    const { row, col } = getGridCoords(property.id);
-    const bgColor = addressToHSL(property.owner);
-    const glowColor = addressToGlow(property.owner);
-    const isTreasury = !property.owner || property.owner === "GBTREASURY";
-    const isUnowned = !property.owner;
+  const { row, col } = getGridCoords(property.id);
+  const bgColor = addressToHSL(property.owner);
+  const glowColor = addressToGlow(property.owner);
+  const isTreasury = !property.owner || property.owner === "GBTREASURY";
+  const isUnowned = !property.owner;
 
-    const tooltipLines = [
-        `📍 (${row}, ${col})`,
-        `👤 ${abbreviateAddress(property.owner)}`,
-        `🏗 ${BUILDING_NAMES[property.buildingLevel]}`,
-    ];
-    if (property.isListed) {
-        tooltipLines.push(`💰 ${property.pricePerShare} LAND`);
-    }
-    const tooltip = tooltipLines.join("\n");
+  const tooltipLines = [
+    `📍 (${row}, ${col})`,
+    `👤 ${abbreviateAddress(property.owner)}`,
+    `🏗 ${BUILDING_NAMES[property.buildingLevel]}`,
+  ];
+  if (property.isListed) {
+    tooltipLines.push(`💰 ${property.pricePerShare} LAND`);
+  }
+  const tooltip = tooltipLines.join("\n");
 
-    const tileClasses = ["city-tile", isSelected && "tile-selected"]
-        .filter(Boolean)
-        .join(" ");
+  const tileClasses = ["city-tile", isSelected && "tile-selected"]
+    .filter(Boolean)
+    .join(" ");
 
-    return (
-        <div
-            key={property.id}
-            data-property-id={property.id}
-            data-tooltip={tooltip}
-            className={tileClasses}
-            style={
-                {
-                    backgroundColor: isUnowned ? "var(--tile-empty)" : bgColor,
-                    "--tile-glow-color": glowColor,
-                    opacity: isUnowned ? 0.45 : isTreasury ? 0.7 : 1,
-                } as React.CSSProperties
-            }
-            role="gridcell"
-            aria-label={`Tile ${row},${col} — ${abbreviateAddress(property.owner)} — ${BUILDING_NAMES[property.buildingLevel]}${property.isListed ? " — For Sale" : ""}`}
-        >
-            {property.buildingLevel > 0 && (
-                <span
-                    className={`tile-badge tile-badge-${property.buildingLevel}`}
-                >
-                    {BUILDING_LABELS[property.buildingLevel]}
-                </span>
-            )}
+  return (
+    <div
+      key={property.id}
+      data-property-id={property.id}
+      data-tooltip={tooltip}
+      className={tileClasses}
+      style={
+        {
+          backgroundColor: isUnowned ? "var(--tile-empty)" : bgColor,
+          "--tile-glow-color": glowColor,
+          opacity: isUnowned ? 0.45 : isTreasury ? 0.7 : 1,
+        } as React.CSSProperties
+      }
+      role="gridcell"
+      aria-label={getTileAriaLabel(property)}
+      aria-selected={isSelected}
+      aria-rowindex={row + 1}
+      aria-colindex={col + 1}
+      tabIndex={isFocusable ? 0 : -1}
+      onFocus={() => onFocus(property.id)}
+    >
+      {property.buildingLevel > 0 && (
+        <span className={`tile-badge tile-badge-${property.buildingLevel}`}>
+          {BUILDING_LABELS[property.buildingLevel]}
+        </span>
+      )}
 
-            {property.buildingLevel === 0 && !isUnowned && !isTreasury && (
-                <span className="tile-badge tile-badge-0">
-                    {BUILDING_LABELS[0]}
-                </span>
-            )}
+      {property.buildingLevel === 0 && !isUnowned && !isTreasury && (
+        <span className="tile-badge tile-badge-0">{BUILDING_LABELS[0]}</span>
+      )}
 
-            {property.isListed && <span className="tile-listed-dot" />}
-        </div>
-    );
+      {property.isListed && <span className="tile-listed-dot" />}
+    </div>
+  );
 });
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -99,6 +122,9 @@ export function CityMap() {
     generateMockGrid(),
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [focusedId, setFocusedId] = useState<string>(
+    () => properties[0]?.id ?? "",
+  );
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gridRef = useRef<HTMLDivElement | null>(null);
 
@@ -164,18 +190,76 @@ export function CityMap() {
     };
   }, []);
 
-  // ── Event delegation click handler ───────────────────────────────────────
-  const handleGridClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    const target = (e.target as HTMLElement).closest<HTMLElement>(
-      "[data-property-id]",
-    );
-    if (!target) return;
-
-    const propertyId = target.dataset.propertyId!;
-
-    // Toggle selection: clicking same tile deselects
+  const selectTile = useCallback((propertyId: string) => {
+    // Toggle selection: activating same tile deselects
     setSelectedId((prev) => (prev === propertyId ? null : propertyId));
   }, []);
+
+  const focusTile = useCallback((propertyId: string) => {
+    setFocusedId(propertyId);
+    gridRef.current
+      ?.querySelector<HTMLElement>(`[data-property-id="${propertyId}"]`)
+      ?.focus();
+  }, []);
+
+  // ── Event delegation click handler ───────────────────────────────────────
+  const handleGridClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      const target = (e.target as HTMLElement).closest<HTMLElement>(
+        "[data-property-id]",
+      );
+      if (!target) return;
+
+      const propertyId = target.dataset.propertyId!;
+      setFocusedId(propertyId);
+      selectTile(propertyId);
+    },
+    [selectTile],
+  );
+
+  // ── Keyboard navigation handler ──────────────────────────────────────────
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const target = (e.target as HTMLElement).closest<HTMLElement>(
+        "[data-property-id]",
+      );
+      if (!target) return;
+
+      const propertyId = target.dataset.propertyId!;
+      const currentIndex = properties.findIndex((p) => p.id === propertyId);
+      if (currentIndex === -1) return;
+
+      const keyOffsets: Record<string, number> = {
+        ArrowUp: -GRID_SIZE,
+        ArrowDown: GRID_SIZE,
+        ArrowLeft: -1,
+        ArrowRight: 1,
+      };
+
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        selectTile(propertyId);
+        return;
+      }
+
+      const offset = keyOffsets[e.key];
+      if (!offset) return;
+
+      e.preventDefault();
+      const { row, col } = getGridCoords(propertyId);
+      const isBlockedHorizontal =
+        (e.key === "ArrowLeft" && col === 0) ||
+        (e.key === "ArrowRight" && col === GRID_SIZE - 1);
+      const isBlockedVertical =
+        (e.key === "ArrowUp" && row === 0) ||
+        (e.key === "ArrowDown" && row === GRID_SIZE - 1);
+      if (isBlockedHorizontal || isBlockedVertical) return;
+
+      const nextProperty = properties[currentIndex + offset];
+      if (nextProperty) focusTile(nextProperty.id);
+    },
+    [focusTile, properties, selectTile],
+  );
 
   // ── Close panel ──────────────────────────────────────────────────────────
   const handleClosePanel = useCallback(() => {
@@ -239,69 +323,19 @@ export function CityMap() {
           ref={gridRef}
           className="city-grid"
           onClick={handleGridClick}
+          onKeyDown={handleGridKeyDown}
           role="grid"
           aria-label="Akkuea City property grid"
         >
-          {properties.map((prop) => {
-            const { row, col } = getGridCoords(prop.id);
-            const bgColor = addressToHSL(prop.owner);
-            const glowColor = addressToGlow(prop.owner);
-            const isSelected = prop.id === selectedId;
-            const isTreasury = !prop.owner || prop.owner === "GBTREASURY";
-            const isUnowned = !prop.owner;
-
-            // Build tooltip text
-            const tooltipLines = [
-              `📍 (${row}, ${col})`,
-              `👤 ${abbreviateAddress(prop.owner)}`,
-              `🏗 ${BUILDING_NAMES[prop.buildingLevel]}`,
-            ];
-            if (prop.isListed) {
-              tooltipLines.push(`💰 ${prop.pricePerShare} LAND`);
-            }
-            const tooltip = tooltipLines.join("\n");
-
-            const tileClasses = ["city-tile", isSelected && "tile-selected"]
-              .filter(Boolean)
-              .join(" ");
-
-            return (
-              <div
-                key={prop.id}
-                data-property-id={prop.id}
-                data-tooltip={tooltip}
-                className={tileClasses}
-                style={
-                  {
-                    backgroundColor: isUnowned ? "var(--tile-empty)" : bgColor,
-                    "--tile-glow-color": glowColor,
-                    opacity: isUnowned ? 0.45 : isTreasury ? 0.7 : 1,
-                  } as React.CSSProperties
-                }
-                role="gridcell"
-                aria-label={`Tile ${row},${col} — ${abbreviateAddress(prop.owner)} — ${BUILDING_NAMES[prop.buildingLevel]}${prop.isListed ? " — For Sale" : ""}`}
-              >
-                {/* Building Level Badge */}
-                {prop.buildingLevel > 0 && (
-                  <span
-                    className={`tile-badge tile-badge-${prop.buildingLevel}`}
-                  >
-                    {BUILDING_LABELS[prop.buildingLevel]}
-                  </span>
-                )}
-
-                {/* Vacant label for level 0 — only on non-empty tiles to reduce clutter */}
-                {prop.buildingLevel === 0 && !isUnowned && !isTreasury && (
-                  <span className="tile-badge tile-badge-0">
-                    {BUILDING_LABELS[0]}
-                  </span>
-                )}
-
-                {/* Listed-for-sale amber dot */}
-                {prop.isListed && <span className="tile-listed-dot" />}
-              </div>
-            );
-          })}
+          {properties.map((prop) => (
+            <PropertyTile
+              key={prop.id}
+              property={prop}
+              isSelected={prop.id === selectedId}
+              isFocusable={prop.id === focusedId}
+              onFocus={setFocusedId}
+            />
+          ))}
         </div>
       </div>
 

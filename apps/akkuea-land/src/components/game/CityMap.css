@@ -37,6 +37,12 @@
   justify-content: center;
 }
 
+.city-tile:focus-visible {
+  outline: 2px solid var(--land-accent, #00d4ff);
+  outline-offset: 2px;
+  z-index: 10;
+}
+
 /* ─── Hover ──────────────────────────────────────────────────────────────── */
 
 .city-tile:hover {

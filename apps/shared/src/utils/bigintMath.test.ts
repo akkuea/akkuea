@@ -19,9 +19,11 @@ describe("bigintMath", () => {
     });
 
     test("throws on division by zero", () => {
-      expect(() => safeDivide(BigInt(10), BigInt(0))).toThrow("Division by zero");
+      expect(() => safeDivide(BigInt(10), BigInt(0))).toThrow(
+        "Division by zero",
+      );
     });
-    
+
     test("truncates correctly", () => {
       expect(safeDivide(BigInt(11), BigInt(2))).toBe(BigInt(5));
       expect(safeDivide(BigInt(-11), BigInt(2))).toBe(BigInt(-5));
@@ -53,12 +55,16 @@ describe("bigintMath", () => {
     });
 
     test("throws on division by zero", () => {
-      expect(() => roundBigInt(BigInt(10), BigInt(0), "down")).toThrow("Division by zero");
+      expect(() => roundBigInt(BigInt(10), BigInt(0), "down")).toThrow(
+        "Division by zero",
+      );
     });
-    
+
     test("works with large numbers", () => {
       const veryLarge = BigInt("123456789012345678901234567890");
-      expect(roundBigInt(veryLarge, BigInt(10), "down")).toBe(BigInt("12345678901234567890123456789"));
+      expect(roundBigInt(veryLarge, BigInt(10), "down")).toBe(
+        BigInt("12345678901234567890123456789"),
+      );
     });
   });
 
@@ -108,7 +114,7 @@ describe("bigintMath", () => {
       expect(formatBigIntAsDecimalString(BigInt(-1050), 2)).toBe("-10.50");
       expect(formatBigIntAsDecimalString(BigInt(-5), 2)).toBe("-0.05");
     });
-    
+
     test("formats with 0 decimals", () => {
       expect(formatBigIntAsDecimalString(BigInt(1050), 0)).toBe("1050");
     });
@@ -117,9 +123,14 @@ describe("bigintMath", () => {
       const original = "12345.6789";
       const parsed = parseDecimalStringToBigInt(original, 4);
       expect(formatBigIntAsDecimalString(parsed, 4)).toBe(original);
-      
+
       const veryLarge = "98765432109876543210.12";
-      expect(formatBigIntAsDecimalString(parseDecimalStringToBigInt(veryLarge, 2), 2)).toBe(veryLarge);
+      expect(
+        formatBigIntAsDecimalString(
+          parseDecimalStringToBigInt(veryLarge, 2),
+          2,
+        ),
+      ).toBe(veryLarge);
     });
   });
 });

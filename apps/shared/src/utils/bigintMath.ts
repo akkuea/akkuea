@@ -25,32 +25,41 @@ export function safeDivide(numerator: bigint, denominator: bigint): bigint {
  * @returns The rounded result
  * @throws {Error} If divisor is 0
  */
-export function roundBigInt(value: bigint, divisor: bigint, mode: 'up' | 'down' | 'nearest'): bigint {
+export function roundBigInt(
+  value: bigint,
+  divisor: bigint,
+  mode: "up" | "down" | "nearest",
+): bigint {
   if (divisor === BigInt(0)) {
     throw new Error("Division by zero");
   }
-  
-  const isNegative = (value < BigInt(0) && divisor > BigInt(0)) || (value > BigInt(0) && divisor < BigInt(0));
+
+  const isNegative =
+    (value < BigInt(0) && divisor > BigInt(0)) ||
+    (value > BigInt(0) && divisor < BigInt(0));
   const absValue = value < BigInt(0) ? -value : value;
   const absDivisor = divisor < BigInt(0) ? -divisor : divisor;
-  
+
   const quotient = absValue / absDivisor;
   const remainder = absValue % absDivisor;
-  
+
   let result = quotient;
-  
+
   if (remainder !== BigInt(0)) {
-    if (mode === 'up') {
+    if (mode === "up") {
       result = quotient + BigInt(1);
-    } else if (mode === 'nearest') {
+    } else if (mode === "nearest") {
       const halfDivisor = absDivisor / BigInt(2);
-      const isHalfOrMore = (absDivisor % BigInt(2) === BigInt(0)) ? (remainder >= halfDivisor) : (remainder > halfDivisor);
+      const isHalfOrMore =
+        absDivisor % BigInt(2) === BigInt(0)
+          ? remainder >= halfDivisor
+          : remainder > halfDivisor;
       if (isHalfOrMore) {
         result = quotient + BigInt(1);
       }
     }
   }
-  
+
   return isNegative ? -result : result;
 }
 
@@ -61,33 +70,36 @@ export function roundBigInt(value: bigint, divisor: bigint, mode: 'up' | 'down' 
  * @returns The scaled BigInt
  * @throws {Error} If the string is not a valid number
  */
-export function parseDecimalStringToBigInt(value: string, decimals: number): bigint {
-  if (!value || value.trim() === '') {
+export function parseDecimalStringToBigInt(
+  value: string,
+  decimals: number,
+): bigint {
+  if (!value || value.trim() === "") {
     throw new Error("Empty value");
   }
-  
+
   let isNegative = false;
   let str = value.trim();
-  
-  if (str.startsWith('-')) {
+
+  if (str.startsWith("-")) {
     isNegative = true;
     str = str.substring(1);
   }
-  
-  if (!/^\d*\.?\d*$/.test(str) || str === '.') {
+
+  if (!/^\d*\.?\d*$/.test(str) || str === ".") {
     throw new Error("Invalid decimal string");
   }
-  
-  let [integerPart, fractionalPart] = str.split('.');
-  if (!integerPart) integerPart = '0';
-  if (!fractionalPart) fractionalPart = '';
-  
+
+  let [integerPart, fractionalPart] = str.split(".");
+  if (!integerPart) integerPart = "0";
+  if (!fractionalPart) fractionalPart = "";
+
   if (fractionalPart.length > decimals) {
     fractionalPart = fractionalPart.substring(0, decimals);
   } else {
-    fractionalPart = fractionalPart.padEnd(decimals, '0');
+    fractionalPart = fractionalPart.padEnd(decimals, "0");
   }
-  
+
   const result = BigInt(integerPart + fractionalPart);
   return isNegative ? -result : result;
 }
@@ -98,26 +110,29 @@ export function parseDecimalStringToBigInt(value: string, decimals: number): big
  * @param decimals The number of decimal places it is scaled by
  * @returns The formatted decimal string (e.g. "10.50")
  */
-export function formatBigIntAsDecimalString(value: bigint, decimals: number): string {
+export function formatBigIntAsDecimalString(
+  value: bigint,
+  decimals: number,
+): string {
   if (decimals < 0) {
     throw new Error("Decimals cannot be negative");
   }
-  
+
   const isNegative = value < BigInt(0);
   const absValue = isNegative ? -value : value;
-  
+
   let str = absValue.toString();
-  
+
   if (decimals === 0) {
     return (isNegative ? "-" : "") + str;
   }
-  
+
   if (str.length <= decimals) {
-    str = str.padStart(decimals + 1, '0');
+    str = str.padStart(decimals + 1, "0");
   }
-  
+
   const integerPart = str.substring(0, str.length - decimals);
   const fractionalPart = str.substring(str.length - decimals);
-  
-  return `${isNegative ? '-' : ''}${integerPart}.${fractionalPart}`;
+
+  return `${isNegative ? "-" : ""}${integerPart}.${fractionalPart}`;
 }

@@ -479,17 +479,22 @@ export default function DashboardPage() {
     };
 
     let wallet: Awaited<ReturnType<typeof connectWalletKit>> = null;
-    if (typeof window !== "undefined") {
-      try {
-        wallet = await connectWalletKit();
-        if (!wallet) {
-          // User closed the wallet picker without selecting — claim nothing.
-          setClaimProgress(null);
-          return;
-        }
-      } catch {
-        wallet = null; // Wallet kit unavailable — fall back to demo mode below.
-      }
+    try {
+      wallet = await connectWalletKit();
+    } catch (err) {
+      // Unexpected wallet-kit failure — surface it as a visible error instead
+      // of faking a successful claim via the demo loop.
+      const reason =
+        err instanceof Error && err.message
+          ? err.message
+          : "wallet connection failed";
+      setClaimProgress({
+        current: 0,
+        total,
+        failures: claimableProperties.map((p) => `${p.name} — ${reason}`),
+        done: true,
+      });
+      return;
     }
 
     if (wallet) {
@@ -504,7 +509,8 @@ export default function DashboardPage() {
       });
       failures = result.failures;
     } else {
-      // Demo fallback when no wallet kit is available.
+      // User closed the picker without selecting a wallet — the only case
+      // that falls back to the demo claim loop.
       for (let i = 0; i < claimableProperties.length; i++) {
         setClaimProgress({ current: i, total, failures: [], done: false });
         await new Promise<void>((r) => setTimeout(r, 600));

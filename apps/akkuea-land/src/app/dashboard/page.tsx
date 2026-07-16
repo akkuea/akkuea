@@ -33,7 +33,7 @@ import {
 } from "@akkuea/shared";
 import { rpc as SorobanRpc } from "@stellar/stellar-sdk";
 import { GameProperty, BuildingLevel } from "@/types/game.types";
-import { getWalletKit } from "@/lib/walletKit";
+import { connectWalletKit } from "@/lib/walletKit";
 import { claimAllRentals } from "@/lib/claim-rental";
 import { TIMEOUTS } from "@/lib/constants";
 
@@ -464,7 +464,6 @@ export default function DashboardPage() {
     const total = claimableProperties.length;
     setClaimProgress({ current: 0, total, failures: [], done: false });
 
-    const kit = typeof window !== "undefined" ? getWalletKit() : null;
     let totalClaimed = 0;
     let failures: string[] = [];
 
@@ -479,11 +478,25 @@ export default function DashboardPage() {
       );
     };
 
-    if (kit) {
+    let wallet: Awaited<ReturnType<typeof connectWalletKit>> = null;
+    if (typeof window !== "undefined") {
+      try {
+        wallet = await connectWalletKit();
+        if (!wallet) {
+          // User closed the wallet picker without selecting — claim nothing.
+          setClaimProgress(null);
+          return;
+        }
+      } catch {
+        wallet = null; // Wallet kit unavailable — fall back to demo mode below.
+      }
+    }
+
+    if (wallet) {
       // Real flow: build claim_rental XDR → sign with wallet → submit → confirm.
       const result = await claimAllRentals({
-        kit,
-        viewerAddress: VIEWER_ADDRESS,
+        kit: wallet.kit,
+        viewerAddress: wallet.address,
         properties: claimableProperties,
         onProgress: (i) =>
           setClaimProgress({ current: i, total, failures: [], done: false }),

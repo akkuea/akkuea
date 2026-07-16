@@ -115,7 +115,7 @@ stellar contract invoke --id $TOKEN_ID --source-account $IDENTITY --network test
 bun run dev   # from repo root, akkuea-land on its dev port
 ```
 
-Open the Akkuea Land dashboard (`/dashboard`), connect Freighter with the imported key, and press **Claim All**. Each claimable property triggers a real Freighter signing prompt; the transaction is submitted to the Soroban RPC and polled until confirmed. Rejecting a prompt records that property in the "Failed" list and the loop continues with the next one.
+Open the Akkuea Land dashboard (`/dashboard`) and press **Claim All**. On first use a wallet-picker modal opens — choose Freighter (with the imported key selected and Freighter on Testnet). Each claimable property then triggers a real Freighter signing prompt; the transaction is submitted to the Soroban RPC and polled until confirmed. Rejecting a prompt records that property in the "Failed" list and the loop continues with the next one; closing the wallet picker aborts without claiming.
 
 ---
 

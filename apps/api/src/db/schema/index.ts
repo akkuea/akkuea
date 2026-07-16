@@ -4,3 +4,4 @@ export * from './lending';
 export * from './transactions';
 export * from './notifications';
 export * from './valuations';
+export * from './notificationDlq';

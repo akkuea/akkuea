@@ -136,7 +136,7 @@ describe('NotificationWorker', () => {
 
       await worker.tick();
 
-      expect(service.markAsFailed).toHaveBeenCalledWith('n-1', 'network down');
+      expect(service.markAsFailed).toHaveBeenCalledWith('n-1', 'network down', 60000);
     });
   });
 

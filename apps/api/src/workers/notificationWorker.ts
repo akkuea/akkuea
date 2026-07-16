@@ -8,6 +8,8 @@ export interface NotificationWorkerConfig {
   webhookSecret?: string;
   requestTimeoutMs?: number;
   fetchImpl?: typeof fetch;
+  retryBaseDelayMs?: number;
+  maxRetryDelayMs?: number;
 }
 
 interface ResolvedConfig {
@@ -16,10 +18,14 @@ interface ResolvedConfig {
   webhookSecret?: string;
   requestTimeoutMs: number;
   fetchImpl: typeof fetch;
+  retryBaseDelayMs: number;
+  maxRetryDelayMs: number;
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
+const DEFAULT_RETRY_BASE_DELAY_MS = 60_000;
+const DEFAULT_MAX_RETRY_DELAY_MS = 60 * 60 * 1_000;
 
 export class NotificationWorker {
   private readonly service: NotificationService;
@@ -32,6 +38,8 @@ export class NotificationWorker {
     this.service = service;
     const envPoll = Number(process.env.NOTIFICATION_POLL_INTERVAL_MS);
     const envTimeout = Number(process.env.NOTIFICATION_REQUEST_TIMEOUT_MS);
+    const envBase = Number(process.env.NOTIFICATION_RETRY_BASE_DELAY_MS);
+    const envMax = Number(process.env.NOTIFICATION_MAX_RETRY_DELAY_MS);
     this.config = {
       pollIntervalMs:
         config?.pollIntervalMs ??
@@ -42,6 +50,12 @@ export class NotificationWorker {
         config?.requestTimeoutMs ??
         (Number.isFinite(envTimeout) && envTimeout > 0 ? envTimeout : DEFAULT_REQUEST_TIMEOUT_MS),
       fetchImpl: config?.fetchImpl ?? fetch,
+      retryBaseDelayMs:
+        config?.retryBaseDelayMs ??
+        (Number.isFinite(envBase) && envBase > 0 ? envBase : DEFAULT_RETRY_BASE_DELAY_MS),
+      maxRetryDelayMs:
+        config?.maxRetryDelayMs ??
+        (Number.isFinite(envMax) && envMax > 0 ? envMax : DEFAULT_MAX_RETRY_DELAY_MS),
     };
   }
 
@@ -112,6 +126,11 @@ export class NotificationWorker {
     if (typeof t.unref === 'function') t.unref();
   }
 
+  private computeBackoffDelay(attemptNumber: number): number {
+    const delay = this.config.retryBaseDelayMs * Math.pow(2, attemptNumber - 1);
+    return Math.min(delay, this.config.maxRetryDelayMs);
+  }
+
   private async dispatch(notification: Notification): Promise<void> {
     if (!this.config.webhookUrl) {
       logger.warn('No NOTIFICATION_WEBHOOK_URL configured, skipping dispatch', {
@@ -138,6 +157,9 @@ export class NotificationWorker {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
 
+    const attemptNumber = parseInt(notification.retryCount) + 1;
+    const backoffDelay = this.computeBackoffDelay(attemptNumber);
+
     try {
       const response = await this.config.fetchImpl(this.config.webhookUrl, {
         method: 'POST',
@@ -151,11 +173,13 @@ export class NotificationWorker {
 
       if (!response.ok) {
         const reason = `Webhook responded with ${response.status}`;
-        await this.service.markAsFailed(notification.id, reason);
+        await this.service.markAsFailed(notification.id, reason, backoffDelay);
         logger.warn('Notification delivery failed', {
           operation: 'NOTIFICATION_DELIVERY_FAILED',
           notificationId: notification.id,
           status: response.status,
+          retryCount: notification.retryCount,
+          nextRetryDelayMs: backoffDelay,
         });
         return;
       }
@@ -167,11 +191,13 @@ export class NotificationWorker {
       });
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
-      await this.service.markAsFailed(notification.id, reason);
+      await this.service.markAsFailed(notification.id, reason, backoffDelay);
       logger.error('Notification delivery error', {
         operation: 'NOTIFICATION_DELIVERY_ERROR',
         notificationId: notification.id,
         error: reason,
+        retryCount: notification.retryCount,
+        nextRetryDelayMs: backoffDelay,
       });
     } finally {
       clearTimeout(timeout);

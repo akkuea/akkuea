@@ -1,7 +1,11 @@
-
 import { Elysia } from 'elysia';
 import { z } from 'zod';
-import { validateBody, validateParams, validateQuery, uuidParamSchema } from '../middleware/validation';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+  uuidParamSchema,
+} from '../middleware/validation';
 import { NotificationService } from '../services/NotificationService';
 import { handleError } from '../utils/errors';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
@@ -27,7 +31,6 @@ function getService(): NotificationService {
   return _service;
 }
 
-
 const listDlqRoute = new Elysia()
   .use(validateQuery(dlqPaginationSchema))
   .get('/notifications/dlq', async ({ validatedQuery, set }) => {
@@ -41,7 +44,6 @@ const listDlqRoute = new Elysia()
       return err;
     }
   });
-
 
 const getDlqEntryRoute = new Elysia()
   .use(validateParams(uuidParamSchema))
@@ -64,7 +66,6 @@ const getDlqEntryRoute = new Elysia()
       return err;
     }
   });
-
 
 const reprocessDlqRoute = new Elysia()
   .use(validateParams(uuidParamSchema))
@@ -100,7 +101,6 @@ const reprocessDlqRoute = new Elysia()
       return err;
     }
   });
-
 
 export const notificationDlqRoutes = new Elysia({ prefix: '/internal' })
   .onBeforeHandle(({ headers, set }) => {

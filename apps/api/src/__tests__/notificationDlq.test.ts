@@ -158,7 +158,9 @@ describe('NotificationWorker – exponential back-off', () => {
       markAsFailed,
     });
 
-    const fetchImpl = mock(async () => { throw new Error('ECONNREFUSED'); });
+    const fetchImpl = mock(async () => {
+      throw new Error('ECONNREFUSED');
+    });
     const worker = new NotificationWorker(service as unknown as NotificationService, {
       webhookUrl: 'https://example.com/hook',
       fetchImpl: fetchImpl as unknown as typeof fetch,
@@ -195,13 +197,18 @@ describe('NotificationService.markAsFailed – DLQ promotion', () => {
       createFromNotification,
     } as unknown as NotificationDlqRepository;
 
-    const service = new NotificationService(notifRepo, { maxRetries: 3, retryDelayMs: 1_000 }, dlqRepo);
+    const service = new NotificationService(
+      notifRepo,
+      { maxRetries: 3, retryDelayMs: 1_000 },
+      dlqRepo,
+    );
     await service.markAsFailed('n-1', 'Webhook responded with 500');
 
     // DLQ must be written
     expect(createFromNotification).toHaveBeenCalledTimes(1);
     // Status must be BOUNCED so the notification is excluded from retry polling
-    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
+    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]!;
     expect(statusCall[1]).toBe('BOUNCED');
   });
 
@@ -215,11 +222,16 @@ describe('NotificationService.markAsFailed – DLQ promotion', () => {
     const notifRepo = { findById, updateDeliveryStatus } as unknown as NotificationRepository;
     const dlqRepo = { createFromNotification } as unknown as NotificationDlqRepository;
 
-    const service = new NotificationService(notifRepo, { maxRetries: 3, retryDelayMs: 1_000 }, dlqRepo);
+    const service = new NotificationService(
+      notifRepo,
+      { maxRetries: 3, retryDelayMs: 1_000 },
+      dlqRepo,
+    );
     await service.markAsFailed('n-1', 'Webhook responded with 503');
 
     expect(createFromNotification).not.toHaveBeenCalled();
-    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
+    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]!;
     expect(statusCall[1]).toBe('FAILED');
   });
 
@@ -241,7 +253,8 @@ describe('NotificationService.markAsFailed – DLQ promotion', () => {
     const explicitDelay = 20_000;
     await service.markAsFailed('n-1', 'error', explicitDelay);
 
-    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
+    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]!;
     const data = statusCall[2] as { nextRetryAt: Date };
     // nextRetryAt should be approximately now + explicitDelay
     const diff = data.nextRetryAt.getTime() - Date.now();
@@ -259,12 +272,17 @@ describe('NotificationService.markAsFailed – DLQ promotion', () => {
     const notifRepo = { findById, updateDeliveryStatus } as unknown as NotificationRepository;
     const dlqRepo = { createFromNotification } as unknown as NotificationDlqRepository;
 
-    const service = new NotificationService(notifRepo, { maxRetries: 3, retryDelayMs: 1_000 }, dlqRepo);
+    const service = new NotificationService(
+      notifRepo,
+      { maxRetries: 3, retryDelayMs: 1_000 },
+      dlqRepo,
+    );
 
     // Must not throw even though the DLQ write rejected
     await expect(service.markAsFailed('n-1', 'webhook error')).resolves.toBeDefined();
     // Status should still be updated to BOUNCED
-    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]!;
+    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]!;
     expect(statusCall[1]).toBe('BOUNCED');
   });
 });
@@ -292,7 +310,8 @@ describe('NotificationService.reprocessDlqEntry', () => {
     const result = await service.reprocessDlqEntry('dlq-1', 'admin@example.com');
 
     expect(create).toHaveBeenCalledTimes(1);
-    const createArg = (create as unknown as { mock: { calls: unknown[][] } }).mock.calls[0]![0] as Record<string, unknown>;
+    const createArg = (create as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]![0] as Record<string, unknown>;
     expect(createArg.deliveryStatus).toBe('PENDING');
     expect(createArg.retryCount).toBe('0');
 
@@ -303,7 +322,9 @@ describe('NotificationService.reprocessDlqEntry', () => {
 
   it('throws NOT_FOUND when the DLQ entry does not exist', async () => {
     const notifRepo = { create } as unknown as NotificationRepository;
-    const dlqRepo = { findById: mock(() => Promise.resolve(undefined)) } as unknown as NotificationDlqRepository;
+    const dlqRepo = {
+      findById: mock(() => Promise.resolve(undefined)),
+    } as unknown as NotificationDlqRepository;
     const service = new NotificationService(notifRepo, undefined, dlqRepo);
 
     await expect(service.reprocessDlqEntry('dlq-missing', 'admin')).rejects.toThrow('not found');
@@ -312,19 +333,27 @@ describe('NotificationService.reprocessDlqEntry', () => {
   it('throws CONFLICT when the DLQ entry has already been requeued', async () => {
     const already = sampleDlqEntry({ requeuedAt: new Date() });
     const notifRepo = { create } as unknown as NotificationRepository;
-    const dlqRepo = { findById: mock(() => Promise.resolve(already)) } as unknown as NotificationDlqRepository;
+    const dlqRepo = {
+      findById: mock(() => Promise.resolve(already)),
+    } as unknown as NotificationDlqRepository;
     const service = new NotificationService(notifRepo, undefined, dlqRepo);
 
-    await expect(service.reprocessDlqEntry('dlq-1', 'admin')).rejects.toThrow('already been requeued');
+    await expect(service.reprocessDlqEntry('dlq-1', 'admin')).rejects.toThrow(
+      'already been requeued',
+    );
   });
 
   it('throws CONFLICT when the DLQ entry has already been resolved', async () => {
     const resolved = sampleDlqEntry({ resolvedAt: new Date() });
     const notifRepo = { create } as unknown as NotificationRepository;
-    const dlqRepo = { findById: mock(() => Promise.resolve(resolved)) } as unknown as NotificationDlqRepository;
+    const dlqRepo = {
+      findById: mock(() => Promise.resolve(resolved)),
+    } as unknown as NotificationDlqRepository;
     const service = new NotificationService(notifRepo, undefined, dlqRepo);
 
-    await expect(service.reprocessDlqEntry('dlq-1', 'admin')).rejects.toThrow('already been resolved');
+    await expect(service.reprocessDlqEntry('dlq-1', 'admin')).rejects.toThrow(
+      'already been resolved',
+    );
   });
 });
 
@@ -341,7 +370,7 @@ describe('DLQ Elysia Routes', () => {
     process.env.OPERATIONS_BACKEND_CREDENTIAL = CREDENTIAL;
     app = new Elysia()
       .onError(({ error }) => {
-        console.error("ELYSIA ERROR:", error);
+        console.error('ELYSIA ERROR:', error);
       })
       .use(notificationDlqRoutes);
   });
@@ -407,9 +436,15 @@ describe('DLQ Elysia Routes', () => {
 
   it('POST /internal/notifications/dlq/:id/reprocess triggers reprocessing', async () => {
     const newNotif = sampleNotification({ id: 'n-new' });
-    const dlqUpdated = sampleDlqEntry({ id: 'dlq-1', requeuedAt: new Date(), requeuedBy: 'admin@example.com' });
+    const dlqUpdated = sampleDlqEntry({
+      id: 'dlq-1',
+      requeuedAt: new Date(),
+      requeuedBy: 'admin@example.com',
+    });
     const original = NotificationService.prototype.reprocessDlqEntry;
-    NotificationService.prototype.reprocessDlqEntry = mock(() => Promise.resolve({ dlqEntry: dlqUpdated, notification: newNotif }));
+    NotificationService.prototype.reprocessDlqEntry = mock(() =>
+      Promise.resolve({ dlqEntry: dlqUpdated, notification: newNotif }),
+    );
 
     try {
       const dlqId = '12345678-1234-1234-1234-123456789012';

@@ -207,10 +207,12 @@ export class NotificationService {
       });
     }
 
-    const delayMs = nextRetryDelayMs ?? Math.min(
-      this.deliveryConfig.retryDelayMs * Math.pow(2, retryCount - 1),
-      this.deliveryConfig.maxRetryDelayMs,
-    );
+    const delayMs =
+      nextRetryDelayMs ??
+      Math.min(
+        this.deliveryConfig.retryDelayMs * Math.pow(2, retryCount - 1),
+        this.deliveryConfig.maxRetryDelayMs,
+      );
     const nextRetryAt = new Date(Date.now() + delayMs);
     return this.repository.updateDeliveryStatus(notificationId, 'FAILED', {
       failureReason: reason,
@@ -475,7 +477,6 @@ export class NotificationService {
   async cleanupOldNotifications(daysToKeep = 90): Promise<number> {
     return this.repository.deleteOlderThan(daysToKeep);
   }
-
 
   async getDlqEntries(limit = 100, offset = 0): Promise<NotificationDlqEntry[]> {
     return this.dlqRepository.findPending(limit, offset);

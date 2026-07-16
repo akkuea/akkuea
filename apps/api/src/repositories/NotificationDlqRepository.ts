@@ -79,10 +79,7 @@ export class NotificationDlqRepository {
   /**
    * Mark a DLQ entry as requeued so it won't appear in the pending list again.
    */
-  async markAsRequeued(
-    id: string,
-    requeuedBy: string,
-  ): Promise<NotificationDlqEntry | undefined> {
+  async markAsRequeued(id: string, requeuedBy: string): Promise<NotificationDlqEntry | undefined> {
     const [updated] = await db
       .update(notificationDlq)
       .set({ requeuedAt: new Date(), requeuedBy })

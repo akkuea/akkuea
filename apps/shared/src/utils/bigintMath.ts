@@ -7,10 +7,10 @@
  * @param numerator The numerator
  * @param denominator The denominator
  * @returns The division result (truncated towards zero)
- * @throws {Error} If denominator is 0n
+ * @throws {Error} If denominator is 0
  */
 export function safeDivide(numerator: bigint, denominator: bigint): bigint {
-  if (denominator === 0n) {
+  if (denominator === BigInt(0)) {
     throw new Error("Division by zero");
   }
   return numerator / denominator;
@@ -23,30 +23,30 @@ export function safeDivide(numerator: bigint, denominator: bigint): bigint {
  * @param divisor The divisor to scale down by
  * @param mode The rounding mode: 'up', 'down', or 'nearest'
  * @returns The rounded result
- * @throws {Error} If divisor is 0n
+ * @throws {Error} If divisor is 0
  */
 export function roundBigInt(value: bigint, divisor: bigint, mode: 'up' | 'down' | 'nearest'): bigint {
-  if (divisor === 0n) {
+  if (divisor === BigInt(0)) {
     throw new Error("Division by zero");
   }
   
-  const isNegative = (value < 0n && divisor > 0n) || (value > 0n && divisor < 0n);
-  const absValue = value < 0n ? -value : value;
-  const absDivisor = divisor < 0n ? -divisor : divisor;
+  const isNegative = (value < BigInt(0) && divisor > BigInt(0)) || (value > BigInt(0) && divisor < BigInt(0));
+  const absValue = value < BigInt(0) ? -value : value;
+  const absDivisor = divisor < BigInt(0) ? -divisor : divisor;
   
   const quotient = absValue / absDivisor;
   const remainder = absValue % absDivisor;
   
   let result = quotient;
   
-  if (remainder !== 0n) {
+  if (remainder !== BigInt(0)) {
     if (mode === 'up') {
-      result = quotient + 1n;
+      result = quotient + BigInt(1);
     } else if (mode === 'nearest') {
-      const halfDivisor = absDivisor / 2n;
-      const isHalfOrMore = (absDivisor % 2n === 0n) ? (remainder >= halfDivisor) : (remainder > halfDivisor);
+      const halfDivisor = absDivisor / BigInt(2);
+      const isHalfOrMore = (absDivisor % BigInt(2) === BigInt(0)) ? (remainder >= halfDivisor) : (remainder > halfDivisor);
       if (isHalfOrMore) {
-        result = quotient + 1n;
+        result = quotient + BigInt(1);
       }
     }
   }
@@ -103,7 +103,7 @@ export function formatBigIntAsDecimalString(value: bigint, decimals: number): st
     throw new Error("Decimals cannot be negative");
   }
   
-  const isNegative = value < 0n;
+  const isNegative = value < BigInt(0);
   const absValue = isNegative ? -value : value;
   
   let str = absValue.toString();

@@ -628,8 +628,8 @@ export class PropertyController {
                 shares: existingOwnership.shares + data.shares,
                 purchasePrice: formatBigIntAsDecimalString(
                   parseDecimalStringToBigInt(existingOwnership.purchasePrice, 2) +
-                  parseDecimalStringToBigInt(totalPurchasePrice, 2),
-                  2
+                    parseDecimalStringToBigInt(totalPurchasePrice, 2),
+                  2,
                 ),
               })
               .where(eq(shareOwnerships.id, existingOwnership.id))

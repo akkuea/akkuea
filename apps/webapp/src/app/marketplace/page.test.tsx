@@ -169,7 +169,7 @@ describe("MarketplacePage", () => {
     cleanup();
     propertyApi.getAll = mockGetAll;
     propertyApi.buyShares = mockBuyShares;
-    mockGetAll.mockClear();
+    mockGetAll.mockReset();
     mockGetAll.mockImplementation(() =>
       Promise.resolve({
         data: [property],
@@ -230,7 +230,9 @@ describe("MarketplacePage", () => {
 
   it("renders an error state with retry when the API request fails", async () => {
     mockGetAll
-      .mockRejectedValueOnce(new Error("Marketplace unavailable"))
+      .mockImplementationOnce(() =>
+        Promise.reject(new Error("Marketplace unavailable")),
+      )
       .mockResolvedValueOnce({
         data: [property],
         pagination: { page: 1, limit: 100, total: 1, totalPages: 1 },
@@ -246,6 +248,82 @@ describe("MarketplacePage", () => {
     await waitFor(() => {
       expect(mockGetAll).toHaveBeenCalledTimes(2);
       expect(view.queryByText(property.name)).not.toBeNull();
+    });
+  });
+
+  it("reorders the list when the sort option changes, without refetching", async () => {
+    const cheapProperty: PropertyInfo = {
+      ...property,
+      id: "550e8400-e29b-41d4-a716-446655440002",
+      name: "Cheap Property",
+      pricePerShare: "10",
+    };
+    const expensiveProperty: PropertyInfo = {
+      ...property,
+      id: "550e8400-e29b-41d4-a716-446655440003",
+      name: "Expensive Property",
+      pricePerShare: "900",
+    };
+    mockGetAll.mockResolvedValueOnce({
+      data: [expensiveProperty, cheapProperty],
+      pagination: { page: 1, limit: 100, total: 2, totalPages: 1 },
+    });
+
+    const view = render(<MarketplacePage />);
+    await view.findByText(expensiveProperty.name);
+
+    fireEvent.click(view.getByRole("button", { name: /Filters/i }));
+
+    const sortSelect = view.getByLabelText(/Sort By/i);
+    fireEvent.change(sortSelect, {
+      target: { value: "Price: Low to High" },
+    });
+
+    const names = view
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(names).toEqual([cheapProperty.name, expensiveProperty.name]);
+    expect(mockGetAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the empty state with a clear-filters action when filters exclude every property", async () => {
+    const commercialPropertyInMexico: PropertyInfo = {
+      ...property,
+      id: "550e8400-e29b-41d4-a716-446655440004",
+      name: "Mexico City Office Tower",
+      propertyType: "commercial",
+      location: { address: "Reforma 100", city: "CDMX", country: "Mexico" },
+    };
+    mockGetAll.mockResolvedValueOnce({
+      data: [property, commercialPropertyInMexico],
+      pagination: { page: 1, limit: 100, total: 2, totalPages: 1 },
+    });
+
+    const view = render(<MarketplacePage />);
+    await view.findByText(property.name);
+    await view.findByText(commercialPropertyInMexico.name);
+
+    fireEvent.click(view.getByRole("button", { name: /Filters/i }));
+
+    // property is Africa/Residential, the other is Latin America/Commercial —
+    // this combination matches neither, so it excludes every property.
+    fireEvent.change(view.getByLabelText(/Region/i), {
+      target: { value: "Africa" },
+    });
+    fireEvent.change(view.getByLabelText(/Property Type/i), {
+      target: { value: "Commercial" },
+    });
+
+    expect(await view.findByText(/No properties found/i)).not.toBeNull();
+    expect(
+      view.getByText(/No properties match your search or filters/i),
+    ).not.toBeNull();
+
+    fireEvent.click(view.getByRole("button", { name: /Clear filters/i }));
+
+    await waitFor(() => {
+      expect(view.queryByText(property.name)).not.toBeNull();
+      expect(view.queryByText(commercialPropertyInMexico.name)).not.toBeNull();
     });
   });
 });

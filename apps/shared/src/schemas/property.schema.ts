@@ -3,6 +3,7 @@ import {
   stellarAddressSchema,
   positiveAmountSchema,
   isoDateSchema,
+  percentageSchema,
 } from "./common.schema";
 
 /**
@@ -53,6 +54,7 @@ export const propertyInfoSchema = z.object({
   totalShares: z.number().int().positive(),
   availableShares: z.number().int().min(0),
   pricePerShare: positiveAmountSchema,
+  expectedYield: percentageSchema.optional(),
   images: z.array(z.string().url()).min(1, "At least one image required"),
   splatUrl: z
     .string()

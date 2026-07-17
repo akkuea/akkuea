@@ -23,6 +23,7 @@ export const mockProperties: PropertyInfo[] = [
     totalShares: 10000,
     availableShares: 3250,
     pricePerShare: "85.00",
+    expectedYield: 8.2,
     images: [
       "https://images.unsplash.com/photo-1613977257592-4871e5fcd7c4?w=800",
       "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
@@ -68,6 +69,7 @@ export const mockProperties: PropertyInfo[] = [
     totalShares: 24000,
     availableShares: 8800,
     pricePerShare: "100.00",
+    expectedYield: 10.5,
     images: [
       "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=800",
       "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800",
@@ -112,6 +114,7 @@ export const mockProperties: PropertyInfo[] = [
     totalShares: 12000,
     availableShares: 9600,
     pricePerShare: "100.00",
+    expectedYield: 12.4,
     images: [
       "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800",
       "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800",
@@ -148,6 +151,7 @@ export const mockProperties: PropertyInfo[] = [
     totalShares: 16500,
     availableShares: 2100,
     pricePerShare: "100.00",
+    expectedYield: 9.1,
     images: [
       "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=800",
       "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
@@ -192,6 +196,7 @@ export const mockProperties: PropertyInfo[] = [
     totalShares: 9800,
     availableShares: 7200,
     pricePerShare: "100.00",
+    expectedYield: 7.6,
     images: [
       "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800",
       "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
@@ -226,6 +231,7 @@ export const mockProperties: PropertyInfo[] = [
     totalShares: 32000,
     availableShares: 29500,
     pricePerShare: "100.00",
+    expectedYield: 6.5,
     images: [
       "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800",
       "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=800",

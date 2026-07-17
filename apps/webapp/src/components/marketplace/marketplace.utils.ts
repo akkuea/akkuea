@@ -5,7 +5,10 @@ export const MARKETPLACE_ALL_TYPES = "All Types";
 
 export const sortOptions = [
   "Recently Added",
-  "Lowest Price",
+  "Price: Low to High",
+  "Price: High to Low",
+  "Yield: Low to High",
+  "Yield: High to Low",
   "Most Funded",
   "Highest Value",
 ] as const;
@@ -76,6 +79,26 @@ interface FilterOptions {
   sortBy: MarketplaceSortOption;
 }
 
+const sortComparators: Record<
+  MarketplaceSortOption,
+  (left: PropertyInfo, right: PropertyInfo) => number
+> = {
+  "Recently Added": (left, right) =>
+    Date.parse(right.listedAt) - Date.parse(left.listedAt),
+  "Price: Low to High": (left, right) =>
+    parseFloat(left.pricePerShare) - parseFloat(right.pricePerShare),
+  "Price: High to Low": (left, right) =>
+    parseFloat(right.pricePerShare) - parseFloat(left.pricePerShare),
+  "Yield: Low to High": (left, right) =>
+    (left.expectedYield ?? 0) - (right.expectedYield ?? 0),
+  "Yield: High to Low": (left, right) =>
+    (right.expectedYield ?? 0) - (left.expectedYield ?? 0),
+  "Most Funded": (left, right) =>
+    getFundingProgress(right) - getFundingProgress(left),
+  "Highest Value": (left, right) =>
+    parseFloat(right.totalValue) - parseFloat(left.totalValue),
+};
+
 export function filterAndSortProperties(
   properties: PropertyInfo[],
   { searchQuery, selectedRegion, selectedType, sortBy }: FilterOptions,
@@ -100,22 +123,7 @@ export function filterAndSortProperties(
 
       return matchesSearch && matchesRegion && matchesType;
     })
-    .sort((left, right) => {
-      switch (sortBy) {
-        case "Recently Added":
-          return Date.parse(right.listedAt) - Date.parse(left.listedAt);
-        case "Lowest Price":
-          return (
-            parseFloat(left.pricePerShare) - parseFloat(right.pricePerShare)
-          );
-        case "Most Funded":
-          return getFundingProgress(right) - getFundingProgress(left);
-        case "Highest Value":
-          return parseFloat(right.totalValue) - parseFloat(left.totalValue);
-        default:
-          return 0;
-      }
-    });
+    .sort(sortComparators[sortBy]);
 }
 
 export function getPropertyImage(property: PropertyInfo): string {

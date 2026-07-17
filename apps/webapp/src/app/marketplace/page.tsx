@@ -85,7 +85,12 @@ function ErrorState({ error, onRetry }: ErrorStateProps) {
   );
 }
 
-function EmptyState() {
+interface EmptyStateProps {
+  hasActiveFilters: boolean;
+  onClearFilters: () => void;
+}
+
+function EmptyState({ hasActiveFilters, onClearFilters }: EmptyStateProps) {
   return (
     <motion.div variants={staggerItem} className="py-16 text-center">
       <Building2 className="mx-auto mb-4 h-16 w-16 text-neutral-700" />
@@ -93,8 +98,15 @@ function EmptyState() {
         No properties found
       </h3>
       <p className="text-sm text-neutral-500">
-        Try adjusting your filters or search query
+        {hasActiveFilters
+          ? "No properties match your search or filters."
+          : "There are no properties listed yet."}
       </p>
+      {hasActiveFilters && (
+        <Button variant="outline" className="mt-6" onClick={onClearFilters}>
+          Clear filters
+        </Button>
+      )}
     </motion.div>
   );
 }
@@ -257,6 +269,19 @@ export default function MarketplacePage() {
     [properties],
   );
 
+  const hasActiveFilters =
+    searchQuery.trim().length > 0 ||
+    selectedRegion !== MARKETPLACE_ALL_REGIONS ||
+    selectedType !== MARKETPLACE_ALL_TYPES ||
+    sortBy !== "Recently Added";
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setSelectedRegion(MARKETPLACE_ALL_REGIONS);
+    setSelectedType(MARKETPLACE_ALL_TYPES);
+    setSortBy("Recently Added");
+  };
+
   return (
     <motion.div
       variants={pageTransition}
@@ -309,10 +334,14 @@ export default function MarketplacePage() {
                     className="grid gap-4 rounded-lg border border-[#262626] bg-[#0a0a0a] p-4 sm:grid-cols-3"
                   >
                     <div>
-                      <label className="mb-2 block text-xs uppercase tracking-wider text-neutral-500">
+                      <label
+                        htmlFor="marketplace-region"
+                        className="mb-2 block text-xs uppercase tracking-wider text-neutral-500"
+                      >
                         Region
                       </label>
                       <select
+                        id="marketplace-region"
                         value={selectedRegion}
                         onChange={(event) =>
                           setSelectedRegion(event.target.value)
@@ -327,10 +356,14 @@ export default function MarketplacePage() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-2 block text-xs uppercase tracking-wider text-neutral-500">
+                      <label
+                        htmlFor="marketplace-property-type"
+                        className="mb-2 block text-xs uppercase tracking-wider text-neutral-500"
+                      >
                         Property Type
                       </label>
                       <select
+                        id="marketplace-property-type"
                         value={selectedType}
                         onChange={(event) =>
                           setSelectedType(event.target.value)
@@ -345,10 +378,14 @@ export default function MarketplacePage() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-2 block text-xs uppercase tracking-wider text-neutral-500">
+                      <label
+                        htmlFor="marketplace-sort"
+                        className="mb-2 block text-xs uppercase tracking-wider text-neutral-500"
+                      >
                         Sort By
                       </label>
                       <select
+                        id="marketplace-sort"
                         value={sortBy}
                         onChange={(event) =>
                           setSortBy(event.target.value as MarketplaceSortOption)
@@ -415,7 +452,10 @@ export default function MarketplacePage() {
                 </motion.div>
 
                 {!isLoading && filteredProperties.length === 0 && (
-                  <EmptyState />
+                  <EmptyState
+                    hasActiveFilters={hasActiveFilters}
+                    onClearFilters={clearFilters}
+                  />
                 )}
               </>
             )}

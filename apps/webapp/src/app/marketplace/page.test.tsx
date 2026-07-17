@@ -230,7 +230,9 @@ describe("MarketplacePage", () => {
 
   it("renders an error state with retry when the API request fails", async () => {
     mockGetAll
-      .mockRejectedValueOnce(new Error("Marketplace unavailable"))
+      .mockImplementationOnce(() =>
+        Promise.reject(new Error("Marketplace unavailable")),
+      )
       .mockResolvedValueOnce({
         data: [property],
         pagination: { page: 1, limit: 100, total: 1, totalPages: 1 },
@@ -321,9 +323,7 @@ describe("MarketplacePage", () => {
 
     await waitFor(() => {
       expect(view.queryByText(property.name)).not.toBeNull();
-      expect(
-        view.queryByText(commercialPropertyInMexico.name),
-      ).not.toBeNull();
+      expect(view.queryByText(commercialPropertyInMexico.name)).not.toBeNull();
     });
   });
 });

@@ -33,7 +33,8 @@ import {
 } from "@akkuea/shared";
 import { rpc as SorobanRpc } from "@stellar/stellar-sdk";
 import { GameProperty, BuildingLevel } from "@/types/game.types";
-import { getWalletKit } from "@/lib/walletKit";
+import { connectWalletKit } from "@/lib/walletKit";
+import { claimAllRentals } from "@/lib/claim-rental";
 import { TIMEOUTS } from "@/lib/constants";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -103,7 +104,7 @@ const EVENTS_PAGE_SIZE = 5;
 
 const MOCK_PROPERTIES: DashboardProperty[] = [
   {
-    id: "prop-1",
+    id: "prop-0-1",
     name: "Oasis Ridge Estate",
     description: "Residential estate with panoramic views.",
     propertyType: "residential",
@@ -129,7 +130,7 @@ const MOCK_PROPERTIES: DashboardProperty[] = [
     lastClaimedLedger: 17_480,
   },
   {
-    id: "prop-2",
+    id: "prop-0-2",
     name: "Neo Tokyo Sector 9",
     description: "Commercial district hub with high foot traffic.",
     propertyType: "commercial",
@@ -155,7 +156,7 @@ const MOCK_PROPERTIES: DashboardProperty[] = [
     lastClaimedLedger: 480,
   },
   {
-    id: "prop-3",
+    id: "prop-0-3",
     name: "Metropolis Central Tower",
     description: "Premium skyscraper in the heart of the city.",
     propertyType: "commercial",
@@ -181,7 +182,7 @@ const MOCK_PROPERTIES: DashboardProperty[] = [
     lastClaimedLedger: 35_180,
   },
   {
-    id: "prop-4",
+    id: "prop-0-4",
     name: "Desert Dunes Parcel",
     description: "Vacant land in the desert outskirts.",
     propertyType: "land",
@@ -463,42 +464,57 @@ export default function DashboardPage() {
     const total = claimableProperties.length;
     setClaimProgress({ current: 0, total, failures: [], done: false });
 
-    const kit = typeof window !== "undefined" ? getWalletKit() : null;
     let totalClaimed = 0;
-    const failures: string[] = [];
+    let failures: string[] = [];
 
-    for (let i = 0; i < claimableProperties.length; i++) {
-      const prop = claimableProperties[i];
+    // Reset lastClaimedLedger so income display zeroes out immediately.
+    const markClaimed = (propertyId: string) => {
+      const prop = claimableProperties.find((p) => p.id === propertyId);
+      if (prop) totalClaimed += prop.earnedIncome;
+      setProperties((prev) =>
+        prev.map((p) =>
+          p.id === propertyId ? { ...p, lastClaimedLedger: currentLedger } : p,
+        ),
+      );
+    };
 
+    let wallet: Awaited<ReturnType<typeof connectWalletKit>> = null;
+    try {
+      wallet = await connectWalletKit();
+    } catch (err) {
+      // Unexpected wallet-kit failure — surface it as a visible error instead
+      // of faking a successful claim via the demo loop.
+      const reason =
+        err instanceof Error && err.message
+          ? err.message
+          : "wallet connection failed";
       setClaimProgress({
-        current: i,
+        current: 0,
         total,
-        failures: [...failures],
-        done: false,
+        failures: claimableProperties.map((p) => `${p.name} — ${reason}`),
+        done: true,
       });
+      return;
+    }
 
-      try {
-        if (kit) {
-          // TODO: replace with real Soroban claim_rental XDR for prop.id
-          const mockXdr = "AAAAAgAAAAD5r+Hl5S94D......";
-          await kit.signTransaction(mockXdr, {
-            networkPassphrase: "Test SDF Network ; September 2015",
-            address: VIEWER_ADDRESS,
-          });
-        } else {
-          await new Promise<void>((r) => setTimeout(r, 600));
-        }
-
-        totalClaimed += prop.earnedIncome;
-
-        // Reset lastClaimedLedger so income display zeroes out immediately.
-        setProperties((prev) =>
-          prev.map((p) =>
-            p.id === prop.id ? { ...p, lastClaimedLedger: currentLedger } : p,
-          ),
-        );
-      } catch {
-        failures.push(prop.name);
+    if (wallet) {
+      // Real flow: build claim_rental XDR → sign with wallet → submit → confirm.
+      const result = await claimAllRentals({
+        kit: wallet.kit,
+        viewerAddress: wallet.address,
+        properties: claimableProperties,
+        onProgress: (i) =>
+          setClaimProgress({ current: i, total, failures: [], done: false }),
+        onClaimed: markClaimed,
+      });
+      failures = result.failures;
+    } else {
+      // User closed the picker without selecting a wallet — the only case
+      // that falls back to the demo claim loop.
+      for (let i = 0; i < claimableProperties.length; i++) {
+        setClaimProgress({ current: i, total, failures: [], done: false });
+        await new Promise<void>((r) => setTimeout(r, 600));
+        markClaimed(claimableProperties[i].id);
       }
     }
 

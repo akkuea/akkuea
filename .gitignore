@@ -101,3 +101,8 @@ bun.lockb
 
 # Snapshot files (generated test artifacts)
 *.snap
+
+
+CLAUDE.md
+plan.md
+tasks/

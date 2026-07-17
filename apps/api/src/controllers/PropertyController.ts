@@ -7,6 +7,8 @@ import {
   NotFoundError,
   AuthenticationError,
   AuthorizationError,
+  parseDecimalStringToBigInt,
+  formatBigIntAsDecimalString,
 } from '@real-estate-defi/shared';
 import { and, eq } from 'drizzle-orm';
 import { logger } from '../services/logger';
@@ -582,7 +584,9 @@ export class PropertyController {
       }
 
       const buyer = await userRepository.getOrCreateByWallet(data.buyer);
-      const totalPurchasePrice = (parseFloat(property.pricePerShare) * data.shares).toFixed(2);
+      const pricePerShareBig = parseDecimalStringToBigInt(property.pricePerShare, 2);
+      const totalPurchasePriceBig = pricePerShareBig * BigInt(data.shares);
+      const totalPurchasePrice = formatBigIntAsDecimalString(totalPurchasePriceBig, 2);
       const { adminPublicKey, adminSecret } = stellarService.getMintingConfig();
       const { txHash: transactionHash } = await stellarService.mintPropertyShares({
         contractId: property.tokenAddress,
@@ -622,9 +626,11 @@ export class PropertyController {
               .update(shareOwnerships)
               .set({
                 shares: existingOwnership.shares + data.shares,
-                purchasePrice: (
-                  parseFloat(existingOwnership.purchasePrice) + parseFloat(totalPurchasePrice)
-                ).toFixed(2),
+                purchasePrice: formatBigIntAsDecimalString(
+                  parseDecimalStringToBigInt(existingOwnership.purchasePrice, 2) +
+                    parseDecimalStringToBigInt(totalPurchasePrice, 2),
+                  2,
+                ),
               })
               .where(eq(shareOwnerships.id, existingOwnership.id))
               .returning()

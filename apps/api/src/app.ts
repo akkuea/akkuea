@@ -6,6 +6,7 @@ import { userRoutes } from './routes/users';
 import { kycRoutes } from './routes/kyc';
 import { webhookRoutes } from './routes/webhooks';
 import { internalOperationsRoutes } from './routes/internalOperations';
+import { notificationDlqRoutes } from './routes/notificationDlq';
 import { authRoutes } from './routes/auth';
 import { ledgerRoutes } from './routes/ledger';
 import { errorHandler } from './middleware/errorHandler';
@@ -26,6 +27,7 @@ const app = new Elysia()
   .use(kycRoutes)
   .use(webhookRoutes)
   .use(internalOperationsRoutes)
+  .use(notificationDlqRoutes)
   .use(ledgerRoutes);
 
 export default app;

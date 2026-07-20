@@ -66,7 +66,11 @@ export function Toggle({
       >
         <motion.span
           layout
-          className={cn("inline-block rounded-full bg-white shadow-lg", thumb, "ml-1")}
+          className={cn(
+            "inline-block rounded-full bg-white shadow-lg",
+            thumb,
+            "ml-1",
+          )}
           animate={{ x: enabled ? parseInt(translate.split("-x-")[1]) * 4 : 0 }}
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
         />

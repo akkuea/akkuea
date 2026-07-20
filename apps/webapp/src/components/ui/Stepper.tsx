@@ -19,7 +19,12 @@ interface StepperProps {
   className?: string;
 }
 
-export function Stepper({ steps, currentStep, onStepClick, className }: StepperProps) {
+export function Stepper({
+  steps,
+  currentStep,
+  onStepClick,
+  className,
+}: StepperProps) {
   const isInteractive = typeof onStepClick === "function";
   const [focusedIndex, setFocusedIndex] = useState(currentStep);
   const stepRefs = useRef<Array<HTMLElement | null>>([]);
@@ -80,7 +85,9 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
               animate={{
                 scale: isActive ? 1.1 : 1,
                 backgroundColor:
-                  isCompleted || isActive ? "rgb(16, 185, 129)" : "rgb(39, 39, 42)",
+                  isCompleted || isActive
+                    ? "rgb(16, 185, 129)"
+                    : "rgb(39, 39, 42)",
               }}
               className={cn(
                 "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-200",
@@ -142,7 +149,11 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
                   onFocus={() => setFocusedIndex(index)}
                   onKeyDown={(e) => handleKeyDown(e, index)}
                   aria-label={`${step.title}${
-                    isCompleted ? " (completed)" : isActive ? " (current step)" : " (upcoming)"
+                    isCompleted
+                      ? " (completed)"
+                      : isActive
+                        ? " (current step)"
+                        : " (upcoming)"
                   }`}
                   className={cn(
                     "flex flex-col items-center rounded-xl p-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
@@ -165,7 +176,10 @@ export function Stepper({ steps, currentStep, onStepClick, className }: StepperP
               )}
 
               {index < steps.length - 1 && (
-                <div className="flex-1 mx-4 h-0.5 bg-zinc-800 relative" aria-hidden="true">
+                <div
+                  className="flex-1 mx-4 h-0.5 bg-zinc-800 relative"
+                  aria-hidden="true"
+                >
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: isCompleted ? "100%" : "0%" }}

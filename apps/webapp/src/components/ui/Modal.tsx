@@ -139,12 +139,18 @@ export function Modal({
                 <div className="flex items-start justify-between p-6 pb-0">
                   <div>
                     {title && (
-                      <h2 id={titleId} className="text-xl font-semibold text-white">
+                      <h2
+                        id={titleId}
+                        className="text-xl font-semibold text-white"
+                      >
                         {title}
                       </h2>
                     )}
                     {description && (
-                      <p id={descriptionId} className="text-sm text-zinc-400 mt-1">
+                      <p
+                        id={descriptionId}
+                        className="text-sm text-zinc-400 mt-1"
+                      >
                         {description}
                       </p>
                     )}

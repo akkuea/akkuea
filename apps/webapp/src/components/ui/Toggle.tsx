@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -28,10 +29,21 @@ export function Toggle({
 }: ToggleProps) {
   const { track, thumb, translate } = sizes[size];
 
+  const labelId = useId();
+  const descriptionId = useId();
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (disabled) return;
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      onChange(!enabled);
+    }
+  };
+
   return (
-    <label
+    <div
       className={cn(
-        "flex items-center gap-3 cursor-pointer",
+        "flex items-center gap-3",
         disabled && "opacity-50 cursor-not-allowed",
       )}
     >
@@ -39,12 +51,17 @@ export function Toggle({
         type="button"
         role="switch"
         aria-checked={enabled}
+        aria-label={!label ? "Toggle" : undefined}
+        aria-labelledby={label ? labelId : undefined}
+        aria-describedby={description ? descriptionId : undefined}
         disabled={disabled}
         onClick={() => !disabled && onChange(!enabled)}
+        onKeyDown={handleKeyDown}
         className={cn(
-          "relative inline-flex flex-shrink-0 items-center rounded-full transition-colors duration-200",
+          "relative inline-flex flex-shrink-0 items-center rounded-full transition-colors duration-200 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900",
           track,
           enabled ? "bg-emerald-500" : "bg-zinc-700",
+          disabled && "cursor-not-allowed",
         )}
       >
         <motion.span
@@ -58,16 +75,21 @@ export function Toggle({
           transition={{ type: "spring", stiffness: 500, damping: 30 }}
         />
       </button>
+
       {(label || description) && (
-        <div className="flex flex-col">
+        <div className="flex flex-col select-none">
           {label && (
-            <span className="text-sm font-medium text-white">{label}</span>
+            <span id={labelId} className="text-sm font-medium text-white">
+              {label}
+            </span>
           )}
           {description && (
-            <span className="text-xs text-zinc-500">{description}</span>
+            <span id={descriptionId} className="text-xs text-zinc-500">
+              {description}
+            </span>
           )}
         </div>
       )}
-    </label>
+    </div>
   );
 }

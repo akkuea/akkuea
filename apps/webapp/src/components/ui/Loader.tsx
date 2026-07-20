@@ -16,7 +16,11 @@ const sizes = {
 
 export function Loader({ size = "md", className }: LoaderProps) {
   return (
-    <div className={cn("relative", sizes[size], className)}>
+    <div
+      className={cn("relative", sizes[size], className)}
+      role="status"
+      aria-live="polite"
+    >
       <motion.div
         className="absolute inset-0 rounded-full border-2 border-emerald-500/30"
         animate={{ rotate: 360 }}
@@ -27,6 +31,7 @@ export function Loader({ size = "md", className }: LoaderProps) {
         animate={{ rotate: 360 }}
         transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
       />
+      <span className="sr-only">Loading...</span>
     </div>
   );
 }
@@ -42,6 +47,8 @@ export function PageLoader({ message = "Loading..." }: PageLoaderProps) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-zinc-950"
+      role="status"
+      aria-live="polite"
     >
       <motion.div
         initial={{ scale: 0.8, opacity: 0 }}
@@ -60,11 +67,13 @@ export function PageLoader({ message = "Loading..." }: PageLoaderProps) {
               ],
             }}
             transition={{ duration: 2, repeat: Infinity }}
+            aria-hidden="true"
           />
           <motion.div
             className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-500"
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            aria-hidden="true"
           />
         </div>
         <motion.p
@@ -80,10 +89,6 @@ export function PageLoader({ message = "Loading..." }: PageLoaderProps) {
   );
 }
 
-/**
- * Simple animated skeleton for basic loading states
- * For more complex skeletons (cards, tables, etc.), use components from Skeleton.tsx
- */
 interface AnimatedSkeletonProps {
   className?: string;
 }
@@ -95,7 +100,8 @@ export function AnimatedSkeleton({ className }: AnimatedSkeletonProps) {
       animate={{ opacity: [0.5, 1, 0.5] }}
       transition={{ duration: 1.5, repeat: Infinity }}
       role="status"
-      aria-label="Loading..."
+      aria-label="Loading content..."
+      aria-live="polite"
     />
   );
 }

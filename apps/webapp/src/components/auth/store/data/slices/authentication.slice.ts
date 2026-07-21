@@ -9,6 +9,8 @@ const initialState = {
   balanceError: null,
   isConnected: false,
   isConnecting: false,
+  isWalletDisconnected: false,
+  pendingAction: null,
   selectedWalletId: null,
   network: "testnet" as const,
 };
@@ -25,6 +27,23 @@ export const useAuthenticationStore = create<AuthenticationStore>()(
       setIsConnecting: (isConnecting) => set({ isConnecting }),
       setSelectedWalletId: (walletId) => set({ selectedWalletId: walletId }),
       setNetwork: (network) => set({ network }),
+      setPendingAction: (action) => set({ pendingAction: action }),
+      triggerReconnectionPrompt: (action) =>
+        set((state) => ({
+          isWalletDisconnected: true,
+          pendingAction: action ?? state.pendingAction,
+        })),
+      clearReconnectionPrompt: () =>
+        set({ isWalletDisconnected: false, pendingAction: null }),
+      resetSession: () =>
+        set({
+          address: null,
+          balance: null,
+          balanceStatus: null,
+          balanceError: null,
+          isConnected: false,
+          selectedWalletId: null,
+        }),
       reset: () => set(initialState),
     }),
     {
@@ -74,6 +93,7 @@ export const useAuthenticationStore = create<AuthenticationStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         state?.setIsConnecting(false);
+        state?.clearReconnectionPrompt();
       },
     },
   ),

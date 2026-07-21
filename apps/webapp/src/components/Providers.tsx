@@ -10,6 +10,7 @@ import {
   pollarProvider,
 } from "@/services/wallet";
 import { PrivyWrapper } from "@/components/auth/PrivyWrapper";
+import { WalletReconnectionPrompt } from "@/components/auth/WalletReconnectionPrompt";
 
 walletRegistry.register(new StellarWalletsKitProvider());
 
@@ -64,7 +65,10 @@ export function Providers({ children }: ProvidersProps) {
           deviceLabel: "Akkuea web",
         }}
       >
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          {children}
+          <WalletReconnectionPrompt />
+        </ThemeProvider>
       </PollarProvider>
     </PrivyWrapper>
   );

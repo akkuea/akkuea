@@ -1,4 +1,4 @@
-use soroban_sdk::{Address, Env};
+use soroban_sdk::{panic_with_error, Address, Env};
 
 use crate::access::admin::AdminControl;
 use crate::access::admin::PauseControl;
@@ -13,8 +13,8 @@ impl TimelockControl {
     }
 
     pub fn schedule_recovery(env: &Env, caller: &Address) {
-        AdminControl::require_admin(env, caller);
-        PauseControl::require_paused(env);
+        AdminControl::require_admin(env, caller).unwrap_or_else(|e| panic_with_error!(env, e));
+        PauseControl::require_paused(env).unwrap_or_else(|e| panic_with_error!(env, e));
 
         if Self::get_pending_recovery(env).is_some() {
             panic!("Recovery already scheduled");
@@ -39,7 +39,7 @@ impl TimelockControl {
     }
 
     pub fn cancel_recovery(env: &Env, caller: &Address) {
-        AdminControl::require_admin(env, caller);
+        AdminControl::require_admin(env, caller).unwrap_or_else(|e| panic_with_error!(env, e));
 
         if Self::get_pending_recovery(env).is_none() {
             panic!("No recovery scheduled");
@@ -51,7 +51,7 @@ impl TimelockControl {
     }
 
     pub fn execute_recovery(env: &Env, caller: &Address) {
-        AdminControl::require_admin(env, caller);
+        AdminControl::require_admin(env, caller).unwrap_or_else(|e| panic_with_error!(env, e));
 
         let record = Self::get_pending_recovery(env).expect("No recovery scheduled");
 

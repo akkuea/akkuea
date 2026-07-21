@@ -1,25 +1,30 @@
-use soroban_sdk::{Address, Env};
+use soroban_sdk::{contracterror, Address, Env};
 
 use crate::access::roles::{Role, RoleKey, RoleStorage};
 
-#[derive(Debug)]
-pub enum AdminError {
-    NotAdmin,
-    NotPendingAdmin,
-    AlreadyInitialized,
-    ZeroAddress,
+#[contracterror]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
+#[repr(u32)]
+pub enum ContractError {
+    NotAdmin = 1,
+    NotPendingAdmin = 2,
+    AlreadyInitialized = 3,
+    Unauthorized = 4,
+    ContractPaused = 5,
+    ContractNotPaused = 6,
 }
 
 pub struct AdminControl;
 
 impl AdminControl {
-    pub fn initialize(env: &Env, admin: &Address) {
+    pub fn initialize(env: &Env, admin: &Address) -> Result<(), ContractError> {
         if Self::is_initialized(env) {
-            panic!("Admin already initialized")
+            return Err(ContractError::AlreadyInitialized);
         }
 
         env.storage().instance().set(&RoleKey::Admin, admin);
         RoleStorage::grant_role(env, admin, &Role::Admin);
+        Ok(())
     }
 
     pub fn is_initialized(env: &Env) -> bool {
@@ -37,41 +42,47 @@ impl AdminControl {
         }
     }
 
-    pub fn require_admin(env: &Env, caller: &Address) {
+    pub fn require_admin(env: &Env, caller: &Address) -> Result<(), ContractError> {
         if !Self::is_admin(env, caller) {
-            panic!("Caller not admin")
+            return Err(ContractError::NotAdmin);
         }
+        Ok(())
     }
 
-    pub fn transfer_admin_start(env: &Env, caller: &Address, new_admin: &Address) {
-        Self::require_admin(env, caller);
+    pub fn transfer_admin_start(
+        env: &Env,
+        caller: &Address,
+        new_admin: &Address,
+    ) -> Result<(), ContractError> {
+        Self::require_admin(env, caller)?;
         env.storage()
             .instance()
             .set(&RoleKey::PendingAdmin, new_admin);
+        Ok(())
     }
 
-    pub fn transfer_admin_accept(env: &Env, new_admin: &Address) {
+    pub fn transfer_admin_accept(env: &Env, new_admin: &Address) -> Result<(), ContractError> {
         let pending: Option<Address> = env.storage().instance().get(&RoleKey::PendingAdmin);
 
         match pending {
-            Some(pending_admin) => {
-                if pending_admin == new_admin.clone() {
-                    if let Some(old_admin) = Self::get_admin(env) {
-                        RoleStorage::revoke_role(env, &old_admin, &Role::Admin);
-                    }
-
-                    env.storage().instance().set(&RoleKey::Admin, new_admin);
-                    RoleStorage::grant_role(env, new_admin, &Role::Admin);
-                    env.storage().instance().remove(&RoleKey::PendingAdmin);
+            Some(pending_admin) if pending_admin == new_admin.clone() => {
+                if let Some(old_admin) = Self::get_admin(env) {
+                    RoleStorage::revoke_role(env, &old_admin, &Role::Admin);
                 }
+
+                env.storage().instance().set(&RoleKey::Admin, new_admin);
+                RoleStorage::grant_role(env, new_admin, &Role::Admin);
+                env.storage().instance().remove(&RoleKey::PendingAdmin);
+                Ok(())
             }
-            _ => panic!("Caller is not pending admin"),
+            _ => Err(ContractError::NotPendingAdmin),
         }
     }
 
-    pub fn transfer_admin_cancel(env: &Env, caller: &Address) {
-        Self::require_admin(env, caller);
+    pub fn transfer_admin_cancel(env: &Env, caller: &Address) -> Result<(), ContractError> {
+        Self::require_admin(env, caller)?;
         env.storage().instance().remove(&RoleKey::PendingAdmin);
+        Ok(())
     }
 
     pub fn get_pending_admin(env: &Env) -> Option<Address> {
@@ -97,32 +108,36 @@ impl PauseControl {
         is_admin || is_pauser || is_emergency_guard
     }
 
-    pub fn require_can_pause(env: &Env, address: &Address) {
-        let can_pause = Self::can_pause(env, address);
-        if !can_pause {
-            panic!("Caller does not have permission to pause")
+    pub fn require_can_pause(env: &Env, address: &Address) -> Result<(), ContractError> {
+        if !Self::can_pause(env, address) {
+            return Err(ContractError::Unauthorized);
         }
+        Ok(())
     }
 
-    pub fn pause(env: &Env, caller: &Address) {
-        Self::require_can_pause(env, caller);
+    pub fn pause(env: &Env, caller: &Address) -> Result<(), ContractError> {
+        Self::require_can_pause(env, caller)?;
         env.storage().instance().set(&RoleKey::Paused, &true);
+        Ok(())
     }
 
-    pub fn unpause(env: &Env, caller: &Address) {
-        Self::require_can_pause(env, caller);
+    pub fn unpause(env: &Env, caller: &Address) -> Result<(), ContractError> {
+        Self::require_can_pause(env, caller)?;
         env.storage().instance().remove(&RoleKey::Paused);
+        Ok(())
     }
 
-    pub fn require_paused(env: &Env) {
+    pub fn require_paused(env: &Env) -> Result<(), ContractError> {
         if !Self::is_paused(env) {
-            panic!("Contract not paused")
+            return Err(ContractError::ContractNotPaused);
         }
+        Ok(())
     }
 
-    pub fn require_not_paused(env: &Env) {
+    pub fn require_not_paused(env: &Env) -> Result<(), ContractError> {
         if Self::is_paused(env) {
-            panic!("Contract paused")
+            return Err(ContractError::ContractPaused);
         }
+        Ok(())
     }
 }

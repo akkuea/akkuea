@@ -25,7 +25,7 @@ pub use events::*;
 pub use lending::*;
 pub use storage::*;
 
-use soroban_sdk::{contract, contractimpl, token, Address, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env, String, Vec};
 
 // Internal imports
 use lending::events as lending_events;
@@ -146,7 +146,7 @@ impl PropertyTokenContract {
         amount: u64,
     ) {
         admin.require_auth();
-        AdminControl::require_admin(&env, &admin);
+        AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
 
         if amount == 0 {
             panic!("Amount must be greater than zero");
@@ -222,7 +222,7 @@ impl PropertyTokenContract {
         payment_token: Address,
     ) {
         buyer.require_auth();
-        PauseControl::require_not_paused(&env);
+        PauseControl::require_not_paused(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
 
         if amount == 0 {
             panic!("Amount must be positive");
@@ -547,7 +547,7 @@ impl PropertyTokenContract {
 
     pub fn set_oracle(env: Env, oracle_address: Address, caller: Address) {
         caller.require_auth();
-        AdminControl::require_admin(&env, &caller);
+        AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
         PriceOracle::set_oracle_address(&env, &oracle_address);
     }
 
@@ -557,7 +557,7 @@ impl PropertyTokenContract {
     /// * `min_price` – minimum normalized price (floor). Set to 0 to disable.
     pub fn set_oracle_config(env: Env, caller: Address, max_age: u64, min_price: i128) {
         caller.require_auth();
-        AdminControl::require_admin(&env, &caller);
+        AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
         if max_age > 0 {
             PriceOracle::set_max_age(&env, max_age);
         }
@@ -612,8 +612,9 @@ impl PropertyTokenContract {
 
     pub fn emergency_pause(env: Env, caller: Address) {
         caller.require_auth();
-        PauseControl::require_can_pause(&env, &caller);
-        PauseControl::pause(&env, &caller);
+        PauseControl::require_can_pause(&env, &caller)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+        PauseControl::pause(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
         EmergencyEvents::emergency_paused(&env, caller);
     }
 
@@ -634,13 +635,13 @@ impl PropertyTokenContract {
 
     pub fn grant_emergency_role(env: Env, admin: Address, target: Address) {
         admin.require_auth();
-        AdminControl::require_admin(&env, &admin);
+        AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
         RoleStorage::grant_role(&env, &target, &Role::EmergencyGuard);
     }
 
     pub fn revoke_emergency_role(env: Env, admin: Address, target: Address) {
         admin.require_auth();
-        AdminControl::require_admin(&env, &admin);
+        AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
         RoleStorage::revoke_role(&env, &target, &Role::EmergencyGuard);
     }
 }

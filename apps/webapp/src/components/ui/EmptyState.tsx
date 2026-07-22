@@ -25,7 +25,9 @@ export function EmptyState({
     <Card variant="bordered" className="py-12">
       <div className="flex flex-col items-center justify-center text-center space-y-4">
         <div className="w-10 h-10 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center">
-          {icon ?? <Inbox className="w-5 h-5 text-neutral-500" aria-hidden="true" />}
+          {icon ?? (
+            <Inbox className="w-5 h-5 text-neutral-500" aria-hidden="true" />
+          )}
         </div>
         <div>
           <p className="text-sm font-medium text-white">{title}</p>

@@ -73,7 +73,9 @@ export function useAsyncState<T>(
   );
 
   const isEmptyResult =
-    status === "success" && data !== null && isEmptyFn ? isEmptyFn(data) : false;
+    status === "success" && data !== null && isEmptyFn
+      ? isEmptyFn(data)
+      : false;
 
   return {
     status,

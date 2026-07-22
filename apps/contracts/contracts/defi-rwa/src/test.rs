@@ -1,4 +1,4 @@
-use super::access::{AdminControl, PauseControl};
+use super::access::{AdminControl, ContractError, PauseControl};
 use super::events::{LendingEvents, PropertyEvents};
 use super::lending::PriceOracle;
 use super::storage;
@@ -839,15 +839,15 @@ fn test_admin_initialization() {
 }
 
 #[test]
-#[should_panic(expected = "Caller not admin")]
+#[should_panic(expected = "NotAdmin")]
 fn test_require_admin_fails() {
     let (contract_id, env) = setup_internal();
     let admin = Address::generate(&env);
     let other = Address::generate(&env);
     // AdminControl::initialize(&env.as_contract(&contract_id, f), &admin);
     env.as_contract(&contract_id, || {
-        AdminControl::require_admin(&env, &admin);
-        AdminControl::require_admin(&env, &other);
+        let _ = AdminControl::require_admin(&env, &admin);
+        AdminControl::require_admin(&env, &other).unwrap();
     });
 }
 
@@ -862,16 +862,50 @@ fn test_admin_transfer() {
         RoleStorage::grant_role(&env, &admin, &Role::Admin);
 
         // Start transfer
-        AdminControl::transfer_admin_start(&env, &admin, &new_admin);
+        AdminControl::transfer_admin_start(&env, &admin, &new_admin).unwrap();
         assert_eq!(
             AdminControl::get_pending_admin(&env),
             Some(new_admin.clone())
         );
 
         // Accept transfer
-        AdminControl::transfer_admin_accept(&env, &new_admin);
+        AdminControl::transfer_admin_accept(&env, &new_admin).unwrap();
         assert!(AdminControl::is_admin(&env, &new_admin));
         assert!(!AdminControl::is_admin(&env, &admin));
+    });
+}
+
+#[test]
+fn test_admin_initialize_twice_fails() {
+    // The constructor already sets the admin during registration, so a
+    // subsequent call to `initialize` must be rejected.
+    let (contract_id, env) = setup_internal();
+    let other = Address::generate(&env);
+    env.as_contract(&contract_id, || {
+        assert!(AdminControl::is_initialized(&env));
+        assert_eq!(
+            AdminControl::initialize(&env, &other),
+            Err(ContractError::AlreadyInitialized)
+        );
+    });
+}
+
+#[test]
+fn test_transfer_admin_accept_wrong_caller_fails() {
+    let (contract_id, env) = setup_internal();
+    let admin = Address::generate(&env);
+    let new_admin = Address::generate(&env);
+    let stranger = Address::generate(&env);
+    env.as_contract(&contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&env, &admin, &Role::Admin);
+
+        AdminControl::transfer_admin_start(&env, &admin, &new_admin).unwrap();
+        assert_eq!(
+            AdminControl::transfer_admin_accept(&env, &stranger),
+            Err(ContractError::NotPendingAdmin)
+        );
     });
 }
 
@@ -884,9 +918,9 @@ fn test_pause_unpause() {
         env.storage().instance().set(&RoleKey::Admin, &admin);
         RoleStorage::grant_role(&env, &admin, &Role::Admin);
         assert!(!PauseControl::is_paused(&env));
-        PauseControl::pause(&env, &admin);
+        PauseControl::pause(&env, &admin).unwrap();
         assert!(PauseControl::is_paused(&env));
-        PauseControl::unpause(&env, &admin);
+        PauseControl::unpause(&env, &admin).unwrap();
         assert!(!PauseControl::is_paused(&env));
     });
 }
@@ -1916,7 +1950,7 @@ fn test_purchase_unverified_property() {
 }
 
 #[test]
-#[should_panic(expected = "Contract paused")]
+#[should_panic(expected = "Error(Contract, #5)")]
 fn test_purchase_when_contract_paused() {
     let (contract_id, env, _property_owner, buyer, payment_token, property_id) =
         setup_purchase_test();
@@ -1925,7 +1959,7 @@ fn test_purchase_when_contract_paused() {
 
     // Pause contract
     env.as_contract(&contract_id, || {
-        PauseControl::pause(&env, &admin);
+        PauseControl::pause(&env, &admin).unwrap();
     });
 
     // Attempt purchase
@@ -1975,7 +2009,7 @@ fn test_mint_and_query_balance() {
 }
 
 #[test]
-#[should_panic(expected = "Caller not admin")]
+#[should_panic(expected = "Error(Contract, #1)")]
 fn test_unauthorized_mint_panics() {
     let env = Env::default();
     env.mock_all_auths();
@@ -2659,14 +2693,14 @@ fn test_borrow_with_zero_oracle_price() {
 }
 
 #[test]
-#[should_panic(expected = "Contract paused")]
+#[should_panic(expected = "ContractPaused")]
 fn test_emergency_pause_blocks_operations() {
     let s = setup();
 
     s.contract_client.emergency_pause(&s.admin);
 
     s.env.as_contract(&s.contract_address, || {
-        PauseControl::require_not_paused(&s.env);
+        PauseControl::require_not_paused(&s.env).unwrap();
     });
 }
 
@@ -2702,7 +2736,7 @@ fn test_recovery_succeeds_after_timelock() {
 }
 
 #[test]
-#[should_panic(expected = "Contract not paused")]
+#[should_panic(expected = "Error(Contract, #6)")]
 fn test_schedule_recovery_requires_paused() {
     let s = setup();
     s.contract_client.schedule_recovery(&s.admin);
@@ -2739,7 +2773,7 @@ fn test_cancel_no_recovery_panics() {
 }
 
 #[test]
-#[should_panic(expected = "Caller does not have permission to pause")]
+#[should_panic(expected = "Error(Contract, #4)")]
 fn test_unauthorized_cannot_emergency_pause() {
     let s = setup();
     let attacker = Address::generate(&s.env);
@@ -2747,7 +2781,7 @@ fn test_unauthorized_cannot_emergency_pause() {
 }
 
 #[test]
-#[should_panic(expected = "Caller not admin")]
+#[should_panic(expected = "Error(Contract, #1)")]
 fn test_unauthorized_cannot_schedule_recovery() {
     let s = setup();
     let attacker = Address::generate(&s.env);
@@ -2756,7 +2790,7 @@ fn test_unauthorized_cannot_schedule_recovery() {
 }
 
 #[test]
-#[should_panic(expected = "Caller not admin")]
+#[should_panic(expected = "Error(Contract, #1)")]
 fn test_unauthorized_cannot_execute_recovery() {
     let s = setup();
     let attacker = Address::generate(&s.env);
@@ -2764,7 +2798,7 @@ fn test_unauthorized_cannot_execute_recovery() {
 }
 
 #[test]
-#[should_panic(expected = "Caller not admin")]
+#[should_panic(expected = "Error(Contract, #1)")]
 fn test_unauthorized_cannot_cancel_recovery() {
     let s = setup();
     let attacker = Address::generate(&s.env);
@@ -2772,7 +2806,7 @@ fn test_unauthorized_cannot_cancel_recovery() {
 }
 
 #[test]
-#[should_panic(expected = "Caller not admin")]
+#[should_panic(expected = "Error(Contract, #1)")]
 fn test_non_admin_cannot_grant_emergency_role() {
     let s = setup();
     let non_admin = Address::generate(&s.env);
@@ -2781,7 +2815,7 @@ fn test_non_admin_cannot_grant_emergency_role() {
 }
 
 #[test]
-#[should_panic(expected = "Caller does not have permission to pause")]
+#[should_panic(expected = "Error(Contract, #4)")]
 fn test_revoked_emergency_guard_cannot_pause() {
     let s = setup();
     let guard = Address::generate(&s.env);

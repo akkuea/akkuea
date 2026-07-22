@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { PropertyInfo } from "@real-estate-defi/shared";
 import { propertyApi } from "@/services/api/properties";
 import { useLiveUpdates, type ConnectionStatus } from "@/hooks/useLiveUpdates";
+import { useAsyncState } from "@/hooks/useAsyncState";
 
 interface UsePropertiesOptions {
   enableLiveUpdates?: boolean;
@@ -20,14 +21,6 @@ interface UsePropertiesResult {
   isPolling: boolean;
 }
 
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error && error.message.trim().length > 0) {
-    return error.message;
-  }
-
-  return "We couldn't load marketplace properties. Please try again.";
-}
-
 const SSE_ENDPOINT =
   typeof process !== "undefined"
     ? process.env?.NEXT_PUBLIC_PROPERTIES_SSE_URL
@@ -37,62 +30,50 @@ export function useProperties(
   options: UsePropertiesOptions = {},
 ): UsePropertiesResult {
   const { enableLiveUpdates = true, pollingInterval = 30000 } = options;
-
-  const [properties, setProperties] = useState<PropertyInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
-  const fetchProperties = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
+  const fetchProperties = useCallback(
+    () => propertyApi.getAll({ limit: 100 }).then((res) => res.data),
+    [],
+  );
 
-    try {
-      const response = await propertyApi.getAll({
-        limit: 100,
-      });
-      setProperties(response.data);
-      setLastUpdatedAt(new Date());
-      return response.data;
-    } catch (fetchError) {
-      setError(getErrorMessage(fetchError));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const asyncState = useAsyncState(fetchProperties, {
+    isEmpty: (data) => data.length === 0,
+  });
 
   const { connectionStatus, isPolling, refresh } = useLiveUpdates(
-    async () => {
-      const response = await propertyApi.getAll({ limit: 100 });
-      return response.data;
-    },
+    async () => (await propertyApi.getAll({ limit: 100 })).data,
     {
       endpoint: SSE_ENDPOINT,
       pollingInterval,
-      enabled: enableLiveUpdates && !isLoading,
+      enabled: enableLiveUpdates && !asyncState.isLoading,
       onUpdate: (updatedProperties) => {
-        setProperties(updatedProperties);
+        asyncState.setData(updatedProperties);
         setLastUpdatedAt(new Date());
       },
     },
   );
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      void fetchProperties();
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [fetchProperties]);
+    void asyncState.execute();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asyncState.execute]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (asyncState.status === "success") setLastUpdatedAt(new Date());
+  }, [asyncState.status]);
 
   const refetch = useCallback(async () => {
-    await fetchProperties();
+    await asyncState.retry();
     refresh();
-  }, [fetchProperties, refresh]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [asyncState.retry, refresh]);
 
   return {
-    properties,
-    isLoading,
-    error,
+    properties: asyncState.data ?? [],
+    isLoading: asyncState.isLoading,
+    error: asyncState.error,
     refetch,
     connectionStatus,
     lastUpdatedAt,

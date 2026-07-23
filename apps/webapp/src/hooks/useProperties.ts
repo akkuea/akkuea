@@ -32,13 +32,21 @@ export function useProperties(
   const { enableLiveUpdates = true, pollingInterval = 30000 } = options;
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
 
-  const fetchProperties = useCallback(
-    () => propertyApi.getAll({ limit: 100 }).then((res) => res.data),
-    [],
-  );
+  const fetchProperties = useCallback(async () => {
+    const response = await propertyApi.getAll({ limit: 100 });
+    setLastUpdatedAt(new Date());
+    return response.data;
+  }, []);
 
-  const asyncState = useAsyncState(fetchProperties, {
-    isEmpty: (data) => data.length === 0,
+  const {
+    data,
+    error,
+    isLoading,
+    execute,
+    retry,
+    setData,
+  } = useAsyncState(fetchProperties, {
+    isEmpty: (loaded) => !loaded || loaded.length === 0,
   });
 
   const { connectionStatus, isPolling, refresh } = useLiveUpdates(
@@ -46,34 +54,27 @@ export function useProperties(
     {
       endpoint: SSE_ENDPOINT,
       pollingInterval,
-      enabled: enableLiveUpdates && !asyncState.isLoading,
+      enabled: enableLiveUpdates && !isLoading,
       onUpdate: (updatedProperties) => {
-        asyncState.setData(updatedProperties);
+        setData(updatedProperties);
         setLastUpdatedAt(new Date());
       },
     },
   );
 
   useEffect(() => {
-    void asyncState.execute();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asyncState.execute]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (asyncState.status === "success") setLastUpdatedAt(new Date());
-  }, [asyncState.status]);
+    void execute();
+  }, [execute]);
 
   const refetch = useCallback(async () => {
-    await asyncState.retry();
+    await retry();
     refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [asyncState.retry, refresh]);
+  }, [retry, refresh]);
 
   return {
-    properties: asyncState.data ?? [],
-    isLoading: asyncState.isLoading,
-    error: asyncState.error,
+    properties: data ?? [],
+    isLoading,
+    error,
     refetch,
     connectionStatus,
     lastUpdatedAt,

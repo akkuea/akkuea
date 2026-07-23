@@ -1,4 +1,3 @@
-// apps/webapp/src/components/ui/EmptyState.tsx
 "use client";
 
 import type { ReactNode } from "react";

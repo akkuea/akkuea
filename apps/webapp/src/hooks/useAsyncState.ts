@@ -1,13 +1,12 @@
-// apps/webapp/src/hooks/useAsyncState.ts
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 export type AsyncStatus = "idle" | "loading" | "success" | "error";
 
 interface UseAsyncStateOptions<T> {
   /** Given successfully-loaded data, is it "empty" for UI purposes? */
-  isEmpty?: (data: T) => boolean;
+  isEmpty?: (data: T | null) => boolean;
 }
 
 interface UseAsyncStateResult<T> {
@@ -41,23 +40,30 @@ export function useAsyncState<T>(
   const [status, setStatus] = useState<AsyncStatus>("idle");
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
   // Depends on asyncFn's identity so callers whose fetcher changes (e.g. a
   // route param changes) get a fresh `execute` — see property detail page.
   const execute = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setStatus("loading");
     setError(null);
     try {
       const result = await asyncFn();
+      if (requestId !== requestIdRef.current) {
+        return undefined;
+      }
       setData(result);
       setStatus("success");
       return result;
     } catch (err) {
+      if (requestId !== requestIdRef.current) {
+        return undefined;
+      }
       setError(getErrorMessage(err));
       setStatus("error");
       return undefined;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [asyncFn]);
 
   const setDataDirectly = useCallback(
@@ -73,9 +79,7 @@ export function useAsyncState<T>(
   );
 
   const isEmptyResult =
-    status === "success" && data !== null && isEmptyFn
-      ? isEmptyFn(data)
-      : false;
+    status === "success" && (isEmptyFn ? isEmptyFn(data) : false);
 
   return {
     status,

@@ -1,58 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import type { PropertyInfo } from "@real-estate-defi/shared";
+import { useCallback, useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { PropertyDetail } from "@/components/property";
 import { InvestModal } from "@/components/marketplace/InvestModal";
 import { Footer, Navbar } from "@/components/layout";
-import { Button, Card } from "@/components/ui";
+import {
+  Button,
+  Card,
+  EmptyState,
+  SectionErrorFallback,
+} from "@/components/ui";
 import { useWallet } from "@/components/auth/hooks";
+import { useAsyncState } from "@/hooks/useAsyncState";
 import { propertyApi } from "@/services/api/properties";
-import { AlertCircle, ChevronLeft, RefreshCw } from "lucide-react";
+import { Building2, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 
 export default function PropertyPage() {
   const params = useParams();
+  const router = useRouter();
   const propertyId = params.id as string;
   const { isConnected, connect, address } = useWallet();
-  const [property, setProperty] = useState<PropertyInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [isInvestModalOpen, setIsInvestModalOpen] = useState(false);
 
+  const fetchProperty = useCallback(
+    () => propertyApi.getById(propertyId),
+    [propertyId],
+  );
+
+  const {
+    data: property,
+    isLoading,
+    isError,
+    isEmpty,
+    error,
+    execute,
+    retry,
+  } = useAsyncState(fetchProperty, {
+    isEmpty: (data) => data == null,
+  });
+
   useEffect(() => {
-    const loadProperty = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const data = await propertyApi.getById(propertyId);
-        setProperty(data);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to load property",
-        );
-        setProperty(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadProperty();
-  }, [propertyId]);
-
-  const handleRetry = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const data = await propertyApi.getById(propertyId);
-      setProperty(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load property");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    void execute();
+  }, [execute]);
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0a0a] text-white">
@@ -60,7 +51,6 @@ export default function PropertyPage() {
 
       <main className="flex-1">
         <div className="container mx-auto max-w-4xl px-4 py-8">
-          {/* Back Button */}
           <Link href="/marketplace">
             <Button variant="ghost" className="mb-6 gap-2">
               <ChevronLeft className="h-4 w-4" />
@@ -69,7 +59,11 @@ export default function PropertyPage() {
           </Link>
 
           {isLoading && (
-            <div className="space-y-6">
+            <div
+              className="space-y-6"
+              aria-busy="true"
+              aria-label="Loading property"
+            >
               <Card className="h-96 animate-pulse bg-[#1a1a1a]" />
               <div className="space-y-3">
                 <div className="h-8 w-1/3 animate-pulse rounded bg-[#1a1a1a]" />
@@ -78,23 +72,31 @@ export default function PropertyPage() {
             </div>
           )}
 
-          {error && !isLoading && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-6">
-              <div className="mb-4 flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-red-400" />
-                <h3 className="font-semibold text-red-200">
-                  Error Loading Property
-                </h3>
-              </div>
-              <p className="mb-4 text-sm text-red-100/80">{error}</p>
-              <Button onClick={handleRetry} variant="ghost" className="gap-2">
-                <RefreshCw className="h-4 w-4" />
-                Try Again
-              </Button>
-            </div>
+          {isError && !isLoading && (
+            <SectionErrorFallback
+              message={error ?? "Error Loading Property"}
+              onReset={() => void retry()}
+            />
           )}
 
-          {property && !isLoading && (
+          {isEmpty && !isLoading && (
+            <EmptyState
+              title="Property not found"
+              description="This property does not exist or is no longer available."
+              icon={
+                <Building2
+                  className="w-5 h-5 text-neutral-500"
+                  aria-hidden="true"
+                />
+              }
+              action={{
+                label: "Browse marketplace",
+                onClick: () => router.push("/marketplace"),
+              }}
+            />
+          )}
+
+          {property && !isLoading && !isEmpty && (
             <div>
               <PropertyDetail
                 property={property}
@@ -107,7 +109,7 @@ export default function PropertyPage() {
 
       <Footer />
 
-      {property && (
+      {property && !isEmpty && (
         <InvestModal
           property={property}
           isOpen={isInvestModalOpen}
@@ -123,7 +125,7 @@ export default function PropertyPage() {
           }}
           onInvestmentSuccess={() => {
             setIsInvestModalOpen(false);
-            handleRetry();
+            void retry();
           }}
         />
       )}

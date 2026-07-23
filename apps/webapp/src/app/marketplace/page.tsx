@@ -4,10 +4,8 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlertCircle,
   Building2,
   MapPin,
-  RefreshCw,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -33,9 +31,11 @@ import {
   Badge,
   Button,
   Card,
+  EmptyState,
   ErrorBoundary,
   FreshnessIndicator,
   Input,
+  SectionErrorFallback,
   SkeletonPropertyCard,
 } from "@/components/ui";
 import {
@@ -55,59 +55,6 @@ function PropertyGridSkeleton() {
         </motion.div>
       ))}
     </>
-  );
-}
-
-interface ErrorStateProps {
-  error: string;
-  onRetry: () => Promise<void>;
-}
-
-function ErrorState({ error, onRetry }: ErrorStateProps) {
-  return (
-    <motion.div
-      variants={staggerItem}
-      className="rounded-2xl border border-red-500/30 bg-red-500/10 p-8 text-center"
-    >
-      <AlertCircle className="mx-auto mb-4 h-12 w-12 text-red-300" />
-      <h2 className="mb-2 text-lg font-semibold text-white">
-        Could not load the marketplace
-      </h2>
-      <p className="mx-auto mb-6 max-w-xl text-sm text-red-100/80">{error}</p>
-      <Button
-        variant="accent"
-        onClick={() => void onRetry()}
-        leftIcon={<RefreshCw className="h-4 w-4" />}
-      >
-        Retry
-      </Button>
-    </motion.div>
-  );
-}
-
-interface EmptyStateProps {
-  hasActiveFilters: boolean;
-  onClearFilters: () => void;
-}
-
-function EmptyState({ hasActiveFilters, onClearFilters }: EmptyStateProps) {
-  return (
-    <motion.div variants={staggerItem} className="py-16 text-center">
-      <Building2 className="mx-auto mb-4 h-16 w-16 text-neutral-700" />
-      <h3 className="mb-2 text-lg font-semibold text-white">
-        No properties found
-      </h3>
-      <p className="text-sm text-neutral-500">
-        {hasActiveFilters
-          ? "No properties match your search or filters."
-          : "There are no properties listed yet."}
-      </p>
-      {hasActiveFilters && (
-        <Button variant="outline" className="mt-6" onClick={onClearFilters}>
-          Clear filters
-        </Button>
-      )}
-    </motion.div>
   );
 }
 
@@ -431,7 +378,12 @@ export default function MarketplacePage() {
             </motion.div>
 
             {error ? (
-              <ErrorState error={error} onRetry={refetch} />
+              <motion.div variants={staggerItem}>
+                <SectionErrorFallback
+                  message="Could not load the marketplace"
+                  onReset={() => void refetch()}
+                />
+              </motion.div>
             ) : (
               <>
                 <motion.div
@@ -452,10 +404,30 @@ export default function MarketplacePage() {
                 </motion.div>
 
                 {!isLoading && filteredProperties.length === 0 && (
-                  <EmptyState
-                    hasActiveFilters={hasActiveFilters}
-                    onClearFilters={clearFilters}
-                  />
+                  <motion.div variants={staggerItem}>
+                    <EmptyState
+                      title="No properties found"
+                      description={
+                        hasActiveFilters
+                          ? "No properties match your search or filters."
+                          : "There are no properties listed yet."
+                      }
+                      icon={
+                        <Building2
+                          className="w-5 h-5 text-neutral-500"
+                          aria-hidden="true"
+                        />
+                      }
+                      action={
+                        hasActiveFilters
+                          ? {
+                              label: "Clear filters",
+                              onClick: clearFilters,
+                            }
+                          : undefined
+                      }
+                    />
+                  </motion.div>
                 )}
               </>
             )}

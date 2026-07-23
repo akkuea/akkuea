@@ -78,8 +78,8 @@ export const ledgerRoutes = new Elysia({ prefix: '/api/ledger' }).get(
 
     const signal = (request as Request & { signal?: AbortSignal }).signal;
 
-    return new ReadableStream({
-      start(controller) {
+    return new ReadableStream<Uint8Array>({
+      start(controller: ReadableStreamDefaultController<Uint8Array>) {
         let closed = false;
 
         const close = () => {

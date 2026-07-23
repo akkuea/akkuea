@@ -38,16 +38,12 @@ export function useProperties(
     return response.data;
   }, []);
 
-  const {
-    data,
-    error,
-    isLoading,
-    execute,
-    retry,
-    setData,
-  } = useAsyncState(fetchProperties, {
-    isEmpty: (loaded) => !loaded || loaded.length === 0,
-  });
+  const { data, error, isLoading, execute, retry, setData } = useAsyncState(
+    fetchProperties,
+    {
+      isEmpty: (loaded) => !loaded || loaded.length === 0,
+    },
+  );
 
   const { connectionStatus, isPolling, refresh } = useLiveUpdates(
     async () => (await propertyApi.getAll({ limit: 100 })).data,

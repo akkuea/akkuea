@@ -1,53 +1,48 @@
+import { z } from 'zod';
 import type { PropertyInfo } from '@real-estate-defi/shared';
+import {
+  stellarAddressSchema,
+  positiveAmountSchema,
+  propertyLocationSchema,
+  propertyDocumentSchema,
+} from '@real-estate-defi/shared';
 
 /**
  * DTO for creating a new property
  */
-export interface CreatePropertyDto {
-  owner: string;
-  totalShares: number;
-  valuePerShare: number;
-  metadata: Record<string, string>;
-  location?: {
-    address: string;
-    city: string;
-    country: string;
-    coordinates?: {
-      lat: number;
-      lng: number;
-    };
-  };
-  documents?: {
-    title: string;
-    url: string;
-    type: 'deed' | 'appraisal' | 'inspection' | 'other';
-  }[];
-}
+export const CreatePropertyDto = z.object({
+  owner: stellarAddressSchema,
+  totalShares: z.number().int().positive(),
+  valuePerShare: positiveAmountSchema,
+  metadata: z.record(z.string()),
+  location: propertyLocationSchema.optional(),
+  documents: z.array(
+    z.object({
+      title: z.string().min(1),
+      url: z.string().url(),
+      type: z.enum(['deed', 'appraisal', 'inspection', 'other']),
+    }),
+  ).optional(),
+});
 
 /**
  * DTO for updating an existing property
  */
-export interface UpdatePropertyDto {
-  owner?: string;
-  totalShares?: number;
-  availableShares?: number;
-  valuePerShare?: number;
-  metadata?: Record<string, string>;
-  location?: {
-    address: string;
-    city: string;
-    country: string;
-    coordinates?: {
-      lat: number;
-      lng: number;
-    };
-  };
-  documents?: {
-    title: string;
-    url: string;
-    type: 'deed' | 'appraisal' | 'inspection' | 'other';
-  }[];
-}
+export const UpdatePropertyDto = z.object({
+  owner: stellarAddressSchema.optional(),
+  totalShares: z.number().int().positive().optional(),
+  availableShares: z.number().int().min(0).optional(),
+  valuePerShare: positiveAmountSchema.optional(),
+  metadata: z.record(z.string()).optional(),
+  location: propertyLocationSchema.optional(),
+  documents: z.array(
+    z.object({
+      title: z.string().min(1),
+      url: z.string().url(),
+      type: z.enum(['deed', 'appraisal', 'inspection', 'other']),
+    }),
+  ).optional(),
+});
 
 /**
  * DTO for filtering properties
@@ -84,185 +79,36 @@ export interface PaginatedResponse<T> {
 }
 
 /**
- * Validates a CreatePropertyDto
+ * Validates a CreatePropertyDto using zod schema
  */
 export function validateCreateProperty(data: unknown): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  if (!data || typeof data !== 'object') {
-    errors.push('Invalid request body');
-    return { valid: false, errors };
+  const result = CreatePropertyDto.safeParse(data);
+  if (result.success) {
+    return { valid: true, errors: [] };
   }
-
-  const dto = data as Partial<CreatePropertyDto>;
-
-  // Required fields
-  if (!dto.owner || typeof dto.owner !== 'string' || dto.owner.trim().length === 0) {
-    errors.push('Owner is required and must be a non-empty string');
-  }
-
-  if (typeof dto.totalShares !== 'number' || dto.totalShares <= 0) {
-    errors.push('Total shares must be a positive number');
-  }
-
-  if (typeof dto.valuePerShare !== 'number' || dto.valuePerShare <= 0) {
-    errors.push('Value per share must be a positive number');
-  }
-
-  if (!dto.metadata || typeof dto.metadata !== 'object') {
-    errors.push('Metadata is required and must be an object');
-  }
-
-  // Optional location validation
-  if (dto.location) {
-    if (!dto.location.address || typeof dto.location.address !== 'string') {
-      errors.push('Location address must be a string');
-    }
-    if (!dto.location.city || typeof dto.location.city !== 'string') {
-      errors.push('Location city must be a string');
-    }
-    if (!dto.location.country || typeof dto.location.country !== 'string') {
-      errors.push('Location country must be a string');
-    }
-    if (dto.location.coordinates) {
-      if (
-        typeof dto.location.coordinates.lat !== 'number' ||
-        dto.location.coordinates.lat < -90 ||
-        dto.location.coordinates.lat > 90
-      ) {
-        errors.push('Location coordinates latitude must be between -90 and 90');
-      }
-      if (
-        typeof dto.location.coordinates.lng !== 'number' ||
-        dto.location.coordinates.lng < -180 ||
-        dto.location.coordinates.lng > 180
-      ) {
-        errors.push('Location coordinates longitude must be between -180 and 180');
-      }
-    }
-  }
-
-  // Optional documents validation
-  if (dto.documents) {
-    if (!Array.isArray(dto.documents)) {
-      errors.push('Documents must be an array');
-    } else {
-      dto.documents.forEach((doc, index) => {
-        if (!doc.title || typeof doc.title !== 'string') {
-          errors.push(`Document ${index}: title is required and must be a string`);
-        }
-        if (!doc.url || typeof doc.url !== 'string') {
-          errors.push(`Document ${index}: url is required and must be a string`);
-        }
-        if (!['deed', 'appraisal', 'inspection', 'other'].includes(doc.type)) {
-          errors.push(`Document ${index}: type must be one of: deed, appraisal, inspection, other`);
-        }
-      });
-    }
-  }
-
-  return { valid: errors.length === 0, errors };
+  return {
+    valid: false,
+    errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+  };
 }
 
 /**
- * Validates an UpdatePropertyDto
+ * Validates an UpdatePropertyDto using zod schema
  */
 export function validateUpdateProperty(data: unknown): { valid: boolean; errors: string[] } {
-  const errors: string[] = [];
-
-  if (!data || typeof data !== 'object') {
-    errors.push('Invalid request body');
-    return { valid: false, errors };
+  const result = UpdatePropertyDto.safeParse(data);
+  if (result.success) {
+    return { valid: true, errors: [] };
   }
-
-  const dto = data as Partial<UpdatePropertyDto>;
-
-  // At least one field must be provided
-  if (Object.keys(dto).length === 0) {
-    errors.push('At least one field must be provided for update');
-    return { valid: false, errors };
-  }
-
-  // Validate fields if provided
-  if (dto.owner !== undefined && (typeof dto.owner !== 'string' || dto.owner.trim().length === 0)) {
-    errors.push('Owner must be a non-empty string');
-  }
-
-  if (
-    dto.totalShares !== undefined &&
-    (typeof dto.totalShares !== 'number' || dto.totalShares <= 0)
-  ) {
-    errors.push('Total shares must be a positive number');
-  }
-
-  if (
-    dto.availableShares !== undefined &&
-    (typeof dto.availableShares !== 'number' || dto.availableShares < 0)
-  ) {
-    errors.push('Available shares must be a non-negative number');
-  }
-
-  if (
-    dto.valuePerShare !== undefined &&
-    (typeof dto.valuePerShare !== 'number' || dto.valuePerShare <= 0)
-  ) {
-    errors.push('Value per share must be a positive number');
-  }
-
-  if (dto.metadata !== undefined && typeof dto.metadata !== 'object') {
-    errors.push('Metadata must be an object');
-  }
-
-  // Optional location validation
-  if (dto.location) {
-    if (dto.location.address && typeof dto.location.address !== 'string') {
-      errors.push('Location address must be a string');
-    }
-    if (dto.location.city && typeof dto.location.city !== 'string') {
-      errors.push('Location city must be a string');
-    }
-    if (dto.location.country && typeof dto.location.country !== 'string') {
-      errors.push('Location country must be a string');
-    }
-    if (dto.location.coordinates) {
-      if (
-        typeof dto.location.coordinates.lat !== 'number' ||
-        dto.location.coordinates.lat < -90 ||
-        dto.location.coordinates.lat > 90
-      ) {
-        errors.push('Location coordinates latitude must be between -90 and 90');
-      }
-      if (
-        typeof dto.location.coordinates.lng !== 'number' ||
-        dto.location.coordinates.lng < -180 ||
-        dto.location.coordinates.lng > 180
-      ) {
-        errors.push('Location coordinates longitude must be between -180 and 180');
-      }
-    }
-  }
-
-  // Optional documents validation
-  if (dto.documents) {
-    if (!Array.isArray(dto.documents)) {
-      errors.push('Documents must be an array');
-    } else {
-      dto.documents.forEach((doc, index) => {
-        if (!doc.title || typeof doc.title !== 'string') {
-          errors.push(`Document ${index}: title is required and must be a string`);
-        }
-        if (!doc.url || typeof doc.url !== 'string') {
-          errors.push(`Document ${index}: url is required and must be a string`);
-        }
-        if (!['deed', 'appraisal', 'inspection', 'other'].includes(doc.type)) {
-          errors.push(`Document ${index}: type must be one of: deed, appraisal, inspection, other`);
-        }
-      });
-    }
-  }
-
-  return { valid: errors.length === 0, errors };
+  return {
+    valid: false,
+    errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+  };
 }
+
+// Export inferred types
+export type CreatePropertyInput = z.infer<typeof CreatePropertyDto>;
+export type UpdatePropertyInput = z.infer<typeof UpdatePropertyDto>;
 
 /**
  * Validates pagination parameters

@@ -4,6 +4,7 @@ import { kycRepository } from '../repositories/KYCRepository';
 import { userRepository } from '../repositories/UserRepository';
 import { storageService, StorageService } from '../services/StorageService';
 import { NotificationService } from '../services/NotificationService';
+import { auditService } from '../services/AuditService';
 
 const DOCUMENT_TYPE_MAP = {
   passport: 'passport' as const,
@@ -178,6 +179,7 @@ export class KYCController {
   static async verifyDocument(
     documentId: string,
     data: { verified: boolean; notes?: string },
+    actorWallet?: string,
   ): Promise<{ success: boolean }> {
     try {
       const doc = await kycRepository.findById(documentId);
@@ -185,17 +187,26 @@ export class KYCController {
         throw ApiError.notFound('Document not found');
       }
 
+      const beforeDoc = { status: doc.status, rejectionReason: doc.rejectionReason, reviewedAt: doc.reviewedAt };
       const status = data.verified ? 'approved' : 'rejected';
+
       await kycRepository.updateStatus(documentId, status, data.notes);
 
       const allDocs = await kycRepository.findByUserId(doc.userId);
       const anyRejected = allDocs.some((d) => d.status === 'rejected');
       const allApproved = allDocs.every((d) => d.status === 'approved');
 
+      const afterDoc = { status, rejectionReason: status === 'rejected' ? (data.notes ?? null) : null, reviewedAt: new Date() };
+
+      let userBeforeStatus: string | undefined;
+      let userAfterStatus: string | undefined;
+
       // Initialize notification service
       const notificationService = new NotificationService();
 
       if (anyRejected) {
+        userBeforeStatus = 'pending';
+        userAfterStatus = 'rejected';
         await kycRepository.updateUserKycStatus(doc.userId, 'rejected');
         // Send verification rejected notification
         await notificationService.notifyVerificationRejected(
@@ -205,10 +216,29 @@ export class KYCController {
           'IN_APP',
         );
       } else if (allApproved) {
+        userBeforeStatus = 'pending';
+        userAfterStatus = 'approved';
         await kycRepository.updateUserKycStatus(doc.userId, 'approved');
         // Send verification approved notification
         await notificationService.notifyVerificationApproved(doc.userId, 'IN_APP');
       }
+
+      const actor = actorWallet || 'system';
+      const actionName = data.verified ? 'kyc.approve' : 'kyc.reject';
+
+      await auditService.logAction({
+        actor,
+        action: actionName,
+        entityType: 'kyc_document',
+        entityId: documentId,
+        beforeValue: beforeDoc as unknown as Record<string, unknown>,
+        afterValue: afterDoc as unknown as Record<string, unknown>,
+        metadata: {
+          userId: doc.userId,
+          notes: data.notes || null,
+          ...(userBeforeStatus && userAfterStatus ? { userKycStatusBefore: userBeforeStatus, userKycStatusAfter: userAfterStatus } : {}),
+        },
+      });
 
       return { success: true };
     } catch (e) {

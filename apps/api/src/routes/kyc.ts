@@ -188,9 +188,11 @@ const internalScoped = new Elysia().post(
         throw new ApiError(401, 'UNAUTHORIZED', 'Internal key required');
       }
 
+      const verifyBody = body as { verified: boolean; notes?: string; actorWallet?: string };
       return await KYCController.verifyDocument(
         documentId,
-        body as { verified: boolean; notes?: string },
+        verifyBody,
+        verifyBody.actorWallet,
       );
     } catch (error) {
       return handleKycError(error, set);

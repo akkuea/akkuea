@@ -128,3 +128,21 @@ test("PropertyCard renders price", () => {
   // ... render component with property, assert "$3,500,000" visible
 });
 ```
+
+## Automated smoke runner
+
+Manual unit tests (`bun test`) cover correctness. For **post-deploy** checks (app boots, DB up, public happy path), use the runnable smoke job:
+
+```bash
+# Local / dev (API on :3001)
+./scripts/smoke/run-smoke-tests.sh
+# or
+bun run smoke
+
+# Staging / production
+API_BASE_URL=https://api.akkuea.com ./scripts/smoke/run-smoke-tests.sh
+```
+
+Full env reference and CI wiring: [`scripts/smoke/README.md`](../../scripts/smoke/README.md).
+
+Optional GitHub Action: **Actions → Smoke tests → Run workflow** (`.github/workflows/smoke.yml`).

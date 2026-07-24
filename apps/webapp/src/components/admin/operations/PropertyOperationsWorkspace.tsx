@@ -14,6 +14,7 @@ import {
 import { Navbar } from "@/components/layout";
 import { Badge, Button, Card } from "@/components/ui";
 import { ConfirmReviewActionModal } from "@/components/admin/operations/ConfirmReviewActionModal";
+import { AuditLogViewer } from "@/components/admin/operations/AuditLogViewer";
 import {
   adminOperationsApi,
   type OperationalPropertyDetail,
@@ -68,6 +69,7 @@ export function PropertyOperationsWorkspace({
   operatorWallet,
   isWalletConnected,
 }: PropertyOperationsWorkspaceProps) {
+  const [activeTab, setActiveTab] = useState<"properties" | "audit">("properties");
   const [queue, setQueue] = useState<OperationsQueue>("pending");
 
   const selectQueue = (next: OperationsQueue) => {
@@ -207,13 +209,30 @@ export function PropertyOperationsWorkspace({
             <p className="text-xs font-medium uppercase tracking-widest text-amber-500/90">
               Internal operations
             </p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight md:text-3xl">
-              Property verification
-            </h1>
+            <div className="mt-2 flex gap-4">
+              <button
+                onClick={() => setActiveTab("properties")}
+                className={cn(
+                  "text-2xl font-semibold tracking-tight md:text-3xl transition-colors",
+                  activeTab === "properties" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                Property verification
+              </button>
+              <button
+                onClick={() => setActiveTab("audit")}
+                className={cn(
+                  "text-2xl font-semibold tracking-tight md:text-3xl transition-colors",
+                  activeTab === "audit" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                Audit log
+              </button>
+            </div>
             <p className="mt-2 max-w-2xl text-sm text-zinc-400">
-              Review tokenized inventory, valuation posture, and owner KYC
-              before marketplace exposure. Critical actions require explicit
-              confirmation.
+              {activeTab === "properties"
+                ? "Review tokenized inventory, valuation posture, and owner KYC before marketplace exposure. Critical actions require explicit confirmation."
+                : "Browse and filter administrative actions across the platform."}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -268,12 +287,13 @@ export function PropertyOperationsWorkspace({
           </Card>
         )}
 
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="grid gap-8 lg:grid-cols-5"
-        >
+        {activeTab === "properties" ? (
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="grid gap-8 lg:grid-cols-5"
+          >
           <motion.section variants={staggerItem} className="lg:col-span-2">
             <Card className="overflow-hidden border-zinc-800 bg-zinc-950/80 p-0">
               <div className="flex flex-wrap gap-1 border-b border-zinc-800 p-2">
@@ -547,6 +567,9 @@ export function PropertyOperationsWorkspace({
             )}
           </motion.section>
         </motion.div>
+        ) : (
+          <AuditLogViewer operatorWallet={operatorWallet} isWalletConnected={isWalletConnected} />
+        )}
       </main>
 
       <ConfirmReviewActionModal

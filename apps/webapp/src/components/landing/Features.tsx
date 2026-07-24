@@ -84,7 +84,7 @@ function FeatureCard({
 
 export function Features() {
   const t = useTranslations("Landing.Features");
-  
+
   const features = [
     {
       icon: Blocks,

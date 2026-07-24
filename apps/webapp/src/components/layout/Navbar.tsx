@@ -24,7 +24,7 @@ export function Navbar() {
   useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const t = useTranslations("Navbar");
-  
+
   const navigation = [
     { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
     { name: t("marketplace"), href: "/marketplace", icon: Store },

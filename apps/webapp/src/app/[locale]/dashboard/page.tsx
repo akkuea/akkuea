@@ -166,9 +166,7 @@ export default function DashboardPage() {
             >
               <div>
                 <h1 className="text-2xl font-bold text-white">{t("title")}</h1>
-                <p className="text-sm text-neutral-500 mt-1">
-                  {t("overview")}
-                </p>
+                <p className="text-sm text-neutral-500 mt-1">{t("overview")}</p>
               </div>
               <div className="flex items-center gap-2">
                 {/* Live-connection indicator */}

@@ -70,7 +70,9 @@ export function PropertyReportCard({
             {shares.toLocaleString()} {t("shares")} ({ownershipPct.toFixed(2)}%)
           </span>
           {property.verified && (
-            <span className="text-[10px] text-[#00ff88]">✓ {t("verified")}</span>
+            <span className="text-[10px] text-[#00ff88]">
+              ✓ {t("verified")}
+            </span>
           )}
         </div>
       </div>
@@ -81,7 +83,9 @@ export function PropertyReportCard({
           {showValue ? formatCurrency(estimatedValue) : "••••••"}
         </p>
         <p className="text-[10px] text-neutral-600 font-mono">
-          {showValue ? `${formatCurrency(pricePerShare)} ${t("perShare")}` : "••••"}
+          {showValue
+            ? `${formatCurrency(pricePerShare)} ${t("perShare")}`
+            : "••••"}
         </p>
         {yieldRate > 0 ? (
           <Badge variant="success" className="text-[10px]">

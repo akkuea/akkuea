@@ -84,7 +84,7 @@ const itemVariants = {
 
 export function AnimatedStats() {
   const t = useTranslations("Landing.AnimatedStats");
-  
+
   const stats: StatProps[] = [
     {
       icon: TrendingUp,

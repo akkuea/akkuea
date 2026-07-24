@@ -8,7 +8,7 @@ import { useTranslations } from "next-intl";
 
 export function CTA() {
   const t = useTranslations("Landing.CTA");
-  
+
   const features = [
     { icon: Shield, label: t("security") },
     { icon: Lock, label: t("compliance") },

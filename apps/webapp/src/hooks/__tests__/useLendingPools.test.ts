@@ -46,9 +46,10 @@ const mockPool2 = createLendingPool({
  * existing bun:test patterns.
  */
 
-const mockGetPools = mock(
-  async (): Promise<LendingPool[]> => [mockPool, mockPool2],
-);
+const mockGetPools = mock(async (): Promise<LendingPool[]> => [
+  mockPool,
+  mockPool2,
+]);
 const mockGetUserDeposits = mock(async (): Promise<DepositPosition[]> => []);
 const mockGetUserBorrows = mock(async () => []);
 const originalGetPools = lendingApi.getPools;

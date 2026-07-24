@@ -26,7 +26,7 @@ const itemVariants = {
 
 export function HowItWorks() {
   const t = useTranslations("Landing.HowItWorks");
-  
+
   const steps = [
     {
       icon: Wallet,
@@ -81,9 +81,7 @@ export function HowItWorks() {
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight">
             {t("title")}
           </h2>
-          <p className="text-sm text-neutral-500 max-w-md">
-            {t("subtitle")}
-          </p>
+          <p className="text-sm text-neutral-500 max-w-md">{t("subtitle")}</p>
         </motion.div>
 
         {/* Steps */}

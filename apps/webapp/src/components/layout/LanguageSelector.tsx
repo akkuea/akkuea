@@ -26,7 +26,7 @@ export function LanguageSelector() {
       className={cn(
         "flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
         "text-neutral-500 hover:text-white hover:bg-[#1a1a1a]",
-        isPending && "opacity-50 cursor-not-allowed"
+        isPending && "opacity-50 cursor-not-allowed",
       )}
       aria-label="Toggle language"
     >

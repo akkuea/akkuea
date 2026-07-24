@@ -111,7 +111,9 @@ export function Hero() {
               <span className="block mt-2">
                 <span className="text-neutral-500">{t("tokenized")}</span>
               </span>
-              <span className="block mt-2 text-[#ff3e00]">{t("democratized")}</span>
+              <span className="block mt-2 text-[#ff3e00]">
+                {t("democratized")}
+              </span>
             </h1>
           </motion.div>
 

@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/i18n/routing";
+import { Link } from "@/i18n/routing";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslations } from "next-intl";
 import {
   Menu,
   X,
@@ -16,18 +17,21 @@ import { useTheme } from "@/context/ThemeContext";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/layout/BrandLogo";
 import { WalletStatusWidget } from "@/components/layout/WalletStatusWidget";
+import { LanguageSelector } from "@/components/layout/LanguageSelector";
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Marketplace", href: "/marketplace", icon: Store },
-  { name: "Tokenize", href: "/tokenize", icon: Building2 },
-  { name: "Lending", href: "/lending", icon: Landmark },
+const getNavigation = (t: any) => [
+  { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+  { name: t("marketplace"), href: "/marketplace", icon: Store },
+  { name: t("tokenize"), href: "/tokenize", icon: Building2 },
+  { name: t("lending"), href: "/lending", icon: Landmark },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
   useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const t = useTranslations("Navbar");
+  const navigation = getNavigation(t);
 
   return (
     <motion.header
@@ -78,6 +82,7 @@ export function Navbar() {
 
           {/* Right Side Actions */}
           <div className="flex items-center gap-2">
+            <LanguageSelector />
             <WalletStatusWidget />
 
             {/* Mobile Menu Toggle */}

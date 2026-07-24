@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import {
   Blocks,
   Shield,
@@ -13,61 +14,53 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 
-const features = [
+const getFeatures = (t: any) => [
   {
     icon: Blocks,
-    title: "Fractional Ownership",
-    description:
-      "Own premium real estate with investments starting at $100. NFT-based shares ensure transparent ownership.",
+    title: t("items.fractional.title"),
+    description: t("items.fractional.desc"),
     tag: "001",
   },
   {
     icon: Shield,
-    title: "Institutional Security",
-    description:
-      "Multi-sig wallets, hardware security modules, and comprehensive insurance protect your investments.",
+    title: t("items.security.title"),
+    description: t("items.security.desc"),
     tag: "002",
   },
   {
     icon: Coins,
-    title: "DeFi Lending",
-    description:
-      "Use tokenized real estate as collateral or earn yields by providing liquidity to lending pools.",
+    title: t("items.defi.title"),
+    description: t("items.defi.desc"),
     tag: "003",
   },
   {
     icon: Globe2,
-    title: "Emerging Markets",
-    description:
-      "Access high-growth real estate markets in Latin America and Africa.",
+    title: t("items.emerging.title"),
+    description: t("items.emerging.desc"),
     tag: "004",
   },
   {
     icon: LineChart,
-    title: "Chainlink Oracles",
-    description:
-      "Real-time property valuations powered by Chainlink oracles ensure accurate pricing.",
+    title: t("items.oracles.title"),
+    description: t("items.oracles.desc"),
     tag: "005",
   },
   {
     icon: Lock,
-    title: "ZK Privacy",
-    description:
-      "Zero-knowledge proofs verify eligibility without revealing sensitive details.",
+    title: t("items.zk.title"),
+    description: t("items.zk.desc"),
     tag: "006",
   },
   {
     icon: Zap,
-    title: "Instant Settlement",
-    description:
-      "Stellar blockchain enables near-instant transactions with fees under $0.01.",
+    title: t("items.settlement.title"),
+    description: t("items.settlement.desc"),
     tag: "007",
   },
   {
     icon: Users,
-    title: "KYC Compliant",
-    description:
-      "Fully compliant with regulatory requirements. Verified investors only.",
+    title: t("items.kyc.title"),
+    description: t("items.kyc.desc"),
     tag: "008",
   },
 ];
@@ -141,6 +134,9 @@ function FeatureCard({
 }
 
 export function Features() {
+  const t = useTranslations("Landing.Features");
+  const features = getFeatures(t);
+
   return (
     <section className="py-24 bg-black relative overflow-hidden">
       {/* Background */}
@@ -158,17 +154,16 @@ export function Features() {
           <div className="flex items-center gap-3 mb-4">
             <div className="h-px w-8 bg-[#ff3e00]" />
             <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
-              Why Choose Akkuea
+              {t("whyChoose")}
             </span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight">
-            Built for the Future
+            {t("builtFor")}
             <br />
-            <span className="text-neutral-500">of Finance</span>
+            <span className="text-neutral-500">{t("ofFinance")}</span>
           </h2>
           <p className="text-sm text-neutral-500 max-w-lg">
-            Combining blockchain technology with real-world assets to create a
-            transparent, efficient, and accessible investment platform.
+            {t("description")}
           </p>
         </motion.div>
 
@@ -194,11 +189,11 @@ export function Features() {
           className="mt-16 flex items-center justify-center gap-4 text-xs font-mono text-neutral-600"
         >
           <span>+</span>
-          <span>SECURE</span>
+          <span>{t("secure")}</span>
           <span>×</span>
-          <span>TRANSPARENT</span>
+          <span>{t("transparent")}</span>
           <span>+</span>
-          <span>EFFICIENT</span>
+          <span>{t("efficient")}</span>
           <span>×</span>
         </motion.div>
       </div>

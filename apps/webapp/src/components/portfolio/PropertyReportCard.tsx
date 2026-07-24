@@ -5,6 +5,7 @@ import { Building2, MapPin, TrendingUp, Layers } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatPercentage } from "@/lib/utils";
 import type { PortfolioProperty } from "@/hooks/usePortfolio";
+import { useTranslations } from "next-intl";
 
 interface PropertyReportCardProps {
   item: PortfolioProperty;
@@ -27,6 +28,7 @@ export function PropertyReportCard({
   const image = property.images[0];
   const ownershipPct = (shares / property.totalShares) * 100;
   const pricePerShare = parseFloat(property.pricePerShare);
+  const t = useTranslations("PropertyReportCard");
 
   return (
     <div className="p-4 flex items-center gap-4 hover:bg-[#0a0a0a] transition-colors cursor-pointer">
@@ -65,10 +67,10 @@ export function PropertyReportCard({
         <div className="flex items-center gap-3 mt-1">
           <span className="text-[10px] text-neutral-600 font-mono flex items-center gap-1">
             <Layers className="w-3 h-3" />
-            {shares.toLocaleString()} shares ({ownershipPct.toFixed(2)}%)
+            {shares.toLocaleString()} {t("shares")} ({ownershipPct.toFixed(2)}%)
           </span>
           {property.verified && (
-            <span className="text-[10px] text-[#00ff88]">✓ Verified</span>
+            <span className="text-[10px] text-[#00ff88]">✓ {t("verified")}</span>
           )}
         </div>
       </div>
@@ -79,12 +81,12 @@ export function PropertyReportCard({
           {showValue ? formatCurrency(estimatedValue) : "••••••"}
         </p>
         <p className="text-[10px] text-neutral-600 font-mono">
-          {showValue ? `${formatCurrency(pricePerShare)} / share` : "••••"}
+          {showValue ? `${formatCurrency(pricePerShare)} ${t("perShare")}` : "••••"}
         </p>
         {yieldRate > 0 ? (
           <Badge variant="success" className="text-[10px]">
             <TrendingUp className="w-3 h-3" />
-            {formatPercentage(yieldRate)} APY
+            {formatPercentage(yieldRate)} {t("apy")}
           </Badge>
         ) : (
           <span className="text-[10px] text-neutral-600">-</span>

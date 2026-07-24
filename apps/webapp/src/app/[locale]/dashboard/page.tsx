@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import {
   Wallet,
   Building2,
@@ -57,6 +58,7 @@ export default function DashboardPage() {
   const { openConnectModal, connectModalProps } = useWalletConnectModal();
   const [showBalance, setShowBalance] = useState(true);
   const [copied, setCopied] = useState(false);
+  const t = useTranslations("Dashboard");
 
   const { properties, borrows, summary, isLoading, error, refetch } =
     usePortfolio(isConnected ? address : null);
@@ -102,11 +104,10 @@ export default function DashboardPage() {
               <Wallet className="w-8 h-8 text-neutral-500" />
             </div>
             <h1 className="text-2xl font-bold text-white mb-3">
-              Connect Your Wallet
+              {t("connectWallet")}
             </h1>
             <p className="text-sm text-neutral-500 max-w-md mb-8">
-              Connect your Stellar wallet to view your portfolio, manage
-              investments, and access DeFi features.
+              {t("connectWalletDesc")}
             </p>
             <Button
               size="lg"
@@ -114,7 +115,7 @@ export default function DashboardPage() {
               leftIcon={<Wallet className="w-4 h-4" />}
               isSecure
             >
-              Connect Wallet
+              {t("connectWallet")}
             </Button>
           </motion.div>
         </main>
@@ -164,9 +165,9 @@ export default function DashboardPage() {
               className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
             >
               <div>
-                <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+                <h1 className="text-2xl font-bold text-white">{t("title")}</h1>
                 <p className="text-sm text-neutral-500 mt-1">
-                  Your portfolio overview
+                  {t("overview")}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -185,7 +186,7 @@ export default function DashboardPage() {
                   variant="outline"
                   size="sm"
                   onClick={refetch}
-                  aria-label="Refresh"
+                  aria-label={t("refresh")}
                 >
                   <RefreshCw
                     className={cn("w-4 h-4", isLoading && "animate-spin")}
@@ -217,7 +218,7 @@ export default function DashboardPage() {
                   onClick={refetch}
                   className="ml-auto text-xs text-red-400 underline"
                 >
-                  Retry
+                  {t("retry")}
                 </button>
               </motion.div>
             )}
@@ -229,7 +230,7 @@ export default function DashboardPage() {
                 <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                   <div>
                     <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">
-                      Wallet Address
+                      {t("walletAddress")}
                     </p>
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm text-white">
@@ -238,7 +239,7 @@ export default function DashboardPage() {
                       <button
                         onClick={copyAddress}
                         className="p-1.5 rounded-md hover:bg-[#1a1a1a] text-neutral-500 hover:text-white transition-colors"
-                        aria-label="Copy address"
+                        aria-label={t("copyAddress")}
                       >
                         {copied ? (
                           <CheckCircle2 className="w-4 h-4 text-[#00ff88]" />
@@ -251,7 +252,7 @@ export default function DashboardPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1.5 rounded-md hover:bg-[#1a1a1a] text-neutral-500 hover:text-white transition-colors"
-                        aria-label="View on explorer"
+                        aria-label={t("viewExplorer")}
                       >
                         <ExternalLink className="w-4 h-4" />
                       </a>
@@ -259,7 +260,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="text-left sm:text-right">
                     <p className="text-[10px] text-neutral-600 mb-1 uppercase tracking-wider">
-                      Wallet Balance
+                      {t("walletBalance")}
                     </p>
                     <p className="text-xl font-bold text-white font-mono">
                       {showBalance
@@ -281,7 +282,7 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
-                          Portfolio Value
+                          {t("portfolioValue")}
                         </p>
                         <p className="text-xl font-bold text-white mt-1 font-mono">
                           {showBalance
@@ -289,7 +290,7 @@ export default function DashboardPage() {
                             : "••••••"}
                         </p>
                         <p className="text-xs text-neutral-500 mt-1">
-                          Estimated
+                          {t("estimated")}
                         </p>
                       </div>
                       <div className="p-2 rounded-lg bg-[#00ff88]/10 border border-[#00ff88]/20">
@@ -302,15 +303,15 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
-                          Properties
+                          {t("properties")}
                         </p>
                         <p className="text-xl font-bold text-white mt-1 font-mono">
                           {summary.propertyCount}
                         </p>
                         <p className="text-xs text-neutral-500 mt-1 font-mono">
                           {summary.propertyCount === 0
-                            ? "No holdings"
-                            : `${summary.propertyCount} asset${summary.propertyCount !== 1 ? "s" : ""}`}
+                            ? t("noHoldings")
+                            : `${summary.propertyCount} ${summary.propertyCount === 1 ? t("assetSingle") : t("assetPlural")}`}
                         </p>
                       </div>
                       <div className="p-2 rounded-lg bg-[#ff3e00]/10 border border-[#ff3e00]/20">
@@ -323,7 +324,7 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
-                          Avg. Yield
+                          {t("avgYield")}
                         </p>
                         <p className="text-xl font-bold text-white mt-1 font-mono">
                           {summary.avgYield > 0
@@ -331,7 +332,7 @@ export default function DashboardPage() {
                             : "-"}
                         </p>
                         <p className="text-xs text-neutral-500 mt-1">
-                          Supply APY
+                          {t("supplyApy")}
                         </p>
                       </div>
                       <div className="p-2 rounded-lg bg-blue-500/10 border border-blue-500/20">
@@ -344,7 +345,7 @@ export default function DashboardPage() {
                     <div className="flex items-start justify-between">
                       <div>
                         <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
-                          Health Factor
+                          {t("healthFactor")}
                         </p>
                         <p
                           className={cn(
@@ -359,7 +360,7 @@ export default function DashboardPage() {
                               : "∞"}
                         </p>
                         <p className="text-xs text-neutral-500 mt-1 capitalize">
-                          {hfStatus === "none" ? "No borrows" : hfStatus}
+                          {hfStatus === "none" ? t("noBorrows") : hfStatus}
                         </p>
                       </div>
                       <div className={cn("p-2 rounded-lg border", hfBg)}>
@@ -378,11 +379,11 @@ export default function DashboardPage() {
                 <Card noPadding>
                   <CardHeader className="p-4 border-b border-[#262626]">
                     <div className="flex items-center justify-between">
-                      <CardTitle>Your Properties</CardTitle>
+                      <CardTitle>{t("yourProperties")}</CardTitle>
                       {summary.totalBorrowed > 0 && (
                         <span className="text-[10px] text-neutral-500 font-mono">
                           {showBalance
-                            ? `${formatCurrency(summary.totalBorrowed)} borrowed`
+                            ? `${formatCurrency(summary.totalBorrowed)} ${t("borrowed")}`
                             : "••••"}
                         </span>
                       )}
@@ -395,10 +396,10 @@ export default function DashboardPage() {
                       <div className="p-8 flex flex-col items-center justify-center text-center">
                         <Building2 className="w-8 h-8 text-neutral-700 mb-3" />
                         <p className="text-sm text-neutral-500">
-                          No properties in your portfolio yet.
+                          {t("noPropertiesYet")}
                         </p>
                         <p className="text-xs text-neutral-600 mt-1">
-                          Browse the marketplace to start investing.
+                          {t("browseMarketplace")}
                         </p>
                       </div>
                     ) : (
@@ -420,7 +421,7 @@ export default function DashboardPage() {
                 {(properties.length > 0 || isLoading) && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Allocation</CardTitle>
+                      <CardTitle>{t("allocation")}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       {isLoading && properties.length === 0 ? (
@@ -441,7 +442,7 @@ export default function DashboardPage() {
                 {borrows.length > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Active Loans</CardTitle>
+                      <CardTitle>{t("activeLoans")}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {borrows.map((borrow) => (
@@ -451,7 +452,7 @@ export default function DashboardPage() {
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] text-neutral-600 uppercase tracking-wider">
-                              Borrowed
+                              {t("borrowed")}
                             </span>
                             <span className="text-xs font-medium text-white font-mono">
                               {showBalance
@@ -461,7 +462,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] text-neutral-600 uppercase tracking-wider">
-                              Accrued Interest
+                              {t("accruedInterest")}
                             </span>
                             <span className="text-xs text-amber-400 font-mono">
                               {showBalance
@@ -473,7 +474,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="flex items-center justify-between">
                             <span className="text-[10px] text-neutral-600 uppercase tracking-wider">
-                              Health Factor
+                              {t("healthFactor")}
                             </span>
                             <Badge
                               variant={
@@ -497,14 +498,14 @@ export default function DashboardPage() {
                 {summary.totalDeposited > 0 && (
                   <Card>
                     <CardHeader>
-                      <CardTitle>Deposits</CardTitle>
+                      <CardTitle>{t("deposits")}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-3 p-3 bg-[#00ff88]/5 border border-[#00ff88]/20 rounded-lg">
                         <Shield className="w-4 h-4 text-[#00ff88] shrink-0" />
                         <div>
                           <p className="text-xs font-medium text-white">
-                            Total Deposited
+                            {t("totalDeposited")}
                           </p>
                           <p className="text-sm font-bold text-[#00ff88] font-mono mt-0.5">
                             {showBalance
@@ -530,7 +531,7 @@ export default function DashboardPage() {
                           <AlertCircle className="w-4 h-4" />
                         </div>
                         <p className="text-xs text-neutral-500">
-                          Activity will appear here once you start investing.
+                          {t("emptyState")}
                         </p>
                       </CardContent>
                     </Card>

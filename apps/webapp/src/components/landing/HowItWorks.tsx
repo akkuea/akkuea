@@ -2,38 +2,35 @@
 
 import { motion } from "framer-motion";
 import { Wallet, Search, ShoppingCart, TrendingUp } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-const steps = [
+const getSteps = (t: any) => [
   {
     icon: Wallet,
     step: "01",
-    title: "Connect Wallet",
-    description:
-      "Link your Stellar wallet and complete KYC verification to unlock the platform.",
+    title: t("steps.connect.title"),
+    description: t("steps.connect.desc"),
     command: "> connect --wallet stellar",
   },
   {
     icon: Search,
     step: "02",
-    title: "Browse Properties",
-    description:
-      "Explore tokenized properties across Latin America and Africa with full transparency.",
+    title: t("steps.browse.title"),
+    description: t("steps.browse.desc"),
     command: "> search --region LATAM,AFRICA",
   },
   {
     icon: ShoppingCart,
     step: "03",
-    title: "Invest",
-    description:
-      "Purchase fractional ownership tokens with stablecoins. Receive NFT certificates.",
+    title: t("steps.invest.title"),
+    description: t("steps.invest.desc"),
     command: "> buy --shares 100 --asset USDC",
   },
   {
     icon: TrendingUp,
     step: "04",
-    title: "Earn Returns",
-    description:
-      "Collect rental income, benefit from appreciation, or use as DeFi collateral.",
+    title: t("steps.earn.title"),
+    description: t("steps.earn.desc"),
     command: "> yield --claim all",
   },
 ];
@@ -59,6 +56,9 @@ const itemVariants = {
 };
 
 export function HowItWorks() {
+  const t = useTranslations("Landing.HowItWorks");
+  const steps = getSteps(t);
+
   return (
     <section className="py-24 bg-black relative overflow-hidden">
       {/* Background */}
@@ -76,14 +76,14 @@ export function HowItWorks() {
           <div className="flex items-center gap-3 mb-4">
             <div className="h-px w-8 bg-[#ff3e00]" />
             <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
-              Getting Started
+              {t("gettingStarted")}
             </span>
           </div>
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4 tracking-tight">
-            How It Works
+            {t("title")}
           </h2>
           <p className="text-sm text-neutral-500 max-w-md">
-            Start investing in tokenized real estate in four simple steps
+            {t("subtitle")}
           </p>
         </motion.div>
 
@@ -151,7 +151,7 @@ export function HowItWorks() {
           <div className="flex items-center gap-4 px-6 py-3 bg-[#0a0a0a] border border-[#262626] rounded-lg">
             <div className="w-2 h-2 rounded-full bg-[#00ff88] animate-pulse-subtle" />
             <span className="text-xs font-mono text-neutral-500">
-              Ready to start? Connect your wallet above.
+              {t("ready")}
             </span>
           </div>
         </motion.div>

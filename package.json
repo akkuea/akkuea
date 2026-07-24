@@ -27,7 +27,8 @@
     "clean": "bun run clean --workspaces && rm -rf node_modules",
     "install:all": "bun install && bun install --workspaces",
     "deploy:contracts": "./scripts/deploy.sh",
-    "format": "prettier --write \"**/*.{js,ts,tsx,json,md,rs}\" \"!apps/contracts/**\""
+    "format": "prettier --write \"**/*.{js,ts,tsx,json,md,rs}\" \"!apps/contracts/**\"",
+    "smoke": "./scripts/smoke/run-smoke-tests.sh"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",

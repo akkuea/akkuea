@@ -1,0 +1,36 @@
+name: Smoke tests
+
+# Optional post-deploy / manual smoke against a live API.
+# Does not replace unit CI — only checks boot + happy-path HTTP.
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: API base URL (e.g. https://api.akkuea.com or http://localhost:3001)
+        required: true
+        type: string
+      webapp_base_url:
+        description: Optional webapp base URL
+        required: false
+        type: string
+        default: ''
+  # Uncomment and set secrets/vars when a real staging URL is available:
+  # schedule:
+  #   - cron: '0 */6 * * *'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run smoke tests
+        env:
+          API_BASE_URL: ${{ inputs.api_base_url || vars.API_BASE_URL || 'http://localhost:3001' }}
+          WEBAPP_BASE_URL: ${{ inputs.webapp_base_url || vars.WEBAPP_BASE_URL || '' }}
+          SMOKE_TIMEOUT_SECS: '15'
+        run: |
+          chmod +x ./scripts/smoke/run-smoke-tests.sh
+          ./scripts/smoke/run-smoke-tests.sh

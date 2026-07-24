@@ -187,7 +187,11 @@ export class KYCController {
         throw ApiError.notFound('Document not found');
       }
 
-      const beforeDoc = { status: doc.status, rejectionReason: doc.rejectionReason, reviewedAt: doc.reviewedAt };
+      const beforeDoc = {
+        status: doc.status,
+        rejectionReason: doc.rejectionReason,
+        reviewedAt: doc.reviewedAt,
+      };
       const status = data.verified ? 'approved' : 'rejected';
 
       await kycRepository.updateStatus(documentId, status, data.notes);
@@ -196,7 +200,11 @@ export class KYCController {
       const anyRejected = allDocs.some((d) => d.status === 'rejected');
       const allApproved = allDocs.every((d) => d.status === 'approved');
 
-      const afterDoc = { status, rejectionReason: status === 'rejected' ? (data.notes ?? null) : null, reviewedAt: new Date() };
+      const afterDoc = {
+        status,
+        rejectionReason: status === 'rejected' ? (data.notes ?? null) : null,
+        reviewedAt: new Date(),
+      };
 
       let userBeforeStatus: string | undefined;
       let userAfterStatus: string | undefined;
@@ -236,7 +244,9 @@ export class KYCController {
         metadata: {
           userId: doc.userId,
           notes: data.notes || null,
-          ...(userBeforeStatus && userAfterStatus ? { userKycStatusBefore: userBeforeStatus, userKycStatusAfter: userAfterStatus } : {}),
+          ...(userBeforeStatus && userAfterStatus
+            ? { userKycStatusBefore: userBeforeStatus, userKycStatusAfter: userAfterStatus }
+            : {}),
         },
       });
 

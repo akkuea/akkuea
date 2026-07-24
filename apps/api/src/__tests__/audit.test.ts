@@ -102,7 +102,11 @@ describe.skipIf(skipIfNoDatabase)('Audit Log Integration', () => {
             'Content-Type': 'application/json',
             'internal-api-key': INTERNAL_KEY,
           },
-          body: JSON.stringify({ verified: false, notes: 'Document invalid', actorWallet: TEST_WALLET }),
+          body: JSON.stringify({
+            verified: false,
+            notes: 'Document invalid',
+            actorWallet: TEST_WALLET,
+          }),
         }),
       );
       expect(response.status).toBe(200);
@@ -233,9 +237,12 @@ describe.skipIf(skipIfNoDatabase)('Audit Log Integration', () => {
     it('should return empty data for non-existent actor filter', async () => {
       const adminApp = createAdminApp();
       const res = await adminApp.handle(
-        new Request('http://localhost/api/v1/admin/audit-log?actor=GNONEXISTENTXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX', {
-          headers: { 'x-internal-api-key': OPS_CREDENTIAL },
-        }),
+        new Request(
+          'http://localhost/api/v1/admin/audit-log?actor=GNONEXISTENTXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX',
+          {
+            headers: { 'x-internal-api-key': OPS_CREDENTIAL },
+          },
+        ),
       );
       expect(res.status).toBe(200);
       const body = (await res.json()) as {
@@ -252,9 +259,7 @@ describe.skipIf(skipIfNoDatabase)('Audit Log Integration', () => {
   describe('authentication', () => {
     it('should return 403 without internal api key', async () => {
       const adminApp = createAdminApp();
-      const res = await adminApp.handle(
-        new Request('http://localhost/api/v1/admin/audit-log'),
-      );
+      const res = await adminApp.handle(new Request('http://localhost/api/v1/admin/audit-log'));
       expect(res.status).toBe(403);
     });
 

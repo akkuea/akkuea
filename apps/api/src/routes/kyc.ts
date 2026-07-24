@@ -189,11 +189,7 @@ const internalScoped = new Elysia().post(
       }
 
       const verifyBody = body as { verified: boolean; notes?: string; actorWallet?: string };
-      return await KYCController.verifyDocument(
-        documentId,
-        verifyBody,
-        verifyBody.actorWallet,
-      );
+      return await KYCController.verifyDocument(documentId, verifyBody, verifyBody.actorWallet);
     } catch (error) {
       return handleKycError(error, set);
     }

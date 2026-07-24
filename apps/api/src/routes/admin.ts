@@ -14,19 +14,17 @@ const auditLogQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
-const adminAuth = new Elysia({ name: 'admin-auth' }).onBeforeHandle(
-  ({ headers, set }) => {
-    if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
-      set.status = 403;
-      return {
-        success: false,
-        error: 'FORBIDDEN',
-        message: 'Admin access denied',
-        timestamp: new Date().toISOString(),
-      };
-    }
-  },
-);
+const adminAuth = new Elysia({ name: 'admin-auth' }).onBeforeHandle(({ headers, set }) => {
+  if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
+    set.status = 403;
+    return {
+      success: false,
+      error: 'FORBIDDEN',
+      message: 'Admin access denied',
+      timestamp: new Date().toISOString(),
+    };
+  }
+});
 
 const getAuditLogRoute = new Elysia()
   .use(adminAuth)
@@ -49,5 +47,4 @@ const getAuditLogRoute = new Elysia()
     }
   });
 
-export const adminRoutes = new Elysia({ prefix: '/api/v1/admin' })
-  .use(getAuditLogRoute);
+export const adminRoutes = new Elysia({ prefix: '/api/v1/admin' }).use(getAuditLogRoute);

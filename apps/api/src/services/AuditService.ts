@@ -1,4 +1,8 @@
-import { AuditLogRepository, type AuditLogFilter, type PaginatedAuditLogs } from '../repositories/AuditLogRepository';
+import {
+  AuditLogRepository,
+  type AuditLogFilter,
+  type PaginatedAuditLogs,
+} from '../repositories/AuditLogRepository';
 import { auditLogRepository as defaultRepository } from '../repositories/AuditLogRepository';
 
 export interface AuditLogActionInput {

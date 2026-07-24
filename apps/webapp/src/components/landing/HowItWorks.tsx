@@ -4,37 +4,6 @@ import { motion } from "framer-motion";
 import { Wallet, Search, ShoppingCart, TrendingUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-const getSteps = (t: ReturnType<typeof useTranslations>) => [
-  {
-    icon: Wallet,
-    step: "01",
-    title: t("steps.connect.title"),
-    description: t("steps.connect.desc"),
-    command: "> connect --wallet stellar",
-  },
-  {
-    icon: Search,
-    step: "02",
-    title: t("steps.browse.title"),
-    description: t("steps.browse.desc"),
-    command: "> search --region LATAM,AFRICA",
-  },
-  {
-    icon: ShoppingCart,
-    step: "03",
-    title: t("steps.invest.title"),
-    description: t("steps.invest.desc"),
-    command: "> buy --shares 100 --asset USDC",
-  },
-  {
-    icon: TrendingUp,
-    step: "04",
-    title: t("steps.earn.title"),
-    description: t("steps.earn.desc"),
-    command: "> yield --claim all",
-  },
-];
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -57,7 +26,37 @@ const itemVariants = {
 
 export function HowItWorks() {
   const t = useTranslations("Landing.HowItWorks");
-  const steps = getSteps(t);
+  
+  const steps = [
+    {
+      icon: Wallet,
+      step: "01",
+      title: t("steps.connect.title"),
+      description: t("steps.connect.desc"),
+      command: "> connect --wallet stellar",
+    },
+    {
+      icon: Search,
+      step: "02",
+      title: t("steps.browse.title"),
+      description: t("steps.browse.desc"),
+      command: "> search --region LATAM,AFRICA",
+    },
+    {
+      icon: ShoppingCart,
+      step: "03",
+      title: t("steps.invest.title"),
+      description: t("steps.invest.desc"),
+      command: "> buy --shares 100 --asset USDC",
+    },
+    {
+      icon: TrendingUp,
+      step: "04",
+      title: t("steps.earn.title"),
+      description: t("steps.earn.desc"),
+      command: "> yield --claim all",
+    },
+  ];
 
   return (
     <section className="py-24 bg-black relative overflow-hidden">

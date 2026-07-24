@@ -19,19 +19,18 @@ import { BrandLogo } from "@/components/layout/BrandLogo";
 import { WalletStatusWidget } from "@/components/layout/WalletStatusWidget";
 import { LanguageSelector } from "@/components/layout/LanguageSelector";
 
-const getNavigation = (t: ReturnType<typeof useTranslations>) => [
-  { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
-  { name: t("marketplace"), href: "/marketplace", icon: Store },
-  { name: t("tokenize"), href: "/tokenize", icon: Building2 },
-  { name: t("lending"), href: "/lending", icon: Landmark },
-];
-
 export function Navbar() {
   const pathname = usePathname();
   useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const t = useTranslations("Navbar");
-  const navigation = getNavigation(t);
+  
+  const navigation = [
+    { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+    { name: t("marketplace"), href: "/marketplace", icon: Store },
+    { name: t("tokenize"), href: "/tokenize", icon: Building2 },
+    { name: t("lending"), href: "/lending", icon: Landmark },
+  ];
 
   return (
     <motion.header

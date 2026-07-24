@@ -6,15 +6,14 @@ import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/Button";
 import { useTranslations } from "next-intl";
 
-const getFeatures = (t: ReturnType<typeof useTranslations>) => [
-  { icon: Shield, label: t("security") },
-  { icon: Lock, label: t("compliance") },
-  { icon: Zap, label: t("settlements") },
-];
-
 export function CTA() {
   const t = useTranslations("Landing.CTA");
-  const features = getFeatures(t);
+  
+  const features = [
+    { icon: Shield, label: t("security") },
+    { icon: Lock, label: t("compliance") },
+    { icon: Zap, label: t("settlements") },
+  ];
 
   return (
     <section className="py-24 bg-[#0a0a0a] relative overflow-hidden">

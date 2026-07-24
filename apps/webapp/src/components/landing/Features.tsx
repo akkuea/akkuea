@@ -14,57 +14,6 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 
-const getFeatures = (t: ReturnType<typeof useTranslations>) => [
-  {
-    icon: Blocks,
-    title: t("items.fractional.title"),
-    description: t("items.fractional.desc"),
-    tag: "001",
-  },
-  {
-    icon: Shield,
-    title: t("items.security.title"),
-    description: t("items.security.desc"),
-    tag: "002",
-  },
-  {
-    icon: Coins,
-    title: t("items.defi.title"),
-    description: t("items.defi.desc"),
-    tag: "003",
-  },
-  {
-    icon: Globe2,
-    title: t("items.emerging.title"),
-    description: t("items.emerging.desc"),
-    tag: "004",
-  },
-  {
-    icon: LineChart,
-    title: t("items.oracles.title"),
-    description: t("items.oracles.desc"),
-    tag: "005",
-  },
-  {
-    icon: Lock,
-    title: t("items.zk.title"),
-    description: t("items.zk.desc"),
-    tag: "006",
-  },
-  {
-    icon: Zap,
-    title: t("items.settlement.title"),
-    description: t("items.settlement.desc"),
-    tag: "007",
-  },
-  {
-    icon: Users,
-    title: t("items.kyc.title"),
-    description: t("items.kyc.desc"),
-    tag: "008",
-  },
-];
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -135,7 +84,57 @@ function FeatureCard({
 
 export function Features() {
   const t = useTranslations("Landing.Features");
-  const features = getFeatures(t);
+  
+  const features = [
+    {
+      icon: Blocks,
+      title: t("items.fractional.title"),
+      description: t("items.fractional.desc"),
+      tag: "001",
+    },
+    {
+      icon: Shield,
+      title: t("items.security.title"),
+      description: t("items.security.desc"),
+      tag: "002",
+    },
+    {
+      icon: Coins,
+      title: t("items.defi.title"),
+      description: t("items.defi.desc"),
+      tag: "003",
+    },
+    {
+      icon: Globe2,
+      title: t("items.emerging.title"),
+      description: t("items.emerging.desc"),
+      tag: "004",
+    },
+    {
+      icon: LineChart,
+      title: t("items.oracles.title"),
+      description: t("items.oracles.desc"),
+      tag: "005",
+    },
+    {
+      icon: Lock,
+      title: t("items.zk.title"),
+      description: t("items.zk.desc"),
+      tag: "006",
+    },
+    {
+      icon: Zap,
+      title: t("items.settlement.title"),
+      description: t("items.settlement.desc"),
+      tag: "007",
+    },
+    {
+      icon: Users,
+      title: t("items.kyc.title"),
+      description: t("items.kyc.desc"),
+      tag: "008",
+    },
+  ];
 
   return (
     <section className="py-24 bg-black relative overflow-hidden">

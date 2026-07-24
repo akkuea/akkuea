@@ -62,42 +62,6 @@ function AnimatedCounter({
   );
 }
 
-const getStats = (t: ReturnType<typeof useTranslations>): StatProps[] => [
-  {
-    icon: TrendingUp,
-    value: 172,
-    suffix: "%",
-    label: t("platformGrowth"),
-    decimals: 0,
-    duration: 2,
-  },
-  {
-    icon: DollarSign,
-    value: 3,
-    suffix: "B",
-    prefix: "$",
-    label: t("targetAum"),
-    decimals: 0,
-    duration: 1.5,
-  },
-  {
-    icon: Building,
-    value: 847,
-    suffix: "+",
-    label: t("propertiesTokenized"),
-    decimals: 0,
-    duration: 2.5,
-  },
-  {
-    icon: Users,
-    value: 12.5,
-    suffix: "K",
-    label: t("activeInvestors"),
-    decimals: 1,
-    duration: 2,
-  },
-];
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -120,7 +84,42 @@ const itemVariants = {
 
 export function AnimatedStats() {
   const t = useTranslations("Landing.AnimatedStats");
-  const stats = getStats(t);
+  
+  const stats: StatProps[] = [
+    {
+      icon: TrendingUp,
+      value: 172,
+      suffix: "%",
+      label: t("platformGrowth"),
+      decimals: 0,
+      duration: 2,
+    },
+    {
+      icon: DollarSign,
+      value: 3,
+      suffix: "B",
+      prefix: "$",
+      label: t("targetAum"),
+      decimals: 0,
+      duration: 1.5,
+    },
+    {
+      icon: Building,
+      value: 847,
+      suffix: "+",
+      label: t("propertiesTokenized"),
+      decimals: 0,
+      duration: 2.5,
+    },
+    {
+      icon: Users,
+      value: 12.5,
+      suffix: "K",
+      label: t("activeInvestors"),
+      decimals: 1,
+      duration: 2,
+    },
+  ];
 
   return (
     <section className="py-20 bg-[#0a0a0a] border-y border-[#262626]">

@@ -437,4 +437,250 @@ mod tests {
         let result = s.marketplace.try_list(&s.treasury, &6, &200);
         assert_eq!(result, Err(Ok(MarketError::AlreadyListed.into())));
     }
+
+    // ── initialize ────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_initialize_starts_with_no_listings() {
+        let s = setup();
+
+        assert!(s.marketplace.get_listing(&0).is_none());
+        assert_eq!(s.marketplace.get_all_listings(&0, &10).len(), 0);
+    }
+
+    #[test]
+    fn test_initialize_twice_fails() {
+        let s = setup();
+
+        let result = s.marketplace.try_initialize(&s.nft.address, &s.land_id);
+        assert_eq!(result, Err(Ok(MarketError::AlreadyInitialized.into())));
+    }
+
+    // ── list ──────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_list_before_initialize_fails() {
+        let s = setup();
+        let uninitialized_id = s.env.register(GameMarketplace, ());
+        let uninitialized = GameMarketplaceClient::new(&s.env, &uninitialized_id);
+        s.nft.approve(&s.treasury, &uninitialized_id, &7);
+
+        let result = uninitialized.try_list(&s.treasury, &7, &100);
+        assert_eq!(result, Err(Ok(MarketError::NotInitialized.into())));
+    }
+
+    #[test]
+    fn test_list_without_nft_approval_fails() {
+        let s = setup();
+
+        // No `approve` call: the escrow `transfer_from` is rejected by the NFT
+        // contract, so the marketplace must not record a listing either.
+        let result = s.marketplace.try_list(&s.treasury, &8, &100);
+        assert!(result.is_err());
+
+        assert!(s.marketplace.get_listing(&8).is_none());
+        assert_eq!(s.nft.get_owner(&8), s.treasury);
+    }
+
+    #[test]
+    fn test_list_by_non_owner_fails() {
+        let s = setup();
+        let attacker = Address::generate(&s.env);
+
+        let result = s.marketplace.try_list(&attacker, &9, &100);
+        assert!(result.is_err());
+
+        assert!(s.marketplace.get_listing(&9).is_none());
+        assert_eq!(s.nft.get_owner(&9), s.treasury);
+    }
+
+    #[test]
+    fn test_list_requires_seller_auth() {
+        let s = setup();
+        s.nft.approve(&s.treasury, &s.marketplace_id, &10);
+
+        s.env.set_auths(&[]);
+        let result = s.marketplace.try_list(&s.treasury, &10, &100);
+        assert!(result.is_err());
+
+        assert!(s.marketplace.get_listing(&10).is_none());
+    }
+
+    // ── buy ───────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_buy_nonexistent_listing_fails() {
+        let s = setup();
+        let buyer = Address::generate(&s.env);
+        mint_land(&s, &buyer, 1000);
+
+        let result = s.marketplace.try_buy(&buyer, &11);
+        assert_eq!(result, Err(Ok(MarketError::NotListed.into())));
+    }
+
+    #[test]
+    fn test_buy_with_exact_balance_succeeds() {
+        let s = setup();
+        let buyer = Address::generate(&s.env);
+        mint_land(&s, &buyer, 250);
+
+        s.nft.approve(&s.treasury, &s.marketplace_id, &12);
+        s.marketplace.list(&s.treasury, &12, &250);
+        s.marketplace.buy(&buyer, &12);
+
+        assert_eq!(s.nft.get_owner(&12), buyer);
+        assert_eq!(TokenClient::new(&s.env, &s.land_id).balance(&buyer), 0);
+    }
+
+    #[test]
+    fn test_buy_removes_listing_from_index() {
+        let s = setup();
+        let buyer = Address::generate(&s.env);
+        mint_land(&s, &buyer, 1000);
+
+        for id in 13..16_u32 {
+            s.nft.approve(&s.treasury, &s.marketplace_id, &id);
+            s.marketplace.list(&s.treasury, &id, &100);
+        }
+        s.marketplace.buy(&buyer, &14);
+
+        let remaining = s.marketplace.get_all_listings(&0, &10);
+        assert_eq!(remaining.len(), 2);
+        assert_eq!(remaining.get(0).unwrap().property_id, 13);
+        assert_eq!(remaining.get(1).unwrap().property_id, 15);
+    }
+
+    #[test]
+    fn test_buy_requires_buyer_auth() {
+        let s = setup();
+        let buyer = Address::generate(&s.env);
+        mint_land(&s, &buyer, 1000);
+
+        s.nft.approve(&s.treasury, &s.marketplace_id, &16);
+        s.marketplace.list(&s.treasury, &16, &100);
+
+        s.env.set_auths(&[]);
+        let result = s.marketplace.try_buy(&buyer, &16);
+        assert!(result.is_err());
+
+        assert!(s.marketplace.get_listing(&16).is_some());
+        assert_eq!(s.nft.get_owner(&16), s.marketplace_id);
+    }
+
+    // ── cancel ────────────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_cancel_nonexistent_listing_fails() {
+        let s = setup();
+
+        let result = s.marketplace.try_cancel(&s.treasury, &17);
+        assert_eq!(result, Err(Ok(MarketError::NotListed.into())));
+    }
+
+    #[test]
+    fn test_cancel_twice_fails() {
+        let s = setup();
+        s.nft.approve(&s.treasury, &s.marketplace_id, &18);
+        s.marketplace.list(&s.treasury, &18, &100);
+        s.marketplace.cancel(&s.treasury, &18);
+
+        let result = s.marketplace.try_cancel(&s.treasury, &18);
+        assert_eq!(result, Err(Ok(MarketError::NotListed.into())));
+        assert_eq!(s.nft.get_owner(&18), s.treasury);
+    }
+
+    #[test]
+    fn test_cancel_requires_seller_auth() {
+        let s = setup();
+        s.nft.approve(&s.treasury, &s.marketplace_id, &19);
+        s.marketplace.list(&s.treasury, &19, &100);
+
+        s.env.set_auths(&[]);
+        let result = s.marketplace.try_cancel(&s.treasury, &19);
+        assert!(result.is_err());
+
+        assert!(s.marketplace.get_listing(&19).is_some());
+        assert_eq!(s.nft.get_owner(&19), s.marketplace_id);
+    }
+
+    #[test]
+    fn test_cancel_removes_listing_from_index_and_allows_relisting() {
+        let s = setup();
+        s.nft.approve(&s.treasury, &s.marketplace_id, &20);
+        s.marketplace.list(&s.treasury, &20, &100);
+        s.marketplace.cancel(&s.treasury, &20);
+
+        assert_eq!(s.marketplace.get_all_listings(&0, &10).len(), 0);
+
+        // Re-listing the same property must succeed after a cancellation.
+        s.nft.approve(&s.treasury, &s.marketplace_id, &20);
+        s.marketplace.list(&s.treasury, &20, &200);
+
+        assert_eq!(s.marketplace.get_listing(&20).unwrap().price, 200);
+        assert_eq!(s.marketplace.get_all_listings(&0, &10).len(), 1);
+    }
+
+    #[test]
+    fn test_cancel_by_non_seller_leaves_nft_in_escrow() {
+        let s = setup();
+        let alice = Address::generate(&s.env);
+        s.nft.transfer(&s.treasury, &alice, &21);
+        s.nft.approve(&alice, &s.marketplace_id, &21);
+        s.marketplace.list(&alice, &21, &100);
+
+        let result = s.marketplace.try_cancel(&s.treasury, &21);
+        assert_eq!(result, Err(Ok(MarketError::NotSeller.into())));
+
+        assert_eq!(s.nft.get_owner(&21), s.marketplace_id);
+        assert_eq!(s.marketplace.get_listing(&21).unwrap().seller, alice);
+    }
+
+    // ── get_listing / get_all_listings ────────────────────────────────────────
+
+    #[test]
+    fn test_get_listing_returns_none_when_not_listed() {
+        let s = setup();
+
+        assert!(s.marketplace.get_listing(&22).is_none());
+    }
+
+    #[test]
+    fn test_get_all_listings_edge_offsets_and_limits() {
+        let s = setup();
+        s.nft.approve(&s.treasury, &s.marketplace_id, &23);
+        s.marketplace.list(&s.treasury, &23, &100);
+
+        // Zero limit, offset at the end, and offset past the end are all empty.
+        assert_eq!(s.marketplace.get_all_listings(&0, &0).len(), 0);
+        assert_eq!(s.marketplace.get_all_listings(&1, &10).len(), 0);
+        assert_eq!(s.marketplace.get_all_listings(&99, &10).len(), 0);
+
+        // A limit larger than the number of listings is clamped.
+        assert_eq!(s.marketplace.get_all_listings(&0, &100).len(), 1);
+    }
+
+    #[test]
+    fn test_get_all_listings_returns_each_seller_and_price() {
+        let s = setup();
+        let alice = Address::generate(&s.env);
+        s.nft.transfer(&s.treasury, &alice, &24);
+
+        s.nft.approve(&alice, &s.marketplace_id, &24);
+        s.marketplace.list(&alice, &24, &777);
+        s.nft.approve(&s.treasury, &s.marketplace_id, &25);
+        s.marketplace.list(&s.treasury, &25, &888);
+
+        let all = s.marketplace.get_all_listings(&0, &10);
+        assert_eq!(all.len(), 2);
+
+        let first = all.get(0).unwrap();
+        assert_eq!(first.seller, alice);
+        assert_eq!(first.property_id, 24);
+        assert_eq!(first.price, 777);
+
+        let second = all.get(1).unwrap();
+        assert_eq!(second.seller, s.treasury);
+        assert_eq!(second.property_id, 25);
+        assert_eq!(second.price, 888);
+    }
 }

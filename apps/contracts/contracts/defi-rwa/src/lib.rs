@@ -429,6 +429,15 @@ impl PropertyTokenContract {
         let collateral_price = PriceOracle::get_price(&env, &collateral_asset);
         let collateral_value = (collateral_price * collateral_amount) / PRECISION;
 
+        // ── collateral_factor cap ────────────────────────────────────────────
+        // Maximum borrowable = collateral_value * collateral_factor / PRECISION.
+        // collateral_factor < liquidation_threshold creates a safety buffer so a
+        // small price drop does not immediately make the position liquidatable.
+        let max_borrow = (collateral_value * pool.collateral_factor) / PRECISION;
+        if amount > max_borrow {
+            panic!("Borrow amount exceeds collateral factor cap");
+        }
+
         let debt_value = amount;
         let health_factor = PositionStorage::calculate_health_factor(
             collateral_value,
@@ -539,6 +548,130 @@ impl PropertyTokenContract {
             repaid_amount,
             remaining_debt,
             collateral_released,
+        );
+
+        result_position
+    }
+
+    /// Liquidate an undercollateralised borrow position.
+    ///
+    /// Anyone may call this function once a position's health factor falls below 1.0
+    /// (i.e. `collateral_value * liquidation_threshold / debt < PRECISION`).
+    ///
+    /// The liquidator repays up to 50 % of the outstanding debt (close-factor) and
+    /// receives the equivalent collateral value **plus** the pool's
+    /// `liquidation_penalty` as a bonus incentive.
+    ///
+    /// # Arguments
+    /// * `liquidator`  – the caller that is repaying debt on behalf of `borrower`
+    /// * `borrower`    – the address whose position is being liquidated
+    /// * `pool_id`     – the pool in which the debt is denominated
+    /// * `repay_amount`– the debt amount the liquidator wishes to repay (capped at
+    ///                   50 % of total debt internally)
+    pub fn liquidate(
+        env: Env,
+        liquidator: Address,
+        borrower: Address,
+        pool_id: String,
+        repay_amount: i128,
+    ) -> BorrowPosition {
+        liquidator.require_auth();
+
+        if repay_amount <= 0 {
+            panic!("repay amount must be positive");
+        }
+
+        let pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
+        if !pool.is_active {
+            panic!("pool is not active");
+        }
+        if PoolStorage::is_paused(&env, &pool_id) {
+            panic!("pool is paused");
+        }
+
+        accrue_interest_internal(&env, &pool_id);
+
+        let position = PositionStorage::get_borrow(&env, &borrower, &pool_id)
+            .expect("borrow position not found");
+
+        // ── Eligibility check ────────────────────────────────────────────────
+        // Re-price collateral at the *current* oracle price (not origination price).
+        let collateral_price = PriceOracle::get_price(&env, &position.collateral_asset);
+        let current_debt = PositionStorage::calculate_current_debt(&env, &position);
+        let collateral_value = (collateral_price * position.collateral_amount) / PRECISION;
+
+        let health_factor = PositionStorage::calculate_health_factor(
+            collateral_value,
+            current_debt,
+            pool.liquidation_threshold,
+        );
+
+        // Only allow liquidation when health factor is below 1.0 (PRECISION).
+        if health_factor >= PRECISION {
+            panic!("position is not undercollateralised");
+        }
+
+        // ── Apply liquidation ────────────────────────────────────────────────
+        let (updated_position, actual_repay, collateral_seized, penalty_amount) =
+            PositionStorage::apply_liquidation(
+                &env,
+                &position,
+                repay_amount,
+                collateral_price,
+                pool.liquidation_penalty,
+            );
+
+        // ── Token transfers ──────────────────────────────────────────────────
+        // 1. Liquidator pays `actual_repay` of pool asset into the contract.
+        let pool_token = token::Client::new(&env, &pool.asset_address);
+        pool_token.transfer(&liquidator, &env.current_contract_address(), &actual_repay);
+
+        // 2. Contract sends seized collateral to the liquidator.
+        let collateral_token = token::Client::new(&env, &position.collateral_asset);
+        collateral_token.transfer(
+            &env.current_contract_address(),
+            &liquidator,
+            &collateral_seized,
+        );
+
+        // ── Update pool totals ────────────────────────────────────────────────
+        let total_borrows = PoolStorage::get_total_borrows(&env, &pool_id);
+        let updated_total_borrows = if actual_repay > total_borrows {
+            0
+        } else {
+            total_borrows - actual_repay
+        };
+        PoolStorage::set_total_borrows(&env, &pool_id, updated_total_borrows);
+
+        // ── Persist position ─────────────────────────────────────────────────
+        let current_index = InterestStorage::get_interest_index(&env, &pool_id);
+        let result_position = match &updated_position {
+            Some(updated) => updated.clone(),
+            None => BorrowPosition {
+                pool_id: pool_id.clone(),
+                borrower: borrower.clone(),
+                principal: 0,
+                index_at_borrow: current_index,
+                collateral_amount: 0,
+                collateral_asset: position.collateral_asset.clone(),
+                borrowed_at: position.borrowed_at,
+            },
+        };
+
+        match updated_position {
+            Some(updated) => PositionStorage::set_borrow(&env, &updated),
+            None => PositionStorage::remove_borrow(&env, &borrower, &pool_id),
+        }
+
+        // ── Emit event ───────────────────────────────────────────────────────
+        lending_events::emit_liquidation(
+            &env,
+            &pool_id,
+            &borrower,
+            &liquidator,
+            actual_repay,
+            collateral_seized,
+            penalty_amount,
         );
 
         result_position

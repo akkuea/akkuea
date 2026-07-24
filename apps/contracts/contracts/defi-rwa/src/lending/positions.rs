@@ -291,7 +291,89 @@ impl PositionStorage {
         (position.principal * current_index) / position.index_at_borrow
     }
 
-    /// Calculate health factor for position
+    /// Apply a liquidation to an undercollateralised borrow position.
+    ///
+    /// The liquidator repays `repay_amount` of the outstanding debt and receives
+    /// collateral worth `repay_amount * (PRECISION + liquidation_penalty) / collateral_price`
+    /// — i.e. the debt value plus the penalty discount, expressed in collateral tokens.
+    ///
+    /// Returns `(updated_position, actual_debt_repaid, collateral_seized, penalty_amount)`.
+    /// `updated_position` is `None` when the position is fully closed.
+    ///
+    /// Panics if:
+    /// - `repay_amount` is not positive
+    /// - the position has no outstanding debt
+    /// - `collateral_price` is zero (caller must supply the current oracle price)
+    /// - `repay_amount` exceeds the 50 % close-factor cap (Aave-style single-call limit)
+    pub fn apply_liquidation(
+        env: &Env,
+        position: &BorrowPosition,
+        repay_amount: i128,
+        collateral_price: i128,
+        liquidation_penalty: i128,
+    ) -> (Option<BorrowPosition>, i128, i128, i128) {
+        if repay_amount <= 0 {
+            panic!("repay amount must be positive");
+        }
+        if collateral_price <= 0 {
+            panic!("collateral price must be positive");
+        }
+
+        let current_debt = Self::calculate_current_debt(env, position);
+        if current_debt <= 0 {
+            panic!("borrow position has no debt");
+        }
+
+        // Close-factor: a single liquidation call may repay at most 50 % of the debt.
+        // This prevents a full seizure in one transaction and gives borrowers a chance
+        // to self-rescue just above the threshold boundary.
+        let max_repay = current_debt / 2;
+        let actual_repay = if repay_amount > max_repay {
+            max_repay
+        } else {
+            repay_amount
+        };
+
+        // Collateral seized = repay_value_in_collateral_tokens * (1 + penalty)
+        // repay_value_in_collateral_tokens = actual_repay * PRECISION / collateral_price
+        // penalty_bonus                    = repay_value * liquidation_penalty / PRECISION
+        let repay_in_collateral = (actual_repay * PRECISION) / collateral_price;
+        let penalty_bonus = (repay_in_collateral * liquidation_penalty) / PRECISION;
+        let collateral_seized = repay_in_collateral + penalty_bonus;
+
+        // Cap seized collateral at whatever is actually held (safety for edge cases where
+        // collateral has dropped so far that seized > available).
+        let collateral_seized = if collateral_seized > position.collateral_amount {
+            position.collateral_amount
+        } else {
+            collateral_seized
+        };
+
+        let remaining_debt = current_debt - actual_repay;
+        let remaining_collateral = position.collateral_amount - collateral_seized;
+
+        if remaining_debt == 0 || remaining_collateral == 0 {
+            return (None, actual_repay, collateral_seized, penalty_bonus);
+        }
+
+        let updated_position = BorrowPosition {
+            pool_id: position.pool_id.clone(),
+            borrower: position.borrower.clone(),
+            principal: remaining_debt,
+            index_at_borrow: InterestStorage::get_interest_index(env, &position.pool_id),
+            collateral_amount: remaining_collateral,
+            collateral_asset: position.collateral_asset.clone(),
+            borrowed_at: position.borrowed_at,
+        };
+
+        (
+            Some(updated_position),
+            actual_repay,
+            collateral_seized,
+            penalty_bonus,
+        )
+    }
+
     /// Calculate health factor for position
     ///
     /// Returns health factor in PRECISION units (1.0 = PRECISION).

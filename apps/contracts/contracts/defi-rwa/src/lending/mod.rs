@@ -14,3 +14,4 @@ pub use keys::{lending_bump, LendingKey};
 pub use oracle::PriceOracle;
 pub use pool::{LendingPool, PoolStorage};
 pub use positions::{BorrowPosition, DepositPosition, PositionStorage};
+pub use events::{emit_liquidation, LiquidationEvent};

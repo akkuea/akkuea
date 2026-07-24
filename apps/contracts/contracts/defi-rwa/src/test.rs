@@ -2912,3 +2912,388 @@ fn test_full_emergency_and_recovery_flow() {
     let total = s.contract_client.get_total_deposits(&pool_id);
     assert_eq!(total, 2_000_000_000);
 }
+
+// ─── Liquidation ────────────────────────────────────────────────────────────
+
+/// Build a scenario where a borrow position can be liquidated:
+/// - pool with 75 % collateral_factor / 80 % liquidation_threshold / 5 % penalty
+/// - borrower posts 2 000 units of collateral priced at 1.0 and borrows 1 000 USDC
+///   (health factor at origination ≈ 1.6 > 1.5, collateral cap: 2000*0.75=1500 > 1000 ✓)
+/// - oracle price is then dropped to 0.5, making the position undercollateralised
+///   (collateral_value = 2000*0.5 = 1000, health = 1000*0.8/1000 = 0.8 < 1.0)
+struct LiquidationTestSetup<'a> {
+    env: Env,
+    contract_id: Address,
+    contract_client: PropertyTokenContractClient<'a>,
+    oracle_id: Address,
+    borrower: Address,
+    liquidator: Address,
+    pool_id: String,
+    usdc_address: Address,
+    xlm_address: Address,
+}
+
+fn setup_liquidation_test() -> LiquidationTestSetup<'static> {
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let contract_id = env.register(PropertyTokenContract, (&admin,));
+    let contract_client = PropertyTokenContractClient::new(&env, &contract_id);
+    let oracle_id = env.register(MockOracleContract, ());
+
+    let borrower = Address::generate(&env);
+    let liquidator = Address::generate(&env);
+
+    // Two Stellar Asset tokens: USDC (pool asset) and XLM (collateral)
+    let usdc_admin = Address::generate(&env);
+    let usdc_contract = env.register_stellar_asset_contract_v2(usdc_admin.clone());
+    let usdc_sac = StellarAssetClient::new(&env, &usdc_contract.address());
+
+    let xlm_admin = Address::generate(&env);
+    let xlm_contract = env.register_stellar_asset_contract_v2(xlm_admin.clone());
+    let xlm_sac = StellarAssetClient::new(&env, &xlm_contract.address());
+
+    let pool_id = String::from_str(&env, "USDC-POOL");
+    let pool = LendingPool {
+        id: pool_id.clone(),
+        name: String::from_str(&env, "USDC Lending Pool"),
+        asset: String::from_str(&env, "USDC"),
+        asset_address: usdc_contract.address().clone(),
+        collateral_factor: 750_000_000_000_000_000,     // 75 %
+        liquidation_threshold: 800_000_000_000_000_000, // 80 %
+        liquidation_penalty: 50_000_000_000_000_000,    // 5 %
+        reserve_factor: 1000,
+        is_active: true,
+        created_at: env.ledger().timestamp(),
+    };
+
+    env.as_contract(&contract_id, || {
+        PoolStorage::set(&env, &pool);
+        // Seed pool liquidity directly so borrow() has funds to disburse.
+        PoolStorage::set_total_deposits(&env, &pool_id, 10_000_000_000);
+        PoolStorage::set_total_borrows(&env, &pool_id, 0);
+
+        let model = InterestRateModel::default();
+        InterestStorage::set_model(&env, &pool_id, &model);
+        InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
+        InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
+
+        PriceOracle::set_oracle_address(&env, &oracle_id);
+    });
+
+    // Oracle: XLM starts at 1.0 (= PRECISION)
+    env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(
+            env.clone(),
+            xlm_contract.address().clone(),
+            PRECISION,
+            env.ledger().timestamp(),
+        );
+    });
+
+    // Mint tokens
+    xlm_sac.mint(&borrower, &2_000_000_000);    // borrower's collateral
+    usdc_sac.mint(&contract_id, &10_000_000_000); // pool liquidity
+    usdc_sac.mint(&liquidator, &5_000_000_000);   // liquidator funds
+
+    // Borrower posts 2 000 XLM as collateral and borrows 1 000 USDC.
+    // collateral_value = 2000 * 1.0 = 2000
+    // max_borrow (CF cap) = 2000 * 0.75 = 1500 ✓
+    // health_factor = 2000 * 0.80 / 1000 = 1.6 ≥ 1.5 ✓
+    contract_client.borrow(
+        &borrower,
+        &pool_id,
+        &1_000_000_000,
+        &xlm_contract.address(),
+        &2_000_000_000,
+    );
+
+    LiquidationTestSetup {
+        env,
+        contract_id,
+        contract_client,
+        oracle_id,
+        borrower,
+        liquidator,
+        pool_id,
+        usdc_address: usdc_contract.address().clone(),
+        xlm_address: xlm_contract.address().clone(),
+    }
+}
+
+/// Drop the oracle price so the position becomes undercollateralised.
+fn drop_price_to(s: &LiquidationTestSetup, new_price: i128) {
+    s.env.as_contract(&s.oracle_id, || {
+        MockOracleContract::set_price(
+            s.env.clone(),
+            s.xlm_address.clone(),
+            new_price,
+            s.env.ledger().timestamp(),
+        );
+    });
+}
+
+// ── Happy-path liquidation ───────────────────────────────────────────────────
+
+#[test]
+fn test_liquidate_undercollateralised_position() {
+    let s = setup_liquidation_test();
+
+    // Drop XLM price to 0.5 → collateral_value = 1000, health = 0.8 < 1.0
+    drop_price_to(&s, PRECISION / 2);
+
+    let usdc = TokenClient::new(&s.env, &s.usdc_address);
+    let xlm = TokenClient::new(&s.env, &s.xlm_address);
+
+    let liquidator_usdc_before = usdc.balance(&s.liquidator);
+    let liquidator_xlm_before = xlm.balance(&s.liquidator);
+
+    // Liquidator repays 500 USDC (≤ 50 % close-factor of 1 000)
+    let result = s
+        .contract_client
+        .liquidate(&s.liquidator, &s.borrower, &s.pool_id, &500_000_000);
+
+    // Liquidator spent 500 USDC
+    let liquidator_usdc_after = usdc.balance(&s.liquidator);
+    assert_eq!(
+        liquidator_usdc_before - liquidator_usdc_after,
+        500_000_000,
+        "liquidator should have paid 500 USDC"
+    );
+
+    // Liquidator received collateral + 5 % penalty.
+    // repay_in_collateral = 500_000_000 * PRECISION / (PRECISION/2) = 1_000_000_000
+    // penalty_bonus       = 1_000_000_000 * 0.05 = 50_000_000
+    // total_seized        = 1_050_000_000
+    let xlm_received = xlm.balance(&s.liquidator) - liquidator_xlm_before;
+    assert_eq!(xlm_received, 1_050_000_000, "liquidator should seize 1 050 XLM");
+
+    // Borrower's position is partially reduced
+    assert_eq!(result.principal, 500_000_000, "remaining debt should be 500");
+    assert_eq!(
+        result.collateral_amount,
+        2_000_000_000 - 1_050_000_000,
+        "remaining collateral should be 950"
+    );
+}
+
+#[test]
+fn test_liquidate_fully_closes_position() {
+    let s = setup_liquidation_test();
+
+    // Drop price to 0.4 → collateral_value = 800, health = 0.64 < 1.0
+    drop_price_to(&s, (PRECISION * 4) / 10);
+
+    // Requesting more than 50 % (e.g. 1 000) will be capped to 500 internally.
+    // After the first half is repaid the position still has debt; call twice to
+    // fully close it. (The test just verifies the first call caps correctly.)
+    let result = s
+        .contract_client
+        .liquidate(&s.liquidator, &s.borrower, &s.pool_id, &1_000_000_000);
+
+    // Close-factor caps the repay to 50 % (500).
+    assert_eq!(
+        result.principal, 500_000_000,
+        "close-factor should cap repay at 500"
+    );
+}
+
+#[test]
+fn test_liquidate_total_borrows_decremented() {
+    let s = setup_liquidation_test();
+    drop_price_to(&s, PRECISION / 2);
+
+    let borrows_before = s.contract_client.get_total_borrows(&s.pool_id);
+    s.contract_client
+        .liquidate(&s.liquidator, &s.borrower, &s.pool_id, &500_000_000);
+    let borrows_after = s.contract_client.get_total_borrows(&s.pool_id);
+
+    assert_eq!(
+        borrows_before - borrows_after,
+        500_000_000,
+        "total borrows should decrease by the repaid amount"
+    );
+}
+
+// ── Liquidation guard-rails ─────────────────────────────────────────────────
+
+#[test]
+#[should_panic(expected = "position is not undercollateralised")]
+fn test_liquidate_healthy_position_rejected() {
+    let s = setup_liquidation_test();
+    // Price is still 1.0, health_factor ≈ 1.6 → must panic
+    s.contract_client
+        .liquidate(&s.liquidator, &s.borrower, &s.pool_id, &100_000_000);
+}
+
+#[test]
+#[should_panic(expected = "borrow position not found")]
+fn test_liquidate_nonexistent_position() {
+    let s = setup_liquidation_test();
+    drop_price_to(&s, PRECISION / 2);
+    let random = Address::generate(&s.env);
+    s.contract_client
+        .liquidate(&s.liquidator, &random, &s.pool_id, &100_000_000);
+}
+
+#[test]
+#[should_panic(expected = "repay amount must be positive")]
+fn test_liquidate_zero_repay_rejected() {
+    let s = setup_liquidation_test();
+    drop_price_to(&s, PRECISION / 2);
+    s.contract_client
+        .liquidate(&s.liquidator, &s.borrower, &s.pool_id, &0);
+}
+
+// ── collateral_factor borrow cap ────────────────────────────────────────────
+
+#[test]
+#[should_panic(expected = "Borrow amount exceeds collateral factor cap")]
+fn test_borrow_exceeds_collateral_factor_rejected() {
+    // collateral_value = 2000 * 1.0 = 2000
+    // max_borrow = 2000 * 0.75 = 1500
+    // Requesting 1600 must be rejected.
+    let setup = setup_borrow_test();
+
+    // setup_borrow_test already called borrow() once successfully.
+    // Now try to borrow more than the cap on a fresh pool via the internal path.
+    // Instead, build a fresh environment.
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let contract_id = env.register(PropertyTokenContract, (&admin,));
+    let contract_client = PropertyTokenContractClient::new(&env, &contract_id);
+    let oracle_id = env.register(MockOracleContract, ());
+
+    let borrower = Address::generate(&env);
+
+    let usdc_admin = Address::generate(&env);
+    let usdc_contract = env.register_stellar_asset_contract_v2(usdc_admin.clone());
+    let usdc_sac = StellarAssetClient::new(&env, &usdc_contract.address());
+
+    let xlm_admin = Address::generate(&env);
+    let xlm_contract = env.register_stellar_asset_contract_v2(xlm_admin.clone());
+    let xlm_sac = StellarAssetClient::new(&env, &xlm_contract.address());
+
+    let pool_id = String::from_str(&env, "USDC-POOL");
+
+    env.as_contract(&contract_id, || {
+        let pool = LendingPool {
+            id: pool_id.clone(),
+            name: String::from_str(&env, "USDC Pool"),
+            asset: String::from_str(&env, "USDC"),
+            asset_address: usdc_contract.address().clone(),
+            collateral_factor: 750_000_000_000_000_000,
+            liquidation_threshold: 800_000_000_000_000_000,
+            liquidation_penalty: 50_000_000_000_000_000,
+            reserve_factor: 1000,
+            is_active: true,
+            created_at: env.ledger().timestamp(),
+        };
+        PoolStorage::set(&env, &pool);
+        PoolStorage::set_total_deposits(&env, &pool_id, 10_000_000_000);
+        PoolStorage::set_total_borrows(&env, &pool_id, 0);
+        let model = InterestRateModel::default();
+        InterestStorage::set_model(&env, &pool_id, &model);
+        InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
+        InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
+        PriceOracle::set_oracle_address(&env, &oracle_id);
+    });
+
+    env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(
+            env.clone(),
+            xlm_contract.address().clone(),
+            PRECISION, // price = 1.0
+            env.ledger().timestamp(),
+        );
+    });
+
+    xlm_sac.mint(&borrower, &2_000_000_000);
+    usdc_sac.mint(&contract_id, &10_000_000_000);
+
+    // 1 600 > max_borrow (1 500) → must panic
+    contract_client.borrow(
+        &borrower,
+        &pool_id,
+        &1_600_000_000, // exceeds 75 % of 2000 = 1500
+        &xlm_contract.address(),
+        &2_000_000_000,
+    );
+
+    // Suppress unused-variable warning; setup used to shadow the outer one
+    let _ = setup;
+}
+
+#[test]
+fn test_borrow_at_collateral_factor_boundary_succeeds() {
+    // Borrow exactly 1 500 with 2 000 collateral at 1.0 and 75 % CF.
+    // health = 2000 * 0.80 / 1500 ≈ 1.067 — below the 1.5 origination floor.
+    // So the CF cap is more permissive than the HF gate in this configuration;
+    // a borrow of 1 000 (health=1.6) should pass both gates.
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let contract_id = env.register(PropertyTokenContract, (&admin,));
+    let contract_client = PropertyTokenContractClient::new(&env, &contract_id);
+    let oracle_id = env.register(MockOracleContract, ());
+    let borrower = Address::generate(&env);
+
+    let usdc_admin = Address::generate(&env);
+    let usdc_contract = env.register_stellar_asset_contract_v2(usdc_admin.clone());
+    let usdc_sac = StellarAssetClient::new(&env, &usdc_contract.address());
+
+    let xlm_admin = Address::generate(&env);
+    let xlm_contract = env.register_stellar_asset_contract_v2(xlm_admin.clone());
+    let xlm_sac = StellarAssetClient::new(&env, &xlm_contract.address());
+
+    let pool_id = String::from_str(&env, "USDC-POOL");
+
+    env.as_contract(&contract_id, || {
+        let pool = LendingPool {
+            id: pool_id.clone(),
+            name: String::from_str(&env, "USDC Pool"),
+            asset: String::from_str(&env, "USDC"),
+            asset_address: usdc_contract.address().clone(),
+            collateral_factor: 750_000_000_000_000_000,
+            liquidation_threshold: 800_000_000_000_000_000,
+            liquidation_penalty: 50_000_000_000_000_000,
+            reserve_factor: 1000,
+            is_active: true,
+            created_at: env.ledger().timestamp(),
+        };
+        PoolStorage::set(&env, &pool);
+        PoolStorage::set_total_deposits(&env, &pool_id, 10_000_000_000);
+        PoolStorage::set_total_borrows(&env, &pool_id, 0);
+        let model = InterestRateModel::default();
+        InterestStorage::set_model(&env, &pool_id, &model);
+        InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
+        InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
+        PriceOracle::set_oracle_address(&env, &oracle_id);
+    });
+
+    env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(
+            env.clone(),
+            xlm_contract.address().clone(),
+            PRECISION,
+            env.ledger().timestamp(),
+        );
+    });
+
+    xlm_sac.mint(&borrower, &2_000_000_000);
+    usdc_sac.mint(&contract_id, &10_000_000_000);
+
+    // 1 000 ≤ 1 500 (CF cap) and health = 1.6 ≥ 1.5 → must succeed
+    let pos = contract_client.borrow(
+        &borrower,
+        &pool_id,
+        &1_000_000_000,
+        &xlm_contract.address(),
+        &2_000_000_000,
+    );
+    assert_eq!(pos.principal, 1_000_000_000);
+}

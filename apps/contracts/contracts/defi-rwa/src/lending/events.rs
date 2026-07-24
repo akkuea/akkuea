@@ -57,3 +57,37 @@ pub fn emit_pool_created(env: &Env, admin: &Address, pool_id: &String) {
     env.events()
         .publish((soroban_sdk::symbol_short!("pool_new"),), event);
 }
+
+/// Liquidation event data
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct LiquidationEvent {
+    pub pool_id: String,
+    pub borrower: Address,
+    pub liquidator: Address,
+    pub debt_repaid: i128,
+    pub collateral_seized: i128,
+    pub penalty: i128,
+}
+
+/// Emit a liquidation event
+pub fn emit_liquidation(
+    env: &Env,
+    pool_id: &String,
+    borrower: &Address,
+    liquidator: &Address,
+    debt_repaid: i128,
+    collateral_seized: i128,
+    penalty: i128,
+) {
+    let event = LiquidationEvent {
+        pool_id: pool_id.clone(),
+        borrower: borrower.clone(),
+        liquidator: liquidator.clone(),
+        debt_repaid,
+        collateral_seized,
+        penalty,
+    };
+    env.events()
+        .publish((soroban_sdk::symbol_short!("liquidate"),), event);
+}

@@ -11,7 +11,9 @@
     "test": "NEXT_PUBLIC_API_URL=http://localhost:3001 bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
-    "clean": "rm -rf .next"
+    "clean": "rm -rf .next",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@akkuea/shared": "workspace:*",
@@ -52,7 +54,13 @@
     "jsdom": "^29.0.1",
     "msw": "^2.14.6",
     "tailwindcss": "^4.1.18",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@storybook/nextjs": "^8.6.0",
+    "@storybook/react": "^8.6.0",
+    "@storybook/addon-essentials": "^8.6.0",
+    "@storybook/addon-interactions": "^8.6.0",
+    "@storybook/blocks": "^8.6.0",
+    "storybook": "^8.6.0"
   },
   "msw": {
     "workerDirectory": [

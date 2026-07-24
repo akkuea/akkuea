@@ -28,7 +28,9 @@
     "install:all": "bun install && bun install --workspaces",
     "deploy:contracts": "./scripts/deploy.sh",
     "format": "prettier --write \"**/*.{js,ts,tsx,json,md,rs}\" \"!apps/contracts/**\"",
-    "smoke": "./scripts/smoke/run-smoke-tests.sh"
+    "smoke": "./scripts/smoke/run-smoke-tests.sh",
+    "storybook": "cd apps/webapp && bun run storybook",
+    "build-storybook": "cd apps/webapp && bun run build-storybook"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",

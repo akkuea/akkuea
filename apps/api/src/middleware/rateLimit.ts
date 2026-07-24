@@ -48,7 +48,7 @@ export function walletKeyGenerator(request: Request): string {
       const token = authHeader.substring(7);
       const parts = token.split('.');
       if (parts.length === 3) {
-        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        const payload = JSON.parse(atob(parts[1]!.replace(/-/g, '+').replace(/_/g, '/')));
         if (typeof payload.walletAddress === 'string' && payload.walletAddress) {
           return `wallet:${payload.walletAddress}`;
         }

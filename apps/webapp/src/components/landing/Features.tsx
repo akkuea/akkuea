@@ -14,7 +14,7 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 
-const getFeatures = (t: any) => [
+const getFeatures = (t: ReturnType<typeof useTranslations>) => [
   {
     icon: Blocks,
     title: t("items.fractional.title"),

@@ -62,7 +62,7 @@ function AnimatedCounter({
   );
 }
 
-const getStats = (t: any): StatProps[] => [
+const getStats = (t: ReturnType<typeof useTranslations>): StatProps[] => [
   {
     icon: TrendingUp,
     value: 172,

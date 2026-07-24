@@ -6,7 +6,7 @@ import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/Button";
 import { useTranslations } from "next-intl";
 
-const getFeatures = (t: any) => [
+const getFeatures = (t: ReturnType<typeof useTranslations>) => [
   { icon: Shield, label: t("security") },
   { icon: Lock, label: t("compliance") },
   { icon: Zap, label: t("settlements") },

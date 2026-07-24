@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Wallet, Search, ShoppingCart, TrendingUp } from "lucide-react";
 import { useTranslations } from "next-intl";
 
-const getSteps = (t: any) => [
+const getSteps = (t: ReturnType<typeof useTranslations>) => [
   {
     icon: Wallet,
     step: "01",

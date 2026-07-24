@@ -19,7 +19,7 @@ import { BrandLogo } from "@/components/layout/BrandLogo";
 import { WalletStatusWidget } from "@/components/layout/WalletStatusWidget";
 import { LanguageSelector } from "@/components/layout/LanguageSelector";
 
-const getNavigation = (t: any) => [
+const getNavigation = (t: ReturnType<typeof useTranslations>) => [
   { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
   { name: t("marketplace"), href: "/marketplace", icon: Store },
   { name: t("tokenize"), href: "/tokenize", icon: Building2 },

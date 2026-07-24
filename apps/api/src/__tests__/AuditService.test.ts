@@ -1,10 +1,11 @@
 import { describe, expect, it, mock } from 'bun:test';
 import { AuditService } from '../services/AuditService';
 import type { AuditLogRepository } from '../repositories/AuditLogRepository';
+import type { AuditLog } from '../db/schema/auditLog';
 
 function createMockRepository(): AuditLogRepository {
   return {
-    create: mock(() => Promise.resolve({ id: 'mock-id' } as any)),
+    create: mock(() => Promise.resolve({ id: 'mock-id' } as AuditLog)),
     findPaginated: mock(() =>
       Promise.resolve({
         data: [],

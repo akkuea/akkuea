@@ -5,6 +5,7 @@ import {
   uuidParamSchema,
   paginationQuerySchema,
   rateLimit,
+  walletKeyGenerator,
   authPlugin,
 } from '../middleware';
 import { LendingController } from '../controllers/LendingController';
@@ -106,7 +107,7 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
 
   // POST /pools - Create pool (auth required)
   .use(validate({ body: createPoolSchema }))
-  .post('/pools', async (ctx) => LendingController.createPool(ctx), { beforeHandle: [rateLimit()] })
+  .post('/pools', async (ctx) => LendingController.createPool(ctx), { beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })] })
 
   // POST /pools/:id/deposit - Deposit into pool (auth required)
   .use(validate({ body: depositSchema }))

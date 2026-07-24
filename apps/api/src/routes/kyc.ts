@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia';
 import { KYCController } from '../controllers/KYCController';
 import { ApiError } from '../errors/ApiError';
-import { rateLimit, authPlugin } from '../middleware';
+import { rateLimit, walletKeyGenerator, authPlugin } from '../middleware';
 
 const DOCUMENT_TYPES = [
   'passport',
@@ -74,7 +74,7 @@ const userScoped = new Elysia()
         return handleKycError(error, set);
       }
     },
-    { beforeHandle: [rateLimit()] },
+    { beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })] },
   )
   .get('/documents/:userId', async ({ params: { userId }, set, getAuthenticatedUser }) => {
     try {
@@ -145,7 +145,7 @@ const jwtScoped = new Elysia()
         return handleKycError(error, set);
       }
     },
-    { beforeHandle: [rateLimit()] },
+    { beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })] },
   )
   .get('/file/:documentId', async ({ params: { documentId }, set }) => {
     try {

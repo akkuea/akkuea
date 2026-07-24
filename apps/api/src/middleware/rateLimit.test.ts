@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { rateLimit, createRedisStore, createMemoryStore } from './rateLimit';
+import { rateLimit, createRedisStore, createMemoryStore, walletKeyGenerator } from './rateLimit';
 import type { RateLimitRedisClient } from './rateLimit';
 import type { Context } from 'elysia';
 
@@ -252,6 +252,89 @@ describe('rateLimit middleware', () => {
 
       expect(set.headers!['X-RateLimit-Limit']).toBe('10');
       expect(set.headers!['X-RateLimit-Remaining']).toBe('9');
+    });
+  });
+
+  describe('walletKeyGenerator', () => {
+    function makeJwt(payload: Record<string, unknown>): string {
+      const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
+      const body = btoa(JSON.stringify(payload));
+      return `${header}.${body}.signature`;
+    }
+
+    it('should extract wallet address from JWT', () => {
+      const token = makeJwt({ walletAddress: 'GA7EXAMPLEADDRESS' });
+      const request = createMockRequest({
+        headers: { authorization: `Bearer ${token}`, 'x-forwarded-for': '10.0.0.1' },
+      });
+      expect(walletKeyGenerator(request)).toBe('wallet:GA7EXAMPLEADDRESS');
+    });
+
+    it('should fall back to IP when no auth header', () => {
+      const request = createMockRequest({
+        headers: { 'x-forwarded-for': '10.0.0.2' },
+      });
+      expect(walletKeyGenerator(request)).toBe('ip:10.0.0.2');
+    });
+
+    it('should fall back to IP for malformed token', () => {
+      const request = createMockRequest({
+        headers: { authorization: 'Bearer not-a-jwt', 'x-forwarded-for': '10.0.0.3' },
+      });
+      expect(walletKeyGenerator(request)).toBe('ip:10.0.0.3');
+    });
+
+    it('should fall back to IP when walletAddress is missing from payload', () => {
+      const token = makeJwt({ id: 'user1' });
+      const request = createMockRequest({
+        headers: { authorization: `Bearer ${token}`, 'x-forwarded-for': '10.0.0.4' },
+      });
+      expect(walletKeyGenerator(request)).toBe('ip:10.0.0.4');
+    });
+
+    it('should rate-limit by wallet across different IPs', async () => {
+      const token = makeJwt({ walletAddress: 'GA7SAMEWALLET' });
+      const middleware = rateLimit({ max: 2, windowMs: 60000, keyGenerator: walletKeyGenerator });
+
+      const req1 = createMockRequest({
+        headers: { authorization: `Bearer ${token}`, 'x-forwarded-for': '192.168.1.1' },
+      });
+      const req2 = createMockRequest({
+        headers: { authorization: `Bearer ${token}`, 'x-forwarded-for': '192.168.2.2' },
+      });
+      const set1 = createMockSet();
+      const set2 = createMockSet();
+
+      await middleware({ request: req1, set: set1 }); // 1st - allowed
+      const result2 = await middleware({ request: req2, set: set2 }); // 2nd - allowed
+      const result3 = await middleware({ request: req1, set: createMockSet() }); // 3rd - blocked
+
+      expect(result2).toBeUndefined();
+      expect(result3).toEqual({
+        success: false,
+        error: 'RATE_LIMITED',
+        message: 'Too many requests. Please try again later.',
+      });
+    });
+
+    it('should track different wallets independently', async () => {
+      const token1 = makeJwt({ walletAddress: 'GA7WALLETONE' });
+      const token2 = makeJwt({ walletAddress: 'GA7WALLETTWO' });
+      const middleware = rateLimit({ max: 1, windowMs: 60000, keyGenerator: walletKeyGenerator });
+
+      const req1 = createMockRequest({
+        headers: { authorization: `Bearer ${token1}`, 'x-forwarded-for': '10.0.0.1' },
+      });
+      const req2 = createMockRequest({
+        headers: { authorization: `Bearer ${token2}`, 'x-forwarded-for': '10.0.0.1' },
+      });
+      const set1 = createMockSet();
+      const set2 = createMockSet();
+
+      await middleware({ request: req1, set: set1 }); // wallet1 hits limit
+      const result2 = await middleware({ request: req2, set: set2 }); // wallet2 still allowed
+
+      expect(result2).toBeUndefined();
     });
   });
 });

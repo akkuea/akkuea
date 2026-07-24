@@ -641,7 +641,9 @@ fn test_interest_rate_model_unit() {
     assert_eq!(rate_0, model.base_rate);
 
     // Optimal (80%) → base + slope1
-    let rate_opt = model.calculate_borrow_rate(model.optimal_utilization).unwrap();
+    let rate_opt = model
+        .calculate_borrow_rate(model.optimal_utilization)
+        .unwrap();
     assert_eq!(rate_opt, model.base_rate + model.slope1);
 
     // 100% utilization → higher than optimal
@@ -650,7 +652,9 @@ fn test_interest_rate_model_unit() {
 
     // Monotonically increasing
     let rate_50 = model.calculate_borrow_rate(PRECISION / 2).unwrap();
-    let rate_90 = model.calculate_borrow_rate(900_000_000_000_000_000).unwrap();
+    let rate_90 = model
+        .calculate_borrow_rate(900_000_000_000_000_000)
+        .unwrap();
     assert!(rate_50 > rate_0);
     assert!(rate_90 > rate_opt);
     assert!(rate_100 > rate_90);
@@ -663,7 +667,9 @@ fn test_supply_rate_less_than_borrow_rate() {
     let reserve_factor = 100_000_000_000_000_000_i128; // 10%
 
     let borrow_rate = model.calculate_borrow_rate(utilization).unwrap();
-    let supply_rate = model.calculate_supply_rate(borrow_rate, utilization, reserve_factor).unwrap();
+    let supply_rate = model
+        .calculate_supply_rate(borrow_rate, utilization, reserve_factor)
+        .unwrap();
 
     assert!(supply_rate < borrow_rate);
     assert!(supply_rate > 0);
@@ -730,7 +736,10 @@ fn test_borrow_rate_rate_at_optimal_add_overflow() {
         optimal_utilization: 0,
     };
     let result = model.calculate_borrow_rate(PRECISION);
-    assert_eq!(result, Err(ContractError::BorrowRateRateAtOptimalAddOverflow));
+    assert_eq!(
+        result,
+        Err(ContractError::BorrowRateRateAtOptimalAddOverflow)
+    );
 }
 
 #[test]

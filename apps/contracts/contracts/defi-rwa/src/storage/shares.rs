@@ -1,3 +1,4 @@
+use crate::access::ContractError;
 use soroban_sdk::{Address, Env};
 
 use super::keys::StorageKey;
@@ -52,13 +53,21 @@ pub fn set_balance(env: &Env, property_id: u64, owner: &Address, balance: u64) {
 /// * `owner` - Address of the share owner
 /// * `amount` - Number of shares to add
 ///
-/// # Panics
-/// Panics if the addition would overflow u64
+/// # Errors
+/// Returns `ContractError::BalanceOverflow` if the addition would overflow u64
 #[allow(dead_code)]
-pub fn increase_balance(env: &Env, property_id: u64, owner: &Address, amount: u64) {
+pub fn increase_balance(
+    env: &Env,
+    property_id: u64,
+    owner: &Address,
+    amount: u64,
+) -> Result<(), ContractError> {
     let current = get_balance(env, property_id, owner);
-    let new_balance = current.checked_add(amount).expect("Share balance overflow");
+    let new_balance = current
+        .checked_add(amount)
+        .ok_or(ContractError::BalanceOverflow)?;
     set_balance(env, property_id, owner, new_balance);
+    Ok(())
 }
 
 /// Decreases the share balance for an owner
@@ -69,15 +78,21 @@ pub fn increase_balance(env: &Env, property_id: u64, owner: &Address, amount: u6
 /// * `owner` - Address of the share owner
 /// * `amount` - Number of shares to subtract
 ///
-/// # Panics
-/// Panics if the subtraction would underflow (insufficient balance)
+/// # Errors
+/// Returns `ContractError::InsufficientBalance` if the balance is insufficient
 #[allow(dead_code)]
-pub fn decrease_balance(env: &Env, property_id: u64, owner: &Address, amount: u64) {
+pub fn decrease_balance(
+    env: &Env,
+    property_id: u64,
+    owner: &Address,
+    amount: u64,
+) -> Result<(), ContractError> {
     let current = get_balance(env, property_id, owner);
     let new_balance = current
         .checked_sub(amount)
-        .expect("Insufficient share balance");
+        .ok_or(ContractError::InsufficientBalance)?;
     set_balance(env, property_id, owner, new_balance);
+    Ok(())
 }
 
 /// Gets the total shares issued for a property
@@ -115,12 +130,20 @@ pub fn set_total_shares(env: &Env, property_id: u64, total: u64) {
 /// * `to` - Address of the recipient
 /// * `amount` - Number of shares to transfer
 ///
-/// # Panics
-/// Panics if sender has insufficient balance
+/// # Errors
+/// Returns `ContractError::InsufficientBalance` if sender has insufficient balance
+/// Returns `ContractError::BalanceOverflow` if recipient balance would overflow
 #[allow(dead_code)]
-pub fn transfer_shares(env: &Env, property_id: u64, from: &Address, to: &Address, amount: u64) {
-    decrease_balance(env, property_id, from, amount);
-    increase_balance(env, property_id, to, amount);
+pub fn transfer_shares(
+    env: &Env,
+    property_id: u64,
+    from: &Address,
+    to: &Address,
+    amount: u64,
+) -> Result<(), ContractError> {
+    decrease_balance(env, property_id, from, amount)?;
+    increase_balance(env, property_id, to, amount)?;
+    Ok(())
 }
 
 /// Helper to get approved allowance
@@ -142,6 +165,9 @@ pub fn set_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Add
 }
 
 /// Helper to consume approved allowance
+///
+/// # Errors
+/// Returns `ContractError::InsufficientAllowance` if allowance is insufficient
 #[allow(dead_code)]
 pub fn spend_allowance(
     env: &Env,
@@ -149,10 +175,11 @@ pub fn spend_allowance(
     owner: &Address,
     spender: &Address,
     amount: u64,
-) {
+) -> Result<(), ContractError> {
     let current_allowance = get_allowance(env, property_id, owner, spender);
     let new_allowance = current_allowance
         .checked_sub(amount)
-        .expect("Insufficient allowance");
+        .ok_or(ContractError::InsufficientAllowance)?;
     set_allowance(env, property_id, owner, spender, new_allowance);
+    Ok(())
 }

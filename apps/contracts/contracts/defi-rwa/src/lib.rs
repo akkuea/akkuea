@@ -155,7 +155,8 @@ impl PropertyTokenContract {
         let total = get_total_shares(&env, property_id);
         let new_total = total.checked_add(amount).expect("Total shares overflow");
         set_total_shares(&env, property_id, new_total);
-        increase_balance(&env, property_id, &recipient, amount);
+        increase_balance(&env, property_id, &recipient, amount)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
 
         let prop_str = u64_to_string(&env, property_id);
         PropertyEvents::share_transfer(&env, prop_str, admin, recipient, amount as i128);
@@ -166,7 +167,8 @@ impl PropertyTokenContract {
         if amount == 0 {
             panic!("Amount must be greater than zero");
         }
-        decrease_balance(&env, property_id, &owner, amount);
+        decrease_balance(&env, property_id, &owner, amount)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
         let total = get_total_shares(&env, property_id);
         let new_total = total.checked_sub(amount).expect("Total shares underflow");
         set_total_shares(&env, property_id, new_total);
@@ -182,7 +184,8 @@ impl PropertyTokenContract {
         if amount == 0 {
             panic!("Amount must be greater than zero");
         }
-        transfer_shares(&env, property_id, &from, &to, amount);
+        transfer_shares(&env, property_id, &from, &to, amount)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
 
         let prop_str = u64_to_string(&env, property_id);
         PropertyEvents::share_transfer(&env, prop_str, from, to, amount as i128);
@@ -205,8 +208,10 @@ impl PropertyTokenContract {
         if amount == 0 {
             panic!("Amount must be greater than zero");
         }
-        spend_allowance(&env, property_id, &from, &spender, amount);
-        transfer_shares(&env, property_id, &from, &to, amount);
+        spend_allowance(&env, property_id, &from, &spender, amount)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+        transfer_shares(&env, property_id, &from, &to, amount)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
 
         let prop_str = u64_to_string(&env, property_id);
         PropertyEvents::share_transfer(&env, prop_str, from, to, amount as i128);
@@ -245,7 +250,8 @@ impl PropertyTokenContract {
         let token_client = token::Client::new(&env, &payment_token);
         token_client.transfer(&buyer, &property.owner, &total_cost);
 
-        storage::shares::increase_balance(&env, property_id, &buyer, amount);
+        storage::shares::increase_balance(&env, property_id, &buyer, amount)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
         storage::property::decrease_available_shares(&env, property_id, amount);
 
         let mut buffer = itoa::Buffer::new();

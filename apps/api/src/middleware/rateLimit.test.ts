@@ -223,7 +223,7 @@ describe('rateLimit middleware', () => {
       const middleware = rateLimit({
         max: 1,
         windowMs: 60000,
-        keyGenerator: (req) => `custom:${req.headers.get('x-api-key') ?? 'unknown'}`,
+        keyGenerator: (ctx) => `custom:${ctx.request.headers.get('x-api-key') ?? 'unknown'}`,
       });
 
       const req1 = createMockRequest({
@@ -256,58 +256,65 @@ describe('rateLimit middleware', () => {
   });
 
   describe('walletKeyGenerator', () => {
-    function makeJwt(payload: Record<string, unknown>): string {
-      const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
-      const body = btoa(JSON.stringify(payload));
-      return `${header}.${body}.signature`;
+    function createAuthContext(
+      walletAddress?: string,
+      forwardIp?: string,
+    ): Pick<Context, 'request' | 'set'> & {
+      getAuthenticatedUser: () => Promise<{ id: string; walletAddress: string }>;
+    } {
+      const headers: Record<string, string> = {};
+      if (forwardIp) headers['x-forwarded-for'] = forwardIp;
+      return {
+        request: createMockRequest({ headers }) as unknown as Request,
+        set: createMockSet(),
+        getAuthenticatedUser: walletAddress
+          ? async () => ({ id: 'user-1', walletAddress })
+          : async () => {
+              throw new Error('UNAUTHORIZED');
+            },
+      };
     }
 
-    it('should extract wallet address from JWT', () => {
-      const token = makeJwt({ walletAddress: 'GA7EXAMPLEADDRESS' });
-      const request = createMockRequest({
-        headers: { authorization: `Bearer ${token}`, 'x-forwarded-for': '10.0.0.1' },
-      });
-      expect(walletKeyGenerator(request)).toBe('wallet:GA7EXAMPLEADDRESS');
+    it('should extract wallet address from verified auth context', async () => {
+      const ctx = createAuthContext('GA7EXAMPLEADDRESS');
+      expect(await walletKeyGenerator(ctx)).toBe('wallet:GA7EXAMPLEADDRESS');
     });
 
-    it('should fall back to IP when no auth header', () => {
-      const request = createMockRequest({
-        headers: { 'x-forwarded-for': '10.0.0.2' },
-      });
-      expect(walletKeyGenerator(request)).toBe('ip:10.0.0.2');
+    it('should fall back to IP when getAuthenticatedUser throws', async () => {
+      const ctx = createAuthContext(undefined, '10.0.0.2');
+      expect(await walletKeyGenerator(ctx)).toBe('ip:10.0.0.2');
     });
 
-    it('should fall back to IP for malformed token', () => {
-      const request = createMockRequest({
-        headers: { authorization: 'Bearer not-a-jwt', 'x-forwarded-for': '10.0.0.3' },
-      });
-      expect(walletKeyGenerator(request)).toBe('ip:10.0.0.3');
+    it('should fall back to IP when getAuthenticatedUser is missing from context', async () => {
+      const ctx = {
+        request: createMockRequest({
+          headers: { 'x-forwarded-for': '10.0.0.3' },
+        }) as unknown as Request,
+        set: createMockSet(),
+      };
+      expect(await walletKeyGenerator(ctx)).toBe('ip:10.0.0.3');
     });
 
-    it('should fall back to IP when walletAddress is missing from payload', () => {
-      const token = makeJwt({ id: 'user1' });
-      const request = createMockRequest({
-        headers: { authorization: `Bearer ${token}`, 'x-forwarded-for': '10.0.0.4' },
-      });
-      expect(walletKeyGenerator(request)).toBe('ip:10.0.0.4');
+    it('should fall back to IP when walletAddress is empty', async () => {
+      const ctx = {
+        request: createMockRequest({
+          headers: { 'x-forwarded-for': '10.0.0.4' },
+        }) as unknown as Request,
+        set: createMockSet(),
+        getAuthenticatedUser: async () => ({ id: 'user-1', walletAddress: '' }),
+      };
+      expect(await walletKeyGenerator(ctx)).toBe('ip:10.0.0.4');
     });
 
     it('should rate-limit by wallet across different IPs', async () => {
-      const token = makeJwt({ walletAddress: 'GA7SAMEWALLET' });
       const middleware = rateLimit({ max: 2, windowMs: 60000, keyGenerator: walletKeyGenerator });
 
-      const req1 = createMockRequest({
-        headers: { authorization: `Bearer ${token}`, 'x-forwarded-for': '192.168.1.1' },
-      });
-      const req2 = createMockRequest({
-        headers: { authorization: `Bearer ${token}`, 'x-forwarded-for': '192.168.2.2' },
-      });
-      const set1 = createMockSet();
-      const set2 = createMockSet();
+      const ctx1 = createAuthContext('GA7SAMEWALLET', '192.168.1.1');
+      const ctx2 = createAuthContext('GA7SAMEWALLET', '192.168.2.2');
 
-      await middleware({ request: req1, set: set1 }); // 1st - allowed
-      const result2 = await middleware({ request: req2, set: set2 }); // 2nd - allowed
-      const result3 = await middleware({ request: req1, set: createMockSet() }); // 3rd - blocked
+      await middleware(ctx1); // 1st - allowed
+      const result2 = await middleware(ctx2); // 2nd - allowed
+      const result3 = await middleware(createAuthContext('GA7SAMEWALLET', '192.168.1.1')); // 3rd - blocked
 
       expect(result2).toBeUndefined();
       expect(result3).toEqual({
@@ -318,21 +325,13 @@ describe('rateLimit middleware', () => {
     });
 
     it('should track different wallets independently', async () => {
-      const token1 = makeJwt({ walletAddress: 'GA7WALLETONE' });
-      const token2 = makeJwt({ walletAddress: 'GA7WALLETTWO' });
       const middleware = rateLimit({ max: 1, windowMs: 60000, keyGenerator: walletKeyGenerator });
 
-      const req1 = createMockRequest({
-        headers: { authorization: `Bearer ${token1}`, 'x-forwarded-for': '10.0.0.1' },
-      });
-      const req2 = createMockRequest({
-        headers: { authorization: `Bearer ${token2}`, 'x-forwarded-for': '10.0.0.1' },
-      });
-      const set1 = createMockSet();
-      const set2 = createMockSet();
+      const ctx1 = createAuthContext('GA7WALLETONE');
+      const ctx2 = createAuthContext('GA7WALLETTWO');
 
-      await middleware({ request: req1, set: set1 }); // wallet1 hits limit
-      const result2 = await middleware({ request: req2, set: set2 }); // wallet2 still allowed
+      await middleware(ctx1); // wallet1 hits limit
+      const result2 = await middleware(ctx2); // wallet2 still allowed
 
       expect(result2).toBeUndefined();
     });

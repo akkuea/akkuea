@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, type InputHTMLAttributes } from "react";
+import { forwardRef, useId, type InputHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -17,6 +17,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     ref,
   ) => {
     const inputId = id || label?.toLowerCase().replace(/\s/g, "-");
+    const hintId = useId();
+    const errorId = useId();
+    const describedBy = [
+      hint && !error ? hintId : undefined,
+      error ? errorId : undefined,
+    ]
+      .filter(Boolean)
+      .join(" ");
 
     return (
       <div className="w-full">
@@ -50,6 +58,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 "border-red-500/50 focus:border-red-500/50 focus:ring-red-500/20",
               className,
             )}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy || undefined}
             {...props}
           />
           {rightIcon && (
@@ -59,12 +69,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {hint && !error && (
-          <p className="mt-1.5 text-[10px] text-neutral-600 font-mono">
+          <p id={hintId} className="mt-1.5 text-[10px] text-neutral-600 font-mono">
             {hint}
           </p>
         )}
         {error && (
-          <p className="mt-1.5 text-[10px] text-red-400 font-mono">{error}</p>
+          <p id={errorId} className="mt-1.5 text-[10px] text-red-300 font-mono">
+            {error}
+          </p>
         )}
       </div>
     );

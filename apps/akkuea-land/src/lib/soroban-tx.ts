@@ -22,41 +22,62 @@ import {
   rpc as SorobanRpc,
   xdr,
 } from "@stellar/stellar-sdk";
-import contractsTestnet from "@akkuea/shared/contracts.testnet.json";
+import gameContractsTestnet from "@akkuea/shared/game-contracts.testnet.json";
 
 // ── Network constants ────────────────────────────────────────────────────────
 
 export const NETWORK_PASSPHRASE = Networks.TESTNET;
 export const RPC_URL =
   process.env.NEXT_PUBLIC_STELLAR_RPC_URL ??
-  contractsTestnet.rpcUrl ??
+  gameContractsTestnet.rpcUrl ??
   "https://soroban-testnet.stellar.org";
 
 // ── Contract addresses ───────────────────────────────────────────────────────
+//
+// Every ID below falls back to the real, deployed game contracts recorded in
+// game-contracts.testnet.json (see docs/deployment/deploy-game-contracts.md).
+// An env var override lets a reviewer point the app at their own deploy
+// without editing this file.
 
 /**
- * The game's property NFT contract (REAL_ESTATE_TOKEN instance on testnet).
+ * The game's property NFT contract.
  * Treasury purchases and NFT transfers go through this contract.
  */
 export const PROPERTY_NFT_CONTRACT_ID =
   process.env.NEXT_PUBLIC_PROPERTY_NFT_CONTRACT_ID ??
-  contractsTestnet.contracts.REAL_ESTATE_TOKEN;
+  gameContractsTestnet.contracts.GAME_PROPERTY_NFT.contractId;
 
 /**
  * The game engine contract, used for improve and claim_rental.
- * Falls back to the DEFI_LENDING instance ID if a dedicated env var is not set.
  */
 export const GAME_ENGINE_CONTRACT_ID =
   process.env.NEXT_PUBLIC_GAME_ENGINE_CONTRACT_ID ??
-  contractsTestnet.contracts.DEFI_LENDING;
+  gameContractsTestnet.contracts.GAME_ENGINE.contractId;
 
 /**
  * The marketplace contract for player-to-player purchases.
- * Override via env var once that contract is deployed separately.
  */
 export const MARKETPLACE_CONTRACT_ID =
   process.env.NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID ??
-  contractsTestnet.contracts.REAL_ESTATE_TOKEN;
+  gameContractsTestnet.contracts.GAME_MARKETPLACE.contractId;
+
+/**
+ * The LAND utility token contract, used for the onboarding faucet claim and
+ * balance reads.
+ */
+export const LAND_TOKEN_CONTRACT_ID =
+  process.env.NEXT_PUBLIC_LAND_TOKEN_CONTRACT_ID ??
+  gameContractsTestnet.contracts.GAME_LAND_TOKEN.contractId;
+
+/**
+ * The Stellar account that owns every unclaimed tile on-chain. Defaults to
+ * the address that deployed and initialized the game contracts (see
+ * `deployedBy` in game-contracts.testnet.json) — by convention the same key
+ * also holds the treasury role unless a separate treasury was passed to the
+ * deploy script.
+ */
+export const TREASURY_ADDRESS =
+  process.env.NEXT_PUBLIC_TREASURY_ADDRESS ?? gameContractsTestnet.deployedBy;
 
 // ── Shared RPC server singleton ──────────────────────────────────────────────
 
@@ -261,9 +282,43 @@ export async function buildImprovePropertyXdr(
 }
 
 /**
+ * Build XDR for: GamePropertyNft.approve(owner, spender, property_id)
+ *
+ * The marketplace contract's `list` calls `transfer_from` to take custody of
+ * the NFT, so the seller must approve the marketplace contract as spender
+ * before listing. Must be signed and confirmed before buildListForSaleXdr.
+ *
+ * @param ownerAddress  Seller's Stellar address (current owner of the tile).
+ * @param propertyId    GameProperty.id string.
+ */
+export async function buildApproveMarketplaceXdr(
+  ownerAddress: string,
+  propertyId: string,
+): Promise<string> {
+  const u32Id = propertyIdToU32(propertyId);
+
+  return buildSorobanTx({
+    sourceAddress: ownerAddress,
+    contractId: PROPERTY_NFT_CONTRACT_ID,
+    functionName: "approve",
+    args: [
+      // owner: Address
+      nativeToScVal(ownerAddress, { type: "address" }),
+      // spender: Address (the marketplace contract itself)
+      nativeToScVal(MARKETPLACE_CONTRACT_ID, { type: "address" }),
+      // property_id: u32
+      nativeToScVal(u32Id, { type: "u32" }),
+    ],
+  });
+}
+
+/**
  * Build XDR for: GameMarketplace.list(seller, property_id, price)
  *
  * Lists a property for sale on the marketplace at the given price (in LAND).
+ * The seller must already have approved the marketplace as spender via
+ * buildApproveMarketplaceXdr — the marketplace's `list` immediately calls
+ * `transfer_from` to escrow the NFT.
  *
  * @param sellerAddress  Owner's Stellar address.
  * @param propertyId     GameProperty.id string.
@@ -316,6 +371,29 @@ export async function buildClaimIncomeXdr(
       nativeToScVal(callerAddress, { type: "address" }),
       // property_id: u32
       nativeToScVal(u32Id, { type: "u32" }),
+    ],
+  });
+}
+
+/**
+ * Build XDR for: GameLandToken.faucet(recipient)
+ *
+ * Claims the one-time testnet faucet grant of LAND tokens. Used by the
+ * onboarding "Claim your starter LAND" step. Only callable when the token
+ * contract was initialized with `is_testnet = true`.
+ *
+ * @param recipientAddress  Stellar address to receive the faucet grant.
+ */
+export async function buildFaucetClaimXdr(
+  recipientAddress: string,
+): Promise<string> {
+  return buildSorobanTx({
+    sourceAddress: recipientAddress,
+    contractId: LAND_TOKEN_CONTRACT_ID,
+    functionName: "faucet",
+    args: [
+      // recipient: Address
+      nativeToScVal(recipientAddress, { type: "address" }),
     ],
   });
 }

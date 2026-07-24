@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useGameWallet } from "@/hooks/useGameWallet";
+import { buildBuyFromTreasuryXdr, TREASURY_ADDRESS } from "@/lib/soroban-tx";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, MapPin, CheckCircle, RefreshCw } from "lucide-react";
 
@@ -25,17 +26,22 @@ export function ClaimPropertyStep({
   onComplete: () => void;
   onSkip: () => void;
 }) {
-  const { signAndSubmitTx } = useGameWallet();
+  const { address, signAndSubmitTx } = useGameWallet();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [status, setStatus] = useState<"idle" | "pending" | "celebrating">(
     "idle",
   );
 
   const handleClaim = async () => {
-    if (selectedId === null) return;
+    if (selectedId === null || !address) return;
     setStatus("pending");
     try {
-      await signAndSubmitTx("placeholder-starter-claim-xdr");
+      const xdr = await buildBuyFromTreasuryXdr(
+        address,
+        String(selectedId),
+        TREASURY_ADDRESS,
+      );
+      await signAndSubmitTx(xdr);
       setStatus("celebrating");
       // Stay on celebration for 3 seconds, then navigate
       setTimeout(onComplete, 3000);

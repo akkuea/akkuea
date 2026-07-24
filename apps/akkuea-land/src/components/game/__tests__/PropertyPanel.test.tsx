@@ -42,7 +42,28 @@ vi.mock("@/lib/walletKit", () => ({
   initializeWalletKit: vi.fn(),
 }));
 
+// Mock the Soroban XDR builders + RPC calls so clicking an action button
+// never makes a real network call to testnet — this test only cares about
+// PropertyPanel wiring the right ownership state to the right sub-panel.
+const TEST_TREASURY_ADDRESS =
+  "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+const MOCK_UNSIGNED_XDR = "AAAA_UNSIGNED_XDR_BASE64==";
+
+vi.mock("@/lib/soroban-tx", () => ({
+  buildBuyFromTreasuryXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
+  buildBuyFromPlayerXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
+  buildImprovePropertyXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
+  buildApproveMarketplaceXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
+  buildListForSaleXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
+  buildClaimIncomeXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
+  submitSorobanTx: vi.fn().mockResolvedValue("mock-tx-hash"),
+  waitForSorobanTx: vi.fn().mockResolvedValue("success"),
+  NETWORK_PASSPHRASE: "Test SDF Network ; September 2015",
+  TREASURY_ADDRESS: TEST_TREASURY_ADDRESS,
+}));
+
 import { PropertyPanel } from "../PropertyPanel";
+import { TREASURY_ADDRESS } from "@/lib/soroban-tx";
 
 const baseProperty: GameProperty = {
   id: "550e8400-e29b-41d4-a716-446655440001",
@@ -67,7 +88,7 @@ const baseProperty: GameProperty = {
   documents: [],
   verified: true,
   listedAt: "2026-05-27T00:00:00Z",
-  owner: "GBTREASURY",
+  owner: TREASURY_ADDRESS,
   buildingLevel: 0,
   improveCost: 100,
   earnedIncome: 0,
@@ -87,7 +108,7 @@ describe("PropertyPanel Tests", () => {
 
     const view = render(
       <PropertyPanel
-        property={{ ...baseProperty, owner: "GBTREASURY" }}
+        property={{ ...baseProperty, owner: TREASURY_ADDRESS }}
         onPropertyUpdate={onUpdate}
         viewerAddress={null}
         isConnected={false}
@@ -111,7 +132,7 @@ describe("PropertyPanel Tests", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  // State 2: unowned (viewer connected, owner is GBTREASURY)
+  // State 2: unowned (viewer connected, owner is the treasury)
   it("renders state 2: unowned (Treasury owned) tile and allows purchase", async () => {
     const onUpdate = mock(() => {});
     const viewerAddress =
@@ -119,7 +140,7 @@ describe("PropertyPanel Tests", () => {
 
     const view = render(
       <PropertyPanel
-        property={{ ...baseProperty, owner: "GBTREASURY" }}
+        property={{ ...baseProperty, owner: TREASURY_ADDRESS }}
         onPropertyUpdate={onUpdate}
         viewerAddress={viewerAddress}
         isConnected={true}

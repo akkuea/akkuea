@@ -121,9 +121,10 @@ impl PositionStorage {
         let mut new_list: Vec<String> = Vec::new(env);
 
         for i in 0..list.len() {
-            let id = list.get(i).unwrap();
-            if id != pool_id.clone() {
-                new_list.push_back(id);
+            if let Some(id) = list.get(i) {
+                if id != pool_id.clone() {
+                    new_list.push_back(id);
+                }
             }
         }
 
@@ -248,9 +249,11 @@ impl PositionStorage {
 
         let mut exists = false;
         for i in 0..list.len() {
-            if list.get(i).unwrap() == pool_id.clone() {
-                exists = true;
-                break;
+            if let Some(id) = list.get(i) {
+                if id == pool_id.clone() {
+                    exists = true;
+                    break;
+                }
             }
         }
 
@@ -267,9 +270,10 @@ impl PositionStorage {
         let mut new_list: Vec<String> = Vec::new(env);
 
         for i in 0..list.len() {
-            let id = list.get(i).unwrap();
-            if id != pool_id.clone() {
-                new_list.push_back(id);
+            if let Some(id) = list.get(i) {
+                if id != pool_id.clone() {
+                    new_list.push_back(id);
+                }
             }
         }
 

@@ -12,6 +12,9 @@ pub enum ContractError {
     Unauthorized = 4,
     ContractPaused = 5,
     ContractNotPaused = 6,
+    BalanceOverflow = 7,
+    InsufficientBalance = 8,
+    InsufficientAllowance = 9,
 }
 
 pub struct AdminControl;

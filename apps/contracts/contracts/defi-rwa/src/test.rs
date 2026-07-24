@@ -2037,13 +2037,42 @@ fn test_burn_shares() {
 }
 
 #[test]
-#[should_panic(expected = "Insufficient share balance")]
+#[should_panic(expected = "Error(Contract, #8)")]
 fn test_burn_more_than_balance_panics() {
     let (env, client, admin) = setup_token_test();
     let owner = Address::generate(&env);
 
     client.mint_shares(&admin, &1, &owner, &500);
     client.burn_shares(&owner, &1, &600); // Exceeds balance
+}
+
+// Transfer more shares than owned should produce InsufficientBalance error (#8)
+#[test]
+#[should_panic(expected = "Error(Contract, #8)")]
+fn test_transfer_insufficient_balance() {
+    let (env, client, admin) = setup_token_test();
+    let from = Address::generate(&env);
+    let to = Address::generate(&env);
+    let property_id = 1;
+
+    client.mint_shares(&admin, &property_id, &from, &500);
+    client.transfer_shares(&from, &to, &property_id, &600);
+}
+
+// TransferFrom with insufficient allowance should produce InsufficientAllowance error (#9)
+#[test]
+#[should_panic(expected = "Error(Contract, #9)")]
+fn test_transfer_from_insufficient_allowance() {
+    let (env, client, admin) = setup_token_test();
+    let owner = Address::generate(&env);
+    let spender = Address::generate(&env);
+    let recipient = Address::generate(&env);
+    let property_id = 1;
+
+    client.mint_shares(&admin, &property_id, &owner, &1000);
+    client.approve(&owner, &spender, &property_id, &100);
+    // Try to spend more than the approved allowance
+    client.transfer_from(&spender, &owner, &recipient, &property_id, &200);
 }
 
 #[test]

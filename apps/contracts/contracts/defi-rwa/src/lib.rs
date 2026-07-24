@@ -33,6 +33,9 @@ use lending::events as lending_events;
 #[cfg(test)]
 mod test;
 
+#[cfg(test)]
+mod reentrancy_tests;
+
 // ───────────────────────────────────────────────
 // Helper functions
 // ───────────────────────────────────────────────

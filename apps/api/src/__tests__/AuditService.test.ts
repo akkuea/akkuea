@@ -31,7 +31,7 @@ describe('AuditService', () => {
       });
 
       expect(repo.create).toHaveBeenCalledTimes(1);
-      const callArg = (repo.create as ReturnType<typeof mock>).mock.calls[0][0];
+      const callArg = (repo.create as ReturnType<typeof mock>).mock.calls[0]![0];
       expect(callArg).toEqual({
         actor: 'GActorWallet1234567890123456789012345678901234567890',
         action: 'kyc.approve',
@@ -54,7 +54,7 @@ describe('AuditService', () => {
         entityId: '550e8400-e29b-41d4-a716-446655440000',
       });
 
-      const callArg = (repo.create as ReturnType<typeof mock>).mock.calls[0][0];
+      const callArg = (repo.create as ReturnType<typeof mock>).mock.calls[0]![0];
       expect(callArg.beforeValue).toBeNull();
       expect(callArg.afterValue).toBeNull();
       expect(callArg.metadata).toBeNull();
@@ -91,7 +91,7 @@ describe('AuditService', () => {
         afterValue: afterValue as unknown as Record<string, unknown>,
       });
 
-      const callArg = (repo.create as ReturnType<typeof mock>).mock.calls[0][0];
+      const callArg = (repo.create as ReturnType<typeof mock>).mock.calls[0]![0];
       expect(callArg.beforeValue).toEqual(beforeValue);
       expect(callArg.afterValue).toEqual(afterValue);
     });
@@ -112,7 +112,7 @@ describe('AuditService', () => {
       });
 
       expect(repo.findPaginated).toHaveBeenCalledTimes(1);
-      const callArg = (repo.findPaginated as ReturnType<typeof mock>).mock.calls[0][0];
+      const callArg = (repo.findPaginated as ReturnType<typeof mock>).mock.calls[0]![0];
       expect(callArg).toEqual({
         actor: 'GActor123',
         action: 'kyc.approve',

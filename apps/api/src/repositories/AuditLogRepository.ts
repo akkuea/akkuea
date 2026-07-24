@@ -24,7 +24,7 @@ export interface PaginatedAuditLogs {
 export class AuditLogRepository {
   async create(data: NewAuditLog): Promise<AuditLog> {
     const results = await db.insert(auditLog).values(data).returning();
-    return results[0];
+    return results[0]!;
   }
 
   async findPaginated(filter: AuditLogFilter): Promise<PaginatedAuditLogs> {

@@ -35,7 +35,7 @@ describe.skipIf(skipIfNoDatabase)('Audit Log Integration', () => {
     }
   });
 
-  async function uploadDocument(app: Elysia): Promise<string> {
+  async function uploadDocument(app: ReturnType<typeof createKycApp>): Promise<string> {
     const formData = new FormData();
     formData.set('userId', testUserId);
     formData.set('documentType', 'passport');
@@ -86,9 +86,9 @@ describe.skipIf(skipIfNoDatabase)('Audit Log Integration', () => {
       };
       expect(auditBody.success).toBe(true);
       expect(auditBody.data?.length).toBeGreaterThanOrEqual(1);
-      expect(auditBody.data![0].action).toBe('kyc.approve');
-      expect(auditBody.data![0].entityId).toBe(documentId);
-      expect(auditBody.data![0].actor).toBe(TEST_WALLET);
+      expect(auditBody.data![0]!.action).toBe('kyc.approve');
+      expect(auditBody.data![0]!.entityId).toBe(documentId);
+      expect(auditBody.data![0]!.actor).toBe(TEST_WALLET);
     });
 
     it('should create an audit row when rejecting a KYC document', async () => {
@@ -120,8 +120,8 @@ describe.skipIf(skipIfNoDatabase)('Audit Log Integration', () => {
       };
       expect(auditBody.success).toBe(true);
       expect(auditBody.data?.length).toBeGreaterThanOrEqual(1);
-      expect(auditBody.data![0].action).toBe('kyc.reject');
-      expect(auditBody.data![0].entityId).toBe(documentId);
+      expect(auditBody.data![0]!.action).toBe('kyc.reject');
+      expect(auditBody.data![0]!.entityId).toBe(documentId);
     });
   });
 
@@ -210,10 +210,10 @@ describe.skipIf(skipIfNoDatabase)('Audit Log Integration', () => {
         pagination?: { page?: number; limit?: number; total?: number; totalPages?: number };
       };
       expect(body.success).toBe(true);
-      expect(body.pagination?.page).toBe(1);
-      expect(body.pagination?.limit).toBe(2);
-      expect(typeof body.pagination?.total).toBe('number');
-      expect(typeof body.pagination?.totalPages).toBe('number');
+      expect(body.pagination!.page).toBe(1);
+      expect(body.pagination!.limit).toBe(2);
+      expect(typeof body.pagination!.total).toBe('number');
+      expect(typeof body.pagination!.totalPages).toBe('number');
     });
 
     it('should limit to 100 max', async () => {

@@ -35,6 +35,8 @@ function listRow(id: string, overrides: Partial<PropertyListRow> = {}): Property
 }
 
 const originalFindPaginated = propertyRepository.findPaginated;
+const originalFindById = propertyRepository.findById;
+const originalUserFindById = userRepository.findById;
 
 describe('MarketplaceController.getListings', () => {
   beforeEach(() => {
@@ -143,6 +145,11 @@ describe('MarketplaceController.getListing', () => {
   beforeEach(() => {
     spyOn(logger, 'info').mockImplementation(() => {});
     spyOn(logger, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    propertyRepository.findById = originalFindById;
+    userRepository.findById = originalUserFindById;
   });
 
   it('returns an approved, verified property with available shares', async () => {

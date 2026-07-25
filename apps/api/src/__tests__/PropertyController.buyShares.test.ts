@@ -58,9 +58,14 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
     propertyId = prop.id;
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     originalMintPropertyShares = stellarService.mintPropertyShares;
     originalGetMintingConfig = stellarService.getMintingConfig;
+
+    // Reset availableShares to initial state for each test
+    if (propertyId) {
+      await db.update(properties).set({ availableShares: 10 }).where(eq(properties.id, propertyId));
+    }
   });
 
   afterEach(() => {

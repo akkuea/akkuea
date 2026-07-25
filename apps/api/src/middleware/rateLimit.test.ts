@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'bun:test';
-import { rateLimit, createRedisStore, createMemoryStore } from './rateLimit';
+import {
+  rateLimit,
+  createRedisStore,
+  createMemoryStore,
+  SLIDING_WINDOW_SCRIPT,
+} from './rateLimit';
 import type { RateLimitRedisClient } from './rateLimit';
 import type { Context } from 'elysia';
 
@@ -12,6 +17,96 @@ function createMockSet(): Context['set'] {
   return {
     headers: {},
   };
+}
+
+// ---------------------------------------------------------------------------
+// Fake Redis: runs the sliding-window script body atomically (sync in eval)
+// ---------------------------------------------------------------------------
+
+/**
+ * Minimal Redis sorted-set simulator that executes the rate-limit Lua script
+ * atomically inside `eval` — concurrent callers serialize through a queue so
+ * the counter cannot race the way separate INCR+EXPIRE commands could.
+ */
+function makeFakeRedisClient(): RateLimitRedisClient & {
+  zsets: Map<string, Map<string, number>>;
+  evalCalls: number;
+} {
+  const zsets = new Map<string, Map<string, number>>();
+  let chain: Promise<unknown> = Promise.resolve();
+  let evalCalls = 0;
+
+  function runScript(
+    numKeys: number,
+    args: (string | number)[],
+  ): [number, number, number, number] {
+    // Mirror SLIDING_WINDOW_SCRIPT semantics in JS
+    const key = String(args[0]);
+    const now = Number(args[1]);
+    const windowMs = Number(args[2]);
+    const max = Number(args[3]);
+    const member = String(args[4]);
+    const windowStart = now - windowMs;
+
+    let zset = zsets.get(key);
+    if (!zset) {
+      zset = new Map();
+      zsets.set(key, zset);
+    }
+
+    // ZREMRANGEBYSCORE key -inf windowStart
+    for (const [m, score] of [...zset.entries()]) {
+      if (score <= windowStart) zset.delete(m);
+    }
+
+    let count = zset.size;
+
+    if (count < max) {
+      zset.set(member, now);
+      count += 1;
+      const remaining = max - count;
+      let oldestScore = now;
+      for (const score of zset.values()) {
+        if (score < oldestScore) oldestScore = score;
+      }
+      const resetAt = oldestScore + windowMs;
+      return [1, remaining, resetAt, 0];
+    }
+
+    let oldestScore = now;
+    for (const score of zset.values()) {
+      if (score < oldestScore) oldestScore = score;
+    }
+    const resetAt = oldestScore + windowMs;
+    const retryAfter = Math.max(0, Math.ceil((resetAt - now) / 1000));
+    return [0, 0, resetAt, retryAfter];
+  }
+
+  const client: RateLimitRedisClient & {
+    zsets: Map<string, Map<string, number>>;
+    evalCalls: number;
+  } = {
+    zsets,
+    get evalCalls() {
+      return evalCalls;
+    },
+    async eval(script: string, numKeys: number, ...args: (string | number)[]) {
+      // Serialize eval invocations to model Redis single-threaded command execution
+      const run = chain.then(() => {
+        evalCalls += 1;
+        expect(script).toContain('ZREMRANGEBYSCORE');
+        expect(numKeys).toBe(1);
+        return runScript(numKeys, args);
+      });
+      chain = run.then(
+        () => undefined,
+        () => undefined,
+      );
+      return run;
+    },
+  };
+
+  return client;
 }
 
 // ---------------------------------------------------------------------------
@@ -35,12 +130,13 @@ describe('createMemoryStore', () => {
     expect(result.retryAfter).toBeGreaterThan(0);
   });
 
-  it('resets the window after expiry', async () => {
+  it('allows a new request once the oldest entry slides out of the window', async () => {
     const store = createMemoryStore();
-    await store.checkLimit('id', 1, 1); // 1ms window
-    await store.checkLimit('id', 1, 1); // over limit
-    await new Promise((r) => setTimeout(r, 5));
-    const result = await store.checkLimit('id', 1, 1); // new window
+    await store.checkLimit('id', 50, 1); // 50ms window, max 1
+    const blocked = await store.checkLimit('id', 50, 1);
+    expect(blocked.allowed).toBe(false);
+    await new Promise((r) => setTimeout(r, 60));
+    const result = await store.checkLimit('id', 50, 1);
     expect(result.allowed).toBe(true);
   });
 
@@ -53,62 +149,48 @@ describe('createMemoryStore', () => {
     expect(resultB.allowed).toBe(true);
   });
 
-  it('sets resetAt in the future', async () => {
+  it('sets resetAt based on the oldest request in the sliding window', async () => {
     const store = createMemoryStore();
     const before = Date.now();
     const result = await store.checkLimit('id', 60000, 10);
     expect(result.resetAt).toBeGreaterThanOrEqual(before + 60000);
   });
+
+  it('handles concurrent checks without exceeding the limit', async () => {
+    const store = createMemoryStore();
+    const max = 10;
+    const concurrent = 50;
+    const results = await Promise.all(
+      Array.from({ length: concurrent }, () => store.checkLimit('concurrent', 60000, max)),
+    );
+    const allowed = results.filter((r) => r.allowed).length;
+    const denied = results.filter((r) => !r.allowed).length;
+    expect(allowed).toBe(max);
+    expect(denied).toBe(concurrent - max);
+  });
 });
 
 // ---------------------------------------------------------------------------
-// createRedisStore
+// createRedisStore (atomic Lua sliding-window)
 // ---------------------------------------------------------------------------
 
 describe('createRedisStore', () => {
-  function makeFakeRedisClient(): RateLimitRedisClient & { counts: Map<string, number> } {
-    const counts = new Map<string, number>();
-    const ttls = new Map<string, number>();
-    return {
-      counts,
-      async incr(key: string) {
-        const c = (counts.get(key) ?? 0) + 1;
-        counts.set(key, c);
-        return c;
-      },
-      async expire(key: string, seconds: number) {
-        ttls.set(key, seconds);
-        return 1;
-      },
-      async ttl(key: string) {
-        return ttls.get(key) ?? 60;
-      },
-    };
-  }
-
-  it('allows the first request and sets expiry', async () => {
+  it('allows the first request via a single atomic eval', async () => {
     const client = makeFakeRedisClient();
     const store = createRedisStore(client);
     const result = await store.checkLimit('user:abc', 60000, 10);
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(9);
+    expect(client.evalCalls).toBe(1);
   });
 
-  it('only calls expire on the first increment', async () => {
+  it('uses one eval per check (no separate INCR/EXPIRE race)', async () => {
     const client = makeFakeRedisClient();
-    const expireCalls: string[] = [];
-    const origExpire = client.expire.bind(client);
-    client.expire = async (key, secs) => {
-      expireCalls.push(key);
-      return origExpire(key, secs);
-    };
-
     const store = createRedisStore(client);
     await store.checkLimit('id', 60000, 5);
     await store.checkLimit('id', 60000, 5);
     await store.checkLimit('id', 60000, 5);
-
-    expect(expireCalls.length).toBe(1);
+    expect(client.evalCalls).toBe(3);
   });
 
   it('blocks requests over the limit', async () => {
@@ -121,20 +203,110 @@ describe('createRedisStore', () => {
     expect(result.retryAfter).toBeGreaterThanOrEqual(0);
   });
 
-  it('uses TTL from Redis for resetAt', async () => {
+  it('sets resetAt from the oldest timestamp in the window', async () => {
     const client = makeFakeRedisClient();
     const store = createRedisStore(client);
     const before = Date.now();
     const result = await store.checkLimit('id', 60000, 10);
-    // TTL defaults to 60s in our fake client
     expect(result.resetAt).toBeGreaterThanOrEqual(before);
+    expect(result.resetAt).toBeLessThanOrEqual(Date.now() + 60000 + 50);
   });
 
   it('prefixes the key with ratelimit:', async () => {
     const client = makeFakeRedisClient();
     const store = createRedisStore(client);
     await store.checkLimit('user:xyz', 60000, 5);
-    expect(client.counts.has('ratelimit:user:xyz')).toBe(true);
+    expect(client.zsets.has('ratelimit:user:xyz')).toBe(true);
+  });
+
+  it('concurrency: simultaneous requests do not produce an inconsistent counter', async () => {
+    const client = makeFakeRedisClient();
+    const store = createRedisStore(client);
+    const max = 15;
+    const concurrent = 100;
+
+    const results = await Promise.all(
+      Array.from({ length: concurrent }, (_, i) =>
+        store.checkLimit(`burst-key`, 60_000, max).then((r) => ({ i, ...r })),
+      ),
+    );
+
+    const allowed = results.filter((r) => r.allowed);
+    const denied = results.filter((r) => !r.allowed);
+
+    expect(allowed.length).toBe(max);
+    expect(denied.length).toBe(concurrent - max);
+
+    // Remaining values for allowed requests must be a permutation of max-1 .. 0
+    const remainings = allowed.map((r) => r.remaining).sort((a, b) => a - b);
+    expect(remainings).toEqual(Array.from({ length: max }, (_, i) => i));
+
+    // Sorted-set cardinality must equal the number of allowed requests
+    const zset = client.zsets.get('ratelimit:burst-key');
+    expect(zset?.size).toBe(max);
+  });
+
+  it('sliding window: crossing the window boundary does not reset the full budget', async () => {
+    // Fixed-window would allow a full new burst at each boundary; sliding window
+    // only frees capacity as individual timestamps age out.
+    const client = makeFakeRedisClient();
+    const store = createRedisStore(client);
+    const windowMs = 200;
+    const max = 3;
+    const id = 'boundary';
+
+    // Fill the entire budget at the start of the window
+    for (let i = 0; i < max; i++) {
+      const r = await store.checkLimit(id, windowMs, max);
+      expect(r.allowed).toBe(true);
+    }
+    const blocked = await store.checkLimit(id, windowMs, max);
+    expect(blocked.allowed).toBe(false);
+
+    // Wait past half the window — under fixed-window this is still the same
+    // bucket (still blocked). Under sliding window we are also still blocked
+    // because all timestamps remain inside [now-windowMs, now].
+    await new Promise((r) => setTimeout(r, Math.floor(windowMs / 2)));
+    const mid = await store.checkLimit(id, windowMs, max);
+    expect(mid.allowed).toBe(false);
+
+    // Wait until the first batch is fully outside the sliding window.
+    // All three original requests should age out; budget is fully restored.
+    await new Promise((r) => setTimeout(r, windowMs));
+    const after = await store.checkLimit(id, windowMs, max);
+    expect(after.allowed).toBe(true);
+    expect(after.remaining).toBe(max - 1);
+  });
+
+  it('sliding window: partial capacity frees as oldest entries expire', async () => {
+    const client = makeFakeRedisClient();
+    const store = createRedisStore(client);
+    const windowMs = 150;
+    const max = 2;
+    const id = 'partial-slide';
+
+    // Request 1
+    expect((await store.checkLimit(id, windowMs, max)).allowed).toBe(true);
+    // Small gap so timestamps are ordered
+    await new Promise((r) => setTimeout(r, 40));
+    // Request 2 fills the limit
+    expect((await store.checkLimit(id, windowMs, max)).allowed).toBe(true);
+    expect((await store.checkLimit(id, windowMs, max)).allowed).toBe(false);
+
+    // Wait long enough for request 1 to slide out but request 2 to remain
+    await new Promise((r) => setTimeout(r, windowMs - 20));
+    const partial = await store.checkLimit(id, windowMs, max);
+    // Exactly one slot should free (the oldest), so one request is allowed
+    expect(partial.allowed).toBe(true);
+    // Immediately after, we should be at capacity again (req2 + new)
+    expect((await store.checkLimit(id, windowMs, max)).allowed).toBe(false);
+  });
+
+  it('exports a Lua script that uses sorted-set sliding-window operations', () => {
+    expect(SLIDING_WINDOW_SCRIPT).toContain('ZREMRANGEBYSCORE');
+    expect(SLIDING_WINDOW_SCRIPT).toContain('ZADD');
+    expect(SLIDING_WINDOW_SCRIPT).toContain('ZCARD');
+    expect(SLIDING_WINDOW_SCRIPT).toContain('PEXPIRE');
   });
 });
 

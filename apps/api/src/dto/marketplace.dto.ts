@@ -8,9 +8,7 @@ import { paginationQuerySchema } from '../middleware/validation';
  * approved, verified properties that have available shares.
  */
 export const marketplaceQuerySchema = paginationQuerySchema.extend({
-  propertyType: z
-    .enum(['residential', 'commercial', 'industrial', 'land', 'mixed'])
-    .optional(),
+  propertyType: z.enum(['residential', 'commercial', 'industrial', 'land', 'mixed']).optional(),
   country: z.string().optional(),
   minPrice: z.coerce.number().positive().optional(),
   maxPrice: z.coerce.number().positive().optional(),

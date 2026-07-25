@@ -18,9 +18,7 @@ const MARKETPLACE_CACHE_PREFIX = 'marketplace:list:';
  * Maps a PropertyListRow to a PropertyInfo response.
  * Expects the owner wallet address to be pre-joined by the repository.
  */
-async function mapToPropertyInfo(
-  row: PropertyListRow,
-): Promise<PropertyInfo> {
+async function mapToPropertyInfo(row: PropertyListRow): Promise<PropertyInfo> {
   return {
     id: row.id,
     name: row.name,
@@ -44,8 +42,10 @@ async function mapToPropertyInfo(
  * Validates and normalises pagination parameters.
  */
 function paginate(page: unknown, limit: unknown): { page: number; limit: number } {
-  const pageNum = typeof page === 'string' ? parseInt(page, 10) : typeof page === 'number' ? page : 1;
-  const limitNum = typeof limit === 'string' ? parseInt(limit, 10) : typeof limit === 'number' ? limit : 20;
+  const pageNum =
+    typeof page === 'string' ? parseInt(page, 10) : typeof page === 'number' ? page : 1;
+  const limitNum =
+    typeof limit === 'string' ? parseInt(limit, 10) : typeof limit === 'number' ? limit : 20;
 
   return {
     page: pageNum > 0 ? pageNum : 1,

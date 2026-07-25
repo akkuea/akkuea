@@ -6,10 +6,7 @@ import { userRepository } from '../repositories/UserRepository';
 import { cacheService } from '../services/CacheService';
 import { logger } from '../services/logger';
 
-function listRow(
-  id: string,
-  overrides: Partial<PropertyListRow> = {},
-): PropertyListRow {
+function listRow(id: string, overrides: Partial<PropertyListRow> = {}): PropertyListRow {
   return {
     id,
     name: 'Test property',
@@ -56,8 +53,7 @@ describe('MarketplaceController.getListings', () => {
 
     spyOn(propertyRepository, 'findPaginated').mockResolvedValue({
       data: rows.filter(
-        (r) =>
-          r.reviewStatus === 'approved' && r.verified && r.availableShares > 0,
+        (r) => r.reviewStatus === 'approved' && r.verified && r.availableShares > 0,
       ),
       pagination: { page: 1, limit: 20, total: 2, totalPages: 1 },
     });
@@ -211,9 +207,7 @@ describe('MarketplaceController.getListing', () => {
       ownerId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     });
 
-    await expect(MarketplaceController.getListing('p-1')).rejects.toThrow(
-      'Marketplace listing',
-    );
+    await expect(MarketplaceController.getListing('p-1')).rejects.toThrow('Marketplace listing');
   });
 
   it('throws NotFoundError for property with no available shares', async () => {
@@ -239,9 +233,7 @@ describe('MarketplaceController.getListing', () => {
       ownerId: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     });
 
-    await expect(MarketplaceController.getListing('p-1')).rejects.toThrow(
-      'Marketplace listing',
-    );
+    await expect(MarketplaceController.getListing('p-1')).rejects.toThrow('Marketplace listing');
   });
 
   it('throws ValidationError for empty ID', async () => {

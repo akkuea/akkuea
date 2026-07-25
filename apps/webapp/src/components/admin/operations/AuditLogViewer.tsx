@@ -12,7 +12,7 @@ export interface AuditLogEntry {
   actor: string;
   actionType: string;
   timestamp: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
   targetResource?: string;
   targetId?: string;
 }
@@ -100,7 +100,10 @@ export function AuditLogViewer({ operatorWallet, isWalletConnected }: AuditLogVi
 
   useEffect(() => {
     if (isWalletConnected && operatorWallet) {
-      void fetchLogs();
+      const timer = setTimeout(() => {
+        void fetchLogs();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [fetchLogs, isWalletConnected, operatorWallet]);
 

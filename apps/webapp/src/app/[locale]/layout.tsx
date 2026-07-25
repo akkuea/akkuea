@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Providers } from "@/components/Providers";
-import "./globals.css";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
+import "../globals.css";
 
 export const metadata: Metadata = {
   title: "Akkuea DeFi RWA | Real Estate Tokenization Platform",
@@ -23,13 +25,18 @@ export const metadata: Metadata = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
+  params,
 }: Readonly<{
   children: React.ReactNode;
+  params: Promise<{ locale: string }>;
 }>) {
+  const { locale } = await params;
+  const messages = await getMessages();
+
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
+    <html lang={locale} className="dark" suppressHydrationWarning>
       <body className="antialiased min-h-screen bg-black text-white">
         <a
           href="#main-content"
@@ -37,9 +44,11 @@ export default function RootLayout({
         >
           Skip to content
         </a>
-        <Providers>
-          <main id="main-content">{children}</main>
-        </Providers>
+        <NextIntlClientProvider messages={messages}>
+          <Providers>
+            <main id="main-content">{children}</main>
+          </Providers>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

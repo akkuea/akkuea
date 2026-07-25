@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 interface AllocationChartProps {
   allocation: Record<string, number>;
@@ -25,6 +26,7 @@ export function AllocationChart({
   className,
 }: AllocationChartProps) {
   const [cumulative, setCumulative] = useState(0);
+  const t = useTranslations("AllocationChart");
 
   const segments = useMemo(() => {
     if (totalValue === 0) return [];
@@ -47,7 +49,7 @@ export function AllocationChart({
           className,
         )}
       >
-        No allocation data
+        {t("noData")}
       </div>
     );
   }

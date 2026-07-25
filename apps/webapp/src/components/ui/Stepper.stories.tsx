@@ -36,18 +36,20 @@ export const Complete: Story = {
   args: { steps: defaultSteps, currentStep: 4 },
 };
 
+function InteractiveStepper() {
+  const [step, setStep] = useState(0);
+  return (
+    <div className="space-y-4">
+      <Stepper steps={defaultSteps} currentStep={step} onStepClick={setStep} />
+      <p className="text-sm text-neutral-400 text-center">
+        Current step: {step} — click completed steps to navigate back
+      </p>
+    </div>
+  );
+}
+
 export const Interactive: Story = {
-  render: () => {
-    const [step, setStep] = useState(0);
-    return (
-      <div className="space-y-4">
-        <Stepper steps={defaultSteps} currentStep={step} onStepClick={setStep} />
-        <p className="text-sm text-neutral-400 text-center">
-          Current step: {step} — click completed steps to navigate back
-        </p>
-      </div>
-    );
-  },
+  render: () => <InteractiveStepper />,
 };
 
 export const ManySteps: Story = {

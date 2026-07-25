@@ -51,7 +51,9 @@ export const CardLoading: StoryObj<typeof SkeletonCard> = {
 CardLoading.storyName = "Card";
 
 export const TableLoading: StoryObj<typeof SkeletonTable> = {
-  render: () => <SkeletonTable rows={4} columns={4} className="w-full max-w-2xl" />,
+  render: () => (
+    <SkeletonTable rows={4} columns={4} className="w-full max-w-2xl" />
+  ),
 };
 TableLoading.storyName = "Table";
 

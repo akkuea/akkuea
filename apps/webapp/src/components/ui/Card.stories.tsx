@@ -1,5 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "./Card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "./Card";
 import { Button } from "./Button";
 
 const meta: Meta<typeof Card> = {
@@ -8,7 +15,14 @@ const meta: Meta<typeof Card> = {
   argTypes: {
     variant: {
       control: "select",
-      options: ["default", "elevated", "bordered", "accent", "gradient", "glow"],
+      options: [
+        "default",
+        "elevated",
+        "bordered",
+        "accent",
+        "gradient",
+        "glow",
+      ],
     },
     hoverable: { control: "boolean" },
     noPadding: { control: "boolean" },
@@ -79,8 +93,12 @@ export const WithHeaderAndFooter: Story = {
         </p>
       </CardContent>
       <CardFooter>
-        <Button variant="outline" size="sm">Cancel</Button>
-        <Button variant="primary" size="sm">Save</Button>
+        <Button variant="outline" size="sm">
+          Cancel
+        </Button>
+        <Button variant="primary" size="sm">
+          Save
+        </Button>
       </CardFooter>
     </Card>
   ),

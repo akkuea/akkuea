@@ -10,7 +10,7 @@ const meta: Meta<typeof ErrorBoundary> = {
 export default meta;
 type Story = StoryObj<typeof ErrorBoundary>;
 
-function BuggyComponent() {
+function BuggyComponent(): React.ReactNode {
   throw new Error("Simulated render error");
 }
 

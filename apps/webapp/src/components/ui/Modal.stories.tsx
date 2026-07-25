@@ -15,19 +15,29 @@ const meta: Meta<typeof Modal> = {
 export default meta;
 type Story = StoryObj<typeof Modal>;
 
-function ModalWrapper(props: Partial<React.ComponentProps<typeof Modal>>) {
+function ModalWrapper({
+  children,
+  ...props
+}: Partial<React.ComponentProps<typeof Modal>>) {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <div>
-      <Button variant="accent" onClick={() => setIsOpen(true)}>Open Modal</Button>
-      <Modal {...props} isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <Button variant="accent" onClick={() => setIsOpen(true)}>
+        Open Modal
+      </Button>
+      <Modal {...props} isOpen={isOpen} onClose={() => setIsOpen(false)}>
+        {children}
+      </Modal>
     </div>
   );
 }
 
 export const Default: Story = {
   render: () => (
-    <ModalWrapper title="Example Modal" description="This is a sample modal dialog.">
+    <ModalWrapper
+      title="Example Modal"
+      description="This is a sample modal dialog."
+    >
       <p className="text-sm text-neutral-300">
         Modal content goes here. You can put any React nodes inside.
       </p>
@@ -39,8 +49,12 @@ export const Small: Story = {
   render: () => (
     <ModalWrapper title="Confirm Action" size="sm" description="Are you sure?">
       <div className="flex gap-2 justify-end">
-        <Button variant="outline" size="sm">Cancel</Button>
-        <Button variant="danger" size="sm">Delete</Button>
+        <Button variant="outline" size="sm">
+          Cancel
+        </Button>
+        <Button variant="danger" size="sm">
+          Delete
+        </Button>
       </div>
     </ModalWrapper>
   ),
@@ -48,7 +62,11 @@ export const Small: Story = {
 
 export const Large: Story = {
   render: () => (
-    <ModalWrapper title="Details" size="lg" description="Detailed information view.">
+    <ModalWrapper
+      title="Details"
+      size="lg"
+      description="Detailed information view."
+    >
       <div className="space-y-3">
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="h-12 rounded bg-zinc-800/50" />

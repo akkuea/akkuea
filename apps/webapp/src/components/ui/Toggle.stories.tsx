@@ -44,15 +44,17 @@ export const Disabled: Story = {
   render: () => <ToggleWrapper label="Disabled toggle" disabled />,
 };
 
+function InteractiveToggle() {
+  const [enabled, setEnabled] = useState(true);
+  return (
+    <Toggle
+      enabled={enabled}
+      onChange={setEnabled}
+      label="Enabled by default"
+    />
+  );
+}
+
 export const Enabled: Story = {
-  render: () => {
-    const [enabled, setEnabled] = useState(true);
-    return (
-      <Toggle
-        enabled={enabled}
-        onChange={setEnabled}
-        label="Enabled by default"
-      />
-    );
-  },
+  render: () => <InteractiveToggle />,
 };

@@ -33,6 +33,12 @@ use soroban_sdk::{
 
 use crate::{PropertyTokenContract, PropertyTokenContractClient, PRECISION};
 
+// This crate is `#![no_std]` (required for Soroban wasm builds), but this
+// module only compiles under `cfg(test)`, which runs on the host — so we can
+// pull in `std` here for debug printing without affecting the contract build.
+#[cfg(test)]
+extern crate std;
+
 // ───────────────────────────────────────────────
 // Mock Oracle (same as in test.rs)
 // ───────────────────────────────────────────────
@@ -131,7 +137,7 @@ fn budget_setup() -> BudgetSetup<'static> {
 fn assert_budget(env: &Env, label: &str, max_cpu: u64, max_mem: u64) {
     let cpu = env.budget().cpu_instruction_cost();
     let mem = env.budget().memory_bytes_cost();
-    println!(
+    std::println!(
         "[budget_check] {}: CPU = {} (limit {}), MEM = {} (limit {})",
         label, cpu, max_cpu, mem, max_mem
     );

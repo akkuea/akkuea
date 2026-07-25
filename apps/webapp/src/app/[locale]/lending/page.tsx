@@ -203,9 +203,12 @@ export default function LendingPage() {
   const {
     pools,
     userPositions,
+    pendingActions,
     isLoading,
     error,
     refetch,
+    addPendingAction,
+    removePendingAction,
     connectionStatus,
     lastUpdatedAt,
     isPolling,
@@ -316,21 +319,35 @@ export default function LendingPage() {
   // Helper: user's total deposit / borrow amount in a specific pool
   // -------------------------------------------------------------------------
   function poolUserDeposit(poolId: string): number {
-    return (
+    const base =
       userPositions[poolId]?.deposits.reduce(
         (s, d) => s + parseFloat(d.amount),
         0,
-      ) ?? 0
-    );
+      ) ?? 0;
+    const pending = pendingActions
+      .filter((a) => a.poolId === poolId)
+      .reduce((acc, a) => {
+        if (a.type === "supply") return acc + a.amount;
+        if (a.type === "withdraw") return acc - a.amount;
+        return acc;
+      }, 0);
+    return Math.max(0, base + pending);
   }
 
   function poolUserBorrow(poolId: string): number {
-    return (
+    const base =
       userPositions[poolId]?.borrows.reduce(
         (s, b) => s + parseFloat(b.principal) + parseFloat(b.accruedInterest),
         0,
-      ) ?? 0
-    );
+      ) ?? 0;
+    const pending = pendingActions
+      .filter((a) => a.poolId === poolId)
+      .reduce((acc, a) => {
+        if (a.type === "borrow") return acc + a.amount;
+        if (a.type === "repay") return acc - a.amount;
+        return acc;
+      }, 0);
+    return Math.max(0, base + pending);
   }
 
   // -------------------------------------------------------------------------
@@ -730,7 +747,7 @@ export default function LendingPage() {
 
                               {/* User position (shown only when non-zero) */}
                               {(deposit > 0 || borrow > 0) && (
-                                <div className="p-3 bg-[#0a0a0a] border border-[#262626] rounded-lg lg:w-48">
+                                <div className="p-3 bg-[#0a0a0a] border border-[#262626] rounded-lg lg:w-52">
                                   <p className="text-[10px] text-neutral-600 mb-2 uppercase tracking-wider">
                                     Your Position
                                   </p>
@@ -740,6 +757,17 @@ export default function LendingPage() {
                                       {hideBalances
                                         ? "••••"
                                         : formatCurrency(deposit)}
+                                      {pendingActions.some(
+                                        (a) =>
+                                          a.poolId === pool.id &&
+                                          (a.type === "supply" ||
+                                            a.type === "withdraw"),
+                                      ) && (
+                                        <span className="ml-1.5 inline-flex items-center gap-1 text-[10px] text-amber-400">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                          pending
+                                        </span>
+                                      )}
                                     </p>
                                   )}
                                   {borrow > 0 && (
@@ -748,6 +776,17 @@ export default function LendingPage() {
                                       {hideBalances
                                         ? "••••"
                                         : formatCurrency(borrow)}
+                                      {pendingActions.some(
+                                        (a) =>
+                                          a.poolId === pool.id &&
+                                          (a.type === "borrow" ||
+                                            a.type === "repay"),
+                                      ) && (
+                                        <span className="ml-1.5 inline-flex items-center gap-1 text-[10px] text-amber-400">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                          pending
+                                        </span>
+                                      )}
                                     </p>
                                   )}
                                 </div>
@@ -870,6 +909,15 @@ export default function LendingPage() {
           refetch();
           void refreshBalance();
         }}
+        onPendingAction={(action) =>
+          addPendingAction({
+            poolId: action.poolId,
+            type: action.type,
+            amount: action.amount,
+            timestamp: Date.now(),
+          })
+        }
+        onSettleAction={(poolId, type) => removePendingAction(poolId, type)}
       />
     </motion.div>
   );

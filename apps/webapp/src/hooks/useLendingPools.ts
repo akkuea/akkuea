@@ -15,27 +15,31 @@ export interface UserPositions {
   borrows: BorrowPosition[];
 }
 
+export type PendingActionType = "supply" | "withdraw" | "borrow" | "repay";
+
+export interface PendingAction {
+  poolId: string;
+  type: PendingActionType;
+  amount: number;
+  timestamp: number;
+}
+
 export interface UseLendingPoolsOptions {
   enableLiveUpdates?: boolean;
   pollingInterval?: number;
 }
 
 export interface UseLendingPoolsReturn {
-  /** All available lending pools from the API */
   pools: LendingPool[];
-  /** Map of poolId → user's deposit + borrow positions in that pool */
   userPositions: Record<string, UserPositions>;
-  /** True while the initial pools fetch or position fetch is in-flight */
+  pendingActions: PendingAction[];
   isLoading: boolean;
-  /** Non-null when any fetch has failed */
   error: string | null;
-  /** Re-trigger a full reload (pools + positions) */
   refetch: () => void;
-  /** Current connection status for live updates */
+  addPendingAction: (action: PendingAction) => void;
+  removePendingAction: (poolId: string, type: PendingActionType) => void;
   connectionStatus: ConnectionStatus;
-  /** Last time the data was updated */
   lastUpdatedAt: Date | null;
-  /** Whether currently using fallback polling */
   isPolling: boolean;
 }
 
@@ -63,6 +67,7 @@ export function useLendingPools(
   const [userPositions, setUserPositions] = useState<
     Record<string, UserPositions>
   >({});
+  const [pendingActions, setPendingActions] = useState<PendingAction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fetchKey, setFetchKey] = useState(0);
@@ -72,6 +77,19 @@ export function useLendingPools(
   const refetch = useCallback(() => {
     setFetchKey((k) => k + 1);
   }, []);
+
+  const addPendingAction = useCallback((action: PendingAction) => {
+    setPendingActions((prev) => [...prev, action]);
+  }, []);
+
+  const removePendingAction = useCallback(
+    (poolId: string, type: PendingActionType) => {
+      setPendingActions((prev) =>
+        prev.filter((a) => !(a.poolId === poolId && a.type === type)),
+      );
+    },
+    [],
+  );
 
   const fetchPoolsOnly = useCallback(async () => {
     const fetchedPools = await lendingApi.getPools();
@@ -158,9 +176,12 @@ export function useLendingPools(
   return {
     pools,
     userPositions,
+    pendingActions,
     isLoading,
     error,
     refetch: refetchWithLive,
+    addPendingAction,
+    removePendingAction,
     connectionStatus,
     lastUpdatedAt,
     isPolling,

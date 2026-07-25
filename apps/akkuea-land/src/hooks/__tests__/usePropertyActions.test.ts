@@ -26,11 +26,13 @@ vi.mock("@/lib/soroban-tx", () => ({
   buildBuyFromTreasuryXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   buildBuyFromPlayerXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   buildImprovePropertyXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
+  buildApproveMarketplaceXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   buildListForSaleXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   buildClaimIncomeXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   submitSorobanTx: vi.fn().mockResolvedValue(MOCK_TX_HASH),
   waitForSorobanTx: vi.fn().mockResolvedValue("success"),
   NETWORK_PASSPHRASE: "Test SDF Network ; September 2015",
+  TREASURY_ADDRESS: TREASURY,
 }));
 
 // Mock walletKit to return a controllable signTransaction function
@@ -55,6 +57,8 @@ vi.mock("@/lib/walletKit", () => ({
 
 import {
   buildBuyFromTreasuryXdr,
+  buildApproveMarketplaceXdr,
+  buildListForSaleXdr,
   submitSorobanTx,
   waitForSorobanTx,
 } from "@/lib/soroban-tx";
@@ -664,6 +668,50 @@ describe("usePropertyActions", () => {
       );
       expect(result.current.error).toBeNull();
       expect(result.current.pendingAction).toBeNull();
+    });
+
+    it("approves the marketplace as spender before listing (transfer_from prerequisite)", async () => {
+      const onPropertyUpdate = vi.fn();
+      const approveMock = buildApproveMarketplaceXdr as ReturnType<
+        typeof vi.fn
+      >;
+      const listMock = buildListForSaleXdr as ReturnType<typeof vi.fn>;
+
+      const callOrder: string[] = [];
+      approveMock.mockImplementationOnce(async () => {
+        callOrder.push("approve");
+        return MOCK_UNSIGNED_XDR;
+      });
+      listMock.mockImplementationOnce(async () => {
+        callOrder.push("list");
+        return MOCK_UNSIGNED_XDR;
+      });
+
+      const { result } = renderHook(() =>
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
+      );
+
+      await act(async () => {
+        await result.current.listForSale(300);
+      });
+
+      expect(approveMock).toHaveBeenCalledWith(
+        VIEWER_ADDRESS,
+        baseProperty.id,
+      );
+      expect(listMock).toHaveBeenCalledWith(
+        VIEWER_ADDRESS,
+        baseProperty.id,
+        300,
+      );
+      // Approval must be signed+submitted before the listing transaction.
+      expect(mockSignTransaction).toHaveBeenCalledTimes(2);
+      expect(callOrder).toEqual(["approve", "list"]);
     });
   });
 

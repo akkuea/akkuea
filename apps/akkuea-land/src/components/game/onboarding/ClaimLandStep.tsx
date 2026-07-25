@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useGameWallet } from "@/hooks/useGameWallet";
+import { buildFaucetClaimXdr } from "@/lib/soroban-tx";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -27,16 +28,20 @@ export function ClaimLandStep({
   onNext: () => void;
   onSkip: () => void;
 }) {
-  const { signAndSubmitTx } = useGameWallet();
+  const { address, signAndSubmitTx } = useGameWallet();
   const [status, setStatus] = useState<Status>("idle");
 
   const handleClaim = async () => {
+    if (!address) {
+      setStatus("error");
+      return;
+    }
     setStatus("pending");
     try {
-      // Simulate/call transaction
-      await signAndSubmitTx("placeholder-faucet-xdr");
+      const xdr = await buildFaucetClaimXdr(address);
+      await signAndSubmitTx(xdr);
       setStatus("done");
-    } catch (err) {
+    } catch {
       setStatus("error");
     }
   };

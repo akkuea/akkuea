@@ -16,6 +16,7 @@ import {
   Wallet,
   AlertCircle,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { Navbar, Footer } from "@/components/layout";
 import { TransactionHistory } from "@/components/transactions";
@@ -209,6 +210,10 @@ export default function LendingPage() {
     connectionStatus,
     lastUpdatedAt,
     isPolling,
+    applyOptimisticUpdate,
+    commitOptimisticUpdate,
+    rollbackOptimisticUpdate,
+    pendingPoolIds,
   } = useLendingPools(isConnected ? address : null);
 
   // Flatten all borrow positions across all pools for health factor computation
@@ -655,7 +660,11 @@ export default function LendingPage() {
                         return (
                           <div
                             key={pool.id}
-                            className="p-4 hover:bg-[#0a0a0a] transition-colors"
+                            className={`p-4 hover:bg-[#0a0a0a] transition-colors ${
+                              pendingPoolIds.has(pool.id)
+                                ? "bg-[#ff3e00]/5 border-l-2 border-l-[#ff3e00]"
+                                : ""
+                            }`}
                           >
                             <div className="flex flex-col lg:flex-row lg:items-center gap-6">
                               {/* Pool identity */}
@@ -664,10 +673,17 @@ export default function LendingPage() {
                                   className="w-10 h-10 rounded-lg bg-[#262626] flex items-center justify-center shrink-0"
                                   aria-label={pool.asset}
                                 >
-                                  <Coins
-                                    className="w-5 h-5 text-neutral-300"
-                                    aria-hidden="true"
-                                  />
+                                  {pendingPoolIds.has(pool.id) ? (
+                                    <Loader2
+                                      className="w-5 h-5 text-[#ff3e00] animate-spin"
+                                      aria-label="Transaction pending"
+                                    />
+                                  ) : (
+                                    <Coins
+                                      className="w-5 h-5 text-neutral-300"
+                                      aria-hidden="true"
+                                    />
+                                  )}
                                 </div>
                                 <div>
                                   <h3 className="text-sm font-semibold text-white">
@@ -731,9 +747,17 @@ export default function LendingPage() {
                               {/* User position (shown only when non-zero) */}
                               {(deposit > 0 || borrow > 0) && (
                                 <div className="p-3 bg-[#0a0a0a] border border-[#262626] rounded-lg lg:w-48">
-                                  <p className="text-[10px] text-neutral-600 mb-2 uppercase tracking-wider">
-                                    Your Position
-                                  </p>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[10px] text-neutral-600 uppercase tracking-wider">
+                                      Your Position
+                                    </p>
+                                    {pendingPoolIds.has(pool.id) && (
+                                      <span className="flex items-center gap-1 text-[10px] text-[#ff3e00]">
+                                        <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                                        Pending
+                                      </span>
+                                    )}
+                                  </div>
                                   {deposit > 0 && (
                                     <p className="text-xs text-white font-mono">
                                       Supplied:{" "}
@@ -760,7 +784,11 @@ export default function LendingPage() {
                                   size="sm"
                                   onClick={() => openPoolAction(pool, "supply")}
                                   aria-label={`Supply to ${pool.name}`}
-                                  disabled={pool.isPaused || available <= 0}
+                                  disabled={
+                                    pool.isPaused ||
+                                    available <= 0 ||
+                                    pendingPoolIds.has(pool.id)
+                                  }
                                 >
                                   Supply
                                 </Button>
@@ -769,7 +797,11 @@ export default function LendingPage() {
                                   size="sm"
                                   onClick={() => openPoolAction(pool, "borrow")}
                                   aria-label={`Borrow from ${pool.name}`}
-                                  disabled={pool.isPaused || available <= 0}
+                                  disabled={
+                                    pool.isPaused ||
+                                    available <= 0 ||
+                                    pendingPoolIds.has(pool.id)
+                                  }
                                 >
                                   Borrow
                                 </Button>
@@ -781,6 +813,7 @@ export default function LendingPage() {
                                       openPoolAction(pool, "withdraw")
                                     }
                                     aria-label={`Withdraw from ${pool.name}`}
+                                    disabled={pendingPoolIds.has(pool.id)}
                                   >
                                     Withdraw
                                   </Button>
@@ -793,6 +826,7 @@ export default function LendingPage() {
                                       openPoolAction(pool, "repay")
                                     }
                                     aria-label={`Repay loan in ${pool.name}`}
+                                    disabled={pendingPoolIds.has(pool.id)}
                                   >
                                     Repay
                                   </Button>
@@ -870,6 +904,9 @@ export default function LendingPage() {
           refetch();
           void refreshBalance();
         }}
+        applyOptimisticUpdate={applyOptimisticUpdate}
+        commitOptimisticUpdate={commitOptimisticUpdate}
+        rollbackOptimisticUpdate={rollbackOptimisticUpdate}
       />
     </motion.div>
   );

@@ -2,7 +2,14 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Shield, Coins, CheckCircle2, ExternalLink } from "lucide-react";
+import {
+  Shield,
+  Coins,
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import type { LendingPool } from "@real-estate-defi/shared";
 import { Modal, Badge, Button, Toggle } from "@/components/ui";
 import { Form, FormInput } from "@/components/forms";
@@ -12,6 +19,7 @@ import {
 } from "@/schemas/forms";
 import { lendingApi } from "@/services/api";
 import { formatCurrency } from "@/lib/utils";
+import type { OptimisticAction } from "@/hooks/useLendingPools";
 
 export type PoolAction = "supply" | "borrow" | "withdraw" | "repay";
 
@@ -24,6 +32,17 @@ export interface PoolActionModalProps {
   userAddress?: string | null;
   /** Callback fired after a successful transaction so the parent can refetch */
   onSuccess?: () => void;
+  /** Apply an optimistic update to the UI before on-chain confirmation */
+  applyOptimisticUpdate?: (
+    action: OptimisticAction,
+    poolId: string,
+    amount: number,
+    pool: LendingPool,
+  ) => string;
+  /** Mark an optimistic snapshot as confirmed */
+  commitOptimisticUpdate?: (snapshotId: string) => void;
+  /** Revert an optimistic snapshot on failure */
+  rollbackOptimisticUpdate?: (snapshotId: string) => void;
 }
 
 /** Present a valid 64-hex-char Stellar-style tx hash in a shortened form */
@@ -77,6 +96,8 @@ const ACTION_CONFIG: Record<
  *
  * Handles Supply / Borrow / Withdraw / Repay actions against a `LendingPool`.
  * Submits real Stellar transactions via the `lendingApi` service layer.
+ * Uses optimistic UI: the change is reflected immediately, and rolled back
+ * if the transaction fails.
  */
 export function PoolActionModal({
   pool,
@@ -85,8 +106,13 @@ export function PoolActionModal({
   onClose,
   userAddress,
   onSuccess,
+  applyOptimisticUpdate,
+  commitOptimisticUpdate,
+  rollbackOptimisticUpdate,
 }: PoolActionModalProps) {
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [pendingTx, setPendingTx] = useState(false);
+  const [txError, setTxError] = useState<string | null>(null);
   const successMessage = useMemo(() => {
     switch (action) {
       case "supply":
@@ -115,39 +141,66 @@ export function PoolActionModal({
     }
 
     const amount = parseFloat(values.amount);
+    let snapshotId: string | null = null;
 
-    if (action === "supply") {
-      await lendingApi.deposit(pool.id, {
-        userAddress,
-        amount,
-      });
-    } else if (action === "withdraw") {
-      await lendingApi.withdraw(pool.id, {
-        userAddress,
-        amount,
-      });
-    } else if (action === "borrow") {
-      await lendingApi.borrow(pool.id, {
-        userAddress,
-        collateralAmount: amount,
-        collateralAsset: pool.assetAddress,
-        borrowAmount: amount,
-      });
-    } else {
-      await lendingApi.repay(pool.id, {
-        userAddress,
-        amount,
-      });
+    try {
+      // 1. Apply optimistic update immediately so the UI reflects the change
+      //    before the on-chain transaction confirms.
+      if (applyOptimisticUpdate) {
+        snapshotId = applyOptimisticUpdate(
+          action as OptimisticAction,
+          pool.id,
+          amount,
+          pool,
+        );
+      }
+
+      setPendingTx(true);
+      setTxError(null);
+
+      // 2. Submit the actual transaction to the backend / Soroban
+      if (action === "supply") {
+        await lendingApi.deposit(pool.id, { userAddress, amount });
+      } else if (action === "withdraw") {
+        await lendingApi.withdraw(pool.id, { userAddress, amount });
+      } else if (action === "borrow") {
+        await lendingApi.borrow(pool.id, {
+          userAddress,
+          collateralAmount: amount,
+          collateralAsset: pool.assetAddress,
+          borrowAmount: amount,
+        });
+      } else {
+        await lendingApi.repay(pool.id, { userAddress, amount });
+      }
+
+      // 3. Transaction confirmed — commit the optimistic snapshot so the
+      //    next refetch replaces it with authoritative data.
+      if (snapshotId && commitOptimisticUpdate) {
+        commitOptimisticUpdate(snapshotId);
+      }
+
+      setTxHash(`submitted-${Date.now()}`);
+      onSuccess?.();
+
+      // Auto-close after showing the hash
+      setTimeout(() => {
+        setTxHash(null);
+        setPendingTx(false);
+        onClose();
+      }, 2500);
+    } catch (err) {
+      // 4. Transaction failed — rollback the optimistic update so the UI
+      //    reverts to the previous state.
+      if (snapshotId && rollbackOptimisticUpdate) {
+        rollbackOptimisticUpdate(snapshotId);
+      }
+
+      const message =
+        err instanceof Error ? err.message : "Transaction failed.";
+      setTxError(message);
+      setPendingTx(false);
     }
-
-    setTxHash(`submitted-${Date.now()}`);
-    onSuccess?.();
-
-    // Auto-close after showing the hash
-    setTimeout(() => {
-      setTxHash(null);
-      onClose();
-    }, 2500);
   };
 
   return (
@@ -155,13 +208,65 @@ export function PoolActionModal({
       isOpen={isOpen}
       onClose={() => {
         setTxHash(null);
+        setTxError(null);
+        setPendingTx(false);
         onClose();
       }}
       title={cfg.title}
       description={cfg.description}
     >
-      {/* Success state - show TX hash */}
-      {txHash ? (
+      {/* Pending state — waiting for on-chain confirmation */}
+      {pendingTx && !txHash ? (
+        <div className="flex flex-col items-center gap-4 py-8 text-center">
+          <div className="w-14 h-14 rounded-full bg-[#ff3e00]/10 border border-[#ff3e00]/30 flex items-center justify-center">
+            <Loader2 className="w-7 h-7 text-[#ff3e00] animate-spin" />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-white mb-1">
+              Confirming transaction
+            </p>
+            <p className="text-xs text-neutral-500">
+              Waiting for Soroban on-chain confirmation…
+            </p>
+          </div>
+          <div className="w-full max-w-xs space-y-2">
+            <div className="h-1.5 bg-[#262626] rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-[#ff3e00] rounded-full"
+                initial={{ width: "0%" }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 15, ease: "easeInOut" }}
+              />
+            </div>
+          </div>
+        </div>
+      ) : txError ? (
+        /* Error state — transaction failed, optimistic update was rolled back */
+        <div className="flex flex-col items-center gap-4 py-6 text-center">
+          <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+            <AlertCircle className="w-7 h-7 text-red-500" />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-white mb-1">
+              Transaction failed
+            </p>
+            <p className="text-xs text-red-400 mb-3">{txError}</p>
+            <p className="text-xs text-neutral-500">
+              Your balances have been reverted.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setTxError(null);
+            }}
+          >
+            Try Again
+          </Button>
+        </div>
+      ) : txHash ? (
+        /* Success state - show TX hash */
         <div className="flex flex-col items-center gap-4 py-6 text-center">
           <div className="w-14 h-14 rounded-full bg-[#00ff88]/10 border border-[#00ff88]/30 flex items-center justify-center">
             <CheckCircle2 className="w-7 h-7 text-[#00ff88]" />
@@ -171,12 +276,10 @@ export function PoolActionModal({
               Action submitted
             </p>
             <p className="text-xs text-neutral-500 mb-3">{successMessage}</p>
-            {txHash ? (
-              <span className="inline-flex items-center gap-1.5 text-xs text-[#ff3e00] font-mono">
-                {shortenTxHash(txHash)}
-                <ExternalLink className="w-3 h-3" aria-hidden="true" />
-              </span>
-            ) : null}
+            <span className="inline-flex items-center gap-1.5 text-xs text-[#ff3e00] font-mono">
+              {shortenTxHash(txHash)}
+              <ExternalLink className="w-3 h-3" aria-hidden="true" />
+            </span>
           </div>
         </div>
       ) : (

@@ -27,7 +27,10 @@ fn accrued_income_is_zero_when_no_time_has_passed() {
 #[test]
 fn accrued_income_is_zero_for_a_partial_epoch() {
     // Strictly less than one full epoch has elapsed.
-    assert_eq!(calculate_accrued_income(EPOCH_LENGTH - 1, 0, LEVEL_RESIDENTIAL), 0);
+    assert_eq!(
+        calculate_accrued_income(EPOCH_LENGTH - 1, 0, LEVEL_RESIDENTIAL),
+        0
+    );
 }
 
 #[test]

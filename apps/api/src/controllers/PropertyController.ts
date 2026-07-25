@@ -584,6 +584,12 @@ export class PropertyController {
       }
 
       const buyer = await userRepository.getOrCreateByWallet(data.buyer);
+
+      if (buyer.kycStatus !== 'approved') {
+        throw new AuthorizationError(
+          'KYC verification must be approved before purchasing shares',
+        );
+      }
       const pricePerShareBig = parseDecimalStringToBigInt(property.pricePerShare, 2);
       const totalPurchasePriceBig = pricePerShareBig * BigInt(data.shares);
       const totalPurchasePrice = formatBigIntAsDecimalString(totalPurchasePriceBig, 2);

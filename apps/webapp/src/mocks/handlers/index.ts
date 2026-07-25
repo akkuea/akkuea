@@ -3,6 +3,7 @@ import { lendingHandlers } from "./lending";
 import { userHandlers } from "./users";
 import { transactionHandlers } from "./transactions";
 import { adminHandlers } from "./admin";
+import { portfolioPerformanceHandlers } from "./portfolioPerformance";
 
 /**
  * All MSW request handlers, combined in one export.
@@ -14,4 +15,5 @@ export const handlers = [
   ...userHandlers,
   ...transactionHandlers,
   ...adminHandlers,
+  ...portfolioPerformanceHandlers,
 ];

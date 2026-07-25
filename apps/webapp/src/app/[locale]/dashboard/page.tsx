@@ -36,6 +36,7 @@ import { useHealthFactor } from "@/hooks/useHealthFactor";
 import { useLiveUpdates } from "@/hooks/useLiveUpdates";
 import {
   AllocationChart,
+  PortfolioChart,
   PropertyReportCard,
   StatsSkeleton,
   PropertiesListSkeleton,
@@ -368,6 +369,11 @@ export default function DashboardPage() {
                   </Card>
                 </div>
               )}
+            </motion.div>
+
+            {/* Performance Chart */}
+            <motion.div variants={staggerItem}>
+              <PortfolioChart walletAddress={address} />
             </motion.div>
 
             {/* Main Content */}

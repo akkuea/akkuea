@@ -52,7 +52,7 @@ const MOCK_PLAYER_ADDRESSES = [
   "GRST7890UVWX1234YZAB5678CDEF9012GHIJ3456KLMN7890OP56",
 ];
 
-const TREASURY = "GBTREASURY";
+const TREASURY = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";    // treasury/deployer account from game-contracts.testnet.json
 
 // ── Building Level Labels ────────────────────────────────────────────────────
 

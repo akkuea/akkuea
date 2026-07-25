@@ -38,7 +38,7 @@ const GRID_SIZE = 20;
 
 function getTileStatus(property: GameProperty): string {
   if (!property.owner) return "Unowned";
-  if (property.owner === "GBTREASURY") return "Treasury";
+  if (property.owner === "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M") return "Treasury";    // treasury/deployer account
   return `Owned by ${abbreviateAddress(property.owner)}`;
 }
 
@@ -61,7 +61,7 @@ const PropertyTile = React.memo(function PropertyTile({
   const { row, col } = getGridCoords(property.id);
   const bgColor = addressToHSL(property.owner);
   const glowColor = addressToGlow(property.owner);
-  const isTreasury = !property.owner || property.owner === "GBTREASURY";
+  const isTreasury = !property.owner || property.owner === "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";    // treasury/deployer account
   const isUnowned = !property.owner;
 
   const tooltipLines = [
@@ -140,7 +140,7 @@ export function CityMap() {
     let listed = 0;
     let treasury = 0;
     for (const p of properties) {
-      if (!p.owner || p.owner === "GBTREASURY") {
+      if (!p.owner || p.owner === "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M") {    // treasury/deployer account
         treasury++;
       } else {
         owned++;

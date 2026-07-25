@@ -637,20 +637,24 @@ fn test_interest_rate_model_unit() {
     let model = InterestRateModel::default();
 
     // 0% utilization → base rate only
-    let rate_0 = model.calculate_borrow_rate(0);
+    let rate_0 = model.calculate_borrow_rate(0).unwrap();
     assert_eq!(rate_0, model.base_rate);
 
     // Optimal (80%) → base + slope1
-    let rate_opt = model.calculate_borrow_rate(model.optimal_utilization);
+    let rate_opt = model
+        .calculate_borrow_rate(model.optimal_utilization)
+        .unwrap();
     assert_eq!(rate_opt, model.base_rate + model.slope1);
 
     // 100% utilization → higher than optimal
-    let rate_100 = model.calculate_borrow_rate(PRECISION);
+    let rate_100 = model.calculate_borrow_rate(PRECISION).unwrap();
     assert!(rate_100 > rate_opt);
 
     // Monotonically increasing
-    let rate_50 = model.calculate_borrow_rate(PRECISION / 2);
-    let rate_90 = model.calculate_borrow_rate(900_000_000_000_000_000);
+    let rate_50 = model.calculate_borrow_rate(PRECISION / 2).unwrap();
+    let rate_90 = model
+        .calculate_borrow_rate(900_000_000_000_000_000)
+        .unwrap();
     assert!(rate_50 > rate_0);
     assert!(rate_90 > rate_opt);
     assert!(rate_100 > rate_90);
@@ -662,11 +666,117 @@ fn test_supply_rate_less_than_borrow_rate() {
     let utilization = PRECISION / 2;
     let reserve_factor = 100_000_000_000_000_000_i128; // 10%
 
-    let borrow_rate = model.calculate_borrow_rate(utilization);
-    let supply_rate = model.calculate_supply_rate(borrow_rate, utilization, reserve_factor);
+    let borrow_rate = model.calculate_borrow_rate(utilization).unwrap();
+    let supply_rate = model
+        .calculate_supply_rate(borrow_rate, utilization, reserve_factor)
+        .unwrap();
 
     assert!(supply_rate < borrow_rate);
     assert!(supply_rate > 0);
+}
+
+// ─── Interest rate overflow error codes ────────
+
+#[test]
+fn test_borrow_rate_utilization_mul_overflow() {
+    let model = InterestRateModel {
+        base_rate: 0,
+        slope1: i128::MAX,
+        slope2: 0,
+        optimal_utilization: PRECISION,
+    };
+    let result = model.calculate_borrow_rate(PRECISION);
+    assert_eq!(result, Err(ContractError::BorrowRateUtilizationMulOverflow));
+}
+
+#[test]
+fn test_borrow_rate_base_add_overflow() {
+    let model = InterestRateModel {
+        base_rate: i128::MAX,
+        slope1: 0,
+        slope2: 0,
+        optimal_utilization: PRECISION,
+    };
+    // utilization below optimal, slope_component = 0, so base + 0 = base (fine)
+    // borrow 0 utilization so the result is just base_rate
+    let result = model.calculate_borrow_rate(0).unwrap();
+    assert_eq!(result, i128::MAX);
+}
+
+#[test]
+fn test_borrow_rate_base_slope1_add_overflow() {
+    let model = InterestRateModel {
+        base_rate: i128::MAX,
+        slope1: 1,
+        slope2: 0,
+        optimal_utilization: 0,
+    };
+    let result = model.calculate_borrow_rate(PRECISION);
+    assert_eq!(result, Err(ContractError::BorrowRateBaseSlope1AddOverflow));
+}
+
+#[test]
+fn test_borrow_rate_excess_mul_overflow() {
+    let model = InterestRateModel {
+        base_rate: 0,
+        slope1: 0,
+        slope2: i128::MAX,
+        optimal_utilization: 0,
+    };
+    let result = model.calculate_borrow_rate(PRECISION);
+    assert_eq!(result, Err(ContractError::BorrowRateExcessMulOverflow));
+}
+
+#[test]
+fn test_borrow_rate_rate_at_optimal_add_overflow() {
+    let model = InterestRateModel {
+        base_rate: i128::MAX,
+        slope1: 0,
+        slope2: 1,
+        optimal_utilization: 0,
+    };
+    let result = model.calculate_borrow_rate(PRECISION);
+    assert_eq!(
+        result,
+        Err(ContractError::BorrowRateRateAtOptimalAddOverflow)
+    );
+}
+
+#[test]
+fn test_supply_rate_borrow_rate_mul_overflow() {
+    let model = InterestRateModel::default();
+    let result = model.calculate_supply_rate(i128::MAX, i128::MAX, 0);
+    assert_eq!(result, Err(ContractError::SupplyRateBorrowRateMulOverflow));
+}
+
+#[test]
+fn test_supply_rate_max_values_no_overflow() {
+    let model = InterestRateModel::default();
+    // Max safe values: the second multiplication is bounded by i128::MAX
+    // for any valid inputs (derivation in code comment).
+    // Use the largest borrow_rate that passes the first checked_mul.
+    let max_borrow = i128::MAX / PRECISION;
+    let result = model.calculate_supply_rate(max_borrow, PRECISION, 0);
+    assert!(result.is_ok());
+    assert!(result.unwrap() > 0);
+}
+
+#[test]
+fn test_new_index_pow_precision_overflow() {
+    // borrow_rate / SECONDS_PER_YEAR + PRECISION ≈ 5.4e30 (no overflow)
+    // pow_precision on that large base overflows on squaring
+    let result = InterestStorage::calculate_new_index(0, i128::MAX, 1);
+    assert_eq!(result, Err(ContractError::PowPrecisionOverflow));
+}
+
+#[test]
+fn test_new_index_mul_overflow() {
+    // current_index * compound_factor overflows if both are very large
+    // Use a short time with a moderately large base to get a factor > 1, then
+    // multiply by a huge current_index
+    let borrow_rate = SECONDS_PER_YEAR as i128; // rate_per_second = 1
+    let result = InterestStorage::calculate_new_index(i128::MAX, borrow_rate, 2);
+    assert_eq!(result, Err(ContractError::NewIndexMulOverflow));
 }
 
 // ─── Utilization & liquidity (unit) ────────────

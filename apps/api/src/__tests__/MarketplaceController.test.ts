@@ -129,7 +129,8 @@ describe('MarketplaceController.getListings', () => {
   it('defaults to page 1, limit 20', async () => {
     let capturedOptions: Record<string, unknown> | undefined;
     propertyRepository.findPaginated = async (options) => {
-      capturedOptions = options as unknown as Record<string, unknown>;      return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+      capturedOptions = options as unknown as Record<string, unknown>;
+      return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
     };
 
     await MarketplaceController.getListings();

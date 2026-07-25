@@ -1,4 +1,4 @@
-import { describe, expect, it, spyOn, beforeEach } from 'bun:test';
+import { describe, expect, it, spyOn, beforeEach, afterEach } from 'bun:test';
 import type { PropertyInfo } from '@real-estate-defi/shared';
 import { MarketplaceController } from '../controllers/MarketplaceController';
 import { propertyRepository, type PropertyListRow } from '../repositories/PropertyRepository';
@@ -34,12 +34,18 @@ function listRow(id: string, overrides: Partial<PropertyListRow> = {}): Property
   };
 }
 
+const originalFindPaginated = propertyRepository.findPaginated;
+
 describe('MarketplaceController.getListings', () => {
   beforeEach(() => {
     spyOn(logger, 'info').mockImplementation(() => {});
     spyOn(logger, 'error').mockImplementation(() => {});
     spyOn(cacheService, 'get').mockResolvedValue(null);
     spyOn(cacheService, 'set').mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    propertyRepository.findPaginated = originalFindPaginated;
   });
 
   it('returns only approved, verified properties with available shares', async () => {
@@ -51,7 +57,7 @@ describe('MarketplaceController.getListings', () => {
       listRow('p-5', { reviewStatus: 'approved', verified: true, availableShares: 5 }),
     ];
 
-    spyOn(propertyRepository, 'findPaginated').mockResolvedValue({
+    propertyRepository.findPaginated = async () => ({
       data: rows.filter(
         (r) => r.reviewStatus === 'approved' && r.verified && r.availableShares > 0,
       ),
@@ -64,10 +70,11 @@ describe('MarketplaceController.getListings', () => {
   });
 
   it('passes marketplace-specific filters to repository', async () => {
-    const findPaginatedSpy = spyOn(propertyRepository, 'findPaginated').mockResolvedValue({
-      data: [],
-      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
-    });
+    let capturedFilter: Record<string, unknown> | undefined;
+    propertyRepository.findPaginated = async (_options, filter) => {
+      capturedFilter = filter as Record<string, unknown>;
+      return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    };
 
     await MarketplaceController.getListings({
       page: 2,
@@ -78,9 +85,7 @@ describe('MarketplaceController.getListings', () => {
       maxPrice: '2000',
     });
 
-    expect(findPaginatedSpy).toHaveBeenCalledTimes(1);
-    const [, filter] = findPaginatedSpy.mock.calls[0]!;
-    expect(filter).toEqual({
+    expect(capturedFilter).toEqual({
       reviewStatuses: ['approved'],
       verified: true,
       hasAvailableShares: true,
@@ -98,36 +103,38 @@ describe('MarketplaceController.getListings', () => {
     };
     spyOn(cacheService, 'get').mockResolvedValue(cached);
 
-    const findPaginatedSpy = spyOn(propertyRepository, 'findPaginated');
+    let repositoryCalled = false;
+    propertyRepository.findPaginated = async () => {
+      repositoryCalled = true;
+      return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    };
 
     const result = await MarketplaceController.getListings();
     expect(result).toEqual(cached);
-    expect(findPaginatedSpy).not.toHaveBeenCalled();
+    expect(repositoryCalled).toBe(false);
   });
 
   it('applies pagination parameters', async () => {
-    const findPaginatedSpy = spyOn(propertyRepository, 'findPaginated').mockResolvedValue({
-      data: [],
-      pagination: { page: 2, limit: 5, total: 15, totalPages: 3 },
-    });
+    let capturedOptions: Record<string, unknown> | undefined;
+    propertyRepository.findPaginated = async (options) => {
+      capturedOptions = options as unknown as Record<string, unknown>;
+      return { data: [], pagination: { page: 2, limit: 5, total: 15, totalPages: 3 } };
+    };
 
     await MarketplaceController.getListings({ page: '2', limit: '5' });
 
-    expect(findPaginatedSpy).toHaveBeenCalledTimes(1);
-    const [options] = findPaginatedSpy.mock.calls[0]!;
-    expect(options).toEqual({ page: 2, limit: 5 });
+    expect(capturedOptions).toEqual({ page: 2, limit: 5 });
   });
 
   it('defaults to page 1, limit 20', async () => {
-    const findPaginatedSpy = spyOn(propertyRepository, 'findPaginated').mockResolvedValue({
-      data: [],
-      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
-    });
+    let capturedOptions: Record<string, unknown> | undefined;
+    propertyRepository.findPaginated = async (options) => {
+      capturedOptions = options as unknown as Record<string, unknown>;      return { data: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
+    };
 
     await MarketplaceController.getListings();
 
-    const [options] = findPaginatedSpy.mock.calls[0]!;
-    expect(options).toEqual({ page: 1, limit: 20 });
+    expect(capturedOptions).toEqual({ page: 1, limit: 20 });
   });
 });
 

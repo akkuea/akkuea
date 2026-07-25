@@ -7,6 +7,7 @@ import {
   rateLimit,
   walletKeyGenerator,
   authPlugin,
+  idempotency,
 } from '../middleware';
 import { LendingController } from '../controllers/LendingController';
 import { positionService } from '../services/PositionService';
@@ -171,6 +172,7 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
   })
 
   // POST /pools/:id/borrow - Borrow from pool (auth required)
+  .use(idempotency)
   .use(validate({ body: borrowSchema }))
   .post('/pools/:id/borrow', async (ctx) => LendingController.borrow(ctx), {
     beforeHandle: [rateLimit()],
@@ -183,6 +185,7 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
   })
 
   // POST /pools/:id/repay - Repay loan (auth required)
+  .use(idempotency)
   .use(validate({ body: repaySchema }))
   .post('/pools/:id/repay', async (ctx) => LendingController.repay(ctx), {
     beforeHandle: [rateLimit()],

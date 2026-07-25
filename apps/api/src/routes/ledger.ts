@@ -123,4 +123,11 @@ export const ledgerRoutes = new Elysia({ prefix: '/api/ledger' }).get(
       },
     });
   },
+  {
+    detail: {
+      summary: 'Stream ledger updates',
+      description: 'Server-Sent Events stream that emits Stellar ledger sequence updates in real-time',
+      tags: ['Ledger'],
+    },
+  },
 );

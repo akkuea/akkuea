@@ -36,8 +36,8 @@ use soroban_sdk::{
 };
 
 use crate::{
-    InterestRateModel, InterestStorage, PoolStorage, PositionStorage,
-    PropertyTokenContract, PropertyTokenContractClient, PRECISION,
+    InterestRateModel, InterestStorage, PoolStorage, PositionStorage, PropertyTokenContract,
+    PropertyTokenContractClient, PRECISION,
 };
 
 // ───────────────────────────────────────────────
@@ -126,10 +126,10 @@ fn setup_reentrancy_env() -> ReentrancyTestEnv<'static> {
         name: String::from_str(&env, "USDC Lending Pool"),
         asset: String::from_str(&env, "USDC"),
         asset_address: usdc_contract.address().clone(),
-        collateral_factor: 750_000_000_000_000_000,   // 75%
+        collateral_factor: 750_000_000_000_000_000, // 75%
         liquidation_threshold: 800_000_000_000_000_000, // 80%
-        liquidation_penalty: 50_000_000_000_000_000,   // 5%
-        reserve_factor: 1000,                           // 10%
+        liquidation_penalty: 50_000_000_000_000_000, // 5%
+        reserve_factor: 1000,                       // 10%
         is_active: true,
         created_at: env.ledger().timestamp(),
     };
@@ -194,7 +194,10 @@ fn test_borrow_state_updated_before_interactions() {
 
     // Record pool state before
     let total_borrows_before = t.client.get_total_borrows(&t.pool_id);
-    assert_eq!(total_borrows_before, 0, "pool should start with zero borrows");
+    assert_eq!(
+        total_borrows_before, 0,
+        "pool should start with zero borrows"
+    );
 
     // Execute borrow
     let position = t.client.borrow(
@@ -327,7 +330,10 @@ fn test_repay_state_updated_before_interactions() {
     usdc_sac.mint(&t.borrower, &2_000_000_000);
 
     let total_borrows_before_repay = t.client.get_total_borrows(&t.pool_id);
-    assert!(total_borrows_before_repay > 0, "should have outstanding borrows");
+    assert!(
+        total_borrows_before_repay > 0,
+        "should have outstanding borrows"
+    );
 
     // Repay the full amount
     let result = t.client.repay(&t.borrower, &t.pool_id, &borrow_amount);

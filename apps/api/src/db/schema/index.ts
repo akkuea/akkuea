@@ -5,3 +5,4 @@ export * from './transactions';
 export * from './notifications';
 export * from './valuations';
 export * from './notificationDlq';
+export * from './auditLog';

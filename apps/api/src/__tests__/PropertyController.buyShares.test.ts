@@ -58,9 +58,14 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
     propertyId = prop.id;
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     originalMintPropertyShares = stellarService.mintPropertyShares;
     originalGetMintingConfig = stellarService.getMintingConfig;
+
+    // Reset availableShares to initial state for each test
+    if (propertyId) {
+      await db.update(properties).set({ availableShares: 10 }).where(eq(properties.id, propertyId));
+    }
   });
 
   afterEach(() => {
@@ -138,8 +143,8 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
       PropertyController.buyShares(propertyId, { buyer: buyerAddress, shares: 2 }, buyerAddress),
     ).rejects.toThrow('Soroban submission failed');
 
-    // Verify DB state unchanged from previous test
+    // Verify DB state unchanged (beforeEach reset availableShares to 10)
     const prop = await propertyRepository.findById(propertyId);
-    expect(prop!.availableShares).toBe(8);
+    expect(prop!.availableShares).toBe(10);
   });
 });

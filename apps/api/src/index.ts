@@ -2,6 +2,7 @@ import { swagger } from '@elysiajs/swagger';
 import app from './app';
 import { checkDatabaseHealth, closeDatabaseConnection } from './db';
 import { propertyRoutes } from './routes/properties';
+import { marketplaceRoutes } from './routes/marketplace';
 import { lendingRoutes } from './routes/lending';
 import { userRoutes } from './routes/users';
 import { kycRoutes } from './routes/kyc';
@@ -28,6 +29,7 @@ app
   )
   .use(errorHandler)
   .use(propertyRoutes)
+  .use(marketplaceRoutes)
   .use(lendingRoutes)
   .use(userRoutes)
   .use(kycRoutes)

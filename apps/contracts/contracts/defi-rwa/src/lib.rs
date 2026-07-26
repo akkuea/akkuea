@@ -629,17 +629,20 @@ impl PropertyTokenContract {
 
     pub fn schedule_recovery(env: Env, caller: Address) {
         caller.require_auth();
-        TimelockControl::schedule_recovery(&env, &caller);
+        TimelockControl::schedule_recovery(&env, &caller)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
     }
 
     pub fn cancel_recovery(env: Env, caller: Address) {
         caller.require_auth();
-        TimelockControl::cancel_recovery(&env, &caller);
+        TimelockControl::cancel_recovery(&env, &caller)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
     }
 
     pub fn execute_recovery(env: Env, caller: Address) {
         caller.require_auth();
-        TimelockControl::execute_recovery(&env, &caller);
+        TimelockControl::execute_recovery(&env, &caller)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
     }
 
     pub fn grant_emergency_role(env: Env, admin: Address, target: Address) {

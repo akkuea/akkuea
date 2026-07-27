@@ -4,7 +4,6 @@ import {
   stellarAddressSchema,
   positiveAmountSchema,
   propertyLocationSchema,
-  propertyDocumentSchema,
 } from '@real-estate-defi/shared';
 
 /**

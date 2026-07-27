@@ -2,7 +2,6 @@ import { z } from 'zod';
 import {
   stellarAddressSchema,
   positiveAmountSchema,
-  nonNegativeAmountSchema,
 } from '@real-estate-defi/shared';
 
 /**

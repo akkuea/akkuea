@@ -309,72 +309,80 @@ mod tests {
         assert_eq!(client.balance(&user), (1000 * 10_000_000) - 200);
         assert_eq!(client.allowance(&user, &spender), 300);
     }
-    /////////
-   use soroban_sdk::Error;
 
-#[test]
-fn test_initialize_already_initialized_fails() {
-    let env = Env::default();
-    let (treasury, engine, _, client) = setup_test(&env);
-    
-    client.initialize(&treasury, &engine, &true);
-    let res = client.try_initialize(&treasury, &engine, &true);
-    
-    assert_eq!(
-        res,
-        Err(Ok(Error::from_contract_error(TokenError::AlreadyInitialized as u32)))
-    );
-}
+    use soroban_sdk::Error;
 
-#[test]
-fn test_mint_unauthorized_fails() {
-    let env = Env::default();
-    env.mock_all_auths();
-    let (treasury, engine, user, client) = setup_test(&env);
-    client.initialize(&treasury, &engine, &true);
+    #[test]
+    fn test_initialize_already_initialized_fails() {
+        let env = Env::default();
+        let (treasury, engine, _, client) = setup_test(&env);
 
-    let unauthorized_caller = Address::generate(&env);
-    let res = client.try_mint(&unauthorized_caller, &user, &1000);
-    
-    assert_eq!(
-        res,
-        Err(Ok(Error::from_contract_error(TokenError::Unauthorized as u32)))
-    );
-}
+        client.initialize(&treasury, &engine, &true);
+        let res = client.try_initialize(&treasury, &engine, &true);
 
-#[test]
-fn test_transfer_insufficient_balance_fails() {
-    let env = Env::default();
-    env.mock_all_auths();
-    let (treasury, engine, user, client) = setup_test(&env);
-    client.initialize(&treasury, &engine, &true);
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::AlreadyInitialized as u32
+            )))
+        );
+    }
 
-    let receiver = Address::generate(&env);
-    let res = client.try_transfer(&user, &receiver, &500);
-    
-    assert_eq!(
-        res,
-        Err(Ok(Error::from_contract_error(TokenError::InsufficientBalance as u32)))
-    );
-}
+    #[test]
+    fn test_mint_unauthorized_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
 
-#[test]
-fn test_transfer_from_insufficient_allowance_fails() {
-    let env = Env::default();
-    env.mock_all_auths();
-    let (treasury, engine, user, client) = setup_test(&env);
-    client.initialize(&treasury, &engine, &true);
+        let unauthorized_caller = Address::generate(&env);
+        let res = client.try_mint(&unauthorized_caller, &user, &1000);
 
-    client.faucet(&user);
-    let spender = Address::generate(&env);
-    let receiver = Address::generate(&env);
-    client.approve(&user, &spender, &100, &100);
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::Unauthorized as u32
+            )))
+        );
+    }
 
-    let res = client.try_transfer_from(&spender, &user, &receiver, &200);
-    
-    assert_eq!(
-        res,
-        Err(Ok(Error::from_contract_error(TokenError::InsufficientAllowance as u32)))
-    );
-}
+    #[test]
+    fn test_transfer_insufficient_balance_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        let receiver = Address::generate(&env);
+        let res = client.try_transfer(&user, &receiver, &500);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::InsufficientBalance as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn test_transfer_from_insufficient_allowance_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        client.faucet(&user);
+        let spender = Address::generate(&env);
+        let receiver = Address::generate(&env);
+        client.approve(&user, &spender, &100, &100);
+
+        let res = client.try_transfer_from(&spender, &user, &receiver, &200);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::InsufficientAllowance as u32
+            )))
+        );
+    }
 }

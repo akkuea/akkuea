@@ -4,6 +4,7 @@ import { PropertyController } from '../controllers/PropertyController';
 import { stellarService } from '../services/StellarService';
 import { propertyRepository } from '../repositories/PropertyRepository';
 import { userRepository } from '../repositories/UserRepository';
+import { kycRepository } from '../repositories/KYCRepository';
 import { db } from '../db';
 import { properties, shareOwnerships, transactions } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -28,6 +29,9 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
     const owner = await userRepository.getOrCreateByWallet(propertyOwnerAddress);
     const buyer = await userRepository.getOrCreateByWallet(buyerAddress);
     buyerId = buyer.id;
+
+    // Approve KYC for the buyer so share purchases are allowed
+    await kycRepository.updateUserKycStatus(buyerId, 'approved');
 
     // Create property
     const prop = await propertyRepository.create({

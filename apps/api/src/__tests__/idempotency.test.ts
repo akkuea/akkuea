@@ -42,7 +42,7 @@ describe('Idempotency Middleware', () => {
     
     const keys = await db.select().from(idempotencyKeys).where(eq(idempotencyKeys.key, 'key-1'));
     expect(keys.length).toBe(1);
-    expect(keys[0].response).toEqual({ success: true, counter: 1, body: { data: 'test' } });
+    expect(keys[0]!.response).toEqual({ success: true, counter: 1, body: { data: 'test' } });
   });
 
   it('should return the cached response for a repeated key without re-running', async () => {

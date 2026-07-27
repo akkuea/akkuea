@@ -15,13 +15,15 @@ export const CreatePropertyDto = z.object({
   valuePerShare: positiveAmountSchema,
   metadata: z.record(z.string()),
   location: propertyLocationSchema.optional(),
-  documents: z.array(
-    z.object({
-      title: z.string().min(1),
-      url: z.string().url(),
-      type: z.enum(['deed', 'appraisal', 'inspection', 'other']),
-    }),
-  ).optional(),
+  documents: z
+    .array(
+      z.object({
+        title: z.string().min(1),
+        url: z.string().url(),
+        type: z.enum(['deed', 'appraisal', 'inspection', 'other']),
+      }),
+    )
+    .optional(),
 });
 
 /**
@@ -34,13 +36,15 @@ export const UpdatePropertyDto = z.object({
   valuePerShare: positiveAmountSchema.optional(),
   metadata: z.record(z.string()).optional(),
   location: propertyLocationSchema.optional(),
-  documents: z.array(
-    z.object({
-      title: z.string().min(1),
-      url: z.string().url(),
-      type: z.enum(['deed', 'appraisal', 'inspection', 'other']),
-    }),
-  ).optional(),
+  documents: z
+    .array(
+      z.object({
+        title: z.string().min(1),
+        url: z.string().url(),
+        type: z.enum(['deed', 'appraisal', 'inspection', 'other']),
+      }),
+    )
+    .optional(),
 });
 
 /**

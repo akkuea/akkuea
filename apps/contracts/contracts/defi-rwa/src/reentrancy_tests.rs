@@ -28,10 +28,8 @@ use super::*;
 
 use sep_40_oracle::{Asset, PriceData};
 use soroban_sdk::{
-    contract, contractimpl,
-    testutils::Address as _,
-    token::StellarAssetClient,
-    Address, Env, String, Symbol,
+    contract, contractimpl, testutils::Address as _, token::StellarAssetClient, Address, Env,
+    String, Symbol,
 };
 
 use crate::{

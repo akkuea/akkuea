@@ -117,9 +117,7 @@ export class RiskMonitoringService {
       transitions = transitions.filter((t) => new Date(t.timestamp) <= endDate);
     }
 
-    transitions.sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-    );
+    transitions.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     return transitions.map((t) => ({
       timestamp: new Date(t.timestamp).toISOString(),

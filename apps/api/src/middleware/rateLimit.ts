@@ -3,7 +3,7 @@ import type { Context } from 'elysia';
 interface RateLimitOptions {
   windowMs?: number;
   max?: number;
-  keyGenerator?: (request: Request) => string;
+  keyGenerator?: (context: Pick<Context, 'request' | 'set'>) => Promise<string> | string;
 }
 
 interface RateLimitResult {
@@ -90,11 +90,32 @@ function getClientIP(request: Request): string {
   return request.headers.get('x-real-ip') ?? 'unknown';
 }
 
-function getIdentifier(request: Request, keyGenerator?: (request: Request) => string): string {
+async function getIdentifier(
+  ctx: Pick<Context, 'request' | 'set'>,
+  keyGenerator?: (context: Pick<Context, 'request' | 'set'>) => Promise<string> | string,
+): Promise<string> {
   if (keyGenerator) {
-    return keyGenerator(request);
+    return keyGenerator(ctx);
   }
-  return `ip:${getClientIP(request)}`;
+  return `ip:${getClientIP(ctx.request)}`;
+}
+
+export async function walletKeyGenerator(ctx: Pick<Context, 'request' | 'set'>): Promise<string> {
+  const getAuthenticatedUser = (ctx as Record<string, unknown>)['getAuthenticatedUser'] as
+    | (() => Promise<{ id: string; walletAddress: string }>)
+    | undefined;
+
+  if (typeof getAuthenticatedUser === 'function') {
+    try {
+      const user = await getAuthenticatedUser();
+      if (user.walletAddress) {
+        return `wallet:${user.walletAddress}`;
+      }
+    } catch {
+      // Auth not available or token invalid – fall through to IP
+    }
+  }
+  return `ip:${getClientIP(ctx.request)}`;
 }
 
 function parseEvalResult(raw: unknown): {
@@ -222,21 +243,21 @@ export function rateLimit(options: RateLimitOptions = {}) {
     storeReady = Promise.resolve(createMemoryStore());
   }
 
-  return async function rateLimitMiddleware({ request, set }: Pick<Context, 'request' | 'set'>) {
-    if (request.headers.get('x-test-bypass-ratelimit') === 'true') {
+  return async function rateLimitMiddleware(ctx: Pick<Context, 'request' | 'set'>) {
+    if (ctx.request.headers.get('x-test-bypass-ratelimit') === 'true') {
       return;
     }
 
-    const identifier = getIdentifier(request, keyGenerator);
+    const identifier = await getIdentifier(ctx, keyGenerator);
     const store = await storeReady;
     const result = await store.checkLimit(identifier, windowMs, max);
 
-    if (!set.headers) {
-      set.headers = {};
+    if (!ctx.set.headers) {
+      ctx.set.headers = {};
     }
-    set.headers['X-RateLimit-Limit'] = String(max);
-    set.headers['X-RateLimit-Remaining'] = String(result.remaining);
-    set.headers['X-RateLimit-Reset'] = String(Math.ceil(result.resetAt / 1000));
+    ctx.set.headers['X-RateLimit-Limit'] = String(max);
+    ctx.set.headers['X-RateLimit-Remaining'] = String(result.remaining);
+    ctx.set.headers['X-RateLimit-Reset'] = String(Math.ceil(result.resetAt / 1000));
 
     if (!result.allowed) {
       set.status = 429;

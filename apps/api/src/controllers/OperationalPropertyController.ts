@@ -4,6 +4,7 @@ import { PropertyController } from './PropertyController';
 import { propertyRepository, type PropertyReviewStatus } from '../repositories/PropertyRepository';
 import { userRepository } from '../repositories/UserRepository';
 import { OracleService } from '../services/OracleService';
+import { auditService } from '../services/AuditService';
 import type { Property } from '../db/schema';
 
 export type OperationsQueue = 'pending' | 'approved' | 'rejected' | 'hold' | 'changes' | 'all';
@@ -201,6 +202,14 @@ export class OperationalPropertyController {
       throw new NotFoundError('Property', propertyId);
     }
 
+    const beforeValue = {
+      reviewStatus: property.reviewStatus,
+      verified: property.verified,
+      lastReviewNote: property.lastReviewNote,
+      lastReviewedAt: property.lastReviewedAt,
+      lastReviewerWallet: property.lastReviewerWallet,
+    };
+
     let reviewStatus: PropertyReviewStatus;
     let verified: boolean;
 
@@ -238,6 +247,24 @@ export class OperationalPropertyController {
     if (!updated) {
       throw new NotFoundError('Property', propertyId);
     }
+
+    const afterValue = {
+      reviewStatus: updated.reviewStatus,
+      verified: updated.verified,
+      lastReviewNote: updated.lastReviewNote,
+      lastReviewedAt: updated.lastReviewedAt,
+      lastReviewerWallet: updated.lastReviewerWallet,
+    };
+
+    await auditService.logAction({
+      actor: actorWallet,
+      action: `property.${action}`,
+      entityType: 'property',
+      entityId: propertyId,
+      beforeValue: beforeValue as unknown as Record<string, unknown>,
+      afterValue: afterValue as unknown as Record<string, unknown>,
+      metadata: note?.trim() ? { note: note.trim() } : null,
+    });
 
     return OperationalPropertyController.getPropertyDetail(propertyId);
   }

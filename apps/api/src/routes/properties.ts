@@ -8,6 +8,7 @@ import {
   paginationQuerySchema,
   ownerParamSchema,
   rateLimit,
+  walletKeyGenerator,
   authPlugin,
 } from '../middleware';
 import { PropertyController } from '../controllers/PropertyController';
@@ -94,7 +95,7 @@ const createPropertyRoute = new Elysia()
         return errorResponse;
       }
     },
-    { beforeHandle: [rateLimit()] },
+    { beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })] },
   );
 
 // PUT /properties/:id - update property
@@ -158,7 +159,7 @@ const tokenizePropertyRoute = new Elysia()
         return errorResponse;
       }
     },
-    { beforeHandle: [rateLimit()] },
+    { beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })] },
   );
 
 // POST /properties/:id/buy-shares - buy property shares
@@ -189,7 +190,7 @@ const buySharesRoute = new Elysia()
         return errorResponse;
       }
     },
-    { beforeHandle: [rateLimit()] },
+    { beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })] },
   );
 
 // GET /properties/:id/shares/:owner - get user shares

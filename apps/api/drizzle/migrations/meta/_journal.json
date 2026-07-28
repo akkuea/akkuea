@@ -43,6 +43,13 @@
       "when": 1777449700000,
       "tag": "0005_expand_valuation_confidence",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777449700001,
+      "tag": "0006_add_audit_log",
+      "breakpoints": true
     }
   ]
 }

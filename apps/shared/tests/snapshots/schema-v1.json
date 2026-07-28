@@ -1,0 +1,87 @@
+{
+  "version": "1.0.0",
+  "schemas": {
+    "PropertyInfo": {
+      "type": "ZodObject",
+      "isOptional": false,
+      "properties": {
+        "id": { "type": "ZodString", "isOptional": false },
+        "name": { "type": "ZodString", "isOptional": false },
+        "description": { "type": "ZodString", "isOptional": false },
+        "propertyType": { "type": "ZodEnum", "isOptional": false },
+        "location": {
+          "type": "ZodObject",
+          "isOptional": false,
+          "properties": {
+            "address": { "type": "ZodString", "isOptional": false },
+            "city": { "type": "ZodString", "isOptional": false },
+            "country": { "type": "ZodString", "isOptional": false },
+            "postalCode": { "type": "ZodString", "isOptional": true },
+            "coordinates": {
+              "type": "ZodObject",
+              "isOptional": true,
+              "properties": {
+                "latitude": { "type": "ZodNumber", "isOptional": false },
+                "longitude": { "type": "ZodNumber", "isOptional": false }
+              }
+            }
+          }
+        },
+        "totalValue": { "type": "ZodString", "isOptional": false },
+        "tokenAddress": { "type": "ZodString", "isOptional": true },
+        "totalShares": { "type": "ZodNumber", "isOptional": false },
+        "availableShares": { "type": "ZodNumber", "isOptional": false },
+        "pricePerShare": { "type": "ZodString", "isOptional": false },
+        "expectedYield": { "type": "ZodNumber", "isOptional": true },
+        "images": {
+          "type": "ZodArray",
+          "isOptional": false,
+          "element": { "type": "ZodString", "isOptional": false }
+        },
+        "splatUrl": { "type": "ZodString", "isOptional": true },
+        "documents": {
+          "type": "ZodArray",
+          "isOptional": false,
+          "element": {
+            "type": "ZodObject",
+            "isOptional": false,
+            "properties": {
+              "id": { "type": "ZodString", "isOptional": false },
+              "type": { "type": "ZodEnum", "isOptional": false },
+              "name": { "type": "ZodString", "isOptional": false },
+              "url": { "type": "ZodString", "isOptional": false },
+              "uploadedAt": { "type": "ZodString", "isOptional": false },
+              "verified": { "type": "ZodBoolean", "isOptional": false }
+            }
+          }
+        },
+        "verified": { "type": "ZodBoolean", "isOptional": false },
+        "listedAt": { "type": "ZodString", "isOptional": false },
+        "owner": { "type": "ZodString", "isOptional": false }
+      }
+    },
+    "LendingPool": {
+      "type": "ZodObject",
+      "isOptional": false,
+      "properties": {
+        "id": { "type": "ZodString", "isOptional": false },
+        "name": { "type": "ZodString", "isOptional": false },
+        "asset": { "type": "ZodString", "isOptional": false },
+        "assetAddress": { "type": "ZodString", "isOptional": false },
+        "totalDeposits": { "type": "ZodString", "isOptional": false },
+        "totalBorrows": { "type": "ZodString", "isOptional": false },
+        "availableLiquidity": { "type": "ZodString", "isOptional": false },
+        "utilizationRate": { "type": "ZodNumber", "isOptional": false },
+        "supplyAPY": { "type": "ZodNumber", "isOptional": false },
+        "borrowAPY": { "type": "ZodNumber", "isOptional": false },
+        "collateralFactor": { "type": "ZodNumber", "isOptional": false },
+        "liquidationThreshold": { "type": "ZodNumber", "isOptional": false },
+        "liquidationPenalty": { "type": "ZodNumber", "isOptional": false },
+        "reserveFactor": { "type": "ZodNumber", "isOptional": false },
+        "isActive": { "type": "ZodBoolean", "isOptional": false },
+        "isPaused": { "type": "ZodBoolean", "isOptional": false },
+        "createdAt": { "type": "ZodString", "isOptional": false }
+      }
+    }
+  }
+}

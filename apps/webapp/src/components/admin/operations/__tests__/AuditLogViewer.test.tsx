@@ -23,7 +23,7 @@ describe("AuditLogViewer", () => {
             pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
           }),
       })
-    ) as jest.Mock;
+    ) as unknown as typeof fetch;
 
     render(<AuditLogViewer operatorWallet="0x123" isWalletConnected={true} />);
     
@@ -52,7 +52,7 @@ describe("AuditLogViewer", () => {
             pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
           }),
       })
-    ) as jest.Mock;
+    ) as unknown as typeof fetch;
 
     render(<AuditLogViewer operatorWallet="0x123" isWalletConnected={true} />);
     
@@ -63,7 +63,7 @@ describe("AuditLogViewer", () => {
   });
 
   it("displays error message if fetch fails", async () => {
-    global.fetch = jest.fn(() => Promise.reject(new Error("Network Error")));
+    global.fetch = jest.fn(() => Promise.reject(new Error("Network Error"))) as unknown as typeof fetch;
 
     render(<AuditLogViewer operatorWallet="0x123" isWalletConnected={true} />);
     
@@ -83,7 +83,7 @@ describe("AuditLogViewer", () => {
             pagination: { page: 1, limit: 20, total: 40, totalPages: 2 },
           }),
       })
-    ) as jest.Mock;
+    ) as unknown as typeof fetch;
 
     render(<AuditLogViewer operatorWallet="0x123" isWalletConnected={true} />);
 

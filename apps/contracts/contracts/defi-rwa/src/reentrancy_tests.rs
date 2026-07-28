@@ -23,15 +23,14 @@
 //!    successful borrow/repay, all storage values (positions, pool
 //!    totals, balances) are internally consistent.
 
-use super::access::{AdminControl, PauseControl};
 use super::lending::PriceOracle;
 use super::*;
 
 use sep_40_oracle::{Asset, PriceData};
 use soroban_sdk::{
     contract, contractimpl,
-    testutils::{Address as _, Ledger as _},
-    token::{StellarAssetClient, TokenClient},
+    testutils::Address as _,
+    token::StellarAssetClient,
     Address, Env, String, Symbol,
 };
 
@@ -87,7 +86,6 @@ struct ReentrancyTestEnv<'a> {
     env: Env,
     contract_id: Address,
     client: PropertyTokenContractClient<'a>,
-    admin: Address,
     borrower: Address,
     pool_id: String,
     usdc_address: Address,
@@ -165,7 +163,6 @@ fn setup_reentrancy_env() -> ReentrancyTestEnv<'static> {
         env,
         contract_id,
         client,
-        admin,
         borrower,
         pool_id,
         usdc_address: usdc_contract.address().clone(),

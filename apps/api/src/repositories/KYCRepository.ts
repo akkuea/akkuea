@@ -120,9 +120,7 @@ export class KYCRepository {
           lte(users.kycExpiresAt, now),
         ),
       );
-    return results.filter(
-      (r): r is { id: string; kycExpiresAt: Date } => r.kycExpiresAt !== null,
-    );
+    return results.filter((r): r is { id: string; kycExpiresAt: Date } => r.kycExpiresAt !== null);
   }
 
   /**
@@ -143,9 +141,7 @@ export class KYCRepository {
           lte(users.kycExpiresAt, cutoff),
         ),
       );
-    return results.filter(
-      (r): r is { id: string; kycExpiresAt: Date } => r.kycExpiresAt !== null,
-    );
+    return results.filter((r): r is { id: string; kycExpiresAt: Date } => r.kycExpiresAt !== null);
   }
 }
 

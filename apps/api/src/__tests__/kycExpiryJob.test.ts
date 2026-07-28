@@ -126,24 +126,21 @@ describe('KycExpiryJob', () => {
   // ── About-to-expire reminders ─────────────────────────────────────────────
 
   describe('about-to-expire reminders', () => {
-    it(
-      'sends a reminder for a user whose KYC expires within the default 30-day window',
-      async () => {
-        const userId = 'user-expiring-soon';
-        const expiresAt = daysFromNow(15);
+    it('sends a reminder for a user whose KYC expires within the default 30-day window', async () => {
+      const userId = 'user-expiring-soon';
+      const expiresAt = daysFromNow(15);
 
-        mockFindUsersExpiringWithin.mockImplementation(async () => [
-          { id: userId, kycExpiresAt: expiresAt },
-        ]);
+      mockFindUsersExpiringWithin.mockImplementation(async () => [
+        { id: userId, kycExpiresAt: expiresAt },
+      ]);
 
-        const job = createJob();
-        const result = await job.tick();
+      const job = createJob();
+      const result = await job.tick();
 
-        expect(result.reminded).toBe(1);
-        expect(mockNotifyKycExpiringSoon).toHaveBeenCalledTimes(1);
-        expect(mockNotifyKycExpiringSoon).toHaveBeenCalledWith(userId, expiresAt, 'IN_APP');
-      },
-    );
+      expect(result.reminded).toBe(1);
+      expect(mockNotifyKycExpiringSoon).toHaveBeenCalledTimes(1);
+      expect(mockNotifyKycExpiringSoon).toHaveBeenCalledWith(userId, expiresAt, 'IN_APP');
+    });
 
     it('sends reminders to multiple users expiring soon', async () => {
       mockFindUsersExpiringWithin.mockImplementation(async () => [

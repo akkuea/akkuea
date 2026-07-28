@@ -12,7 +12,7 @@ import { kycRepository } from '../repositories/KYCRepository';
 import type { NotificationService } from '../services/NotificationService';
 import type { Notification } from '../db/schema';
 
-// ── Date helpers ─────────────────────────────────────────────────────────────
+// ── Date helpers ──────────────────────────────────────────────────────────────
 
 function daysFromNow(days: number): Date {
   const d = new Date();
@@ -26,18 +26,28 @@ function daysAgo(days: number): Date {
 
 // ── Mock repository methods ───────────────────────────────────────────────────
 
-const mockUpdateUserKycStatus = mock(async (_id: string, _status: string, _exp?: Date | null) => {});
-const mockFindExpiredApprovedUsers = mock(async (): Promise<{ id: string; kycExpiresAt: Date }[]> => []);
-const mockFindUsersExpiringWithin = mock(async (_ms: number): Promise<{ id: string; kycExpiresAt: Date }[]> => []);
+type ExpiryRow = { id: string; kycExpiresAt: Date };
+
+const mockUpdateUserKycStatus = mock(
+  async (_id: string, _status: string, _exp?: Date | null) => {},
+);
+const mockFindExpiredApprovedUsers = mock(async (): Promise<ExpiryRow[]> => []);
+const mockFindUsersExpiringWithin = mock(async (_ms: number): Promise<ExpiryRow[]> => []);
 
 kycRepository.findExpiredApprovedUsers = mockFindExpiredApprovedUsers;
 kycRepository.findUsersExpiringWithin = mockFindUsersExpiringWithin;
-kycRepository.updateUserKycStatus = mockUpdateUserKycStatus as typeof kycRepository.updateUserKycStatus;
+kycRepository.updateUserKycStatus =
+  mockUpdateUserKycStatus as typeof kycRepository.updateUserKycStatus;
 
 // ── Mock NotificationService ──────────────────────────────────────────────────
 
-const mockNotifyKycExpired = mock(async (_userId: string, _channel?: string): Promise<Notification> => ({}) as Notification);
-const mockNotifyKycExpiringSoon = mock(async (_userId: string, _exp: Date, _channel?: string): Promise<Notification> => ({}) as Notification);
+const mockNotifyKycExpired = mock(
+  async (_userId: string, _channel?: string): Promise<Notification> => ({}) as Notification,
+);
+const mockNotifyKycExpiringSoon = mock(
+  async (_userId: string, _exp: Date, _channel?: string): Promise<Notification> =>
+    ({}) as Notification,
+);
 
 const mockNotificationService = {
   notifyKycExpired: mockNotifyKycExpired,
@@ -68,7 +78,7 @@ describe('KycExpiryJob', () => {
     mockFindUsersExpiringWithin.mockImplementation(async () => []);
   });
 
-  // ── Already-expired records ────────────────────────────────────────────────
+  // ── Already-expired records ───────────────────────────────────────────────
 
   describe('already expired KYC records', () => {
     it('marks a user as expired when kycExpiresAt is in the past', async () => {
@@ -113,24 +123,27 @@ describe('KycExpiryJob', () => {
     });
   });
 
-  // ── About-to-expire reminders ──────────────────────────────────────────────
+  // ── About-to-expire reminders ─────────────────────────────────────────────
 
   describe('about-to-expire reminders', () => {
-    it('sends a reminder for a user whose KYC expires within the default 30-day window', async () => {
-      const userId = 'user-expiring-soon';
-      const expiresAt = daysFromNow(15);
+    it(
+      'sends a reminder for a user whose KYC expires within the default 30-day window',
+      async () => {
+        const userId = 'user-expiring-soon';
+        const expiresAt = daysFromNow(15);
 
-      mockFindUsersExpiringWithin.mockImplementation(async () => [
-        { id: userId, kycExpiresAt: expiresAt },
-      ]);
+        mockFindUsersExpiringWithin.mockImplementation(async () => [
+          { id: userId, kycExpiresAt: expiresAt },
+        ]);
 
-      const job = createJob();
-      const result = await job.tick();
+        const job = createJob();
+        const result = await job.tick();
 
-      expect(result.reminded).toBe(1);
-      expect(mockNotifyKycExpiringSoon).toHaveBeenCalledTimes(1);
-      expect(mockNotifyKycExpiringSoon).toHaveBeenCalledWith(userId, expiresAt, 'IN_APP');
-    });
+        expect(result.reminded).toBe(1);
+        expect(mockNotifyKycExpiringSoon).toHaveBeenCalledTimes(1);
+        expect(mockNotifyKycExpiringSoon).toHaveBeenCalledWith(userId, expiresAt, 'IN_APP');
+      },
+    );
 
     it('sends reminders to multiple users expiring soon', async () => {
       mockFindUsersExpiringWithin.mockImplementation(async () => [
@@ -167,7 +180,7 @@ describe('KycExpiryJob', () => {
     });
   });
 
-  // ── Combined in one tick ───────────────────────────────────────────────────
+  // ── Combined in one tick ──────────────────────────────────────────────────
 
   describe('combined: expired + reminders in same tick', () => {
     it('handles both expired records and reminder candidates simultaneously', async () => {
@@ -189,7 +202,7 @@ describe('KycExpiryJob', () => {
     });
   });
 
-  // ── Lifecycle ──────────────────────────────────────────────────────────────
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   describe('start() / stop() lifecycle', () => {
     it('starts and can be stopped cleanly', async () => {
@@ -215,7 +228,7 @@ describe('KycExpiryJob', () => {
     });
   });
 
-  // ── Error resilience ───────────────────────────────────────────────────────
+  // ── Error resilience ──────────────────────────────────────────────────────
 
   describe('error handling', () => {
     it('continues processing remaining users even if one throws', async () => {

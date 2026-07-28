@@ -52,6 +52,30 @@ describe('Risk Monitoring API', () => {
     const data = await response.json();
     expect(Array.isArray(data)).toBe(true);
   });
+
+  describe('GET /internal/risk/positions/:positionId/history', () => {
+    test('Get collateral ratio history for position', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/internal/risk/positions/pos-1/history'),
+      );
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    test('Filter collateral ratio history by startDate and endDate', async () => {
+      const response = await app.handle(
+        new Request(
+          'http://localhost/internal/risk/positions/pos-1/history?startDate=2026-01-01T00:00:00Z&endDate=2026-07-28T00:00:00Z',
+        ),
+      );
+
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(Array.isArray(data)).toBe(true);
+    });
+  });
 });
 
 describe('Liquidation endpoint auth', () => {

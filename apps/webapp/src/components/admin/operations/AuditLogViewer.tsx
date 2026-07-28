@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { RefreshCw, Search } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 import { cn, truncateAddress } from "@/lib/utils";
-import { pageTransition, staggerContainer, staggerItem } from "@/lib/animations";
+import { pageTransition } from "@/lib/animations";
 
 export interface AuditLogEntry {
   id: string;

@@ -2,19 +2,10 @@ import type { PropertyInfo, ValuationRecord } from "@real-estate-defi/shared";
 import type { PaginatedResponse } from "./types";
 
 export type OperationsQueue =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "hold"
-  | "changes"
-  | "all";
+  "pending" | "approved" | "rejected" | "hold" | "changes" | "all";
 
 export type PropertyReviewStatus =
-  | "pending_review"
-  | "approved"
-  | "rejected"
-  | "changes_requested"
-  | "on_hold";
+  "pending_review" | "approved" | "rejected" | "changes_requested" | "on_hold";
 
 export type ReviewAction = "approve" | "reject" | "request_changes" | "hold";
 

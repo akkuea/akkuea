@@ -7,12 +7,7 @@ import { fadeInUp, hoverScale } from "@/lib/animations";
 
 interface CardProps extends Omit<HTMLMotionProps<"div">, "ref"> {
   variant?:
-    | "default"
-    | "elevated"
-    | "bordered"
-    | "accent"
-    | "gradient"
-    | "glow";
+    "default" | "elevated" | "bordered" | "accent" | "gradient" | "glow";
   hoverable?: boolean;
   noPadding?: boolean;
 }

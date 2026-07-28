@@ -18,12 +18,12 @@ export const idempotency = new Elysia({ name: 'idempotency' })
     });
     
     if (existing) {
-      (store as any).servedFromCache = true;
+      (store as { servedFromCache?: boolean }).servedFromCache = true;
       return existing.response;
     }
   })
   .onAfterHandle(async ({ idempotencyKey, response, store }) => {
-    if (!idempotencyKey || !response || (store as any).servedFromCache) return;
+    if (!idempotencyKey || !response || (store as { servedFromCache?: boolean }).servedFromCache) return;
     
     // Save to db (TTL: 24 hours)
     const TTL_MS = 24 * 60 * 60 * 1000;

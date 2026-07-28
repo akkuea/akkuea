@@ -19,7 +19,7 @@ describe('Idempotency Middleware', () => {
     counter = 0;
     try {
       await db.delete(idempotencyKeys);
-    } catch (e) {
+    } catch {
       // Ignore in case DB isn't fully set up for this test in isolated mode
     }
   });

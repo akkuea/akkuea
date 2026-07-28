@@ -74,24 +74,21 @@ export class KYCRepository {
 
   /**
    * Set user KYC status (not_started | pending | approved | rejected | expired).
-   * Optionally sets or clears the expiry timestamp.
+   * Pass kycExpiresAt to set/clear the expiry timestamp; omit to leave it unchanged.
    */
   async updateUserKycStatus(
     userId: string,
     status: 'not_started' | 'pending' | 'approved' | 'rejected' | 'expired',
     kycExpiresAt?: Date | null,
   ): Promise<void> {
-    if (kycExpiresAt !== undefined) {
-      await db
-        .update(users)
-        .set({ kycStatus: status, kycExpiresAt, updatedAt: new Date() })
-        .where(eq(users.id, userId));
-    } else {
-      await db
-        .update(users)
-        .set({ kycStatus: status, updatedAt: new Date() })
-        .where(eq(users.id, userId));
-    }
+    await db
+      .update(users)
+      .set({
+        kycStatus: status,
+        ...(kycExpiresAt !== undefined ? { kycExpiresAt } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 
   async getUserKycStatus(

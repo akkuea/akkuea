@@ -6,6 +6,7 @@
  */
 
 import { GameProperty, BuildingLevel } from "../types/game.types";
+import { TREASURY_ADDRESS } from "@/lib/soroban-tx";
 
 // ── Seeded PRNG ──────────────────────────────────────────────────────────────
 
@@ -52,7 +53,7 @@ const MOCK_PLAYER_ADDRESSES = [
   "GRST7890UVWX1234YZAB5678CDEF9012GHIJ3456KLMN7890OP56",
 ];
 
-const TREASURY = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";    // treasury/deployer account from game-contracts.testnet.json
+
 
 // ── Building Level Labels ────────────────────────────────────────────────────
 
@@ -103,7 +104,7 @@ export function generateMockGrid(): GameProperty[] {
       if (ownerRoll < 0.6) {
         owner = rng.pick(MOCK_PLAYER_ADDRESSES);
       } else if (ownerRoll < 0.85) {
-        owner = TREASURY;
+        owner = TREASURY_ADDRESS;
       } else {
         owner = "";
       }
@@ -117,12 +118,12 @@ export function generateMockGrid(): GameProperty[] {
       else buildingLevel = 3;
 
       // Unowned/treasury always level 0
-      if (!owner || owner === TREASURY) {
+      if (!owner || owner === TREASURY_ADDRESS) {
         buildingLevel = 0;
       }
 
       // Listing
-      const isPlayerOwned = owner !== "" && owner !== TREASURY;
+      const isPlayerOwned = owner !== "" && owner !== TREASURY_ADDRESS;
       const isListed = isPlayerOwned && rng.next() < 0.2;
       const listPrice = isListed ? rng.int(50, 5000) : undefined;
 
@@ -145,7 +146,7 @@ export function generateMockGrid(): GameProperty[] {
         },
         totalValue: "1000",
         totalShares: 100,
-        availableShares: owner === TREASURY ? 100 : owner === "" ? 100 : 0,
+        availableShares: owner === TREASURY_ADDRESS ? 100 : owner === "" ? 100 : 0,
         pricePerShare: listPrice?.toString() ?? "100",
         images: ["https://images.unsplash.com/photo-placeholder"],
         documents: [],
@@ -185,7 +186,7 @@ export function getGridCoords(propertyId: string): {
  */
 export function abbreviateAddress(address: string): string {
   if (!address) return "Unowned";
-  if (address === TREASURY) return "Treasury";
+  if (address === TREASURY_ADDRESS) return "Treasury";
   if (address.length <= 12) return address;
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
 }

@@ -12,6 +12,7 @@ import {
   Shield,
   HelpCircle,
 } from "lucide-react";
+import { TREASURY_ADDRESS } from "@/lib/soroban-tx";
 import { useGameWallet } from "../hooks/useGameWallet";
 
 // Mock coordinates and details
@@ -37,7 +38,7 @@ const mockPropertiesList: GameProperty[] = [
     documents: [],
     verified: true,
     listedAt: "2026-05-27T00:00:00Z",
-    owner: "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M",    // treasury/deployer account
+    owner: TREASURY_ADDRESS,
     buildingLevel: 0,
     improveCost: 100,
     earnedIncome: 0,
@@ -63,7 +64,7 @@ const mockPropertiesList: GameProperty[] = [
     documents: [],
     verified: true,
     listedAt: "2026-05-27T00:00:00Z",
-    owner: "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M",    // treasury/deployer account
+    owner: TREASURY_ADDRESS,
     buildingLevel: 1,
     improveCost: 150,
     earnedIncome: 750,
@@ -89,7 +90,7 @@ const mockPropertiesList: GameProperty[] = [
     documents: [],
     verified: true,
     listedAt: "2026-05-27T00:00:00Z",
-    owner: "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M",    // treasury/deployer account
+    owner: TREASURY_ADDRESS,
     buildingLevel: 2,
     improveCost: 400,
     earnedIncome: 0,
@@ -121,7 +122,7 @@ export default function SandboxPage() {
       return "border-slate-800 hover:border-slate-700 bg-slate-900/40";
     if (p.owner === address)
       return "border-emerald-500/40 hover:border-emerald-400 bg-emerald-950/20";
-    if (p.owner === "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M")    // treasury
+    if (    p.owner === TREASURY_ADDRESS)
       return "border-amber-500/40 hover:border-amber-400 bg-amber-950/20";
     return "border-purple-500/40 hover:border-purple-400 bg-purple-950/20";
   };
@@ -131,7 +132,7 @@ export default function SandboxPage() {
       return <span className="text-slate-500">Not Connected</span>;
     if (p.owner === address)
       return <span className="text-emerald-400">Owned by You</span>;
-    if (p.owner === "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M")    // treasury
+    if (    p.owner === TREASURY_ADDRESS)
       return <span className="text-amber-400">Treasury</span>;
     return <span className="text-purple-400">Listed (Other)</span>;
   };

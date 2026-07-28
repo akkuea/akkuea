@@ -1,4 +1,4 @@
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, lte, gte, isNotNull } from 'drizzle-orm';
 import { db } from '../db';
 import { kycDocuments, users, type KycDocument, type NewKycDocument } from '../db/schema/users';
 
@@ -74,15 +74,24 @@ export class KYCRepository {
 
   /**
    * Set user KYC status (not_started | pending | approved | rejected | expired).
+   * Optionally sets or clears the expiry timestamp.
    */
   async updateUserKycStatus(
     userId: string,
     status: 'not_started' | 'pending' | 'approved' | 'rejected' | 'expired',
+    kycExpiresAt?: Date | null,
   ): Promise<void> {
-    await db
-      .update(users)
-      .set({ kycStatus: status, updatedAt: new Date() })
-      .where(eq(users.id, userId));
+    if (kycExpiresAt !== undefined) {
+      await db
+        .update(users)
+        .set({ kycStatus: status, kycExpiresAt, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+    } else {
+      await db
+        .update(users)
+        .set({ kycStatus: status, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+    }
   }
 
   async getUserKycStatus(
@@ -94,6 +103,49 @@ export class KYCRepository {
       .where(eq(users.id, userId))
       .limit(1);
     return results[0]?.kycStatus;
+  }
+
+  /**
+   * Find users whose approved KYC has already expired (kycExpiresAt <= now).
+   */
+  async findExpiredApprovedUsers(): Promise<{ id: string; kycExpiresAt: Date }[]> {
+    const now = new Date();
+    const results = await db
+      .select({ id: users.id, kycExpiresAt: users.kycExpiresAt })
+      .from(users)
+      .where(
+        and(
+          eq(users.kycStatus, 'approved'),
+          isNotNull(users.kycExpiresAt),
+          lte(users.kycExpiresAt, now),
+        ),
+      );
+    return results.filter(
+      (r): r is { id: string; kycExpiresAt: Date } => r.kycExpiresAt !== null,
+    );
+  }
+
+  /**
+   * Find users whose approved KYC will expire within the given window (for reminder notifications).
+   * Returns users where now <= kycExpiresAt <= now + windowMs.
+   */
+  async findUsersExpiringWithin(windowMs: number): Promise<{ id: string; kycExpiresAt: Date }[]> {
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + windowMs);
+    const results = await db
+      .select({ id: users.id, kycExpiresAt: users.kycExpiresAt })
+      .from(users)
+      .where(
+        and(
+          eq(users.kycStatus, 'approved'),
+          isNotNull(users.kycExpiresAt),
+          gte(users.kycExpiresAt, now),
+          lte(users.kycExpiresAt, cutoff),
+        ),
+      );
+    return results.filter(
+      (r): r is { id: string; kycExpiresAt: Date } => r.kycExpiresAt !== null,
+    );
   }
 }
 

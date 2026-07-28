@@ -50,6 +50,13 @@
       "when": 1777449700001,
       "tag": "0006_add_audit_log",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1753714873000,
+      "tag": "0007_add_kyc_expiry",
+      "breakpoints": true
     }
   ]
 }

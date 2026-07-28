@@ -15,6 +15,8 @@ export const notificationEventTypeEnum = pgEnum('notification_event_type', [
   'SYSTEM_ALERT',
   'INVESTMENT_OPPORTUNITY',
   'PORTFOLIO_UPDATE',
+  'KYC_EXPIRY_REMINDER',
+  'KYC_EXPIRED',
 ]);
 
 export const notificationChannelEnum = pgEnum('notification_channel', ['IN_APP', 'EMAIL', 'SMS']);

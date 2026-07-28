@@ -586,7 +586,11 @@ export class PropertyController {
       const buyer = await userRepository.getOrCreateByWallet(data.buyer);
 
       if (buyer.kycStatus !== 'approved') {
-        throw new AuthorizationError('KYC verification must be approved before purchasing shares');
+        const msg =
+          buyer.kycStatus === 'expired'
+            ? 'Your KYC verification has expired. Please re-verify before purchasing shares.'
+            : 'KYC verification must be approved before purchasing shares';
+        throw new AuthorizationError(msg);
       }
       const pricePerShareBig = parseDecimalStringToBigInt(property.pricePerShare, 2);
       const totalPurchasePriceBig = pricePerShareBig * BigInt(data.shares);

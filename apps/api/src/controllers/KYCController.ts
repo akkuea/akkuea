@@ -60,7 +60,8 @@ function toKycDocumentForResponse(doc: {
 
 export class KYCController {
   static async getKYCStatus(userId: string): Promise<{
-    status: 'pending' | 'verified' | 'rejected';
+    status: 'pending' | 'verified' | 'rejected' | 'expired';
+    kycExpiresAt?: string;
     documents: (KycDocument & { documentUrl: string })[];
   }> {
     try {
@@ -72,17 +73,19 @@ export class KYCController {
       const dbStatus = await kycRepository.getUserKycStatus(userId);
       const docs = await kycRepository.findByUserId(userId);
 
+      // Surface 'expired' distinctly so clients can show a re-verification prompt
       const statusMap = {
         not_started: 'pending' as const,
         pending: 'pending' as const,
         approved: 'verified' as const,
         rejected: 'rejected' as const,
-        expired: 'rejected' as const,
+        expired: 'expired' as const,
       };
       const status = dbStatus ? statusMap[dbStatus] : 'pending';
 
       const documents = docs.map((d) => toKycDocumentForResponse(d));
-      return { status, documents };
+      const kycExpiresAt = user.kycExpiresAt ? user.kycExpiresAt.toISOString() : undefined;
+      return { status, kycExpiresAt, documents };
     } catch (e) {
       if (e instanceof ApiError) throw e;
       throw ApiError.internal(e instanceof Error ? e.message : 'Failed to fetch KYC status');
@@ -226,7 +229,10 @@ export class KYCController {
       } else if (allApproved) {
         userBeforeStatus = 'pending';
         userAfterStatus = 'approved';
-        await kycRepository.updateUserKycStatus(doc.userId, 'approved');
+        // KYC approval is valid for 1 year from today
+        const expiresAt = new Date();
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        await kycRepository.updateUserKycStatus(doc.userId, 'approved', expiresAt);
         // Send verification approved notification
         await notificationService.notifyVerificationApproved(doc.userId, 'IN_APP');
       }

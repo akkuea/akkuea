@@ -39,11 +39,11 @@ WEBAPP_BASE_URL=https://app.akkuea.com \
   ./scripts/smoke/run-smoke-tests.sh
 ```
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `API_BASE_URL` | `http://localhost:3001` | Base URL of the API under test |
-| `WEBAPP_BASE_URL` | _(unset = skip)_ | If set, also `GET /` on the webapp |
-| `SMOKE_TIMEOUT_SECS` | `10` | curl connect/max time per request |
+| Variable             | Default                 | Purpose                            |
+| -------------------- | ----------------------- | ---------------------------------- |
+| `API_BASE_URL`       | `http://localhost:3001` | Base URL of the API under test     |
+| `WEBAPP_BASE_URL`    | _(unset = skip)_        | If set, also `GET /` on the webapp |
+| `SMOKE_TIMEOUT_SECS` | `10`                    | curl connect/max time per request  |
 
 ## What it checks
 

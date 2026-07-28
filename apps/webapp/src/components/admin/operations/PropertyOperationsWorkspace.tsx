@@ -69,7 +69,9 @@ export function PropertyOperationsWorkspace({
   operatorWallet,
   isWalletConnected,
 }: PropertyOperationsWorkspaceProps) {
-  const [activeTab, setActiveTab] = useState<"properties" | "audit">("properties");
+  const [activeTab, setActiveTab] = useState<"properties" | "audit">(
+    "properties",
+  );
   const [queue, setQueue] = useState<OperationsQueue>("pending");
 
   const selectQueue = (next: OperationsQueue) => {
@@ -214,7 +216,9 @@ export function PropertyOperationsWorkspace({
                 onClick={() => setActiveTab("properties")}
                 className={cn(
                   "text-2xl font-semibold tracking-tight md:text-3xl transition-colors",
-                  activeTab === "properties" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                  activeTab === "properties"
+                    ? "text-white"
+                    : "text-zinc-500 hover:text-zinc-300",
                 )}
               >
                 Property verification
@@ -223,7 +227,9 @@ export function PropertyOperationsWorkspace({
                 onClick={() => setActiveTab("audit")}
                 className={cn(
                   "text-2xl font-semibold tracking-tight md:text-3xl transition-colors",
-                  activeTab === "audit" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+                  activeTab === "audit"
+                    ? "text-white"
+                    : "text-zinc-500 hover:text-zinc-300",
                 )}
               >
                 Audit log
@@ -294,281 +300,294 @@ export function PropertyOperationsWorkspace({
             animate="visible"
             className="grid gap-8 lg:grid-cols-5"
           >
-          <motion.section variants={staggerItem} className="lg:col-span-2">
-            <Card className="overflow-hidden border-zinc-800 bg-zinc-950/80 p-0">
-              <div className="flex flex-wrap gap-1 border-b border-zinc-800 p-2">
-                {QUEUE_TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => selectQueue(tab.id)}
-                    className={cn(
-                      "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                      queue === tab.id
-                        ? "bg-zinc-100 text-zinc-900"
-                        : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200",
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-              <div className="max-h-[560px] overflow-y-auto">
-                {listLoading && (
-                  <p className="p-6 text-sm text-zinc-500">Loading queue…</p>
-                )}
-                {listError && !listLoading && (
-                  <p className="p-6 text-sm text-red-300">{listError}</p>
-                )}
-                {!listLoading && !listError && items.length === 0 && (
-                  <p className="p-6 text-sm text-zinc-500">
-                    No properties in this queue.
-                  </p>
-                )}
-                {!listLoading &&
-                  !listError &&
-                  items.map((row) => (
+            <motion.section variants={staggerItem} className="lg:col-span-2">
+              <Card className="overflow-hidden border-zinc-800 bg-zinc-950/80 p-0">
+                <div className="flex flex-wrap gap-1 border-b border-zinc-800 p-2">
+                  {QUEUE_TABS.map((tab) => (
                     <button
-                      key={row.id}
+                      key={tab.id}
                       type="button"
-                      onClick={() => setSelectedId(row.id)}
+                      onClick={() => selectQueue(tab.id)}
                       className={cn(
-                        "flex w-full flex-col gap-2 border-b border-zinc-800/80 px-4 py-3 text-left transition-colors hover:bg-zinc-900/80",
-                        selectedId === row.id && "bg-zinc-900",
+                        "rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                        queue === tab.id
+                          ? "bg-zinc-100 text-zinc-900"
+                          : "text-zinc-500 hover:bg-zinc-900 hover:text-zinc-200",
                       )}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="font-medium text-zinc-100">
-                          {row.name}
-                        </span>
-                        <Badge
-                          variant={statusBadgeVariant(row.reviewStatus)}
-                          className="shrink-0"
-                        >
-                          {formatStatusLabel(row.reviewStatus)}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-zinc-500">
-                        {row.city}, {row.country} · Owner{" "}
-                        {truncateAddress(row.ownerWallet)}
-                      </p>
-                      <div className="flex flex-wrap gap-2 text-[11px] text-zinc-500">
-                        <span>KYC: {row.ownerKycStatus}</span>
-                        <span>·</span>
-                        <span>Valuation: {row.valuationState}</span>
-                        <span>·</span>
-                        <span>Docs: {row.documentCount}</span>
-                      </div>
+                      {tab.label}
                     </button>
                   ))}
-              </div>
-            </Card>
-          </motion.section>
-
-          <motion.section variants={staggerItem} className="lg:col-span-3">
-            {!selectedId && (
-              <Card className="flex min-h-[320px] flex-col items-center justify-center border-dashed border-zinc-700 bg-zinc-950/40 p-8 text-center">
-                <Building2 className="mb-3 h-10 w-10 text-zinc-600" />
-                <p className="text-sm text-zinc-500">
-                  Select a property from the queue to see audit context,
-                  documents, and actions.
-                </p>
-              </Card>
-            )}
-            {selectedId && detailLoading && (
-              <p className="text-sm text-zinc-500">Loading property detail…</p>
-            )}
-            {selectedId && detailError && !detailLoading && (
-              <Card className="border-red-500/30 bg-red-500/5 p-6 text-sm text-red-200">
-                {detailError}
-              </Card>
-            )}
-            {detail && !detailLoading && (
-              <div className="space-y-4">
-                <Card className="border-zinc-800 bg-zinc-950/80 p-6">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <h2 className="text-xl font-semibold text-white">
-                        {detail.name}
-                      </h2>
-                      <p className="mt-1 text-sm text-zinc-500">
-                        {detail.location.city}, {detail.location.country} ·
-                        Listed {new Date(detail.listedAt).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <Badge variant={detail.verified ? "success" : "warning"}>
-                        {detail.verified
-                          ? "Verified (marketplace)"
-                          : "Not verified"}
-                      </Badge>
-                      <Badge variant={statusBadgeVariant(detail.reviewStatus)}>
-                        {formatStatusLabel(detail.reviewStatus)}
-                      </Badge>
-                    </div>
-                  </div>
-                  <p className="mt-4 text-sm leading-relaxed text-zinc-400">
-                    {detail.description}
-                  </p>
-                  <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
-                    <div>
-                      <dt className="text-zinc-500">Total value</dt>
-                      <dd className="font-medium text-zinc-100">
-                        {formatCurrency(parseFloat(detail.totalValue))}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-zinc-500">Price / share</dt>
-                      <dd className="font-medium text-zinc-100">
-                        {formatCurrency(parseFloat(detail.pricePerShare))}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-zinc-500">Owner wallet</dt>
-                      <dd className="font-mono text-xs text-zinc-300">
-                        {detail.owner}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-zinc-500">Token</dt>
-                      <dd className="font-mono text-xs text-zinc-300">
-                        {detail.tokenAddress ?? "Not tokenized"}
-                      </dd>
-                    </div>
-                  </dl>
-                </Card>
-
-                <Card className="border-zinc-800 bg-zinc-950/80 p-6">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
-                    <ClipboardList className="h-4 w-4 text-amber-500" />
-                    Readiness &amp; audit context
-                  </h3>
-                  <ul className="mt-4 space-y-2 text-sm text-zinc-400">
-                    <li>
-                      <span className="text-zinc-500">Owner KYC: </span>
-                      {detail.ownerKycStatus} ({detail.ownerKycTier})
-                    </li>
-                    <li>
-                      <span className="text-zinc-500">Valuation: </span>
-                      {detail.valuation.state}
-                      {detail.valuation.record?.price != null && (
-                        <span className="text-zinc-500">
-                          {" "}
-                          - {formatCurrency(detail.valuation.record.price)}{" "}
-                          {detail.valuation.record.currency}
-                        </span>
-                      )}
-                    </li>
-                    {readinessSummary && (
-                      <li>
-                        <span className="text-zinc-500">Documents: </span>
-                        {readinessSummary.verifiedDocs}/
-                        {readinessSummary.docsTotal} verified on file
-                      </li>
-                    )}
-                    <li>
-                      <span className="text-zinc-500">Last reviewer: </span>
-                      {detail.audit.lastActorWallet
-                        ? truncateAddress(detail.audit.lastActorWallet)
-                        : "-"}
-                      {detail.audit.lastActionAt && (
-                        <span className="text-zinc-600">
-                          {" "}
-                          ·{" "}
-                          {new Date(detail.audit.lastActionAt).toLocaleString()}
-                        </span>
-                      )}
-                    </li>
-                    {detail.audit.lastNote && (
-                      <li>
-                        <span className="text-zinc-500">Last note: </span>
-                        {detail.audit.lastNote}
-                      </li>
-                    )}
-                  </ul>
-                </Card>
-
-                <Card className="border-zinc-800 bg-zinc-950/80 p-6">
-                  <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
-                    <FileText className="h-4 w-4 text-amber-500" />
-                    Documents
-                  </h3>
-                  <ul className="mt-4 divide-y divide-zinc-800">
-                    {(detail.documents ?? []).length === 0 && (
-                      <li className="py-2 text-sm text-zinc-500">
-                        No documents uploaded.
-                      </li>
-                    )}
-                    {(detail.documents ?? []).map((doc) => (
-                      <li
-                        key={doc.id}
-                        className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
+                </div>
+                <div className="max-h-[560px] overflow-y-auto">
+                  {listLoading && (
+                    <p className="p-6 text-sm text-zinc-500">Loading queue…</p>
+                  )}
+                  {listError && !listLoading && (
+                    <p className="p-6 text-sm text-red-300">{listError}</p>
+                  )}
+                  {!listLoading && !listError && items.length === 0 && (
+                    <p className="p-6 text-sm text-zinc-500">
+                      No properties in this queue.
+                    </p>
+                  )}
+                  {!listLoading &&
+                    !listError &&
+                    items.map((row) => (
+                      <button
+                        key={row.id}
+                        type="button"
+                        onClick={() => setSelectedId(row.id)}
+                        className={cn(
+                          "flex w-full flex-col gap-2 border-b border-zinc-800/80 px-4 py-3 text-left transition-colors hover:bg-zinc-900/80",
+                          selectedId === row.id && "bg-zinc-900",
+                        )}
                       >
-                        <span className="text-zinc-200">{doc.name}</span>
-                        <span className="text-xs text-zinc-500">
-                          {doc.type}
-                        </span>
-                        <Badge variant={doc.verified ? "success" : "warning"}>
-                          {doc.verified ? "Verified" : "Pending"}
-                        </Badge>
-                      </li>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-medium text-zinc-100">
+                            {row.name}
+                          </span>
+                          <Badge
+                            variant={statusBadgeVariant(row.reviewStatus)}
+                            className="shrink-0"
+                          >
+                            {formatStatusLabel(row.reviewStatus)}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-zinc-500">
+                          {row.city}, {row.country} · Owner{" "}
+                          {truncateAddress(row.ownerWallet)}
+                        </p>
+                        <div className="flex flex-wrap gap-2 text-[11px] text-zinc-500">
+                          <span>KYC: {row.ownerKycStatus}</span>
+                          <span>·</span>
+                          <span>Valuation: {row.valuationState}</span>
+                          <span>·</span>
+                          <span>Docs: {row.documentCount}</span>
+                        </div>
+                      </button>
                     ))}
-                  </ul>
-                </Card>
+                </div>
+              </Card>
+            </motion.section>
 
-                <Card className="border-zinc-800 bg-zinc-950/80 p-6">
-                  <h3 className="text-sm font-semibold text-zinc-200">
-                    Operational note
-                  </h3>
-                  <textarea
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    rows={3}
-                    placeholder="Optional context recorded with the next action (audit trail)."
-                    className="mt-3 w-full rounded-xl border border-zinc-800 bg-black/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-amber-500/50 focus:outline-none"
-                  />
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    <Button
-                      variant="accent"
-                      size="sm"
-                      disabled={!operatorWallet || submitting}
-                      onClick={() => setConfirmAction("approve")}
-                    >
-                      Approve
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={!operatorWallet || submitting}
-                      onClick={() => setConfirmAction("request_changes")}
-                    >
-                      Request changes
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={!operatorWallet || submitting}
-                      onClick={() => setConfirmAction("hold")}
-                    >
-                      Hold
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-300 hover:text-red-200"
-                      disabled={!operatorWallet || submitting}
-                      onClick={() => setConfirmAction("reject")}
-                    >
-                      Reject
-                    </Button>
-                  </div>
+            <motion.section variants={staggerItem} className="lg:col-span-3">
+              {!selectedId && (
+                <Card className="flex min-h-[320px] flex-col items-center justify-center border-dashed border-zinc-700 bg-zinc-950/40 p-8 text-center">
+                  <Building2 className="mb-3 h-10 w-10 text-zinc-600" />
+                  <p className="text-sm text-zinc-500">
+                    Select a property from the queue to see audit context,
+                    documents, and actions.
+                  </p>
                 </Card>
-              </div>
-            )}
-          </motion.section>
-        </motion.div>
+              )}
+              {selectedId && detailLoading && (
+                <p className="text-sm text-zinc-500">
+                  Loading property detail…
+                </p>
+              )}
+              {selectedId && detailError && !detailLoading && (
+                <Card className="border-red-500/30 bg-red-500/5 p-6 text-sm text-red-200">
+                  {detailError}
+                </Card>
+              )}
+              {detail && !detailLoading && (
+                <div className="space-y-4">
+                  <Card className="border-zinc-800 bg-zinc-950/80 p-6">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div>
+                        <h2 className="text-xl font-semibold text-white">
+                          {detail.name}
+                        </h2>
+                        <p className="mt-1 text-sm text-zinc-500">
+                          {detail.location.city}, {detail.location.country} ·
+                          Listed {new Date(detail.listedAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge
+                          variant={detail.verified ? "success" : "warning"}
+                        >
+                          {detail.verified
+                            ? "Verified (marketplace)"
+                            : "Not verified"}
+                        </Badge>
+                        <Badge
+                          variant={statusBadgeVariant(detail.reviewStatus)}
+                        >
+                          {formatStatusLabel(detail.reviewStatus)}
+                        </Badge>
+                      </div>
+                    </div>
+                    <p className="mt-4 text-sm leading-relaxed text-zinc-400">
+                      {detail.description}
+                    </p>
+                    <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt className="text-zinc-500">Total value</dt>
+                        <dd className="font-medium text-zinc-100">
+                          {formatCurrency(parseFloat(detail.totalValue))}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-zinc-500">Price / share</dt>
+                        <dd className="font-medium text-zinc-100">
+                          {formatCurrency(parseFloat(detail.pricePerShare))}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-zinc-500">Owner wallet</dt>
+                        <dd className="font-mono text-xs text-zinc-300">
+                          {detail.owner}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-zinc-500">Token</dt>
+                        <dd className="font-mono text-xs text-zinc-300">
+                          {detail.tokenAddress ?? "Not tokenized"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </Card>
+
+                  <Card className="border-zinc-800 bg-zinc-950/80 p-6">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+                      <ClipboardList className="h-4 w-4 text-amber-500" />
+                      Readiness &amp; audit context
+                    </h3>
+                    <ul className="mt-4 space-y-2 text-sm text-zinc-400">
+                      <li>
+                        <span className="text-zinc-500">Owner KYC: </span>
+                        {detail.ownerKycStatus} ({detail.ownerKycTier})
+                      </li>
+                      <li>
+                        <span className="text-zinc-500">Valuation: </span>
+                        {detail.valuation.state}
+                        {detail.valuation.record?.price != null && (
+                          <span className="text-zinc-500">
+                            {" "}
+                            - {formatCurrency(
+                              detail.valuation.record.price,
+                            )}{" "}
+                            {detail.valuation.record.currency}
+                          </span>
+                        )}
+                      </li>
+                      {readinessSummary && (
+                        <li>
+                          <span className="text-zinc-500">Documents: </span>
+                          {readinessSummary.verifiedDocs}/
+                          {readinessSummary.docsTotal} verified on file
+                        </li>
+                      )}
+                      <li>
+                        <span className="text-zinc-500">Last reviewer: </span>
+                        {detail.audit.lastActorWallet
+                          ? truncateAddress(detail.audit.lastActorWallet)
+                          : "-"}
+                        {detail.audit.lastActionAt && (
+                          <span className="text-zinc-600">
+                            {" "}
+                            ·{" "}
+                            {new Date(
+                              detail.audit.lastActionAt,
+                            ).toLocaleString()}
+                          </span>
+                        )}
+                      </li>
+                      {detail.audit.lastNote && (
+                        <li>
+                          <span className="text-zinc-500">Last note: </span>
+                          {detail.audit.lastNote}
+                        </li>
+                      )}
+                    </ul>
+                  </Card>
+
+                  <Card className="border-zinc-800 bg-zinc-950/80 p-6">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+                      <FileText className="h-4 w-4 text-amber-500" />
+                      Documents
+                    </h3>
+                    <ul className="mt-4 divide-y divide-zinc-800">
+                      {(detail.documents ?? []).length === 0 && (
+                        <li className="py-2 text-sm text-zinc-500">
+                          No documents uploaded.
+                        </li>
+                      )}
+                      {(detail.documents ?? []).map((doc) => (
+                        <li
+                          key={doc.id}
+                          className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm"
+                        >
+                          <span className="text-zinc-200">{doc.name}</span>
+                          <span className="text-xs text-zinc-500">
+                            {doc.type}
+                          </span>
+                          <Badge variant={doc.verified ? "success" : "warning"}>
+                            {doc.verified ? "Verified" : "Pending"}
+                          </Badge>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+
+                  <Card className="border-zinc-800 bg-zinc-950/80 p-6">
+                    <h3 className="text-sm font-semibold text-zinc-200">
+                      Operational note
+                    </h3>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      rows={3}
+                      placeholder="Optional context recorded with the next action (audit trail)."
+                      className="mt-3 w-full rounded-xl border border-zinc-800 bg-black/60 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-amber-500/50 focus:outline-none"
+                    />
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        variant="accent"
+                        size="sm"
+                        disabled={!operatorWallet || submitting}
+                        onClick={() => setConfirmAction("approve")}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={!operatorWallet || submitting}
+                        onClick={() => setConfirmAction("request_changes")}
+                      >
+                        Request changes
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={!operatorWallet || submitting}
+                        onClick={() => setConfirmAction("hold")}
+                      >
+                        Hold
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-300 hover:text-red-200"
+                        disabled={!operatorWallet || submitting}
+                        onClick={() => setConfirmAction("reject")}
+                      >
+                        Reject
+                      </Button>
+                    </div>
+                  </Card>
+                </div>
+              )}
+            </motion.section>
+          </motion.div>
         ) : (
-          <AuditLogViewer operatorWallet={operatorWallet} isWalletConnected={isWalletConnected} />
+          <AuditLogViewer
+            operatorWallet={operatorWallet}
+            isWalletConnected={isWalletConnected}
+          />
         )}
       </main>
 

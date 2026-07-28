@@ -19,6 +19,7 @@
 ## Base URL & Authentication
 
 **Base URL:**
+
 ```
 http://localhost:3001  (Development)
 https://api.akkuea.com (Production)
@@ -29,6 +30,7 @@ https://api.akkuea.com (Production)
 **Authentication Type:** Bearer Token (JWT)
 
 **Swagger Documentation:**
+
 ```
 http://localhost:3001/swagger
 ```
@@ -49,6 +51,7 @@ The Akkuea API uses Stellar wallet authentication with JWT tokens. Users authent
 ### Stellar Address Format
 
 Stellar addresses are 56 characters long and start with `G`:
+
 ```
 Example: GBRPYHIL2CI4XKBOUFMHX7RHVNUJXCJPKV3DKZRGYGD5YPFPBX7BNLE
 ```
@@ -81,17 +84,18 @@ All errors return a JSON response with the following structure:
 
 ### Common Error Codes
 
-| Code | Status | Description |
-|------|--------|-------------|
-| `UNAUTHORIZED` | 401 | Missing, invalid, or expired JWT token |
-| `FORBIDDEN` | 403 | User lacks required permissions |
-| `BAD_REQUEST` | 400 | Invalid request parameters or body |
-| `NOT_FOUND` | 404 | Resource not found |
-| `INTERNAL_ERROR` | 500 | Server-side error |
+| Code             | Status | Description                            |
+| ---------------- | ------ | -------------------------------------- |
+| `UNAUTHORIZED`   | 401    | Missing, invalid, or expired JWT token |
+| `FORBIDDEN`      | 403    | User lacks required permissions        |
+| `BAD_REQUEST`    | 400    | Invalid request parameters or body     |
+| `NOT_FOUND`      | 404    | Resource not found                     |
+| `INTERNAL_ERROR` | 500    | Server-side error                      |
 
 ### Common Error Scenarios
 
 **Missing Authentication Token:**
+
 ```json
 {
   "success": false,
@@ -103,6 +107,7 @@ All errors return a JSON response with the following structure:
 ```
 
 **Invalid Parameters:**
+
 ```json
 {
   "success": false,
@@ -114,6 +119,7 @@ All errors return a JSON response with the following structure:
 ```
 
 **Resource Not Found:**
+
 ```json
 {
   "success": false,
@@ -137,6 +143,7 @@ Request a nonce to sign for authentication.
 **Authentication:** None (public)
 
 **Request Body:**
+
 ```json
 {
   "stellarAddress": "GBRPYHIL2CI4XKBOUFMHX7RHVNUJXCJPKV3DKZRGYGD5YPFPBX7BNLE"
@@ -144,6 +151,7 @@ Request a nonce to sign for authentication.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -153,6 +161,7 @@ Request a nonce to sign for authentication.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/auth/challenge \
   -H "Content-Type: application/json" \
@@ -170,6 +179,7 @@ Exchange signed challenge for JWT token.
 **Authentication:** None (public)
 
 **Request Body:**
+
 ```json
 {
   "stellarAddress": "GBRPYHIL2CI4XKBOUFMHX7RHVNUJXCJPKV3DKZRGYGD5YPFPBX7BNLE",
@@ -178,6 +188,7 @@ Exchange signed challenge for JWT token.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -188,6 +199,7 @@ Exchange signed challenge for JWT token.
 ```
 
 **Error Response (401):**
+
 ```json
 {
   "success": false,
@@ -199,6 +211,7 @@ Exchange signed challenge for JWT token.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/auth/session \
   -H "Content-Type: application/json" \
@@ -207,7 +220,6 @@ curl -X POST https://api.akkuea.com/auth/session \
     "signature": "your_signed_challenge"
   }'
 ```
-
 
 ---
 
@@ -222,18 +234,20 @@ Retrieve paginated list of properties with optional filters.
 **Authentication:** None (public)
 
 **Query Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `limit` | number | Results per page (default: 10) |
-| `offset` | number | Pagination offset (default: 0) |
-| `propertyType` | string | Filter: residential, commercial, industrial, land, mixed |
-| `country` | string | Filter by country |
-| `minPrice` | number | Minimum property value |
-| `maxPrice` | number | Maximum property value |
-| `verified` | boolean | Filter by verification status |
-| `owner` | string | Filter by owner's Stellar address |
+
+| Parameter      | Type    | Description                                              |
+| -------------- | ------- | -------------------------------------------------------- |
+| `limit`        | number  | Results per page (default: 10)                           |
+| `offset`       | number  | Pagination offset (default: 0)                           |
+| `propertyType` | string  | Filter: residential, commercial, industrial, land, mixed |
+| `country`      | string  | Filter by country                                        |
+| `minPrice`     | number  | Minimum property value                                   |
+| `maxPrice`     | number  | Maximum property value                                   |
+| `verified`     | boolean | Filter by verification status                            |
+| `owner`        | string  | Filter by owner's Stellar address                        |
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -270,6 +284,7 @@ Retrieve paginated list of properties with optional filters.
 ```
 
 **cURL Example:**
+
 ```bash
 curl "https://api.akkuea.com/properties?propertyType=residential&country=USA&limit=10&offset=0"
 ```
@@ -283,11 +298,13 @@ Retrieve details of a specific property.
 **Authentication:** None (public)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string (UUID) | Property ID |
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| `id`      | string (UUID) | Property ID |
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -306,7 +323,10 @@ Retrieve details of a specific property.
     "totalShares": 1000,
     "pricePerShare": "5000.00",
     "availableShares": 750,
-    "images": ["https://example.com/image1.jpg", "https://example.com/image2.jpg"],
+    "images": [
+      "https://example.com/image1.jpg",
+      "https://example.com/image2.jpg"
+    ],
     "owner": "GBRPYHIL2CI4XKBOUFMHX7RHVNUJXCJPKV3DKZRGYGD5YPFPBX7BNLE",
     "verified": true,
     "createdAt": "2026-01-15T08:00:00.000Z",
@@ -316,6 +336,7 @@ Retrieve details of a specific property.
 ```
 
 **cURL Example:**
+
 ```bash
 curl https://api.akkuea.com/properties/550e8400-e29b-41d4-a716-446655440000
 ```
@@ -329,6 +350,7 @@ Create a new tokenized property listing.
 **Authentication:** Required (Bearer token)
 
 **Request Body:**
+
 ```json
 {
   "name": "Downtown Apartment Complex",
@@ -348,6 +370,7 @@ Create a new tokenized property listing.
 ```
 
 **Success Response (201):**
+
 ```json
 {
   "success": true,
@@ -365,6 +388,7 @@ Create a new tokenized property listing.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/properties \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -395,11 +419,13 @@ Purchase shares of a tokenized property.
 **Authentication:** Required (Bearer token)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string (UUID) | Property ID |
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| `id`      | string (UUID) | Property ID |
 
 **Request Body:**
+
 ```json
 {
   "buyer": "GBRPYHIL2CI4XKBOUFMHX7RHVNUJXCJPKV3DKZRGYGD5YPFPBX7BNLE",
@@ -408,6 +434,7 @@ Purchase shares of a tokenized property.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -425,6 +452,7 @@ Purchase shares of a tokenized property.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/properties/550e8400-e29b-41d4-a716-446655440000/buy-shares \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -444,12 +472,14 @@ Check how many shares a user owns in a property.
 **Authentication:** None (public)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string (UUID) | Property ID |
-| `owner` | string | Owner's Stellar address |
+
+| Parameter | Type          | Description             |
+| --------- | ------------- | ----------------------- |
+| `id`      | string (UUID) | Property ID             |
+| `owner`   | string        | Owner's Stellar address |
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -463,10 +493,10 @@ Check how many shares a user owns in a property.
 ```
 
 **cURL Example:**
+
 ```bash
 curl https://api.akkuea.com/properties/550e8400-e29b-41d4-a716-446655440000/shares/GBRPYHIL2CI4XKBOUFMHX7RHVNUJXCJPKV3DKZRGYGD5YPFPBX7BNLE
 ```
-
 
 ---
 
@@ -481,14 +511,16 @@ Retrieve available lending pools with optional filters.
 **Authentication:** None (public)
 
 **Query Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `limit` | number | Results per page (default: 10) |
-| `offset` | number | Pagination offset (default: 0) |
-| `asset` | string | Filter by asset symbol |
-| `isActive` | boolean | Filter by active status |
+
+| Parameter  | Type    | Description                    |
+| ---------- | ------- | ------------------------------ |
+| `limit`    | number  | Results per page (default: 10) |
+| `offset`   | number  | Pagination offset (default: 0) |
+| `asset`    | string  | Filter by asset symbol         |
+| `isActive` | boolean | Filter by active status        |
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -520,6 +552,7 @@ Retrieve available lending pools with optional filters.
 ```
 
 **cURL Example:**
+
 ```bash
 curl "https://api.akkuea.com/lending/pools?asset=USDC&isActive=true"
 ```
@@ -533,11 +566,13 @@ Retrieve details of a specific lending pool.
 **Authentication:** None (public)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string (UUID) | Pool ID |
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| `id`      | string (UUID) | Pool ID     |
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -557,6 +592,7 @@ Retrieve details of a specific lending pool.
 ```
 
 **cURL Example:**
+
 ```bash
 curl https://api.akkuea.com/lending/pools/770e8400-e29b-41d4-a716-446655440002
 ```
@@ -570,11 +606,13 @@ Deposit funds into a lending pool to earn interest.
 **Authentication:** Required (Bearer token)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string (UUID) | Pool ID |
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| `id`      | string (UUID) | Pool ID     |
 
 **Request Body:**
+
 ```json
 {
   "amount": "10000.50"
@@ -582,6 +620,7 @@ Deposit funds into a lending pool to earn interest.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -599,6 +638,7 @@ Deposit funds into a lending pool to earn interest.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/lending/pools/770e8400-e29b-41d4-a716-446655440002/deposit \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -617,11 +657,13 @@ Withdraw deposited funds from a lending pool.
 **Authentication:** Required (Bearer token)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string (UUID) | Pool ID |
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| `id`      | string (UUID) | Pool ID     |
 
 **Request Body:**
+
 ```json
 {
   "amount": "5000.00"
@@ -629,6 +671,7 @@ Withdraw deposited funds from a lending pool.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -645,6 +688,7 @@ Withdraw deposited funds from a lending pool.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/lending/pools/770e8400-e29b-41d4-a716-446655440002/withdraw \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -663,11 +707,13 @@ Borrow funds against collateral.
 **Authentication:** Required (Bearer token)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string (UUID) | Pool ID |
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| `id`      | string (UUID) | Pool ID     |
 
 **Request Body:**
+
 ```json
 {
   "borrowAmount": "50000.00",
@@ -677,6 +723,7 @@ Borrow funds against collateral.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -695,6 +742,7 @@ Borrow funds against collateral.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/lending/pools/770e8400-e29b-41d4-a716-446655440002/borrow \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -715,11 +763,13 @@ Repay borrowed funds.
 **Authentication:** Required (Bearer token)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string (UUID) | Pool ID |
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| `id`      | string (UUID) | Pool ID     |
 
 **Request Body:**
+
 ```json
 {
   "amount": "50000.00"
@@ -727,6 +777,7 @@ Repay borrowed funds.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -744,6 +795,7 @@ Repay borrowed funds.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/lending/pools/770e8400-e29b-41d4-a716-446655440002/repay \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -752,7 +804,6 @@ curl -X POST https://api.akkuea.com/lending/pools/770e8400-e29b-41d4-a716-446655
     "amount": "50000.00"
   }'
 ```
-
 
 ---
 
@@ -767,11 +818,13 @@ Retrieve the KYC verification status for a user.
 **Authentication:** Required (Bearer token, must be own user)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `userId` | string (UUID) | User ID |
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| `userId`  | string (UUID) | User ID     |
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -795,6 +848,7 @@ Retrieve the KYC verification status for a user.
 ```
 
 **Error Response (403):**
+
 ```json
 {
   "success": false,
@@ -806,6 +860,7 @@ Retrieve the KYC verification status for a user.
 ```
 
 **cURL Example:**
+
 ```bash
 curl https://api.akkuea.com/kyc/status/cc0e8400-e29b-41d4-a716-446655440007 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -820,19 +875,22 @@ Upload a document for KYC verification.
 **Authentication:** Required (Bearer token)
 
 **Request Headers:**
+
 ```
 Content-Type: multipart/form-data
 Authorization: Bearer YOUR_JWT_TOKEN
 ```
 
 **Form Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `userId` | string (UUID) | User ID |
-| `documentType` | string | Type: passport, id_card, proof_of_address, national_id, drivers_license, bank_statement, tax_document, other |
-| `file` | file | Document file (PDF, JPG, PNG) |
+
+| Parameter      | Type          | Description                                                                                                  |
+| -------------- | ------------- | ------------------------------------------------------------------------------------------------------------ |
+| `userId`       | string (UUID) | User ID                                                                                                      |
+| `documentType` | string        | Type: passport, id_card, proof_of_address, national_id, drivers_license, bank_statement, tax_document, other |
+| `file`         | file          | Document file (PDF, JPG, PNG)                                                                                |
 
 **Success Response (200):**
+
 ```json
 {
   "documentId": "ee0e8400-e29b-41d4-a716-446655440009",
@@ -841,6 +899,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 ```
 
 **Error Response (400):**
+
 ```json
 {
   "success": false,
@@ -852,6 +911,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/kyc/upload \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -869,11 +929,13 @@ Retrieve all uploaded KYC documents for a user.
 **Authentication:** Required (Bearer token, must be own user)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `userId` | string (UUID) | User ID |
+
+| Parameter | Type          | Description |
+| --------- | ------------- | ----------- |
+| `userId`  | string (UUID) | User ID     |
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -902,6 +964,7 @@ Retrieve all uploaded KYC documents for a user.
 ```
 
 **cURL Example:**
+
 ```bash
 curl https://api.akkuea.com/kyc/documents/cc0e8400-e29b-41d4-a716-446655440007 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -916,11 +979,13 @@ Retrieve an uploaded KYC document file.
 **Authentication:** None (public, document is served inline)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
+
+| Parameter    | Type          | Description |
+| ------------ | ------------- | ----------- |
 | `documentId` | string (UUID) | Document ID |
 
 **Success Response (200):**
+
 ```
 Content-Type: application/pdf
 Content-Disposition: inline; filename="passport.pdf"
@@ -929,6 +994,7 @@ Content-Disposition: inline; filename="passport.pdf"
 ```
 
 **cURL Example:**
+
 ```bash
 curl https://api.akkuea.com/kyc/file/dd0e8400-e29b-41d4-a716-446655440008 \
   -o downloaded_passport.pdf
@@ -947,12 +1013,14 @@ Retrieve paginated list of user notifications.
 **Authentication:** Required (Bearer token)
 
 **Query Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `limit` | number | Results per page (default: 20) |
-| `offset` | number | Pagination offset (default: 0) |
+
+| Parameter | Type   | Description                    |
+| --------- | ------ | ------------------------------ |
+| `limit`   | number | Results per page (default: 20) |
+| `offset`  | number | Pagination offset (default: 0) |
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -996,6 +1064,7 @@ Retrieve paginated list of user notifications.
 ```
 
 **cURL Example:**
+
 ```bash
 curl "https://api.akkuea.com/notifications?limit=20&offset=0" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -1010,6 +1079,7 @@ Get the count of unread notifications.
 **Authentication:** Required (Bearer token)
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -1018,6 +1088,7 @@ Get the count of unread notifications.
 ```
 
 **cURL Example:**
+
 ```bash
 curl https://api.akkuea.com/notifications/unread-count \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -1032,11 +1103,13 @@ Mark a single notification as read.
 **Authentication:** Required (Bearer token)
 
 **URL Parameters:**
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `id` | string (UUID) | Notification ID |
+
+| Parameter | Type          | Description     |
+| --------- | ------------- | --------------- |
+| `id`      | string (UUID) | Notification ID |
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -1049,6 +1122,7 @@ Mark a single notification as read.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X PATCH https://api.akkuea.com/notifications/gg0e8400-e29b-41d4-a716-446655440011/read \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
@@ -1063,6 +1137,7 @@ Mark multiple notifications as read in a single request.
 **Authentication:** Required (Bearer token)
 
 **Request Body:**
+
 ```json
 {
   "notificationIds": [
@@ -1074,6 +1149,7 @@ Mark multiple notifications as read in a single request.
 ```
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -1082,6 +1158,7 @@ Mark multiple notifications as read in a single request.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/notifications/read-multiple \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
@@ -1103,6 +1180,7 @@ Mark all user notifications as read.
 **Authentication:** Required (Bearer token)
 
 **Success Response (200):**
+
 ```json
 {
   "success": true,
@@ -1111,11 +1189,11 @@ Mark all user notifications as read.
 ```
 
 **cURL Example:**
+
 ```bash
 curl -X POST https://api.akkuea.com/notifications/read-all \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
-
 
 ---
 
@@ -1150,20 +1228,21 @@ All error responses follow this structure:
 
 ### HTTP Status Codes
 
-| Code | Meaning | Example |
-|------|---------|---------|
-| 200 | OK | Successful GET, PATCH, or POST/PUT with successful operation |
-| 201 | Created | Resource created successfully |
-| 400 | Bad Request | Invalid parameters, missing required fields |
-| 401 | Unauthorized | Missing, invalid, or expired JWT token |
-| 403 | Forbidden | User lacks required permissions |
-| 404 | Not Found | Resource doesn't exist |
-| 429 | Too Many Requests | Rate limit exceeded |
-| 500 | Internal Server Error | Server-side error |
+| Code | Meaning               | Example                                                      |
+| ---- | --------------------- | ------------------------------------------------------------ |
+| 200  | OK                    | Successful GET, PATCH, or POST/PUT with successful operation |
+| 201  | Created               | Resource created successfully                                |
+| 400  | Bad Request           | Invalid parameters, missing required fields                  |
+| 401  | Unauthorized          | Missing, invalid, or expired JWT token                       |
+| 403  | Forbidden             | User lacks required permissions                              |
+| 404  | Not Found             | Resource doesn't exist                                       |
+| 429  | Too Many Requests     | Rate limit exceeded                                          |
+| 500  | Internal Server Error | Server-side error                                            |
 
 ### Common Validation Errors
 
 **Invalid UUID Format:**
+
 ```json
 {
   "success": false,
@@ -1175,6 +1254,7 @@ All error responses follow this structure:
 ```
 
 **Invalid Stellar Address:**
+
 ```json
 {
   "success": false,
@@ -1186,6 +1266,7 @@ All error responses follow this structure:
 ```
 
 **Insufficient Funds:**
+
 ```json
 {
   "success": false,
@@ -1199,6 +1280,7 @@ All error responses follow this structure:
 ### Example: Complete Auth Flow
 
 **Step 1: Get Challenge**
+
 ```bash
 curl -X POST https://api.akkuea.com/auth/challenge \
   -H "Content-Type: application/json" \
@@ -1208,6 +1290,7 @@ curl -X POST https://api.akkuea.com/auth/challenge \
 ```
 
 Response:
+
 ```json
 {
   "success": true,
@@ -1219,6 +1302,7 @@ Response:
 **Step 2: Sign Challenge** (done in wallet)
 
 **Step 3: Verify Session**
+
 ```bash
 curl -X POST https://api.akkuea.com/auth/session \
   -H "Content-Type: application/json" \
@@ -1229,6 +1313,7 @@ curl -X POST https://api.akkuea.com/auth/session \
 ```
 
 Response:
+
 ```json
 {
   "success": true,
@@ -1239,6 +1324,7 @@ Response:
 ```
 
 **Step 4: Use Token in Requests**
+
 ```bash
 curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   https://api.akkuea.com/properties
@@ -1311,6 +1397,7 @@ curl https://api.akkuea.com/health
 ```
 
 Response:
+
 ```json
 {
   "status": "healthy",
@@ -1367,16 +1454,19 @@ Response:
 ### Testing Endpoints
 
 **Health Check:**
+
 ```bash
 curl https://api.akkuea.com/health
 ```
 
 **List Properties (No Auth):**
+
 ```bash
 curl https://api.akkuea.com/properties?limit=5
 ```
 
 **Create Property (Requires Auth):**
+
 ```bash
 curl -X POST https://api.akkuea.com/properties \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -1400,6 +1490,7 @@ curl -X POST https://api.akkuea.com/properties \
 ### Version 1.0.0 (2026-06-01)
 
 **Features:**
+
 - Authentication via Stellar wallet
 - Property tokenization and share trading
 - Lending pool management
@@ -1408,7 +1499,7 @@ curl -X POST https://api.akkuea.com/properties \
 - Rate limiting per user
 
 **Fixes:**
+
 - Improved error messages
 - Better validation
 - Optimized database queries
-

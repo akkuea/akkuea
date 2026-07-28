@@ -53,9 +53,7 @@ The API uses wallet-based authentication:
 ```json
 {
   "success": true,
-  "data": {
-    /* Response data */
-  },
+  "data": {/* Response data */},
   "timestamp": "2026-01-06T10:30:00.000Z"
 }
 ```

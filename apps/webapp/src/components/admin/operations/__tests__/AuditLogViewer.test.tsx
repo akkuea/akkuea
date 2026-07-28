@@ -9,7 +9,9 @@ describe("AuditLogViewer", () => {
 
   it("displays prompt when wallet is not connected", () => {
     render(<AuditLogViewer operatorWallet={null} isWalletConnected={false} />);
-    expect(screen.queryByText(/Connect an authorized wallet to view audit logs/i)).not.toBeNull();
+    expect(
+      screen.queryByText(/Connect an authorized wallet to view audit logs/i),
+    ).not.toBeNull();
   });
 
   it("displays loading state and then no logs initially when connected", async () => {
@@ -22,11 +24,11 @@ describe("AuditLogViewer", () => {
             data: [],
             pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
           }),
-      })
+      }),
     ) as unknown as typeof fetch;
 
     render(<AuditLogViewer operatorWallet="0x123" isWalletConnected={true} />);
-    
+
     await waitFor(() => {
       expect(screen.queryByText(/No audit logs found/i)).not.toBeNull();
     });
@@ -51,11 +53,11 @@ describe("AuditLogViewer", () => {
             data: mockLogs,
             pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
           }),
-      })
+      }),
     ) as unknown as typeof fetch;
 
     render(<AuditLogViewer operatorWallet="0x123" isWalletConnected={true} />);
-    
+
     await waitFor(() => {
       expect(screen.queryByText("LOGIN")).not.toBeNull();
       // It should truncate the address but it's okay to just query part of the content
@@ -63,10 +65,12 @@ describe("AuditLogViewer", () => {
   });
 
   it("displays error message if fetch fails", async () => {
-    global.fetch = jest.fn(() => Promise.reject(new Error("Network Error"))) as unknown as typeof fetch;
+    global.fetch = jest.fn(() =>
+      Promise.reject(new Error("Network Error")),
+    ) as unknown as typeof fetch;
 
     render(<AuditLogViewer operatorWallet="0x123" isWalletConnected={true} />);
-    
+
     await waitFor(() => {
       expect(screen.queryByText(/Network Error/i)).not.toBeNull();
     });
@@ -82,7 +86,7 @@ describe("AuditLogViewer", () => {
             data: [],
             pagination: { page: 1, limit: 20, total: 40, totalPages: 2 },
           }),
-      })
+      }),
     ) as unknown as typeof fetch;
 
     render(<AuditLogViewer operatorWallet="0x123" isWalletConnected={true} />);

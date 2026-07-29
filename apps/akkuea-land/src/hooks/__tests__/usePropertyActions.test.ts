@@ -12,8 +12,8 @@ import { describe, it, expect, vi, beforeEach, mock } from "bun:test";
 
 // ── Shared mock data ─────────────────────────────────────────────────────────
 
-const VIEWER = "GDVIEWER1234567890123456789012345678901234567890123456";
-const TREASURY = "GBTREASURY";
+const VIEWER = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+const TREASURY = "GABC1234EFGH5678IJKL9012MNOP3456QRST7890UVWX1234YZ56";
 const MOCK_UNSIGNED_XDR = "AAAA_UNSIGNED_XDR_BASE64==";
 const MOCK_SIGNED_XDR = "AAAA_SIGNED_XDR_BASE64==";
 const MOCK_TX_HASH =
@@ -26,11 +26,13 @@ vi.mock("@/lib/soroban-tx", () => ({
   buildBuyFromTreasuryXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   buildBuyFromPlayerXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   buildImprovePropertyXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
+  buildApproveMarketplaceXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   buildListForSaleXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   buildClaimIncomeXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   submitSorobanTx: vi.fn().mockResolvedValue(MOCK_TX_HASH),
   waitForSorobanTx: vi.fn().mockResolvedValue("success"),
   NETWORK_PASSPHRASE: "Test SDF Network ; September 2015",
+  TREASURY_ADDRESS: TREASURY,
 }));
 
 // Mock walletKit to return a controllable signTransaction function
@@ -55,6 +57,8 @@ vi.mock("@/lib/walletKit", () => ({
 
 import {
   buildBuyFromTreasuryXdr,
+  buildApproveMarketplaceXdr,
+  buildListForSaleXdr,
   submitSorobanTx,
   waitForSorobanTx,
 } from "@/lib/soroban-tx";
@@ -308,8 +312,9 @@ mock.module("@stellar/stellar-sdk", () => ({
 
 import { usePropertyActions } from "../usePropertyActions";
 
-const VIEWER_ADDRESS = "GDVIEWER1234567890123456789012345678901234567890123456";
-const TREASURY_ADDRESS = "GBTREASURY";
+const VIEWER_ADDRESS =
+  "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+const TREASURY_ADDRESS = "GABC1234EFGH5678IJKL9012MNOP3456QRST7890UVWX1234YZ56";
 const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 const STUB_XDR = MOCK_UNSIGNED_XDR;
 
@@ -665,6 +670,47 @@ describe("usePropertyActions", () => {
       expect(result.current.error).toBeNull();
       expect(result.current.pendingAction).toBeNull();
     });
+
+    it("approves the marketplace as spender before listing (transfer_from prerequisite)", async () => {
+      const onPropertyUpdate = vi.fn();
+      const approveMock = buildApproveMarketplaceXdr as ReturnType<
+        typeof vi.fn
+      >;
+      const listMock = buildListForSaleXdr as ReturnType<typeof vi.fn>;
+
+      const callOrder: string[] = [];
+      approveMock.mockImplementationOnce(async () => {
+        callOrder.push("approve");
+        return MOCK_UNSIGNED_XDR;
+      });
+      listMock.mockImplementationOnce(async () => {
+        callOrder.push("list");
+        return MOCK_UNSIGNED_XDR;
+      });
+
+      const { result } = renderHook(() =>
+        usePropertyActions(
+          baseProperty,
+          onPropertyUpdate,
+          VIEWER_ADDRESS,
+          true,
+        ),
+      );
+
+      await act(async () => {
+        await result.current.listForSale(300);
+      });
+
+      expect(approveMock).toHaveBeenCalledWith(VIEWER_ADDRESS, baseProperty.id);
+      expect(listMock).toHaveBeenCalledWith(
+        VIEWER_ADDRESS,
+        baseProperty.id,
+        300,
+      );
+      // Approval must be signed+submitted before the listing transaction.
+      expect(mockSignTransaction).toHaveBeenCalledTimes(2);
+      expect(callOrder).toEqual(["approve", "list"]);
+    });
   });
 
   describe("TC8 — claimIncome: success path and income boundary", () => {
@@ -731,7 +777,7 @@ describe("usePropertyActions", () => {
     it("maps owner to viewer and flips isListed to false, surfaces exact success message", async () => {
       const listedProperty: GameProperty = {
         ...baseProperty,
-        owner: "GDOTHER12345678901234567890123456789012345678901234567",
+        owner: "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M",
         isListed: true,
         pricePerShare: "200",
       };

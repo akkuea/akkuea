@@ -10,7 +10,8 @@
       "default": "./dist/index.js"
     },
     "./contracts.testnet.json": "./src/contracts.testnet.json",
-    "./contracts.mainnet.json": "./src/contracts.mainnet.json"
+    "./contracts.mainnet.json": "./src/contracts.mainnet.json",
+    "./game-contracts.testnet.json": "./src/contracts/game-contracts.testnet.json"
   },
   "scripts": {
     "build": "tsc",

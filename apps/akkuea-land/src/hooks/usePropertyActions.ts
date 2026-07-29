@@ -5,16 +5,15 @@ import {
   buildBuyFromTreasuryXdr,
   buildBuyFromPlayerXdr,
   buildImprovePropertyXdr,
+  buildApproveMarketplaceXdr,
   buildListForSaleXdr,
   buildClaimIncomeXdr,
   submitSorobanTx,
   waitForSorobanTx,
   NETWORK_PASSPHRASE,
+  TREASURY_ADDRESS,
 } from "@/lib/soroban-tx";
 
-/** Stellar address used as the treasury in the game contract. */
-const TREASURY_ADDRESS =
-  process.env.NEXT_PUBLIC_TREASURY_ADDRESS ?? "GBTREASURY";
 
 export const usePropertyActions = (
   property: GameProperty,
@@ -143,12 +142,20 @@ export const usePropertyActions = (
         isListed: true,
       }),
       async () => {
-        const xdr = await buildListForSaleXdr(
+        // The marketplace escrows the NFT via transfer_from, so it must be
+        // approved as spender before list() will succeed.
+        const approveXdr = await buildApproveMarketplaceXdr(
+          viewerAddress!,
+          property.id,
+        );
+        await signAndSubmit(approveXdr);
+
+        const listXdr = await buildListForSaleXdr(
           viewerAddress!,
           property.id,
           price,
         );
-        await signAndSubmit(xdr);
+        await signAndSubmit(listXdr);
       },
     );
   };

@@ -428,6 +428,42 @@ export class NotificationService {
   }
 
   /**
+   * Notify KYC expiring soon (reminder)
+   */
+  async notifyKycExpiringSoon(
+    userId: string,
+    expiresAt: Date,
+    channel: NotificationChannel = 'IN_APP',
+  ): Promise<Notification> {
+    const dateStr = expiresAt.toLocaleDateString();
+    return this.createNotification({
+      userId,
+      eventType: 'KYC_EXPIRY_REMINDER',
+      title: 'KYC Verification Expiring Soon',
+      message: `Your KYC verification will expire on ${dateStr}. Please re-verify to avoid disruption to your account.`,
+      channel,
+      metadata: { expiresAt: expiresAt.toISOString() },
+    });
+  }
+
+  /**
+   * Notify KYC has expired
+   */
+  async notifyKycExpired(
+    userId: string,
+    channel: NotificationChannel = 'IN_APP',
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId,
+      eventType: 'KYC_EXPIRED',
+      title: 'KYC Verification Expired',
+      message:
+        'Your KYC verification has expired. Please re-submit your documents to regain full platform access.',
+      channel,
+    });
+  }
+
+  /**
    * Notify investment opportunity
    */
   async notifyInvestmentOpportunity(

@@ -10,6 +10,9 @@ use soroban_sdk::{
 pub mod constants;
 pub mod cougr_core;
 
+#[cfg(test)]
+mod additional_tests;
+
 use constants::*;
 use cougr_core::app::{named_system, GameApp, ScheduleStage};
 // Define PropertyState structure for cross-contract communication

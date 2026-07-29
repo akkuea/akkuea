@@ -1,6 +1,7 @@
 import { Elysia } from 'elysia';
 import { cors } from '@elysiajs/cors';
 import { propertyRoutes } from './routes/properties';
+import { marketplaceRoutes } from './routes/marketplace';
 import { lendingRoutes } from './routes/lending';
 import { userRoutes } from './routes/users';
 import { kycRoutes } from './routes/kyc';
@@ -8,6 +9,7 @@ import { webhookRoutes } from './routes/webhooks';
 import { internalOperationsRoutes } from './routes/internalOperations';
 import { notificationDlqRoutes } from './routes/notificationDlq';
 import { authRoutes } from './routes/auth';
+import { adminRoutes } from './routes/admin';
 import { ledgerRoutes } from './routes/ledger';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware';
@@ -22,12 +24,14 @@ const app = new Elysia()
   .use(errorHandler)
   .use(authRoutes)
   .use(propertyRoutes)
+  .use(marketplaceRoutes)
   .use(lendingRoutes)
   .use(userRoutes)
   .use(kycRoutes)
   .use(webhookRoutes)
   .use(internalOperationsRoutes)
   .use(notificationDlqRoutes)
+  .use(adminRoutes)
   .use(ledgerRoutes);
 
 export default app;

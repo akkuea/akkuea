@@ -398,6 +398,50 @@ export async function buildFaucetClaimXdr(
   });
 }
 
+// ── Balance fetching ────────────────────────────────────────────────────────────
+
+/**
+ * Fetch the LAND token balance for a given Stellar address via a Soroban
+ * simulated call to `balance_of` on the LAND token contract.
+ *
+ * Returns the raw balance as a decimal string (7-decimal LAND units, i.e.
+ * stroops). Throws if the simulation fails or no return value is returned.
+ */
+export async function fetchLandBalance(address: string): Promise<string> {
+  const server = getSorobanServer();
+  const contract = new Contract(LAND_TOKEN_CONTRACT_ID);
+
+  const source = await server.getAccount(address);
+
+  const tx = new TransactionBuilder(source, {
+    fee: "100",
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(
+      contract.call("balance_of", nativeToScVal(address, { type: "address" })),
+    )
+    .setTimeout(30)
+    .build();
+
+  const sim = await server.simulateTransaction(tx);
+
+  if (SorobanRpc.Api.isSimulationError(sim)) {
+    throw new Error(`LAND balance check failed: ${sim.error}`);
+  }
+
+  if (SorobanRpc.Api.isSimulationRestore(sim)) {
+    throw new Error(
+      "LAND token contract data expired. Please restore and retry.",
+    );
+  }
+
+  if (!sim.result?.retval) {
+    throw new Error("No return value from balance_of");
+  }
+
+  return sim.result.retval.i128()?.toString() ?? "0";
+}
+
 // ── Transaction submission & polling ─────────────────────────────────────────
 
 export type TxStatus = "pending" | "success" | "failed" | "not_found";

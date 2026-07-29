@@ -5,6 +5,7 @@ import {
   resetWalletKit,
 } from "@/lib/walletKit";
 import {
+  fetchLandBalance,
   submitSorobanTx,
   waitForSorobanTx,
   NETWORK_PASSPHRASE,
@@ -13,19 +14,36 @@ import {
 interface WalletStore {
   isConnected: boolean;
   address: string | null;
+  balance: string | null;
+  error: string | null;
   setIsConnected: (connected: boolean) => void;
   setAddress: (address: string | null) => void;
+  setBalance: (balance: string | null) => void;
+  setError: (error: string | null) => void;
 }
 
 export const useWalletStore = create<WalletStore>((set) => ({
   isConnected: false,
   address: null,
+  balance: null,
+  error: null,
   setIsConnected: (connected) => set({ isConnected: connected }),
   setAddress: (address) => set({ address }),
+  setBalance: (balance) => set({ balance }),
+  setError: (error) => set({ error }),
 }));
 
 export function useGameWallet() {
-  const { isConnected, address, setIsConnected, setAddress } = useWalletStore();
+  const {
+    isConnected,
+    address,
+    balance,
+    error,
+    setIsConnected,
+    setAddress,
+    setBalance,
+    setError,
+  } = useWalletStore();
 
   /**
    * Opens the Stellar wallet picker (Freighter, etc.) and connects the
@@ -43,6 +61,27 @@ export function useGameWallet() {
     resetWalletKit();
     setIsConnected(false);
     setAddress(null);
+    setBalance(null);
+    setError(null);
+  };
+
+  /**
+   * Fetch the LAND token balance for the connected wallet address.
+   * Stores the result in `balance` or sets `error` on failure.
+   */
+  const fetchBalance = async () => {
+    setError(null);
+    if (!address) {
+      setBalance(null);
+      return;
+    }
+    try {
+      const raw = await fetchLandBalance(address);
+      setBalance(raw);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(message);
+    }
   };
 
   /**
@@ -67,8 +106,11 @@ export function useGameWallet() {
   return {
     isConnected,
     address,
+    balance,
+    error,
     login,
     logout,
+    fetchBalance,
     signAndSubmitTx,
   };
 }

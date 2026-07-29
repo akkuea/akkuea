@@ -1,0 +1,216 @@
+{
+  "propertyInfo": {
+    "name": "PropertyInfo",
+    "fields": {
+      "id": {
+        "type": "ZodString",
+        "required": true
+      },
+      "name": {
+        "type": "ZodString",
+        "required": true
+      },
+      "description": {
+        "type": "ZodString",
+        "required": true
+      },
+      "propertyType": {
+        "type": "ZodEnum",
+        "required": true
+      },
+      "location": {
+        "type": "ZodObject",
+        "required": true,
+        "fields": {
+          "address": {
+            "type": "ZodString",
+            "required": true
+          },
+          "city": {
+            "type": "ZodString",
+            "required": true
+          },
+          "country": {
+            "type": "ZodString",
+            "required": true
+          },
+          "postalCode": {
+            "type": "ZodString",
+            "required": false
+          },
+          "coordinates": {
+            "type": "ZodObject",
+            "required": false,
+            "fields": {
+              "latitude": {
+                "type": "ZodNumber",
+                "required": true
+              },
+              "longitude": {
+                "type": "ZodNumber",
+                "required": true
+              }
+            }
+          }
+        }
+      },
+      "totalValue": {
+        "type": "ZodString",
+        "required": true
+      },
+      "tokenAddress": {
+        "type": "ZodString",
+        "required": false
+      },
+      "totalShares": {
+        "type": "ZodNumber",
+        "required": true
+      },
+      "availableShares": {
+        "type": "ZodNumber",
+        "required": true
+      },
+      "pricePerShare": {
+        "type": "ZodString",
+        "required": true
+      },
+      "expectedYield": {
+        "type": "ZodNumber",
+        "required": false
+      },
+      "images": {
+        "type": "ZodArray",
+        "required": true,
+        "element": {
+          "type": "ZodString",
+          "required": true
+        }
+      },
+      "splatUrl": {
+        "type": "ZodString",
+        "required": false
+      },
+      "documents": {
+        "type": "ZodArray",
+        "required": true,
+        "element": {
+          "type": "ZodObject",
+          "required": true,
+          "fields": {
+            "id": {
+              "type": "ZodString",
+              "required": true
+            },
+            "type": {
+              "type": "ZodEnum",
+              "required": true
+            },
+            "name": {
+              "type": "ZodString",
+              "required": true
+            },
+            "url": {
+              "type": "ZodString",
+              "required": true
+            },
+            "uploadedAt": {
+              "type": "ZodString",
+              "required": true
+            },
+            "verified": {
+              "type": "ZodBoolean",
+              "required": true
+            }
+          }
+        }
+      },
+      "verified": {
+        "type": "ZodBoolean",
+        "required": true
+      },
+      "listedAt": {
+        "type": "ZodString",
+        "required": true
+      },
+      "owner": {
+        "type": "ZodString",
+        "required": true
+      }
+    },
+    "capturedAt": "2026-07-29T14:51:10.388Z"
+  },
+  "lendingPool": {
+    "name": "LendingPool",
+    "fields": {
+      "id": {
+        "type": "ZodString",
+        "required": true
+      },
+      "name": {
+        "type": "ZodString",
+        "required": true
+      },
+      "asset": {
+        "type": "ZodString",
+        "required": true
+      },
+      "assetAddress": {
+        "type": "ZodString",
+        "required": true
+      },
+      "totalDeposits": {
+        "type": "ZodString",
+        "required": true
+      },
+      "totalBorrows": {
+        "type": "ZodString",
+        "required": true
+      },
+      "availableLiquidity": {
+        "type": "ZodString",
+        "required": true
+      },
+      "utilizationRate": {
+        "type": "ZodNumber",
+        "required": true
+      },
+      "supplyAPY": {
+        "type": "ZodNumber",
+        "required": true
+      },
+      "borrowAPY": {
+        "type": "ZodNumber",
+        "required": true
+      },
+      "collateralFactor": {
+        "type": "ZodNumber",
+        "required": true
+      },
+      "liquidationThreshold": {
+        "type": "ZodNumber",
+        "required": true
+      },
+      "liquidationPenalty": {
+        "type": "ZodNumber",
+        "required": true
+      },
+      "reserveFactor": {
+        "type": "ZodNumber",
+        "required": true
+      },
+      "isActive": {
+        "type": "ZodBoolean",
+        "required": true
+      },
+      "isPaused": {
+        "type": "ZodBoolean",
+        "required": true
+      },
+      "createdAt": {
+        "type": "ZodString",
+        "required": true
+      }
+    },
+    "capturedAt": "2026-07-29T14:51:10.388Z"
+  }
+}

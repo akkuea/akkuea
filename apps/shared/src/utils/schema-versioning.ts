@@ -77,8 +77,7 @@ export function unwrapZodSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
     // ---- Pipeline ----
     else if (current instanceof z.ZodPipeline) {
       // Prefer the *output* type as it represents the validated shape.
-      current = (current as z.ZodPipeline<z.ZodTypeAny, z.ZodTypeAny>)._def
-        .out;
+      current = (current as z.ZodPipeline<z.ZodTypeAny, z.ZodTypeAny>)._def.out;
     }
     // ---- Branded ----
     else if (current instanceof z.ZodBranded) {
@@ -153,10 +152,7 @@ export function extractFieldDefinition(schema: z.ZodTypeAny): FieldDefinition {
   }
 
   // ---- Union / DiscriminatedUnion ----
-  if (
-    inner instanceof z.ZodUnion ||
-    inner instanceof z.ZodDiscriminatedUnion
-  ) {
+  if (inner instanceof z.ZodUnion || inner instanceof z.ZodDiscriminatedUnion) {
     const options: FieldDefinition[] = [];
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const opts: readonly z.ZodTypeAny[] = inner._def.options;
@@ -213,7 +209,9 @@ export function compareFieldDefinition(
 
   // --- type ---
   if (current.type !== snapshot.type) {
-    diffs.push(`${prefix}: type changed from "${snapshot.type}" to "${current.type}"`);
+    diffs.push(
+      `${prefix}: type changed from "${snapshot.type}" to "${current.type}"`,
+    );
   }
 
   // --- required flag ---
@@ -245,7 +243,9 @@ export function compareFieldDefinition(
     } else if (currentField && !snapshotField) {
       diffs.push(`${nestedPath}: added`);
     } else if (currentField && snapshotField) {
-      diffs.push(...compareFieldDefinition(currentField, snapshotField, nestedPath));
+      diffs.push(
+        ...compareFieldDefinition(currentField, snapshotField, nestedPath),
+      );
     }
   }
 
@@ -278,9 +278,7 @@ export function compareFieldDefinition(
       // `noUncheckedIndexedAccess` means c/s could be undefined for
       // out-of-bounds indices on readonly tuples. Guard before recursing.
       if (c && s) {
-        diffs.push(
-          ...compareFieldDefinition(c, s, `${prefix}[union@${i}]`),
-        );
+        diffs.push(...compareFieldDefinition(c, s, `${prefix}[union@${i}]`));
       }
     }
   }
@@ -319,4 +317,34 @@ export function diffSchemaSnapshots(
   }
 
   return { added, removed, changed };
+}
+
+// ---------------------------------------------------------------------------
+// Validation helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Capture the current shape of a schema and compare it against a previously
+ * stored baseline snapshot.  Returns `valid: true` when the current schema
+ * exactly matches the baseline, and `valid: false` together with a structured
+ * diff otherwise.
+ *
+ * Use this in CI or a pre-commit hook to prevent accidental breaking schema
+ * changes from landing unnoticed.
+ */
+export function validateSchemaSnapshot(
+  name: string,
+  schema: z.ZodObject<z.ZodRawShape>,
+  baseline: SchemaSnapshot,
+): { valid: boolean; diff: SchemaDiff } {
+  const current = captureSchemaSnapshot(name, schema);
+  const diff = diffSchemaSnapshots(current, baseline);
+
+  return {
+    valid:
+      diff.added.length === 0 &&
+      diff.removed.length === 0 &&
+      diff.changed.length === 0,
+    diff,
+  };
 }

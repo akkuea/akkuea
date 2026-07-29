@@ -62,6 +62,17 @@ export class RiskMonitoringController {
     return this.service.getTransitions(positionId);
   }
 
+  static async getCollateralRatioHistory(
+    positionId: string,
+    startDateStr?: string,
+    endDateStr?: string,
+  ) {
+    const startDate = startDateStr ? new Date(startDateStr) : undefined;
+    const endDate = endDateStr ? new Date(endDateStr) : undefined;
+
+    return this.service.getCollateralRatioHistory(positionId, startDate, endDate);
+  }
+
   private static async getAllBorrowPositions(): Promise<BorrowPosition[]> {
     return await lendingRepository.getAllBorrowPositions();
   }

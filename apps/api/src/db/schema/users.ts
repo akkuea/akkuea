@@ -18,6 +18,7 @@ export const users = pgTable('users', {
   displayName: varchar('display_name', { length: 50 }),
   kycStatus: kycStatusEnum('kyc_status').notNull().default('not_started'),
   kycTier: kycTierEnum('kyc_tier').notNull().default('none'),
+  kycExpiresAt: timestamp('kyc_expires_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),

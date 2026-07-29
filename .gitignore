@@ -102,6 +102,9 @@ bun.lockb
 # Snapshot files (generated test artifacts)
 *.snap
 
+# Uploaded files
+apps/api/uploads/
+
 
 CLAUDE.md
 plan.md

@@ -2,6 +2,7 @@ import { swagger } from '@elysiajs/swagger';
 import app from './app';
 import { checkDatabaseHealth, closeDatabaseConnection } from './db';
 import { propertyRoutes } from './routes/properties';
+import { marketplaceRoutes } from './routes/marketplace';
 import { lendingRoutes } from './routes/lending';
 import { userRoutes } from './routes/users';
 import { kycRoutes } from './routes/kyc';
@@ -12,6 +13,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { cacheService } from './services/CacheService';
 import { NotificationService } from './services/NotificationService';
 import { createNotificationWorkerFromEnv } from './workers/notificationWorker';
+import { createKycExpiryJobFromEnv } from './workers/kycExpiryJob';
 
 app
   .use(
@@ -28,6 +30,7 @@ app
   )
   .use(errorHandler)
   .use(propertyRoutes)
+  .use(marketplaceRoutes)
   .use(lendingRoutes)
   .use(userRoutes)
   .use(kycRoutes)
@@ -66,12 +69,17 @@ cacheService.connect();
 const notificationWorker = createNotificationWorkerFromEnv(new NotificationService());
 notificationWorker?.start();
 
+// Start the KYC expiry job (opt-out via KYC_EXPIRY_JOB_ENABLED=false)
+const kycExpiryJob = createKycExpiryJobFromEnv();
+kycExpiryJob?.start();
+
 const shutdown = async (signal: string) => {
   console.log(`\n${signal} received, closing connections...`);
   await Promise.all([
     closeDatabaseConnection(),
     cacheService.disconnect(),
     notificationWorker?.stop() ?? Promise.resolve(),
+    kycExpiryJob?.stop() ?? Promise.resolve(),
   ]);
 
   console.log('Connections closed. Exiting...');

@@ -2,16 +2,19 @@
 
 import { motion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, Shield, Lock, Zap } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/Button";
-
-const features = [
-  { icon: Shield, label: "Bank-grade security" },
-  { icon: Lock, label: "Regulatory compliant" },
-  { icon: Zap, label: "Instant settlements" },
-];
+import { useTranslations } from "next-intl";
 
 export function CTA() {
+  const t = useTranslations("Landing.CTA");
+
+  const features = [
+    { icon: Shield, label: t("security") },
+    { icon: Lock, label: t("compliance") },
+    { icon: Zap, label: t("settlements") },
+  ];
+
   return (
     <section className="py-24 bg-[#0a0a0a] relative overflow-hidden">
       {/* Background grid */}
@@ -48,22 +51,20 @@ export function CTA() {
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-[#00ff88]" />
                 <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-wider">
-                  Platform Live
+                  {t("platformLive")}
                 </span>
               </motion.div>
 
               {/* Headline */}
               <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-                Ready to Build Your
+                {t("titlePart1")}
                 <br />
-                <span className="text-[#ff3e00]">Real Estate Portfolio?</span>
+                <span className="text-[#ff3e00]">{t("titlePart2")}</span>
               </h2>
 
               {/* Description */}
               <p className="text-neutral-400 max-w-lg mx-auto mb-8 text-sm sm:text-base">
-                Join thousands of investors already earning yields from
-                tokenized properties. Start with as little as $100 and diversify
-                globally.
+                {t("description")}
               </p>
 
               {/* CTA Buttons */}
@@ -73,7 +74,7 @@ export function CTA() {
                     size="lg"
                     rightIcon={<ArrowRight className="w-4 h-4" />}
                   >
-                    Start Investing Now
+                    {t("startInvesting")}
                   </Button>
                 </Link>
                 <Link href="/tokenize">
@@ -82,7 +83,7 @@ export function CTA() {
                     size="lg"
                     rightIcon={<ArrowUpRight className="w-4 h-4" />}
                   >
-                    List Your Property
+                    {t("listProperty")}
                   </Button>
                 </Link>
               </div>

@@ -12,9 +12,19 @@ import {
   Shield,
   HelpCircle,
 } from "lucide-react";
+import { TREASURY_ADDRESS } from "@/lib/soroban-tx";
 import { useGameWallet } from "../hooks/useGameWallet";
 
-// Mock coordinates and details
+// Distinct mock addresses to demonstrate the three ownership states on the sandbox:
+//   1. Treasury/unowned  → TREASURY_ADDRESS  (amber tile)
+//   2. Viewer-owned      → MOCK_VIEWER_ADDRESS  (green tile — matches useGameWallet
+//      when wallet is connected; see dashboard for the env-var-based VIEWER_ADDRESS)
+//   3. Other player      → MOCK_OTHER_ADDRESS  (purple tile — "Listed (Other)")
+const MOCK_VIEWER_ADDRESS =
+  "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+const MOCK_OTHER_ADDRESS =
+  "GABC1234EFGH5678IJKL9012MNOP3456QRST7890UVWX1234YZ56";
+
 const mockPropertiesList: GameProperty[] = [
   {
     id: "tile-1-treasury",
@@ -29,7 +39,7 @@ const mockPropertiesList: GameProperty[] = [
       coordinates: { latitude: 35.6762, longitude: 139.6503 },
     },
     totalValue: "850000",
-    tokenAddress: "GCTREASURYXXXXXX",
+    tokenAddress: "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE", // GAME_PROPERTY_NFT
     totalShares: 1000,
     availableShares: 1000,
     pricePerShare: "250",
@@ -37,7 +47,7 @@ const mockPropertiesList: GameProperty[] = [
     documents: [],
     verified: true,
     listedAt: "2026-05-27T00:00:00Z",
-    owner: "GBTREASURY",
+    owner: TREASURY_ADDRESS,
     buildingLevel: 0,
     improveCost: 100,
     earnedIncome: 0,
@@ -55,7 +65,7 @@ const mockPropertiesList: GameProperty[] = [
       coordinates: { latitude: 4.7128, longitude: -74.006 },
     },
     totalValue: "1200000",
-    tokenAddress: "GCOWNEDXXXXXX",
+    tokenAddress: "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE", // GAME_PROPERTY_NFT
     totalShares: 5000,
     availableShares: 0,
     pricePerShare: "150",
@@ -63,7 +73,7 @@ const mockPropertiesList: GameProperty[] = [
     documents: [],
     verified: true,
     listedAt: "2026-05-27T00:00:00Z",
-    owner: "GDVIEWER1234567890123456789012345678901234567890123456",
+    owner: MOCK_VIEWER_ADDRESS,
     buildingLevel: 1,
     improveCost: 150,
     earnedIncome: 750,
@@ -81,7 +91,7 @@ const mockPropertiesList: GameProperty[] = [
       coordinates: { latitude: 51.5074, longitude: -0.1278 },
     },
     totalValue: "2500000",
-    tokenAddress: "GCLISTEDXXXXXX",
+    tokenAddress: "CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3", // GAME_MARKETPLACE
     totalShares: 10000,
     availableShares: 0,
     pricePerShare: "320",
@@ -89,7 +99,7 @@ const mockPropertiesList: GameProperty[] = [
     documents: [],
     verified: true,
     listedAt: "2026-05-27T00:00:00Z",
-    owner: "GDOTHER9876543210987654321098765432109876543210987654",
+    owner: MOCK_OTHER_ADDRESS,
     buildingLevel: 2,
     improveCost: 400,
     earnedIncome: 0,
@@ -121,7 +131,7 @@ export default function SandboxPage() {
       return "border-slate-800 hover:border-slate-700 bg-slate-900/40";
     if (p.owner === address)
       return "border-emerald-500/40 hover:border-emerald-400 bg-emerald-950/20";
-    if (p.owner === "GBTREASURY")
+    if (p.owner === TREASURY_ADDRESS)
       return "border-amber-500/40 hover:border-amber-400 bg-amber-950/20";
     return "border-purple-500/40 hover:border-purple-400 bg-purple-950/20";
   };
@@ -131,7 +141,7 @@ export default function SandboxPage() {
       return <span className="text-slate-500">Not Connected</span>;
     if (p.owner === address)
       return <span className="text-emerald-400">Owned by You</span>;
-    if (p.owner === "GBTREASURY")
+    if (p.owner === TREASURY_ADDRESS)
       return <span className="text-amber-400">Treasury</span>;
     return <span className="text-purple-400">Listed (Other)</span>;
   };

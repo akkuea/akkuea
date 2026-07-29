@@ -11,4 +11,11 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
   )
   .get('/transitions', ({ query }) =>
     RiskMonitoringController.getRiskTransitions(query.positionId as string | undefined),
+  )
+  .get('/positions/:positionId/history', ({ params: { positionId }, query }) =>
+    RiskMonitoringController.getCollateralRatioHistory(
+      positionId,
+      query.startDate as string | undefined,
+      query.endDate as string | undefined,
+    ),
   );

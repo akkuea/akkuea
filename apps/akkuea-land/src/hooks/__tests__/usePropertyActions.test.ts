@@ -13,7 +13,7 @@ import { describe, it, expect, vi, beforeEach, mock } from "bun:test";
 // ── Shared mock data ─────────────────────────────────────────────────────────
 
 const VIEWER = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
-const TREASURY = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+const TREASURY = "GABC1234EFGH5678IJKL9012MNOP3456QRST7890UVWX1234YZ56";
 const MOCK_UNSIGNED_XDR = "AAAA_UNSIGNED_XDR_BASE64==";
 const MOCK_SIGNED_XDR = "AAAA_SIGNED_XDR_BASE64==";
 const MOCK_TX_HASH =
@@ -312,8 +312,9 @@ mock.module("@stellar/stellar-sdk", () => ({
 
 import { usePropertyActions } from "../usePropertyActions";
 
-const VIEWER_ADDRESS = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
-const TREASURY_ADDRESS = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+const VIEWER_ADDRESS =
+  "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+const TREASURY_ADDRESS = "GABC1234EFGH5678IJKL9012MNOP3456QRST7890UVWX1234YZ56";
 const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 const STUB_XDR = MOCK_UNSIGNED_XDR;
 
@@ -700,10 +701,7 @@ describe("usePropertyActions", () => {
         await result.current.listForSale(300);
       });
 
-      expect(approveMock).toHaveBeenCalledWith(
-        VIEWER_ADDRESS,
-        baseProperty.id,
-      );
+      expect(approveMock).toHaveBeenCalledWith(VIEWER_ADDRESS, baseProperty.id);
       expect(listMock).toHaveBeenCalledWith(
         VIEWER_ADDRESS,
         baseProperty.id,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import { rateLimit, createRedisStore, createMemoryStore } from './rateLimit';
+import { rateLimit, createRedisStore, createMemoryStore, walletKeyGenerator } from './rateLimit';
 import type { RateLimitRedisClient } from './rateLimit';
 import type { Context } from 'elysia';
 
@@ -223,7 +223,7 @@ describe('rateLimit middleware', () => {
       const middleware = rateLimit({
         max: 1,
         windowMs: 60000,
-        keyGenerator: (req) => `custom:${req.headers.get('x-api-key') ?? 'unknown'}`,
+        keyGenerator: (ctx) => `custom:${ctx.request.headers.get('x-api-key') ?? 'unknown'}`,
       });
 
       const req1 = createMockRequest({
@@ -252,6 +252,88 @@ describe('rateLimit middleware', () => {
 
       expect(set.headers!['X-RateLimit-Limit']).toBe('10');
       expect(set.headers!['X-RateLimit-Remaining']).toBe('9');
+    });
+  });
+
+  describe('walletKeyGenerator', () => {
+    function createAuthContext(
+      walletAddress?: string,
+      forwardIp?: string,
+    ): Pick<Context, 'request' | 'set'> & {
+      getAuthenticatedUser: () => Promise<{ id: string; walletAddress: string }>;
+    } {
+      const headers: Record<string, string> = {};
+      if (forwardIp) headers['x-forwarded-for'] = forwardIp;
+      return {
+        request: createMockRequest({ headers }) as unknown as Request,
+        set: createMockSet(),
+        getAuthenticatedUser: walletAddress
+          ? async () => ({ id: 'user-1', walletAddress })
+          : async () => {
+              throw new Error('UNAUTHORIZED');
+            },
+      };
+    }
+
+    it('should extract wallet address from verified auth context', async () => {
+      const ctx = createAuthContext('GA7EXAMPLEADDRESS');
+      expect(await walletKeyGenerator(ctx)).toBe('wallet:GA7EXAMPLEADDRESS');
+    });
+
+    it('should fall back to IP when getAuthenticatedUser throws', async () => {
+      const ctx = createAuthContext(undefined, '10.0.0.2');
+      expect(await walletKeyGenerator(ctx)).toBe('ip:10.0.0.2');
+    });
+
+    it('should fall back to IP when getAuthenticatedUser is missing from context', async () => {
+      const ctx = {
+        request: createMockRequest({
+          headers: { 'x-forwarded-for': '10.0.0.3' },
+        }) as unknown as Request,
+        set: createMockSet(),
+      };
+      expect(await walletKeyGenerator(ctx)).toBe('ip:10.0.0.3');
+    });
+
+    it('should fall back to IP when walletAddress is empty', async () => {
+      const ctx = {
+        request: createMockRequest({
+          headers: { 'x-forwarded-for': '10.0.0.4' },
+        }) as unknown as Request,
+        set: createMockSet(),
+        getAuthenticatedUser: async () => ({ id: 'user-1', walletAddress: '' }),
+      };
+      expect(await walletKeyGenerator(ctx)).toBe('ip:10.0.0.4');
+    });
+
+    it('should rate-limit by wallet across different IPs', async () => {
+      const middleware = rateLimit({ max: 2, windowMs: 60000, keyGenerator: walletKeyGenerator });
+
+      const ctx1 = createAuthContext('GA7SAMEWALLET', '192.168.1.1');
+      const ctx2 = createAuthContext('GA7SAMEWALLET', '192.168.2.2');
+
+      await middleware(ctx1); // 1st - allowed
+      const result2 = await middleware(ctx2); // 2nd - allowed
+      const result3 = await middleware(createAuthContext('GA7SAMEWALLET', '192.168.1.1')); // 3rd - blocked
+
+      expect(result2).toBeUndefined();
+      expect(result3).toEqual({
+        success: false,
+        error: 'RATE_LIMITED',
+        message: 'Too many requests. Please try again later.',
+      });
+    });
+
+    it('should track different wallets independently', async () => {
+      const middleware = rateLimit({ max: 1, windowMs: 60000, keyGenerator: walletKeyGenerator });
+
+      const ctx1 = createAuthContext('GA7WALLETONE');
+      const ctx2 = createAuthContext('GA7WALLETTWO');
+
+      await middleware(ctx1); // wallet1 hits limit
+      const result2 = await middleware(ctx2); // wallet2 still allowed
+
+      expect(result2).toBeUndefined();
     });
   });
 });

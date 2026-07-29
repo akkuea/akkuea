@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Deploys and initializes the three Akkuea Land game contracts
-# (game-property-nft, game-land-token, game-engine) to a Stellar network.
+# Deploys and initializes the four Akkuea Land game contracts
+# (game-property-nft, game-land-token, game-engine, game-marketplace) to a
+# Stellar network.
 #
 # Usage:
 #   ./scripts/deploy-game-contracts.sh [network] [identity] [treasury]
@@ -50,7 +51,7 @@ echo "Treasury: $TREASURY"
 echo "Building contracts..."
 (cd "$CONTRACTS_DIR" && stellar contract build)
 
-for wasm in game_property_nft game_land_token game_engine; do
+for wasm in game_property_nft game_land_token game_engine game_marketplace; do
     if [ ! -f "$WASM_DIR/$wasm.wasm" ]; then
         echo "Missing $WASM_DIR/$wasm.wasm after build." >&2
         exit 1
@@ -77,6 +78,10 @@ echo "  -> $TOKEN_ID"
 echo "Deploying game_engine..."
 ENGINE_ID="$(deploy game_engine)"
 echo "  -> $ENGINE_ID"
+
+echo "Deploying game_marketplace..."
+MARKETPLACE_ID="$(deploy game_marketplace)"
+echo "  -> $MARKETPLACE_ID"
 
 # ── 4. Initialize ─────────────────────────────────────────────────────────────
 # Arg names match the Rust signatures exactly. The NFT and token contracts
@@ -105,6 +110,9 @@ invoke "$TOKEN_ID" initialize --treasury "$TREASURY" --engine "$ENGINE_ID" --is_
 echo "Initializing game_engine..."
 invoke "$ENGINE_ID" initialize --nft_contract "$NFT_ID" --token_contract "$TOKEN_ID" --treasury "$TREASURY"
 
+echo "Initializing game_marketplace..."
+invoke "$MARKETPLACE_ID" initialize --nft_contract "$NFT_ID" --land_token "$TOKEN_ID"
+
 # ── 5. Summary ────────────────────────────────────────────────────────────────
 
 cat <<EOF
@@ -114,6 +122,7 @@ Deployment complete.
   game_property_nft: $NFT_ID
   game_land_token:   $TOKEN_ID
   game_engine:       $ENGINE_ID
+  game_marketplace:  $MARKETPLACE_ID
   treasury:          $TREASURY
 
 Paste into apps/akkuea-land/.env.local:
@@ -124,6 +133,7 @@ NEXT_PUBLIC_TREASURY_ADDRESS=$TREASURY
 NEXT_PUBLIC_GAME_ENGINE_CONTRACT_ID=$ENGINE_ID
 NEXT_PUBLIC_PROPERTY_NFT_CONTRACT_ID=$NFT_ID
 NEXT_PUBLIC_LAND_TOKEN_CONTRACT_ID=$TOKEN_ID
+NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID=$MARKETPLACE_ID
 
 Income accrues once per epoch (100 ledgers, ~9 min on testnet) — wait one
 epoch after init before the first claim_rental can succeed.

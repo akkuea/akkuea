@@ -33,6 +33,9 @@ use lending::events as lending_events;
 #[cfg(test)]
 mod test;
 
+#[cfg(test)]
+mod reentrancy_tests;
+
 // ───────────────────────────────────────────────
 // Helper functions
 // ───────────────────────────────────────────────
@@ -100,11 +103,14 @@ fn accrue_interest_internal(env: &Env, pool_id: &String) {
 
     let utilization = PoolStorage::calculate_utilization(total_deposits, total_borrows);
     let model = InterestStorage::get_model(env, pool_id);
-    let borrow_rate = model.calculate_borrow_rate(utilization);
+    let borrow_rate = model
+        .calculate_borrow_rate(utilization)
+        .unwrap_or_else(|e| panic_with_error!(env, e));
 
     // Update interest index
     let current_index = InterestStorage::get_interest_index(env, pool_id);
-    let new_index = InterestStorage::calculate_new_index(current_index, borrow_rate, time_elapsed);
+    let new_index = InterestStorage::calculate_new_index(current_index, borrow_rate, time_elapsed)
+        .unwrap_or_else(|e| panic_with_error!(env, e));
     InterestStorage::set_interest_index(env, pool_id, new_index);
 
     // Calculate and add reserve income

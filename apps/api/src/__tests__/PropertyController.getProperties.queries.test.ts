@@ -64,6 +64,7 @@ describe('PropertyController.getProperties', () => {
       pagination: { page: 1, limit: 20, total: 3, totalPages: 1 },
     });
     const findUserByIdSpy = spyOn(userRepository, 'findById');
+    findUserByIdSpy.mockClear();
 
     const out = await PropertyController.getProperties({ page: 1, limit: 20 });
 

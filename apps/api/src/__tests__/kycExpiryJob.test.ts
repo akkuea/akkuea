@@ -6,7 +6,7 @@
  * so we can simulate arbitrary date scenarios.
  */
 
-import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import { describe, it, expect, beforeEach, afterAll, mock } from 'bun:test';
 import { KycExpiryJob } from '../workers/kycExpiryJob';
 import { kycRepository } from '../repositories/KYCRepository';
 import type { NotificationService } from '../services/NotificationService';
@@ -33,6 +33,11 @@ const mockUpdateUserKycStatus = mock(
 );
 const mockFindExpiredApprovedUsers = mock(async (): Promise<ExpiryRow[]> => []);
 const mockFindUsersExpiringWithin = mock(async (_ms: number): Promise<ExpiryRow[]> => []);
+
+// Save originals so we can restore them after the suite finishes
+const originalUpdateUserKycStatus = kycRepository.updateUserKycStatus.bind(kycRepository);
+const originalFindExpiredApprovedUsers = kycRepository.findExpiredApprovedUsers.bind(kycRepository);
+const originalFindUsersExpiringWithin = kycRepository.findUsersExpiringWithin.bind(kycRepository);
 
 kycRepository.findExpiredApprovedUsers = mockFindExpiredApprovedUsers;
 kycRepository.findUsersExpiringWithin = mockFindUsersExpiringWithin;
@@ -67,6 +72,13 @@ function createJob(overrides?: { reminderWindowMs?: number }) {
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 describe('KycExpiryJob', () => {
+  afterAll(() => {
+    // Restore real repository methods so subsequent test files are not affected
+    kycRepository.updateUserKycStatus = originalUpdateUserKycStatus;
+    kycRepository.findExpiredApprovedUsers = originalFindExpiredApprovedUsers;
+    kycRepository.findUsersExpiringWithin = originalFindUsersExpiringWithin;
+  });
+
   beforeEach(() => {
     mockUpdateUserKycStatus.mockReset();
     mockFindExpiredApprovedUsers.mockReset();

@@ -607,11 +607,7 @@ impl PropertyTokenContract {
         // Return any excess collateral to the borrower on full close
         let excess = position.collateral_amount - collateral_to_seize;
         if remaining_debt == 0 && excess > 0 {
-            collateral_token.transfer(
-                &env.current_contract_address(),
-                &borrower_address,
-                &excess,
-            );
+            collateral_token.transfer(&env.current_contract_address(), &borrower_address, &excess);
         }
 
         // Emit event
@@ -817,8 +813,8 @@ impl PropertyTokenContract {
     /// A value below PRECISION means the position is underwater and eligible
     /// for liquidation. This is a read-only view that does not modify state.
     pub fn get_health_factor(env: Env, user: Address, pool_id: String) -> i128 {
-        let position = PositionStorage::get_borrow(&env, &user, &pool_id)
-            .expect("borrow position not found");
+        let position =
+            PositionStorage::get_borrow(&env, &user, &pool_id).expect("borrow position not found");
         let pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
         let collateral_price = PriceOracle::get_price(&env, &position.collateral_asset);
         let collateral_value = (collateral_price * position.collateral_amount) / PRECISION;

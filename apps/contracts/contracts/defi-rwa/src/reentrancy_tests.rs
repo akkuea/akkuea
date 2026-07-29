@@ -293,7 +293,7 @@ fn test_borrow_rejected_at_checks_no_state_mutation() {
         &t.pool_id,
         &70_i128, // 70 USDC
         &t.xlm_address,
-        &100,     // 100 XLM collateral
+        &100, // 100 XLM collateral
     );
     // Panic expected — no state should have been modified
 }

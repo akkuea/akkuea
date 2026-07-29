@@ -184,6 +184,7 @@ describe('MarketplaceController.getListing', () => {
       createdAt: new Date(),
       updatedAt: new Date(),
       lastLoginAt: null,
+      kycExpiresAt: null,
     });
 
     const result = await MarketplaceController.getListing('p-1');

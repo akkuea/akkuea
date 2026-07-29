@@ -3853,3 +3853,293 @@ fn test_set_close_factor_unauthorized() {
         )
     });
 }
+
+// ═══════════════════════════════════════════════
+// Additional Coverage Tests — Untapped Branches
+// ═══════════════════════════════════════════════
+
+/// Liquidate with zero debt_to_cover is rejected.
+#[test]
+#[should_panic(expected = "debt to cover must be positive")]
+fn test_liquidate_zero_debt_to_cover() {
+    let (env, contract_id, _oracle_id, borrower, liquidator, pool_id, _usdc_addr, _xlm_addr) =
+        setup_liquidation_env();
+
+    // Attempt liquidation with zero debt — should panic
+    env.as_contract(&contract_id, || {
+        PropertyTokenContract::liquidate(
+            env.clone(),
+            liquidator.clone(),
+            pool_id.clone(),
+            borrower.clone(),
+            0_i128,
+        )
+    });
+}
+
+/// Liquidate with negative debt_to_cover is rejected.
+#[test]
+#[should_panic(expected = "debt to cover must be positive")]
+fn test_liquidate_negative_debt_to_cover() {
+    let (env, contract_id, _oracle_id, borrower, liquidator, pool_id, _usdc_addr, _xlm_addr) =
+        setup_liquidation_env();
+
+    // Attempt liquidation with negative debt — should panic
+    env.as_contract(&contract_id, || {
+        PropertyTokenContract::liquidate(
+            env.clone(),
+            liquidator.clone(),
+            pool_id.clone(),
+            borrower.clone(),
+            -100_i128,
+        )
+    });
+}
+
+/// Liquidate from an inactive pool is rejected.
+#[test]
+#[should_panic(expected = "Pool is not active")]
+fn test_liquidate_inactive_pool() {
+    use soroban_sdk::token::StellarAssetClient;
+
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let contract_id = env.register(PropertyTokenContract, (&admin,));
+    let oracle_id = env.register(MockOracleContract, ());
+
+    let borrower = Address::generate(&env);
+    let liquidator = Address::generate(&env);
+
+    let usdc_admin = Address::generate(&env);
+    let usdc_contract = env.register_stellar_asset_contract_v2(usdc_admin.clone());
+    let usdc_token = StellarAssetClient::new(&env, &usdc_contract.address());
+
+    let _xlm_admin = Address::generate(&env);
+    let _xlm_contract = env.register_stellar_asset_contract_v2(_xlm_admin.clone());
+    let _xlm_token = StellarAssetClient::new(&env, &_xlm_contract.address());
+
+    let pool_id = String::from_str(&env, "USDC-POOL");
+
+    // Create pool with is_active = false
+    let pool = LendingPool {
+        id: pool_id.clone(),
+        name: String::from_str(&env, "USDC Lending Pool"),
+        asset: String::from_str(&env, "USDC"),
+        asset_address: usdc_contract.address().clone(),
+        collateral_factor: 750_000_000_000_000_000,
+        liquidation_threshold: 800_000_000_000_000_000,
+        liquidation_penalty: 50_000_000_000_000_000,
+        close_factor: 500_000_000_000_000_000,
+        reserve_factor: 1000,
+        is_active: false, // Inactive!
+        created_at: env.ledger().timestamp(),
+    };
+
+    env.as_contract(&contract_id, || {
+        PoolStorage::set(&env, &pool);
+        PoolStorage::set_total_deposits(&env, &pool_id, 10_000_000_000);
+        PoolStorage::set_total_borrows(&env, &pool_id, 0);
+
+        let model = InterestRateModel::default();
+        InterestStorage::set_model(&env, &pool_id, &model);
+        InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
+        InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
+        PriceOracle::set_oracle_address(&env, &oracle_id);
+    });
+
+    usdc_token.mint(&liquidator, &2_000_000_000);
+
+    // Liquidation of inactive pool should panic
+    env.as_contract(&contract_id, || {
+        PropertyTokenContract::liquidate(
+            env.clone(),
+            liquidator.clone(),
+            pool_id.clone(),
+            borrower.clone(),
+            100_000_000_i128,
+        )
+    });
+}
+
+/// Liquidate from a paused pool is rejected.
+#[test]
+#[should_panic(expected = "Pool is paused")]
+fn test_liquidate_paused_pool() {
+    let (env, contract_id, _oracle_id, borrower, liquidator, pool_id, _usdc_addr, _xlm_addr) =
+        setup_liquidation_env();
+
+    // Manually pause the pool
+    env.as_contract(&contract_id, || {
+        PoolStorage::set_paused(&env, &pool_id, true);
+    });
+
+    // Liquidation of paused pool should panic
+    env.as_contract(&contract_id, || {
+        PropertyTokenContract::liquidate(
+            env.clone(),
+            liquidator.clone(),
+            pool_id.clone(),
+            borrower.clone(),
+            100_000_000_i128,
+        )
+    });
+}
+
+/// When debt_to_cover exceeds total_borrows, the EFFECTS phase clamps to zero
+/// instead of underflowing.
+#[test]
+fn test_liquidate_debt_exceeds_total_borrows() {
+    use soroban_sdk::token::StellarAssetClient;
+
+    let (env, contract_id, _oracle_id, borrower, liquidator, pool_id, _usdc_addr, xlm_addr) =
+        setup_liquidation_env();
+
+    // Artificially reduce total_borrows to 100 below what the borrower actually owes (500)
+    // This forces the `debt_to_cover > total_borrows` branch to clamp to 0.
+    env.as_contract(&contract_id, || {
+        PoolStorage::set_total_borrows(&env, &pool_id, 100_000_000);
+    });
+
+    let _liquidator_xlm_before = StellarAssetClient::new(&env, &xlm_addr).balance(&liquidator);
+
+    // Liquidate 250 USDC — close factor still applies but total_borrows is tiny.
+    // debt_to_cover is capped first to current_debt (500), then close factor (50% → 250),
+    // then EFFECTS: total_borrows = 100, debt_to_cover (250) > total_borrows → 0.
+    // assert no underflow.
+    env.as_contract(&contract_id, || {
+        PropertyTokenContract::liquidate(
+            env.clone(),
+            liquidator.clone(),
+            pool_id.clone(),
+            borrower.clone(),
+            500_000_000_i128,
+        )
+    });
+
+    // total_borrows should be 0, not negative
+    let total_borrows_after = env.as_contract(&contract_id, || {
+        PoolStorage::get_total_borrows(&env, &pool_id)
+    });
+    assert_eq!(total_borrows_after, 0, "total_borrows should clamp to 0");
+}
+
+/// Borrow fails when amount exceeds collateral factor (LTV) limit.
+#[test]
+#[should_panic(expected = "Borrow exceeds collateral factor limit")]
+fn test_borrow_exceeds_collateral_factor_limit() {
+    use soroban_sdk::token::StellarAssetClient;
+
+    let env = Env::default();
+    env.mock_all_auths();
+
+    let admin = Address::generate(&env);
+    let contract_id = env.register(PropertyTokenContract, (&admin,));
+    let oracle_id = env.register(MockOracleContract, ());
+
+    let borrower = Address::generate(&env);
+
+    let usdc_admin = Address::generate(&env);
+    let usdc_contract = env.register_stellar_asset_contract_v2(usdc_admin.clone());
+    let usdc_token = StellarAssetClient::new(&env, &usdc_contract.address());
+
+    let xlm_admin = Address::generate(&env);
+    let xlm_contract = env.register_stellar_asset_contract_v2(xlm_admin.clone());
+    let xlm_token = StellarAssetClient::new(&env, &xlm_contract.address());
+
+    let pool_id = String::from_str(&env, "USDC-POOL");
+    let pool = LendingPool {
+        id: pool_id.clone(),
+        name: String::from_str(&env, "USDC Lending Pool"),
+        asset: String::from_str(&env, "USDC"),
+        asset_address: usdc_contract.address().clone(),
+        collateral_factor: 750_000_000_000_000_000, // 75%
+        liquidation_threshold: 800_000_000_000_000_000,
+        liquidation_penalty: 50_000_000_000_000_000,
+        close_factor: 500_000_000_000_000_000,
+        reserve_factor: 1000,
+        is_active: true,
+        created_at: env.ledger().timestamp(),
+    };
+
+    env.as_contract(&contract_id, || {
+        PoolStorage::set(&env, &pool);
+        PoolStorage::set_total_deposits(&env, &pool_id, 10_000_000_000);
+        PoolStorage::set_total_borrows(&env, &pool_id, 0);
+
+        let model = InterestRateModel::default();
+        InterestStorage::set_model(&env, &pool_id, &model);
+        InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
+        InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
+        PriceOracle::set_oracle_address(&env, &oracle_id);
+    });
+
+    env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(
+            env.clone(),
+            xlm_contract.address().clone(),
+            PRECISION, // $1.00
+            env.ledger().timestamp(),
+        );
+    });
+
+    // Borrower: 1000 XLM at $1.00 = $1000 collateral value
+    // Max borrow at 75% CF = $750
+    // Trying to borrow 800 USDC > 750 → should panic
+    usdc_token.mint(&borrower, &2_000_000_000);
+    xlm_token.mint(&borrower, &1_000_000_000);
+    usdc_token.mint(&contract_id, &10_000_000_000);
+
+    env.as_contract(&contract_id, || {
+        PropertyTokenContract::borrow(
+            env.clone(),
+            borrower.clone(),
+            pool_id.clone(),
+            800_000_000_i128, // amount > max_borrow (750)
+            xlm_contract.address().clone(),
+            1_000_000_000_i128,
+        )
+    });
+}
+
+/// set_close_factor panics on invalid bounds (≤0 or >100%).
+#[test]
+#[should_panic(expected = "close factor must be between 0 and 1.0 (PRECISION)")]
+fn test_set_close_factor_negative_value() {
+    let (env, contract_id, _oracle_id, _borrower, _liquidator, pool_id, _usdc_addr, _xlm_addr) =
+        setup_liquidation_env();
+
+    // Get the admin (who registered the contract) by using the constructor's admin
+    let admin = env.as_contract(&contract_id, || {
+        // derive admin from stored admin
+        get_lending_admin(&env)
+    });
+
+    // Admin tries to set negative close factor — should panic
+    env.as_contract(&contract_id, || {
+        PropertyTokenContract::set_close_factor(env.clone(), admin, pool_id.clone(), -100_i128)
+    });
+}
+
+/// Read-only query view returns the correct health factor for a borrow position.
+#[test]
+fn test_get_health_factor_direct() {
+    let (env, contract_id, _oracle_id, borrower, _liquidator, pool_id, _usdc_addr, _xlm_addr) =
+        setup_liquidation_env();
+
+    // The setup_liquidation_env sets price to $0.30/XLM
+    // Collateral: 2000 XLM * $0.30 = $600
+    // Debt: 500 USDC
+    // LT: 80%
+    // Expected HF = (600 * 0.80) / 500 = 480/500 = 0.96 * PRECISION
+    let client = PropertyTokenContractClient::new(&env, &contract_id);
+    let hf = client.get_health_factor(&borrower, &pool_id);
+
+    let expected_hf = (96 * PRECISION) / 100; // 0.96 * PRECISION
+    assert_eq!(hf, expected_hf, "health factor should be 0.96");
+    assert!(
+        hf < PRECISION,
+        "health factor should be below 1.0 (underwater)"
+    );
+}

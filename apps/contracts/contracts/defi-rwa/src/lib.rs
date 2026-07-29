@@ -277,6 +277,7 @@ impl PropertyTokenContract {
         collateral_factor: i128,
         liquidation_threshold: i128,
         liquidation_penalty: i128,
+        close_factor: i128,
         reserve_factor: u32,
     ) {
         require_admin(&env, &admin);
@@ -292,6 +293,7 @@ impl PropertyTokenContract {
             collateral_factor,
             liquidation_threshold,
             liquidation_penalty,
+            close_factor,
             reserve_factor,
             is_active: true,
             created_at: env.ledger().timestamp(),
@@ -435,6 +437,12 @@ impl PropertyTokenContract {
         let collateral_price = PriceOracle::get_price(&env, &collateral_asset);
         let collateral_value = (collateral_price * collateral_amount) / PRECISION;
 
+        // Enforce max borrow based on collateral factor (LTV)
+        let max_borrow = (collateral_value * pool.collateral_factor) / PRECISION;
+        if amount > max_borrow {
+            panic!("Borrow exceeds collateral factor limit");
+        }
+
         let debt_value = amount;
         let health_factor = PositionStorage::calculate_health_factor(
             collateral_value,
@@ -478,6 +486,166 @@ impl PropertyTokenContract {
             health_factor,
         );
         position
+    }
+
+    /// Liquidate an underwater borrow position.
+    ///
+    /// A position is eligible for liquidation when its health factor drops below 1.0
+    /// (i.e. `health_factor < PRECISION`). The liquidator repays `debt_to_cover`
+    /// of the borrower's debt and receives the equivalent collateral value plus a
+    /// liquidation penalty (bonus).
+    ///
+    /// # Arguments
+    /// * `liquidator`       – Address of the account performing the liquidation.
+    /// * `pool_id`          – The lending pool identifier.
+    /// * `borrower_address` – Address of the underwater borrower.
+    /// * `debt_to_cover`    – Amount of debt the liquidator wants to repay
+    ///                        (capped at the borrower's current debt).
+    ///
+    /// # Returns
+    /// The resulting (possibly zeroed-out) borrow position.
+    pub fn liquidate(
+        env: Env,
+        liquidator: Address,
+        pool_id: String,
+        borrower_address: Address,
+        debt_to_cover: i128,
+    ) -> BorrowPosition {
+        liquidator.require_auth();
+        if debt_to_cover <= 0 {
+            panic!("debt to cover must be positive");
+        }
+
+        let pool = PoolStorage::get(&env, &pool_id).expect("Pool not found");
+        if !pool.is_active {
+            panic!("Pool is not active");
+        }
+        if PoolStorage::is_paused(&env, &pool_id) {
+            panic!("Pool is paused");
+        }
+
+        accrue_interest_internal(&env, &pool_id);
+
+        let position = PositionStorage::get_borrow(&env, &borrower_address, &pool_id)
+            .expect("borrow position not found");
+
+        let current_debt = PositionStorage::calculate_current_debt(&env, &position);
+        let debt_to_cover = if debt_to_cover > current_debt {
+            current_debt
+        } else {
+            debt_to_cover
+        };
+
+        // Enforce close factor — cap % of debt liquidatable per tx
+        let max_liquidatable = (current_debt * pool.close_factor) / PRECISION;
+        let debt_to_cover = if debt_to_cover > max_liquidatable {
+            max_liquidatable
+        } else {
+            debt_to_cover
+        };
+
+        // Check health factor – position must be underwater
+        let collateral_price = PriceOracle::get_price(&env, &position.collateral_asset);
+        let collateral_value = (collateral_price * position.collateral_amount) / PRECISION;
+        let health_factor = PositionStorage::calculate_health_factor(
+            collateral_value,
+            current_debt,
+            pool.liquidation_threshold,
+        );
+        if health_factor >= PRECISION {
+            panic!("Position is not underwater");
+        }
+
+        // Calculate liquidation bonus and collateral to seize
+        let penalty = (debt_to_cover * pool.liquidation_penalty) / PRECISION;
+        let collateral_seize_value = debt_to_cover + penalty;
+        let collateral_to_seize = (collateral_seize_value * PRECISION) / collateral_price;
+        let collateral_to_seize = if collateral_to_seize > position.collateral_amount {
+            position.collateral_amount
+        } else {
+            collateral_to_seize
+        };
+
+        let remaining_debt = current_debt - debt_to_cover;
+
+        // ── EFFECTS phase (CEI) – update state before token transfers ──
+        if remaining_debt == 0 {
+            PositionStorage::remove_borrow(&env, &borrower_address, &pool_id);
+        } else {
+            let current_index = InterestStorage::get_interest_index(&env, &pool_id);
+            let updated_position = BorrowPosition {
+                pool_id: pool_id.clone(),
+                borrower: borrower_address.clone(),
+                principal: remaining_debt,
+                index_at_borrow: current_index,
+                collateral_amount: position.collateral_amount - collateral_to_seize,
+                collateral_asset: position.collateral_asset.clone(),
+                borrowed_at: position.borrowed_at,
+            };
+            PositionStorage::set_borrow(&env, &updated_position);
+        }
+
+        let total_borrows = PoolStorage::get_total_borrows(&env, &pool_id);
+        let updated_total_borrows = if debt_to_cover > total_borrows {
+            0
+        } else {
+            total_borrows - debt_to_cover
+        };
+        PoolStorage::set_total_borrows(&env, &pool_id, updated_total_borrows);
+
+        // ── INTERACTIONS phase – token transfers ──
+        let pool_token = token::Client::new(&env, &pool.asset_address);
+        pool_token.transfer(&liquidator, &env.current_contract_address(), &debt_to_cover);
+
+        let collateral_token = token::Client::new(&env, &position.collateral_asset);
+        collateral_token.transfer(
+            &env.current_contract_address(),
+            &liquidator,
+            &collateral_to_seize,
+        );
+
+        // Return any excess collateral to the borrower on full close
+        let excess = position.collateral_amount - collateral_to_seize;
+        if remaining_debt == 0 && excess > 0 {
+            collateral_token.transfer(
+                &env.current_contract_address(),
+                &borrower_address,
+                &excess,
+            );
+        }
+
+        // Emit event
+        LendingEvents::liquidation(
+            &env,
+            pool_id.clone(),
+            borrower_address.clone(),
+            liquidator.clone(),
+            debt_to_cover,
+            collateral_to_seize,
+            penalty,
+        );
+
+        if remaining_debt == 0 {
+            BorrowPosition {
+                pool_id: pool_id.clone(),
+                borrower: borrower_address,
+                principal: 0,
+                index_at_borrow: InterestStorage::get_interest_index(&env, &pool_id),
+                collateral_amount: 0,
+                collateral_asset: position.collateral_asset,
+                borrowed_at: position.borrowed_at,
+            }
+        } else {
+            BorrowPosition {
+                pool_id: pool_id.clone(),
+                borrower: borrower_address,
+                principal: remaining_debt,
+                index_at_borrow: InterestStorage::get_interest_index(&env, &pool_id),
+                collateral_amount: position.collateral_amount - collateral_to_seize,
+                collateral_asset: position.collateral_asset,
+                borrowed_at: position.borrowed_at,
+            }
+        }
     }
 
     pub fn repay(env: Env, borrower: Address, pool_id: String, amount: i128) -> BorrowPosition {
@@ -550,6 +718,29 @@ impl PropertyTokenContract {
         result_position
     }
 
+    /// Configure the close factor for a pool — max % of debt liquidatable per tx.
+    ///
+    /// * `pool_id`         – The lending pool identifier.
+    /// * `new_close_factor` – New close factor in PRECISION units (e.g., 50% = 500_000_000_000_000_000).
+    /// * `caller`           – Must be the contract admin.
+    pub fn set_close_factor(env: Env, caller: Address, pool_id: String, new_close_factor: i128) {
+        require_admin(&env, &caller);
+        if new_close_factor <= 0 || new_close_factor > PRECISION {
+            panic!("close factor must be between 0 and 1.0 (PRECISION)");
+        }
+        let mut pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
+        let old = pool.close_factor;
+        pool.close_factor = new_close_factor;
+        PoolStorage::set(&env, &pool);
+        LendingEvents::pool_updated(
+            &env,
+            pool_id,
+            String::from_str(&env, "close_factor"),
+            old,
+            new_close_factor,
+        );
+    }
+
     pub fn accrue_interest(env: Env, pool_id: String) {
         if !PoolStorage::exists(&env, &pool_id) {
             panic!("pool not found");
@@ -618,6 +809,26 @@ impl PropertyTokenContract {
     }
     pub fn get_borrow_position(env: Env, user: Address, pool_id: String) -> BorrowPosition {
         PositionStorage::get_borrow(&env, &user, &pool_id).expect("borrow position not found")
+    }
+
+    /// Calculate the current health factor for a borrow position.
+    ///
+    /// Returns the health factor in PRECISION units (1.0 = PRECISION).
+    /// A value below PRECISION means the position is underwater and eligible
+    /// for liquidation. This is a read-only view that does not modify state.
+    pub fn get_health_factor(env: Env, user: Address, pool_id: String) -> i128 {
+        let position = PositionStorage::get_borrow(&env, &user, &pool_id)
+            .expect("borrow position not found");
+        let pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
+        let collateral_price = PriceOracle::get_price(&env, &position.collateral_asset);
+        let collateral_value = (collateral_price * position.collateral_amount) / PRECISION;
+        let current_debt = PositionStorage::calculate_current_debt(&env, &position);
+
+        PositionStorage::calculate_health_factor(
+            collateral_value,
+            current_debt,
+            pool.liquidation_threshold,
+        )
     }
 
     //  Emergency Controls

@@ -14,6 +14,7 @@ import {
   TREASURY_ADDRESS,
 } from "@/lib/soroban-tx";
 
+
 export const usePropertyActions = (
   property: GameProperty,
   onPropertyUpdate: (updated: GameProperty) => void,

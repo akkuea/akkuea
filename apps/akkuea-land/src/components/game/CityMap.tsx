@@ -19,6 +19,7 @@ import {
   abbreviateAddress,
   getGridCoords,
 } from "../../lib/mockProperties";
+import { TREASURY_ADDRESS } from "@/lib/soroban-tx";
 import { useMapEvents } from "../../hooks/useMapEvents";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -38,7 +39,7 @@ const GRID_SIZE = 20;
 
 function getTileStatus(property: GameProperty): string {
   if (!property.owner) return "Unowned";
-  if (property.owner === "GBTREASURY") return "Treasury";
+  if (property.owner === TREASURY_ADDRESS) return "Treasury";
   return `Owned by ${abbreviateAddress(property.owner)}`;
 }
 
@@ -61,7 +62,7 @@ const PropertyTile = React.memo(function PropertyTile({
   const { row, col } = getGridCoords(property.id);
   const bgColor = addressToHSL(property.owner);
   const glowColor = addressToGlow(property.owner);
-  const isTreasury = !property.owner || property.owner === "GBTREASURY";
+  const isTreasury = !property.owner || property.owner === TREASURY_ADDRESS;
   const isUnowned = !property.owner;
 
   const tooltipLines = [
@@ -140,7 +141,7 @@ export function CityMap() {
     let listed = 0;
     let treasury = 0;
     for (const p of properties) {
-      if (!p.owner || p.owner === "GBTREASURY") {
+      if (!p.owner || p.owner === TREASURY_ADDRESS) {
         treasury++;
       } else {
         owned++;

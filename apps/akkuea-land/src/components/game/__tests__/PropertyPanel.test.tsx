@@ -175,7 +175,7 @@ describe("PropertyPanel Tests", () => {
   it("renders state 3: owned_by_viewer and allows claiming income", () => {
     const onUpdate = mock(() => {});
     const viewerAddress =
-      "GDVIEWER1234567890123456789012345678901234567890123456";
+      "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
     const propertyOwned = {
       ...baseProperty,
       owner: viewerAddress,
@@ -214,7 +214,7 @@ describe("PropertyPanel Tests", () => {
   it("renders state 3: owned_by_viewer and allows improving the building", () => {
     const onUpdate = mock(() => {});
     const viewerAddress =
-      "GDVIEWER1234567890123456789012345678901234567890123456";
+      "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
     const propertyOwned = {
       ...baseProperty,
       owner: viewerAddress,

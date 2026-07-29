@@ -4025,6 +4025,76 @@ fn test_liquidate_debt_exceeds_total_borrows() {
     assert_eq!(total_borrows_after, 0, "total_borrows should clamp to 0");
 }
 
+/// Liquidate with debt_to_cover > current_debt exercises the first clamp.
+///
+/// Close factor is set to 100% so the second clamp does not interfere.
+/// The liquidator requests 600 USDC on a 500 USDC debt, which should
+/// be clamped to 500 (current_debt) by the first safety rail.
+#[test]
+fn test_liquidate_debt_to_cover_exceeds_current_debt() {
+    use soroban_sdk::token::StellarAssetClient;
+
+    let (env, contract_id, _oracle_id, borrower, liquidator, pool_id, _usdc_addr, xlm_addr) =
+        setup_liquidation_env();
+
+    // Set close_factor to 100% so only the current_debt clamp applies
+    env.as_contract(&contract_id, || {
+        let mut pool = PoolStorage::get(&env, &pool_id).expect("pool must exist");
+        pool.close_factor = PRECISION; // 100%
+        PoolStorage::set(&env, &pool);
+    });
+
+    let xlm_token = StellarAssetClient::new(&env, &xlm_addr);
+    let liquidator_xlm_before = xlm_token.balance(&liquidator);
+
+    // Request 600 USDC on a 500 USDC debt — first clamp caps to 500
+    let result = env.as_contract(&contract_id, || {
+        PropertyTokenContract::liquidate(
+            env.clone(),
+            liquidator.clone(),
+            pool_id.clone(),
+            borrower.clone(),
+            600_000_000_i128, // > current_debt (500)
+        )
+    });
+
+    // Full close: principal should be 0
+    assert_eq!(result.principal, 0, "full close expected");
+    assert_eq!(result.collateral_amount, 0, "no remaining collateral");
+
+    // Position should be fully removed
+    let stored = env.as_contract(&contract_id, || {
+        PositionStorage::get_borrow(&env, &borrower, &pool_id)
+    });
+    assert!(
+        stored.is_none(),
+        "position should be removed after full close"
+    );
+
+    // Liquidator received collateral: (500 + 5% penalty) / 0.30 = 1750 XLM
+    let liquidator_xlm_after = xlm_token.balance(&liquidator);
+    let xlm_received = liquidator_xlm_after - liquidator_xlm_before;
+    // 500 debt + 25 penalty = 525 / 0.30 = 1750, clamped to 2000
+    // but we only seized enough to cover: min(2000, 1750) = 1750
+    assert_eq!(
+        xlm_received, 1_750_000_000_i128,
+        "liquidator should receive 1750 XLM (full close with penalty)"
+    );
+
+    // Excess collateral (250 XLM) returned to borrower
+    let borrower_xlm_after = xlm_token.balance(&borrower);
+    assert_eq!(
+        borrower_xlm_after, 250_000_000_i128,
+        "borrower should receive 250 XLM excess collateral"
+    );
+
+    // total_borrows should be 0
+    let total_borrows_after = env.as_contract(&contract_id, || {
+        PoolStorage::get_total_borrows(&env, &pool_id)
+    });
+    assert_eq!(total_borrows_after, 0, "total_borrows should be 0");
+}
+
 /// Borrow fails when amount exceeds collateral factor (LTV) limit.
 #[test]
 #[should_panic(expected = "Borrow exceeds collateral factor limit")]

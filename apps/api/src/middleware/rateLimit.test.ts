@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'bun:test';
-import {
-  rateLimit,
-  createRedisStore,
-  createMemoryStore,
-  SLIDING_WINDOW_SCRIPT,
-} from './rateLimit';
+import { rateLimit, createRedisStore, createMemoryStore, SLIDING_WINDOW_SCRIPT } from './rateLimit';
 import type { RateLimitRedisClient } from './rateLimit';
 import type { Context } from 'elysia';
 
@@ -20,23 +15,23 @@ function createMockSet(): Context['set'] {
 }
 
 // ---------------------------------------------------------------------------
-// Fake Redis: runs the sliding-window script body atomically (sync in eval)
+// Fake Redis: runs the sliding-window script body atomically (sync in script)
 // ---------------------------------------------------------------------------
 
 /**
  * Minimal Redis sorted-set simulator that executes the rate-limit Lua script
- * atomically inside `eval` — concurrent callers serialize through a queue so
+ * atomically inside `runScript` — concurrent callers serialize through a queue so
  * the counter cannot race the way separate INCR+EXPIRE commands could.
  */
 function makeFakeRedisClient(): RateLimitRedisClient & {
   zsets: Map<string, Map<string, number>>;
-  evalCalls: number;
+  scriptCalls: number;
 } {
   const zsets = new Map<string, Map<string, number>>();
   let chain: Promise<unknown> = Promise.resolve();
-  let evalCalls = 0;
+  let scriptCalls = 0;
 
-  function runScript(
+  function runScriptBody(
     numKeys: number,
     args: (string | number)[],
   ): [number, number, number, number] {
@@ -84,19 +79,19 @@ function makeFakeRedisClient(): RateLimitRedisClient & {
 
   const client: RateLimitRedisClient & {
     zsets: Map<string, Map<string, number>>;
-    evalCalls: number;
+    scriptCalls: number;
   } = {
     zsets,
-    get evalCalls() {
-      return evalCalls;
+    get scriptCalls() {
+      return scriptCalls;
     },
-    async eval(script: string, numKeys: number, ...args: (string | number)[]) {
-      // Serialize eval invocations to model Redis single-threaded command execution
+    async runScript(script: string, numKeys: number, ...args: (string | number)[]) {
+      // Serialize script invocations to model Redis single-threaded command execution
       const run = chain.then(() => {
-        evalCalls += 1;
+        scriptCalls += 1;
         expect(script).toContain('ZREMRANGEBYSCORE');
         expect(numKeys).toBe(1);
-        return runScript(numKeys, args);
+        return runScriptBody(numKeys, args);
       });
       chain = run.then(
         () => undefined,
@@ -175,22 +170,22 @@ describe('createMemoryStore', () => {
 // ---------------------------------------------------------------------------
 
 describe('createRedisStore', () => {
-  it('allows the first request via a single atomic eval', async () => {
+  it('allows the first request via a single atomic script', async () => {
     const client = makeFakeRedisClient();
     const store = createRedisStore(client);
     const result = await store.checkLimit('user:abc', 60000, 10);
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(9);
-    expect(client.evalCalls).toBe(1);
+    expect(client.scriptCalls).toBe(1);
   });
 
-  it('uses one eval per check (no separate INCR/EXPIRE race)', async () => {
+  it('uses one script call per check (no separate INCR/EXPIRE race)', async () => {
     const client = makeFakeRedisClient();
     const store = createRedisStore(client);
     await store.checkLimit('id', 60000, 5);
     await store.checkLimit('id', 60000, 5);
     await store.checkLimit('id', 60000, 5);
-    expect(client.evalCalls).toBe(3);
+    expect(client.scriptCalls).toBe(3);
   });
 
   it('blocks requests over the limit', async () => {
@@ -281,20 +276,23 @@ describe('createRedisStore', () => {
   it('sliding window: partial capacity frees as oldest entries expire', async () => {
     const client = makeFakeRedisClient();
     const store = createRedisStore(client);
-    const windowMs = 150;
+    // Wide window + clear gap so timer jitter cannot expire both entries at once.
+    const windowMs = 500;
+    const gapMs = 200;
     const max = 2;
     const id = 'partial-slide';
 
     // Request 1
     expect((await store.checkLimit(id, windowMs, max)).allowed).toBe(true);
-    // Small gap so timestamps are ordered
-    await new Promise((r) => setTimeout(r, 40));
+    // Gap so timestamps are ordered and only the oldest ages out first
+    await new Promise((r) => setTimeout(r, gapMs));
     // Request 2 fills the limit
     expect((await store.checkLimit(id, windowMs, max)).allowed).toBe(true);
     expect((await store.checkLimit(id, windowMs, max)).allowed).toBe(false);
 
-    // Wait long enough for request 1 to slide out but request 2 to remain
-    await new Promise((r) => setTimeout(r, windowMs - 20));
+    // Wait so req1 (age ≈ gap + wait) exits the window while req2 (age ≈ wait) remains.
+    // wait = windowMs - gap/2  →  req1 age = windowMs + gap/2  (out), req2 age = windowMs - gap/2 (in)
+    await new Promise((r) => setTimeout(r, windowMs - Math.floor(gapMs / 2)));
     const partial = await store.checkLimit(id, windowMs, max);
     // Exactly one slot should free (the oldest), so one request is allowed
     expect(partial.allowed).toBe(true);

@@ -15,10 +15,10 @@ interface RateLimitResult {
 
 /**
  * Minimal Redis surface used by the rate limiter.
- * `eval` runs a Lua script atomically (INCR+EXPIRE-style multi-step logic).
+ * `runScript` executes a Lua script atomically on Redis.
  */
 export interface RateLimitRedisClient {
-  eval(script: string, numKeys: number, ...args: (string | number)[]): Promise<unknown>;
+  runScript(script: string, numKeys: number, ...args: (string | number)[]): Promise<unknown>;
 }
 
 export interface RateLimitStore {
@@ -97,7 +97,7 @@ function getIdentifier(request: Request, keyGenerator?: (request: Request) => st
   return `ip:${getClientIP(request)}`;
 }
 
-function parseEvalResult(raw: unknown): {
+function parseScriptResult(raw: unknown): {
   allowed: boolean;
   remaining: number;
   resetAt: number;
@@ -126,8 +126,8 @@ export function createRedisStore(client: RateLimitRedisClient): RateLimitStore {
       const now = Date.now();
       const member = uniqueMember(now);
 
-      const raw = await client.eval(SLIDING_WINDOW_SCRIPT, 1, key, now, windowMs, max, member);
-      const parsed = parseEvalResult(raw);
+      const raw = await client.runScript(SLIDING_WINDOW_SCRIPT, 1, key, now, windowMs, max, member);
+      const parsed = parseScriptResult(raw);
 
       if (!parsed.allowed) {
         return {
@@ -200,6 +200,17 @@ export function createMemoryStore(): RateLimitStore {
   };
 }
 
+/** Adapt an ioredis-like client to RateLimitRedisClient via Redis CALL. */
+function wrapIoredisClient(client: {
+  call(command: string, ...args: (string | number | Buffer)[]): Promise<unknown>;
+}): RateLimitRedisClient {
+  return {
+    runScript(script, numKeys, ...args) {
+      return client.call('EVAL', script, numKeys, ...args);
+    },
+  };
+}
+
 export function rateLimit(options: RateLimitOptions = {}) {
   const { windowMs = DEFAULT_WINDOW_MS, max = DEFAULT_MAX, keyGenerator } = options;
 
@@ -213,7 +224,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
         maxRetriesPerRequest: 1,
         connectTimeout: 3000,
       });
-      return createRedisStore(client);
+      return createRedisStore(wrapIoredisClient(client));
     });
   } else {
     console.warn(

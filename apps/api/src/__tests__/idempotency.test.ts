@@ -8,12 +8,10 @@ import { eq } from 'drizzle-orm';
 describe('Idempotency Middleware', () => {
   let counter = 0;
 
-  const app = new Elysia()
-    .use(idempotency)
-    .post('/test', ({ body }) => {
-      counter++;
-      return { success: true, counter, body };
-    });
+  const app = new Elysia().use(idempotency).post('/test', ({ body }) => {
+    counter++;
+    return { success: true, counter, body };
+  });
 
   beforeEach(async () => {
     counter = 0;
@@ -30,17 +28,20 @@ describe('Idempotency Middleware', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Idempotency-Key': 'key-1'
+          'Idempotency-Key': 'key-1',
         },
-        body: JSON.stringify({ data: 'test' })
-      })
+        body: JSON.stringify({ data: 'test' }),
+      }),
     );
 
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.counter).toBe(1);
-    
-    const keys = await db.select().from(idempotencyKeys).where(eq(idempotencyKeys.key, 'key-1'));
+
+    const keys = await db
+      .select()
+      .from(idempotencyKeys)
+      .where(eq(idempotencyKeys.key, 'anonymous:key-1'));
     expect(keys.length).toBe(1);
     expect(keys[0]!.response).toEqual({ success: true, counter: 1, body: { data: 'test' } });
   });
@@ -51,10 +52,10 @@ describe('Idempotency Middleware', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Idempotency-Key': 'key-2'
+          'Idempotency-Key': 'key-2',
         },
-        body: JSON.stringify({ data: 'test' })
-      })
+        body: JSON.stringify({ data: 'test' }),
+      }),
     );
 
     const res2 = await app.handle(
@@ -62,10 +63,10 @@ describe('Idempotency Middleware', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Idempotency-Key': 'key-2'
+          'Idempotency-Key': 'key-2',
         },
-        body: JSON.stringify({ data: 'test' })
-      })
+        body: JSON.stringify({ data: 'test' }),
+      }),
     );
 
     const body2 = await res2.json();
@@ -75,31 +76,63 @@ describe('Idempotency Middleware', () => {
   });
 
   it('should re-run if the key is expired', async () => {
-    await db.insert(idempotencyKeys).values({
-      key: 'key-3',
-      response: { success: true, counter: 999, body: { data: 'old' } },
-      expiresAt: new Date(Date.now() - 1000)
-    }).onConflictDoUpdate({
-      target: idempotencyKeys.key,
-      set: {
+    await db
+      .insert(idempotencyKeys)
+      .values({
+        key: 'anonymous:key-3',
         response: { success: true, counter: 999, body: { data: 'old' } },
-        expiresAt: new Date(Date.now() - 1000)
-      }
-    });
+        expiresAt: new Date(Date.now() - 1000),
+      })
+      .onConflictDoUpdate({
+        target: idempotencyKeys.key,
+        set: {
+          response: { success: true, counter: 999, body: { data: 'old' } },
+          expiresAt: new Date(Date.now() - 1000),
+        },
+      });
 
     const res = await app.handle(
       new Request('http://localhost/test', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Idempotency-Key': 'key-3'
+          'Idempotency-Key': 'key-3',
         },
-        body: JSON.stringify({ data: 'new' })
-      })
+        body: JSON.stringify({ data: 'new' }),
+      }),
     );
 
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.counter).toBe(1);
+  });
+
+  it('should scope the idempotency key by walletAddress if authenticated', async () => {
+    const appWithAuth = new Elysia()
+      .derive(() => ({
+        getAuthenticatedUser: async () => ({ id: 'user-1', walletAddress: 'G123' }),
+      }))
+      .use(idempotency)
+      .post('/test-auth', ({ body }) => {
+        counter++;
+        return { success: true, counter, body };
+      });
+
+    await appWithAuth.handle(
+      new Request('http://localhost/test-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'key-auth',
+        },
+        body: JSON.stringify({ data: 'test' }),
+      }),
+    );
+
+    const keys = await db
+      .select()
+      .from(idempotencyKeys)
+      .where(eq(idempotencyKeys.key, 'G123:key-auth'));
+    expect(keys.length).toBe(1);
   });
 });

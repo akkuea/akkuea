@@ -1,7 +1,7 @@
 export * from './errorHandler';
 export * from './requestLogger';
 export * from './auth';
-export { rateLimit } from './rateLimit';
+export { rateLimit, walletKeyGenerator } from './rateLimit';
 export {
   validate,
   validateBody,

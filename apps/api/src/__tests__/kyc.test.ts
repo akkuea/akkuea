@@ -2,14 +2,14 @@ import { describe, expect, it, beforeAll } from 'bun:test';
 import { Elysia } from 'elysia';
 import { kycRoutes } from '../routes/kyc';
 import { errorHandler } from '../middleware/errorHandler';
-import { VALID_UUID, NON_EXISTENT_UUID } from '@real-estate-defi/shared';
+import { VALID_UUID } from '@real-estate-defi/shared';
 import { userRepository } from '../repositories/UserRepository';
 import jwt from 'jsonwebtoken';
 
 const skipIfNoDatabase = !process.env.DATABASE_URL;
 // Use a unique dummy address for KYC tests to avoid parallel test collisions with webhooks
 const TEST_WALLET = 'GAKYCTESTWALLETXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
-const NON_EXISTENT_USER_ID = NON_EXISTENT_UUID;
+const NON_EXISTENT_USER_ID = crypto.randomUUID();
 const NON_EXISTENT_DOC_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';
 const INTERNAL_KEY = process.env.INTERNAL_API_KEY || 'test-internal-api-key';

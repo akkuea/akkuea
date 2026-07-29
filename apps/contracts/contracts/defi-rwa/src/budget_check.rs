@@ -33,12 +33,6 @@ use soroban_sdk::{
 
 use crate::{PropertyTokenContract, PropertyTokenContractClient, PRECISION};
 
-// This crate is `#![no_std]` (required for Soroban wasm builds), but this
-// module only compiles under `cfg(test)`, which runs on the host — so we can
-// pull in `std` here for debug printing without affecting the contract build.
-#[cfg(test)]
-extern crate std;
-
 // ───────────────────────────────────────────────
 // Mock Oracle (same as in test.rs)
 // ───────────────────────────────────────────────
@@ -132,15 +126,14 @@ fn budget_setup() -> BudgetSetup<'static> {
     }
 }
 
-/// Helper: assert CPU and memory are within the given thresholds and print
-/// the observed values (visible in CI with `--nocapture`).
+/// Helper: assert CPU and memory are within the given thresholds. Uses the
+/// Soroban SDK's own `Budget::print()` (a `testutils`-gated API) to report
+/// observed costs to stdout — this avoids using `println!` directly, which
+/// isn't available since this crate is `no_std`.
 fn assert_budget(env: &Env, label: &str, max_cpu: u64, max_mem: u64) {
     let cpu = env.budget().cpu_instruction_cost();
     let mem = env.budget().memory_bytes_cost();
-    std::println!(
-        "[budget_check] {}: CPU = {} (limit {}), MEM = {} (limit {})",
-        label, cpu, max_cpu, mem, max_mem
-    );
+    env.budget().print();
     assert!(
         cpu <= max_cpu,
         "{} exceeded CPU budget: {} > {}",
@@ -306,9 +299,7 @@ fn budget_check_borrow() {
     let col_sac = StellarAssetClient::new(&s.env, &collateral_address);
     col_sac.mint(&borrower, &100_000_000_i128);
 
-    s.env
-        .ledger()
-        .with_mut(|li| li.timestamp = 1000);
+    s.env.ledger().with_mut(|li| li.timestamp = 1000);
 
     s.env.budget().reset_default();
     s.client.borrow(
@@ -364,9 +355,7 @@ fn budget_check_repay() {
     col_sac.mint(&borrower, &100_000_000_i128);
     sac.mint(&borrower, &100_000_000_i128); // for repay
 
-    s.env
-        .ledger()
-        .with_mut(|li| li.timestamp = 1000);
+    s.env.ledger().with_mut(|li| li.timestamp = 1000);
 
     s.client.borrow(
         &borrower,

@@ -56,8 +56,7 @@ function toDateStr(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-const MOCK_WALLET =
-  "GDEMOUSER1234567890AKKUEA00000000000000000000000000000000";
+const MOCK_WALLET = "GDEMOUSER1234567890AKKUEA00000000000000000000000000000000";
 
 /**
  * Pre-built 90-day performance history starting from 2026-04-26 (today minus 90 days

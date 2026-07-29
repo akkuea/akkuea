@@ -23,8 +23,7 @@ export interface UsePortfolioPerformanceReturn {
   refetch: () => void;
 }
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export function usePortfolioPerformance(
   walletAddress: string | null | undefined,
@@ -71,9 +70,7 @@ export function usePortfolioPerformance(
         // Trim to the requested time range
         const maxDays = TIME_RANGE_DAYS[range];
         const trimmed =
-          maxDays === Infinity
-            ? json.points
-            : json.points.slice(-maxDays);
+          maxDays === Infinity ? json.points : json.points.slice(-maxDays);
 
         setData(trimmed);
       } catch (err) {

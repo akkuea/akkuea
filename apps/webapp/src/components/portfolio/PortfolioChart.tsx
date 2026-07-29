@@ -151,7 +151,10 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
 // Main component
 // ---------------------------------------------------------------------------
 
-export function PortfolioChart({ walletAddress, className }: PortfolioChartProps) {
+export function PortfolioChart({
+  walletAddress,
+  className,
+}: PortfolioChartProps) {
   const [range, setRange] = useState<TimeRange>("3M");
   const { data, isLoading, error, refetch } = usePortfolioPerformance(
     walletAddress,

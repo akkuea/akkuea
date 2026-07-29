@@ -57,11 +57,7 @@ import "@/test/setup-dom";
 }
 
 import { afterAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import type {
-  ButtonHTMLAttributes,
-  HTMLAttributes,
-  ReactNode,
-} from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from "react";
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import type { UsePortfolioPerformanceReturn } from "@/hooks/usePortfolioPerformance";
 import { mockPortfolioPerformance } from "@/mocks/fixtures/portfolioPerformance";
@@ -104,9 +100,7 @@ mock.module("framer-motion", () => {
       { div: passthroughDiv, button: passthroughButton },
       {
         get: (target, prop) =>
-          prop in target
-            ? target[prop as keyof typeof target]
-            : passthroughDiv,
+          prop in target ? target[prop as keyof typeof target] : passthroughDiv,
       },
     ),
   };
@@ -119,8 +113,9 @@ mock.module("framer-motion", () => {
 mock.module("recharts", () => {
   const passDiv =
     (label: string) =>
-    ({ children }: { children?: ReactNode }) =>
-      <div data-testid={label}>{children ?? null}</div>;
+    ({ children }: { children?: ReactNode }) => (
+      <div data-testid={label}>{children ?? null}</div>
+    );
 
   return {
     ResponsiveContainer: passDiv("recharts-responsive-container"),
@@ -139,10 +134,7 @@ mock.module("recharts", () => {
 // ---------------------------------------------------------------------------
 
 mock.module("next-intl", () => ({
-  useTranslations:
-    () =>
-    (key: string) =>
-      key,
+  useTranslations: () => (key: string) => key,
 }));
 
 // ---------------------------------------------------------------------------
@@ -164,9 +156,8 @@ mock.module("@/hooks/usePortfolioPerformance", () => ({
 // Dynamic import AFTER all mocks are registered
 // ---------------------------------------------------------------------------
 
-const { PortfolioChart } = await import(
-  "@/components/portfolio/PortfolioChart"
-);
+const { PortfolioChart } =
+  await import("@/components/portfolio/PortfolioChart");
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -269,9 +260,7 @@ describe("PortfolioChart", () => {
 
     const view = render(<PortfolioChart walletAddress={WALLET} />);
 
-    expect(
-      view.queryByTestId("recharts-responsive-container"),
-    ).not.toBeNull();
+    expect(view.queryByTestId("recharts-responsive-container")).not.toBeNull();
     expect(view.queryByTestId("recharts-area-chart")).not.toBeNull();
 
     // No error or skeleton

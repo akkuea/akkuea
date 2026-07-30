@@ -2857,7 +2857,7 @@ fn test_emergency_pause_blocks_operations() {
 }
 
 #[test]
-#[should_panic(expected = "Timelock not expired")]
+#[should_panic(expected = "Error(Contract, #20)")]
 fn test_recovery_rejected_before_timelock() {
     let s = setup();
 
@@ -2895,7 +2895,7 @@ fn test_schedule_recovery_requires_paused() {
 }
 
 #[test]
-#[should_panic(expected = "Recovery already scheduled")]
+#[should_panic(expected = "Error(Contract, #18)")]
 fn test_double_schedule_rejected() {
     let s = setup();
 
@@ -2918,7 +2918,7 @@ fn test_cancel_recovery_keeps_contract_paused() {
 }
 
 #[test]
-#[should_panic(expected = "No recovery scheduled")]
+#[should_panic(expected = "Error(Contract, #19)")]
 fn test_cancel_no_recovery_panics() {
     let s = setup();
     s.contract_client.cancel_recovery(&s.admin);

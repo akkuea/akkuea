@@ -125,6 +125,7 @@ fn setup_reentrancy_env() -> ReentrancyTestEnv<'static> {
         collateral_factor: 750_000_000_000_000_000, // 75%
         liquidation_threshold: 800_000_000_000_000_000, // 80%
         liquidation_penalty: 50_000_000_000_000_000, // 5%
+        close_factor: 500_000_000_000_000_000,      // 50%
         reserve_factor: 1000,                       // 10%
         is_active: true,
         created_at: env.ledger().timestamp(),
@@ -283,14 +284,16 @@ fn test_borrow_double_call_does_not_corrupt_state() {
 fn test_borrow_rejected_at_checks_no_state_mutation() {
     let t = setup_reentrancy_env();
 
-    // Try to borrow with very little collateral — should fail health check
-    // Borrow 1B USDC with only 100 XLM collateral (health factor < 1.5)
+    // Try to borrow with sufficient LTV but insufficient health factor.
+    // Collateral: 100 XLM * $1.00 = $100
+    // Borrow: 70 USDC (passes collateral_factor: 70 ≤ 100*0.75=75)
+    // Health factor = (100 * 0.8) / 70 ≈ 1.14 < 1.5 ❌
     t.client.borrow(
         &t.borrower,
         &t.pool_id,
-        &1_000_000_000,
+        &70_i128, // 70 USDC
         &t.xlm_address,
-        &100, // Tiny collateral → health factor way below 1.5
+        &100, // 100 XLM collateral
     );
     // Panic expected — no state should have been modified
 }

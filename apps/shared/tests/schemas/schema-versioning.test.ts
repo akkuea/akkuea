@@ -335,6 +335,36 @@ describe("validateSchemaSnapshot", () => {
     expect(result.valid).toBe(true);
   });
 
+  it("returns valid when adding a new optional field (non-breaking)", () => {
+    const baseline: SchemaSnapshot = {
+      name: "Test",
+      fields: { x: { type: "ZodString", required: true } },
+      capturedAt: new Date().toISOString(),
+    };
+    // Schema with an *optional* field added on top of the baseline.
+    const schemaWithOptional = z.object({
+      x: z.string(),
+      y: z.string().optional(),
+    });
+    const result = validateSchemaSnapshot("Test", schemaWithOptional, baseline);
+    expect(result.valid).toBe(true);
+  });
+
+  it("returns invalid when adding a new required field (breaking)", () => {
+    const baseline: SchemaSnapshot = {
+      name: "Test",
+      fields: { x: { type: "ZodString", required: true } },
+      capturedAt: new Date().toISOString(),
+    };
+    // Schema with a *required* field added on top of the baseline.
+    const schemaWithRequired = z.object({
+      x: z.string(),
+      y: z.string(),
+    });
+    const result = validateSchemaSnapshot("Test", schemaWithRequired, baseline);
+    expect(result.valid).toBe(false);
+  });
+
   it("returns invalid when a field type has changed", () => {
     const baseline: SchemaSnapshot = {
       name: "Test",

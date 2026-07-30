@@ -57,8 +57,7 @@ impl TimelockControl {
     pub fn execute_recovery(env: &Env, caller: &Address) -> Result<(), ContractError> {
         AdminControl::require_admin(env, caller)?;
 
-        let record = Self::get_pending_recovery(env)
-            .ok_or(ContractError::NoRecoveryScheduled)?;
+        let record = Self::get_pending_recovery(env).ok_or(ContractError::NoRecoveryScheduled)?;
 
         let now = env.ledger().timestamp();
         if now < record.earliest_execution {

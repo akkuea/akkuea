@@ -1,7 +1,4 @@
 import { describe, it, expect } from 'bun:test';
-<<<<<<< HEAD
-import { rateLimit, createRedisStore, createMemoryStore, SLIDING_WINDOW_SCRIPT } from './rateLimit';
-=======
 import { rateLimit, createRedisStore, createMemoryStore, walletKeyGenerator } from './rateLimit';
 >>>>>>> a0e198b756d03d7005e0710f930c70fc36939eeb
 import type { RateLimitRedisClient } from './rateLimit';

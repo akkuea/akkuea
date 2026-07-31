@@ -21,7 +21,8 @@ export interface FormProps<TSchema extends z.ZodTypeAny> {
   defaultValues?: DefaultValues<z.infer<TSchema>>;
   onSubmit: (values: z.infer<TSchema>) => void | Promise<void>;
   children:
-    React.ReactNode | ((methods: FormRenderProps<TSchema>) => React.ReactNode);
+    | React.ReactNode
+    | ((methods: FormRenderProps<TSchema>) => React.ReactNode);
   className?: string;
   id?: string;
   successMessage?: string;

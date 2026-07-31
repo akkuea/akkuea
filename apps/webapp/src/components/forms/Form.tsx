@@ -21,7 +21,8 @@ export interface FormProps<TSchema extends z.ZodTypeAny> {
   defaultValues?: DefaultValues<z.infer<TSchema>>;
   onSubmit: (values: z.infer<TSchema>) => void | Promise<void>;
   children:
-    React.ReactNode | ((methods: FormRenderProps<TSchema>) => React.ReactNode);
+    | React.ReactNode
+    | ((methods: FormRenderProps<TSchema>) => React.ReactNode);
   className?: string;
   id?: string;
   successMessage?: string;
@@ -61,8 +62,8 @@ export function Form<TSchema extends z.ZodTypeAny>({
         err instanceof Error
           ? err.message
           : typeof err === "string"
-            ? err
-            : "Something went wrong. Please try again.";
+          ? err
+          : "Something went wrong. Please try again.";
       setFormError(message);
     }
   };

@@ -23,6 +23,10 @@ pub enum ContractError {
     SupplyRateBorrowRateMulOverflow = 15,
     NewIndexMulOverflow = 16,
     PowPrecisionOverflow = 17,
+    RecoveryAlreadyScheduled = 18,
+    NoRecoveryScheduled = 19,
+    TimelockNotExpired = 20,
+    TimelockOverflow = 21,
 }
 
 pub struct AdminControl;

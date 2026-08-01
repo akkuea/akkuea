@@ -8,6 +8,7 @@ import {
   paginationQuerySchema,
   ownerParamSchema,
   rateLimit,
+  walletKeyGenerator,
   authPlugin,
 } from '../middleware';
 import { PropertyController } from '../controllers/PropertyController';
@@ -111,7 +112,7 @@ const createPropertyRoute = new Elysia()
       }
     },
     {
-      beforeHandle: [rateLimit()],
+      beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
       detail: {
         summary: 'Create a property',
         description: 'Create a new real estate property listing (requires authentication)',
@@ -202,7 +203,7 @@ const tokenizePropertyRoute = new Elysia()
       }
     },
     {
-      beforeHandle: [rateLimit()],
+      beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
       detail: {
         summary: 'Tokenize a property',
         description: 'Tokenize a property on the Stellar network (requires authentication)',
@@ -240,7 +241,7 @@ const buySharesRoute = new Elysia()
       }
     },
     {
-      beforeHandle: [rateLimit()],
+      beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
       detail: {
         summary: 'Buy property shares',
         description: 'Purchase shares in a tokenized property (requires authentication)',

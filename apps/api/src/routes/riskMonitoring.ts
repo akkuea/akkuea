@@ -51,4 +51,24 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
         tags: ['Risk Monitoring'],
       },
     },
+  )
+  .get(
+    '/positions/:positionId/history',
+    ({ params: { positionId }, query }) =>
+      RiskMonitoringController.getCollateralRatioHistory(
+        positionId,
+        query.startDate as string | undefined,
+        query.endDate as string | undefined,
+      ),
+    {
+      params: t.Object({
+        positionId: t.String(),
+      }),
+      detail: {
+        summary: 'Get collateral ratio history',
+        description:
+          'Retrieve collateral ratio history for a position, optionally filtered by date range',
+        tags: ['Risk Monitoring'],
+      },
+    },
   );

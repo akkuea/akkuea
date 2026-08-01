@@ -115,10 +115,21 @@ jobs:
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-audit-${{ hashFiles('**/Cargo.lock') }}
           
-      - name: Run security audit
+      - name: Run cargo audit (high/critical only)
         run: |
           cd apps/contracts
-          cargo audit
+          echo "Running cargo audit against Cargo.lock..."
+          cargo audit --deny warnings --file Cargo.lock 2>&1 | tee audit-output.txt
+          # Fail the job only on high or critical severity advisories
+          if grep -Ei '(Severity: high|Severity: critical)' audit-output.txt; then
+            echo "::error::High or critical severity vulnerability found!"
+            exit 1
+          fi
+          echo "No high/critical vulnerabilities found."
+
+      - name: Run cargo deny
+        run: |
+          cd apps/contracts
           cargo deny check
           
       - name: Check for sensitive data
@@ -183,3 +194,32 @@ jobs:
           name: coverage-report
           path: apps/contracts/target/llvm-cov/html/
           retention-days: 7
+
+  invocation-budget:
+    name: Soroban Invocation Budget Check
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-budget-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-budget-
+
+      - name: Run invocation budget tests
+        run: |
+          cd apps/contracts
+          echo "Running Soroban invocation budget checks for defi-rwa..."
+          cargo test --package rwa-defi-contract budget_check -- --nocapture

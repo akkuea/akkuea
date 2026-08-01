@@ -1,7 +1,7 @@
 import { Elysia } from 'elysia';
 import { KYCController } from '../controllers/KYCController';
 import { ApiError } from '../errors/ApiError';
-import { rateLimit, authPlugin } from '../middleware';
+import { rateLimit, walletKeyGenerator, authPlugin } from '../middleware';
 
 const DOCUMENT_TYPES = [
   'passport',
@@ -85,7 +85,7 @@ const userScoped = new Elysia()
       }
     },
     {
-      beforeHandle: [rateLimit()],
+      beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
       detail: {
         summary: 'Submit KYC',
         description: 'Submit KYC verification documents for a user',
@@ -118,7 +118,7 @@ const jwtScoped = new Elysia()
   .use(authPlugin)
   .post(
     '/upload',
-    async ({ request, set }) => {
+    async ({ body, request, set }) => {
       try {
         const contentType = request.headers.get('content-type') ?? '';
         if (!contentType.includes('multipart/form-data')) {
@@ -130,10 +130,10 @@ const jwtScoped = new Elysia()
           };
         }
 
-        const formData = await request.formData();
-        const file = formData.get('file');
-        const userId = formData.get('userId');
-        const documentType = formData.get('documentType');
+        const formData = body as Record<string, unknown>;
+        const file = formData.file;
+        const userId = formData.userId;
+        const documentType = formData.documentType;
 
         if (!userId || typeof userId !== 'string') {
           set.status = 400;
@@ -173,7 +173,7 @@ const jwtScoped = new Elysia()
       }
     },
     {
-      beforeHandle: [rateLimit()],
+      beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
       detail: {
         summary: 'Upload KYC document',
         description: 'Upload a KYC document file (multipart/form-data)',
@@ -232,10 +232,8 @@ const internalScoped = new Elysia().post(
         throw new ApiError(401, 'UNAUTHORIZED', 'Internal key required');
       }
 
-      return await KYCController.verifyDocument(
-        documentId,
-        body as { verified: boolean; notes?: string },
-      );
+      const verifyBody = body as { verified: boolean; notes?: string; actorWallet?: string };
+      return await KYCController.verifyDocument(documentId, verifyBody, verifyBody.actorWallet);
     } catch (error) {
       return handleKycError(error, set);
     }

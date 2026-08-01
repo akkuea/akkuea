@@ -9,12 +9,17 @@ export const idempotency = new Elysia({ name: 'idempotency' })
     if (!rawKey) return { idempotencyKey: undefined };
 
     let walletAddress = 'anonymous';
-    if ('getAuthenticatedUser' in ctx && typeof (ctx as any).getAuthenticatedUser === 'function') {
-      try {
-        const user = await (ctx as any).getAuthenticatedUser();
-        walletAddress = user.walletAddress;
-      } catch (e) {
-        // user not authenticated, default to anonymous
+    if ('getAuthenticatedUser' in ctx) {
+      const getAuthenticatedUser = (
+        ctx as { getAuthenticatedUser?: () => Promise<{ walletAddress: string }> }
+      ).getAuthenticatedUser;
+      if (typeof getAuthenticatedUser === 'function') {
+        try {
+          const user = await getAuthenticatedUser();
+          walletAddress = user.walletAddress;
+        } catch {
+          // user not authenticated, default to anonymous
+        }
       }
     }
 

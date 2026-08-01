@@ -50,50 +50,46 @@ const buySharesSchema = z.object({
 });
 
 // GET /properties - list with filters
-const listPropertiesRoute = new Elysia()
-  .use(validateQuery(propertyQuerySchema))
-  .get(
-    '/',
-    async ({ validatedQuery, set }) => {
-      try {
-        return await PropertyController.getProperties(validatedQuery!);
-      } catch (error) {
-        const errorResponse = handleError(error);
-        set.status = errorResponse.statusCode;
-        return errorResponse;
-      }
+const listPropertiesRoute = new Elysia().use(validateQuery(propertyQuerySchema)).get(
+  '/',
+  async ({ validatedQuery, set }) => {
+    try {
+      return await PropertyController.getProperties(validatedQuery!);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  },
+  {
+    detail: {
+      summary: 'List properties',
+      description: 'Retrieve a paginated list of properties with optional filters',
+      tags: ['Properties'],
     },
-    {
-      detail: {
-        summary: 'List properties',
-        description: 'Retrieve a paginated list of properties with optional filters',
-        tags: ['Properties'],
-      },
-    },
-  );
+  },
+);
 
 // GET /properties/:id - get single property
-const getPropertyRoute = new Elysia()
-  .use(validateParams(uuidParamSchema))
-  .get(
-    '/:id',
-    async ({ validatedParams, set }) => {
-      try {
-        return await PropertyController.getProperty(validatedParams!.id);
-      } catch (error) {
-        const errorResponse = handleError(error);
-        set.status = errorResponse.statusCode;
-        return errorResponse;
-      }
+const getPropertyRoute = new Elysia().use(validateParams(uuidParamSchema)).get(
+  '/:id',
+  async ({ validatedParams, set }) => {
+    try {
+      return await PropertyController.getProperty(validatedParams!.id);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  },
+  {
+    detail: {
+      summary: 'Get property by ID',
+      description: 'Retrieve a single property by its UUID',
+      tags: ['Properties'],
     },
-    {
-      detail: {
-        summary: 'Get property by ID',
-        description: 'Retrieve a single property by its UUID',
-        tags: ['Properties'],
-      },
-    },
-  );
+  },
+);
 
 // POST /properties - create property
 const createPropertyRoute = new Elysia()
@@ -254,27 +250,25 @@ const buySharesRoute = new Elysia()
   );
 
 // GET /properties/:id/shares/:owner - get user shares
-const getUserSharesRoute = new Elysia()
-  .use(validateParams(ownerParamSchema))
-  .get(
-    '/:id/shares/:owner',
-    async ({ validatedParams, set }) => {
-      try {
-        return await PropertyController.getUserShares(validatedParams!.id, validatedParams!.owner);
-      } catch (error) {
-        const errorResponse = handleError(error);
-        set.status = errorResponse.statusCode;
-        return errorResponse;
-      }
+const getUserSharesRoute = new Elysia().use(validateParams(ownerParamSchema)).get(
+  '/:id/shares/:owner',
+  async ({ validatedParams, set }) => {
+    try {
+      return await PropertyController.getUserShares(validatedParams!.id, validatedParams!.owner);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  },
+  {
+    detail: {
+      summary: 'Get user shares',
+      description: 'Retrieve the number of shares owned by a user for a specific property',
+      tags: ['Properties'],
     },
-    {
-      detail: {
-        summary: 'Get user shares',
-        description: 'Retrieve the number of shares owned by a user for a specific property',
-        tags: ['Properties'],
-      },
-    },
-  );
+  },
+);
 
 // Combine all routes
 export const propertyRoutes = new Elysia({ prefix: '/properties' })

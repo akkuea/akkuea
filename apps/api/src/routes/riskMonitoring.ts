@@ -9,8 +9,10 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
       tags: ['Risk Monitoring'],
     },
   })
-  .get('/positions/risk/:level', ({ params: { level } }) =>
-    RiskMonitoringController.getPositionsByRisk(level), {
+  .get(
+    '/positions/risk/:level',
+    ({ params: { level } }) => RiskMonitoringController.getPositionsByRisk(level),
+    {
       params: t.Object({
         level: t.String(),
       }),
@@ -21,8 +23,10 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
       },
     },
   )
-  .get('/liquidation/:positionId', ({ params: { positionId } }) =>
-    RiskMonitoringController.getLiquidationReadiness(positionId), {
+  .get(
+    '/liquidation/:positionId',
+    ({ params: { positionId } }) => RiskMonitoringController.getLiquidationReadiness(positionId),
+    {
       params: t.Object({
         positionId: t.String(),
       }),
@@ -33,8 +37,11 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
       },
     },
   )
-  .get('/transitions', ({ query }) =>
-    RiskMonitoringController.getRiskTransitions(query.positionId as string | undefined), {
+  .get(
+    '/transitions',
+    ({ query }) =>
+      RiskMonitoringController.getRiskTransitions(query.positionId as string | undefined),
+    {
       query: t.Object({
         positionId: t.Optional(t.String()),
       }),

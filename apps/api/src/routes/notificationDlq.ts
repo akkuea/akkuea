@@ -31,61 +31,57 @@ function getService(): NotificationService {
   return _service;
 }
 
-const listDlqRoute = new Elysia()
-  .use(validateQuery(dlqPaginationSchema))
-  .get(
-    '/notifications/dlq',
-    async ({ validatedQuery, set }) => {
-      try {
-        const { limit, offset } = validatedQuery!;
-        const entries = await getService().getDlqEntries(limit, offset);
-        return { success: true, data: entries, meta: { limit, offset, count: entries.length } };
-      } catch (error) {
-        const err = handleError(error);
-        set.status = err.statusCode;
-        return err;
-      }
+const listDlqRoute = new Elysia().use(validateQuery(dlqPaginationSchema)).get(
+  '/notifications/dlq',
+  async ({ validatedQuery, set }) => {
+    try {
+      const { limit, offset } = validatedQuery!;
+      const entries = await getService().getDlqEntries(limit, offset);
+      return { success: true, data: entries, meta: { limit, offset, count: entries.length } };
+    } catch (error) {
+      const err = handleError(error);
+      set.status = err.statusCode;
+      return err;
+    }
+  },
+  {
+    detail: {
+      summary: 'List DLQ entries',
+      description: 'Retrieve entries from the notification dead letter queue',
+      tags: ['Notification DLQ'],
     },
-    {
-      detail: {
-        summary: 'List DLQ entries',
-        description: 'Retrieve entries from the notification dead letter queue',
-        tags: ['Notification DLQ'],
-      },
-    },
-  );
+  },
+);
 
-const getDlqEntryRoute = new Elysia()
-  .use(validateParams(uuidParamSchema))
-  .get(
-    '/notifications/dlq/:id',
-    async ({ validatedParams, set }) => {
-      try {
-        const entry = await getService().getDlqEntryById(validatedParams!.id);
-        if (!entry) {
-          set.status = 404;
-          return {
-            success: false,
-            error: 'NOT_FOUND',
-            message: `DLQ entry ${validatedParams!.id} not found`,
-            timestamp: new Date().toISOString(),
-          };
-        }
-        return { success: true, data: entry };
-      } catch (error) {
-        const err = handleError(error);
-        set.status = err.statusCode;
-        return err;
+const getDlqEntryRoute = new Elysia().use(validateParams(uuidParamSchema)).get(
+  '/notifications/dlq/:id',
+  async ({ validatedParams, set }) => {
+    try {
+      const entry = await getService().getDlqEntryById(validatedParams!.id);
+      if (!entry) {
+        set.status = 404;
+        return {
+          success: false,
+          error: 'NOT_FOUND',
+          message: `DLQ entry ${validatedParams!.id} not found`,
+          timestamp: new Date().toISOString(),
+        };
       }
+      return { success: true, data: entry };
+    } catch (error) {
+      const err = handleError(error);
+      set.status = err.statusCode;
+      return err;
+    }
+  },
+  {
+    detail: {
+      summary: 'Get DLQ entry',
+      description: 'Retrieve a specific entry from the notification dead letter queue by ID',
+      tags: ['Notification DLQ'],
     },
-    {
-      detail: {
-        summary: 'Get DLQ entry',
-        description: 'Retrieve a specific entry from the notification dead letter queue by ID',
-        tags: ['Notification DLQ'],
-      },
-    },
-  );
+  },
+);
 
 const reprocessDlqRoute = new Elysia()
   .use(validateParams(uuidParamSchema))

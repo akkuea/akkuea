@@ -121,8 +121,10 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
 
   // GET /pools/:id/user/:address/summary - Get user position summary
   .use(validate({ params: poolUserParamsSchema }))
-  .get('/pools/:id/user/:address/summary', async (ctx) =>
-    LendingController.getUserPositionSummary(ctx), {
+  .get(
+    '/pools/:id/user/:address/summary',
+    async (ctx) => LendingController.getUserPositionSummary(ctx),
+    {
       detail: {
         summary: 'Get user position summary',
         description: 'Retrieve a summary of a user position in a specific lending pool',
@@ -173,7 +175,8 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
     beforeHandle: [rateLimit()],
     detail: {
       summary: 'Borrow from pool',
-      description: 'Borrow assets from a lending pool by providing collateral (requires authentication)',
+      description:
+        'Borrow assets from a lending pool by providing collateral (requires authentication)',
       tags: ['Lending'],
     },
   })
@@ -192,11 +195,14 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
   // POST /pools/:id/positions/:borrowerId/liquidate - Execute liquidation (liquidator role required)
   .use(liquidatorAuth)
   .use(validate({ params: liquidationParamsSchema }))
-  .post('/pools/:id/positions/:borrowerId/liquidate', async (ctx) =>
-    LendingController.liquidate(ctx), {
+  .post(
+    '/pools/:id/positions/:borrowerId/liquidate',
+    async (ctx) => LendingController.liquidate(ctx),
+    {
       detail: {
         summary: 'Liquidate position',
-        description: 'Execute liquidation on an undercollateralized position (requires liquidator role)',
+        description:
+          'Execute liquidation on an undercollateralized position (requires liquidator role)',
         tags: ['Lending'],
       },
     },

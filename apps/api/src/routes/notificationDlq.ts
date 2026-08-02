@@ -31,9 +31,9 @@ function getService(): NotificationService {
   return _service;
 }
 
-const listDlqRoute = new Elysia()
-  .use(validateQuery(dlqPaginationSchema))
-  .get('/notifications/dlq', async ({ validatedQuery, set }) => {
+const listDlqRoute = new Elysia().use(validateQuery(dlqPaginationSchema)).get(
+  '/notifications/dlq',
+  async ({ validatedQuery, set }) => {
     try {
       const { limit, offset } = validatedQuery!;
       const entries = await getService().getDlqEntries(limit, offset);
@@ -43,11 +43,19 @@ const listDlqRoute = new Elysia()
       set.status = err.statusCode;
       return err;
     }
-  });
+  },
+  {
+    detail: {
+      summary: 'List DLQ entries',
+      description: 'Retrieve entries from the notification dead letter queue',
+      tags: ['Notification DLQ'],
+    },
+  },
+);
 
-const getDlqEntryRoute = new Elysia()
-  .use(validateParams(uuidParamSchema))
-  .get('/notifications/dlq/:id', async ({ validatedParams, set }) => {
+const getDlqEntryRoute = new Elysia().use(validateParams(uuidParamSchema)).get(
+  '/notifications/dlq/:id',
+  async ({ validatedParams, set }) => {
     try {
       const entry = await getService().getDlqEntryById(validatedParams!.id);
       if (!entry) {
@@ -65,42 +73,60 @@ const getDlqEntryRoute = new Elysia()
       set.status = err.statusCode;
       return err;
     }
-  });
+  },
+  {
+    detail: {
+      summary: 'Get DLQ entry',
+      description: 'Retrieve a specific entry from the notification dead letter queue by ID',
+      tags: ['Notification DLQ'],
+    },
+  },
+);
 
 const reprocessDlqRoute = new Elysia()
   .use(validateParams(uuidParamSchema))
   .use(validateBody(reprocessBodySchema))
-  .post('/notifications/dlq/:id/reprocess', async ({ validatedParams, validatedBody, set }) => {
-    try {
-      const result = await getService().reprocessDlqEntry(
-        validatedParams!.id,
-        validatedBody!.requeuedBy,
-      );
-      return { success: true, data: result };
-    } catch (error) {
-      if (error instanceof Error && error.message.includes('already been')) {
-        set.status = 409;
-        return {
-          success: false,
-          error: 'CONFLICT',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        };
+  .post(
+    '/notifications/dlq/:id/reprocess',
+    async ({ validatedParams, validatedBody, set }) => {
+      try {
+        const result = await getService().reprocessDlqEntry(
+          validatedParams!.id,
+          validatedBody!.requeuedBy,
+        );
+        return { success: true, data: result };
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('already been')) {
+          set.status = 409;
+          return {
+            success: false,
+            error: 'CONFLICT',
+            message: error.message,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        if (error instanceof Error && error.message.includes('not found')) {
+          set.status = 404;
+          return {
+            success: false,
+            error: 'NOT_FOUND',
+            message: error.message,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        const err = handleError(error);
+        set.status = err.statusCode;
+        return err;
       }
-      if (error instanceof Error && error.message.includes('not found')) {
-        set.status = 404;
-        return {
-          success: false,
-          error: 'NOT_FOUND',
-          message: error.message,
-          timestamp: new Date().toISOString(),
-        };
-      }
-      const err = handleError(error);
-      set.status = err.statusCode;
-      return err;
-    }
-  });
+    },
+    {
+      detail: {
+        summary: 'Reprocess DLQ entry',
+        description: 'Reprocess a failed notification from the dead letter queue',
+        tags: ['Notification DLQ'],
+      },
+    },
+  );
 
 export const notificationDlqRoutes = new Elysia({ prefix: '/internal' })
   .onBeforeHandle(({ headers, set }) => {

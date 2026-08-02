@@ -62,8 +62,8 @@ export function Form<TSchema extends z.ZodTypeAny>({
         err instanceof Error
           ? err.message
           : typeof err === "string"
-          ? err
-          : "Something went wrong. Please try again.";
+            ? err
+            : "Something went wrong. Please try again.";
       setFormError(message);
     }
   };

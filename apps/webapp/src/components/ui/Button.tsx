@@ -14,8 +14,10 @@ type ButtonVariant =
   | "accent";
 type ButtonSize = "sm" | "md" | "lg";
 
-interface ButtonProps
-  extends Omit<HTMLMotionProps<"button">, "size" | "children"> {
+interface ButtonProps extends Omit<
+  HTMLMotionProps<"button">,
+  "size" | "children"
+> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   isLoading?: boolean;

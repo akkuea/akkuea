@@ -1,12 +1,23 @@
-import { describe, expect, it, beforeEach } from 'bun:test';
+import { describe, expect, it, beforeEach, beforeAll } from 'bun:test';
 import { Elysia } from 'elysia';
 import { idempotency } from '../middleware/idempotency';
 import { db } from '../db';
 import { idempotencyKeys } from '../db/schema/idempotency';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 describe('Idempotency Middleware', () => {
   let counter = 0;
+
+  beforeAll(async () => {
+    await db.execute(sql`
+      CREATE TABLE IF NOT EXISTS idempotency_keys (
+        key VARCHAR(255) PRIMARY KEY,
+        response JSONB NOT NULL,
+        expires_at TIMESTAMPTZ NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+  });
 
   const app = new Elysia().use(idempotency).post('/test', ({ body }) => {
     counter++;

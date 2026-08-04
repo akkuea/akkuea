@@ -111,7 +111,15 @@ export function AuditLogViewer({
     } finally {
       setLoading(false);
     }
-  }, [operatorWallet, page, limit, debouncedActor, debouncedActionType, debouncedStartDate, debouncedEndDate]);
+  }, [
+    operatorWallet,
+    page,
+    limit,
+    debouncedActor,
+    debouncedActionType,
+    debouncedStartDate,
+    debouncedEndDate,
+  ]);
 
   useEffect(() => {
     if (isWalletConnected && operatorWallet) {

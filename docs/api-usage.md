@@ -10,9 +10,10 @@
 6. [Lending Endpoints](#lending-endpoints)
 7. [KYC Endpoints](#kyc-endpoints)
 8. [Notifications Endpoints](#notifications-endpoints)
-9. [Response Examples](#response-examples)
-10. [Rate Limiting](#rate-limiting)
-11. [Versioning](#versioning)
+9. [Admin Endpoints](#admin-endpoints)
+10. [Response Examples](#response-examples)
+11. [Rate Limiting](#rate-limiting)
+12. [Versioning](#versioning)
 
 ---
 
@@ -1328,6 +1329,55 @@ Response:
 ```bash
 curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
   https://api.akkuea.com/properties
+```
+
+---
+
+## Admin Endpoints
+
+### 1. Get Audit Logs
+
+Retrieve paginated audit logs for admin operations.
+
+**Endpoint:** `GET /api/v1/admin/audit-log`
+
+**Authentication:** Required (Admin Operator Wallet)
+
+**Headers:**
+
+- `x-operator-wallet`: Admin operator wallet address (string)
+
+**Query Parameters:**
+
+| Parameter    | Type   | Description                                 |
+| ------------ | ------ | ------------------------------------------- |
+| `page`       | number | Page number (default: 1)                    |
+| `limit`      | number | Results per page (default: 20)              |
+| `actor`      | string | Filter by actor's wallet address            |
+| `actionType` | string | Filter by action type (e.g., LOGIN, UPDATE) |
+| `startDate`  | string | Filter by start date (YYYY-MM-DD)           |
+| `endDate`    | string | Filter by end date (YYYY-MM-DD)             |
+
+**Success Response (200):**
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "1",
+      "actor": "0xABCDEF",
+      "actionType": "LOGIN",
+      "timestamp": "2023-10-10T12:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 1,
+    "totalPages": 1
+  }
+}
 ```
 
 ---

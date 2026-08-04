@@ -49,19 +49,25 @@ export function AuditLogViewer({
 
   const [filterActor, setFilterActor] = useState("");
   const [filterActionType, setFilterActionType] = useState("");
+  const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterEndDate, setFilterEndDate] = useState("");
 
   // debounced inputs
   const [debouncedActor, setDebouncedActor] = useState("");
   const [debouncedActionType, setDebouncedActionType] = useState("");
+  const [debouncedStartDate, setDebouncedStartDate] = useState("");
+  const [debouncedEndDate, setDebouncedEndDate] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedActor(filterActor);
       setDebouncedActionType(filterActionType);
+      setDebouncedStartDate(filterStartDate);
+      setDebouncedEndDate(filterEndDate);
       setPage(1); // reset to page 1 on filter change
     }, 500);
     return () => clearTimeout(timer);
-  }, [filterActor, filterActionType]);
+  }, [filterActor, filterActionType, filterStartDate, filterEndDate]);
 
   const fetchLogs = useCallback(async () => {
     if (!operatorWallet) return;
@@ -75,6 +81,8 @@ export function AuditLogViewer({
       if (debouncedActor) searchParams.set("actor", debouncedActor);
       if (debouncedActionType)
         searchParams.set("actionType", debouncedActionType);
+      if (debouncedStartDate) searchParams.set("startDate", debouncedStartDate);
+      if (debouncedEndDate) searchParams.set("endDate", debouncedEndDate);
 
       const res = await fetch(
         `/api/v1/admin/audit-log?${searchParams.toString()}`,
@@ -103,7 +111,7 @@ export function AuditLogViewer({
     } finally {
       setLoading(false);
     }
-  }, [operatorWallet, page, limit, debouncedActor, debouncedActionType]);
+  }, [operatorWallet, page, limit, debouncedActor, debouncedActionType, debouncedStartDate, debouncedEndDate]);
 
   useEffect(() => {
     if (isWalletConnected && operatorWallet) {
@@ -149,6 +157,22 @@ export function AuditLogViewer({
                 placeholder="Filter by Action Type..."
                 value={filterActionType}
                 onChange={(e) => setFilterActionType(e.target.value)}
+                className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-amber-500/50 focus:outline-none"
+              />
+            </div>
+            <div className="relative max-w-xs flex-1">
+              <input
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-amber-500/50 focus:outline-none"
+              />
+            </div>
+            <div className="relative max-w-xs flex-1">
+              <input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
                 className="w-full rounded-lg border border-zinc-800 bg-black px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-amber-500/50 focus:outline-none"
               />
             </div>

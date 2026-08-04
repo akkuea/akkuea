@@ -1,10 +1,11 @@
 import "@/test/setup-dom";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, cleanup } from "@testing-library/react";
 import { AuditLogViewer } from "../AuditLogViewer";
 
 describe("AuditLogViewer", () => {
   afterEach(() => {
     jest.restoreAllMocks();
+    cleanup();
   });
 
   it("displays prompt when wallet is not connected", () => {

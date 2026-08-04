@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'bun:test';
 import { rateLimit, createRedisStore, createMemoryStore, walletKeyGenerator } from './rateLimit';
->>>>>>> a0e198b756d03d7005e0710f930c70fc36939eeb
 import type { RateLimitRedisClient } from './rateLimit';
 import type { Context } from 'elysia';
 

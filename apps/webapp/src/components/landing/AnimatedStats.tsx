@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { motion, useInView } from "framer-motion";
 import { TrendingUp, Building, Users, DollarSign } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface StatProps {
   icon: React.ComponentType<{ className?: string }>;
@@ -61,42 +62,6 @@ function AnimatedCounter({
   );
 }
 
-const stats: StatProps[] = [
-  {
-    icon: TrendingUp,
-    value: 172,
-    suffix: "%",
-    label: "Platform Growth YoY",
-    decimals: 0,
-    duration: 2,
-  },
-  {
-    icon: DollarSign,
-    value: 3,
-    suffix: "B",
-    prefix: "$",
-    label: "Target AUM by 2027",
-    decimals: 0,
-    duration: 1.5,
-  },
-  {
-    icon: Building,
-    value: 847,
-    suffix: "+",
-    label: "Properties Tokenized",
-    decimals: 0,
-    duration: 2.5,
-  },
-  {
-    icon: Users,
-    value: 12.5,
-    suffix: "K",
-    label: "Active Investors",
-    decimals: 1,
-    duration: 2,
-  },
-];
-
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
@@ -118,6 +83,44 @@ const itemVariants = {
 };
 
 export function AnimatedStats() {
+  const t = useTranslations("Landing.AnimatedStats");
+
+  const stats: StatProps[] = [
+    {
+      icon: TrendingUp,
+      value: 172,
+      suffix: "%",
+      label: t("platformGrowth"),
+      decimals: 0,
+      duration: 2,
+    },
+    {
+      icon: DollarSign,
+      value: 3,
+      suffix: "B",
+      prefix: "$",
+      label: t("targetAum"),
+      decimals: 0,
+      duration: 1.5,
+    },
+    {
+      icon: Building,
+      value: 847,
+      suffix: "+",
+      label: t("propertiesTokenized"),
+      decimals: 0,
+      duration: 2.5,
+    },
+    {
+      icon: Users,
+      value: 12.5,
+      suffix: "K",
+      label: t("activeInvestors"),
+      decimals: 1,
+      duration: 2,
+    },
+  ];
+
   return (
     <section className="py-20 bg-[#0a0a0a] border-y border-[#262626]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -131,14 +134,14 @@ export function AnimatedStats() {
         >
           <div className="inline-flex items-center gap-3 mb-4">
             <span className="text-[10px] font-mono text-neutral-500 uppercase tracking-wider">
-              [METRICS]
+              {t("metrics")}
             </span>
           </div>
           <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3 tracking-tight">
-            Driving the RWA Revolution
+            {t("title")}
           </h2>
           <p className="text-sm text-neutral-500 max-w-md mx-auto">
-            Real results from real estate tokenization in emerging markets
+            {t("subtitle")}
           </p>
         </motion.div>
 

@@ -11,7 +11,9 @@
     "test": "NEXT_PUBLIC_API_URL=http://localhost:3001 bun test",
     "test:watch": "bun test --watch",
     "test:coverage": "bun test --coverage",
-    "clean": "rm -rf .next"
+    "clean": "rm -rf .next",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@akkuea/shared": "workspace:*",
@@ -21,15 +23,17 @@
     "@pollar/react": "^0.8.0",
     "@privy-io/react-auth": "^2.0.0",
     "@privy-io/server-auth": "^1.32.5",
+    "@stellar/stellar-sdk": "^13.3.0",
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.468.0",
     "next": "^16.2.6",
+    "next-intl": "^3.26.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.1",
+    "recharts": "2.15.3",
     "smart-account-kit": "0.2.10",
-    "@stellar/stellar-sdk": "^13.3.0",
     "zod": "^3.25.76",
     "zustand": "^5.0.11"
   },
@@ -50,7 +54,14 @@
     "jsdom": "^29.0.1",
     "msw": "^2.14.6",
     "tailwindcss": "^4.1.18",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@storybook/nextjs": "^8.6.0",
+    "@storybook/react": "^8.6.0",
+    "@storybook/addon-actions": "^8.6.0",
+    "@storybook/addon-essentials": "^8.6.0",
+    "@storybook/addon-interactions": "^8.6.0",
+    "@storybook/blocks": "^8.6.0",
+    "storybook": "^8.6.0"
   },
   "msw": {
     "workerDirectory": [

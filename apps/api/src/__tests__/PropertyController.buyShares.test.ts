@@ -4,6 +4,7 @@ import { PropertyController } from '../controllers/PropertyController';
 import { stellarService } from '../services/StellarService';
 import { propertyRepository } from '../repositories/PropertyRepository';
 import { userRepository } from '../repositories/UserRepository';
+import { kycRepository } from '../repositories/KYCRepository';
 import { db } from '../db';
 import { properties, shareOwnerships, transactions } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -28,6 +29,9 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
     const owner = await userRepository.getOrCreateByWallet(propertyOwnerAddress);
     const buyer = await userRepository.getOrCreateByWallet(buyerAddress);
     buyerId = buyer.id;
+
+    // Approve KYC for the buyer so share purchases are allowed
+    await kycRepository.updateUserKycStatus(buyerId, 'approved');
 
     // Create property
     const prop = await propertyRepository.create({
@@ -58,9 +62,14 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
     propertyId = prop.id;
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     originalMintPropertyShares = stellarService.mintPropertyShares;
     originalGetMintingConfig = stellarService.getMintingConfig;
+
+    // Reset availableShares to initial state for each test
+    if (propertyId) {
+      await db.update(properties).set({ availableShares: 10 }).where(eq(properties.id, propertyId));
+    }
   });
 
   afterEach(() => {
@@ -138,8 +147,8 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
       PropertyController.buyShares(propertyId, { buyer: buyerAddress, shares: 2 }, buyerAddress),
     ).rejects.toThrow('Soroban submission failed');
 
-    // Verify DB state unchanged from previous test
+    // Verify DB state unchanged (beforeEach reset availableShares to 10)
     const prop = await propertyRepository.findById(propertyId);
-    expect(prop!.availableShares).toBe(8);
+    expect(prop!.availableShares).toBe(10);
   });
 });

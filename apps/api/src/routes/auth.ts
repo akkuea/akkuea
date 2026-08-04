@@ -27,10 +27,20 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
   .use(validate({ body: challengeSchema }))
   .post('/challenge', async (ctx) => AuthController.getChallenge(ctx), {
     beforeHandle: [rateLimit()],
+    detail: {
+      summary: 'Get authentication challenge',
+      description: 'Request a nonce to sign for Stellar wallet authentication',
+      tags: ['Auth'],
+    },
   })
 
   // POST /auth/session - Verify signature and issue JWT
   .use(validate({ body: sessionSchema }))
   .post('/session', async (ctx) => AuthController.verifySession(ctx), {
     beforeHandle: [rateLimit()],
+    detail: {
+      summary: 'Create a session',
+      description: 'Verify a signed challenge and issue a JWT session token',
+      tags: ['Auth'],
+    },
   });

@@ -1,0 +1,130 @@
+{
+  "Landing": {
+    "Hero": {
+      "liveOnTestnet": "Live on Stellar Testnet",
+      "realEstate": "Real Estate.",
+      "tokenized": "Tokenized.",
+      "democratized": "Democratized.",
+      "investDesc": "Invest in premium real estate across Latin America and Africa.",
+      "startingFrom": "Starting from ",
+      "poweredBy": ". Powered by ",
+      "exploreProperties": "Explore Properties",
+      "tokenizeProperty": "Tokenize Your Property",
+      "targetAum": "Target AUM",
+      "properties": "Properties",
+      "investors": "Investors",
+      "marquee": [
+        "REAL ESTATE",
+        "TOKENIZATION",
+        "DEFI",
+        "STELLAR",
+        "BLOCKCHAIN",
+        "FRACTIONAL",
+        "OWNERSHIP",
+        "EMERGING MARKETS"
+      ],
+      "asciiTitle": "REAL WORLD",
+      "asciiSubtitle": "ASSETS"
+    },
+    "AnimatedStats": {
+      "metrics": "[METRICS]",
+      "title": "Driving the RWA Revolution",
+      "subtitle": "Real results from real estate tokenization in emerging markets",
+      "platformGrowth": "Platform Growth YoY",
+      "targetAum": "Target AUM by 2027",
+      "propertiesTokenized": "Properties Tokenized",
+      "activeInvestors": "Active Investors"
+    },
+    "Features": {
+      "whyChoose": "Why Choose Akkuea",
+      "builtFor": "Built for the Future",
+      "ofFinance": "of Finance",
+      "description": "Combining blockchain technology with real-world assets to create a transparent, efficient, and accessible investment platform.",
+      "secure": "SECURE",
+      "transparent": "TRANSPARENT",
+      "efficient": "EFFICIENT",
+      "items": {
+        "fractional": { "title": "Fractional Ownership", "desc": "Own premium real estate with investments starting at $100. NFT-based shares ensure transparent ownership." },
+        "security": { "title": "Institutional Security", "desc": "Multi-sig wallets, hardware security modules, and comprehensive insurance protect your investments." },
+        "defi": { "title": "DeFi Lending", "desc": "Use tokenized real estate as collateral or earn yields by providing liquidity to lending pools." },
+        "emerging": { "title": "Emerging Markets", "desc": "Access high-growth real estate markets in Latin America and Africa." },
+        "oracles": { "title": "Chainlink Oracles", "desc": "Real-time property valuations powered by Chainlink oracles ensure accurate pricing." },
+        "zk": { "title": "ZK Privacy", "desc": "Zero-knowledge proofs verify eligibility without revealing sensitive details." },
+        "settlement": { "title": "Instant Settlement", "desc": "Stellar blockchain enables near-instant transactions with fees under $0.01." },
+        "kyc": { "title": "KYC Compliant", "desc": "Fully compliant with regulatory requirements. Verified investors only." }
+      }
+    },
+    "HowItWorks": {
+      "gettingStarted": "Getting Started",
+      "title": "How It Works",
+      "subtitle": "Start investing in tokenized real estate in four simple steps",
+      "ready": "Ready to start? Connect your wallet above.",
+      "steps": {
+        "connect": { "title": "Connect Wallet", "desc": "Link your Stellar wallet and complete KYC verification to unlock the platform." },
+        "browse": { "title": "Browse Properties", "desc": "Explore tokenized properties across Latin America and Africa with full transparency." },
+        "invest": { "title": "Invest", "desc": "Purchase fractional ownership tokens with stablecoins. Receive NFT certificates." },
+        "earn": { "title": "Earn Returns", "desc": "Collect rental income, benefit from appreciation, or use as DeFi collateral." }
+      }
+    },
+    "CTA": {
+      "platformLive": "Platform Live",
+      "titlePart1": "Ready to Build Your",
+      "titlePart2": "Real Estate Portfolio?",
+      "description": "Join thousands of investors already earning yields from tokenized properties. Start with as little as $100 and diversify globally.",
+      "startInvesting": "Start Investing Now",
+      "listProperty": "List Your Property",
+      "security": "Bank-grade security",
+      "compliance": "Regulatory compliant",
+      "settlements": "Instant settlements"
+    }
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "overview": "Your portfolio overview",
+    "connectWallet": "Connect Your Wallet",
+    "connectWalletDesc": "Connect your Stellar wallet to view your portfolio, manage investments, and access DeFi features.",
+    "walletAddress": "Wallet Address",
+    "walletBalance": "Wallet Balance",
+    "portfolioValue": "Portfolio Value",
+    "estimated": "Estimated",
+    "properties": "Properties",
+    "noHoldings": "No holdings",
+    "avgYield": "Avg. Yield",
+    "supplyApy": "Supply APY",
+    "healthFactor": "Health Factor",
+    "noBorrows": "No borrows",
+    "yourProperties": "Your Properties",
+    "borrowed": "borrowed",
+    "noPropertiesYet": "No properties in your portfolio yet.",
+    "browseMarketplace": "Browse the marketplace to start investing.",
+    "allocation": "Allocation",
+    "activeLoans": "Active Loans",
+    "accruedInterest": "Accrued Interest",
+    "deposits": "Deposits",
+    "totalDeposited": "Total Deposited",
+    "emptyState": "Your portfolio is empty. Connect a wallet with assets to see your investments.",
+    "refresh": "Refresh",
+    "copyAddress": "Copy address",
+    "viewExplorer": "View on explorer",
+    "retry": "Retry",
+    "assetSingle": "asset",
+    "assetPlural": "assets"
+  },
+  "PropertyReportCard": {
+    "shares": "shares",
+    "verified": "Verified",
+    "perShare": "/ share",
+    "apy": "APY"
+  },
+  "AllocationChart": {
+    "noData": "No allocation data"
+  },
+  "Navbar": {
+    "dashboard": "Dashboard",
+    "marketplace": "Marketplace",
+    "tokenize": "Tokenize",
+    "lending": "Lending",
+    "map": "Map",
+    "connect": "Connect"
+  }
+}

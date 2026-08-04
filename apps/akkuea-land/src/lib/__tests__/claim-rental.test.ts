@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach } from "bun:test";
 
 // ── Shared mock data ─────────────────────────────────────────────────────────
 
-const VIEWER = "GDVIEWER1234567890123456789012345678901234567890123456";
+const VIEWER = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
 const MOCK_UNSIGNED_XDR = "AAAA_UNSIGNED_XDR_BASE64==";
 const MOCK_SIGNED_XDR = "AAAA_SIGNED_XDR_BASE64==";
 const MOCK_TX_HASH =

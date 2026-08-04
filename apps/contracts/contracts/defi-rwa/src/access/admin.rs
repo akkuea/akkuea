@@ -15,6 +15,18 @@ pub enum ContractError {
     BalanceOverflow = 7,
     InsufficientBalance = 8,
     InsufficientAllowance = 9,
+    BorrowRateUtilizationMulOverflow = 10,
+    BorrowRateBaseAddOverflow = 11,
+    BorrowRateBaseSlope1AddOverflow = 12,
+    BorrowRateExcessMulOverflow = 13,
+    BorrowRateRateAtOptimalAddOverflow = 14,
+    SupplyRateBorrowRateMulOverflow = 15,
+    NewIndexMulOverflow = 16,
+    PowPrecisionOverflow = 17,
+    RecoveryAlreadyScheduled = 18,
+    NoRecoveryScheduled = 19,
+    TimelockNotExpired = 20,
+    TimelockOverflow = 21,
 }
 
 pub struct AdminControl;

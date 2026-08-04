@@ -1,0 +1,130 @@
+{
+  "Landing": {
+    "Hero": {
+      "liveOnTestnet": "En vivo en Stellar Testnet",
+      "realEstate": "Bienes Raíces.",
+      "tokenized": "Tokenizados.",
+      "democratized": "Democratizados.",
+      "investDesc": "Invierte en bienes raíces premium en toda América Latina y África.",
+      "startingFrom": "Desde ",
+      "poweredBy": ". Impulsado por ",
+      "exploreProperties": "Explorar Propiedades",
+      "tokenizeProperty": "Tokeniza tu Propiedad",
+      "targetAum": "AUM Objetivo",
+      "properties": "Propiedades",
+      "investors": "Inversores",
+      "marquee": [
+        "BIENES RAÍCES",
+        "TOKENIZACIÓN",
+        "DEFI",
+        "STELLAR",
+        "BLOCKCHAIN",
+        "FRACCIONADO",
+        "PROPIEDAD",
+        "MERCADOS EMERGENTES"
+      ],
+      "asciiTitle": "ACTIVOS DEL MUNDO",
+      "asciiSubtitle": "REAL"
+    },
+    "AnimatedStats": {
+      "metrics": "[MÉTRICAS]",
+      "title": "Impulsando la Revolución RWA",
+      "subtitle": "Resultados reales de tokenización de bienes raíces en mercados emergentes",
+      "platformGrowth": "Crecimiento de Plataforma",
+      "targetAum": "AUM Objetivo para 2027",
+      "propertiesTokenized": "Propiedades Tokenizadas",
+      "activeInvestors": "Inversores Activos"
+    },
+    "Features": {
+      "whyChoose": "Por qué elegir Akkuea",
+      "builtFor": "Construido para el futuro",
+      "ofFinance": "de las Finanzas",
+      "description": "Combinando la tecnología blockchain con activos del mundo real para crear una plataforma de inversión transparente, eficiente y accesible.",
+      "secure": "SEGURO",
+      "transparent": "TRANSPARENTE",
+      "efficient": "EFICIENTE",
+      "items": {
+        "fractional": { "title": "Propiedad Fraccionada", "desc": "Posee bienes raíces con inversiones desde $100. Acciones en NFT garantizan propiedad transparente." },
+        "security": { "title": "Seguridad Institucional", "desc": "Billeteras multifirma, HSMs y seguro completo protegen tus inversiones." },
+        "defi": { "title": "Préstamos DeFi", "desc": "Usa bienes raíces como garantía o genera rendimientos proporcionando liquidez a pools." },
+        "emerging": { "title": "Mercados Emergentes", "desc": "Accede a mercados de alto crecimiento en América Latina y África." },
+        "oracles": { "title": "Oráculos de Chainlink", "desc": "Valoraciones en tiempo real impulsadas por oráculos aseguran precios precisos." },
+        "zk": { "title": "Privacidad ZK", "desc": "Pruebas de conocimiento cero verifican la elegibilidad sin revelar detalles sensibles." },
+        "settlement": { "title": "Liquidación Instantánea", "desc": "La blockchain de Stellar permite transacciones instantáneas con tarifas menores a $0.01." },
+        "kyc": { "title": "Cumplimiento KYC", "desc": "Cumplimiento normativo total. Solo inversores verificados." }
+      }
+    },
+    "HowItWorks": {
+      "gettingStarted": "Empezando",
+      "title": "Cómo Funciona",
+      "subtitle": "Empieza a invertir en bienes raíces tokenizados en cuatro sencillos pasos",
+      "ready": "¿Listo para empezar? Conecta tu billetera arriba.",
+      "steps": {
+        "connect": { "title": "Conectar Billetera", "desc": "Vincula tu billetera Stellar y completa la verificación KYC." },
+        "browse": { "title": "Explorar Propiedades", "desc": "Explora propiedades tokenizadas en América Latina y África con total transparencia." },
+        "invest": { "title": "Invertir", "desc": "Compra tokens de propiedad fraccionada con stablecoins. Recibe certificados NFT." },
+        "earn": { "title": "Ganar Rendimientos", "desc": "Cobra rentas, benefíciate de la apreciación o usa como garantía DeFi." }
+      }
+    },
+    "CTA": {
+      "platformLive": "Plataforma en Vivo",
+      "titlePart1": "¿Listo para Construir tu",
+      "titlePart2": "Portafolio Inmobiliario?",
+      "description": "Únete a miles de inversores que ya generan rendimientos. Empieza con $100 y diversifica.",
+      "startInvesting": "Empieza a Invertir",
+      "listProperty": "Lista tu Propiedad",
+      "security": "Seguridad de nivel bancario",
+      "compliance": "Cumplimiento normativo",
+      "settlements": "Liquidaciones instantáneas"
+    }
+  },
+  "Dashboard": {
+    "title": "Panel",
+    "overview": "Resumen de tu portafolio",
+    "connectWallet": "Conecta tu Billetera",
+    "connectWalletDesc": "Conecta tu billetera Stellar para ver tu portafolio, administrar inversiones y acceder a funciones DeFi.",
+    "walletAddress": "Dirección de Billetera",
+    "walletBalance": "Saldo de Billetera",
+    "portfolioValue": "Valor del Portafolio",
+    "estimated": "Estimado",
+    "properties": "Propiedades",
+    "noHoldings": "Sin tenencias",
+    "avgYield": "Rendimiento Promedio",
+    "supplyApy": "APY de Suministro",
+    "healthFactor": "Factor de Salud",
+    "noBorrows": "Sin préstamos",
+    "yourProperties": "Tus Propiedades",
+    "borrowed": "prestado",
+    "noPropertiesYet": "Aún no hay propiedades en tu portafolio.",
+    "browseMarketplace": "Explora el mercado para comenzar a invertir.",
+    "allocation": "Asignación",
+    "activeLoans": "Préstamos Activos",
+    "accruedInterest": "Interés Acumulado",
+    "deposits": "Depósitos",
+    "totalDeposited": "Total Depositado",
+    "emptyState": "Tu portafolio está vacío. Conecta una billetera con activos para ver tus inversiones.",
+    "retry": "Reintentar",
+    "assetSingle": "activo",
+    "assetPlural": "activos",
+    "refresh": "Actualizar",
+    "copyAddress": "Copiar dirección",
+    "viewExplorer": "Ver en el explorador"
+  },
+  "PropertyReportCard": {
+    "shares": "acciones",
+    "verified": "Verificado",
+    "perShare": "/ acción",
+    "apy": "APY"
+  },
+  "AllocationChart": {
+    "noData": "Sin datos de asignación"
+  },
+  "Navbar": {
+    "dashboard": "Panel",
+    "marketplace": "Mercado",
+    "tokenize": "Tokenizar",
+    "lending": "Préstamos",
+    "map": "Mapa",
+    "connect": "Conectar"
+  }
+}

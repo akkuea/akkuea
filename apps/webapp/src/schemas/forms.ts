@@ -1,4 +1,9 @@
 import { z, type RefinementCtx } from "zod";
+import {
+  stellarAddressSchema,
+  positiveAmountSchema,
+  percentageSchema,
+} from "@real-estate-defi/shared";
 
 const nonEmpty = (label: string) => z.string().min(1, `${label} is required`);
 
@@ -53,7 +58,7 @@ const tokenizeBaseSchema = z.object({
   appraisalReport: z.unknown().nullable().optional(),
 
   // Step 3: Tokenization
-  totalValue: positiveNumberString("Total property value"),
+  totalValue: positiveAmountSchema,
   totalTokens: positiveIntString("Total tokens"),
   minInvestment: positiveIntString("Minimum investment"),
   expectedYield: nonEmpty("Expected yield").refine(

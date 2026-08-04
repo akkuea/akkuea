@@ -2,8 +2,9 @@
 
 import { motion, useMotionValue } from "framer-motion";
 import { ArrowRight, ArrowUpRight } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/routing";
 import { Button } from "@/components/ui/Button";
+import { useTranslations } from "next-intl";
 
 export function GridBackground() {
   return (
@@ -31,16 +32,8 @@ export function GridBackground() {
 }
 
 function MarqueeText() {
-  const items = [
-    "REAL ESTATE",
-    "TOKENIZATION",
-    "DEFI",
-    "STELLAR",
-    "BLOCKCHAIN",
-    "FRACTIONAL",
-    "OWNERSHIP",
-    "EMERGING MARKETS",
-  ];
+  const t = useTranslations("Landing.Hero");
+  const items = t.raw("marquee") as string[];
 
   return (
     <div className="marquee border-y border-[#262626] py-3 bg-[#0a0a0a]">
@@ -73,6 +66,7 @@ function MarqueeText() {
 export function Hero() {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
+  const t = useTranslations("Landing.Hero");
 
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -100,7 +94,7 @@ export function Hero() {
             <div className="inline-flex items-center gap-3 px-4 py-2 bg-[#0a0a0a] border border-[#262626] rounded-full">
               <span className="status-dot status-dot-pulse" />
               <span className="text-xs font-mono text-neutral-400 tracking-wider uppercase">
-                Live on Stellar Testnet
+                {t("liveOnTestnet")}
               </span>
             </div>
           </motion.div>
@@ -113,11 +107,13 @@ export function Hero() {
             className="mb-6"
           >
             <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white leading-[0.9] tracking-tight">
-              <span className="block">Real Estate.</span>
+              <span className="block">{t("realEstate")}</span>
               <span className="block mt-2">
-                <span className="text-neutral-500">Tokenized.</span>
+                <span className="text-neutral-500">{t("tokenized")}</span>
               </span>
-              <span className="block mt-2 text-[#ff3e00]">Democratized.</span>
+              <span className="block mt-2 text-[#ff3e00]">
+                {t("democratized")}
+              </span>
             </h1>
           </motion.div>
 
@@ -136,8 +132,8 @@ export function Hero() {
 │  ██╔══██╗██║███╗██║ │
 │  ██║  ██║╚███╔███╔╝ │
 │  ╚═╝  ╚═╝ ╚══╝╚══╝  │
-│     REAL WORLD      │
-│      ASSETS         │
+│     ${t("asciiTitle").padEnd(15)} │
+│      ${t("asciiSubtitle").padEnd(14)} │
 └─────────────────────┘`}
             </pre>
           </motion.div>
@@ -149,11 +145,11 @@ export function Hero() {
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-base sm:text-lg text-neutral-400 max-w-xl mb-10 leading-relaxed"
           >
-            Invest in premium real estate across Latin America and Africa.
+            {t("investDesc")}
             <br className="hidden sm:block" />
-            <span className="text-neutral-500">Starting from </span>
+            <span className="text-neutral-500">{t("startingFrom")}</span>
             <span className="text-white font-mono">$100</span>
-            <span className="text-neutral-500">. Powered by </span>
+            <span className="text-neutral-500">{t("poweredBy")}</span>
             <span className="text-white">Stellar</span>.
           </motion.p>
 
@@ -166,7 +162,7 @@ export function Hero() {
           >
             <Link href="/marketplace">
               <Button size="lg" rightIcon={<ArrowRight className="w-4 h-4" />}>
-                Explore Properties
+                {t("exploreProperties")}
               </Button>
             </Link>
             <Link href="/tokenize">
@@ -175,7 +171,7 @@ export function Hero() {
                 size="lg"
                 rightIcon={<ArrowUpRight className="w-4 h-4" />}
               >
-                Tokenize Your Property
+                {t("tokenizeProperty")}
               </Button>
             </Link>
           </motion.div>
@@ -188,9 +184,9 @@ export function Hero() {
             className="flex flex-wrap items-center gap-8 sm:gap-12 border-t border-[#262626] pt-8"
           >
             {[
-              { value: "$3B", label: "Target AUM" },
-              { value: "847+", label: "Properties" },
-              { value: "12.5K", label: "Investors" },
+              { value: "$3B", label: t("targetAum") },
+              { value: "847+", label: t("properties") },
+              { value: "12.5K", label: t("investors") },
             ].map((stat) => (
               <div key={stat.label} className="group cursor-default">
                 <div className="text-2xl sm:text-3xl font-bold text-white font-mono tracking-tight group-hover:text-[#ff3e00] transition-colors">

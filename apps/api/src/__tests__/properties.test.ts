@@ -2,8 +2,9 @@ import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
 import { Elysia } from 'elysia';
 import { propertyRoutes } from '../routes/properties';
 import jwt from 'jsonwebtoken';
-import { VALID_UUID, NON_EXISTENT_UUID } from '@real-estate-defi/shared';
+import { VALID_UUID } from '@real-estate-defi/shared';
 const TEST_WALLET = 'GCVCMAB2RFWXYUOURL7XY3MW6LZUK6FQ5T6E7UFRHH4Y6OL43WER4QYF'; // Unique wallet for property tests
+const NON_EXISTENT_UUID = crypto.randomUUID();
 import { userRepository } from '../repositories/UserRepository';
 import { errorHandler } from '../middleware/errorHandler';
 
@@ -367,9 +368,14 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
       );
 
       // Validation should pass - controller handles business logic
-      const body = await response.json();
+      // getUserShares may return null (empty body) if user/property not found
+      const text = await response.text();
       if (response.status === 400) {
+        const body = JSON.parse(text);
         expect(body.code).not.toBe('VALIDATION_ERROR');
+      } else if (text && text.length > 0) {
+        const body = JSON.parse(text);
+        expect(body).toBeDefined();
       }
     });
   });

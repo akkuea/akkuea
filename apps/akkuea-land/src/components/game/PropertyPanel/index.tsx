@@ -8,6 +8,7 @@ import {
   BuildingLevel,
   PropertyOwnershipState,
 } from "../../../types/game.types";
+import { TREASURY_ADDRESS } from "@/lib/soroban-tx";
 
 import { EmptyPanel } from "./EmptyPanel";
 import { NotConnectedPanel } from "./NotConnectedPanel";
@@ -44,7 +45,7 @@ export const getOwnershipState = (
   }
   const isTreasury =
     !property.owner ||
-    property.owner === "GBTREASURY" ||
+    property.owner === TREASURY_ADDRESS ||
     property.owner.toLowerCase() === "treasury" ||
     property.owner.toLowerCase() === "system";
   if (isTreasury) {

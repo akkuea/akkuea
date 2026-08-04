@@ -18,7 +18,7 @@ import {
   type SelectableWalletKit,
 } from "@/lib/walletKit";
 
-const ADDRESS = "GDVIEWER1234567890123456789012345678901234567890123456";
+const ADDRESS = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
 
 const mockGetAddress = vi.fn();
 const mockOpenModal = vi.fn();

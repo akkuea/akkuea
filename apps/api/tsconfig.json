@@ -21,7 +21,7 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
+    "ignoreDeprecations": "5.0",
     "paths": {
       "@akkuea/shared": ["../shared/src"],
       "@real-estate-defi/shared": ["../shared/src"]

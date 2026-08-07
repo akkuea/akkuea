@@ -4,7 +4,7 @@ import { idempotencyKeys } from '../db/schema/idempotency';
 import { eq, and, gt } from 'drizzle-orm';
 
 export const idempotency = new Elysia({ name: 'idempotency' })
-  .derive(async (ctx) => {
+  .derive({ as: 'global' }, async (ctx) => {
     const rawKey = ctx.headers['idempotency-key'] as string | undefined;
     if (!rawKey) return { idempotencyKey: undefined };
 
@@ -27,7 +27,7 @@ export const idempotency = new Elysia({ name: 'idempotency' })
       idempotencyKey: `${walletAddress}:${rawKey}`,
     };
   })
-  .onBeforeHandle(async ({ idempotencyKey, store }) => {
+  .onBeforeHandle({ as: 'global' }, async ({ idempotencyKey, store }) => {
     if (!idempotencyKey) return;
 
     const existing = await db.query.idempotencyKeys.findFirst({
@@ -42,7 +42,7 @@ export const idempotency = new Elysia({ name: 'idempotency' })
       return existing.response;
     }
   })
-  .onAfterHandle(async ({ idempotencyKey, response, store }) => {
+  .onAfterHandle({ as: 'global' }, async ({ idempotencyKey, response, store }) => {
     if (!idempotencyKey || !response || (store as { servedFromCache?: boolean }).servedFromCache)
       return;
 

@@ -213,7 +213,10 @@ export function useLendingPools(
           }
         }
 
-        return { ...prev, [poolId]: { deposits: newDeposits, borrows: newBorrows } };
+        return {
+          ...prev,
+          [poolId]: { deposits: newDeposits, borrows: newBorrows },
+        };
       });
 
       // Apply optimistic pool-level changes (liquidity / totals)

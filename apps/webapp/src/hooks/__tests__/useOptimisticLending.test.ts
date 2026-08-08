@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, afterAll, mock } from "bun:test";
-import type { LendingPool, DepositPosition, BorrowPosition } from "@real-estate-defi/shared";
+import type {
+  LendingPool,
+  DepositPosition,
+  BorrowPosition,
+} from "@real-estate-defi/shared";
 import {
   VALID_STELLAR_ADDRESS,
   createLendingPool,
@@ -75,7 +79,10 @@ function applyOptimisticDeposit(
       }),
     ];
   }
-  return { ...positions, [poolId]: { deposits: newDeposits, borrows: current.borrows } };
+  return {
+    ...positions,
+    [poolId]: { deposits: newDeposits, borrows: current.borrows },
+  };
 }
 
 function applyOptimisticBorrow(
@@ -109,7 +116,10 @@ function applyOptimisticBorrow(
       }),
     ];
   }
-  return { ...positions, [poolId]: { deposits: current.deposits, borrows: newBorrows } };
+  return {
+    ...positions,
+    [poolId]: { deposits: current.deposits, borrows: newBorrows },
+  };
 }
 
 function applyOptimisticWithdraw(
@@ -125,7 +135,10 @@ function applyOptimisticWithdraw(
       shares: (parseFloat(d.shares) - amount).toString(),
     }))
     .filter((d) => parseFloat(d.amount) > 0);
-  return { ...positions, [poolId]: { deposits: newDeposits, borrows: current.borrows } };
+  return {
+    ...positions,
+    [poolId]: { deposits: newDeposits, borrows: current.borrows },
+  };
 }
 
 function applyOptimisticRepay(
@@ -141,7 +154,10 @@ function applyOptimisticRepay(
       accruedInterest: "0",
     }))
     .filter((b) => parseFloat(b.principal) > 0);
-  return { ...positions, [poolId]: { deposits: current.deposits, borrows: newBorrows } };
+  return {
+    ...positions,
+    [poolId]: { deposits: current.deposits, borrows: newBorrows },
+  };
 }
 
 function applyPoolLiquidityUpdate(
@@ -157,13 +173,29 @@ function applyPoolLiquidityUpdate(
     const totalBor = parseFloat(p.totalBorrows);
     switch (action) {
       case "supply":
-        return { ...p, availableLiquidity: (liq - amount).toString(), totalDeposits: (totalDep + amount).toString() };
+        return {
+          ...p,
+          availableLiquidity: (liq - amount).toString(),
+          totalDeposits: (totalDep + amount).toString(),
+        };
       case "borrow":
-        return { ...p, availableLiquidity: (liq - amount).toString(), totalBorrows: (totalBor + amount).toString() };
+        return {
+          ...p,
+          availableLiquidity: (liq - amount).toString(),
+          totalBorrows: (totalBor + amount).toString(),
+        };
       case "withdraw":
-        return { ...p, availableLiquidity: (liq + amount).toString(), totalDeposits: (totalDep - amount).toString() };
+        return {
+          ...p,
+          availableLiquidity: (liq + amount).toString(),
+          totalDeposits: (totalDep - amount).toString(),
+        };
       case "repay":
-        return { ...p, availableLiquidity: (liq + amount).toString(), totalBorrows: (totalBor - amount).toString() };
+        return {
+          ...p,
+          availableLiquidity: (liq + amount).toString(),
+          totalBorrows: (totalBor - amount).toString(),
+        };
     }
   });
 }
@@ -172,10 +204,18 @@ function applyPoolLiquidityUpdate(
 // Mock lendingApi methods
 // ---------------------------------------------------------------------------
 
-const mockDeposit = mock(async () => createDepositPosition({ accruedInterest: "12.5" }));
-const mockBorrow = mock(async () => createBorrowPosition({ principal: "5000", accruedInterest: "0" }));
-const mockWithdraw = mock(async () => createDepositPosition({ amount: "500", shares: "500" }));
-const mockRepay = mock(async () => createBorrowPosition({ principal: "4500", accruedInterest: "0" }));
+const mockDeposit = mock(async () =>
+  createDepositPosition({ accruedInterest: "12.5" }),
+);
+const mockBorrow = mock(async () =>
+  createBorrowPosition({ principal: "5000", accruedInterest: "0" }),
+);
+const mockWithdraw = mock(async () =>
+  createDepositPosition({ amount: "500", shares: "500" }),
+);
+const mockRepay = mock(async () =>
+  createBorrowPosition({ principal: "4500", accruedInterest: "0" }),
+);
 
 const originalDeposit = lendingApi.deposit;
 const originalBorrow = lendingApi.borrow;
@@ -381,7 +421,9 @@ describe("Optimistic UI for lending actions", () => {
         VALID_STELLAR_ADDRESS,
         mockPool.assetAddress,
       );
-      expect(positionsOptimistic[mockPool.id].borrows[0].principal).toBe("5000");
+      expect(positionsOptimistic[mockPool.id].borrows[0].principal).toBe(
+        "5000",
+      );
 
       let errorMessage: string | null = null;
       try {
@@ -541,7 +583,9 @@ describe("Optimistic UI for lending actions", () => {
         mockPool.id,
         5000,
       );
-      expect(positionsOptimistic[mockPool.id].borrows[0].principal).toBe("5000");
+      expect(positionsOptimistic[mockPool.id].borrows[0].principal).toBe(
+        "5000",
+      );
 
       let errorMessage: string | null = null;
       try {
@@ -565,7 +609,12 @@ describe("Optimistic UI for lending actions", () => {
 
   describe("pool liquidity optimistic updates", () => {
     it("supply decreases available liquidity and increases totalDeposits", () => {
-      const pools = applyPoolLiquidityUpdate([mockPool], mockPool.id, "supply", 5000);
+      const pools = applyPoolLiquidityUpdate(
+        [mockPool],
+        mockPool.id,
+        "supply",
+        5000,
+      );
       const updated = pools[0];
 
       expect(updated.availableLiquidity).toBe("1395000"); // 1400000 - 5000
@@ -573,7 +622,12 @@ describe("Optimistic UI for lending actions", () => {
     });
 
     it("borrow decreases available liquidity and increases totalBorrows", () => {
-      const pools = applyPoolLiquidityUpdate([mockPool], mockPool.id, "borrow", 5000);
+      const pools = applyPoolLiquidityUpdate(
+        [mockPool],
+        mockPool.id,
+        "borrow",
+        5000,
+      );
       const updated = pools[0];
 
       expect(updated.availableLiquidity).toBe("1395000");
@@ -581,7 +635,12 @@ describe("Optimistic UI for lending actions", () => {
     });
 
     it("withdraw increases available liquidity and decreases totalDeposits", () => {
-      const pools = applyPoolLiquidityUpdate([mockPool], mockPool.id, "withdraw", 5000);
+      const pools = applyPoolLiquidityUpdate(
+        [mockPool],
+        mockPool.id,
+        "withdraw",
+        5000,
+      );
       const updated = pools[0];
 
       expect(updated.availableLiquidity).toBe("1405000");
@@ -589,7 +648,12 @@ describe("Optimistic UI for lending actions", () => {
     });
 
     it("repay increases available liquidity and decreases totalBorrows", () => {
-      const pools = applyPoolLiquidityUpdate([mockPool], mockPool.id, "repay", 5000);
+      const pools = applyPoolLiquidityUpdate(
+        [mockPool],
+        mockPool.id,
+        "repay",
+        5000,
+      );
       const updated = pools[0];
 
       expect(updated.availableLiquidity).toBe("1405000");
@@ -628,7 +692,9 @@ describe("Optimistic UI for lending actions", () => {
       expect(pendingPoolIds.has(mockPool2.id)).toBe(true);
 
       // Commit pool 1
-      pendingPoolIds = new Set([...pendingPoolIds].filter((id) => id !== mockPool.id));
+      pendingPoolIds = new Set(
+        [...pendingPoolIds].filter((id) => id !== mockPool.id),
+      );
       expect(pendingPoolIds.has(mockPool.id)).toBe(false);
       expect(pendingPoolIds.has(mockPool2.id)).toBe(true);
     });

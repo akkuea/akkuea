@@ -30,6 +30,21 @@ Object.defineProperty(globalThis, "HTMLElement", {
   writable: true,
 });
 
+Object.defineProperty(globalThis, "SVGElement", {
+  value: dom.window.SVGElement,
+  writable: true,
+});
+
+Object.defineProperty(globalThis, "Element", {
+  value: dom.window.Element,
+  writable: true,
+});
+
+Object.defineProperty(globalThis, "Node", {
+  value: dom.window.Node,
+  writable: true,
+});
+
 Object.defineProperty(globalThis, "MutationObserver", {
   value: dom.window.MutationObserver,
   writable: true,

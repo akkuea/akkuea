@@ -17,14 +17,26 @@ import { StorageService } from '../services/StorageService';
 // ── helpers ────────────────────────────────────────────────────────────────────
 
 /** Minimal valid magic bytes for each allowed type (padded to 16 bytes). */
-const PDF_MAGIC = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-const JPEG_MAGIC = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01]);
-const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52]);
+const PDF_MAGIC = Buffer.from([
+  0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34, 0x0a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+]);
+const JPEG_MAGIC = Buffer.from([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+]);
+const PNG_MAGIC = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+]);
 
 /** Executable / archive magic bytes — must always be rejected. */
-const EXE_MAGIC = Buffer.from([0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00]);
-const ZIP_MAGIC = Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
-const GIF_MAGIC = Buffer.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0xff, 0xff, 0xff]);
+const EXE_MAGIC = Buffer.from([
+  0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00,
+]);
+const ZIP_MAGIC = Buffer.from([
+  0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+]);
+const GIF_MAGIC = Buffer.from([
+  0x47, 0x49, 0x46, 0x38, 0x39, 0x61, 0x01, 0x00, 0x01, 0x00, 0x80, 0x00, 0x00, 0xff, 0xff, 0xff,
+]);
 
 // ── extension / MIME-only checks (no buffer) ───────────────────────────────────
 
@@ -72,7 +84,11 @@ describe('StorageService.isAllowedFileType — magic-byte validation', () => {
   // ── valid files ──────────────────────────────────────────────────────────────
 
   it('accepts a real PDF buffer named .pdf', async () => {
-    const result = await StorageService.isAllowedFileType('document.pdf', 'application/pdf', PDF_MAGIC);
+    const result = await StorageService.isAllowedFileType(
+      'document.pdf',
+      'application/pdf',
+      PDF_MAGIC,
+    );
     expect(result.allowed).toBe(true);
   });
 
@@ -89,7 +105,11 @@ describe('StorageService.isAllowedFileType — magic-byte validation', () => {
   // ── renamed malicious files (the main attack vector) ─────────────────────────
 
   it('rejects an EXE file renamed to .pdf', async () => {
-    const result = await StorageService.isAllowedFileType('malicious.pdf', 'application/pdf', EXE_MAGIC);
+    const result = await StorageService.isAllowedFileType(
+      'malicious.pdf',
+      'application/pdf',
+      EXE_MAGIC,
+    );
     expect(result.allowed).toBe(false);
     expect(result.error).toMatch(/invalid file type/i);
   });
@@ -121,19 +141,37 @@ describe('StorageService.isAllowedFileType — magic-byte validation', () => {
 
   it('rejects an unrecognised file type (random bytes, large buffer)', async () => {
     const randomBytes = Buffer.alloc(32, 0xab); // no known magic signature
-    const result = await StorageService.isAllowedFileType('doc.pdf', 'application/pdf', randomBytes);
+    const result = await StorageService.isAllowedFileType(
+      'doc.pdf',
+      'application/pdf',
+      randomBytes,
+    );
     expect(result.allowed).toBe(false);
   });
 
-  it('allows a tiny buffer (unit-test stub) when extension/MIME are valid', async () => {
-    // Buffers < 8 bytes cannot be reliably identified; fall back to extension/MIME check.
+  it('rejects a tiny buffer that cannot be identified by magic bytes', async () => {
+    // Undersized payloads must not bypass magic-byte validation via MIME/extension trust.
     const tinyBuffer = Buffer.from('stub');
     const result = await StorageService.isAllowedFileType('doc.pdf', 'application/pdf', tinyBuffer);
-    expect(result.allowed).toBe(true);
+    expect(result.allowed).toBe(false);
+    expect(result.error).toMatch(/invalid file type/i);
+  });
+
+  it('rejects an empty buffer even with a valid extension and MIME', async () => {
+    const result = await StorageService.isAllowedFileType(
+      'doc.pdf',
+      'application/pdf',
+      Buffer.alloc(0),
+    );
+    expect(result.allowed).toBe(false);
   });
 
   it('still rejects a bad extension even with a valid PDF buffer', async () => {
-    const result = await StorageService.isAllowedFileType('malware.exe', 'application/pdf', PDF_MAGIC);
+    const result = await StorageService.isAllowedFileType(
+      'malware.exe',
+      'application/pdf',
+      PDF_MAGIC,
+    );
     expect(result.allowed).toBe(false);
   });
 });

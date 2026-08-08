@@ -61,25 +61,25 @@ export class StorageService {
       return { allowed: false, error: 'Invalid file type. Only PDF, JPG, and PNG are allowed.' };
     }
 
-    // 3. Magic-byte inspection — the definitive check
-    if (buffer && buffer.length > 0) {
+    // 3. Magic-byte inspection — definitive when content is available.
+    // When a buffer is supplied we never fall back to extension/MIME alone:
+    // undersized or unidentifiable content is rejected (spoofable checks only
+    // apply when no buffer is provided, e.g. pure unit-test extension cases).
+    if (buffer !== undefined) {
+      if (buffer.length === 0) {
+        return {
+          allowed: false,
+          error: 'Invalid file type. Only PDF, JPG, and PNG are allowed.',
+        };
+      }
+
       const detected = await fileTypeFromBuffer(buffer);
 
       if (!detected) {
-        // file-type could not detect any known signature.
-        // Allow plain-text detection to handle edge-case tiny test files in unit
-        // tests, but reject empty or undetectable blobs in production by falling
-        // back to the extension/MIME checks already passed above.
-        // For security, if the buffer is large enough that we should have detected
-        // a real type, reject it.
-        if (buffer.length >= 8) {
-          return {
-            allowed: false,
-            error: 'Invalid file type. Only PDF, JPG, and PNG are allowed.',
-          };
-        }
-        // Very small buffer (unit-test stubs) — trust extension/MIME checks.
-        return { allowed: true };
+        return {
+          allowed: false,
+          error: 'Invalid file type. Only PDF, JPG, and PNG are allowed.',
+        };
       }
 
       if (!ALLOWED_MAGIC_MIME_TYPES.has(detected.mime)) {

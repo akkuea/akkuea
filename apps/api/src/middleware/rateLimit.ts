@@ -271,9 +271,9 @@ export function rateLimit(options: RateLimitOptions = {}) {
     ctx.set.headers['X-RateLimit-Reset'] = String(Math.ceil(result.resetAt / 1000));
 
     if (!result.allowed) {
-      set.status = 429;
+      ctx.set.status = 429;
       if (result.retryAfter !== undefined) {
-        set.headers['Retry-After'] = String(result.retryAfter);
+        ctx.set.headers['Retry-After'] = String(result.retryAfter);
       }
       return {
         success: false,

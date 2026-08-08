@@ -1,47 +1,71 @@
+/* eslint-disable @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 import "@/test/setup-dom";
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import { cleanup, fireEvent, render } from "@testing-library/react";
-import type {
-  ButtonHTMLAttributes,
-  HTMLAttributes,
-  ReactNode,
+import {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type ImgHTMLAttributes,
+  type ReactNode,
 } from "react";
 import axe from "axe-core";
 import type { PropertyInfo } from "@real-estate-defi/shared";
 
-const { InvestModal } = await import("../InvestModal");
-
 mock.module("next/image", () => ({
-  default: (props: HTMLAttributes<HTMLImageElement>) => <img {...props} alt={props.alt ?? ""} />,
+  default: (props: ImgHTMLAttributes<HTMLImageElement>) => (
+    <img {...props} alt={props.alt ?? ""} />
+  ),
 }));
 
 mock.module("framer-motion", () => {
-  const passthroughDiv = ({
-    children,
-    whileHover: _whileHover,
-    whileTap: _whileTap,
-    initial: _initial,
-    animate: _animate,
-    exit: _exit,
-    transition: _transition,
-    variants: _variants,
-    ...props
-  }: HTMLAttributes<HTMLDivElement> & Record<string, unknown>) => (
-    <div {...props}>{children}</div>
-  );
-  const passthroughButton = ({
-    children,
-    whileHover: _whileHover,
-    whileTap: _whileTap,
-    initial: _initial,
-    animate: _animate,
-    exit: _exit,
-    transition: _transition,
-    variants: _variants,
-    ...props
-  }: ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>) => (
-    <button {...props}>{children}</button>
-  );
+  const passthroughDiv = forwardRef<
+    HTMLDivElement,
+    HTMLAttributes<HTMLDivElement> & Record<string, unknown>
+  >(function PassthroughDiv(
+    {
+      children,
+      whileHover: _whileHover,
+      whileTap: _whileTap,
+      initial: _initial,
+      animate: _animate,
+      exit: _exit,
+      transition: _transition,
+      variants: _variants,
+      ...props
+    },
+    ref,
+  ) {
+    return (
+      <div ref={ref} {...props}>
+        {children as ReactNode}
+      </div>
+    );
+  });
+
+  const passthroughButton = forwardRef<
+    HTMLButtonElement,
+    ButtonHTMLAttributes<HTMLButtonElement> & Record<string, unknown>
+  >(function PassthroughButton(
+    {
+      children,
+      whileHover: _whileHover,
+      whileTap: _whileTap,
+      initial: _initial,
+      animate: _animate,
+      exit: _exit,
+      transition: _transition,
+      variants: _variants,
+      ...props
+    },
+    ref,
+  ) {
+    return (
+      <button ref={ref} {...props}>
+        {children as ReactNode}
+      </button>
+    );
+  });
 
   return {
     AnimatePresence: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -59,6 +83,8 @@ mock.module("framer-motion", () => {
     ),
   };
 });
+
+const { InvestModal } = await import("../InvestModal");
 
 const property: PropertyInfo = {
   id: "550e8400-e29b-41d4-a716-446655440001",
@@ -88,7 +114,7 @@ afterEach(() => {
 
 describe("InvestModal accessibility", () => {
   it("keeps focus within the modal while tabbing", () => {
-    const { getByRole } = render(
+    const { getByRole, getAllByRole } = render(
       <InvestModal
         property={property}
         isOpen
@@ -99,12 +125,19 @@ describe("InvestModal accessibility", () => {
       />,
     );
 
-    const firstButton = getByRole("button", { name: /decrease token count/i });
     const closeButton = getByRole("button", { name: /close dialog/i });
+    const buttons = getAllByRole("button");
+    const lastButton = buttons[buttons.length - 1];
+
+    // Close is first in tab order; Tab from the last control must wrap back.
+    expect(buttons[0]).toBe(closeButton);
+    lastButton.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
+    expect(document.activeElement).toBe(closeButton);
 
     closeButton.focus();
-    fireEvent.keyDown(document, { key: "Tab" });
-    expect(document.activeElement).toBe(firstButton);
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(lastButton);
   });
 
   it("has no critical axe violations", async () => {

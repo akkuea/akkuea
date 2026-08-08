@@ -22,20 +22,31 @@ const sizeClasses = {
   xl: "max-w-xl",
 };
 
+function isFocusableVisible(el: HTMLElement): boolean {
+  if (el.getAttribute("aria-hidden") === "true" || el.hasAttribute("hidden")) {
+    return false;
+  }
+
+  // Walk ancestors so fixed/absolute dialogs still count in jsdom, where
+  // offsetParent is often null even for visible controls.
+  let current: HTMLElement | null = el;
+  while (current) {
+    const style = window.getComputedStyle(current);
+    if (style.display === "none" || style.visibility === "hidden") {
+      return false;
+    }
+    current = current.parentElement;
+  }
+
+  return true;
+}
+
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector =
     'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
   return Array.from(container.querySelectorAll<HTMLElement>(selector)).filter(
-    (el) => {
-      const style = window.getComputedStyle(el);
-      const isVisible =
-        style.display !== "none" &&
-        style.visibility !== "hidden" &&
-        el.getAttribute("aria-hidden") !== "true";
-
-      return isVisible && (el.offsetParent !== null || style.position === "fixed");
-    },
+    isFocusableVisible,
   );
 }
 

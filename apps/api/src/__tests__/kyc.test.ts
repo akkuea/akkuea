@@ -148,13 +148,10 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       formData.set('documentType', 'passport');
       // MZ header — Windows PE executable
       const exeMagic = new Uint8Array([
-        0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00,
-        0x04, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00,
+        0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00,
+        0x00,
       ]);
-      formData.set(
-        'file',
-        new File([exeMagic], 'passport.pdf', { type: 'application/pdf' }),
-      );
+      formData.set('file', new File([exeMagic], 'passport.pdf', { type: 'application/pdf' }));
       const response = await app.handle(
         new Request('http://localhost/kyc/upload', {
           method: 'POST',
@@ -174,13 +171,10 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       formData.set('documentType', 'passport');
       // PK header — ZIP archive
       const zipMagic = new Uint8Array([
-        0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00,
       ]);
-      formData.set(
-        'file',
-        new File([zipMagic], 'photo.jpg', { type: 'image/jpeg' }),
-      );
+      formData.set('file', new File([zipMagic], 'photo.jpg', { type: 'image/jpeg' }));
       const response = await app.handle(
         new Request('http://localhost/kyc/upload', {
           method: 'POST',

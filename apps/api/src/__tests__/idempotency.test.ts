@@ -1,25 +1,29 @@
 import { describe, expect, it, beforeEach, beforeAll } from 'bun:test';
 import { Elysia } from 'elysia';
+import { eq, sql } from 'drizzle-orm';
 import { idempotency } from '../middleware/idempotency';
 import { db } from '../db';
 import { idempotencyKeys } from '../db/schema/idempotency';
-import { eq, sql } from 'drizzle-orm';
 
-describe('Idempotency Middleware', () => {
+const skipIfNoDatabase = !process.env.DATABASE_URL;
+
+describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
   let counter = 0;
 
   beforeAll(async () => {
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS idempotency_keys (
         key VARCHAR(255) PRIMARY KEY,
-        response JSONB NOT NULL,
+        response JSONB,
         expires_at TIMESTAMPTZ NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
   });
 
-  const app = new Elysia().use(idempotency).post('/test', ({ body }) => {
+  const app = new Elysia().use(idempotency).post('/test', async ({ body }) => {
+    // small delay so concurrent claims can contend on the key
+    await new Promise((r) => setTimeout(r, 20));
     counter++;
     return { success: true, counter, body };
   });
@@ -45,7 +49,7 @@ describe('Idempotency Middleware', () => {
       }),
     );
 
-    const body = await res.json();
+    const body = (await res.json()) as { counter: number };
     expect(res.status).toBe(200);
     expect(body.counter).toBe(1);
 
@@ -80,7 +84,7 @@ describe('Idempotency Middleware', () => {
       }),
     );
 
-    const body2 = await res2.json();
+    const body2 = (await res2.json()) as { counter: number };
     expect(res2.status).toBe(200);
     expect(body2.counter).toBe(1);
     expect(counter).toBe(1);
@@ -113,7 +117,7 @@ describe('Idempotency Middleware', () => {
       }),
     );
 
-    const body = await res.json();
+    const body = (await res.json()) as { counter: number };
     expect(res.status).toBe(200);
     expect(body.counter).toBe(1);
   });
@@ -145,5 +149,36 @@ describe('Idempotency Middleware', () => {
       .from(idempotencyKeys)
       .where(eq(idempotencyKeys.key, 'G123:key-auth'));
     expect(keys.length).toBe(1);
+  });
+
+  it('should not run the handler twice under concurrent identical keys', async () => {
+    const results = await Promise.all([
+      app.handle(
+        new Request('http://localhost/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': 'key-race',
+          },
+          body: JSON.stringify({ data: 'race' }),
+        }),
+      ),
+      app.handle(
+        new Request('http://localhost/test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Idempotency-Key': 'key-race',
+          },
+          body: JSON.stringify({ data: 'race' }),
+        }),
+      ),
+    ]);
+
+    const statuses = results.map((r) => r.status).sort();
+    // One request completes the work; the other is either cached 200 or 409 in-flight
+    expect(counter).toBe(1);
+    expect(statuses[0]).toBeGreaterThanOrEqual(200);
+    expect(statuses.some((s) => s === 200)).toBe(true);
   });
 });

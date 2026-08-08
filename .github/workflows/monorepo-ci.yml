@@ -103,20 +103,15 @@ jobs:
       with:
         bun-version: ${{ env.BUN_VERSION }}
         
-    - name: Audit all dependencies
+    - name: Install dependencies
       run: |
-        cd .
-
-        # Install root dependencies
         bun install --frozen-lockfile
         bun install --workspaces --frozen-lockfile
 
-        # Audit Bun workspaces
-        bun audit --workspaces || true
-
-        cd apps/api && bun install --frozen-lockfile && bun audit || true
-        cd ../shared && bun install --frozen-lockfile && bun audit || true
+    - name: Security audit
+      run: bash .github/scripts/dependency-audit.sh .
         
+
     - name: Check for license conflicts
       run: |
         cd .

@@ -121,14 +121,7 @@ jobs:
           bun install --frozen-lockfile
 
       - name: Audit dependencies
-        run: |
-          cd apps/webapp
-
-          # Check for known vulnerabilities
-          bun audit --audit-level=moderate || true
-
-          # Check for outdated packages
-          bun outdated || true
+        run: bash .github/scripts/dependency-audit.sh .
 
       - name: Check for secrets in code
         run: |

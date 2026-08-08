@@ -100,14 +100,7 @@ jobs:
         bun install --frozen-lockfile
 
     - name: Audit dependencies
-      run: |
-        cd apps/api
-
-        # Check for high/critical vulnerabilities in dependencies
-        # Note: Known transitive vulnerabilities in minimatch (via eslint) and axios
-        # (via stellar-sdk/soroban-client) cannot be fixed without upstream updates.
-        # Using continue-on-error to avoid blocking PRs on transitive dependency issues.
-        bun audit --audit-level=high || echo "Audit found vulnerabilities in transitive dependencies (see above)"
+      run: bash .github/scripts/dependency-audit.sh .
 
   code-quality:
     name: Code Quality

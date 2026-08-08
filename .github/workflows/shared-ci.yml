@@ -80,14 +80,7 @@ jobs:
           bun install --frozen-lockfile
 
       - name: Audit dependencies
-        run: |
-          cd apps/shared
-
-          # Check for vulnerabilities
-          bun audit --audit-level=moderate || true
-
-          # Additional security checks
-          bunx audit-ci --moderate || true
+        run: bash .github/scripts/dependency-audit.sh .
 
   type-safety:
     name: Type Safety Analysis

@@ -2337,20 +2337,32 @@ fn test_oracle_fresh_price() {
         MockOracleContract::set_price(t.env.clone(), t.asset_address.clone(), PRECISION, now);
     });
 
-    let price = t.env.as_contract(&t.contract_id, || {
-        PriceOracle::get_price(&t.env, &t.asset_address)
+    let result = t.env.as_contract(&t.contract_id, || {
+        PriceOracle::try_get_price(&t.env, &t.asset_address)
     });
 
     assert_eq!(
-        price, PRECISION,
+        result,
+        Ok(PRECISION),
         "Fresh price should be returned as-is (18 dec oracle)"
     );
+
+    // Successful fetch persists price + timestamp together in storage
+    let snapshot = t.env.as_contract(&t.contract_id, || {
+        PriceOracle::get_last_oracle_price(&t.env, &t.asset_address)
+    });
+    assert!(
+        snapshot.is_some(),
+        "Snapshot should be stored after fresh fetch"
+    );
+    let snapshot = snapshot.unwrap();
+    assert_eq!(snapshot.price, PRECISION);
+    assert_eq!(snapshot.timestamp, now);
 }
 
-// ─── Test 2: Stale price → panic ───────────────────────
+// ─── Test 2: Stale price → specific ContractError ──────
 
 #[test]
-#[should_panic(expected = "Price data is stale")]
 fn test_oracle_stale_price() {
     let t = setup_oracle_test();
 
@@ -2372,16 +2384,29 @@ fn test_oracle_stale_price() {
         );
     });
 
-    // Should panic
-    t.env.as_contract(&t.contract_id, || {
-        PriceOracle::get_price(&t.env, &t.asset_address);
+    let result = t.env.as_contract(&t.contract_id, || {
+        PriceOracle::try_get_price(&t.env, &t.asset_address)
     });
+
+    assert_eq!(
+        result,
+        Err(ContractError::StalePrice),
+        "Stale price must fail with ContractError::StalePrice"
+    );
+
+    // Failed fetch must not write a snapshot
+    let snapshot = t.env.as_contract(&t.contract_id, || {
+        PriceOracle::get_last_oracle_price(&t.env, &t.asset_address)
+    });
+    assert!(
+        snapshot.is_none(),
+        "Stale price must not persist a snapshot"
+    );
 }
 
-// ─── Test 3: Zero price → panic ────────────────────────
+// ─── Test 3: Zero price → InvalidPrice ─────────────────
 
 #[test]
-#[should_panic(expected = "Invalid price: price must be positive")]
 fn test_oracle_zero_price() {
     let t = setup_oracle_test();
     let now = t.env.ledger().timestamp();
@@ -2390,15 +2415,16 @@ fn test_oracle_zero_price() {
         MockOracleContract::set_price(t.env.clone(), t.asset_address.clone(), 0, now);
     });
 
-    t.env.as_contract(&t.contract_id, || {
-        PriceOracle::get_price(&t.env, &t.asset_address);
+    let result = t.env.as_contract(&t.contract_id, || {
+        PriceOracle::try_get_price(&t.env, &t.asset_address)
     });
+
+    assert_eq!(result, Err(ContractError::InvalidPrice));
 }
 
-// ─── Test 4: Negative price → panic ───────────────────
+// ─── Test 4: Negative price → InvalidPrice ────────────
 
 #[test]
-#[should_panic(expected = "Invalid price: price must be positive")]
 fn test_oracle_negative_price() {
     let t = setup_oracle_test();
     let now = t.env.ledger().timestamp();
@@ -2407,22 +2433,25 @@ fn test_oracle_negative_price() {
         MockOracleContract::set_price(t.env.clone(), t.asset_address.clone(), -500, now);
     });
 
-    t.env.as_contract(&t.contract_id, || {
-        PriceOracle::get_price(&t.env, &t.asset_address);
+    let result = t.env.as_contract(&t.contract_id, || {
+        PriceOracle::try_get_price(&t.env, &t.asset_address)
     });
+
+    assert_eq!(result, Err(ContractError::InvalidPrice));
 }
 
-// ─── Test 5: Missing price (no data set) → panic ──────
+// ─── Test 5: Missing price (no data set) ──────────────
 
 #[test]
-#[should_panic(expected = "Price not available for asset")]
 fn test_oracle_missing_price() {
     let t = setup_oracle_test();
 
     // Do NOT set any price - oracle will return None
-    t.env.as_contract(&t.contract_id, || {
-        PriceOracle::get_price(&t.env, &t.asset_address);
+    let result = t.env.as_contract(&t.contract_id, || {
+        PriceOracle::try_get_price(&t.env, &t.asset_address)
     });
+
+    assert_eq!(result, Err(ContractError::PriceNotAvailable));
 }
 
 // ─── Test 6: Decimal normalization - scale UP ──────────
@@ -2535,7 +2564,6 @@ fn test_oracle_configurable_max_age() {
 }
 
 #[test]
-#[should_panic(expected = "Price data is stale")]
 fn test_oracle_configurable_max_age_rejects_stale() {
     let env = Env::default();
     env.mock_all_auths();
@@ -2560,15 +2588,20 @@ fn test_oracle_configurable_max_age_rejects_stale() {
         MockOracleContract::set_price(env.clone(), asset_address.clone(), PRECISION, 10_000 - 120);
     });
 
-    env.as_contract(&contract_id, || {
-        PriceOracle::get_price(&env, &asset_address);
+    let result = env.as_contract(&contract_id, || {
+        PriceOracle::try_get_price(&env, &asset_address)
     });
+
+    assert_eq!(
+        result,
+        Err(ContractError::StalePrice),
+        "Custom max age must reject stale prices with StalePrice"
+    );
 }
 
 // ─── Test 9: Minimum price floor ───────────────────────
 
 #[test]
-#[should_panic(expected = "Price below minimum threshold")]
 fn test_oracle_min_price_floor() {
     let env = Env::default();
     env.mock_all_auths();
@@ -2595,9 +2628,11 @@ fn test_oracle_min_price_floor() {
         );
     });
 
-    env.as_contract(&contract_id, || {
-        PriceOracle::get_price(&env, &asset_address);
+    let result = env.as_contract(&contract_id, || {
+        PriceOracle::try_get_price(&env, &asset_address)
     });
+
+    assert_eq!(result, Err(ContractError::PriceBelowFloor));
 }
 fn advance_time(env: &Env, secs: u64) {
     let mut li = env.ledger().get();
@@ -2688,7 +2723,7 @@ fn test_oracle_guarded_price_alias() {
 // ─── Test 12: End-to-end borrow with stale oracle ──────
 
 #[test]
-#[should_panic(expected = "Price data is stale")]
+#[should_panic(expected = "Error(Contract, #22)")]
 fn test_borrow_with_stale_oracle() {
     use soroban_sdk::token::StellarAssetClient;
 
@@ -2773,7 +2808,7 @@ fn test_borrow_with_stale_oracle() {
 // ─── Test 13: End-to-end borrow with zero oracle price ─
 
 #[test]
-#[should_panic(expected = "Invalid price: price must be positive")]
+#[should_panic(expected = "Error(Contract, #24)")]
 fn test_borrow_with_zero_oracle_price() {
     use soroban_sdk::token::StellarAssetClient;
 

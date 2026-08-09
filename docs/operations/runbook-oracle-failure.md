@@ -8,19 +8,22 @@
 
 ## Symptoms
 
-An oracle incident manifests as one of four panics in the Soroban contract (Issue #729 merged - `oracle.rs` updated):
+An oracle incident manifests as a typed `ContractError` from the Soroban contract (Issues #729 / #981 - `oracle.rs`). Public entry points panic via `panic_with_error` so the host surfaces the error code/name below:
 
-| Panic message                             | Location                           | Meaning                                                        |
-| ----------------------------------------- | ---------------------------------- | -------------------------------------------------------------- |
-| `"Oracle address not configured"`         | `oracle.rs` - `get_oracle_address` | `set_oracle` was never called, or the oracle address was wiped |
-| `"Price not available for asset"`         | `oracle.rs` - `get_price`          | Oracle returned `None` for the requested asset                 |
-| `"Invalid price: price must be positive"` | `oracle.rs` - `get_price`          | Oracle returned a zero or negative raw price                   |
-| `"Price data is stale"`                   | `oracle.rs` - `get_price`          | Price timestamp exceeds the configured `max_age` threshold     |
-| `"Price below minimum threshold"`         | `oracle.rs` - `get_price`          | Normalized price is below the configured `min_price` floor     |
+| ContractError           | Code | Meaning                                                        |
+| ----------------------- | ---- | -------------------------------------------------------------- |
+| `OracleNotConfigured`   | 26   | `set_oracle` was never called, or the oracle address was wiped |
+| `PriceNotAvailable`     | 23   | Oracle returned `None` for the requested asset                 |
+| `InvalidPrice`          | 24   | Oracle returned a zero or negative raw price                   |
+| `StalePrice`            | 22   | Price timestamp exceeds the configured `max_age` threshold     |
+| `PriceBelowFloor`       | 25   | Normalized price is below the configured `min_price` floor     |
+| `PriceScalingOverflow`  | 27   | Decimal normalization overflowed or underflowed                |
 
-All five panics terminate every `borrow()` call. `deposit()`, `withdraw()`, and `repay()` are **not** affected - existing depositors and borrowers can still exit positions. Only new borrowing is blocked.
+All of these terminate every `borrow()` / `liquidate()` call that needs a price. `deposit()`, `withdraw()`, and `repay()` are **not** affected - existing depositors and borrowers can still exit positions. Only new borrowing and liquidations that reprice collateral are blocked.
 
-> **Issue #729 - merged.** The staleness threshold is now **configurable** via `set_oracle_config(caller, max_age, min_price)`. The default is `DEFAULT_MAX_AGE = 3600` seconds if `set_oracle_config` has not been called. Run `get_oracle_config()` on your deployed contract to confirm the active values before citing any specific threshold in an incident report.
+On each **successful** guarded fetch the contract also stores an `OraclePriceSnapshot` `{ price, timestamp }` under `LastOraclePrice(asset)` for observability. Stale or invalid prices are never persisted.
+
+> **Issue #729 / #981.** The staleness threshold is **configurable** via `set_oracle_config(caller, max_age, min_price)`. The default is `DEFAULT_MAX_AGE = 3600` seconds if `set_oracle_config` has not been called. Run `get_oracle_config()` on your deployed contract to confirm the active values before citing any specific threshold in an incident report.
 
 ---
 
@@ -43,13 +46,14 @@ stellar contract invoke \
   --collateral_amount 1
 ```
 
-Read the error:
+Read the error (variant name or contract error code):
 
-- `"Oracle address not configured"` → go to **Scenario A**
-- `"Price not available for asset"` → go to **Scenario B1** (oracle outage)
-- `"Invalid price: price must be positive"` → go to **Scenario C** (bad price feed)
-- `"Price data is stale"` → go to **Scenario B** (staleness)
-- `"Price below minimum threshold"` → go to **Scenario C** (price floor breach)
+- `OracleNotConfigured` / `#26` → go to **Scenario A**
+- `PriceNotAvailable` / `#23` → go to **Scenario B1** (oracle outage)
+- `InvalidPrice` / `#24` → go to **Scenario C** (bad price feed)
+- `StalePrice` / `#22` → go to **Scenario B** (staleness)
+- `PriceBelowFloor` / `#25` → go to **Scenario C** (price floor breach)
+- `PriceScalingOverflow` / `#27` → go to **Scenario C** (bad decimals / feed scale)
 - Any other error → oracle is not the root cause; check pool status and contract pause state
 
 ### 2. Check active guardrail configuration

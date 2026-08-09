@@ -27,6 +27,18 @@ pub enum ContractError {
     NoRecoveryScheduled = 19,
     TimelockNotExpired = 20,
     TimelockOverflow = 21,
+    /// Oracle price age exceeds the configured max_age threshold
+    StalePrice = 22,
+    /// Oracle returned no price data for the requested asset
+    PriceNotAvailable = 23,
+    /// Oracle price is zero or negative
+    InvalidPrice = 24,
+    /// Normalized price is below the configured minimum floor
+    PriceBelowFloor = 25,
+    /// Oracle contract address has not been configured
+    OracleNotConfigured = 26,
+    /// Decimal normalization overflowed or underflowed
+    PriceScalingOverflow = 27,
 }
 
 pub struct AdminControl;

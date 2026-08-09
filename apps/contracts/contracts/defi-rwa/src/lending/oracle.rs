@@ -1,7 +1,9 @@
 use sep_40_oracle::{Asset, PriceData, PriceFeedClient};
-use soroban_sdk::{Address, Env};
+use soroban_sdk::{panic_with_error, Address, Env};
 
-use super::keys::LendingKey;
+use crate::access::ContractError;
+
+use super::keys::{lending_bump, LendingKey, OraclePriceSnapshot};
 
 /// Default maximum age for price data (1 hour in seconds).
 const DEFAULT_MAX_AGE: u64 = 3600;
@@ -9,8 +11,11 @@ const DEFAULT_MAX_AGE: u64 = 3600;
 /// Oracle price consumer with production-grade guardrails.
 ///
 /// Every price-sensitive code path in the contract MUST go through
-/// [`get_price`] (or the equivalent [`get_guarded_price`] alias) so that
-/// staleness, validity, and floor checks are applied uniformly.
+/// [`try_get_price`] (or the panic wrappers [`get_price`] / [`get_guarded_price`])
+/// so that staleness, validity, and floor checks are applied uniformly.
+///
+/// On a successful fetch the contract also persists an [`OraclePriceSnapshot`]
+/// (normalized price + oracle timestamp) under [`LendingKey::LastOraclePrice`].
 pub struct PriceOracle;
 
 impl PriceOracle {
@@ -24,11 +29,11 @@ impl PriceOracle {
     }
 
     /// Retrieve the configured oracle address.
-    pub fn get_oracle_address(env: &Env) -> Address {
+    pub fn get_oracle_address(env: &Env) -> Result<Address, ContractError> {
         env.storage()
             .instance()
             .get(&LendingKey::OracleAddress)
-            .expect("Oracle address not configured")
+            .ok_or(ContractError::OracleNotConfigured)
     }
 
     // ─── Configurable Guardrail Parameters ──────────
@@ -69,48 +74,98 @@ impl PriceOracle {
             .unwrap_or(0_i128)
     }
 
+    // ─── Snapshot storage ───────────────────────────
+
+    /// Persist a validated price snapshot (price + timestamp) for `asset`.
+    fn store_price_snapshot(env: &Env, asset: &Address, snapshot: &OraclePriceSnapshot) {
+        let key = LendingKey::LastOraclePrice(asset.clone());
+        env.storage().persistent().set(&key, snapshot);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
+    }
+
+    /// Read the last validated oracle snapshot for `asset`, if any.
+    pub fn get_last_oracle_price(env: &Env, asset: &Address) -> Option<OraclePriceSnapshot> {
+        let key = LendingKey::LastOraclePrice(asset.clone());
+        if env.storage().persistent().has(&key) {
+            env.storage().persistent().extend_ttl(
+                &key,
+                lending_bump::PERSISTENT_BUMP,
+                lending_bump::PERSISTENT_BUMP,
+            );
+            env.storage().persistent().get(&key)
+        } else {
+            None
+        }
+    }
+
     // ─── Guarded Price Fetch ────────────────────────
 
-    /// Fetch the price for `asset` with full production guardrails:
+    /// Fetch the price for `asset` with full production guardrails.
     ///
-    /// 1. Rejects missing prices (`None` from oracle).
-    /// 2. Rejects zero or negative raw prices.
-    /// 3. Rejects stale prices (age > configurable max age).
-    /// 4. Normalizes decimals to 18-decimal precision using checked math.
-    /// 5. Enforces the configurable minimum price floor after normalization.
-    pub fn get_price(env: &Env, asset: &Address) -> i128 {
-        let oracle_address = Self::get_oracle_address(env);
+    /// Returns `Result::Err` with a typed [`ContractError`] when any guardrail
+    /// fails (including staleness). On success, stores an
+    /// [`OraclePriceSnapshot`] alongside the normalized price and returns it.
+    ///
+    /// Guardrails:
+    /// 1. Oracle address must be configured
+    /// 2. Rejects missing prices (`None` from oracle)
+    /// 3. Rejects zero or negative raw prices
+    /// 4. Rejects stale prices (age > configurable max age)
+    /// 5. Normalizes decimals to 18-decimal precision using checked math
+    /// 6. Enforces the configurable minimum price floor after normalization
+    pub fn try_get_price(env: &Env, asset: &Address) -> Result<i128, ContractError> {
+        let oracle_address = Self::get_oracle_address(env)?;
         let price_feed_client = PriceFeedClient::new(env, &oracle_address);
 
         // 1. Fetch price - reject if missing
         let asset_enum = Asset::Stellar(asset.clone());
         let price_data: PriceData = price_feed_client
             .lastprice(&asset_enum)
-            .expect("Price not available for asset");
+            .ok_or(ContractError::PriceNotAvailable)?;
 
         // 2. Reject zero or negative raw price
         if price_data.price <= 0 {
-            panic!("Invalid price: price must be positive");
+            return Err(ContractError::InvalidPrice);
         }
 
         // 3. Staleness check - configurable max age
         let current_time = env.ledger().timestamp();
         let max_age = Self::get_max_age(env);
         if current_time > price_data.timestamp && (current_time - price_data.timestamp) > max_age {
-            panic!("Price data is stale");
+            return Err(ContractError::StalePrice);
         }
 
         // 4. Decimal normalization (target = 18 decimals, overflow-safe)
         let oracle_decimals = price_feed_client.decimals();
-        let normalized_price = Self::normalize_price(price_data.price, oracle_decimals);
+        let normalized_price = Self::normalize_price(price_data.price, oracle_decimals)?;
 
         // 5. Minimum price floor
         let min_price = Self::get_min_price(env);
         if min_price > 0 && normalized_price < min_price {
-            panic!("Price below minimum threshold");
+            return Err(ContractError::PriceBelowFloor);
         }
 
-        normalized_price
+        // 6. Persist price + timestamp together in contract storage
+        let snapshot = OraclePriceSnapshot {
+            price: normalized_price,
+            timestamp: price_data.timestamp,
+        };
+        Self::store_price_snapshot(env, asset, &snapshot);
+
+        Ok(normalized_price)
+    }
+
+    /// Fetch the price for `asset` with full production guardrails.
+    ///
+    /// Panic wrapper around [`try_get_price`] using typed [`ContractError`] codes
+    /// (via `panic_with_error`). Prefer [`try_get_price`] in new code that can
+    /// propagate `Result`.
+    pub fn get_price(env: &Env, asset: &Address) -> i128 {
+        Self::try_get_price(env, asset).unwrap_or_else(|e| panic_with_error!(env, e))
     }
 
     /// Canonical safe entry point - alias for [`get_price`].
@@ -126,13 +181,13 @@ impl PriceOracle {
     /// This still rejects missing prices but does **not** apply staleness,
     /// validity, or floor checks. Use only for informational / diagnostic
     /// purposes - never in risk-sensitive code paths.
-    pub fn get_raw_price_data(env: &Env, asset: &Address) -> PriceData {
-        let oracle_address = Self::get_oracle_address(env);
+    pub fn get_raw_price_data(env: &Env, asset: &Address) -> Result<PriceData, ContractError> {
+        let oracle_address = Self::get_oracle_address(env)?;
         let price_feed_client = PriceFeedClient::new(env, &oracle_address);
         let asset_enum = Asset::Stellar(asset.clone());
         price_feed_client
             .lastprice(&asset_enum)
-            .expect("Price not available for asset")
+            .ok_or(ContractError::PriceNotAvailable)
     }
 
     // ─── Internal Helpers ───────────────────────────
@@ -140,18 +195,18 @@ impl PriceOracle {
     /// Normalize a price from `oracle_decimals` to 18-decimal precision.
     ///
     /// Uses checked arithmetic to prevent silent overflow.
-    fn normalize_price(raw_price: i128, oracle_decimals: u32) -> i128 {
+    fn normalize_price(raw_price: i128, oracle_decimals: u32) -> Result<i128, ContractError> {
         let decimals_diff = 18_i32 - oracle_decimals as i32;
         if decimals_diff >= 0 {
             let scale_factor = 10_i128.pow(decimals_diff as u32);
             raw_price
                 .checked_mul(scale_factor)
-                .expect("Price scaling overflow")
+                .ok_or(ContractError::PriceScalingOverflow)
         } else {
             let scale_factor = 10_i128.pow((-decimals_diff) as u32);
             raw_price
                 .checked_div(scale_factor)
-                .expect("Price scaling underflow")
+                .ok_or(ContractError::PriceScalingOverflow)
         }
     }
 }

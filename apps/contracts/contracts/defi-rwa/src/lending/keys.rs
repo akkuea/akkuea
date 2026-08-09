@@ -1,5 +1,18 @@
 use soroban_sdk::{contracttype, Address, String};
 
+/// Last validated oracle observation for an asset: normalized price + feed timestamp.
+///
+/// Persisted after a successful guarded price fetch so price and timestamp travel
+/// together in contract storage (issue #981).
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[contracttype]
+pub struct OraclePriceSnapshot {
+    /// Price normalized to 18-decimal precision
+    pub price: i128,
+    /// Timestamp reported by the SEP-40 oracle feed
+    pub timestamp: u64,
+}
+
 /// Storage key types for the lending module
 #[derive(Clone)]
 #[contracttype]
@@ -79,6 +92,10 @@ pub enum LendingKey {
     /// Minimum acceptable normalized price (floor)
     /// Storage: Instance
     OracleMinPrice,
+
+    /// Last validated oracle price snapshot (price + timestamp) for an asset
+    /// Storage: Persistent
+    LastOraclePrice(Address),
 }
 
 /// TTL bump amounts for lending storage

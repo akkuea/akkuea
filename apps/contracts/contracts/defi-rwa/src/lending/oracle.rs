@@ -3,7 +3,7 @@ use soroban_sdk::{panic_with_error, Address, Env};
 
 use crate::access::ContractError;
 
-use super::keys::{LendingKey, OraclePriceSnapshot};
+use super::keys::{lending_bump, LendingKey, OraclePriceSnapshot};
 
 /// Default maximum age for price data (1 hour in seconds).
 const DEFAULT_MAX_AGE: u64 = 3600;
@@ -78,16 +78,28 @@ impl PriceOracle {
 
     /// Persist a validated price snapshot (price + timestamp) for `asset`.
     fn store_price_snapshot(env: &Env, asset: &Address, snapshot: &OraclePriceSnapshot) {
-        env.storage()
-            .persistent()
-            .set(&LendingKey::LastOraclePrice(asset.clone()), snapshot);
+        let key = LendingKey::LastOraclePrice(asset.clone());
+        env.storage().persistent().set(&key, snapshot);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
     }
 
     /// Read the last validated oracle snapshot for `asset`, if any.
     pub fn get_last_oracle_price(env: &Env, asset: &Address) -> Option<OraclePriceSnapshot> {
-        env.storage()
-            .persistent()
-            .get(&LendingKey::LastOraclePrice(asset.clone()))
+        let key = LendingKey::LastOraclePrice(asset.clone());
+        if env.storage().persistent().has(&key) {
+            env.storage().persistent().extend_ttl(
+                &key,
+                lending_bump::PERSISTENT_BUMP,
+                lending_bump::PERSISTENT_BUMP,
+            );
+            env.storage().persistent().get(&key)
+        } else {
+            None
+        }
     }
 
     // ─── Guarded Price Fetch ────────────────────────

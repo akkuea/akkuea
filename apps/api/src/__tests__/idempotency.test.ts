@@ -11,10 +11,12 @@ describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
   let counter = 0;
 
   beforeAll(async () => {
+    // Force a clean schema matching the migration (CI may re-use the service DB).
+    await db.execute(sql`DROP TABLE IF EXISTS idempotency_keys`);
     await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS idempotency_keys (
+      CREATE TABLE idempotency_keys (
         key VARCHAR(255) PRIMARY KEY,
-        response JSONB,
+        response JSONB NOT NULL,
         expires_at TIMESTAMPTZ NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
@@ -22,7 +24,6 @@ describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
   });
 
   const app = new Elysia().use(idempotency).post('/test', async ({ body }) => {
-    // small delay so concurrent claims can contend on the key
     await new Promise((r) => setTimeout(r, 20));
     counter++;
     return { success: true, counter, body };
@@ -33,7 +34,7 @@ describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
     try {
       await db.delete(idempotencyKeys);
     } catch {
-      // Ignore in case DB isn't fully set up for this test in isolated mode
+      // ignore if table missing
     }
   });
 
@@ -49,8 +50,9 @@ describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
       }),
     );
 
-    const body = (await res.json()) as { counter: number };
+    const text = await res.text();
     expect(res.status).toBe(200);
+    const body = JSON.parse(text) as { counter: number };
     expect(body.counter).toBe(1);
 
     const keys = await db
@@ -84,27 +86,18 @@ describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
       }),
     );
 
-    const body2 = (await res2.json()) as { counter: number };
+    const body2 = JSON.parse(await res2.text()) as { counter: number };
     expect(res2.status).toBe(200);
     expect(body2.counter).toBe(1);
     expect(counter).toBe(1);
   });
 
   it('should re-run if the key is expired', async () => {
-    await db
-      .insert(idempotencyKeys)
-      .values({
-        key: 'anonymous:key-3',
-        response: { success: true, counter: 999, body: { data: 'old' } },
-        expiresAt: new Date(Date.now() - 1000),
-      })
-      .onConflictDoUpdate({
-        target: idempotencyKeys.key,
-        set: {
-          response: { success: true, counter: 999, body: { data: 'old' } },
-          expiresAt: new Date(Date.now() - 1000),
-        },
-      });
+    await db.insert(idempotencyKeys).values({
+      key: 'anonymous:key-3',
+      response: { success: true, counter: 999, body: { data: 'old' } },
+      expiresAt: new Date(Date.now() - 1000),
+    });
 
     const res = await app.handle(
       new Request('http://localhost/test', {
@@ -117,7 +110,7 @@ describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
       }),
     );
 
-    const body = (await res.json()) as { counter: number };
+    const body = JSON.parse(await res.text()) as { counter: number };
     expect(res.status).toBe(200);
     expect(body.counter).toBe(1);
   });
@@ -133,7 +126,7 @@ describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
         return { success: true, counter, body };
       });
 
-    await appWithAuth.handle(
+    const res = await appWithAuth.handle(
       new Request('http://localhost/test-auth', {
         method: 'POST',
         headers: {
@@ -143,6 +136,8 @@ describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
         body: JSON.stringify({ data: 'test' }),
       }),
     );
+
+    expect(res.status).toBe(200);
 
     const keys = await db
       .select()
@@ -175,10 +170,11 @@ describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
       ),
     ]);
 
-    const statuses = results.map((r) => r.status).sort();
-    // One request completes the work; the other is either cached 200 or 409 in-flight
+    const statuses = results.map((r) => r.status).sort((a, b) => a - b);
+    // Exactly one handler execution
     expect(counter).toBe(1);
-    expect(statuses[0]).toBeGreaterThanOrEqual(200);
+    // One success; the other is either cached 200 or in-flight 409
     expect(statuses.some((s) => s === 200)).toBe(true);
+    expect(statuses.every((s) => s === 200 || s === 409)).toBe(true);
   });
 });

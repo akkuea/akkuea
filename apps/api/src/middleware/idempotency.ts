@@ -1,41 +1,64 @@
 import { Elysia } from 'elysia';
-import { and, eq, gt, sql } from 'drizzle-orm';
+import { and, eq, gt, lt } from 'drizzle-orm';
 import { db } from '../db';
 import { idempotencyKeys } from '../db/schema/idempotency';
 
 const TTL_MS = 24 * 60 * 60 * 1000;
 
-type IdempotencyStore = {
-  servedFromCache?: boolean;
-  claimedIdempotencyKey?: boolean;
-};
+/** Marker stored while a request is in-flight (never returned to clients). */
+const PENDING_MARKER = { __idempotency: 'pending' } as const;
+
+function isPendingResponse(response: unknown): boolean {
+  return (
+    typeof response === 'object' &&
+    response !== null &&
+    (response as { __idempotency?: string }).__idempotency === 'pending'
+  );
+}
 
 /**
- * Atomically claim an idempotency key for this request.
- * Inserts a pending row (response NULL). On conflict, reclaims only if expired.
- * Returns the claimed row when this request owns the key; otherwise null.
+ * Atomically reserve an idempotency key for this request.
+ * Uses primary-key uniqueness as the race guard (INSERT ... ON CONFLICT DO NOTHING).
+ * Expired rows are reclaimed via a conditional UPDATE.
  */
-async function tryClaimKey(key: string, expiresAt: Date) {
-  const result = await db.execute(sql`
-    INSERT INTO idempotency_keys (key, response, expires_at)
-    VALUES (${key}, NULL, ${expiresAt})
-    ON CONFLICT (key) DO UPDATE
-    SET
-      response = NULL,
-      expires_at = EXCLUDED.expires_at,
-      created_at = NOW()
-    WHERE idempotency_keys.expires_at < NOW()
-    RETURNING key
-  `);
+async function tryClaimKey(key: string, expiresAt: Date): Promise<boolean> {
+  const inserted = await db
+    .insert(idempotencyKeys)
+    .values({
+      key,
+      response: PENDING_MARKER,
+      expiresAt,
+    })
+    .onConflictDoNothing({ target: idempotencyKeys.key })
+    .returning({ key: idempotencyKeys.key });
 
-  const rows = Array.isArray(result) ? result : ((result as { rows?: unknown[] }).rows ?? []);
-  return rows.length > 0;
+  if (inserted.length > 0) {
+    return true;
+  }
+
+  const reclaimed = await db
+    .update(idempotencyKeys)
+    .set({
+      response: PENDING_MARKER,
+      expiresAt,
+      createdAt: new Date(),
+    })
+    .where(and(eq(idempotencyKeys.key, key), lt(idempotencyKeys.expiresAt, new Date())))
+    .returning({ key: idempotencyKeys.key });
+
+  return reclaimed.length > 0;
 }
 
 export const idempotency = new Elysia({ name: 'idempotency' })
   .derive({ as: 'global' }, async (ctx) => {
     const rawKey = ctx.headers['idempotency-key'] as string | undefined;
-    if (!rawKey) return { idempotencyKey: undefined as string | undefined };
+    if (!rawKey) {
+      return {
+        idempotencyKey: undefined as string | undefined,
+        claimedIdempotencyKey: false,
+        servedFromCache: false,
+      };
+    }
 
     let walletAddress = 'anonymous';
     if ('getAuthenticatedUser' in ctx) {
@@ -52,23 +75,30 @@ export const idempotency = new Elysia({ name: 'idempotency' })
       }
     }
 
-    return {
-      idempotencyKey: `${walletAddress}:${rawKey}`,
-    };
-  })
-  .onBeforeHandle({ as: 'global' }, async ({ idempotencyKey, store, set }) => {
-    if (!idempotencyKey) return;
-
-    const state = store as IdempotencyStore;
+    const idempotencyKey = `${walletAddress}:${rawKey}`;
     const expiresAt = new Date(Date.now() + TTL_MS);
-    const claimed = await tryClaimKey(idempotencyKey, expiresAt);
 
-    if (claimed) {
-      state.claimedIdempotencyKey = true;
-      return;
+    let claimed = false;
+    try {
+      claimed = await tryClaimKey(idempotencyKey, expiresAt);
+    } catch (error) {
+      console.error('Failed to claim idempotency key', error);
+      return {
+        idempotencyKey,
+        claimedIdempotencyKey: false,
+        servedFromCache: false,
+        idempotencyClaimError: true as boolean,
+      };
     }
 
-    // Another request holds a non-expired claim (or completed response)
+    if (claimed) {
+      return {
+        idempotencyKey,
+        claimedIdempotencyKey: true,
+        servedFromCache: false,
+      };
+    }
+
     const existing = await db.query.idempotencyKeys.findFirst({
       where: and(
         eq(idempotencyKeys.key, idempotencyKey),
@@ -76,34 +106,73 @@ export const idempotency = new Elysia({ name: 'idempotency' })
       ),
     });
 
-    if (existing?.response != null) {
-      state.servedFromCache = true;
-      return existing.response;
+    if (existing && existing.response != null && !isPendingResponse(existing.response)) {
+      return {
+        idempotencyKey,
+        claimedIdempotencyKey: false,
+        servedFromCache: true,
+        cachedIdempotencyResponse: existing.response as unknown,
+      };
     }
 
-    // In-flight concurrent request with the same key — do not re-run the handler
-    set.status = 409;
     return {
-      success: false,
-      error: 'IDEMPOTENCY_CONFLICT',
-      message: 'A request with this Idempotency-Key is already in progress.',
+      idempotencyKey,
+      claimedIdempotencyKey: false,
+      servedFromCache: false,
+      idempotencyInFlight: true as boolean,
     };
   })
-  .onAfterHandle({ as: 'global' }, async ({ idempotencyKey, response, store }) => {
-    const state = store as IdempotencyStore;
-    if (!idempotencyKey || !response || !state.claimedIdempotencyKey || state.servedFromCache) {
-      return;
-    }
+  .onBeforeHandle(
+    { as: 'global' },
+    ({
+      set,
+      servedFromCache,
+      cachedIdempotencyResponse,
+      idempotencyInFlight,
+      idempotencyClaimError,
+    }) => {
+      if (idempotencyClaimError) {
+        set.status = 500;
+        return {
+          success: false,
+          error: 'IDEMPOTENCY_ERROR',
+          message: 'Failed to process Idempotency-Key.',
+        };
+      }
 
-    try {
-      await db
-        .update(idempotencyKeys)
-        .set({
-          response,
-          expiresAt: new Date(Date.now() + TTL_MS),
-        })
-        .where(eq(idempotencyKeys.key, idempotencyKey));
-    } catch (error) {
-      console.error('Failed to save idempotency key', error);
-    }
-  });
+      if (servedFromCache && cachedIdempotencyResponse !== undefined) {
+        return cachedIdempotencyResponse;
+      }
+
+      if (idempotencyInFlight) {
+        set.status = 409;
+        return {
+          success: false,
+          error: 'IDEMPOTENCY_CONFLICT',
+          message: 'A request with this Idempotency-Key is already in progress.',
+        };
+      }
+    },
+  )
+  .onAfterHandle(
+    { as: 'global' },
+    async ({ idempotencyKey, response, claimedIdempotencyKey, servedFromCache }) => {
+      if (!idempotencyKey || response == null || !claimedIdempotencyKey || servedFromCache) {
+        return;
+      }
+
+      if (isPendingResponse(response)) return;
+
+      try {
+        await db
+          .update(idempotencyKeys)
+          .set({
+            response,
+            expiresAt: new Date(Date.now() + TTL_MS),
+          })
+          .where(eq(idempotencyKeys.key, idempotencyKey));
+      } catch (error) {
+        console.error('Failed to save idempotency key', error);
+      }
+    },
+  );

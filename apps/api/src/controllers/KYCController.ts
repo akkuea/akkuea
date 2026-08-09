@@ -107,17 +107,18 @@ export class KYCController {
         throw ApiError.notFound('User not found');
       }
 
-      // Read the file buffer first so it can be used for magic-byte inspection
+      // Size first: cheap check and correct error for oversized uploads before
+      // spending CPU on magic-byte inspection of multi-megabyte payloads.
+      const sizeCheck = StorageService.isAllowedFileSize(file.size);
+      if (!sizeCheck.allowed) {
+        throw ApiError.badRequest(sizeCheck.error!);
+      }
+
       const buffer = Buffer.from(await file.arrayBuffer());
 
       const typeCheck = await StorageService.isAllowedFileType(file.name, file.type, buffer);
       if (!typeCheck.allowed) {
         throw ApiError.badRequest(typeCheck.error!);
-      }
-
-      const sizeCheck = StorageService.isAllowedFileSize(file.size);
-      if (!sizeCheck.allowed) {
-        throw ApiError.badRequest(sizeCheck.error!);
       }
 
       const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '.pdf';

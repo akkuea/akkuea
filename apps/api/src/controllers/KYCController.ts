@@ -107,14 +107,18 @@ export class KYCController {
         throw ApiError.notFound('User not found');
       }
 
-      const typeCheck = StorageService.isAllowedFileType(file.name, file.type);
-      if (!typeCheck.allowed) {
-        throw ApiError.badRequest(typeCheck.error!);
-      }
-
+      // Size first: cheap check and correct error for oversized uploads before
+      // spending CPU on magic-byte inspection of multi-megabyte payloads.
       const sizeCheck = StorageService.isAllowedFileSize(file.size);
       if (!sizeCheck.allowed) {
         throw ApiError.badRequest(sizeCheck.error!);
+      }
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const typeCheck = await StorageService.isAllowedFileType(file.name, file.type, buffer);
+      if (!typeCheck.allowed) {
+        throw ApiError.badRequest(typeCheck.error!);
       }
 
       const ext = file.name.includes('.') ? file.name.slice(file.name.lastIndexOf('.')) : '.pdf';
@@ -122,8 +126,6 @@ export class KYCController {
 
       const existing = await kycRepository.findByUserIdAndType(userId, dbDocType);
       let documentId: string;
-
-      const buffer = Buffer.from(await file.arrayBuffer());
 
       if (existing) {
         await storage.deleteByRelativePath(existing.fileUrl);

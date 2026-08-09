@@ -57,6 +57,13 @@
       "when": 1753714873000,
       "tag": "0007_add_kyc_expiry",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777449700002,
+      "tag": "0008_idempotency_keys",
+      "breakpoints": true
     }
   ]
 }

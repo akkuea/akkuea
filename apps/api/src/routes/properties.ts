@@ -10,6 +10,7 @@ import {
   rateLimit,
   walletKeyGenerator,
   authPlugin,
+  idempotency,
 } from '../middleware';
 import { PropertyController } from '../controllers/PropertyController';
 import { handleError, UnauthorizedError } from '../utils/errors';
@@ -215,6 +216,7 @@ const tokenizePropertyRoute = new Elysia()
 // POST /properties/:id/buy-shares - buy property shares
 const buySharesRoute = new Elysia()
   .use(authPlugin)
+  .use(idempotency)
   .use(validateParams(uuidParamSchema))
   .use(validateBody(buySharesSchema))
   .post(

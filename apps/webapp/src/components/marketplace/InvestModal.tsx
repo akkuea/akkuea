@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import {
   ArrowRight,
@@ -55,20 +55,21 @@ export function InvestModal({
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  // Reset form when the modal opens or the property changes. Do this
-  // synchronously in the effect (no deferred timeout) so a late reset cannot
-  // wipe a successful txHash after the user submits.
-  useEffect(() => {
-    if (!isOpen) {
-      return;
+  // Reset form when the modal opens or the property changes.
+  // Adjust state during render (React-recommended) instead of an effect to
+  // satisfy react-hooks/set-state-in-effect and avoid deferred-reset races.
+  const formSessionKey = `${isOpen ? "open" : "closed"}:${property.id}`;
+  const [activeFormSession, setActiveFormSession] = useState(formSessionKey);
+  if (formSessionKey !== activeFormSession) {
+    setActiveFormSession(formSessionKey);
+    if (isOpen) {
+      setTokens(1);
+      setPaymentMethod("usdc");
+      setIsSubmitting(false);
+      setError(null);
+      setTxHash(null);
     }
-
-    setTokens(1);
-    setPaymentMethod("usdc");
-    setIsSubmitting(false);
-    setError(null);
-    setTxHash(null);
-  }, [isOpen, property.id]);
+  }
 
   const maxTokens = property.availableShares;
   const pricePerToken = parseFloat(property.pricePerShare);

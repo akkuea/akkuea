@@ -55,20 +55,19 @@ export function InvestModal({
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
+  // Reset form when the modal opens or the property changes. Do this
+  // synchronously in the effect (no deferred timeout) so a late reset cannot
+  // wipe a successful txHash after the user submits.
   useEffect(() => {
     if (!isOpen) {
       return;
     }
 
-    const timer = setTimeout(() => {
-      setTokens(1);
-      setPaymentMethod("usdc");
-      setIsSubmitting(false);
-      setError(null);
-      setTxHash(null);
-    }, 0);
-
-    return () => clearTimeout(timer);
+    setTokens(1);
+    setPaymentMethod("usdc");
+    setIsSubmitting(false);
+    setError(null);
+    setTxHash(null);
   }, [isOpen, property.id]);
 
   const maxTokens = property.availableShares;
@@ -173,7 +172,10 @@ export function InvestModal({
           </div>
 
           {!isConnected && (
-            <div className="rounded-lg border border-[#ff3e00]/40 bg-[#7c2d12]/80 p-4" role="alert">
+            <div
+              className="rounded-lg border border-[#ff3e00]/40 bg-[#7c2d12]/80 p-4"
+              role="alert"
+            >
               <div className="flex items-start gap-3">
                 <Wallet className="mt-0.5 h-5 w-5 text-[#ff3e00]" />
                 <div className="space-y-2">
@@ -275,7 +277,10 @@ export function InvestModal({
                     tabIndex={isSelected ? 0 : -1}
                     onClick={() => setPaymentMethod(method)}
                     onKeyDown={(event) => {
-                      if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+                      if (
+                        event.key === "ArrowRight" ||
+                        event.key === "ArrowLeft"
+                      ) {
                         event.preventDefault();
                         const nextMethod = method === "usdc" ? "fiat" : "usdc";
                         setPaymentMethod(nextMethod);
@@ -332,7 +337,11 @@ export function InvestModal({
           </div>
 
           {error && (
-            <div className="rounded-lg border border-red-400/50 bg-red-950/70 p-3 text-sm text-red-100" role="alert" aria-live="assertive">
+            <div
+              className="rounded-lg border border-red-400/50 bg-red-950/70 p-3 text-sm text-red-100"
+              role="alert"
+              aria-live="assertive"
+            >
               {error}
             </div>
           )}

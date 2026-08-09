@@ -298,7 +298,10 @@ export function PoolActionModal({
               <div className="space-y-6">
                 {/* Pool identity banner */}
                 {!canSubmit ? (
-                  <div className="rounded-lg border border-[#ff3e00]/40 bg-[#7c2d12]/80 p-4 text-sm text-white" role="alert">
+                  <div
+                    className="rounded-lg border border-[#ff3e00]/40 bg-[#7c2d12]/80 p-4 text-sm text-white"
+                    role="alert"
+                  >
                     Connect your wallet before submitting this action.
                   </div>
                 ) : null}
@@ -364,7 +367,10 @@ export function PoolActionModal({
                 </div>
 
                 {/* Fee summary */}
-                <div className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg space-y-2" role="status">
+                <div
+                  className="p-4 bg-[#0a0a0a] border border-[#262626] rounded-lg space-y-2"
+                  role="status"
+                >
                   <div className="flex justify-between text-sm">
                     <span className="text-neutral-500">Transaction Fee</span>
                     <span className="text-white font-mono">~0.001 XLM</span>

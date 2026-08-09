@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Image from "next/image";
 import {
   ArrowRight,
@@ -55,21 +55,21 @@ export function InvestModal({
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
+  // Reset form when the modal opens or the property changes.
+  // Adjust state during render (React-recommended) instead of an effect to
+  // satisfy react-hooks/set-state-in-effect and avoid deferred-reset races.
+  const formSessionKey = `${isOpen ? "open" : "closed"}:${property.id}`;
+  const [activeFormSession, setActiveFormSession] = useState(formSessionKey);
+  if (formSessionKey !== activeFormSession) {
+    setActiveFormSession(formSessionKey);
+    if (isOpen) {
       setTokens(1);
       setPaymentMethod("usdc");
       setIsSubmitting(false);
       setError(null);
       setTxHash(null);
-    }, 0);
-
-    return () => clearTimeout(timer);
-  }, [isOpen, property.id]);
+    }
+  }
 
   const maxTokens = property.availableShares;
   const pricePerToken = parseFloat(property.pricePerShare);
@@ -173,7 +173,10 @@ export function InvestModal({
           </div>
 
           {!isConnected && (
-            <div className="rounded-lg border border-[#ff3e00]/30 bg-[#ff3e00]/10 p-4">
+            <div
+              className="rounded-lg border border-[#ff3e00]/40 bg-[#7c2d12]/80 p-4"
+              role="alert"
+            >
               <div className="flex items-start gap-3">
                 <Wallet className="mt-0.5 h-5 w-5 text-[#ff3e00]" />
                 <div className="space-y-2">
@@ -205,19 +208,18 @@ export function InvestModal({
           )}
 
           <div>
-            <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-neutral-400">
-              Number of Tokens
-            </label>
             <div className="flex items-center gap-4">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setTokens((current) => Math.max(1, current - 1))}
                 disabled={tokens <= 1 || isSubmitting}
+                aria-label="Decrease token count"
               >
                 -
               </Button>
               <Input
+                label="Number of Tokens"
                 type="number"
                 min={1}
                 max={Math.max(1, maxTokens)}
@@ -242,6 +244,7 @@ export function InvestModal({
                 disabled={
                   tokens >= maxTokens || isSubmitting || maxTokens === 0
                 }
+                aria-label="Increase token count"
               >
                 +
               </Button>
@@ -254,32 +257,54 @@ export function InvestModal({
           </div>
 
           <div>
-            <label className="mb-2 block text-xs font-medium uppercase tracking-wider text-neutral-400">
+            <p className="mb-2 block text-xs font-medium uppercase tracking-wider text-neutral-400">
               Payment Method
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {(["usdc", "fiat"] as const).map((method) => (
-                <button
-                  key={method}
-                  type="button"
-                  onClick={() => setPaymentMethod(method)}
-                  className={cn(
-                    "cursor-pointer rounded-lg border-2 p-4 text-left transition-all",
-                    paymentMethod === method
-                      ? "border-[#00ff88] bg-[#00ff88]/10"
-                      : "border-[#262626] hover:border-[#404040]",
-                  )}
-                >
-                  <span className="font-medium text-white">
-                    {method === "usdc" ? "USDC" : "Fiat"}
-                  </span>
-                  <p className="mt-1 text-xs text-neutral-500">
-                    {method === "usdc"
-                      ? "Pay with stablecoin"
-                      : "Card / bank transfer"}
-                  </p>
-                </button>
-              ))}
+            </p>
+            <div
+              className="grid grid-cols-2 gap-3"
+              role="radiogroup"
+              aria-label="Payment method"
+            >
+              {(["usdc", "fiat"] as const).map((method) => {
+                const isSelected = paymentMethod === method;
+
+                return (
+                  <button
+                    key={method}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    aria-label={`${method === "usdc" ? "USDC" : "Fiat"} payment method`}
+                    tabIndex={isSelected ? 0 : -1}
+                    onClick={() => setPaymentMethod(method)}
+                    onKeyDown={(event) => {
+                      if (
+                        event.key === "ArrowRight" ||
+                        event.key === "ArrowLeft"
+                      ) {
+                        event.preventDefault();
+                        const nextMethod = method === "usdc" ? "fiat" : "usdc";
+                        setPaymentMethod(nextMethod);
+                      }
+                    }}
+                    className={cn(
+                      "cursor-pointer rounded-lg border-2 p-4 text-left transition-all",
+                      isSelected
+                        ? "border-[#00ff88] bg-[#00ff88]/10"
+                        : "border-[#262626] hover:border-[#404040]",
+                    )}
+                  >
+                    <span className="font-medium text-white">
+                      {method === "usdc" ? "USDC" : "Fiat"}
+                    </span>
+                    <p className="mt-1 text-xs text-neutral-500">
+                      {method === "usdc"
+                        ? "Pay with stablecoin"
+                        : "Card / bank transfer"}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -313,7 +338,11 @@ export function InvestModal({
           </div>
 
           {error && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+            <div
+              className="rounded-lg border border-red-400/50 bg-red-950/70 p-3 text-sm text-red-100"
+              role="alert"
+              aria-live="assertive"
+            >
               {error}
             </div>
           )}

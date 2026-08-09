@@ -126,6 +126,32 @@ describe("InvestModal", () => {
     expect(connectWallet).toHaveBeenCalledTimes(1);
   });
 
+  it("provides accessible names for the token quantity and payment method controls", () => {
+    const view = render(
+      <InvestModal
+        property={property}
+        isOpen
+        onClose={() => {}}
+        isConnected
+        walletAddress="GDB6EXAMPLEWALLETADDRESS1234567890123456789012345678901234"
+        onConnectWallet={() => Promise.resolve()}
+      />,
+    );
+
+    expect(
+      view.getByRole("button", { name: /decrease token count/i }),
+    ).not.toBeNull();
+    expect(
+      view.getByRole("button", { name: /increase token count/i }),
+    ).not.toBeNull();
+    expect(
+      view.getByRole("radio", { name: /usdc payment method/i }),
+    ).not.toBeNull();
+    expect(
+      view.getByRole("radio", { name: /fiat payment method/i }),
+    ).not.toBeNull();
+  });
+
   it("submits the investment transaction for a connected wallet", async () => {
     const onSuccess = mock(() => {});
 
@@ -152,9 +178,8 @@ describe("InvestModal", () => {
         "GDB6EXAMPLEWALLETADDRESS1234567890123456789012345678901234",
         3,
       );
+      expect(onSuccess).toHaveBeenCalledTimes(1);
+      expect(view.queryByText(/Transaction submitted/i)).not.toBeNull();
     });
-
-    expect(onSuccess).toHaveBeenCalledTimes(1);
-    expect(view.queryByText(/Transaction submitted/i)).not.toBeNull();
   });
 });

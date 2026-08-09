@@ -22,11 +22,31 @@ const sizeClasses = {
   xl: "max-w-xl",
 };
 
+function isFocusableVisible(el: HTMLElement): boolean {
+  if (el.getAttribute("aria-hidden") === "true" || el.hasAttribute("hidden")) {
+    return false;
+  }
+
+  // Walk ancestors so fixed/absolute dialogs still count in jsdom, where
+  // offsetParent is often null even for visible controls.
+  let current: HTMLElement | null = el;
+  while (current) {
+    const style = window.getComputedStyle(current);
+    if (style.display === "none" || style.visibility === "hidden") {
+      return false;
+    }
+    current = current.parentElement;
+  }
+
+  return true;
+}
+
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
   const selector =
     'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
   return Array.from(container.querySelectorAll<HTMLElement>(selector)).filter(
-    (el) => el.offsetParent !== null,
+    isFocusableVisible,
   );
 }
 
@@ -50,7 +70,6 @@ export function Modal({
       previouslyFocusedElement.current =
         document.activeElement as HTMLElement | null;
 
-      // Move focus into the modal on the next tick (after it renders)
       const focusTimeout = setTimeout(() => {
         const container = dialogRef.current;
         if (!container) return;
@@ -59,17 +78,29 @@ export function Modal({
       }, 0);
 
       return () => clearTimeout(focusTimeout);
-    } else {
-      // Return focus to the trigger element on close
-      previouslyFocusedElement.current?.focus();
     }
+
+    previouslyFocusedElement.current?.focus();
   }, [isOpen]);
 
   // Keyboard handling: Escape to close, Tab trap within modal
   useEffect(() => {
     if (!isOpen) return;
 
-    function handleKeyDown(e: KeyboardEvent) {
+    const container = dialogRef.current;
+    if (!container) return;
+
+    const handleFocusIn = (event: FocusEvent) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement) || container.contains(target)) {
+        return;
+      }
+
+      const focusable = getFocusableElements(container);
+      (focusable[0] ?? container).focus();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
         onClose();
@@ -77,10 +108,12 @@ export function Modal({
       }
 
       if (e.key === "Tab") {
-        const container = dialogRef.current;
-        if (!container) return;
         const focusable = getFocusableElements(container);
-        if (focusable.length === 0) return;
+        if (focusable.length === 0) {
+          e.preventDefault();
+          container.focus();
+          return;
+        }
 
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
@@ -94,10 +127,15 @@ export function Modal({
           first.focus();
         }
       }
-    }
+    };
 
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener("focusin", handleFocusIn);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("focusin", handleFocusIn);
+    };
   }, [isOpen, onClose]);
 
   return (
@@ -157,6 +195,7 @@ export function Modal({
                   </div>
                   {showCloseButton && (
                     <button
+                      type="button"
                       onClick={onClose}
                       aria-label="Close dialog"
                       className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"

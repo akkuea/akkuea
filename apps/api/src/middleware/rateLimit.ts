@@ -13,10 +13,12 @@ interface RateLimitResult {
   retryAfter?: number;
 }
 
+/**
+ * Minimal Redis surface used by the rate limiter.
+ * `runScript` executes a Lua script atomically on Redis.
+ */
 export interface RateLimitRedisClient {
-  incr(key: string): Promise<number>;
-  expire(key: string, seconds: number): Promise<number>;
-  ttl(key: string): Promise<number>;
+  runScript(script: string, numKeys: number, ...args: (string | number)[]): Promise<unknown>;
 }
 
 export interface RateLimitStore {
@@ -25,6 +27,60 @@ export interface RateLimitStore {
 
 const DEFAULT_WINDOW_MS = 60000;
 const DEFAULT_MAX = 10;
+
+/**
+ * Sliding-window log algorithm executed atomically in Redis.
+ *
+ * KEYS[1]  – sorted-set key (scores = request timestamps in ms)
+ * ARGV[1]  – now (ms)
+ * ARGV[2]  – windowMs
+ * ARGV[3]  – max requests
+ * ARGV[4]  – unique member id for this request
+ *
+ * Returns: { allowed (0|1), remaining, resetAt (ms), retryAfter (seconds) }
+ */
+const SLIDING_WINDOW_SCRIPT = `
+local key = KEYS[1]
+local now = tonumber(ARGV[1])
+local windowMs = tonumber(ARGV[2])
+local max = tonumber(ARGV[3])
+local member = ARGV[4]
+local windowStart = now - windowMs
+
+-- Drop timestamps that fell outside the sliding window
+redis.call('ZREMRANGEBYSCORE', key, '-inf', windowStart)
+
+local count = redis.call('ZCARD', key)
+
+if count < max then
+  redis.call('ZADD', key, now, member)
+  -- Keep the key at least as long as the window; refresh on every allow
+  redis.call('PEXPIRE', key, windowMs)
+  count = count + 1
+
+  local remaining = max - count
+  local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
+  local resetAt = now + windowMs
+  if oldest[2] then
+    resetAt = tonumber(oldest[2]) + windowMs
+  end
+
+  return {1, remaining, resetAt, 0}
+end
+
+-- Over limit: do not record this request
+local oldest = redis.call('ZRANGE', key, 0, 0, 'WITHSCORES')
+local resetAt = now + windowMs
+if oldest[2] then
+  resetAt = tonumber(oldest[2]) + windowMs
+end
+local retryAfter = math.ceil((resetAt - now) / 1000)
+if retryAfter < 0 then
+  retryAfter = 0
+end
+
+return {0, 0, resetAt, retryAfter}
+`;
 
 function getClientIP(request: Request): string {
   const forwarded = request.headers.get('x-forwarded-for');
@@ -62,53 +118,116 @@ export async function walletKeyGenerator(ctx: Pick<Context, 'request' | 'set'>):
   return `ip:${getClientIP(ctx.request)}`;
 }
 
+function parseScriptResult(raw: unknown): {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+  retryAfter: number;
+} {
+  if (!Array.isArray(raw) || raw.length < 4) {
+    throw new Error('Unexpected rate-limit script response from Redis');
+  }
+  const allowed = Number(raw[0]) === 1;
+  const remaining = Math.max(0, Number(raw[1]));
+  const resetAt = Number(raw[2]);
+  const retryAfter = Math.max(0, Number(raw[3]));
+  return { allowed, remaining, resetAt, retryAfter };
+}
+
+function uniqueMember(now: number): string {
+  // Score collisions are fine in ZSET; members must be unique so concurrent
+  // requests in the same millisecond are counted separately.
+  return `${now}:${Math.random().toString(36).slice(2, 11)}`;
+}
+
 export function createRedisStore(client: RateLimitRedisClient): RateLimitStore {
   return {
     async checkLimit(identifier: string, windowMs: number, max: number): Promise<RateLimitResult> {
       const key = `ratelimit:${identifier}`;
-      const ttlSeconds = Math.ceil(windowMs / 1000);
+      const now = Date.now();
+      const member = uniqueMember(now);
 
-      const count = await client.incr(key);
-      if (count === 1) {
-        await client.expire(key, ttlSeconds);
+      const raw = await client.runScript(SLIDING_WINDOW_SCRIPT, 1, key, now, windowMs, max, member);
+      const parsed = parseScriptResult(raw);
+
+      if (!parsed.allowed) {
+        return {
+          allowed: false,
+          remaining: 0,
+          resetAt: parsed.resetAt,
+          retryAfter: parsed.retryAfter,
+        };
       }
 
-      const ttl = await client.ttl(key);
-      const resetAt = Date.now() + Math.max(0, ttl) * 1000;
-      const remaining = Math.max(0, max - count);
-
-      if (count > max) {
-        return { allowed: false, remaining: 0, resetAt, retryAfter: Math.max(0, ttl) };
-      }
-
-      return { allowed: true, remaining, resetAt };
+      return {
+        allowed: true,
+        remaining: parsed.remaining,
+        resetAt: parsed.resetAt,
+      };
     },
   };
 }
 
+/**
+ * In-process sliding-window log (same algorithm as Redis; not multi-instance safe).
+ * Uses a simple mutex so concurrent checkLimit calls cannot race the counter.
+ */
 export function createMemoryStore(): RateLimitStore {
-  const store = new Map<string, { count: number; resetAt: number }>();
+  const store = new Map<string, number[]>();
+  /** Per-identifier chain so overlapping async checks stay consistent. */
+  const locks = new Map<string, Promise<void>>();
+
+  async function withLock<T>(identifier: string, fn: () => T | Promise<T>): Promise<T> {
+    const prev = locks.get(identifier) ?? Promise.resolve();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    locks.set(
+      identifier,
+      prev.then(() => gate).catch(() => gate),
+    );
+    await prev.catch(() => undefined);
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
+  }
 
   return {
     async checkLimit(identifier: string, windowMs: number, max: number): Promise<RateLimitResult> {
-      const now = Date.now();
-      const entry = store.get(identifier);
+      return withLock(identifier, () => {
+        const now = Date.now();
+        const windowStart = now - windowMs;
+        const timestamps = (store.get(identifier) ?? []).filter((t) => t > windowStart);
 
-      if (!entry || now >= entry.resetAt) {
-        const resetAt = now + windowMs;
-        store.set(identifier, { count: 1, resetAt });
-        return { allowed: true, remaining: max - 1, resetAt };
-      }
+        if (timestamps.length < max) {
+          timestamps.push(now);
+          store.set(identifier, timestamps);
+          const remaining = max - timestamps.length;
+          const oldest = timestamps[0] ?? now;
+          const resetAt = oldest + windowMs;
+          return { allowed: true, remaining, resetAt };
+        }
 
-      entry.count += 1;
-      const remaining = Math.max(0, max - entry.count);
+        store.set(identifier, timestamps);
+        const oldest = timestamps[0] ?? now;
+        const resetAt = oldest + windowMs;
+        const retryAfter = Math.max(0, Math.ceil((resetAt - now) / 1000));
+        return { allowed: false, remaining: 0, resetAt, retryAfter };
+      });
+    },
+  };
+}
 
-      if (entry.count > max) {
-        const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
-        return { allowed: false, remaining: 0, resetAt: entry.resetAt, retryAfter };
-      }
-
-      return { allowed: true, remaining, resetAt: entry.resetAt };
+/** Adapt an ioredis-like client to RateLimitRedisClient via Redis CALL. */
+function wrapIoredisClient(client: {
+  call(command: string, ...args: (string | number | Buffer)[]): Promise<unknown>;
+}): RateLimitRedisClient {
+  return {
+    runScript(script, numKeys, ...args) {
+      return client.call('EVAL', script, numKeys, ...args);
     },
   };
 }
@@ -126,7 +245,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
         maxRetriesPerRequest: 1,
         connectTimeout: 3000,
       });
-      return createRedisStore(client);
+      return createRedisStore(wrapIoredisClient(client));
     });
   } else {
     console.warn(
@@ -153,7 +272,7 @@ export function rateLimit(options: RateLimitOptions = {}) {
 
     if (!result.allowed) {
       ctx.set.status = 429;
-      if (result.retryAfter) {
+      if (result.retryAfter !== undefined) {
         ctx.set.headers['Retry-After'] = String(result.retryAfter);
       }
       return {
@@ -164,3 +283,6 @@ export function rateLimit(options: RateLimitOptions = {}) {
     }
   };
 }
+
+/** Exported for unit tests that need to exercise the Lua script via a fake client. */
+export { SLIDING_WINDOW_SCRIPT };

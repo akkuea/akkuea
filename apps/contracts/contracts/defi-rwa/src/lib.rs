@@ -17,7 +17,7 @@ mod storage;
 pub use lending::{
     events::{DepositEvent, PoolCreatedEvent, WithdrawEvent},
     lending_bump, BorrowPosition, DepositPosition, InterestRateModel, InterestStorage, LendingKey,
-    LendingPool, PoolStorage, PositionStorage, PRECISION, SECONDS_PER_YEAR,
+    LendingPool, OraclePriceSnapshot, PoolStorage, PositionStorage, PRECISION, SECONDS_PER_YEAR,
 };
 
 pub use access::*;

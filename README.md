@@ -2,7 +2,7 @@
 
 # Akkuea
 
-**Real Estate Tokenization & DeFi Lending on the Stellar Blockchain**
+**Tokenized real estate income, one allied agency at a time - on Stellar**
 
 [![Monorepo CI](https://github.com/akkuea/akkuea/actions/workflows/monorepo-ci.yml/badge.svg)](https://github.com/akkuea/akkuea/actions/workflows/monorepo-ci.yml)
 [![API CI](https://github.com/akkuea/akkuea/actions/workflows/api-ci.yml/badge.svg)](https://github.com/akkuea/akkuea/actions/workflows/api-ci.yml)
@@ -10,9 +10,9 @@
 [![Contracts CI](https://github.com/akkuea/akkuea/actions/workflows/contracts-ci.yml/badge.svg)](https://github.com/akkuea/akkuea/actions/workflows/contracts-ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Akkuea is an institutional-grade platform that bridges traditional real estate with decentralized finance. Property owners can tokenize real-world assets as on-chain shares, and investors can use those shares as collateral to access DeFi lending pools - all on Stellar's high-throughput, low-cost network.
+Someone priced out of buying a house outright can invest a smaller amount through Akkuea and earn proportionally to what they put in - with an on-chain record of what was collected and distributed. Akkuea is a tokenization-as-a-service pilot: one allied real estate agency issues a tokenized right to a share of a specific property's rental income, investors buy in at whatever size they choose, and distribution runs through Akkuea's own payout-split contract on Stellar.
 
-[Getting Started](#getting-started) · [Architecture](#architecture) · [Tech Stack](#tech-stack) · [Contributing](CONTRIBUTING.md) · [Docs](docs/)
+[Strategy](docs/strategy/product-brief.md) · [Getting Started](#getting-started) · [Architecture](#architecture) · [Tech Stack](#tech-stack) · [Contributing](CONTRIBUTING.md) · [Docs](docs/)
 
 </div>
 
@@ -20,31 +20,37 @@ Akkuea is an institutional-grade platform that bridges traditional real estate w
 
 ## Overview
 
-Akkuea solves two tightly coupled problems in the intersection of real estate and DeFi:
+**Read [`docs/strategy/product-brief.md`](docs/strategy/product-brief.md) first.** It is this project's canonical source of product direction - where anything below describes the product differently, the strategy docs win.
 
-1. **Illiquidity of real estate.** Tokenizing property into fractional on-chain shares makes it possible to trade, transfer, and leverage real-world assets with the same programmability as any blockchain token.
+In short: Akkuea's near-term product is a single-ally pilot, not a general platform. An allied real estate agency's rental-income right for one property is issued as a **non-transferable revenue-participation token** (not fractional equity or title - a deliberately lighter legal category). Investors buy in, hold their tokens in their own Stellar wallet, and receive a pro-rata share of each monthly income distribution after a transparent 10% platform fee. Income evidence is human-reviewed and referenced on-chain as a link plus a cryptographic hash, so the product is honestly described as **verifiable/auditable, not "trustless."** See [`docs/strategy/`](docs/strategy/) for the full brief, roadmap (including the parallel treasury track using DeFindex and EtherFuse), integration-verification matrix, and decision log.
 
-2. **Collateral limitations in DeFi.** By accepting tokenized real estate as collateral, Akkuea unlocks lending capacity backed by tangible, regulated assets rather than purely speculative crypto positions.
-
-The platform is built to meet institutional compliance requirements (KYC/AML on-chain, role-based access, audit trails) while remaining open and composable for DeFi participants.
+This repository also contains a **substantially larger platform build that predates that pilot scoping**: a `defi-rwa` contract with fractional property-share tokenization and a full collateralized DeFi lending protocol (pools, oracle valuation, liquidation), a general KYC engine, and a tile-based property game (`apps/akkuea-land`). That work is real and documented in detail below and under `docs/api/`, `docs/architecture/`, `docs/deployment/`, and `docs/operations/` - it just isn't the pilot's critical path. `apps/akkuea-land` is the one piece kept front-and-center: it's repositioned as the pilot's visual, playable companion, letting someone feel the buy-property → earn-income → claim-income loop before real capital is involved.
 
 ---
 
 ## Features
 
-### Real Estate Tokenization
+> The features below describe the **existing platform build** (fractional shares + DeFi lending), not the pilot's own, smaller contract surface (income-participation token + whitelist + payout-split). See [`docs/strategy/product-brief.md`](docs/strategy/product-brief.md#relationship-to-the-existing-platform-build) for how the two relate.
+
+### Real Estate Tokenization (existing platform build)
 
 - Fractional share ownership of individual properties, tracked entirely on-chain
 - KYC/AML compliance enforced at the smart contract level
 - Minting and burning controls with role-gated admin operations
 - Property metadata storage with immutable audit history
 
-### DeFi Lending Protocol
+### DeFi Lending Protocol (existing platform build)
 
 - Collateralized borrowing using tokenized real estate shares
 - Privacy-configurable lending pools for institutional participants
 - Automated interest calculation and liquidation mechanisms
 - Oracle-integrated asset valuation for accurate collateral ratios
+
+### Akkuea Land - the pilot's visual companion
+
+- Tile-based property simulation (`apps/akkuea-land`) mirroring the pilot's real mechanics: buy a property, earn income over time, claim it, trade on a marketplace
+- Fully on-chain on Stellar testnet (four Soroban contracts) - see [`docs/game/`](docs/game/)
+- Built to make the pilot's flow tangible before real capital is involved, not a separate product line
 
 ### Compliance & Security
 
@@ -77,16 +83,21 @@ The platform is built to meet institutional compliance requirements (KYC/AML on-
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-The repository is a **Bun monorepo** with four workspaces:
+The repository is a **Bun monorepo** with four `bun` workspaces, plus the Rust contracts workspace built separately:
 
-| Workspace        | Path             | Role                                                               |
-| ---------------- | ---------------- | ------------------------------------------------------------------ |
-| `@akkuea/webapp` | `apps/webapp`    | Next.js 16 frontend with React 19                                  |
-| `@akkuea/api`    | `apps/api`       | Elysia REST API running on Bun                                     |
-| `@akkuea/shared` | `apps/shared`    | Types, utilities, and Stellar SDK helpers shared across workspaces |
-| Contracts        | `apps/contracts` | Soroban smart contracts written in Rust                            |
+| Workspace            | Path              | Role                                                               |
+| --------------------- | ----------------- | ------------------------------------------------------------------ |
+| `@akkuea/webapp`      | `apps/webapp`      | Next.js 16 frontend with React 19 - the existing platform build    |
+| `@akkuea/api`         | `apps/api`         | Elysia REST API running on Bun                                     |
+| `@akkuea/shared`      | `apps/shared`      | Types, utilities, and Stellar SDK helpers shared across workspaces |
+| `@akkuea/akkuea-land` | `apps/akkuea-land` | Next.js frontend for the tile-based game - the pilot's visual companion |
+| Contracts (not a `bun` workspace) | `apps/contracts` | Soroban smart contracts written in Rust - both the existing `defi-rwa` contract and the four `game-*` contracts |
+
+The pilot's own contract surface (income-participation token, whitelist, payout-split) is being built inside `apps/contracts` alongside the existing `defi-rwa` contract - see [`docs/strategy/product-brief.md`](docs/strategy/product-brief.md) for why they're kept separate rather than reusing `defi-rwa`.
 
 ### Data Flows
+
+The flows below describe the **existing platform build** (`defi-rwa` contract). The pilot's own flow (evidence submission → review → payout-split distribution) is diagrammed in [`docs/strategy/product-brief.md`](docs/strategy/product-brief.md).
 
 **Property Tokenization**
 
@@ -220,22 +231,29 @@ akkuea/
 │   │   │   ├── db/
 │   │   │   └── workers/
 │   │   └── drizzle/      # Database migrations
-│   ├── webapp/           # Next.js frontend
+│   ├── webapp/           # Next.js frontend - existing platform build
 │   │   └── src/
 │   │       ├── app/      # App Router pages and layouts
 │   │       ├── components/
 │   │       ├── hooks/
 │   │       ├── services/
 │   │       └── types/
+│   ├── akkuea-land/      # Next.js frontend - the pilot's visual companion (game)
 │   ├── contracts/        # Soroban smart contracts (Rust)
 │   │   └── contracts/
-│   │       └── defi-rwa/
+│   │       ├── defi-rwa/          # Existing platform build (fractional shares + lending)
+│   │       ├── game-property-nft/ # Akkuea Land
+│   │       ├── game-land-token/
+│   │       ├── game-engine/
+│   │       └── game-marketplace/
 │   └── shared/           # Shared TypeScript library
 ├── docs/
-│   ├── api/              # API endpoint documentation
+│   ├── strategy/         # Canonical product direction - read this first
+│   ├── design-system/    # Visual/interaction system
+│   ├── api/              # API endpoint documentation (existing platform build)
 │   ├── architecture/     # System design documents
 │   ├── deployment/       # Deployment and environment guides
-│   ├── guides/           # Developer getting-started guides
+│   ├── game/             # Akkuea Land rules, economy, and setup
 │   ├── operations/       # Runbooks for production operations
 │   └── testing/          # Testing strategy and smoke tests
 ├── scripts/              # Build and deployment shell scripts
@@ -249,13 +267,17 @@ akkuea/
 
 | Document                                                                               | Description                             |
 | -------------------------------------------------------------------------------------- | --------------------------------------- |
-| [`docs/guides/getting-started.md`](docs/guides/getting-started.md)                     | Full local setup walkthrough            |
+| [`docs/strategy/product-brief.md`](docs/strategy/product-brief.md)                     | Canonical product direction - read first |
+| [`docs/strategy/roadmap.md`](docs/strategy/roadmap.md)                                 | Phase 1a/1b/2 roadmap, jurisdiction, partnerships |
+| [`docs/design-system/README.md`](docs/design-system/README.md)                        | Visual/interaction system               |
+| [`docs/local-setup.md`](docs/local-setup.md)                                           | Full local setup walkthrough            |
 | [`docs/architecture/system-architecture.md`](docs/architecture/system-architecture.md) | System design and component breakdown   |
 | [`docs/deployment/environment-variables.md`](docs/deployment/environment-variables.md) | Complete environment variable reference |
 | [`docs/deployment/deploy-contracts.md`](docs/deployment/deploy-contracts.md)           | Contract deployment to Stellar networks |
 | [`docs/api/overview.md`](docs/api/overview.md)                                         | API overview and authentication         |
 | [`docs/api/minting-workflow.md`](docs/api/minting-workflow.md)                         | Property tokenization API flow          |
 | [`docs/api/kyc-workflow.md`](docs/api/kyc-workflow.md)                                 | KYC verification API flow               |
+| [`docs/game/GAME_RULES.md`](docs/game/GAME_RULES.md)                                   | Akkuea Land rules                        |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md)                                                   | Contribution workflow and standards     |
 
 ---

@@ -2,19 +2,21 @@
 
 Welcome to Akkuea Land! This is a city-building game where you buy property, earn passive income, and improve buildings to boost profits. Here's everything you need to play.
 
+> **Why this game exists.** Akkuea Land isn't a separate product - it's a playable, low-stakes mirror of the real pilot's mechanics (see [`docs/strategy/product-brief.md`](../strategy/product-brief.md)). Buying a tile and collecting LAND rent over time is the same shape as buying a real income-participation token and collecting a share of real rental income: value accrues from an underlying property, and you claim it when you choose to. The differences are deliberate and instructive rather than accidental - the game's income is pre-programmed on-chain and claimable instantly, while the real pilot's income is grounded in human-reviewed, hashed evidence of actual rent collected and paid out on a monthly cycle. Playing the game is a fast way to feel the mechanic before understanding the real trust model layered on top of it.
+
 ## The Game Board
 
 The game takes place on a 20×20 grid with 400 properties spread across the virtual city. Each property is a single tile that you can own. When you own a property, it generates income automatically every 8 minutes.
 
 ## Getting Started: Your First Properties
 
-When you first join, you receive **1,000 LAND tokens** from the faucet—that's your starting capital.
+When you first join, you receive **1,000 LAND tokens** from the faucet-that's your starting capital.
 
 **Buying from the City**
 
 - The city offers each property for **500 LAND**
 - Buy as many as you want using these starter funds
-- You own them immediately—no waiting period
+- You own them immediately-no waiting period
 
 **Your Wallet**
 
@@ -33,14 +35,14 @@ Every property generates income automatically, even when you're not playing. Her
 
 | Building Level | Cost to Build | Income per Cycle | Total Income |
 | -------------- | ------------- | ---------------- | ------------ |
-| Vacant         | —             | 10×              | 10 LAND      |
+| Vacant         | -             | 10×              | 10 LAND      |
 | Residential    | 200 LAND      | 1.5×             | 15 LAND      |
 | Commercial     | 600 LAND      | 3×               | 30 LAND      |
 | Skyscraper     | 1,800 LAND    | 6×               | 60 LAND      |
 
 **Claiming Your Income**
 
-- Income accumulates over time—it doesn't disappear
+- Income accumulates over time-it doesn't disappear
 - Claim your earned LAND anytime by tapping "Claim" on a property
 - After you claim, your income counter resets to 0
 
@@ -54,7 +56,7 @@ Want to boost your income? Upgrade your properties to higher building levels.
 - Select the next building level
 - Pay the cost instantly from your LAND balance
 - Your property immediately starts earning at the new rate
-- You can only upgrade once—each property goes Vacant → Residential → Commercial → Skyscraper
+- You can only upgrade once-each property goes Vacant → Residential → Commercial → Skyscraper
 
 **When Do They Pay Off?**
 Most upgrades earn back their cost in 4–8 hours of play. A Skyscraper, for example:
@@ -79,7 +81,7 @@ Want to buy or sell properties from other players? The marketplace lets you trad
 1. Browse the marketplace
 2. Find a property you want
 3. Tap "Buy Now" and confirm
-4. The trade happens instantly—you get the property, the seller gets your LAND
+4. The trade happens instantly-you get the property, the seller gets your LAND
 
 **Why Trade?**
 

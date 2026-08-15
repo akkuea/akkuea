@@ -79,22 +79,17 @@ Create `.env.local` in the root:
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/akkuea_dev
 
 # Stellar testnet account (generate with `stellar keys generate`)
-STELLAR_ADMIN_SECRET_KEY=your_secret_key_here
+STELLAR_ADMIN_SECRET=your_secret_key_here
 STELLAR_ADMIN_PUBLIC_KEY=your_public_key_here
-
-# Contract IDs (leave empty for testing, fill after deployment)
-REAL_ESTATE_TOKEN_CONTRACT_ID=
-PROPERTY_NFT_CONTRACT_ID=
-GAME_MARKETPLACE_CONTRACT_ID=
-GAME_ENGINE_CONTRACT_ID=
 
 # Network
 STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
 
-# API & Webapp ports (optional, these are defaults)
-API_PORT=3001
-WEBAPP_PORT=3000
+# API port (default shown)
+PORT=3001
 ```
+
+> Game contract IDs go in `apps/akkuea-land/.env.local`, not the root `.env.local` above - see [Game Contracts Deployment](../deployment/deploy-game-contracts.md). All four (`NEXT_PUBLIC_GAME_ENGINE_CONTRACT_ID`, `NEXT_PUBLIC_PROPERTY_NFT_CONTRACT_ID`, `NEXT_PUBLIC_LAND_TOKEN_CONTRACT_ID`, `NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID`) are optional - unset values fall back to the checked-in `apps/shared/src/contracts/game-contracts.testnet.json` deployment.
 
 ### Generate a Stellar Testnet Account
 
@@ -116,7 +111,7 @@ stellar keys show test-account --public-key
 
 ### Option 1: API + Webapp with Mock Data (Fastest)
 
-Run the frontend and API with mock data—no contracts needed.
+Run the frontend and API with mock data-no contracts needed.
 
 ```bash
 # Install dependencies (one time)
@@ -156,46 +151,21 @@ cargo test -- --nocapture
 
 Contract binaries output to: `target/wasm32-unknown-unknown/release/`
 
-### Option 3: Deploy to Stellar Testnet
+### Option 3: Deploy Akkuea Land's contracts to Stellar Testnet
 
-Deploy actual smart contracts to testnet for full integration testing.
+Deploy the four game contracts to testnet for full integration testing. Full walkthrough: [Game Contracts Deployment](../deployment/deploy-game-contracts.md).
 
 ```bash
-# Step 1: Ensure your Stellar account is funded
-# (Follow "Generate a Stellar Testnet Account" above)
+# From the repo root - generates and funds a game-deployer identity automatically
+./scripts/deploy-game-contracts.sh testnet game-deployer
 
-# Step 2: Set contract IDs in .env.local
-STELLAR_ADMIN_SECRET_KEY=your_secret_key
-STELLAR_ADMIN_PUBLIC_KEY=your_public_key
-
-# Step 3: Run the deployment script
-cd apps/contracts
-./deploy.sh testnet
-
-# The script outputs contract IDs—save them to .env.local
-
-# Step 4: Initialize the oracle (REQUIRED before lending)
-stellar contract invoke \
-  --network testnet \
-  --contract-id $GAME_ENGINE_CONTRACT_ID \
-  --function set_oracle \
-  -- \
-  --oracle $(stellar keys show test-account --public-key)
-
-# Step 5: Start the API pointing to testnet contracts
-cd ../api
-cp ../.env.local .env
-bun run dev
-
-# Verify in the API logs that it's using your contract IDs
+# The script prints a ready-to-paste apps/akkuea-land/.env.local block
+# with all four NEXT_PUBLIC_*_CONTRACT_ID values.
 ```
 
-**After testnet deployment**, your contract IDs appear in:
+The existing `defi-rwa` platform contract (fractional shares + lending) has its own, separate deployment guide: [`docs/deployment/deploy-contracts.md`](../deployment/deploy-contracts.md). Its oracle setup step does not apply to the game contracts.
 
-- Terminal output from `./deploy.sh testnet`
-- `.soroban/contractIds.json` (if generated)
-
-Update `.env.local` with these IDs.
+**After deployment**, contract IDs are also recorded in `apps/shared/src/contracts/game-contracts.testnet.json` - the frontend falls back to that file automatically if the env vars are unset.
 
 ### Option 4: Run the Full Test Suite
 
@@ -253,12 +223,14 @@ cd apps/contracts && cargo fmt --check && cargo clippy
 ```
 akkuea/
 ├── apps/
-│   ├── api/              # Node.js backend (Express)
+│   ├── api/              # Elysia/Bun backend API
 │   ├── contracts/        # Soroban smart contracts (Rust)
 │   ├── shared/           # Shared types and schemas
-│   └── webapp/           # Next.js frontend
+│   ├── webapp/           # Next.js frontend - existing platform build
+│   └── akkuea-land/      # Next.js frontend - this game
 ├── docs/
-│   ├── guides/           # Getting started, system architecture
+│   ├── strategy/         # Canonical product direction
+│   ├── local-setup.md    # General local setup guide
 │   └── game/             # This guide + game rules
 ├── scripts/              # Build and deployment scripts
 └── package.json          # Monorepo root
@@ -321,17 +293,9 @@ cd apps/contracts && cargo clean && cargo build --target wasm32-unknown-unknown 
 cargo install --locked stellar-cli --features opt
 ```
 
-### Test failures with "oracle not set"
+### Game contract errors (`NothingToClaim`, `NotOwner`, `NotListed`, ...)
 
-```bash
-# If using testnet contracts, you must set the oracle first
-stellar contract invoke \
-  --network testnet \
-  --contract-id $GAME_ENGINE_CONTRACT_ID \
-  --function set_oracle \
-  -- \
-  --oracle $(stellar keys show test-account --public-key)
-```
+The game contracts don't use an oracle - that's specific to the separate `defi-rwa` platform contract. For game-contract error codes and fixes (income not yet accrued, wrong signing wallet, marketplace listing state), see the troubleshooting table in [Game Contracts Deployment](../deployment/deploy-game-contracts.md).
 
 ## Next Steps
 
@@ -342,4 +306,4 @@ stellar contract invoke \
 
 ---
 
-**Stuck?** Check the [getting started guide](../guides/getting-started.md) or open an issue on GitHub.
+**Stuck?** Check the [local setup guide](../local-setup.md) or open an issue on GitHub.

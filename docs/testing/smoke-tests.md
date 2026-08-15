@@ -36,7 +36,7 @@ import {
   NON_EXISTENT_UUID,
   BASE_DATE,
   VALID_TX_HASH,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 ```
 
 These replace locally-duplicated values like `const VALID_STELLAR_ADDRESS = "G..."` that appear across test files.
@@ -50,7 +50,7 @@ import {
   createUser,
   createProperty,
   createLendingPool,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 
 // Defaults - approved KYC user with Miami address
 const user = createUser();
@@ -88,7 +88,7 @@ import {
   MIAMI_PROPERTY_SCENARIO,
   USDC_LENDING_SCENARIO,
   USER_ONBOARDING_SCENARIO,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 
 // Miami property with owner, 3 investors, and purchase transactions
 const { owner, property, investors, transactions } = MIAMI_PROPERTY_SCENARIO;
@@ -105,7 +105,7 @@ const { newUser, pendingUser, verifiedUser, rejectedUser } =
 
 ```ts
 import { describe, it, expect } from "bun:test";
-import { createUser, VALID_UUID } from "@real-estate-defi/shared";
+import { createUser, VALID_UUID } from "@akkuea/shared";
 
 describe("GET /users/:id", () => {
   it("should return user data", async () => {
@@ -121,7 +121,7 @@ describe("GET /users/:id", () => {
 import {
   createProperty,
   MIAMI_PROPERTY_SCENARIO,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 
 test("PropertyCard renders price", () => {
   const property = createProperty({ totalValue: "3500000" });

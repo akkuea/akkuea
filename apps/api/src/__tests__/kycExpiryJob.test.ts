@@ -1,7 +1,7 @@
 /**
  * Tests for KycExpiryJob
  *
- * All tests run entirely in memory — no database required.
+ * All tests run entirely in memory - no database required.
  * The repository methods and NotificationService are replaced with mocks
  * so we can simulate arbitrary date scenarios.
  */

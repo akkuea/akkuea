@@ -3,7 +3,7 @@ import { PRIVY_APP_CREDENTIAL_ENV, PRIVY_APP_ID_ENV } from "./privy-env";
 
 let privyClient: PrivyClient | null = null;
 
-/** Resets the cached client — for unit tests only. */
+/** Resets the cached client - for unit tests only. */
 export function resetPrivyClient(): void {
   privyClient = null;
 }

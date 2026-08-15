@@ -76,7 +76,7 @@ export const Glow: Story = {
 export const Hoverable: Story = {
   args: {
     hoverable: true,
-    children: "Hover over me — I scale up slightly.",
+    children: "Hover over me - I scale up slightly.",
   },
 };
 

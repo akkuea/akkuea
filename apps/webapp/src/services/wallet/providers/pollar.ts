@@ -11,7 +11,7 @@ export interface PollarInterface {
   isAuthenticated: () => boolean;
   /**
    * Signs the XDR with the connected wallet without submitting.
-   * Maps to usePollar().signTx — available for external (non-custodial) wallets.
+   * Maps to usePollar().signTx - available for external (non-custodial) wallets.
    *
    * NOTE: Pollar's primary flow is signAndSubmitTx (sign + broadcast in one
    * step). signTx is provided for external wallets only; custodial flows must

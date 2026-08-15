@@ -41,7 +41,7 @@ function generateSeries(
   let s = seed;
 
   for (let i = 1; i < HISTORY_DAYS; i++) {
-    // LCG pseudo-random — gives repeatable, visually smooth walks
+    // LCG pseudo-random - gives repeatable, visually smooth walks
     s = (s * 1664525 + 1013904223) & 0xffffffff;
     const rand = (s >>> 0) / 0xffffffff; // [0, 1)
     const delta = (rand - 0.5) * 2 * volatility;

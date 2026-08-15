@@ -40,7 +40,7 @@ export class StorageService {
    *
    * When `buffer` is supplied the file's real type is detected from its leading
    * bytes using the `file-type` package.  A file whose bytes do not match an
-   * allowed type is rejected even if its extension / MIME type look correct —
+   * allowed type is rejected even if its extension / MIME type look correct -
    * this prevents attackers from bypassing the check by renaming files.
    *
    * The method is async because `fileTypeFromBuffer` returns a Promise.
@@ -61,7 +61,7 @@ export class StorageService {
       return { allowed: false, error: 'Invalid file type. Only PDF, JPG, and PNG are allowed.' };
     }
 
-    // 3. Magic-byte inspection — definitive when content is available.
+    // 3. Magic-byte inspection - definitive when content is available.
     // When a buffer is supplied we never fall back to extension/MIME alone:
     // undersized or unidentifiable content is rejected (spoofable checks only
     // apply when no buffer is provided, e.g. pure unit-test extension cases).

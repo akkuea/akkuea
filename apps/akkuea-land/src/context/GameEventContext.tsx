@@ -65,7 +65,7 @@ export function GameEventProvider({ children }: { children: ReactNode }) {
           const event = JSON.parse(e.data) as GameEvent;
           dispatch(event);
         } catch {
-          // malformed payload — ignore
+          // malformed payload - ignore
         }
       };
 

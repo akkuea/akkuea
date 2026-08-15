@@ -1,4 +1,4 @@
-# Akkuea Land — Game Economy Specification
+# Akkuea Land - Game Economy Specification
 
 > **Canonical source**: The numeric constants in this document are mirrored in
 > `apps/shared/src/types/game.ts` (TypeScript) and
@@ -12,6 +12,8 @@
 Akkuea Land is a tile-based property game built on top of the Stellar/Soroban
 blockchain. Players buy land parcels, construct buildings, collect rental
 income in LAND tokens, and trade properties on an open marketplace.
+
+This is the pilot's visual/educational companion, not a separate product - see [`docs/strategy/product-brief.md`](../strategy/product-brief.md). The mechanics below (buy → accrue → claim) are a simplified, fully-automated mirror of the real pilot's flow, which instead runs on a monthly cycle gated by human-reviewed income evidence.
 
 ---
 
@@ -55,7 +57,7 @@ Upgrades are **one-directional**; there is no downgrade path.
 
 | Level       | Label        | Upgrade cost | Rental multiplier | Effective rate   |
 | ----------- | ------------ | ------------ | ----------------- | ---------------- |
-| 0 (default) | `EMPTY`      | —            | **1×**            | 10 LAND / epoch  |
+| 0 (default) | `EMPTY`      | -            | **1×**            | 10 LAND / epoch  |
 | 1           | `HOUSE`      | 100 LAND     | **2×**            | 20 LAND / epoch  |
 | 2           | `APARTMENT`  | 300 LAND     | **5×**            | 50 LAND / epoch  |
 | 3           | `SKYSCRAPER` | 1 000 LAND   | **12×**           | 120 LAND / epoch |
@@ -79,7 +81,7 @@ claimable = floor(
 Key behaviour:
 
 - Only **whole epochs** are paid; partial epochs do not earn rent.
-- Unclaimed epochs **accumulate indefinitely** — there is no expiry.
+- Unclaimed epochs **accumulate indefinitely** - there is no expiry.
 - `lastClaimedLedger` is updated to the ledger at the start of the last fully
   counted epoch (not to `currentLedger`), preserving fractional-epoch carry.
 
@@ -137,4 +139,4 @@ under the `GameEvent` union type.
 
 ---
 
-_Last updated: 2025 — Cycle 5_
+_Last updated: 2025 - Cycle 5_

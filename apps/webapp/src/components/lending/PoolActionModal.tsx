@@ -174,7 +174,7 @@ export function PoolActionModal({
         await lendingApi.repay(pool.id, { userAddress, amount });
       }
 
-      // 3. Transaction confirmed — commit the optimistic snapshot so the
+      // 3. Transaction confirmed - commit the optimistic snapshot so the
       //    next refetch replaces it with authoritative data.
       if (snapshotId && commitOptimisticUpdate) {
         commitOptimisticUpdate(snapshotId);
@@ -190,7 +190,7 @@ export function PoolActionModal({
         onClose();
       }, 2500);
     } catch (err) {
-      // 4. Transaction failed — rollback the optimistic update so the UI
+      // 4. Transaction failed - rollback the optimistic update so the UI
       //    reverts to the previous state.
       if (snapshotId && rollbackOptimisticUpdate) {
         rollbackOptimisticUpdate(snapshotId);
@@ -215,7 +215,7 @@ export function PoolActionModal({
       title={cfg.title}
       description={cfg.description}
     >
-      {/* Pending state — waiting for on-chain confirmation */}
+      {/* Pending state - waiting for on-chain confirmation */}
       {pendingTx && !txHash ? (
         <div className="flex flex-col items-center gap-4 py-8 text-center">
           <div className="w-14 h-14 rounded-full bg-[#ff3e00]/10 border border-[#ff3e00]/30 flex items-center justify-center">
@@ -241,7 +241,7 @@ export function PoolActionModal({
           </div>
         </div>
       ) : txError ? (
-        /* Error state — transaction failed, optimistic update was rolled back */
+        /* Error state - transaction failed, optimistic update was rolled back */
         <div className="flex flex-col items-center gap-4 py-6 text-center">
           <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center">
             <AlertCircle className="w-7 h-7 text-red-500" />

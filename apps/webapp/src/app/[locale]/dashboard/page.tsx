@@ -65,7 +65,7 @@ export default function DashboardPage() {
     usePortfolio(isConnected ? address : null);
   const { healthFactor, status: hfStatus } = useHealthFactor(borrows);
 
-  // SSE ledger stream — falls back to 30 s polling on failure
+  // SSE ledger stream - falls back to 30 s polling on failure
   const onLedgerUpdate = useCallback(() => {
     refetch();
   }, [refetch]);

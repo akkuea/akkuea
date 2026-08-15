@@ -1,5 +1,5 @@
 /**
- * ClaimLandStep — unit tests
+ * ClaimLandStep - unit tests
  *
  * Verifies the onboarding "Claim your starter LAND" step builds a real
  * GameLandToken.faucet XDR for the connected wallet address and signs it

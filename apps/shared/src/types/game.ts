@@ -1,13 +1,13 @@
 /**
  * @file game.ts
- * @description Shared game types for Akkuea Land — the contract between
+ * @description Shared game types for Akkuea Land - the contract between
  * Soroban smart contracts (Rust) and the Next.js/React frontend.
  *
  * All types represent on-chain state as returned by Quasar typed clients
  * and consumed by React components. No `any`, no disabled lint rules.
  *
  * ─────────────────────────────────────────────────────────────────────────────
- * AKKUEA LAND — TOKEN ECONOMY SPECIFICATION
+ * AKKUEA LAND - TOKEN ECONOMY SPECIFICATION
  * ─────────────────────────────────────────────────────────────────────────────
  *
  * LAND Token
@@ -27,7 +27,7 @@
  * --------------------------
  * Level        | Label       | Upgrade cost (LAND) | Rental multiplier
  * -------------|-------------|---------------------|-------------------
- * 0  (default) | EMPTY       | —                   | 1×  (base rate)
+ * 0  (default) | EMPTY       | -                   | 1×  (base rate)
  * 1            | HOUSE       | 100 LAND            | 2×  (20 LAND / epoch)
  * 2            | APARTMENT   | 300 LAND            | 5×  (50 LAND / epoch)
  * 3            | SKYSCRAPER  | 1 000 LAND          | 12× (120 LAND / epoch)

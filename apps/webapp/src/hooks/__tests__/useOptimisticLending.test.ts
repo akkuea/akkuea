@@ -359,7 +359,7 @@ describe("Optimistic UI for lending actions", () => {
       }
       expect(errorMessage).toBe("Insufficient liquidity");
 
-      // Step 3: Rollback — state reverts to before
+      // Step 3: Rollback - state reverts to before
       const positionsRolledBack = positionsBefore;
       expect(positionsRolledBack[mockPool.id]).toBeUndefined();
     });
@@ -519,7 +519,7 @@ describe("Optimistic UI for lending actions", () => {
       }
       expect(errorMessage).toBe("Withdrawal exceeds balance");
 
-      // Rollback — deposit is back to original 10000
+      // Rollback - deposit is back to original 10000
       expect(positionsBefore[mockPool.id].deposits[0].amount).toBe("10000");
     });
   });
@@ -598,7 +598,7 @@ describe("Optimistic UI for lending actions", () => {
       }
       expect(errorMessage).toBe("Repayment failed");
 
-      // Rollback — borrow is back to original 10000
+      // Rollback - borrow is back to original 10000
       expect(positionsBefore[mockPool.id].borrows[0].principal).toBe("10000");
     });
   });

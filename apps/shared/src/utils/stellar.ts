@@ -26,7 +26,7 @@ const MAX_BACKOFF_MS = 5000;
 function toOperation(
   op: ReturnType<Contract["call"]> | StellarOperation,
 ): xdr.Operation {
-  // The Stellar SDK types are correct here — single cast with comment
+  // The Stellar SDK types are correct here - single cast with comment
   return op as unknown as xdr.Operation;
 }
 

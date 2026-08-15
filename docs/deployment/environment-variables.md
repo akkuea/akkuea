@@ -1,6 +1,6 @@
 # Environment Variables Reference
 
-**Source of truth:** `akkuea-defi-rwa/apps/api/.env.example`
+**Source of truth:** `apps/api/.env.example`
 
 This document lists every environment variable required to run the Akkuea platform. All variables come directly from the `.env.example` file. Any variable not listed here does not exist in the codebase and should not be referenced.
 
@@ -11,7 +11,7 @@ This document lists every environment variable required to run the Akkuea platfo
 ## How to set up
 
 ```bash
-cp akkuea-defi-rwa/apps/api/.env.example akkuea-defi-rwa/apps/api/.env
+cp apps/api/.env.example apps/api/.env
 # Edit .env and fill in every value marked as required
 ```
 
@@ -51,7 +51,7 @@ cp akkuea-defi-rwa/apps/api/.env.example akkuea-defi-rwa/apps/api/.env
 
 ### KYC Expiry Job
 
-The KYC expiry job runs in the background to mark expired KYC records and send re-verification reminders. All three variables are optional — the defaults are suitable for production.
+The KYC expiry job runs in the background to mark expired KYC records and send re-verification reminders. All three variables are optional - the defaults are suitable for production.
 
 | Variable                        | Example Value  | Required             | Description                                                                                                                                        |
 | ------------------------------- | -------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |

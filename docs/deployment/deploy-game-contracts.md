@@ -1,6 +1,6 @@
 # Game Contracts Deployment Guide (Akkuea Land)
 
-This guide deploys the four Akkuea Land game contracts to Stellar **testnet** and wires the resulting contract IDs into the `apps/akkuea-land` frontend so the full flow — claim a starter property and LAND, view the dashboard, claim rental income, list/buy on the marketplace — signs and submits real transactions end to end. No part of the flow talks to mocked data or the unrelated defi-rwa contracts.
+This guide deploys the four Akkuea Land game contracts to Stellar **testnet** and wires the resulting contract IDs into the `apps/akkuea-land` frontend so the full flow - claim a starter property and LAND, view the dashboard, claim rental income, list/buy on the marketplace - signs and submits real transactions end to end. No part of the flow talks to mocked data or the unrelated defi-rwa contracts.
 
 **Contract sources:**
 
@@ -13,7 +13,7 @@ This guide deploys the four Akkuea Land game contracts to Stellar **testnet** an
 
 Unlike the defi-rwa contract (which uses `__constructor`), each game contract is deployed **and then explicitly initialized** with a separate `initialize` invocation. The script below does both.
 
-> This repo already carries a deployed instance at `apps/shared/src/contracts/game-contracts.testnet.json` (all four contracts, deployed 2026-06-24). Steps 1–2 below are only needed if you want to deploy your **own** instance instead of reusing that one — the frontend falls back to the checked-in IDs automatically when the `NEXT_PUBLIC_*_CONTRACT_ID` env vars are unset (see Step 3).
+> This repo already carries a deployed instance at `apps/shared/src/contracts/game-contracts.testnet.json` (all four contracts, deployed 2026-06-24). Steps 1–2 below are only needed if you want to deploy your **own** instance instead of reusing that one - the frontend falls back to the checked-in IDs automatically when the `NEXT_PUBLIC_*_CONTRACT_ID` env vars are unset (see Step 3).
 
 ---
 
@@ -28,11 +28,11 @@ cargo install --locked stellar-cli --features opt
 stellar --version
 ```
 
-No pre-existing funded account is needed — the script generates a `game-deployer` identity and funds it via friendbot.
+No pre-existing funded account is needed - the script generates a `game-deployer` identity and funds it via friendbot.
 
 ---
 
-## Step 1 — Run the deploy script
+## Step 1 - Run the deploy script
 
 From the repo root:
 
@@ -46,7 +46,7 @@ The script:
 2. Builds all contracts with `stellar contract build` (targets `wasm32v1-none`; a raw `cargo build --target wasm32-unknown-unknown` on modern rustc emits reference-types the Soroban VM rejects at upload).
 3. Deploys the four WASMs and captures their contract IDs.
 4. Initializes them in dependency order:
-   - `game_property_nft.initialize(treasury, game_engine)` — after this, the **treasury logically owns all 400 tiles**; no minting or seeding is needed.
+   - `game_property_nft.initialize(treasury, game_engine)` - after this, the **treasury logically owns all 400 tiles**; no minting or seeding is needed.
    - `game_land_token.initialize(treasury, engine, is_testnet=true)`
    - `game_engine.initialize(nft_contract, token_contract, treasury)`
    - `game_marketplace.initialize(nft_contract, land_token)`
@@ -56,7 +56,7 @@ By default the deployer identity **is** the treasury, so the same key that deplo
 
 ---
 
-## Step 2 — Import the deployer key into Freighter
+## Step 2 - Import the deployer key into Freighter
 
 The browser wallet must sign as the treasury (the on-chain owner of the tiles):
 
@@ -70,7 +70,7 @@ In Freighter: **Settings → Import a Stellar secret key**, paste the `S...` key
 
 ---
 
-## Step 3 — Configure the frontend
+## Step 3 - Configure the frontend
 
 Create `apps/akkuea-land/.env.local` (gitignored) from the script's output:
 
@@ -85,12 +85,12 @@ NEXT_PUBLIC_LAND_TOKEN_CONTRACT_ID=C...
 NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID=C...
 ```
 
-None of these are strictly mandatory: every contract ID in `soroban-tx.ts` (`PROPERTY_NFT_CONTRACT_ID`, `GAME_ENGINE_CONTRACT_ID`, `MARKETPLACE_CONTRACT_ID`, `LAND_TOKEN_CONTRACT_ID`) and `TREASURY_ADDRESS` fall back to the checked-in `game-contracts.testnet.json` deploy when the env var is unset. Set them only when pointing the app at your **own** deploy from Step 1 — otherwise the app already talks to the shared testnet instance recorded in that file.
-(Historically `NEXT_PUBLIC_GAME_ENGINE_CONTRACT_ID` was the one exception — an unset value silently fell back to the unrelated DeFi lending contract ID. That fallback bug is fixed: every ID now falls back to the correct game contract.)
+None of these are strictly mandatory: every contract ID in `soroban-tx.ts` (`PROPERTY_NFT_CONTRACT_ID`, `GAME_ENGINE_CONTRACT_ID`, `MARKETPLACE_CONTRACT_ID`, `LAND_TOKEN_CONTRACT_ID`) and `TREASURY_ADDRESS` fall back to the checked-in `game-contracts.testnet.json` deploy when the env var is unset. Set them only when pointing the app at your **own** deploy from Step 1 - otherwise the app already talks to the shared testnet instance recorded in that file.
+(Historically `NEXT_PUBLIC_GAME_ENGINE_CONTRACT_ID` was the one exception - an unset value silently fell back to the unrelated DeFi lending contract ID. That fallback bug is fixed: every ID now falls back to the correct game contract.)
 
 ---
 
-## Step 4 — Verify with the CLI (no browser needed)
+## Step 4 - Verify with the CLI (no browser needed)
 
 Income accrues once per epoch (**100 ledgers, ~9 minutes on testnet**). Wait one epoch after initialization, then:
 
@@ -136,7 +136,7 @@ stellar contract invoke --id $NFT_ID --source-account $IDENTITY --network testne
 
 ---
 
-## Step 5 — Verify in the browser
+## Step 5 - Verify in the browser
 
 ```bash
 bun run dev   # from repo root, akkuea-land on its dev port
@@ -148,7 +148,7 @@ The full flow now goes through real contract calls, no mocked data or hardcoded 
 - **Dashboard** (`/dashboard`): **Claim All** builds a real `claim_rental` transaction per claimable property, sequentially, sign-submit-confirm.
 - **City map** (`/`): selecting a treasury tile and clicking **Buy from Treasury** builds a real treasury transfer; selecting an owned tile and clicking **Improve** or **List for Sale** builds a real `improve` / `approve` + `list` pair; selecting a listed tile and clicking **Buy Land Tile** builds a real marketplace `buy`.
 
-On first wallet action a wallet-picker modal opens — choose Freighter (with the imported key selected and Freighter on Testnet). Each action then triggers a real Freighter signing prompt; the transaction is submitted to the Soroban RPC and polled until confirmed. For **Claim All**, rejecting a prompt records that property in the "Failed" list and the loop continues with the next one; closing the wallet picker aborts without claiming.
+On first wallet action a wallet-picker modal opens - choose Freighter (with the imported key selected and Freighter on Testnet). Each action then triggers a real Freighter signing prompt; the transaction is submitted to the Soroban RPC and polled until confirmed. For **Claim All**, rejecting a prompt records that property in the "Failed" list and the loop continues with the next one; closing the wallet picker aborts without claiming.
 
 ---
 

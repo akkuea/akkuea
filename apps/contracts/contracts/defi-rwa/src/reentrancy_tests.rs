@@ -16,7 +16,7 @@
 //!    operation.
 //!
 //! 2. **Double-operation prevention**: Calling the same operation twice
-//!    with identical parameters does not corrupt state — the second call
+//!    with identical parameters does not corrupt state - the second call
 //!    either panics or produces a consistent result.
 //!
 //! 3. **State consistency under concurrent-like access**: After a
@@ -170,7 +170,7 @@ fn setup_reentrancy_env() -> ReentrancyTestEnv<'static> {
 }
 
 // ═══════════════════════════════════════════════
-// REENTRANCY TESTS — BORROW
+// REENTRANCY TESTS - BORROW
 // ═══════════════════════════════════════════════
 
 /// Verify CEI pattern for `borrow`: state (borrow position + pool total
@@ -229,7 +229,7 @@ fn test_borrow_state_updated_before_interactions() {
     );
 }
 
-/// Simulate a "double borrow" attempt — a second borrow call with the
+/// Simulate a "double borrow" attempt - a second borrow call with the
 /// same borrower/pool overwrites the position but the pool total borrows
 /// should reflect both operations consistently (no double-counting or
 /// state corruption).
@@ -251,7 +251,7 @@ fn test_borrow_double_call_does_not_corrupt_state() {
     let total_borrows_after_first = t.client.get_total_borrows(&t.pool_id);
     assert_eq!(total_borrows_after_first, borrow_amount);
 
-    // Second borrow with same params — this overwrites the position
+    // Second borrow with same params - this overwrites the position
     // but should not double-count or corrupt pool totals in an unsafe way
     t.client.borrow(
         &t.borrower,
@@ -278,7 +278,7 @@ fn test_borrow_double_call_does_not_corrupt_state() {
 }
 
 /// Verify that a borrow with insufficient collateral (health factor too low)
-/// is rejected at the checks phase — no state mutation occurs.
+/// is rejected at the checks phase - no state mutation occurs.
 #[test]
 #[should_panic(expected = "Health factor too low")]
 fn test_borrow_rejected_at_checks_no_state_mutation() {
@@ -295,11 +295,11 @@ fn test_borrow_rejected_at_checks_no_state_mutation() {
         &t.xlm_address,
         &100, // 100 XLM collateral
     );
-    // Panic expected — no state should have been modified
+    // Panic expected - no state should have been modified
 }
 
 // ═══════════════════════════════════════════════
-// REENTRANCY TESTS — REPAY
+// REENTRANCY TESTS - REPAY
 // ═══════════════════════════════════════════════
 
 /// Verify CEI pattern for `repay`: state (borrow position update + pool
@@ -350,7 +350,7 @@ fn test_repay_state_updated_before_interactions() {
     );
 }
 
-/// Simulate a "double repay" attempt — after fully repaying a borrow,
+/// Simulate a "double repay" attempt - after fully repaying a borrow,
 /// a second repay call should panic because the position no longer exists.
 /// This proves that state was committed before the token transfer.
 #[test]
@@ -373,10 +373,10 @@ fn test_repay_double_call_panics_position_already_removed() {
     let usdc_sac = StellarAssetClient::new(&t.env, &t.usdc_address);
     usdc_sac.mint(&t.borrower, &2_000_000_000);
 
-    // First repay — succeeds, removes position
+    // First repay - succeeds, removes position
     t.client.repay(&t.borrower, &t.pool_id, &borrow_amount);
 
-    // Second repay — should panic because position was already removed
+    // Second repay - should panic because position was already removed
     // This is the critical reentrancy defense: if a malicious contract
     // tried to re-enter `repay` during the token transfer of the first
     // repay, it would fail here because the position is already gone.
@@ -420,7 +420,7 @@ fn test_repay_partial_then_full_no_state_corruption() {
         "Total borrows should decrease after partial repay"
     );
 
-    // Repay remainder — position should be fully closed
+    // Repay remainder - position should be fully closed
     let remaining = partial_result.principal;
     let final_result = t.client.repay(&t.borrower, &t.pool_id, &remaining);
     assert_eq!(
@@ -436,16 +436,16 @@ fn test_repay_partial_then_full_no_state_corruption() {
 }
 
 // ═══════════════════════════════════════════════
-// REENTRANCY TESTS — LIQUIDATE
+// REENTRANCY TESTS - LIQUIDATE
 // ═══════════════════════════════════════════════
 //
 // NOTE: The contract does not yet expose a public `liquidate` function
 // (only the LendingEvents::liquidation event struct exists). These tests
-// verify reentrancy safety at the **storage layer** level — the same
+// verify reentrancy safety at the **storage layer** level - the same
 // storage primitives that a future `liquidate` implementation will use.
 //
 // Specifically, we verify:
-// 1. Position removal is atomic — once removed, it cannot be re-read
+// 1. Position removal is atomic - once removed, it cannot be re-read
 // 2. Pool total borrows reduction is consistent after position removal
 // 3. Collateral accounting remains correct through position lifecycle
 
@@ -481,7 +481,7 @@ fn test_liquidation_position_removal_is_atomic() {
         PositionStorage::remove_borrow(&t.env, &t.borrower, &t.pool_id);
     });
 
-    // Verify position is gone — a reentrancy attempt would fail here
+    // Verify position is gone - a reentrancy attempt would fail here
     let position_after = t.env.as_contract(&t.contract_id, || {
         PositionStorage::get_borrow(&t.env, &t.borrower, &t.pool_id)
     });
@@ -527,7 +527,7 @@ fn test_liquidation_double_attempt_finds_no_position() {
         let pos = PositionStorage::get_borrow(&t.env, &t.borrower, &t.pool_id)
             .expect("position must exist for first liquidation");
 
-        // Effects phase — state updated BEFORE any external call
+        // Effects phase - state updated BEFORE any external call
         PositionStorage::remove_borrow(&t.env, &t.borrower, &t.pool_id);
         let current_total = PoolStorage::get_total_borrows(&t.env, &t.pool_id);
         let new_total = if pos.principal > current_total {
@@ -539,7 +539,7 @@ fn test_liquidation_double_attempt_finds_no_position() {
     });
 
     // Simulate second liquidation attempt (reentrancy scenario)
-    // The position no longer exists — this is the reentrancy guard
+    // The position no longer exists - this is the reentrancy guard
     let second_attempt = t.env.as_contract(&t.contract_id, || {
         PositionStorage::get_borrow(&t.env, &t.borrower, &t.pool_id)
     });
@@ -573,7 +573,7 @@ fn test_liquidation_health_factor_deterministic() {
     let threshold: i128 = 800_000_000_000_000_000; // 80%
 
     let hf1 = PositionStorage::calculate_health_factor(collateral_value, debt_value, threshold);
-    // Call again — must produce identical result (no side effects / reentrancy risk)
+    // Call again - must produce identical result (no side effects / reentrancy risk)
     let hf2 = PositionStorage::calculate_health_factor(collateral_value, debt_value, threshold);
 
     assert_eq!(

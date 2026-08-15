@@ -18,7 +18,7 @@ import { ApiError } from '../errors/ApiError';
 import { getRealEstateTokenContractId } from '../config/contracts';
 
 function toOperation(op: ReturnType<Contract['call']>): xdr.Operation {
-  // The Stellar SDK types are correct here — single cast with comment
+  // The Stellar SDK types are correct here - single cast with comment
   return op as unknown as xdr.Operation;
 }
 

@@ -3,14 +3,14 @@
  *
  * Usage: Call `initMocks()` once at application startup in a Client Component.
  * This is a no-op in Node.js (SSR/SSG) because the Service Worker API is
- * not available there — MSW's browser integration is client-only.
+ * not available there - MSW's browser integration is client-only.
  *
  * The function is dynamic-imported so the MSW bundle is never included in
  * the server build (tree-shaken when USE_MOCK is false).
  */
 export async function initMocks(): Promise<void> {
   if (typeof window === "undefined") {
-    // Server environment — nothing to do.
+    // Server environment - nothing to do.
     return;
   }
 

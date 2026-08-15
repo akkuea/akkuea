@@ -21,7 +21,7 @@ This issue adds Pollar as a `WalletProvider` in `apps/webapp` following the modu
 
 Before writing code, verify the following at `https://docs.pollar.xyz`:
 
-1. The exact npm package names — expected: `@pollar/react`, `@pollar/core`.
+1. The exact npm package names - expected: `@pollar/react`, `@pollar/core`.
 2. Whether `usePollar()` exposes `address` directly or through a nested wallet object.
 3. The exact shape of the hook return: `{ wallet, login, logout, signAndSubmitTx, loading }` or similar.
 4. What error is thrown when a user cancels the login modal.
@@ -41,7 +41,7 @@ bun add @pollar/react @pollar/core
 Add to `apps/webapp/.env.example`:
 
 ```env
-# Pollar publishable API key — get one at https://pollar.xyz
+# Pollar publishable API key - get one at https://pollar.xyz
 # Testnet keys start with pub_testnet_
 NEXT_PUBLIC_POLLAR_API_KEY=pub_testnet_your_key_here
 ```
@@ -56,13 +56,13 @@ The `WalletProvider` interface from C4-012 defines:
 signTransaction: (xdr: string, networkPassphrase: string) => Promise<string>;
 ```
 
-This returns a signed XDR string, leaving submission to the caller. Pollar does not expose a bare sign step — `signAndSubmitTx(xdr)` signs and submits atomically with fee-bump sponsorship and returns `void` (or a transaction hash).
+This returns a signed XDR string, leaving submission to the caller. Pollar does not expose a bare sign step - `signAndSubmitTx(xdr)` signs and submits atomically with fee-bump sponsorship and returns `void` (or a transaction hash).
 
 Two resolution options:
 
-**Option A — Extend the interface (preferred):** Add an optional `submitTransaction` method to `WalletProvider`. Providers that sign-and-submit natively (Pollar) implement `submitTransaction` instead of `signTransaction`. The app's transaction dispatch logic checks for `submitTransaction` first.
+**Option A - Extend the interface (preferred):** Add an optional `submitTransaction` method to `WalletProvider`. Providers that sign-and-submit natively (Pollar) implement `submitTransaction` instead of `signTransaction`. The app's transaction dispatch logic checks for `submitTransaction` first.
 
-**Option B — Wrap and return original XDR:** Have `signTransaction` call `pollar.signAndSubmitTx` internally, and on success return the original XDR unchanged. This is a lie to the interface but avoids a breaking change to `WalletProvider`. Only acceptable if Option A is too disruptive at the time of implementation.
+**Option B - Wrap and return original XDR:** Have `signTransaction` call `pollar.signAndSubmitTx` internally, and on success return the original XDR unchanged. This is a lie to the interface but avoids a breaking change to `WalletProvider`. Only acceptable if Option A is too disruptive at the time of implementation.
 
 Document the chosen option in the pull request.
 
@@ -74,7 +74,7 @@ Create `apps/webapp/src/services/wallet/providers/pollar.ts`:
 import type { WalletProvider, WalletAccount } from "../types";
 
 // Pollar's hooks must run inside a React context.
-// This provider is a bridge — actual state comes from PollarWrapper.
+// This provider is a bridge - actual state comes from PollarWrapper.
 let pollarInterface: {
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;

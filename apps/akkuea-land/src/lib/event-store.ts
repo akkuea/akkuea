@@ -2,7 +2,7 @@ import type { GameEvent } from "@akkuea/shared";
 
 const MAX_EVENTS = 1_000;
 
-/** Module-level ring buffer — persists across requests in the same Node.js process. */
+/** Module-level ring buffer - persists across requests in the same Node.js process. */
 const store: GameEvent[] = [];
 
 export function appendEvents(events: GameEvent[]): void {

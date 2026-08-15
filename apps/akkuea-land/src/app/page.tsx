@@ -17,9 +17,9 @@ import { useGameWallet } from "../hooks/useGameWallet";
 
 // Distinct mock addresses to demonstrate the three ownership states on the sandbox:
 //   1. Treasury/unowned  → TREASURY_ADDRESS  (amber tile)
-//   2. Viewer-owned      → MOCK_VIEWER_ADDRESS  (green tile — matches useGameWallet
+//   2. Viewer-owned      → MOCK_VIEWER_ADDRESS  (green tile - matches useGameWallet
 //      when wallet is connected; see dashboard for the env-var-based VIEWER_ADDRESS)
-//   3. Other player      → MOCK_OTHER_ADDRESS  (purple tile — "Listed (Other)")
+//   3. Other player      → MOCK_OTHER_ADDRESS  (purple tile - "Listed (Other)")
 const MOCK_VIEWER_ADDRESS =
   "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
 const MOCK_OTHER_ADDRESS =

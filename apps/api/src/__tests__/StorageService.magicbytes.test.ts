@@ -1,5 +1,5 @@
 /**
- * Unit tests for StorageService.isAllowedFileType — magic-byte (real content) validation.
+ * Unit tests for StorageService.isAllowedFileType - magic-byte (real content) validation.
  *
  * These tests do NOT require a database connection and always run in CI.
  *
@@ -27,7 +27,7 @@ const PNG_MAGIC = Buffer.from([
   0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
 ]);
 
-/** Executable / archive magic bytes — must always be rejected. */
+/** Executable / archive magic bytes - must always be rejected. */
 const EXE_MAGIC = Buffer.from([
   0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00, 0x00,
 ]);
@@ -40,7 +40,7 @@ const GIF_MAGIC = Buffer.from([
 
 // ── extension / MIME-only checks (no buffer) ───────────────────────────────────
 
-describe('StorageService.isAllowedFileType — extension/MIME checks', () => {
+describe('StorageService.isAllowedFileType - extension/MIME checks', () => {
   it('allows .pdf with application/pdf MIME', async () => {
     const result = await StorageService.isAllowedFileType('doc.pdf', 'application/pdf');
     expect(result.allowed).toBe(true);
@@ -80,7 +80,7 @@ describe('StorageService.isAllowedFileType — extension/MIME checks', () => {
 
 // ── magic-byte checks (buffer provided) ───────────────────────────────────────
 
-describe('StorageService.isAllowedFileType — magic-byte validation', () => {
+describe('StorageService.isAllowedFileType - magic-byte validation', () => {
   // ── valid files ──────────────────────────────────────────────────────────────
 
   it('accepts a real PDF buffer named .pdf', async () => {

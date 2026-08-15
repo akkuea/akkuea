@@ -1,7 +1,7 @@
 name: Smoke tests
 
 # Optional post-deploy / manual smoke against a live API.
-# Does not replace unit CI — only checks boot + happy-path HTTP.
+# Does not replace unit CI - only checks boot + happy-path HTTP.
 
 on:
   workflow_dispatch:

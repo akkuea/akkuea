@@ -1,252 +1,196 @@
 # System Architecture
 
+> This document describes the **existing platform build** - the monorepo as it exists today, including both the fractional-shares/lending platform and Akkuea Land. For *why* the pilot uses a different, smaller contract surface than the `defi-rwa` contract described here, see [`docs/strategy/product-brief.md`](../strategy/product-brief.md#relationship-to-the-existing-platform-build).
+
 ## Overview
 
-The Real Estate DeFi Platform is built as a monorepo with multiple specialized applications working together to provide a complete solution for real estate tokenization and DeFi lending on the Stellar blockchain.
+Akkuea is a Bun monorepo with five applications working together: two Next.js frontends, one Elysia/Bun API, one shared TypeScript library, and one Rust/Soroban contracts workspace containing two independent contract systems.
 
 ## High-Level Architecture
 
+```mermaid
+flowchart TB
+    subgraph Frontends
+        WA["apps/webapp\nNext.js 16 + React 19\nexisting platform build"]
+        AL["apps/akkuea-land\nNext.js\npilot's visual companion"]
+    end
+    API["apps/api\nElysia / Bun\nlocalhost:3001"]
+    SH["apps/shared\nTypes · Validation · Stellar SDK helpers"]
+    DB[(PostgreSQL\nvia Drizzle)]
+    Redis[(Redis\noptional cache)]
+
+    subgraph Stellar["Stellar Network (Soroban)"]
+        RWA["defi-rwa contract\nshares + lending"]
+        GameEngine[game-engine]
+        GameNFT[game-property-nft]
+        GameToken[game-land-token]
+        GameMkt[game-marketplace]
+    end
+
+    WA <--> API
+    AL <--> API
+    WA -.->|direct wallet calls| RWA
+    AL -.->|direct wallet calls| GameEngine
+    AL -.->|direct wallet calls| GameNFT
+    AL -.->|direct wallet calls| GameToken
+    AL -.->|direct wallet calls| GameMkt
+    API <--> DB
+    API <--> Redis
+    API -->|admin-signed transactions| RWA
+    WA --- SH
+    AL --- SH
+    API --- SH
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Web Frontend  │    │   Backend API   │    │  Smart Contracts│
-│   (Next.js)     │◄──►│   (Elysia/Bun)  │◄──►│   (Soroban)     │
-│   Port: 3000    │    │   Port: 3001    │    │  Stellar Network│
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         │              ┌─────────────────┐              │
-         └──────────────►│  Shared Library │◄─────────────┘
-                        │ (Types/Utils)   │
-                        └─────────────────┘
-```
+
+Both frontends talk to the same API and share the same `@akkuea/shared` types, but each talks to its own contract system directly from the browser via a connected Stellar wallet (Freighter or equivalent) for user-signed actions, while the API holds the admin key for admin-signed actions (minting, oracle configuration, role grants).
 
 ## Component Breakdown
 
-### 1. Web Application (apps/webapp)
+### 1. Web Application (`apps/webapp`) - existing platform build
 
-**Technology Stack:**
+**Technology Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, `@stellar/stellar-sdk`, `@creit.tech/stellar-wallets-kit`.
 
-- Next.js 14 with App Router
-- TypeScript for type safety
-- Tailwind CSS for styling
-- Stellar SDK for blockchain integration
-- React Query for state management
+**Responsibilities:** property browsing and tokenization UI, wallet connection, share purchase, lending pool interactions, KYC document upload, portfolio management. See [`../design-system/`](../design-system/) for the visual system this app implements.
 
-**Responsibilities:**
+### 2. Akkuea Land (`apps/akkuea-land`) - the pilot's visual companion
 
-- User interface for property browsing
-- Wallet connection and management
-- Share purchase/sale interface
-- Lending pool interactions
-- KYC document upload
-- Portfolio management
+**Technology Stack:** Next.js, TypeScript, same Stellar wallet integration pattern as `apps/webapp`.
 
-### 2. Backend API (apps/api)
+**Responsibilities:** the tile-based property game - onboarding (claim starter LAND + a starter property), dashboard (view and claim accrued rental income), city map (buy from treasury, improve, list/buy on the marketplace). See [`../game/`](../game/) and [`../strategy/product-brief.md`](../strategy/product-brief.md) for why this exists alongside the pilot.
 
-**Technology Stack:**
+### 3. Backend API (`apps/api`)
 
-- Elysia framework (Bun runtime)
-- TypeScript
-- Stellar SDK for blockchain operations
-- Swagger for API documentation
-- Built-in validation and error handling
+**Technology Stack:** Elysia (Bun runtime), TypeScript, Drizzle ORM (PostgreSQL), Zod validation, Swagger-generated docs.
 
-**Responsibilities:**
+**Responsibilities:** REST API for both frontends, admin-signed blockchain transaction orchestration for the `defi-rwa` contract, KYC verification workflow, property review queue, notifications, rate limiting and structured audit logging. See [`../api/overview.md`](../api/overview.md).
 
-- RESTful API for frontend consumption
-- Blockchain transaction orchestration
-- KYC verification workflow
-- Data aggregation and caching
-- Transaction monitoring
-- User management
+### 4. Smart Contracts (`apps/contracts`) - two independent systems
 
-### 3. Smart Contracts (apps/contracts)
+**Technology Stack:** Rust, Soroban SDK, WASM (`wasm32v1-none` target via `stellar contract build`).
 
-**Technology Stack:**
+Two separate, unrelated contract systems live in this one Rust workspace:
 
-- Rust programming language
-- Soroban SDK
-- Stellar blockchain
-- WASM compilation target
+- **`defi-rwa`** (existing platform build) - single WASM binary exposing both property-share tokenization and DeFi lending (pools, collateral, oracle-based valuation, liquidation, emergency pause). See [`../deployment/deploy-contracts.md`](../deployment/deploy-contracts.md).
+- **`game-property-nft`, `game-land-token`, `game-engine`, `game-marketplace`** (Akkuea Land) - four independently deployed and initialized contracts. See [`../deployment/deploy-game-contracts.md`](../deployment/deploy-game-contracts.md).
 
-**Responsibilities:**
+The pilot's own contract surface (income-participation token, whitelist, payout-split - see [`../strategy/product-brief.md`](../strategy/product-brief.md)) is being built inside this same workspace, as a third, independent system, not as a modification of `defi-rwa`.
 
-- Property tokenization logic
-- Share ownership tracking
-- Lending pool management
-- Collateral management
-- Interest calculation
-- Liquidation logic
+### 5. Shared Library (`apps/shared`)
 
-### 4. Shared Library (apps/shared)
+**Technology Stack:** TypeScript.
 
-**Technology Stack:**
-
-- TypeScript
-- Common type definitions
-- Stellar utilities
-- Validation functions
-- Constants and configurations
-
-**Responsibilities:**
-
-- Type sharing between frontend and backend
-- Common utilities and helpers
-- Validation logic
-- Stellar integration utilities
-- Constants and enums
+**Responsibilities:** type definitions shared between both frontends and the API, Stellar utilities, validation schemas, contract-ID resolution (`contracts.testnet.json` / `contracts.mainnet.json` / `contracts/game-contracts.testnet.json`), test factories and staging scenarios (see [`../testing/smoke-tests.md`](../testing/smoke-tests.md)).
 
 ## Data Flow Architecture
 
-### Property Tokenization Flow
+### Property Tokenization Flow (existing platform build)
+
+```mermaid
+sequenceDiagram
+    participant U as User (owner)
+    participant FE as Frontend
+    participant API as API
+    participant DB as PostgreSQL
+    participant SC as defi-rwa contract
+
+    U->>FE: Submit property details
+    FE->>API: POST /properties
+    API->>DB: Insert property (verified=false)
+    Note over API,DB: Admin review queue (/internal/operations)
+    U->>FE: Trigger tokenize
+    FE->>API: POST /properties/:id/tokenize
+    API->>API: Guard: verified, not already tokenized
+    API->>SC: mint_shares(admin, property_id, owner, amount)
+    SC-->>API: txHash
+    API->>DB: Write tokenAddress only after on-chain success
+    API-->>FE: 200 { txHash, tokenAddress, ... }
+```
+
+Full detail: [`../api/minting-workflow.md`](../api/minting-workflow.md).
+
+### DeFi Borrowing Flow (existing platform build)
 
 ```
-1. User uploads property info → Frontend
-2. Frontend validates → Backend API
-3. API verifies KYC → External KYC Service
-4. API tokenizes property → Smart Contract
-5. Contract emits event → API monitors
-6. API updates database → Frontend refreshes
+User requests loan → Frontend calculates available collateral
+→ API checks on-chain share balance → Contract validates collateral ratio via oracle
+→ Contract disburses funds → Frontend updates lending position
 ```
 
-### DeFi Lending Flow
+### Akkuea Land claim flow
 
 ```
-1. User wants to borrow → Frontend
-2. Frontend calculates available → Backend API
-3. API checks collateral → Smart Contract
-4. Contract validates → API processes
-5. API executes transaction → Smart Contract
-6. Contract transfers funds → Frontend updates
+User connects wallet → Frontend builds claim_rental transaction for each claimable property
+→ Wallet signs → Submitted to Soroban RPC → Polled until confirmed
+→ LAND balance updates
 ```
+
+Full detail: [`../deployment/deploy-game-contracts.md`](../deployment/deploy-game-contracts.md).
 
 ## Security Architecture
 
 ### 1. Authentication & Authorization
 
-- **Wallet-based authentication** using Stellar signatures
-- **Role-based access control** for different user types
-- **KYC verification** for compliance
-- **Rate limiting** to prevent abuse
+- Wallet-based authentication using Stellar Ed25519 signatures (see [`../api/authentication.md`](../api/authentication.md))
+- Role-based access control on-chain for `defi-rwa` (`Admin`, `Pauser`, `EmergencyGuard`, plus reserved-but-unenforced `Oracle`/`Verifier`/`Liquidator` roles - see [`../operations/runbook-role-management.md`](../operations/runbook-role-management.md))
+- Off-chain KYC state machine gating platform participation (see [`../api/kyc-workflow.md`](../api/kyc-workflow.md) for known enforcement gaps)
+- Rate limiting on authentication and general API endpoints
 
 ### 2. Smart Contract Security
 
-- **Access control patterns** for admin functions
-- **Reentrancy protection** for lending operations
-- **Input validation** for all external calls
-- **Event logging** for audit trails
+- Role-gated admin functions, two-step admin transfer (`transfer_admin_start` / `transfer_admin_accept`)
+- 24-hour timelocked emergency pause and recovery (see [`../operations/runbook-emergency-pause.md`](../operations/runbook-emergency-pause.md))
+- Configurable oracle staleness/price-floor guardrails (see [`../operations/runbook-oracle-failure.md`](../operations/runbook-oracle-failure.md))
+- Event logging on-chain for audit trails
 
 ### 3. API Security
 
-- **CORS configuration** for frontend access
-- **Input sanitization** to prevent injection attacks
-- **Environment variable protection** for sensitive data
-- **API key management** for external services
-
-## Scalability Considerations
-
-### 1. Frontend Scaling
-
-- **Static generation** for property listings
-- **Incremental Static Regeneration** for dynamic content
-- **Client-side caching** with React Query
-- **Code splitting** for optimal loading
-
-### 2. Backend Scaling
-
-- **Horizontal scaling** with stateless API design
-- **Database connection pooling** for efficiency
-- **Redis caching** for frequently accessed data
-- **Queue processing** for background tasks
-
-### 3. Blockchain Scaling
-
-- **Stellar's high throughput** (5,000+ TPS)
-- **Low transaction fees** for user accessibility
-- **Batch operations** for efficiency
-- **Optimized contract storage** to reduce costs
-
-## Monitoring & Observability
-
-### 1. Application Monitoring
-
-- **Health check endpoints** for service status
-- **Performance metrics** for response times
-- **Error tracking** with structured logs
-- **User analytics** for platform usage
-
-### 2. Blockchain Monitoring
-
-- **Transaction monitoring** for failed transactions
-- **Event listening** for real-time updates
-- **Contract state monitoring** for security
-- **Network status** for Stellar operations
-
-### 3. Infrastructure Monitoring
-
-- **Server resource utilization**
-- **Database performance metrics**
-- **API rate limiting status**
-- **SSL certificate monitoring**
+- CORS configuration scoped to known frontend origins
+- Input validation and sanitization
+- Admin-only endpoints gated by `OPERATIONS_BACKEND_CREDENTIAL` / `OPERATIONS_ALLOWED_WALLETS` (see [`../deployment/environment-variables.md`](../deployment/environment-variables.md))
+- Secrets never committed - `STELLAR_ADMIN_SECRET` treated as a root credential
 
 ## Deployment Architecture
 
-### Development Environment
+### Development
 
 ```
 Local Machine:
-├── Frontend (localhost:3000)
-├── Backend API (localhost:3001)
-├── Stellar Testnet
-└── Mock KYC Service
+├── apps/webapp    (localhost:3000)
+├── apps/akkuea-land
+├── apps/api       (localhost:3001)
+├── PostgreSQL + Redis (docker-compose.dev.yml)
+└── Stellar Testnet
 ```
 
-### Production Environment
+### Production
 
 ```
-Cloud Infrastructure:
-├── Frontend (CDN/Static Hosting)
-├── Backend API (Load Balanced)
-├── Database (Managed PostgreSQL)
-├── Redis Cluster
-├── Stellar Mainnet
-└── Production KYC Service
+├── Frontends       (static/edge hosting)
+├── API             (load-balanced Elysia/Bun)
+├── Database        (managed PostgreSQL)
+├── Redis           (optional cache layer)
+└── Stellar Mainnet (defi-rwa + game contracts, deployed independently)
 ```
+
+See [`../deployment/deploy-contracts.md`](../deployment/deploy-contracts.md), [`../deployment/deploy-game-contracts.md`](../deployment/deploy-game-contracts.md), and [`../deployment/post-deploy-checklist.md`](../deployment/post-deploy-checklist.md).
 
 ## Integration Points
 
-### External Services
+### External
 
-1. **Stellar Network** - Blockchain operations
-2. **KYC Providers** - Identity verification
-3. **Property Data APIs** - Real estate information
-4. **Price Oracles** - Asset valuation
-5. **Payment Processors** - Fiat on-ramps
+1. **Stellar Network** - Horizon (classic ops) and Soroban RPC (contract invocations)
+2. **SEP-40 price oracle** - required by `defi-rwa` for lending; see [`../operations/runbook-oracle-failure.md`](../operations/runbook-oracle-failure.md)
+3. **KYC document review** - currently manual/admin-driven, no third-party KYC provider integrated (see [`../api/kyc-workflow.md`](../api/kyc-workflow.md))
 
-### Internal Integrations
+### Internal
 
-1. **Shared Types** - Frontend ↔ Backend communication
-2. **Stellar SDK** - All components ↔ Blockchain
-3. **Database Models** - API ↔ Data persistence
-4. **Event System** - Smart Contracts ↔ API monitoring
+1. **`@akkuea/shared`** - types and utilities shared across all three TypeScript workspaces
+2. **`@stellar/stellar-sdk`** - all frontend and API components talk to Stellar through this
+3. **Drizzle ORM models** - API ↔ PostgreSQL
+4. **Contract-ID JSON artifacts** (`apps/shared/src/contracts*.json`) - the single source of truth read by both the API and frontends for which contract to call, per network
 
-## Future Architecture Considerations
+## See also
 
-### 1. Multi-chain Support
-
-- Bridge contracts for other blockchains
-- Cross-chain asset transfers
-- Unified asset representation
-
-### 2. Advanced Privacy Features
-
-- Zero-knowledge proof integration
-- Private lending pools
-- Encrypted transaction data
-
-### 3. Institutional Features
-
-- Enterprise-grade compliance tools
-- Advanced reporting capabilities
-- Custom contract deployment
-
-This architecture provides a solid foundation for the Real Estate DeFi Platform while maintaining flexibility for future growth and feature additions.
+- [`../strategy/product-brief.md`](../strategy/product-brief.md) - why the pilot's contract surface is separate from `defi-rwa`
+- [`../design-system/`](../design-system/) - the visual/interaction system `apps/webapp` implements
+- [`../deployment/`](../deployment/) - deployment guides for both contract systems

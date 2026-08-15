@@ -40,7 +40,7 @@ export interface ClaimAllOptions {
 }
 
 export interface ClaimAllResult {
-  /** Human-readable "<property name> — <reason>" entries, one per failed claim. */
+  /** Human-readable "<property name> - <reason>" entries, one per failed claim. */
   failures: string[];
 }
 
@@ -78,7 +78,7 @@ export function describeClaimError(err: unknown): string {
  * number, so building the next XDR only after the previous claim confirms
  * avoids sequence-number collisions. Do not parallelize.
  *
- * A failure on one property never aborts the loop — it is recorded in
+ * A failure on one property never aborts the loop - it is recorded in
  * `failures` and the next property is attempted.
  */
 export async function claimAllRentals(
@@ -104,7 +104,7 @@ export async function claimAllRentals(
 
       onClaimed?.(prop.id);
     } catch (err) {
-      failures.push(`${prop.name} — ${describeClaimError(err)}`);
+      failures.push(`${prop.name} - ${describeClaimError(err)}`);
     }
   }
 

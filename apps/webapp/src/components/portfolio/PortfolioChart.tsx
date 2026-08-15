@@ -299,7 +299,7 @@ export function PortfolioChart({
                 cursor={{ stroke: "#333333", strokeWidth: 1 }}
               />
 
-              {/* Hidden Legend — we render our own above */}
+              {/* Hidden Legend - we render our own above */}
               <Legend wrapperStyle={{ display: "none" }} />
 
               <Area

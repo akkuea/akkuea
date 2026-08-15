@@ -26,7 +26,7 @@ function createMockSet(): Context['set'] {
 
 /**
  * Minimal Redis sorted-set simulator that executes the rate-limit Lua script
- * atomically inside `runScript` — concurrent callers serialize through a queue so
+ * atomically inside `runScript` - concurrent callers serialize through a queue so
  * the counter cannot race the way separate INCR+EXPIRE commands could.
  */
 function makeFakeRedisClient(): RateLimitRedisClient & {
@@ -264,7 +264,7 @@ describe('createRedisStore', () => {
     const blocked = await store.checkLimit(id, windowMs, max);
     expect(blocked.allowed).toBe(false);
 
-    // Wait past half the window — under fixed-window this is still the same
+    // Wait past half the window - under fixed-window this is still the same
     // bucket (still blocked). Under sliding window we are also still blocked
     // because all timestamps remain inside [now-windowMs, now].
     await new Promise((r) => setTimeout(r, Math.floor(windowMs / 2)));

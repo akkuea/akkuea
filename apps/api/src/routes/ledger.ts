@@ -68,7 +68,7 @@ class LedgerBroadcaster {
 
 const broadcaster = new LedgerBroadcaster();
 
-// GET /api/ledger/stream — SSE stream, emits { sequence, timestamp } on each new ledger
+// GET /api/ledger/stream - SSE stream, emits { sequence, timestamp } on each new ledger
 export const ledgerRoutes = new Elysia({ prefix: '/api/ledger' }).get(
   '/stream',
   ({ set, request }) => {

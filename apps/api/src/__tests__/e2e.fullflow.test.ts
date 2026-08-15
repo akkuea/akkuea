@@ -5,8 +5,8 @@
  * Covers:
  *  1. Happy path: property tokenized → buyer KYC approved → shares purchased →
  *     deposit made into lending pool → shares used as collateral to borrow
- *  2. Error path: KYC not approved — buyer cannot purchase shares
- *  3. Error path: Insufficient liquidity — borrow amount exceeds pool's available liquidity
+ *  2. Error path: KYC not approved - buyer cannot purchase shares
+ *  3. Error path: Insufficient liquidity - borrow amount exceeds pool's available liquidity
  *
  * Pattern: follows PropertyController.buyShares.test.ts conventions:
  *   - describe.skipIf(skipIfNoDatabase) guards all DB-requiring tests
@@ -126,7 +126,7 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     // Ensure no-KYC user is explicitly not approved
     await kycRepository.updateUserKycStatus(buyerNoKycId, 'not_started');
 
-    // Property — verified so tokenization can proceed immediately
+    // Property - verified so tokenization can proceed immediately
     const prop = await propertyRepository.create({
       name: 'E2E Test Property',
       description: 'An end-to-end test property with enough description',
@@ -142,7 +142,7 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     });
     propertyId = prop.id;
 
-    // Lending pool — will be pre-funded with 2000 USDC for later borrow tests
+    // Lending pool - will be pre-funded with 2000 USDC for later borrow tests
     const pool = await lendingRepository.create({
       name: 'E2E USDC Pool',
       asset: 'USDC',
@@ -204,14 +204,14 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
       await db.delete(properties).where(eq(properties.id, propertyId));
     }
 
-    // Users — must come after all referencing records are removed
+    // Users - must come after all referencing records are removed
     for (const id of [ownerId, buyerKycOkId, buyerNoKycId, depositorId]) {
       if (id) await db.delete(users).where(eq(users.id, id));
     }
   });
 
   // =======================================================================
-  // STEP 1 — Tokenization
+  // STEP 1 - Tokenization
   // =======================================================================
   describe('Step 1: Tokenize property', () => {
     it('tokenizes the property and persists contract address + sorobanPropertyId', async () => {
@@ -238,7 +238,7 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     });
 
     it('rejects tokenization of an already-tokenized property', async () => {
-      // Property is tokenized from the previous test — should conflict
+      // Property is tokenized from the previous test - should conflict
       await expect(
         PropertyController.tokenizeProperty(propertyId, {}, OWNER_ADDRESS),
       ).rejects.toMatchObject({ statusCode: 409, code: 'CONFLICT' });
@@ -246,13 +246,13 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   });
 
   // =======================================================================
-  // STEP 2 — Buy Shares (KYC gating)
+  // STEP 2 - Buy Shares (KYC gating)
   // =======================================================================
-  describe('Step 2: Buy shares — KYC not approved', () => {
+  describe('Step 2: Buy shares - KYC not approved', () => {
     it('rejects share purchase when buyer KYC is not approved', async () => {
       // buyerNoKyc has kycStatus = 'not_started'
       (stellarService as any).mintPropertyShares = async () => {
-        throw new Error('should not be called — KYC gate should fire first');
+        throw new Error('should not be called - KYC gate should fire first');
       };
 
       await expect(
@@ -282,9 +282,9 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   });
 
   // =======================================================================
-  // STEP 3 — Buy Shares (happy path — KYC approved)
+  // STEP 3 - Buy Shares (happy path - KYC approved)
   // =======================================================================
-  describe('Step 3: Buy shares — KYC approved', () => {
+  describe('Step 3: Buy shares - KYC approved', () => {
     it('mints shares for a KYC-approved buyer and updates DB state', async () => {
       let capturedMintParams: any = {};
 
@@ -353,16 +353,16 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
         ),
       ).rejects.toThrow('Soroban submission failed');
 
-      // DB: available shares still 90 — unchanged from the previous test's purchase
+      // DB: available shares still 90 - unchanged from the previous test's purchase
       const prop = await propertyRepository.findById(propertyId);
       expect(prop!.availableShares).toBe(90);
     });
   });
 
   // =======================================================================
-  // STEP 4 — Collateral Lending (happy path)
+  // STEP 4 - Collateral Lending (happy path)
   // =======================================================================
-  describe('Step 4: Borrow against share collateral — happy path', () => {
+  describe('Step 4: Borrow against share collateral - happy path', () => {
     it('creates a borrow position using tokenized shares as collateral', async () => {
       const poolBefore = await lendingRepository.findById(poolId);
       const liquidityBefore = parseFloat(poolBefore!.availableLiquidity);
@@ -404,9 +404,9 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   });
 
   // =======================================================================
-  // STEP 5 — Collateral Lending (insufficient liquidity error path)
+  // STEP 5 - Collateral Lending (insufficient liquidity error path)
   // =======================================================================
-  describe('Step 5: Borrow — insufficient liquidity in pool', () => {
+  describe('Step 5: Borrow - insufficient liquidity in pool', () => {
     /**
      * Helper that calls LendingController.borrow and returns a normalized
      * { status, body } pair regardless of whether the controller throws an
@@ -418,7 +418,7 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
         const body = await response.json();
         return { status: response.status, body };
       } catch (err: any) {
-        // ApiError thrown by the controller — mirror the error handler output
+        // ApiError thrown by the controller - mirror the error handler output
         if (err?.statusCode) {
           return {
             status: err.statusCode,

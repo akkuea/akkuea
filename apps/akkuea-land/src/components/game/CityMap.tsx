@@ -24,7 +24,7 @@ import { useMapEvents } from "../../hooks/useMapEvents";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const FLASH_DURATION = 700; // ms — matches CSS animation duration
+const FLASH_DURATION = 700; // ms - matches CSS animation duration
 
 // ── PropertyTile ─────────────────────────────────────────────────────────────
 
@@ -319,7 +319,7 @@ export function CityMap() {
 
       {/* ── Grid ────────────────────────────────────────────────────────── */}
       <div className="city-map-wrapper">
-        {/* Single click handler on the container — event delegation */}
+        {/* Single click handler on the container - event delegation */}
         <div
           ref={gridRef}
           className="city-grid"

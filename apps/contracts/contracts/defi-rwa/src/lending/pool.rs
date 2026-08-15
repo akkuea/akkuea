@@ -21,7 +21,7 @@ pub struct LendingPool {
     pub liquidation_threshold: i128,
     /// Liquidation penalty (e.g., 5% = 50000000000000000)
     pub liquidation_penalty: i128,
-    /// Close factor — max % of debt liquidatable per tx (e.g., 50% = 500000000000000000)
+    /// Close factor - max % of debt liquidatable per tx (e.g., 50% = 500000000000000000)
     pub close_factor: i128,
     /// Reserve factor in basis points (e.g., 1000 = 10%)
     pub reserve_factor: u32,

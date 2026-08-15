@@ -52,7 +52,7 @@ stellar keys import --name mainnet-deployer
 ## Step 1 - Build the WASM binary
 
 ```bash
-cd akkuea-defi-rwa/apps/contracts
+cd apps/contracts
 
 cargo build --target wasm32-unknown-unknown --release
 ```
@@ -210,7 +210,7 @@ Available roles: `Admin`, `Pauser`, `Oracle`, `Verifier`, `Liquidator`, `Emergen
 
 ## Step 6 - Configure the API
 
-Update `akkuea-defi-rwa/apps/api/.env`:
+Update `apps/api/.env`:
 
 ```bash
 REAL_ESTATE_TOKEN_CONTRACT_ID=<value from Step 2>
@@ -224,7 +224,7 @@ STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
 Restart the API:
 
 ```bash
-cd akkuea-defi-rwa/apps/api
+cd apps/api
 bun run start
 ```
 

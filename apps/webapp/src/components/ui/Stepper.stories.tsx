@@ -42,7 +42,7 @@ function InteractiveStepper() {
     <div className="space-y-4">
       <Stepper steps={defaultSteps} currentStep={step} onStepClick={setStep} />
       <p className="text-sm text-neutral-400 text-center">
-        Current step: {step} — click completed steps to navigate back
+        Current step: {step} - click completed steps to navigate back
       </p>
     </div>
   );

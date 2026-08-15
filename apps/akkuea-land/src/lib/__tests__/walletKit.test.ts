@@ -1,12 +1,12 @@
 /**
- * walletKit — ensureWalletSelected unit tests
+ * walletKit - ensureWalletSelected unit tests
  *
  * Regression for the dashboard bug where "Claim All" never popped the wallet:
  * getWalletKit() returned null because initializeWalletKit() was never called,
  * so the page silently took the demo fallback. The connect flow must guarantee
  * a wallet is selected (opening the picker if needed) before signing.
  *
- * Uses a plain structural stub (SelectableWalletKit) instead of module mocks —
+ * Uses a plain structural stub (SelectableWalletKit) instead of module mocks -
  * bun's vi.mock is process-global and other test files already mock
  * "@/lib/walletKit", so module mocking here would collide across files.
  */

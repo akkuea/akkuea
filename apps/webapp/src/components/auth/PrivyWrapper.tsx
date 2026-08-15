@@ -172,7 +172,7 @@ function PrivyBridge() {
     authWaiters.current = [];
   }, [authenticated]);
 
-  // Auth interface is stable — reads latest login/logout via ref
+  // Auth interface is stable - reads latest login/logout via ref
   useLayoutEffect(() => {
     privyProvider.setAuthInterface({
       login: () => privyStateRef.current.login(),

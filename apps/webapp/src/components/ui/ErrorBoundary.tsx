@@ -18,7 +18,7 @@ interface ErrorBoundaryState {
 /**
  * Reusable class-based error boundary.
  *
- * React error boundaries **must** be class components — hooks cannot catch
+ * React error boundaries **must** be class components - hooks cannot catch
  * render-time errors. Wrap any subtree with `<ErrorBoundary>` to prevent a
  * single component crash from tearing down the entire page.
  *

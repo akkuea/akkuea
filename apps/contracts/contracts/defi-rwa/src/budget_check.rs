@@ -128,7 +128,7 @@ fn budget_setup() -> BudgetSetup<'static> {
 
 /// Helper: assert CPU and memory are within the given thresholds. Uses the
 /// Soroban SDK's own `Budget::print()` (a `testutils`-gated API) to report
-/// observed costs to stdout — this avoids using `println!` directly, which
+/// observed costs to stdout - this avoids using `println!` directly, which
 /// isn't available since this crate is `no_std`.
 fn assert_budget(env: &Env, label: &str, max_cpu: u64, max_mem: u64) {
     let cpu = env.budget().cpu_instruction_cost();

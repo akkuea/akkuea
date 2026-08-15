@@ -1,5 +1,5 @@
 /**
- * ClaimPropertyStep — unit tests
+ * ClaimPropertyStep - unit tests
  *
  * Verifies the onboarding "Claim your first property" step builds a real
  * PropertyNft.transfer (treasury → viewer) XDR for the selected starter tile

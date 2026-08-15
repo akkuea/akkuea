@@ -28,14 +28,14 @@ CONTRACTS_DIR="$REPO_ROOT/apps/contracts"
 WASM_DIR="$CONTRACTS_DIR/target/wasm32v1-none/release"
 
 if [ "$NETWORK" != "testnet" ] && [ "$NETWORK" != "futurenet" ]; then
-    echo "Refusing to deploy game contracts to '$NETWORK' — testnet/futurenet only." >&2
+    echo "Refusing to deploy game contracts to '$NETWORK' - testnet/futurenet only." >&2
     exit 1
 fi
 
 # ── 1. Deployer identity ──────────────────────────────────────────────────────
 
 if ! stellar keys address "$IDENTITY" >/dev/null 2>&1; then
-    echo "Identity '$IDENTITY' not found — generating and funding it on $NETWORK..."
+    echo "Identity '$IDENTITY' not found - generating and funding it on $NETWORK..."
     stellar keys generate "$IDENTITY" --network "$NETWORK" --fund
 fi
 
@@ -135,6 +135,6 @@ NEXT_PUBLIC_PROPERTY_NFT_CONTRACT_ID=$NFT_ID
 NEXT_PUBLIC_LAND_TOKEN_CONTRACT_ID=$TOKEN_ID
 NEXT_PUBLIC_MARKETPLACE_CONTRACT_ID=$MARKETPLACE_ID
 
-Income accrues once per epoch (100 ledgers, ~9 min on testnet) — wait one
+Income accrues once per epoch (100 ledgers, ~9 min on testnet) - wait one
 epoch after init before the first claim_rental can succeed.
 EOF

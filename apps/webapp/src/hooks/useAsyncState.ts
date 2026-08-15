@@ -19,7 +19,7 @@ interface UseAsyncStateResult<T> {
   isSuccess: boolean;
   /** Run the async function. Callers decide when (mount, param change, retry click). */
   execute: () => Promise<T | undefined>;
-  /** Alias for execute — reads better at retry call sites. */
+  /** Alias for execute - reads better at retry call sites. */
   retry: () => Promise<T | undefined>;
   /** Push new data in directly (e.g. from a live-update stream) without a loading flash. */
   setData: (updater: T | ((prev: T | null) => T)) => void;
@@ -43,7 +43,7 @@ export function useAsyncState<T>(
   const requestIdRef = useRef(0);
 
   // Depends on asyncFn's identity so callers whose fetcher changes (e.g. a
-  // route param changes) get a fresh `execute` — see property detail page.
+  // route param changes) get a fresh `execute` - see property detail page.
   const execute = useCallback(async () => {
     const requestId = ++requestIdRef.current;
     setStatus("loading");

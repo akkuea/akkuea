@@ -1,5 +1,5 @@
 /**
- * claim-rental — unit tests
+ * claim-rental - unit tests
  *
  * Verifies that claimAllRentals:
  *  1. Builds a real claim_rental XDR per property and passes it to the wallet,
@@ -23,7 +23,7 @@ const MOCK_TX_HASH =
 const NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 const OLD_PLACEHOLDER_XDR = "AAAAAgAAAAD5r+Hl5S94D......";
 
-// ── Module mocks — must be declared before importing the module under test ──
+// ── Module mocks - must be declared before importing the module under test ──
 
 vi.mock("@/lib/soroban-tx", () => ({
   buildClaimIncomeXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
@@ -66,7 +66,7 @@ beforeEach(() => {
 
 // ── claimAllRentals ──────────────────────────────────────────────────────────
 
-describe("claimAllRentals — success path", () => {
+describe("claimAllRentals - success path", () => {
   it("builds, signs, submits, and confirms one real transaction per property", async () => {
     const onProgress = vi.fn();
     const onClaimed = vi.fn();
@@ -120,7 +120,7 @@ describe("claimAllRentals — success path", () => {
   });
 });
 
-describe("claimAllRentals — failure handling", () => {
+describe("claimAllRentals - failure handling", () => {
   it("records a wallet rejection and still claims the next property", async () => {
     mockSignTransaction.mockRejectedValueOnce(new Error("User rejected"));
     const onClaimed = vi.fn();
@@ -132,7 +132,7 @@ describe("claimAllRentals — failure handling", () => {
       onClaimed,
     });
 
-    expect(failures).toEqual(["Oasis Ridge Estate — wallet signing rejected"]);
+    expect(failures).toEqual(["Oasis Ridge Estate - wallet signing rejected"]);
 
     // Second property completed the full flow
     expect(onClaimed).toHaveBeenCalledTimes(1);
@@ -154,7 +154,7 @@ describe("claimAllRentals — failure handling", () => {
     });
 
     expect(failures).toEqual([
-      "Oasis Ridge Estate — Transaction failed on-chain. Result XDR: AAAA==",
+      "Oasis Ridge Estate - Transaction failed on-chain. Result XDR: AAAA==",
     ]);
     expect(onClaimed).not.toHaveBeenCalled();
   });
@@ -173,7 +173,7 @@ describe("claimAllRentals — failure handling", () => {
     });
 
     expect(failures).toEqual([
-      "Oasis Ridge Estate — nothing to claim yet (wait one epoch)",
+      "Oasis Ridge Estate - nothing to claim yet (wait one epoch)",
     ]);
     expect(mockSignTransaction).not.toHaveBeenCalled();
   });

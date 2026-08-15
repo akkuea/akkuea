@@ -43,7 +43,7 @@ vi.mock("@/lib/walletKit", () => ({
 }));
 
 // Mock the Soroban XDR builders + RPC calls so clicking an action button
-// never makes a real network call to testnet — this test only cares about
+// never makes a real network call to testnet - this test only cares about
 // PropertyPanel wiring the right ownership state to the right sub-panel.
 const TEST_TREASURY_ADDRESS =
   "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";

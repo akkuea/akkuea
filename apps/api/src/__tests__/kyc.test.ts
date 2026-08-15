@@ -146,7 +146,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const formData = new FormData();
       formData.set('userId', testUserId);
       formData.set('documentType', 'passport');
-      // MZ header — Windows PE executable
+      // MZ header - Windows PE executable
       const exeMagic = new Uint8Array([
         0x4d, 0x5a, 0x90, 0x00, 0x03, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0xff, 0xff, 0x00,
         0x00,
@@ -169,7 +169,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const formData = new FormData();
       formData.set('userId', testUserId);
       formData.set('documentType', 'passport');
-      // PK header — ZIP archive
+      // PK header - ZIP archive
       const zipMagic = new Uint8Array([
         0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
         0x00,

@@ -1,5 +1,5 @@
 /**
- * usePropertyActions — unit tests
+ * usePropertyActions - unit tests
  *
  * Verifies that:
  *  1. buyFromTreasury builds a real Soroban XDR (via buildBuyFromTreasuryXdr)
@@ -19,7 +19,7 @@ const MOCK_SIGNED_XDR = "AAAA_SIGNED_XDR_BASE64==";
 const MOCK_TX_HASH =
   "abc123def456abc123def456abc123def456abc123def456abc123def456abc1";
 
-// ── Module mocks — must be declared before importing the module under test ──
+// ── Module mocks - must be declared before importing the module under test ──
 
 // Mock the soroban-tx helpers so no network calls are made
 vi.mock("@/lib/soroban-tx", () => ({
@@ -102,7 +102,7 @@ function makeProperty(overrides: Partial<GameProperty> = {}): GameProperty {
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
-describe("soroban-tx — propertyIdToU32", () => {
+describe("soroban-tx - propertyIdToU32", () => {
   it('converts "prop-3-7" to 67 (3*20 + 7)', async () => {
     const { propertyIdToU32 } = await import("@/lib/soroban-tx");
     expect(propertyIdToU32("prop-3-7")).toBe(67);
@@ -129,7 +129,7 @@ describe("soroban-tx — propertyIdToU32", () => {
   });
 });
 
-describe("buyFromTreasury — XDR build + sign + submit flow", () => {
+describe("buyFromTreasury - XDR build + sign + submit flow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Restore default successful mocks after clearing
@@ -255,7 +255,7 @@ describe("buyFromTreasury — XDR build + sign + submit flow", () => {
   });
 });
 
-describe("buyFromTreasury — XDR is not a hardcoded placeholder string", () => {
+describe("buyFromTreasury - XDR is not a hardcoded placeholder string", () => {
   it("does not use the old hardcoded mock XDR placeholder", async () => {
     // The old code passed a literal "AAAAAgAAAAD5r+Hl5S94D......" string
     // Confirm the builder is called (not that literal) and returns a non-placeholder value
@@ -356,7 +356,7 @@ describe("usePropertyActions", () => {
     }));
   });
 
-  describe("TC1 — buyFromTreasury: success path", () => {
+  describe("TC1 - buyFromTreasury: success path", () => {
     it("applies optimistic state mutation and passes deterministic XDR to signTransaction", async () => {
       const onPropertyUpdate = vi.fn();
 
@@ -415,7 +415,7 @@ describe("usePropertyActions", () => {
     });
   });
 
-  describe("TC2 — Authentication Guard", () => {
+  describe("TC2 - Authentication Guard", () => {
     it("short-circuits and sets error boundary when isConnected is false", async () => {
       const onPropertyUpdate = vi.fn();
 
@@ -451,7 +451,7 @@ describe("usePropertyActions", () => {
     });
   });
 
-  describe("TC3 — WalletKit Initialization Drop", () => {
+  describe("TC3 - WalletKit Initialization Drop", () => {
     it("surfaces exact init error and rolls back the optimistic update when getWalletKit returns null", async () => {
       mockGetWalletKit.mockReturnValueOnce(null as any);
 
@@ -483,7 +483,7 @@ describe("usePropertyActions", () => {
     });
   });
 
-  describe("TC4 — Atomic Rollback on Rejection", () => {
+  describe("TC4 - Atomic Rollback on Rejection", () => {
     it("calls onPropertyUpdate twice: optimistic first, exact original second on rejection", async () => {
       mockSignTransaction.mockRejectedValueOnce(new Error("User rejected"));
 
@@ -519,7 +519,7 @@ describe("usePropertyActions", () => {
     });
   });
 
-  describe("TC5 — Domain Boundaries Validation", () => {
+  describe("TC5 - Domain Boundaries Validation", () => {
     it("improveProperty at max level (3) traps error and bypasses wallet signature", async () => {
       const maxLevelProperty: GameProperty = {
         ...baseProperty,
@@ -594,7 +594,7 @@ describe("usePropertyActions", () => {
     });
   });
 
-  describe("TC6 — improveProperty: success path", () => {
+  describe("TC6 - improveProperty: success path", () => {
     it("levels up from 1→2 (Commercial), doubles improveCost, and surfaces exact success message", async () => {
       const level1Property: GameProperty = {
         ...baseProperty,
@@ -636,7 +636,7 @@ describe("usePropertyActions", () => {
     });
   });
 
-  describe("TC7 — listForSale: success path", () => {
+  describe("TC7 - listForSale: success path", () => {
     it("lists at given price, flips isListed, and surfaces exact success message", async () => {
       const onPropertyUpdate = vi.fn();
 
@@ -713,7 +713,7 @@ describe("usePropertyActions", () => {
     });
   });
 
-  describe("TC8 — claimIncome: success path and income boundary", () => {
+  describe("TC8 - claimIncome: success path and income boundary", () => {
     it("zeroes earnedIncome, calls signTransaction, and surfaces exact success message", async () => {
       const incomeProperty: GameProperty = {
         ...baseProperty,
@@ -773,7 +773,7 @@ describe("usePropertyActions", () => {
     });
   });
 
-  describe("TC9 — buyFromPlayer: P2P purchase success path", () => {
+  describe("TC9 - buyFromPlayer: P2P purchase success path", () => {
     it("maps owner to viewer and flips isListed to false, surfaces exact success message", async () => {
       const listedProperty: GameProperty = {
         ...baseProperty,
@@ -815,7 +815,7 @@ describe("usePropertyActions", () => {
     });
   });
 
-  describe("TC10 — clearStates: flushes error and success containers", () => {
+  describe("TC10 - clearStates: flushes error and success containers", () => {
     it("resets error to null after a domain guard triggered it", async () => {
       const onPropertyUpdate = vi.fn();
 

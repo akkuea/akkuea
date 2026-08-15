@@ -5,7 +5,7 @@ Automates the post-deploy checks described in [`docs/testing/smoke-tests.md`](..
 ## Quick start (local / dev)
 
 ```bash
-# From repo root — API must already be running (default port 3001)
+# From repo root - API must already be running (default port 3001)
 ./scripts/smoke/run-smoke-tests.sh
 ```
 
@@ -47,10 +47,10 @@ WEBAPP_BASE_URL=https://app.akkuea.com \
 
 ## What it checks
 
-1. **`GET /health`** — HTTP 200, `status === "healthy"`, DB healthy
-2. **`GET /swagger`** — docs surface reachable
-3. **`GET /properties?limit=5`** — public list happy path (JSON body)
-4. **`GET $WEBAPP_BASE_URL/`** — only when `WEBAPP_BASE_URL` is set
+1. **`GET /health`** - HTTP 200, `status === "healthy"`, DB healthy
+2. **`GET /swagger`** - docs surface reachable
+3. **`GET /properties?limit=5`** - public list happy path (JSON body)
+4. **`GET $WEBAPP_BASE_URL/`** - only when `WEBAPP_BASE_URL` is set
 
 Exit code `0` = all required checks passed; non-zero if any required check failed.
 
@@ -70,5 +70,5 @@ Workflow: [`.github/workflows/smoke.yml`](../../.github/workflows/smoke.yml)
 
 ## Requirements
 
-- `bash`, `curl`, `python3` (stdlib only — used to parse JSON)
+- `bash`, `curl`, `python3` (stdlib only - used to parse JSON)
 - No secrets, funded wallet, or monorepo install required for the smoke runner itself

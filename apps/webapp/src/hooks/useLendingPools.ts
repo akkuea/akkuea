@@ -49,7 +49,7 @@ export interface UseLendingPoolsReturn {
     amount: number,
     pool: LendingPool,
   ) => string;
-  /** Mark an optimistic snapshot as confirmed — the next refetch will reconcile */
+  /** Mark an optimistic snapshot as confirmed - the next refetch will reconcile */
   commitOptimisticUpdate: (snapshotId: string) => void;
   /** Revert all changes from an optimistic snapshot */
   rollbackOptimisticUpdate: (snapshotId: string) => void;

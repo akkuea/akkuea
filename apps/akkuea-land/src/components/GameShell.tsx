@@ -7,7 +7,7 @@ function StatusBar() {
   const { connected, events } = useGameEvents();
   return (
     <p className={`text-xs ${connected ? "text-green-600" : "text-red-600"}`}>
-      {connected ? "● Live" : "○ Connecting…"} — {events.length} events received
+      {connected ? "● Live" : "○ Connecting…"} - {events.length} events received
     </p>
   );
 }

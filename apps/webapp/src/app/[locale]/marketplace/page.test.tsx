@@ -305,7 +305,7 @@ describe("MarketplacePage", () => {
 
     fireEvent.click(view.getByRole("button", { name: /Filters/i }));
 
-    // property is Africa/Residential, the other is Latin America/Commercial —
+    // property is Africa/Residential, the other is Latin America/Commercial -
     // this combination matches neither, so it excludes every property.
     fireEvent.change(view.getByLabelText(/Region/i), {
       target: { value: "Africa" },

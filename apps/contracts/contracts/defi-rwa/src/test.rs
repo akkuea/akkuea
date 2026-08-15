@@ -3215,7 +3215,7 @@ fn test_liquidate_full_position() {
     });
     assert!(total_borrows_before > 0, "should have outstanding borrows");
 
-    // Attempt to liquidate 500 USDC — close factor caps it to 250 (50%)
+    // Attempt to liquidate 500 USDC - close factor caps it to 250 (50%)
     let result = env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -3382,7 +3382,7 @@ fn test_liquidate_healthy_position_rejected() {
         PriceOracle::set_oracle_address(&env, &oracle_id);
     });
 
-    // Keep price at $1.00 — position is healthy
+    // Keep price at $1.00 - position is healthy
     env.as_contract(&oracle_id, || {
         MockOracleContract::set_price(
             env.clone(),
@@ -3409,7 +3409,7 @@ fn test_liquidate_healthy_position_rejected() {
         )
     });
 
-    // Try to liquidate — should panic because position is healthy
+    // Try to liquidate - should panic because position is healthy
     env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -3507,7 +3507,7 @@ fn test_liquidate_double_attempt_panics() {
 
     let borrower_xlm_before = xlm_token.balance(&borrower);
 
-    // First liquidation — covers 250 of 500 (capped by close factor)
+    // First liquidation - covers 250 of 500 (capped by close factor)
     let first = env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -3545,7 +3545,7 @@ fn test_liquidate_double_attempt_panics() {
         );
     });
 
-    // Second liquidation — covers remaining 250, fully closes position
+    // Second liquidation - covers remaining 250, fully closes position
     let second = env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -3569,7 +3569,7 @@ fn test_liquidate_double_attempt_panics() {
         "borrower should get 75 XLM excess collateral back"
     );
 
-    // Third liquidation — position is gone, should panic
+    // Third liquidation - position is gone, should panic
     env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -3610,7 +3610,7 @@ fn test_liquidate_excess_collateral_returned() {
         "borrower starts with 0 XLM (all collateral locked)"
     );
 
-    // First liquidation — covers 250 of 500
+    // First liquidation - covers 250 of 500
     env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -3643,7 +3643,7 @@ fn test_liquidate_excess_collateral_returned() {
         );
     });
 
-    // Second liquidation — covers remaining 250, full close
+    // Second liquidation - covers remaining 250, full close
     let result = env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -3689,7 +3689,7 @@ fn test_liquidate_excess_collateral_returned() {
 /// Test 7: Liquidation penalty bonus is correctly calculated.
 ///
 /// With 50% close factor, debt covered = 250. Liquidator receives 875 XLM
-/// worth 262.5 USDC at $0.30/XLM — a 5% bonus on the 250 USDC debt covered.
+/// worth 262.5 USDC at $0.30/XLM - a 5% bonus on the 250 USDC debt covered.
 #[test]
 fn test_liquidate_penalty_bonus_verified() {
     let (env, contract_id, _oracle_id, borrower, liquidator, pool_id, usdc_addr, xlm_addr) =
@@ -3773,7 +3773,7 @@ fn test_liquidate_close_factor_caps_request() {
         PoolStorage::get_total_borrows(&env, &pool_id)
     });
 
-    // Request 400 USDC — close factor caps to 250 (50% of 500)
+    // Request 400 USDC - close factor caps to 250 (50% of 500)
     let result = env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -3838,7 +3838,7 @@ fn test_set_close_factor_as_admin() {
     let (env, contract_id, _oracle_id, _borrower, _liquidator, pool_id, _usdc_addr, _xlm_addr) =
         setup_liquidation_env();
 
-    // Get admin address — the setup registers with a generated admin
+    // Get admin address - the setup registers with a generated admin
     // We need to read the stored admin to call set_close_factor
     let admin = env.as_contract(&contract_id, || {
         env.storage()
@@ -3877,7 +3877,7 @@ fn test_set_close_factor_unauthorized() {
     let (env, contract_id, _oracle_id, _borrower, liquidator, pool_id, _usdc_addr, _xlm_addr) =
         setup_liquidation_env();
 
-    // Liquidator (non-admin) tries to change close factor — should panic
+    // Liquidator (non-admin) tries to change close factor - should panic
     let new_cf = 400_000_000_000_000_000_i128;
     env.as_contract(&contract_id, || {
         PropertyTokenContract::set_close_factor(
@@ -3890,7 +3890,7 @@ fn test_set_close_factor_unauthorized() {
 }
 
 // ═══════════════════════════════════════════════
-// Additional Coverage Tests — Untapped Branches
+// Additional Coverage Tests - Untapped Branches
 // ═══════════════════════════════════════════════
 
 /// Liquidate with zero debt_to_cover is rejected.
@@ -3900,7 +3900,7 @@ fn test_liquidate_zero_debt_to_cover() {
     let (env, contract_id, _oracle_id, borrower, liquidator, pool_id, _usdc_addr, _xlm_addr) =
         setup_liquidation_env();
 
-    // Attempt liquidation with zero debt — should panic
+    // Attempt liquidation with zero debt - should panic
     env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -3919,7 +3919,7 @@ fn test_liquidate_negative_debt_to_cover() {
     let (env, contract_id, _oracle_id, borrower, liquidator, pool_id, _usdc_addr, _xlm_addr) =
         setup_liquidation_env();
 
-    // Attempt liquidation with negative debt — should panic
+    // Attempt liquidation with negative debt - should panic
     env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -4039,7 +4039,7 @@ fn test_liquidate_debt_exceeds_total_borrows() {
 
     let _liquidator_xlm_before = StellarAssetClient::new(&env, &xlm_addr).balance(&liquidator);
 
-    // Liquidate 250 USDC — close factor still applies but total_borrows is tiny.
+    // Liquidate 250 USDC - close factor still applies but total_borrows is tiny.
     // debt_to_cover is capped first to current_debt (500), then close factor (50% → 250),
     // then EFFECTS: total_borrows = 100, debt_to_cover (250) > total_borrows → 0.
     // assert no underflow.
@@ -4082,7 +4082,7 @@ fn test_liquidate_debt_to_cover_exceeds_current_debt() {
     let xlm_token = StellarAssetClient::new(&env, &xlm_addr);
     let liquidator_xlm_before = xlm_token.balance(&liquidator);
 
-    // Request 600 USDC on a 500 USDC debt — first clamp caps to 500
+    // Request 600 USDC on a 500 USDC debt - first clamp caps to 500
     let result = env.as_contract(&contract_id, || {
         PropertyTokenContract::liquidate(
             env.clone(),
@@ -4221,7 +4221,7 @@ fn test_set_close_factor_negative_value() {
         get_lending_admin(&env)
     });
 
-    // Admin tries to set negative close factor — should panic
+    // Admin tries to set negative close factor - should panic
     env.as_contract(&contract_id, || {
         PropertyTokenContract::set_close_factor(env.clone(), admin, pool_id.clone(), -100_i128)
     });

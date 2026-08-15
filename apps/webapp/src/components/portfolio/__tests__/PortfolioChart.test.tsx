@@ -41,7 +41,7 @@ import "@/test/setup-dom";
     }
   }
 
-  // ResizeObserver is not in JSDOM — stub it so recharts doesn't throw
+  // ResizeObserver is not in JSDOM - stub it so recharts doesn't throw
   if (!("ResizeObserver" in globalThis)) {
     class FakeResizeObserver {
       observe() {}
@@ -107,7 +107,7 @@ mock.module("framer-motion", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Mock recharts — replace with plain divs to avoid SVG / ResizeObserver issues
+// Mock recharts - replace with plain divs to avoid SVG / ResizeObserver issues
 // ---------------------------------------------------------------------------
 
 mock.module("recharts", () => {
@@ -130,7 +130,7 @@ mock.module("recharts", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Mock next-intl — useTranslations falls back to the key
+// Mock next-intl - useTranslations falls back to the key
 // ---------------------------------------------------------------------------
 
 mock.module("next-intl", () => ({
@@ -138,7 +138,7 @@ mock.module("next-intl", () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Mock the data hook — each test controls what the component receives
+// Mock the data hook - each test controls what the component receives
 // ---------------------------------------------------------------------------
 
 let hookImpl: UsePortfolioPerformanceReturn = {
@@ -349,7 +349,7 @@ describe("PortfolioChart", () => {
   });
 
   // -----------------------------------------------------------------------
-  // Null wallet address — empty state
+  // Null wallet address - empty state
   // -----------------------------------------------------------------------
 
   it("renders the empty state when walletAddress is null", () => {

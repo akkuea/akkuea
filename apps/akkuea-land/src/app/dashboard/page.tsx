@@ -482,7 +482,7 @@ export default function DashboardPage() {
     try {
       wallet = await connectWalletKit();
     } catch (err) {
-      // Unexpected wallet-kit failure — surface it as a visible error instead
+      // Unexpected wallet-kit failure - surface it as a visible error instead
       // of faking a successful claim via the demo loop.
       const reason =
         err instanceof Error && err.message
@@ -491,7 +491,7 @@ export default function DashboardPage() {
       setClaimProgress({
         current: 0,
         total,
-        failures: claimableProperties.map((p) => `${p.name} — ${reason}`),
+        failures: claimableProperties.map((p) => `${p.name} - ${reason}`),
         done: true,
       });
       return;
@@ -509,7 +509,7 @@ export default function DashboardPage() {
       });
       failures = result.failures;
     } else {
-      // User closed the picker without selecting a wallet — the only case
+      // User closed the picker without selecting a wallet - the only case
       // that falls back to the demo claim loop.
       for (let i = 0; i < claimableProperties.length; i++) {
         setClaimProgress({ current: i, total, failures: [], done: false });

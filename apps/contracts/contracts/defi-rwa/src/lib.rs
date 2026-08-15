@@ -536,7 +536,7 @@ impl PropertyTokenContract {
             debt_to_cover
         };
 
-        // Enforce close factor — cap % of debt liquidatable per tx
+        // Enforce close factor - cap % of debt liquidatable per tx
         let max_liquidatable = (current_debt * pool.close_factor) / PRECISION;
         let debt_to_cover = if debt_to_cover > max_liquidatable {
             max_liquidatable
@@ -714,7 +714,7 @@ impl PropertyTokenContract {
         result_position
     }
 
-    /// Configure the close factor for a pool — max % of debt liquidatable per tx.
+    /// Configure the close factor for a pool - max % of debt liquidatable per tx.
     ///
     /// * `pool_id`         – The lending pool identifier.
     /// * `new_close_factor` – New close factor in PRECISION units (e.g., 50% = 500_000_000_000_000_000).

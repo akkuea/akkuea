@@ -155,7 +155,7 @@ jobs:
 
         echo "Testing build performance..."
 
-        # Retry helper — platform-specific binaries (e.g. @next/swc-linux-x64-gnu)
+        # Retry helper - platform-specific binaries (e.g. @next/swc-linux-x64-gnu)
         # can fail on transient registry/CDN errors; three attempts is enough.
         bun_install() {
           for i in 1 2 3; do

@@ -55,7 +55,7 @@ export const useWallet = () => {
    * Passive reconnection check: the Stellar Wallets Kit (v1.9.5) exposes no
    * onAccountChange/onNetworkChange subscription, so the only way to notice an
    * extension lock, revoked session, or out-of-band network switch is to probe
-   * it. We probe on window focus rather than on an interval — cheap, and it
+   * it. We probe on window focus rather than on an interval - cheap, and it
    * naturally fires exactly when a user comes back from the extension popup.
    */
   useEffect(() => {
@@ -227,7 +227,7 @@ export const useWallet = () => {
    * Re-invokes whichever connect path established the current session
    * (registry provider vs. legacy raw-kit connect) using the id already saved
    * in the store. Note: for the Stellar Wallets Kit this still opens its
-   * selection modal — the kit has no headless "resume session" API.
+   * selection modal - the kit has no headless "resume session" API.
    */
   const reconnect = useCallback(async () => {
     const provider = store.selectedWalletId
@@ -243,7 +243,7 @@ export const useWallet = () => {
     // The legacy connect() path resolves even when the user closes the
     // wallet-selection modal without picking a wallet (onClosed doesn't
     // reject). Read fresh state rather than the stale `store` closure to
-    // confirm a session actually came back before dismissing the prompt —
+    // confirm a session actually came back before dismissing the prompt -
     // otherwise a cancelled reconnect would silently hide its own banner.
     const { isConnected, address, pendingAction } =
       useAuthenticationStore.getState();

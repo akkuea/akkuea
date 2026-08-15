@@ -1,9 +1,9 @@
 /**
- * soroban-tx — contract ID wiring regression tests
+ * soroban-tx - contract ID wiring regression tests
  *
  * Before this fix, PROPERTY_NFT_CONTRACT_ID / GAME_ENGINE_CONTRACT_ID /
  * MARKETPLACE_CONTRACT_ID fell back to IDs from the unrelated defi-rwa
- * deployment (contracts.testnet.json — REAL_ESTATE_TOKEN / DEFI_LENDING)
+ * deployment (contracts.testnet.json - REAL_ESTATE_TOKEN / DEFI_LENDING)
  * whenever an env var override was not set, so every simulated transaction
  * silently targeted the wrong contract.
  *
@@ -26,7 +26,7 @@ import {
   buildFaucetClaimXdr,
 } from "@/lib/soroban-tx";
 
-describe("soroban-tx — game contract ID resolution", () => {
+describe("soroban-tx - game contract ID resolution", () => {
   it("PROPERTY_NFT_CONTRACT_ID defaults to the deployed GAME_PROPERTY_NFT contract", () => {
     expect(PROPERTY_NFT_CONTRACT_ID).toBe(
       gameContractsTestnet.contracts.GAME_PROPERTY_NFT.contractId,
@@ -81,13 +81,13 @@ describe("soroban-tx — game contract ID resolution", () => {
   });
 });
 
-describe("soroban-tx — propertyIdToU32 (regression, still real)", () => {
+describe("soroban-tx - propertyIdToU32 (regression, still real)", () => {
   it('still converts "prop-3-7" to 67 with the real module import path', () => {
     expect(propertyIdToU32("prop-3-7")).toBe(67);
   });
 });
 
-describe("soroban-tx — new real-contract builders exist", () => {
+describe("soroban-tx - new real-contract builders exist", () => {
   it("exports buildFaucetClaimXdr for the onboarding LAND claim step", () => {
     expect(typeof buildFaucetClaimXdr).toBe("function");
   });

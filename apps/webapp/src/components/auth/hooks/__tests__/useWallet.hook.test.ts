@@ -85,7 +85,7 @@ describe("useWallet - reconnection flow", () => {
     });
 
     // The legacy connect() path resolves even when the user closes the
-    // modal without picking a wallet — reconnect() must not treat that as
+    // modal without picking a wallet - reconnect() must not treat that as
     // a successful reconnection.
     expect(useAuthenticationStore.getState().isWalletDisconnected).toBe(true);
     expect(useAuthenticationStore.getState().isConnected).toBe(false);
@@ -185,7 +185,7 @@ describe("useAuthenticationStore - reconnection state", () => {
     useAuthenticationStore.getState().triggerReconnectionPrompt(action);
 
     // Simulates the passive focus-probe firing after a sign attempt already
-    // queued a pending action — it must not clobber it.
+    // queued a pending action - it must not clobber it.
     useAuthenticationStore.getState().triggerReconnectionPrompt();
 
     const state = useAuthenticationStore.getState();

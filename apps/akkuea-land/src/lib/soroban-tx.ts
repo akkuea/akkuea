@@ -72,7 +72,7 @@ export const LAND_TOKEN_CONTRACT_ID =
 /**
  * The Stellar account that owns every unclaimed tile on-chain. Defaults to
  * the address that deployed and initialized the game contracts (see
- * `deployedBy` in game-contracts.testnet.json) — by convention the same key
+ * `deployedBy` in game-contracts.testnet.json) - by convention the same key
  * also holds the treasury role unless a separate treasury was passed to the
  * deploy script.
  */
@@ -99,7 +99,7 @@ export function getSorobanServer(): SorobanRpc.Server {
  * If the id is already a plain number string (e.g. "42") it is used directly.
  */
 export function propertyIdToU32(propertyId: string): number {
-  // Numeric string — use as-is
+  // Numeric string - use as-is
   if (/^\d+$/.test(propertyId)) {
     return parseInt(propertyId, 10);
   }
@@ -182,7 +182,7 @@ export async function buildSorobanTx(opts: BuildTxOptions): Promise<string> {
     );
   }
 
-  // 4. Assemble — injects soroban data + resource fee bump.
+  // 4. Assemble - injects soroban data + resource fee bump.
   // assembleTransaction returns a TransactionBuilder; build() yields the tx.
   const assembled = SorobanRpc.assembleTransaction(tx, simResult).build();
   return assembled.toXDR();
@@ -317,7 +317,7 @@ export async function buildApproveMarketplaceXdr(
  *
  * Lists a property for sale on the marketplace at the given price (in LAND).
  * The seller must already have approved the marketplace as spender via
- * buildApproveMarketplaceXdr — the marketplace's `list` immediately calls
+ * buildApproveMarketplaceXdr - the marketplace's `list` immediately calls
  * `transfer_from` to escrow the NFT.
  *
  * @param sellerAddress  Owner's Stellar address.

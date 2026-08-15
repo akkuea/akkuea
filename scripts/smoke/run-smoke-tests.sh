@@ -86,7 +86,7 @@ echo "API_BASE_URL=$API_BASE_URL"
 echo "TIMEOUT=${TIMEOUT_SECS}s"
 echo
 
-# 1. Health — app boots + DB dependency
+# 1. Health - app boots + DB dependency
 echo "[1/4] GET /health"
 if request GET /health; then
   assert_status "health responds" "200" || true
@@ -100,7 +100,7 @@ else
 fi
 echo
 
-# 2. Swagger docs — service surface reachable
+# 2. Swagger docs - service surface reachable
 echo "[2/4] GET /swagger"
 if request GET /swagger; then
   # Swagger UI may be 200 HTML or redirect; accept 200/301/302/308
@@ -120,9 +120,9 @@ else
 fi
 echo
 
-# 3. Properties list — public happy path (no auth)
+# 3. Properties list - public happy path (no auth)
 echo "[3/4] GET /properties?limit=5"
-# property routes may be mounted at /properties (index.ts dual-mount) — try both
+# property routes may be mounted at /properties (index.ts dual-mount) - try both
 PROPS_PATH="/properties?limit=5"
 if ! request GET "$PROPS_PATH"; then
   PROPS_PATH="/api/properties?limit=5"
@@ -154,7 +154,7 @@ elif [[ "$HTTP_CODE" == "000" ]]; then
   FAIL=$((FAIL + 1))
 else
   # 401/403/404 still means process is up; mark soft-fail for unauth envs
-  yellow "WARN  properties returned HTTP $HTTP_CODE (path=$PROPS_PATH) — service up, check mount/auth"
+  yellow "WARN  properties returned HTTP $HTTP_CODE (path=$PROPS_PATH) - service up, check mount/auth"
   info "body: ${BODY:0:200}"
   SKIP=$((SKIP + 1))
 fi

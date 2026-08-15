@@ -2,13 +2,13 @@
 
 ## Context
 
-Pollar (pollar.xyz) is an embedded wallet and onboarding SDK for Stellar, comparable to Privy on EVM chains. It is not a governance platform — it has no polling, voting, or on-chain governance features. Pollar handles social login (Google, GitHub, email OTP) and Freighter/Albedo passthrough, automatically creates non-custodial Stellar wallets, and provides a fee-bump-inclusive `signAndSubmitTx` API so users never need XLM for fees.
+Pollar (pollar.xyz) is an embedded wallet and onboarding SDK for Stellar, comparable to Privy on EVM chains. It is not a governance platform - it has no polling, voting, or on-chain governance features. Pollar handles social login (Google, GitHub, email OTP) and Freighter/Albedo passthrough, automatically creates non-custodial Stellar wallets, and provides a fee-bump-inclusive `signAndSubmitTx` API so users never need XLM for fees.
 
 This issue adds `PollarProvider` to `apps/webapp` as an additional `WalletProvider` in the registry from C4-012, giving users a frictionless sign-in path without installing a browser extension. The governance page described in the original version of this issue is removed entirely.
 
 ## Design Note
 
-`WalletProvider.signTransaction` returns a signed XDR string. Pollar's API does not expose a bare sign step — it signs and submits atomically via `signAndSubmitTx(xdr)`. The implementer must decide whether to: (a) extend the `WalletProvider` interface with an optional `submitTransaction` method, or (b) wrap Pollar so that `connect/disconnect/getAccount` work normally while `signTransaction` delegates to Pollar's full submit flow. Document the chosen approach in the pull request.
+`WalletProvider.signTransaction` returns a signed XDR string. Pollar's API does not expose a bare sign step - it signs and submits atomically via `signAndSubmitTx(xdr)`. The implementer must decide whether to: (a) extend the `WalletProvider` interface with an optional `submitTransaction` method, or (b) wrap Pollar so that `connect/disconnect/getAccount` work normally while `signTransaction` delegates to Pollar's full submit flow. Document the chosen approach in the pull request.
 
 ## What Needs to Be Done
 

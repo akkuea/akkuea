@@ -1,5 +1,5 @@
 /**
- * useGameWallet — unit tests
+ * useGameWallet - unit tests
  *
  * Verifies the 4 core behaviours:
  *   connect()      → sets wallet address in state
@@ -18,7 +18,7 @@ const CONNECTED_ADDRESS =
   "GDVIEWER1234567890123456789012345678901234567890123456";
 const MOCK_BALANCE = "15000000000"; // e.g. 1 500 LAND in stroops (7 decimals)
 
-// ── Module mocks — must be declared before importing the module under test ──
+// ── Module mocks - must be declared before importing the module under test ──
 
 const mockConnectWalletKit = vi.fn();
 const mockGetWalletKit = vi.fn();
@@ -71,7 +71,7 @@ beforeEach(() => {
 // ── Test cases ───────────────────────────────────────────────────────────────
 
 describe("useGameWallet", () => {
-  it("connect() — sets wallet address in state", async () => {
+  it("connect() - sets wallet address in state", async () => {
     mockConnectWalletKit.mockResolvedValue({
       kit: {},
       address: CONNECTED_ADDRESS,
@@ -91,7 +91,7 @@ describe("useGameWallet", () => {
     expect(result.current.address).toBe(CONNECTED_ADDRESS);
   });
 
-  it("disconnect() — clears address and balance from state", async () => {
+  it("disconnect() - clears address and balance from state", async () => {
     useWalletStore.setState({
       isConnected: true,
       address: CONNECTED_ADDRESS,
@@ -112,7 +112,7 @@ describe("useGameWallet", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("fetchBalance() success — updates balance in state", async () => {
+  it("fetchBalance() success - updates balance in state", async () => {
     mockFetchLandBalance.mockResolvedValue(MOCK_BALANCE);
     useWalletStore.setState({
       isConnected: true,
@@ -132,7 +132,7 @@ describe("useGameWallet", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("fetchBalance() RPC error — sets error state without crashing", async () => {
+  it("fetchBalance() RPC error - sets error state without crashing", async () => {
     const testError = new Error("Soroban RPC unavailable");
     mockFetchLandBalance.mockRejectedValue(testError);
     useWalletStore.setState({

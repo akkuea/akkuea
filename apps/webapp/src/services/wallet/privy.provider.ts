@@ -12,7 +12,7 @@ export interface PrivyInterface {
 }
 
 /**
- * Auth-only interface injected as soon as PrivyBridge mounts — before any wallet
+ * Auth-only interface injected as soon as PrivyBridge mounts - before any wallet
  * exists. This allows connect() to trigger login() even when no Stellar wallet
  * has been provisioned yet.
  */

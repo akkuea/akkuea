@@ -81,7 +81,7 @@ export const useAuthenticationStore = create<AuthenticationStore>()(
           network: state.network ?? "testnet",
         };
       },
-      // Never persist transient UI state — a stale true leaves Connect stuck loading.
+      // Never persist transient UI state - a stale true leaves Connect stuck loading.
       partialize: (state) => ({
         address: state.address,
         balance: state.balance,

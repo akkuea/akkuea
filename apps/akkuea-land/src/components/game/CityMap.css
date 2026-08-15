@@ -321,7 +321,7 @@
     font-size: 9px;
   }
 
-  /* Disable tooltip on very small screens — use click instead */
+  /* Disable tooltip on very small screens - use click instead */
   .city-tile[data-tooltip]::after {
     display: none;
   }

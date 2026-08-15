@@ -340,7 +340,7 @@ export function validateSchemaSnapshot(
   const current = captureSchemaSnapshot(name, schema);
   const diff = diffSchemaSnapshots(current, baseline);
 
-  // Adding a new *optional* field is not a breaking change — only
+  // Adding a new *optional* field is not a breaking change - only
   // required-field additions, removals, and type/required changes count.
   // We still return the full diff for diagnostics, but only use
   // breaking additions in the validity decision.

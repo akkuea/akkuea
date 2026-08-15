@@ -49,7 +49,7 @@ export const ensureWalletSelected = async (
     const { address } = await kit.getAddress();
     return address;
   } catch {
-    // No wallet selected yet — fall through to the picker modal.
+    // No wallet selected yet - fall through to the picker modal.
   }
 
   const walletId = await new Promise<string | null>((resolve) => {

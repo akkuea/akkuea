@@ -1,50 +1,62 @@
 # API Overview
 
-The Real Estate DeFi Platform API is built with Elysia framework running on Bun, providing a fast and type-safe backend service for the frontend applications.
+> This document describes the API for the **existing platform build** (fractional property shares + DeFi lending) - see [`docs/strategy/product-brief.md`](../strategy/product-brief.md#relationship-to-the-existing-platform-build) for how that relates to the current pilot. The pilot's own API surface (evidence submission, whitelist review, payout-split triggers) does not exist yet.
+
+The Akkuea API is built with the [Elysia](https://elysiajs.com) framework running on [Bun](https://bun.sh), providing a fast, type-safe backend for `apps/webapp` and `apps/akkuea-land`.
 
 ## Base URL
 
 - **Development**: `http://localhost:3001`
-- **Staging**: `https://staging-api.realestate-defi.com`
-- **Production**: `https://api.realestate-defi.com`
+- **Production**: configured per deployment - see [`docs/deployment/environment-variables.md`](../deployment/environment-variables.md)
 
 ## API Architecture
 
 ### Framework & Runtime
 
 - **Framework**: Elysia (TypeScript-first web framework)
-- **Runtime**: Bun (High-performance JavaScript runtime)
-- **Type Safety**: Full TypeScript coverage from frontend to backend
-- **Documentation**: Auto-generated Swagger/OpenAPI specifications
+- **Runtime**: Bun
+- **Type Safety**: Full TypeScript coverage from frontend to backend, shared via `@akkuea/shared`
+- **Documentation**: Auto-generated Swagger/OpenAPI, served at `/swagger`
 
 ### Key Features
 
-- **Type-safe request/response** handling
-- **Automatic validation** with TypeScript types
-- **Structured error handling** with consistent format
-- **Built-in CORS** for frontend integration
-- **Rate limiting** for abuse prevention
-- **Health checks** for monitoring
+- Type-safe request/response handling
+- Structured error handling with a consistent response shape
+- Built-in CORS for frontend integration
+- Rate limiting
+- Health checks for monitoring
 
 ## API Structure
 
 ```
-/api/
-├── /properties          # Real estate property operations
-├── /lending            # DeFi lending operations
-├── /users              # User management
-├── /kyc                # KYC verification
-└── /health             # Service health checks
+/
+├── /auth               # Stellar wallet challenge-response authentication
+├── /properties         # Real estate property CRUD, tokenization, share purchase
+├── /lending            # DeFi lending pools: deposit, withdraw, borrow, repay
+├── /kyc                # KYC document upload and verification workflow
+├── /notifications       # User notification feed
+├── /internal/operations # Admin-only property review queue (OPERATIONS_BACKEND_CREDENTIAL)
+└── /health              # Service health check
 ```
+
+For endpoint-level detail, see:
+
+- [`authentication.md`](authentication.md) - the full challenge-response flow, JWT details, protected routes
+- [`launch-workflows.md`](launch-workflows.md) - end-to-end HTTP sequences for KYC onboarding, tokenization, and share purchase
+- [`minting-workflow.md`](minting-workflow.md) - the on-chain tokenization path in detail
+- [`kyc-workflow.md`](kyc-workflow.md) - the KYC state machine and admin review procedure
 
 ## Authentication
 
-The API uses wallet-based authentication:
+The API uses Stellar wallet-based authentication (see [`authentication.md`](authentication.md) for the full flow):
 
-1. Users connect their Stellar wallet
-2. Sign a challenge message with their private key
-3. API verifies the signature
-4. Session token is issued for subsequent requests
+1. Client requests a nonce via `POST /auth/challenge`
+2. User signs the nonce with their Stellar wallet
+3. Client submits the signature via `POST /auth/session`
+4. API verifies the Ed25519 signature and issues a JWT
+5. JWT is sent as `Authorization: Bearer <token>` on subsequent protected requests
+
+Some endpoints (e.g. property creation, tokenization) instead check an `x-user-address` header directly against the resource owner - see [`launch-workflows.md`](launch-workflows.md) for which pattern applies where.
 
 ## Request/Response Format
 
@@ -55,8 +67,7 @@ The API uses wallet-based authentication:
   "success": true,
   "data": {
     /* Response data */
-  },
-  "timestamp": "2026-01-06T10:30:00.000Z"
+  }
 }
 ```
 
@@ -65,151 +76,63 @@ The API uses wallet-based authentication:
 ```json
 {
   "success": false,
-  "error": "Validation Error",
-  "message": "Invalid input parameters",
-  "timestamp": "2026-01-06T10:30:00.000Z"
+  "error": "ERROR_CODE",
+  "message": "Human-readable error message",
+  "statusCode": 400,
+  "timestamp": "2026-06-29T10:30:00.000Z"
 }
 ```
-
-## Rate Limiting
-
-- **Default Rate**: 100 requests per minute per IP
-- **Authenticated Users**: 500 requests per minute
-- **Burst Rate**: Up to 10 requests per second
-- **Headers**: Rate limit info included in response headers
 
 ## Error Handling
 
 ### HTTP Status Codes
 
 - `200` - Success
-- `400` - Bad Request (Validation error)
-- `401` - Unauthorized (Authentication required)
-- `403` - Forbidden (Insufficient permissions)
+- `201` - Created
+- `400` - Bad Request (validation error)
+- `401` - Unauthorized (authentication required or invalid)
+- `403` - Forbidden (insufficient permissions / address mismatch)
 - `404` - Not Found
-- `429` - Too Many Requests (Rate limited)
+- `409` - Conflict (e.g. property already tokenized)
+- `429` - Too Many Requests (rate limited)
 - `500` - Internal Server Error
 
-### Error Types
+### Error Categories
 
-1. **Validation Errors** - Invalid input parameters
-2. **Authentication Errors** - Invalid credentials or signatures
-3. **Authorization Errors** - Insufficient permissions
-4. **Blockchain Errors** - Stellar transaction failures
-5. **Business Logic Errors** - Invalid operations (insufficient funds, etc.)
+1. **Validation errors** - invalid input parameters
+2. **Authentication errors** - invalid credentials or signatures
+3. **Authorization errors** - insufficient permissions
+4. **Blockchain errors** - Stellar/Soroban transaction failures
+5. **Business logic errors** - invalid operations (insufficient shares, already tokenized, etc.)
 
-## CORS Configuration
+## Rate Limiting
+
+Both `/auth/challenge` and `/auth/session` are explicitly rate-limited (10 requests / 60 seconds per IP, see [`authentication.md`](authentication.md)). Rate limit headers are included on responses:
 
 ```
-Allowed Origins: http://localhost:3000, https://yourdomain.com
-Allowed Methods: GET, POST, PUT, DELETE, OPTIONS
-Allowed Headers: Content-Type, Authorization, X-Requested-With
-Max Age: 86400 seconds (24 hours)
+X-RateLimit-Limit
+X-RateLimit-Remaining
+X-RateLimit-Reset
 ```
-
-## Monitoring & Logging
-
-### Health Check Endpoint
-
-```http
-GET /health
-```
-
-Returns service status, version, and timestamp.
-
-### Logging
-
-- **Structured JSON logging** for all requests
-- **Error tracking** with stack traces
-- **Performance metrics** for response times
-- **Security events** for authentication attempts
 
 ## Security Features
 
-### Input Validation
+- **Signature verification** for wallet authentication (Ed25519, single-use nonces)
+- **Input validation** via TypeScript-checked request schemas
+- **File upload security** for KYC documents (type and size limits enforced by `StorageService`)
+- **Rate limiting** to reduce brute-force and abuse risk
+- **Structured logging** for requests and security-relevant events
 
-- **Type-safe validation** using TypeScript
-- **SQL injection prevention** with parameterized queries
-- **XSS protection** with input sanitization
-- **File upload security** with type and size limits
+> **Known gap:** `POST /kyc/verify/:documentId` currently has no authentication middleware - see [`kyc-workflow.md`](kyc-workflow.md#known-gaps-current-codebase-state). Do not treat every endpoint listed here as production-hardened by default; check the workflow docs for known gaps before relying on a specific guarantee.
 
-### Authentication Security
+## SDK
 
-- **Signature verification** for wallet authentication
-- **Nonce validation** to prevent replay attacks
-- **Session expiration** with configurable timeouts
-- **Rate limiting** to prevent brute force attacks
-
-## Integration Examples
-
-### Frontend Integration (TypeScript)
+Shared types, validation schemas, and Stellar utilities live in the `@akkuea/shared` package (`apps/shared`), imported the same way across `apps/webapp`, `apps/akkuea-land`, and `apps/api`:
 
 ```typescript
-import { PropertyInfo } from "@real-estate-defi/shared";
-
-// Type-safe API calls
-const properties = await fetch("/api/properties")
-  .then((res) => res.json())
-  .then((data: PropertyInfo[]) => data);
-
-// With error handling
-try {
-  const property = await fetch(`/api/properties/${id}`).then((res) => {
-    if (!res.ok) throw new Error("Property not found");
-    return res.json();
-  });
-} catch (error) {
-  console.error("Failed to fetch property:", error);
-}
+import type { PropertyInfo } from "@akkuea/shared";
 ```
-
-### Webhook Support
-
-The API supports webhooks for real-time updates:
-
-- **Transaction confirmations**
-- **KYC status changes**
-- **Property listings updates**
-- **Lending pool events**
-
-## SDK & Tools
-
-### TypeScript SDK
-
-A TypeScript SDK is provided in the `@real-estate-defi/shared` package:
-
-```typescript
-import { RealEstateAPI } from "@real-estate-defi/shared/api";
-
-const api = new RealEstateAPI("http://localhost:3001");
-const properties = await api.properties.getAll();
-```
-
-### Postman Collection
-
-Pre-configured Postman collection available for API testing and documentation.
 
 ## Environment Configuration
 
-### Required Environment Variables
-
-```bash
-# API Configuration
-API_PORT=3001
-API_HOST=localhost
-
-# Stellar Configuration
-STELLAR_NETWORK=testnet
-STELLAR_RPC_URL=https://soroban-testnet.stellar.org
-STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
-
-# Security
-JWT_SECRET=your_jwt_secret_here
-CORS_ORIGIN=http://localhost:3000
-
-# External Services
-KYC_PROVIDER_API_KEY=your_kyc_api_key
-WEBHOOK_SECRET=your_webhook_secret
-```
-
-This API provides a robust, type-safe foundation for the Real Estate DeFi platform's backend operations.
+Full reference: [`docs/deployment/environment-variables.md`](../deployment/environment-variables.md). Key categories: database (`DATABASE_URL`), server (`PORT`, `NODE_ENV`, `LOG_LEVEL`), internal security (`WEBHOOK_SECRET`, `OPERATIONS_BACKEND_CREDENTIAL`, `OPERATIONS_ALLOWED_WALLETS`), KYC (`KYC_UPLOAD_DIR`), and Stellar/Soroban (network URLs, passphrase, admin keys, contract IDs).

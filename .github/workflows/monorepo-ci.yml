@@ -5,19 +5,40 @@ on:
     branches: [ main, develop ]
     paths:
       - 'apps/**'
-      - '.github/workflows/monorepo-ci.yml'
+      - 'docs/**'
+      - 'scripts/**'
+      - '.github/**'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'apps/**'
-      - '.github/workflows/monorepo-ci.yml'
+      - 'docs/**'
+      - 'scripts/**'
+      - '.github/**'
 
 env:
   NODE_VERSION: '20'
   BUN_VERSION: '1.x'
 
 jobs:
+  style-quality-gate:
+    name: Codebase Style Quality Gate
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Run style quality gate scanner (em dashes and emojis)
+      run: python3 .github/scripts/check-style-rules.py .
+
   monorepo-integrity:
+
     name: Monorepo Integrity Check
     runs-on: ubuntu-latest
     

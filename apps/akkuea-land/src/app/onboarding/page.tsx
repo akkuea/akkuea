@@ -79,7 +79,7 @@ function StepDots({ current, steps }: { current: Step; steps: Step[] }) {
           key={stepName}
           className={[
             "h-1.5 rounded-full transition-all duration-300",
-            i <= idx ? "w-6 bg-land-accent" : "w-1.5 bg-land-surface-raised",
+            i <= idx ? "w-6 bg-land-accent" : "w-1.5 bg-land-border",
           ].join(" ")}
           title={`Step ${i + 1}: ${stepName}`}
         />

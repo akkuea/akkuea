@@ -53,7 +53,7 @@ export const BuildingLevelBar: React.FC<{ buildingLevel: BuildingLevel }> = ({
                     ? "text-land-accent font-bold"
                     : isActive
                       ? "text-land-fg"
-                      : "text-land-fg-subtle"
+                      : "text-land-fg-muted"
                 }`}
               >
                 {step.label}

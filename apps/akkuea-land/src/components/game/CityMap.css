@@ -31,14 +31,14 @@
     z-index 0s;
   will-change: transform;
   overflow: visible;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid color-mix(in srgb, var(--land-fg) 6%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .city-tile:focus-visible {
-  outline: 2px solid var(--land-accent, #00d4ff);
+  outline: 2px solid var(--land-accent);
   outline-offset: 2px;
   z-index: 10;
 }
@@ -48,26 +48,26 @@
 .city-tile:hover {
   transform: scale(1.15);
   z-index: 10;
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: color-mix(in srgb, var(--land-fg) 20%, transparent);
   box-shadow:
     0 0 16px rgba(0, 0, 0, 0.5),
-    0 0 8px var(--tile-glow-color, rgba(255, 255, 255, 0.1));
+    0 0 8px var(--tile-glow-color, color-mix(in srgb, var(--land-fg) 10%, transparent));
 }
 
 /* ─── Selection Ring ─────────────────────────────────────────────────────── */
 
 .tile-selected {
   box-shadow:
-    0 0 0 2px var(--land-accent, #00d4ff),
-    0 0 16px var(--land-accent-glow, rgba(0, 212, 255, 0.35));
-  border-color: var(--land-accent, #00d4ff);
+    0 0 0 2px var(--land-accent),
+    0 0 16px var(--land-accent-glow);
+  border-color: var(--land-accent);
   z-index: 5;
 }
 
 .tile-selected:hover {
   box-shadow:
-    0 0 0 2px var(--land-accent, #00d4ff),
-    0 0 24px var(--land-accent-glow, rgba(0, 212, 255, 0.35));
+    0 0 0 2px var(--land-accent),
+    0 0 24px var(--land-accent-glow);
 }
 
 /* ─── Building Badge ─────────────────────────────────────────────────────── */
@@ -81,7 +81,7 @@
   border-radius: 4px;
   font-size: 9px;
   font-weight: 800;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -90,24 +90,24 @@
 }
 
 .tile-badge-0 {
-  background: rgba(61, 90, 128, 0.4);
-  color: rgba(232, 240, 254, 0.35);
+  background: color-mix(in srgb, var(--tile-empty) 40%, transparent);
+  color: color-mix(in srgb, var(--land-fg) 35%, transparent);
 }
 
 .tile-badge-1 {
-  background: rgba(0, 230, 118, 0.2);
-  color: rgba(0, 230, 118, 0.85);
+  background: color-mix(in srgb, var(--land-success) 20%, transparent);
+  color: color-mix(in srgb, var(--land-success) 85%, transparent);
 }
 
 .tile-badge-2 {
-  background: rgba(0, 212, 255, 0.2);
-  color: rgba(0, 212, 255, 0.85);
+  background: color-mix(in srgb, var(--land-accent) 20%, transparent);
+  color: color-mix(in srgb, var(--land-accent) 85%, transparent);
 }
 
 .tile-badge-3 {
-  background: rgba(179, 136, 255, 0.25);
-  color: rgba(179, 136, 255, 0.95);
-  box-shadow: 0 0 6px rgba(179, 136, 255, 0.2);
+  background: color-mix(in srgb, var(--tile-listed) 25%, transparent);
+  color: color-mix(in srgb, var(--tile-listed) 95%, transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--tile-listed) 20%, transparent);
 }
 
 /* ─── Listed Indicator (pulsing amber dot) ───────────────────────────────── */
@@ -119,8 +119,8 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--land-gold, #f5a623);
-  box-shadow: 0 0 6px var(--land-gold-glow, rgba(245, 166, 35, 0.35));
+  background: var(--land-gold);
+  box-shadow: 0 0 6px var(--land-gold-glow);
   animation: pulse-glow 2s ease-in-out infinite;
   pointer-events: none;
 }
@@ -133,16 +133,16 @@
   bottom: calc(100% + 8px);
   left: 50%;
   transform: translateX(-50%) scale(0.92);
-  background: rgba(8, 12, 20, 0.95);
+  background: color-mix(in srgb, var(--land-bg) 95%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: var(--land-fg, #e8f0fe);
+  color: var(--land-fg);
   font-size: 11px;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--font-mono);
   line-height: 1.5;
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid var(--land-border, #1e2d47);
+  border: 1px solid var(--land-border);
   white-space: pre;
   pointer-events: none;
   opacity: 0;
@@ -187,13 +187,13 @@
 
 @keyframes tile-flash {
   0% {
-    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.8);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--land-accent) 80%, transparent);
   }
   30% {
-    box-shadow: 0 0 24px 6px rgba(0, 212, 255, 0.5);
+    box-shadow: 0 0 24px 6px color-mix(in srgb, var(--land-accent) 50%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 
@@ -217,7 +217,7 @@
 .map-header h1 {
   font-size: 18px;
   font-weight: 700;
-  color: var(--land-fg, #e8f0fe);
+  color: var(--land-fg);
   letter-spacing: -0.02em;
   white-space: nowrap;
   flex-shrink: 0;
@@ -239,15 +239,15 @@
 .map-stat-value {
   font-size: 14px;
   font-weight: 800;
-  font-family: var(--font-mono, monospace);
-  color: var(--land-fg, #e8f0fe);
+  font-family: var(--font-mono);
+  color: var(--land-fg);
 }
 
 .map-stat-label {
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--land-fg-subtle, #3d5a80);
+  color: var(--land-fg-subtle);
   font-weight: 600;
 }
 
@@ -268,7 +268,7 @@
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  color: var(--land-fg-muted, #7a9cc4);
+  color: var(--land-fg-muted);
   font-weight: 500;
 }
 
@@ -276,7 +276,7 @@
   width: 12px;
   height: 12px;
   border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid color-mix(in srgb, var(--land-fg) 10%, transparent);
 }
 
 /* ─── Responsive ─────────────────────────────────────────────────────────── */

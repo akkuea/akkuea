@@ -168,7 +168,7 @@ export function ClaimLandStep({
                   status === "pending"
                     ? "bg-land-surface-raised border border-land-border-hover/60 text-land-fg-muted cursor-not-allowed"
                     : status === "error"
-                      ? "bg-land-danger hover:bg-land-danger/90 text-land-fg shadow-land-danger/10"
+                      ? "bg-land-danger hover:bg-land-danger/90 text-land-bg shadow-land-danger/10"
                       : "bg-land-accent hover:bg-land-accent/90 text-land-bg shadow-land-accent/20"
                 }`}
               >

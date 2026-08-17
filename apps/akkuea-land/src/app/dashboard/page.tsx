@@ -736,14 +736,14 @@ export default function DashboardPage() {
                       <span className="text-land-fg-muted">Accrued</span>
                       <span
                         className={`font-mono font-bold ${
-                          hasIncome ? "text-land-success" : "text-land-fg-subtle"
+                          hasIncome ? "text-land-success" : "text-land-fg-muted"
                         }`}
                       >
                         {prop.earnedIncome} LAND
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 text-[10px] text-land-fg-subtle group-hover:text-land-fg-muted transition-colors relative z-10">
+                    <div className="flex items-center gap-1 text-[10px] text-land-fg-muted group-hover:text-land-fg transition-colors relative z-10">
                       <ChevronRight size={10} />
                       View on map
                     </div>

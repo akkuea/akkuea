@@ -303,7 +303,10 @@ export function CityMap() {
           Unowned
         </div>
         <div className="legend-item">
-          <div className="legend-swatch bg-[hsl(210, 60%, 42%)]" />
+          {/* Representative sample of the per-owner hash colour from
+              addressToHSL; underscores are required because Tailwind
+              arbitrary values cannot contain literal spaces. */}
+          <div className="legend-swatch bg-[hsl(210,_60%,_42%)]" />
           Player-owned
         </div>
         <div className="legend-item">

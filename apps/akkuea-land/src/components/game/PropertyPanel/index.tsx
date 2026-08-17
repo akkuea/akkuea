@@ -179,7 +179,7 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
           initial="hidden"
           animate="visible"
           exit="exit"
-          className={`fixed z-50 bg-slate-950/95 border-slate-800/90 text-white shadow-2xl flex flex-col font-sans backdrop-blur-xl ${
+          className={`fixed z-50 bg-land-bg/95 border-land-border/90 text-land-fg shadow-2xl flex flex-col font-game backdrop-blur-xl ${
             isMobile
               ? "bottom-0 left-0 right-0 h-[70vh] rounded-t-[2.5rem] border-t"
               : "right-0 top-0 bottom-0 h-full w-80 border-l"
@@ -187,20 +187,20 @@ export const PropertyPanel: React.FC<PropertyPanelProps> = ({
         >
           {isMobile && (
             <div className="w-full flex justify-center py-3.5">
-              <div className="w-12 h-1 bg-slate-800 rounded-full" />
+              <div className="w-12 h-1 bg-land-surface-raised rounded-full" />
             </div>
           )}
 
-          <div className="flex justify-between items-center px-5 py-4 border-b border-slate-900/60 shrink-0">
+          <div className="flex justify-between items-center px-5 py-4 border-b border-land-border/60 shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
-              <h2 className="text-sm font-bold tracking-wide uppercase text-slate-200">
+              <div className="w-2.5 h-2.5 rounded-full bg-land-accent animate-pulse" />
+              <h2 className="text-sm font-bold tracking-wide uppercase text-land-fg">
                 Land Details
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-all duration-200"
+              className="p-1.5 rounded-full bg-land-surface hover:bg-land-surface-raised border border-land-border text-land-fg-muted hover:text-land-fg transition-all duration-200"
             >
               <X size={16} />
             </button>

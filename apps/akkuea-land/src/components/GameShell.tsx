@@ -6,7 +6,7 @@ import { CityMap } from "@/components/CityMap";
 function StatusBar() {
   const { connected, events } = useGameEvents();
   return (
-    <p className={`text-xs ${connected ? "text-green-600" : "text-red-600"}`}>
+    <p className={`text-xs ${connected ? "text-land-success" : "text-land-danger"}`}>
       {connected ? "● Live" : "○ Connecting…"} - {events.length} events received
     </p>
   );
@@ -15,7 +15,7 @@ function StatusBar() {
 export function GameShell() {
   return (
     <GameEventProvider>
-      <main className="p-6 font-sans">
+      <main className="p-6 font-game">
         <h1 className="mb-2">Akkuea Land</h1>
         <StatusBar />
         <div className="mt-4">

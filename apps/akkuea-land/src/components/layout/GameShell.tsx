@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Map, ShoppingBag, LayoutDashboard, Wallet } from "lucide-react";
+import { PilotCta } from "@/components/game/PilotCta";
 
 const NAV_LINKS = [
   { href: "/map", label: "Map", icon: Map },
@@ -88,6 +89,14 @@ export function GameShell({
 
       {/* Page content */}
       <main className="flex-1">{children}</main>
+
+      {/* Pilot funnel: only on the dashboard, where a player has seen the
+          buy, earn, claim loop and the pointer to the real pilot lands. */}
+      {pathname === "/dashboard" && (
+        <footer className="border-t border-land-border bg-land-surface px-4 py-2.5 text-center">
+          <PilotCta variant="compact" />
+        </footer>
+      )}
     </div>
   );
 }

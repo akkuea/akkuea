@@ -35,3 +35,15 @@ Several existing components bypass the token system documented in [`foundations.
 - `Stepper.tsx` and `FreshnessIndicator.tsx` use default Tailwind palette colors (`emerald-500`, `amber-400`, `zinc-700`, ...) rather than `--accent-secondary` / `--accent` / `--border`.
 
 This means these components will not automatically track a future token change (e.g., adjusting `--accent` app-wide), and their colors don't strictly follow the "accent is the one constant signal color" rule in `foundations.md`. Recorded here rather than silently worked around - when touching any of these components next, migrate their hardcoded colors to the token-backed Tailwind utilities (`bg-accent`, `border-border`, `text-accent-secondary`, etc.) instead of adding more hardcoded values on top.
+
+## Akkuea Land components
+
+Game-specific components under `apps/akkuea-land/src/components/`. These are not part of the `apps/webapp` `ui/` library and are not importable from it; they follow the same conventions (lucide-react icons, `framer-motion` at the established 1.02 hover / 0.98 tap scale) against the `--land-*` token layer described in [`foundations.md`](foundations.md#cross-app-token-usage).
+
+- **GameShell** (`components/layout/GameShell.tsx`): Top navigation bar with wallet connection status and LAND balance display. Uses `bg-land-surface` header, `font-mono` for wallet address and balance.
+- **CityMap** (`components/game/CityMap.tsx`): Tile grid using CSS custom property `--tile-size` (80px). Tile ownership states use semantic tokens: `--tile-owned` (success), `--tile-treasury` (gold), `--tile-listed` (purple), `--tile-empty` (subtle).
+- **PropertyPanel** (`components/game/PropertyPanel/`): Slide-in panel showing property details. Uses `bg-land-bg/95` backdrop, `border-land-border` border. Status-specific panels (OwnedPanel, UnownedPanel, ListedPanel) use success/gold/listed tokens respectively.
+- **OnboardingGate** (`components/game/onboarding/`): Three-step onboarding flow. Progress dots use `bg-land-accent` (active) and `bg-land-border` (inactive).
+- **PilotCta** (`components/game/PilotCta.tsx`): The "this is a simulation, see the real pilot" call-to-action from `docs/strategy/recommendations.md` (section 2b). Two variants: `banner` (end of onboarding) and `compact` (dashboard footer). Both render the same copy and link, so the funnel message is defined once rather than per surface.
+
+**Note:** `components/GameShell.tsx` and `components/CityMap.tsx` (outside the `layout/` and `game/` subdirectories) are an earlier, unreferenced pair - `GameShell.tsx` is imported by nothing, and imports the old `CityMap.tsx`. They were migrated to tokens along with everything else rather than left as a source of stale patterns, but they are dead code and are candidates for deletion.

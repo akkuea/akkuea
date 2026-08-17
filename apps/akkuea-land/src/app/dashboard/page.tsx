@@ -36,6 +36,7 @@ import { GameProperty, BuildingLevel } from "@/types/game.types";
 import { connectWalletKit } from "@/lib/walletKit";
 import { claimAllRentals } from "@/lib/claim-rental";
 import { TIMEOUTS } from "@/lib/constants";
+import { PilotCta } from "@/components/game/PilotCta";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,10 +77,10 @@ const LEVEL_LABEL: Record<BuildingLevel, string> = {
 };
 
 const LEVEL_COLOR: Record<BuildingLevel, string> = {
-  0: "from-slate-500/10 to-slate-600/5 border-slate-700/60",
-  1: "from-sky-500/15 to-sky-600/5 border-sky-600/40",
-  2: "from-violet-500/15 to-violet-600/5 border-violet-600/40",
-  3: "from-amber-500/15 to-amber-600/5 border-amber-600/40",
+  0: "from-land-surface-raised/10 to-land-surface-raised/5 border-land-border-hover/60",
+  1: "from-land-accent/15 to-land-accent/5 border-land-accent/40",
+  2: "from-tile-listed/15 to-tile-listed/5 border-tile-listed/40",
+  3: "from-land-gold/15 to-land-gold/5 border-land-gold/40",
 };
 
 const EVENT_LABELS: Record<EventType, string> = {
@@ -298,26 +299,26 @@ function computeAccruedIncome(
 function EventTypeIcon({ type }: { type: EventType }) {
   switch (type) {
     case "buy":
-      return <ArrowRight size={14} className="text-amber-400" />;
+      return <ArrowRight size={14} className="text-land-gold" />;
     case "improve":
-      return <ArrowUpRight size={14} className="text-indigo-400" />;
+      return <ArrowUpRight size={14} className="text-land-accent" />;
     case "list":
-      return <Building2 size={14} className="text-purple-400" />;
+      return <Building2 size={14} className="text-tile-listed" />;
     case "claim":
-      return <Coins size={14} className="text-emerald-400" />;
+      return <Coins size={14} className="text-land-success" />;
   }
 }
 
 function eventBadgeClass(type: EventType): string {
   switch (type) {
     case "buy":
-      return "bg-amber-950/40 border-amber-500/20 text-amber-300";
+      return "bg-land-gold/5 border-land-gold/20 text-land-gold";
     case "improve":
-      return "bg-indigo-950/40 border-indigo-500/20 text-indigo-300";
+      return "bg-land-accent/10 border-land-accent/20 text-land-accent";
     case "list":
-      return "bg-purple-950/40 border-purple-500/20 text-purple-300";
+      return "bg-tile-listed/5 border-tile-listed/20 text-tile-listed";
     case "claim":
-      return "bg-emerald-950/40 border-emerald-500/20 text-emerald-300";
+      return "bg-land-success/5 border-land-success/20 text-land-success";
   }
 }
 
@@ -531,30 +532,30 @@ export default function DashboardPage() {
   const isClaimRunning = !!claimProgress && !claimProgress.done;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+    <main className="min-h-screen bg-land-bg text-land-fg font-game">
       {/* ── Sticky header ── */}
-      <header className="border-b border-slate-900 bg-slate-950/95 backdrop-blur sticky top-0 z-10">
+      <header className="border-b border-land-border bg-land-bg/95 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles size={17} className="text-indigo-400" />
-            <span className="font-extrabold tracking-tight text-white">
+            <Sparkles size={17} className="text-land-accent" />
+            <span className="font-extrabold tracking-tight text-land-fg">
               Akkuea Land
             </span>
-            <span className="text-slate-700 mx-1">/</span>
-            <span className="text-slate-400 text-sm">Dashboard</span>
+            <span className="text-land-fg-subtle mx-1">/</span>
+            <span className="text-land-fg-muted text-sm">Dashboard</span>
           </div>
           <div className="flex items-center gap-2.5">
             <div
-              className={`w-2 h-2 rounded-full ${isConnected ? "bg-emerald-500" : "bg-rose-500"}`}
+              className={`w-2 h-2 rounded-full ${isConnected ? "bg-land-success" : "bg-land-danger"}`}
             />
-            <span className="text-xs font-mono text-slate-400 hidden sm:block">
+            <span className="text-xs font-mono text-land-fg-muted hidden sm:block">
               {isConnected
                 ? `${VIEWER_ADDRESS.slice(0, 6)}...${VIEWER_ADDRESS.slice(-6)}`
                 : "Disconnected"}
             </span>
             <a
               href="/"
-              className="ml-1 text-xs text-slate-500 hover:text-white flex items-center gap-1 transition-colors"
+              className="ml-1 text-xs text-land-fg-muted hover:text-land-fg flex items-center gap-1 transition-colors"
             >
               <Home size={13} />
               <span className="hidden sm:inline">City Map</span>
@@ -566,51 +567,51 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-10">
         {/* ── Section 1: Portfolio Summary ── */}
         <section aria-label="Portfolio summary">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-4">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-land-fg-muted mb-4">
             Portfolio Overview
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* LAND Balance */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-                <Wallet size={13} className="text-indigo-400" />
+            <div className="bg-land-surface/60 border border-land-border rounded-2xl p-5 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-land-fg-muted text-[11px] font-bold uppercase tracking-wider">
+                <Wallet size={13} className="text-land-accent" />
                 LAND Balance
               </div>
-              <div className="text-3xl font-extrabold text-white tabular-nums">
+              <div className="text-3xl font-extrabold text-land-fg tabular-nums">
                 {landBalance.toLocaleString()}
               </div>
-              <div className="text-xs text-slate-500">LAND tokens</div>
+              <div className="text-xs text-land-fg-muted">LAND tokens</div>
             </div>
 
             {/* Accrued Income */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex flex-col gap-2">
-              <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-                <TrendingUp size={13} className="text-emerald-400" />
+            <div className="bg-land-surface/60 border border-land-border rounded-2xl p-5 flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-land-fg-muted text-[11px] font-bold uppercase tracking-wider">
+                <TrendingUp size={13} className="text-land-success" />
                 Accrued Income
               </div>
-              <div className="text-3xl font-extrabold text-emerald-400 tabular-nums">
+              <div className="text-3xl font-extrabold text-land-success tabular-nums">
                 {totalAccruedIncome.toLocaleString()}
               </div>
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-land-fg-muted">
                 across {propertiesWithIncome.length} properties · ledger{" "}
                 {currentLedger.toLocaleString()}
               </div>
             </div>
 
             {/* Claim All */}
-            <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex flex-col gap-3 justify-between">
-              <div className="flex items-center gap-2 text-slate-400 text-[11px] font-bold uppercase tracking-wider">
-                <Coins size={13} className="text-amber-400" />
+            <div className="bg-land-surface/60 border border-land-border rounded-2xl p-5 flex flex-col gap-3 justify-between">
+              <div className="flex items-center gap-2 text-land-fg-muted text-[11px] font-bold uppercase tracking-wider">
+                <Coins size={13} className="text-land-gold" />
                 Quick Claim
               </div>
 
               {/* Progress indicator while claiming */}
               {isClaimRunning && claimProgress && (
-                <div className="text-xs text-slate-300 flex items-center gap-2">
+                <div className="text-xs text-land-fg flex items-center gap-2">
                   <RefreshCw
                     size={12}
-                    className="animate-spin text-indigo-400 shrink-0"
+                    className="animate-spin text-land-accent shrink-0"
                   />
                   Claiming {claimProgress.current + 1} of {claimProgress.total}…
                 </div>
@@ -620,19 +621,19 @@ export default function DashboardPage() {
               {claimProgress?.done && (
                 <div className="space-y-1">
                   {claimProgress.failures.length === 0 ? (
-                    <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                    <div className="flex items-center gap-1.5 text-xs text-land-success">
                       <CheckCircle2 size={13} />
                       All {claimProgress.total} claims succeeded
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                      <div className="flex items-center gap-1.5 text-xs text-land-success">
                         <CheckCircle2 size={13} />
                         {claimProgress.total -
                           claimProgress.failures.length}{" "}
                         claimed
                       </div>
-                      <div className="flex items-start gap-1.5 text-xs text-rose-400">
+                      <div className="flex items-start gap-1.5 text-xs text-land-danger">
                         <XCircle size={13} className="mt-0.5 shrink-0" />
                         <span>Failed: {claimProgress.failures.join(", ")}</span>
                       </div>
@@ -644,7 +645,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleClaimAll}
                 disabled={claimableProperties.length === 0 || isClaimRunning}
-                className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-bold py-2.5 px-4 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 border border-emerald-400/20"
+                className="w-full bg-gradient-to-r from-land-success to-land-accent hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-bg font-bold py-2.5 px-4 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 border border-land-success/20"
               >
                 <Coins size={15} />
                 {claimableProperties.length > 0
@@ -657,24 +658,24 @@ export default function DashboardPage() {
 
         {/* ── Section 2: Property Grid ── */}
         <section aria-label="Owned properties">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-4">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-land-fg-muted mb-4">
             Your Properties
           </h2>
 
           {propertiesWithIncome.length === 0 ? (
             // Empty state
-            <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-12 flex flex-col items-center gap-4 text-center">
-              <MapPin size={42} className="text-slate-700" />
+            <div className="bg-land-surface/40 border border-land-border rounded-2xl p-12 flex flex-col items-center gap-4 text-center">
+              <MapPin size={42} className="text-land-fg-subtle" />
               <div>
-                <h3 className="font-bold text-slate-300">No Properties Yet</h3>
-                <p className="text-sm text-slate-500 mt-1.5 max-w-xs leading-relaxed">
+                <h3 className="font-bold text-land-fg">No Properties Yet</h3>
+                <p className="text-sm text-land-fg-muted mt-1.5 max-w-xs leading-relaxed">
                   You don&apos;t own any land tiles yet. Head to the city map to
                   claim your starter property from the treasury!
                 </p>
               </div>
               <a
                 href="/"
-                className="mt-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2"
+                className="mt-1 bg-land-accent hover:bg-land-accent/90 text-land-bg font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2"
               >
                 <MapPin size={14} />
                 Open City Map
@@ -698,22 +699,22 @@ export default function DashboardPage() {
                     aria-label={`View ${prop.name} on city map`}
                     className={`text-left p-4 rounded-2xl border bg-gradient-to-br transition-all duration-300 hover:scale-[1.02] active:scale-[0.99] flex flex-col gap-3 relative overflow-hidden group ${LEVEL_COLOR[prop.buildingLevel]} ${
                       hasIncome
-                        ? "shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/20"
+                        ? "shadow-lg shadow-land-success/10 ring-1 ring-land-success/20"
                         : ""
                     }`}
                   >
                     {/* Subtle green glow overlay for properties with unclaimed income */}
                     {hasIncome && (
-                      <div className="absolute inset-0 rounded-2xl bg-emerald-500/[0.04] pointer-events-none" />
+                      <div className="absolute inset-0 rounded-2xl bg-land-success/[0.04] pointer-events-none" />
                     )}
 
                     {/* Level badge + income badge */}
                     <div className="flex justify-between items-start relative z-10">
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-950/70 px-2 py-0.5 rounded border border-slate-800/60">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-land-bg/70 px-2 py-0.5 rounded border border-land-border/60">
                         {LEVEL_LABEL[prop.buildingLevel]}
                       </span>
                       {hasIncome && (
-                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/20 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] font-bold text-land-success bg-land-success/10 border border-land-success/20 px-1.5 py-0.5 rounded">
                           +{prop.earnedIncome} LAND
                         </span>
                       )}
@@ -721,28 +722,28 @@ export default function DashboardPage() {
 
                     {/* Property name + coords */}
                     <div className="relative z-10">
-                      <h4 className="font-bold text-white text-sm group-hover:text-indigo-200 transition-colors line-clamp-1">
+                      <h4 className="font-bold text-land-fg text-sm group-hover:text-land-accent transition-colors line-clamp-1">
                         {prop.name}
                       </h4>
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-1">
+                      <div className="flex items-center gap-1 text-[11px] text-land-fg-muted mt-1">
                         <MapPin size={10} />
                         <span className="font-mono truncate">{coordLabel}</span>
                       </div>
                     </div>
 
                     {/* Accrued income footer */}
-                    <div className="mt-auto flex justify-between items-center text-[11px] bg-slate-950/50 p-2 rounded-lg border border-slate-900/60 relative z-10">
-                      <span className="text-slate-500">Accrued</span>
+                    <div className="mt-auto flex justify-between items-center text-[11px] bg-land-bg/50 p-2 rounded-lg border border-land-border/60 relative z-10">
+                      <span className="text-land-fg-muted">Accrued</span>
                       <span
                         className={`font-mono font-bold ${
-                          hasIncome ? "text-emerald-400" : "text-slate-600"
+                          hasIncome ? "text-land-success" : "text-land-fg-subtle"
                         }`}
                       >
                         {prop.earnedIncome} LAND
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1 text-[10px] text-slate-600 group-hover:text-slate-400 transition-colors relative z-10">
+                    <div className="flex items-center gap-1 text-[10px] text-land-fg-subtle group-hover:text-land-fg-muted transition-colors relative z-10">
                       <ChevronRight size={10} />
                       View on map
                     </div>
@@ -755,24 +756,24 @@ export default function DashboardPage() {
 
         {/* ── Section 3: Transaction History ── */}
         <section aria-label="Transaction history">
-          <h2 className="text-[11px] font-bold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
+          <h2 className="text-[11px] font-bold uppercase tracking-widest text-land-fg-muted mb-4 flex items-center gap-2">
             <History size={13} />
             Transaction History
           </h2>
 
-          <div className="bg-slate-900/40 border border-slate-800 rounded-2xl overflow-hidden">
+          <div className="bg-land-surface/40 border border-land-border rounded-2xl overflow-hidden">
             {paginatedEvents.length === 0 ? (
-              <div className="p-10 text-center text-slate-500 text-sm">
+              <div className="p-10 text-center text-land-fg-muted text-sm">
                 No transactions yet.
               </div>
             ) : (
-              <div className="divide-y divide-slate-800/60">
+              <div className="divide-y divide-land-border/60">
                 {paginatedEvents.map((event) => {
                   const badgeClass = eventBadgeClass(event.eventType);
                   return (
                     <div
                       key={event.id}
-                      className="flex items-center gap-4 px-5 py-4 hover:bg-slate-900/60 transition-colors"
+                      className="flex items-center gap-4 px-5 py-4 hover:bg-land-surface/60 transition-colors"
                     >
                       {/* Icon badge */}
                       <div
@@ -784,14 +785,14 @@ export default function DashboardPage() {
                       {/* Event details */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-slate-200">
+                          <span className="text-sm font-semibold text-land-fg">
                             {EVENT_LABELS[event.eventType]}
                           </span>
-                          <span className="text-xs text-slate-500 font-mono bg-slate-800/60 px-1.5 py-0.5 rounded">
+                          <span className="text-xs text-land-fg-muted font-mono bg-land-surface-raised/60 px-1.5 py-0.5 rounded">
                             [{event.coordinates[0]}, {event.coordinates[1]}]
                           </span>
                         </div>
-                        <div className="text-xs text-slate-500 mt-0.5">
+                        <div className="text-xs text-land-fg-muted mt-0.5">
                           Ledger #{event.ledger.toLocaleString()} ·{" "}
                           {new Date(event.timestamp).toLocaleDateString(
                             undefined,
@@ -817,10 +818,10 @@ export default function DashboardPage() {
 
             {/* Load more */}
             {hasMoreEvents && (
-              <div className="px-5 py-3 border-t border-slate-800/60">
+              <div className="px-5 py-3 border-t border-land-border/60">
                 <button
                   onClick={() => setEventPage((p) => p + 1)}
-                  className="w-full text-xs font-bold text-slate-400 hover:text-white py-2 rounded-xl hover:bg-slate-800/60 transition-colors"
+                  className="w-full text-xs font-bold text-land-fg-muted hover:text-land-fg py-2 rounded-xl hover:bg-land-surface-raised/60 transition-colors"
                 >
                   Load more
                 </button>
@@ -828,6 +829,13 @@ export default function DashboardPage() {
             )}
           </div>
         </section>
+
+        {/* Pilot funnel, per docs/strategy/recommendations.md section 2b.
+            This page renders its own chrome rather than wrapping in GameShell,
+            so it carries the compact CTA itself. */}
+        <footer className="border-t border-land-border pt-5 text-center">
+          <PilotCta variant="compact" />
+        </footer>
       </div>
     </main>
   );

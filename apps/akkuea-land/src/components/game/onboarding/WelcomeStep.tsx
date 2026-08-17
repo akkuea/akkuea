@@ -14,7 +14,7 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
     >
       {/* City grid illustration: a 5x5 mini grid as visual */}
       <div
-        className="mx-auto mb-8 grid gap-1.5 rounded-2xl bg-slate-900/80 border border-slate-800/80 p-4 w-fit shadow-2xl shadow-indigo-950/20"
+        className="mx-auto mb-8 grid gap-1.5 rounded-2xl bg-land-surface/80 border border-land-border/80 p-4 w-fit shadow-2xl shadow-land-accent/20"
         style={{ gridTemplateColumns: "repeat(5, 2.5rem)" }}
       >
         {SAMPLE_TILES.map((color, i) => (
@@ -30,16 +30,16 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
         ))}
       </div>
 
-      <h1 className="mb-4 text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-300 bg-clip-text text-transparent">
+      <h1 className="mb-4 text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-land-fg to-land-accent bg-clip-text text-transparent">
         Welcome to Akkuea Land
       </h1>
 
       <div className="space-y-4 mb-8 max-w-sm mx-auto">
-        <p className="text-sm text-slate-400 leading-relaxed">
+        <p className="text-sm text-land-fg-muted leading-relaxed">
           Explore and buy virtual properties in a dynamic, live city grid. Earn
           steady rental income in real-time as the city thrives.
         </p>
-        <p className="text-sm text-slate-400 leading-relaxed">
+        <p className="text-sm text-land-fg-muted leading-relaxed">
           Your Stellar wallet has been set up securely through Pollar. You
           don&apos;t need any prior blockchain experience or fees to play.
         </p>
@@ -49,7 +49,7 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
         onClick={onNext}
-        className="rounded-xl bg-indigo-600 px-10 py-3.5 text-sm font-bold text-white hover:bg-indigo-500 transition-all duration-200 shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/35"
+        className="rounded-xl bg-land-accent px-10 py-3.5 text-sm font-bold text-land-bg hover:bg-land-accent/90 transition-all duration-200 shadow-lg shadow-land-accent/20 hover:shadow-land-accent/35"
       >
         Get Started
       </motion.button>
@@ -57,31 +57,16 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
   );
 }
 
-// Curated harmonious neon city palette
+// Decorative city grid, drawn from the design tokens in globals.css so the
+// illustration tracks the palette instead of pinning its own hex values.
+const TILE_TOKENS = [
+  "var(--land-surface)",
+  "var(--land-surface-raised)",
+  "var(--land-border)",
+  "var(--land-border-hover)",
+] as const;
+
+// Fixed pattern (not random) so the grid renders identically on server and client.
 const SAMPLE_TILES = [
-  "#1e1b4b",
-  "#312e81",
-  "#1e1b4b",
-  "#3730a3",
-  "#1e1b4b",
-  "#3730a3",
-  "#4338ca",
-  "#312e81",
-  "#1e1b4b",
-  "#4338ca",
-  "#1e1b4b",
-  "#3730a3",
-  "#312e81",
-  "#4338ca",
-  "#3730a3",
-  "#4338ca",
-  "#1e1b4b",
-  "#3730a3",
-  "#312e81",
-  "#1e1b4b",
-  "#312e81",
-  "#4338ca",
-  "#1e1b4b",
-  "#3730a3",
-  "#4338ca",
-];
+  0, 1, 0, 2, 0, 2, 3, 1, 0, 3, 0, 2, 1, 3, 2, 3, 0, 2, 1, 0, 1, 3, 0, 2, 3,
+].map((i) => TILE_TOKENS[i]);

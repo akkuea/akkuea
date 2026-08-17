@@ -64,3 +64,15 @@ Animation keyframes available as utility classes: `.animate-flicker`, `.animate-
 - `cursor: pointer` is applied globally to `button`, `a`, `[role="button"]`, and submit/button inputs - don't re-add it manually.
 - `:focus-visible` uses a 2px `--accent` outline with 2px offset - do not override focus styling per-component; extend the shared rule if a component needs different focus treatment.
 - Scrollbars are custom-styled (6px, `--border` thumb, transparent track) - this is global, not per-component.
+
+## Cross-app token usage
+
+`apps/akkuea-land` maintains its own token layer (`--land-*` prefix) in `apps/akkuea-land/src/app/globals.css`. These tokens share the same structural intent as the webapp tokens (surface, border, foreground, accent, status colors) but use a distinct dark-first game palette. Both apps share:
+
+- The same scrollbar styling conventions
+- The same `.scanlines`, `.glass`, `.animate-shimmer` utility pattern
+- The same `.font-mono` treatment for on-chain numeric values
+
+Akkuea Land-specific tokens: see `apps/akkuea-land/src/app/globals.css`.
+
+**Known gap - the two apps are consistent internally, not yet with each other.** Every component in `apps/akkuea-land` now resolves its colors through `--land-*` tokens rather than hardcoded Tailwind palette classes, but the `--land-*` values themselves are still a separate palette (cyan `--land-accent`, amber `--land-gold`) from the webapp's (`--accent` red-orange). The two apps therefore do not yet render as one visual family, and Akkuea Land has no `.light` theme at all - it is dark-only, with no `ThemeProvider` equivalent to the webapp's. Consolidating onto a single shared token file, and adding light-theme support to the game, are follow-up items, not something this pass delivered.

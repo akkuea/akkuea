@@ -41,26 +41,26 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
   return (
     <>
       {/* Scrollable Container */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 scrollbar-thin scrollbar-thumb-slate-800">
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 scrollbar-thin scrollbar-thumb-land-border">
         {/* Top Section: Miniature tile preview and status badge */}
         <div
           className={`relative p-5 rounded-2xl border bg-gradient-to-br ${theme.bgGrad} ${theme.border} shadow-lg ${theme.glow} transition-all duration-300 overflow-hidden group`}
         >
-          <div className="absolute -right-6 -bottom-6 text-slate-500/10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-12">
+          <div className="absolute -right-6 -bottom-6 text-land-fg-muted/10 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-12">
             <Sparkles size={110} />
           </div>
 
           {/* Grid Preview Effect */}
-          <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
+          <div className="absolute inset-0 bg-[radial-gradient(var(--land-border)_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none" />
 
           <div className="relative flex flex-col gap-3">
             <div className="flex justify-between items-start">
               <div>
-                <h3 className="text-lg font-bold tracking-tight text-white group-hover:text-indigo-200 transition-colors duration-200">
+                <h3 className="text-lg font-bold tracking-tight text-land-fg group-hover:text-land-accent transition-colors duration-200">
                   {property.name}
                 </h3>
-                <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-1 font-medium">
-                  <MapPin size={12} className="text-slate-500" />
+                <div className="flex items-center gap-1 text-[11px] text-land-fg-muted mt-1 font-medium">
+                  <MapPin size={12} className="text-land-fg-muted" />
                   <span>
                     {property.location.city}, {property.location.country}
                   </span>
@@ -74,31 +74,31 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
             </div>
 
             {/* Grid Location / Coords Bar */}
-            <div className="flex justify-between items-center bg-slate-950/60 p-2.5 rounded-lg border border-slate-900/60 text-xs mt-1">
-              <span className="text-slate-400 font-medium">Coordinates</span>
-              <span className="font-mono text-indigo-400 font-semibold">
+            <div className="flex justify-between items-center bg-land-bg/60 p-2.5 rounded-lg border border-land-border/60 text-xs mt-1">
+              <span className="text-land-fg-muted font-medium">Coordinates</span>
+              <span className="font-mono text-land-accent font-semibold">
                 {coordinates}
               </span>
             </div>
 
             {/* Owner Address Section with Copy Option */}
             <div className="flex justify-between items-center text-xs mt-1">
-              <span className="text-slate-400 font-medium flex items-center gap-1.5">
-                <User size={13} className="text-slate-500" />
+              <span className="text-land-fg-muted font-medium flex items-center gap-1.5">
+                <User size={13} className="text-land-fg-muted" />
                 Owner
               </span>
               <div className="flex items-center gap-1.5">
-                <span className="font-mono text-slate-200 font-medium bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800/60">
+                <span className="font-mono text-land-fg font-medium bg-land-surface/80 px-2 py-0.5 rounded border border-land-border/60">
                   {abbreviateAddress(property.owner)}
                 </span>
                 {property.owner && (
                   <button
                     onClick={copyToClipboard}
-                    className="p-1 rounded bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800/80 transition-colors"
+                    className="p-1 rounded bg-land-surface hover:bg-land-surface-raised text-land-fg-muted hover:text-land-fg border border-land-border/80 transition-colors"
                     title="Copy Address"
                   >
                     {copied ? (
-                      <Check size={11} className="text-emerald-400" />
+                      <Check size={11} className="text-land-success" />
                     ) : (
                       <Copy size={11} />
                     )}
@@ -116,25 +116,25 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
 
         {/* Inline notification states */}
         {error && (
-          <div className="bg-rose-950/40 border border-rose-500/20 text-rose-300 text-xs p-3.5 rounded-xl flex items-start gap-2.5 animate-fadeIn">
-            <span className="w-2 h-2 mt-1.5 rounded-full bg-rose-500 shrink-0" />
+          <div className="bg-land-danger/5 border border-land-danger/20 text-land-danger text-xs p-3.5 rounded-xl flex items-start gap-2.5 animate-fadeIn">
+            <span className="w-2 h-2 mt-1.5 rounded-full bg-land-danger shrink-0" />
             <div>
-              <span className="font-bold text-rose-200 block mb-0.5">
+              <span className="font-bold text-land-danger block mb-0.5">
                 Transaction Error
               </span>
-              <span className="text-rose-300/90 leading-relaxed">{error}</span>
+              <span className="text-land-danger/90 leading-relaxed">{error}</span>
             </div>
           </div>
         )}
 
         {success && (
-          <div className="bg-emerald-950/40 border border-emerald-500/20 text-emerald-300 text-xs p-3.5 rounded-xl flex items-start gap-2.5 animate-fadeIn">
-            <span className="w-2 h-2 mt-1.5 rounded-full bg-emerald-500 shrink-0" />
+          <div className="bg-land-success/5 border border-land-success/20 text-land-success text-xs p-3.5 rounded-xl flex items-start gap-2.5 animate-fadeIn">
+            <span className="w-2 h-2 mt-1.5 rounded-full bg-land-success shrink-0" />
             <div>
-              <span className="font-bold text-emerald-200 block mb-0.5">
+              <span className="font-bold text-land-success block mb-0.5">
                 Success!
               </span>
-              <span className="text-emerald-300/90 leading-relaxed">
+              <span className="text-land-success/90 leading-relaxed">
                 {success}
               </span>
             </div>
@@ -143,13 +143,13 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
 
         {/* Pending details state string */}
         {pendingAction && (
-          <div className="bg-slate-900 border border-slate-800 text-xs p-4 rounded-xl flex flex-col items-center justify-center gap-3 text-center animate-pulse">
-            <div className="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+          <div className="bg-land-surface border border-land-border text-xs p-4 rounded-xl flex flex-col items-center justify-center gap-3 text-center animate-pulse">
+            <div className="w-5 h-5 border-2 border-land-accent border-t-transparent rounded-full animate-spin" />
             <div className="space-y-1">
-              <span className="font-bold text-slate-200 block text-xs uppercase tracking-wider">
+              <span className="font-bold text-land-fg block text-xs uppercase tracking-wider">
                 Processing Blockchain Tx
               </span>
-              <p className="text-[11px] text-slate-400 font-medium px-4">
+              <p className="text-[11px] text-land-fg-muted font-medium px-4">
                 {pendingAction}
               </p>
             </div>
@@ -158,7 +158,7 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
       </div>
 
       {/* Bottom Section: Action flows contextually rendered */}
-      <div className="px-5 py-4 border-t border-slate-900/60 bg-slate-950/80">
+      <div className="px-5 py-4 border-t border-land-border/60 bg-land-bg/80">
         {footer}
       </div>
     </>

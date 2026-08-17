@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="bg-slate-950 text-white min-h-screen antialiased">
+      <body className="bg-land-bg text-land-fg min-h-screen antialiased">
         <OnboardingGate>{children}</OnboardingGate>
       </body>
     </html>

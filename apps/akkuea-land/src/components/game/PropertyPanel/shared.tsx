@@ -15,18 +15,18 @@ export const BuildingLevelBar: React.FC<{ buildingLevel: BuildingLevel }> = ({
   ];
 
   return (
-    <div className="w-full bg-slate-950/50 p-4 rounded-xl border border-slate-800/80">
-      <div className="text-[10px] font-semibold text-slate-400 mb-3 tracking-wider uppercase flex justify-between items-center">
+    <div className="w-full bg-land-bg/50 p-4 rounded-xl border border-land-border/80">
+      <div className="text-[10px] font-semibold text-land-fg-muted mb-3 tracking-wider uppercase flex justify-between items-center">
         <span>Development Phase</span>
-        <span className="text-xs font-bold text-indigo-400 bg-indigo-950/50 px-2.5 py-0.5 rounded-full border border-indigo-900/50">
+        <span className="text-xs font-bold text-land-accent bg-land-accent/10 px-2.5 py-0.5 rounded-full border border-land-accent/50">
           {steps[buildingLevel].label}
         </span>
       </div>
       <div className="relative flex justify-between items-center px-1">
         {/* Line Connector Background */}
-        <div className="absolute left-3 right-3 top-3.5 h-[3px] bg-slate-800/80 rounded-full z-0">
+        <div className="absolute left-3 right-3 top-3.5 h-[3px] bg-land-surface-raised/80 rounded-full z-0">
           <div
-            className="h-full bg-gradient-to-r from-teal-400 via-indigo-500 to-purple-600 rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-land-accent via-land-accent to-tile-listed rounded-full transition-all duration-500"
             style={{ width: `${(buildingLevel / 3) * 100}%` }}
           />
         </div>
@@ -39,10 +39,10 @@ export const BuildingLevelBar: React.FC<{ buildingLevel: BuildingLevel }> = ({
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-extrabold transition-all duration-300 ${
                   isCurrent
-                    ? "bg-gradient-to-br from-indigo-500 to-purple-600 text-white ring-4 ring-indigo-950/60 scale-110 shadow-lg shadow-indigo-500/30"
+                    ? "bg-gradient-to-br from-land-accent to-tile-listed text-land-bg ring-4 ring-land-accent/60 scale-110 shadow-lg shadow-land-accent/30"
                     : isActive
-                      ? "bg-indigo-600 text-indigo-100"
-                      : "bg-slate-900 text-slate-500 border border-slate-800"
+                      ? "bg-land-accent text-land-accent"
+                      : "bg-land-surface text-land-fg-muted border border-land-border"
                 }`}
               >
                 {idx}
@@ -50,10 +50,10 @@ export const BuildingLevelBar: React.FC<{ buildingLevel: BuildingLevel }> = ({
               <span
                 className={`text-[9px] mt-1.5 font-semibold transition-colors duration-300 ${
                   isCurrent
-                    ? "text-indigo-400 font-bold"
+                    ? "text-land-accent font-bold"
                     : isActive
-                      ? "text-slate-300"
-                      : "text-slate-600"
+                      ? "text-land-fg"
+                      : "text-land-fg-subtle"
                 }`}
               >
                 {step.label}

@@ -2,11 +2,11 @@
 
 ## Overview
 
-| Attribute     | Value                                                                                       |
-| ------------- | --------------------------------------------------------------------------------------------- |
-| Cycle Number  | 6                                                                                              |
-| Total Issues  | 8                                                                                              |
-| Focus Areas   | Pilot smart contracts, pilot UX, treasury track, design system parity, security, developer experience |
+| Attribute     | Value                                                                                                                |
+| ------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Cycle Number  | 6                                                                                                                    |
+| Total Issues  | 8                                                                                                                    |
+| Focus Areas   | Pilot smart contracts, pilot UX, treasury track, design system parity, security, developer experience                |
 | Prerequisites | `docs/strategy/product-brief.md`, `docs/strategy/roadmap.md`, `docs/design-system/` (all shipped in the prior cycle) |
 
 ## Objective
@@ -44,12 +44,12 @@ docs/
 
 ## Issue Distribution by Area
 
-| Area      | Count | Issues                          |
-| --------- | ----- | -------------------------------- |
-| CONTRACT  | 1     | C6-001                           |
-| WEBAPP    | 3     | C6-002, C6-005, C6-008           |
-| API       | 2     | C6-003, C6-006                   |
-| TOOLING   | 2     | C6-004, C6-007                   |
+| Area     | Count | Issues                 |
+| -------- | ----- | ---------------------- |
+| CONTRACT | 1     | C6-001                 |
+| WEBAPP   | 3     | C6-002, C6-005, C6-008 |
+| API      | 2     | C6-003, C6-006         |
+| TOOLING  | 2     | C6-004, C6-007         |
 
 ## Issue Distribution by Difficulty
 
@@ -57,49 +57,49 @@ All eight issues are High: every one spans multiple modules, requires design dec
 
 ## Issues Summary
 
-| ID     | Title                                                              | Area     | Difficulty | Dependencies |
-| ------ | ------------------------------------------------------------------- | -------- | ---------- | ------------ |
-| C6-001 | Implement the pilot's income token, whitelist, and payout-split contracts | CONTRACT | High       | None         |
-| C6-002 | Build the pilot's read-only dashboard for allies and investors    | WEBAPP   | High       | C6-001       |
-| C6-003 | Integrate the Phase 1a treasury track (DeFindex + EtherFuse)       | API      | High       | None         |
-| C6-004 | Build the professional diagram generation pipeline                 | TOOLING  | High       | None         |
-| C6-005 | Align Akkuea Land with the webapp design system                    | WEBAPP   | High       | None         |
-| C6-006 | Close the KYC enforcement gaps and remediate dependency vulnerabilities | API      | High       | None         |
+| ID     | Title                                                                          | Area     | Difficulty | Dependencies |
+| ------ | ------------------------------------------------------------------------------ | -------- | ---------- | ------------ |
+| C6-001 | Implement the pilot's income token, whitelist, and payout-split contracts      | CONTRACT | High       | None         |
+| C6-002 | Build the pilot's read-only dashboard for allies and investors                 | WEBAPP   | High       | C6-001       |
+| C6-003 | Integrate the Phase 1a treasury track (DeFindex + EtherFuse)                   | API      | High       | None         |
+| C6-004 | Build the professional diagram generation pipeline                             | TOOLING  | High       | None         |
+| C6-005 | Align Akkuea Land with the webapp design system                                | WEBAPP   | High       | None         |
+| C6-006 | Close the KYC enforcement gaps and remediate dependency vulnerabilities        | API      | High       | None         |
 | C6-007 | Ship an environment variable guide, boot-time validation, and CI quality gates | TOOLING  | High       | None         |
-| C6-008 | Build the self-serve whitelist and investor onboarding flow        | WEBAPP   | High       | C6-001       |
+| C6-008 | Build the self-serve whitelist and investor onboarding flow                    | WEBAPP   | High       | C6-001       |
 
 ## Acceptance Criteria for Cycle Completion
 
-| Criteria                              | Description                                                                                       |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Pilot contracts deployed to testnet     | Income token, whitelist, and payout-split contracts live and verified on Stellar testnet            |
-| Pilot dashboard functional              | An ally can submit evidence and an investor can see holdings, distributions, and cycle status, end to end on testnet |
-| Treasury visible on-chain                | The accumulated platform fee balance is verifiably deposited in DeFindex and/or EtherFuse, checkable on stellar.expert |
-| Diagrams shipped                        | Every diagram in `docs/strategy/`, `docs/architecture/`, and the README has both a vertical and a horizontal rendering |
-| Akkuea Land visually matches webapp     | Akkuea Land uses the same color tokens, typography, and (where applicable) shared components as `apps/webapp` |
-| No open known-gap in KYC enforcement    | `POST /kyc/verify/:documentId` requires authentication; `buyShares` enforces `kycStatus === 'approved'` |
-| Dependency audit shrinks                | `audit-allowlist.txt` no longer lists any advisory with an available non-breaking patch |
-| Env guide exists and is enforced        | `docs/ENV_SETUP.md` documents every variable's source; the API and webapp fail fast with a clear message if a required variable is missing |
-| Onboarding flow functional              | A new investor can request whitelist approval, and an operator can approve or reject it, without touching `curl` |
-| All five required workflows pass        | `monorepo-ci.yml`, `api-ci.yml`, `webapp-ci.yml`, `shared-ci.yml`, `contracts-ci.yml` all green on every PR from this cycle |
+| Criteria                             | Description                                                                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Pilot contracts deployed to testnet  | Income token, whitelist, and payout-split contracts live and verified on Stellar testnet                                                   |
+| Pilot dashboard functional           | An ally can submit evidence and an investor can see holdings, distributions, and cycle status, end to end on testnet                       |
+| Treasury visible on-chain            | The accumulated platform fee balance is verifiably deposited in DeFindex and/or EtherFuse, checkable on stellar.expert                     |
+| Diagrams shipped                     | Every diagram in `docs/strategy/`, `docs/architecture/`, and the README has both a vertical and a horizontal rendering                     |
+| Akkuea Land visually matches webapp  | Akkuea Land uses the same color tokens, typography, and (where applicable) shared components as `apps/webapp`                              |
+| No open known-gap in KYC enforcement | `POST /kyc/verify/:documentId` requires authentication; `buyShares` enforces `kycStatus === 'approved'`                                    |
+| Dependency audit shrinks             | `audit-allowlist.txt` no longer lists any advisory with an available non-breaking patch                                                    |
+| Env guide exists and is enforced     | `docs/ENV_SETUP.md` documents every variable's source; the API and webapp fail fast with a clear message if a required variable is missing |
+| Onboarding flow functional           | A new investor can request whitelist approval, and an operator can approve or reject it, without touching `curl`                           |
+| All five required workflows pass     | `monorepo-ci.yml`, `api-ci.yml`, `webapp-ci.yml`, `shared-ci.yml`, `contracts-ci.yml` all green on every PR from this cycle                |
 
 ## Dependencies Between Issues
 
 | Issue          | Depends On |
-| --------------- | ---------- |
+| -------------- | ---------- |
 | C6-002, C6-008 | C6-001     |
 
 Everything else is independently startable and parallelizable across contributors.
 
 ## Parallel Workstreams
 
-| Contributor Focus        | Recommended Issues                       |
-| -------------------------- | ------------------------------------------ |
-| Soroban / Rust              | C6-001 (then unblocks C6-002, C6-008)      |
-| Frontend, pilot surface     | C6-002, C6-008 (after C6-001 lands)         |
-| Backend / integrations      | C6-003, C6-006                              |
-| Tooling / documentation     | C6-004, C6-007                              |
-| Frontend, Akkuea Land        | C6-005                                      |
+| Contributor Focus       | Recommended Issues                    |
+| ----------------------- | ------------------------------------- |
+| Soroban / Rust          | C6-001 (then unblocks C6-002, C6-008) |
+| Frontend, pilot surface | C6-002, C6-008 (after C6-001 lands)   |
+| Backend / integrations  | C6-003, C6-006                        |
+| Tooling / documentation | C6-004, C6-007                        |
+| Frontend, Akkuea Land   | C6-005                                |
 
 ## Notes
 

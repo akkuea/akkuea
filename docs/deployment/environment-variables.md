@@ -53,11 +53,11 @@ cp apps/api/.env.example apps/api/.env
 
 The KYC expiry job runs in the background to mark expired KYC records and send re-verification reminders. All three variables are optional - the defaults are suitable for production.
 
-| Variable                        | Example Value  | Required             | Description                                                                                                                                        |
-| ------------------------------- | -------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `KYC_EXPIRY_JOB_ENABLED`        | `true`         | No (default: `true`) | Set to `false` to disable the KYC expiry background job entirely (e.g. in test environments)                                                       |
-| `KYC_EXPIRY_POLL_INTERVAL_MS`   | `86400000`     | No (default: 24h)    | How often the job runs, in milliseconds. Default is `86400000` (24 hours). Set lower in staging to test expiry behaviour without waiting a full day |
-| `KYC_EXPIRY_REMINDER_WINDOW_MS` | `2592000000`   | No (default: 30d)    | How far in advance to send the expiry reminder notification, in milliseconds. Default is `2592000000` (30 days)                                     |
+| Variable                        | Example Value | Required             | Description                                                                                                                                         |
+| ------------------------------- | ------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `KYC_EXPIRY_JOB_ENABLED`        | `true`        | No (default: `true`) | Set to `false` to disable the KYC expiry background job entirely (e.g. in test environments)                                                        |
+| `KYC_EXPIRY_POLL_INTERVAL_MS`   | `86400000`    | No (default: 24h)    | How often the job runs, in milliseconds. Default is `86400000` (24 hours). Set lower in staging to test expiry behaviour without waiting a full day |
+| `KYC_EXPIRY_REMINDER_WINDOW_MS` | `2592000000`  | No (default: 30d)    | How far in advance to send the expiry reminder notification, in milliseconds. Default is `2592000000` (30 days)                                     |
 
 ### Stellar / Soroban - Network
 

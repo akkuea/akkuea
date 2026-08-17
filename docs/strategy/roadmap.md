@@ -2,8 +2,8 @@
 
 Two structures coexist here and answer different questions:
 
-- **Testnet → Mainnet** is about *deployment environment* within Phase 1: build and harden on testnet first, then take verified integrations and real capital to mainnet.
-- **Phase 1 → Phase 2** is about *product scope and ambition over time*: prove the pilot before investing in anything harder to undo.
+- **Testnet → Mainnet** is about _deployment environment_ within Phase 1: build and harden on testnet first, then take verified integrations and real capital to mainnet.
+- **Phase 1 → Phase 2** is about _product scope and ambition over time_: prove the pilot before investing in anything harder to undo.
 
 ```mermaid
 flowchart LR

@@ -1,6 +1,6 @@
 # System Architecture
 
-> This document describes the **existing platform build** - the monorepo as it exists today, including both the fractional-shares/lending platform and Akkuea Land. For *why* the pilot uses a different, smaller contract surface than the `defi-rwa` contract described here, see [`docs/strategy/product-brief.md`](../strategy/product-brief.md#relationship-to-the-existing-platform-build).
+> This document describes the **existing platform build** - the monorepo as it exists today, including both the fractional-shares/lending platform and Akkuea Land. For _why_ the pilot uses a different, smaller contract surface than the `defi-rwa` contract described here, see [`docs/strategy/product-brief.md`](../strategy/product-brief.md#relationship-to-the-existing-platform-build).
 
 ## Overview
 

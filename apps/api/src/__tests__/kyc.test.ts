@@ -396,32 +396,80 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       expect(lastStatus).toBe(429);
     });
   });
+});
 
-  describe('Verify endpoint auth rules', () => {
-    it.skipIf(skipIfNoDatabase)('returns 401 when called with a user JWT', async () => {
-      const app = createApp();
-      const token = jwt.sign({ id: testUserId, walletAddress: TEST_WALLET }, JWT_SECRET);
-      const response = await app.handle(
-        new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ verified: true }),
-        }),
-      );
-      expect(response.status).toBe(401);
-    });
-
-    it.skipIf(skipIfNoDatabase)('accepts internal API key', async () => {
-      const app = createApp();
-      const response = await app.handle(
-        new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'internal-api-key': INTERNAL_KEY },
-          body: JSON.stringify({ verified: true }),
-        }),
-      );
-      // With a missing document this should still reach auth then return 404
-      expect([200, 404]).toContain(response.status);
-    });
+describe('KYC Verify Endpoint Auth Rules (Unit Tests)', () => {
+  it('returns 401 when called with no authentication headers at all', async () => {
+    const app = createApp();
+    const response = await app.handle(
+      new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verified: true }),
+      }),
+    );
+    expect(response.status).toBe(401);
   });
+
+  it('returns 401 when called with an invalid internal API key', async () => {
+    const app = createApp();
+    const response = await app.handle(
+      new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'internal-api-key': 'invalid-key' },
+        body: JSON.stringify({ verified: true }),
+      }),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it('returns 401 when called with a user JWT', async () => {
+    const app = createApp();
+    const token = jwt.sign({ id: NON_EXISTENT_USER_ID, walletAddress: TEST_WALLET }, JWT_SECRET);
+    const response = await app.handle(
+      new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ verified: true }),
+      }),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  it.skipIf(skipIfNoDatabase)('accepts internal API key', async () => {
+    const app = createApp();
+    const response = await app.handle(
+      new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'internal-api-key': INTERNAL_KEY },
+        body: JSON.stringify({ verified: true }),
+      }),
+    );
+    // With a missing document this should still reach auth then return 404
+    expect([200, 404]).toContain(response.status);
+  });
+
+  it.skipIf(skipIfNoDatabase)(
+    'accepts OPERATIONS_BACKEND_CREDENTIAL via x-internal-api-key',
+    async () => {
+      const origCred = process.env.OPERATIONS_BACKEND_CREDENTIAL;
+      process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-ops-credential-123';
+      try {
+        const app = createApp();
+        const response = await app.handle(
+          new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-internal-api-key': 'test-ops-credential-123',
+            },
+            body: JSON.stringify({ verified: true }),
+          }),
+        );
+        expect([200, 404]).toContain(response.status);
+      } finally {
+        process.env.OPERATIONS_BACKEND_CREDENTIAL = origCred;
+      }
+    },
+  );
 });

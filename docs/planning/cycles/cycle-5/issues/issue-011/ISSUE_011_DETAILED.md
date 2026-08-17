@@ -26,11 +26,7 @@ src/hooks/useMarketplace.ts
 
 ```typescript
 type LevelFilter =
-  | "all"
-  | "vacant"
-  | "residential"
-  | "commercial"
-  | "skyscraper";
+  "all" | "vacant" | "residential" | "commercial" | "skyscraper";
 type SortOrder = "price-asc" | "price-desc" | "newest";
 
 interface MarketplaceFilters {

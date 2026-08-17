@@ -53,8 +53,6 @@ const MOCK_PLAYER_ADDRESSES = [
   "GRST7890UVWX1234YZAB5678CDEF9012GHIJ3456KLMN7890OP56",
 ];
 
-
-
 // ── Building Level Labels ────────────────────────────────────────────────────
 
 export const BUILDING_LABELS: Record<BuildingLevel, string> = {
@@ -146,7 +144,8 @@ export function generateMockGrid(): GameProperty[] {
         },
         totalValue: "1000",
         totalShares: 100,
-        availableShares: owner === TREASURY_ADDRESS ? 100 : owner === "" ? 100 : 0,
+        availableShares:
+          owner === TREASURY_ADDRESS ? 100 : owner === "" ? 100 : 0,
         pricePerShare: listPrice?.toString() ?? "100",
         images: ["https://images.unsplash.com/photo-placeholder"],
         documents: [],

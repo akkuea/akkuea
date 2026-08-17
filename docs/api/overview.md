@@ -65,9 +65,7 @@ Some endpoints (e.g. property creation, tokenization) instead check an `x-user-a
 ```json
 {
   "success": true,
-  "data": {
-    /* Response data */
-  }
+  "data": {/* Response data */}
 }
 ```
 

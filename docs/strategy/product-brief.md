@@ -1,6 +1,6 @@
 # Product Brief: Akkuea
 
-**Status:** Living strategic document - this file is the canonical source of product direction. Where anything elsewhere in this repository (README, architecture docs, API docs) describes the product differently, this brief and the rest of `docs/strategy/` take precedence. Technical docs outside `docs/strategy/` describe what is built; this folder describes what Akkuea is *for* and where it is going.
+**Status:** Living strategic document - this file is the canonical source of product direction. Where anything elsewhere in this repository (README, architecture docs, API docs) describes the product differently, this brief and the rest of `docs/strategy/` take precedence. Technical docs outside `docs/strategy/` describe what is built; this folder describes what Akkuea is _for_ and where it is going.
 
 ---
 
@@ -61,7 +61,7 @@ sequenceDiagram
 
 ### Akkuea Land: the visual companion, not a separate product
 
-[`apps/akkuea-land`](../../apps/akkuea-land) - the tile-based property simulation already built in this monorepo - is kept and repositioned as an **educational/visual onboarding tool**, not a parallel product line. Its mechanics (buy a property, collect rental income over time, claim it, trade on a marketplace) are a close conceptual mirror of the real pilot flow (buy a participation token, income accrues from a real property, evidence gets reviewed, distributions get claimed). It exists to let a prospective investor or ally *feel* the mechanics of the real pilot in a low-stakes, playable form before they put real capital in. It is explicitly not the fractional-equity/lending product described in the existing technical docs - see [`docs/game/`](../game/) for its own documentation, now framed accordingly.
+[`apps/akkuea-land`](../../apps/akkuea-land) - the tile-based property simulation already built in this monorepo - is kept and repositioned as an **educational/visual onboarding tool**, not a parallel product line. Its mechanics (buy a property, collect rental income over time, claim it, trade on a marketplace) are a close conceptual mirror of the real pilot flow (buy a participation token, income accrues from a real property, evidence gets reviewed, distributions get claimed). It exists to let a prospective investor or ally _feel_ the mechanics of the real pilot in a low-stakes, playable form before they put real capital in. It is explicitly not the fractional-equity/lending product described in the existing technical docs - see [`docs/game/`](../game/) for its own documentation, now framed accordingly.
 
 ---
 
@@ -104,6 +104,7 @@ Engineering/output metrics (what the build itself must hit, independent of wheth
 ## Scope
 
 **In - Testnet track (product build):**
+
 - Income-participation token contract (SEP-41-style, non-transferable in this phase, scoped to the pilot ally)
 - Whitelist/approval contract (manual review-backed, approved/not-approved)
 - Payout-split contract: computes the 10% platform fee, then distributes the remainder pro-rata against human-reviewed, hashed income evidence, over a fixed holder set (no snapshot logic needed given non-transferability)
@@ -111,15 +112,18 @@ Engineering/output metrics (what the build itself must hit, independent of wheth
 - Full local/testnet dev and test cycles completed before mainnet work starts
 
 **In - Mainnet track (integrations + real pilot):**
+
 - Verified contracts deployed to mainnet, including Akkuea's own payout-split, whitelist, and token contracts - no external escrow service in this flow
 - USDC as the live settlement asset; EURC-via-swap as a fast-follow once the USDC path is validated
 - Real pilot ally and real investors onboarded under the signed rev-share agreement
 - At least the payout-cycle count defined in Success Criteria executed for real
 
 **Also in - Phase 1a, Treasury track (runs in parallel, see [`roadmap.md`](roadmap.md)):**
+
 - Depositing the accumulated platform fee into already-audited, already-deployed DeFi infrastructure (DeFindex, EtherFuse) to generate real, verifiable on-chain activity early, independent of whether a pilot ally is signed yet.
 
 **Out (explicit, for this phase):**
+
 - Token transferability / secondary market (deferred - revisit post-pilot)
 - DeFindex vault/liquidity layer for the income tokens themselves (confirmed real and audited, but only supports pre-built on-chain DeFi strategies, not custom off-chain real-estate yield - deferred to Phase 2; the treasury use of DeFindex is different and is in-scope now, see Phase 1a above)
 - Multi-tenant "as-a-service" platform for multiple agencies (only after this pilot proves demand)
@@ -144,7 +148,7 @@ Engineering/output metrics (what the build itself must hit, independent of wheth
 
 ## Relationship to the existing platform build
 
-This repository already contains a substantially built platform: a `defi-rwa` Soroban contract with fractional property-share tokenization *and* a collateralized DeFi lending protocol (pools, oracle-based valuation, liquidation), a general KYC engine, and a full tile-based property game (`apps/akkuea-land`). That work is real, deployed to testnet, and documented in detail under `docs/api/`, `docs/architecture/`, `docs/deployment/`, and `docs/operations/`.
+This repository already contains a substantially built platform: a `defi-rwa` Soroban contract with fractional property-share tokenization _and_ a collateralized DeFi lending protocol (pools, oracle-based valuation, liquidation), a general KYC engine, and a full tile-based property game (`apps/akkuea-land`). That work is real, deployed to testnet, and documented in detail under `docs/api/`, `docs/architecture/`, `docs/deployment/`, and `docs/operations/`.
 
 It predates this brief's scoping and is **not the pilot's critical path**. The decision recorded here and in [`decision-log.md`](decision-log.md) is:
 

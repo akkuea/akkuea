@@ -9,7 +9,7 @@
 - Build an investor-facing onboarding flow: connect a Stellar wallet, submit whatever minimum-defensible identity information the pilot's whitelist review actually requires (this is intentionally lighter than the existing platform's full KYC document upload; confirm the exact minimum-defensible requirement against `docs/strategy/product-brief.md` and `docs/strategy/decision-log.md` before building the form, don't assume it mirrors the existing platform's heavier flow), see their approval status.
 - Build an operator-facing review queue: list pending whitelist requests, approve or reject, with the approval calling the C6-001 whitelist contract's `approve` function.
 - Use the `Stepper` component from the design system for the investor's multi-step submission flow, consistent with the rest of the pilot surface.
-- This flow is distinct from C6-002's ally evidence and investor holdings views; it is specifically the *becoming* a whitelisted investor flow, which happens once, before any of C6-002's ongoing views become relevant to a given investor.
+- This flow is distinct from C6-002's ally evidence and investor holdings views; it is specifically the _becoming_ a whitelisted investor flow, which happens once, before any of C6-002's ongoing views become relevant to a given investor.
 
 ## Acceptance Criteria
 

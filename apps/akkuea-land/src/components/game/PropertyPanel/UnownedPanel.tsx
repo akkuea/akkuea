@@ -56,7 +56,7 @@ export const UnownedPanel: React.FC<UnownedPanelProps> = ({
       <button
         onClick={buyFromTreasury}
         disabled={!!pendingAction}
-        className="w-full bg-gradient-to-r from-land-gold to-land-warning hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-bg font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md shadow-land-gold/5 flex items-center justify-center gap-2 border border-land-gold/20"
+        className="w-full bg-gradient-to-r from-land-gold-fill to-land-warning-fill hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-on-accent font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md shadow-land-gold-fill/5 flex items-center justify-center gap-2 border border-land-gold-fill/20"
       >
         Buy from Treasury
       </button>

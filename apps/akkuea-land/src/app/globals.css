@@ -1,47 +1,81 @@
 @import "tailwindcss";
+@import "@akkuea/shared/styles/tokens.css";
 
 /* ─── Akkuea Land Design System ─────────────────────────────────────────── */
-/* Dark-first game palette, distinct from the main Akkuea investment platform */
+/*
+ * Akkuea Land does not define a palette. Every `--land-*` and `--tile-*`
+ * token below is an alias onto a token declared in
+ * `apps/shared/src/styles/tokens.css`, the same file `apps/webapp` imports,
+ * so the two apps read as one visual family and a colour change lands in
+ * both at once.
+ *
+ * The alias names survive because they carry game meaning the core palette
+ * does not: "the colour of a treasury tile" is a more useful thing to say in
+ * a component than "accent tertiary". What changed is that they now resolve
+ * to shared values instead of a private set.
+ *
+ * Because each alias is a `var()` reference rather than a literal, applying
+ * `.light` to <html> re-points the whole layer without a second declaration
+ * block here.
+ */
 
 :root {
-  /* Brand */
-  --land-bg: #080c14;
-  --land-surface: #0d1420;
-  --land-surface-raised: #111b2e;
-  --land-border: #1e2d47;
-  --land-border-hover: #2e4470;
+  /* Surfaces */
+  --land-bg: var(--background);
+  --land-surface: var(--card);
+  --land-surface-raised: var(--secondary);
+  --land-border: var(--border);
+  --land-border-hover: var(--border-hover);
 
   /* Foreground */
-  --land-fg: #e8f0fe;
-  --land-fg-muted: #7a9cc4;
-  --land-fg-subtle: #3d5a80;
+  --land-fg: var(--foreground);
+  --land-fg-muted: var(--muted-foreground);
+  --land-fg-subtle: var(--foreground-subtle);
 
-  /* Accent – electric cyan (game energy) */
-  --land-accent: #00d4ff;
-  --land-accent-dim: rgba(0, 212, 255, 0.15);
-  --land-accent-glow: rgba(0, 212, 255, 0.35);
+  /* Signal colours. Each has a text role (the short name, used for type,
+     borders and translucent washes) and a fill role (`-fill`, the vivid
+     swatch used as a solid background under --land-on-accent). In the dark
+     theme the two are the same value, so this split changes nothing there;
+     it exists so the light theme can darken type without dulling buttons.
+     See the "Fill vs text" note in apps/shared/src/styles/tokens.css. */
 
-  /* Secondary accent – amber (LAND token / gold) */
-  --land-gold: #f5a623;
-  --land-gold-dim: rgba(245, 166, 35, 0.15);
-  --land-gold-glow: rgba(245, 166, 35, 0.35);
+  /* Primary accent. Shared with the webapp, which is the point: the two
+     apps signal "interactive / important" with the same colour. */
+  --land-accent: var(--accent-text);
+  --land-accent-fill: var(--accent);
+  --land-accent-dim: color-mix(in srgb, var(--accent-text) 15%, transparent);
+  --land-accent-glow: color-mix(in srgb, var(--accent) 35%, transparent);
+
+  /* Value-bearing gold. LAND balances, prices, treasury. */
+  --land-gold: var(--accent-tertiary-text);
+  --land-gold-fill: var(--accent-tertiary);
+  --land-gold-dim: color-mix(in srgb, var(--accent-tertiary-text) 15%, transparent);
+  --land-gold-glow: color-mix(in srgb, var(--accent-tertiary) 35%, transparent);
 
   /* Status */
-  --land-success: #00e676;
-  --land-warning: #ffab40;
-  --land-danger: #ff5252;
+  --land-success: var(--accent-secondary-text);
+  --land-success-fill: var(--accent-secondary);
+  --land-warning: var(--warning-text);
+  --land-warning-fill: var(--warning);
+  --land-danger: var(--destructive-text);
+  --land-danger-fill: var(--destructive);
+
+  /* Ink for text on a filled accent, gold, success or danger swatch. */
+  --land-on-accent: var(--accent-ink);
 
   /* Tile ownership states */
-  --tile-owned: #00e676;
-  --tile-treasury: #f5a623;
-  --tile-listed: #b388ff;
-  --tile-empty: #3d5a80;
+  --tile-owned: var(--accent-secondary);
+  --tile-treasury: var(--accent-tertiary);
+  --tile-listed: var(--accent-quaternary-text);
+  --tile-listed-fill: var(--accent-quaternary);
+  --tile-empty: var(--foreground-subtle);
 
-  /* Typography */
-  --font-game: "Inter", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", "SFMono-Regular", monospace;
+  /* Typography. Same stacks as the webapp; `--font-game` is kept as the
+     name components already use. */
+  --font-game: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 
-  /* Grid / tile sizing */
+  /* Grid / tile sizing. Layout, not palette, so genuinely local. */
   --tile-size: 80px;
   --tile-gap: 4px;
   --tile-radius: 8px;
@@ -57,17 +91,25 @@
   --color-land-fg-muted: var(--land-fg-muted);
   --color-land-fg-subtle: var(--land-fg-subtle);
   --color-land-accent: var(--land-accent);
+  --color-land-accent-fill: var(--land-accent-fill);
   --color-land-accent-dim: var(--land-accent-dim);
   --color-land-gold: var(--land-gold);
+  --color-land-gold-fill: var(--land-gold-fill);
   --color-land-gold-dim: var(--land-gold-dim);
   --color-land-success: var(--land-success);
+  --color-land-success-fill: var(--land-success-fill);
   --color-land-warning: var(--land-warning);
+  --color-land-warning-fill: var(--land-warning-fill);
   --color-land-danger: var(--land-danger);
+  --color-land-danger-fill: var(--land-danger-fill);
+  --color-land-on-accent: var(--land-on-accent);
   --color-tile-owned: var(--tile-owned);
   --color-tile-treasury: var(--tile-treasury);
   --color-tile-listed: var(--tile-listed);
+  --color-tile-listed-fill: var(--tile-listed-fill);
   --color-tile-empty: var(--tile-empty);
   --font-game: var(--font-game);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-mono);
   --spacing-tile: var(--tile-size);
   --spacing-tile-gap: var(--tile-gap);
@@ -131,7 +173,7 @@ body {
 
 /* Glass surface */
 .glass {
-  background: rgba(13, 20, 32, 0.8);
+  background: color-mix(in srgb, var(--land-surface) 80%, transparent);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
@@ -183,9 +225,9 @@ body {
 .animate-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(255,255,255,0.03) 0%,
-    rgba(255,255,255,0.08) 50%,
-    rgba(255,255,255,0.03) 100%
+    color-mix(in srgb, var(--land-fg) 3%, transparent) 0%,
+    color-mix(in srgb, var(--land-fg) 8%, transparent) 50%,
+    color-mix(in srgb, var(--land-fg) 3%, transparent) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
@@ -193,9 +235,9 @@ body {
 
 /* Tile real-time event flash */
 @keyframes tile-flash {
-  0% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.8); }
-  30% { box-shadow: 0 0 24px 6px rgba(0, 212, 255, 0.5); }
-  100% { box-shadow: 0 0 0 0 rgba(0, 212, 255, 0); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--land-accent) 80%, transparent); }
+  30% { box-shadow: 0 0 24px 6px color-mix(in srgb, var(--land-accent) 50%, transparent); }
+  100% { box-shadow: 0 0 0 0 transparent; }
 }
 .animate-tile-flash {
   animation: tile-flash 0.7s ease-out;

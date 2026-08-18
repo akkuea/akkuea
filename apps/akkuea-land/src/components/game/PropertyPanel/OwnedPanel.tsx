@@ -58,7 +58,7 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
           <button
             onClick={improveProperty}
             disabled={!!pendingAction}
-            className="w-full bg-gradient-to-r from-land-accent to-tile-listed hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-bg font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md flex items-center justify-center gap-2 border border-land-accent/20"
+            className="w-full bg-gradient-to-r from-land-accent-fill to-tile-listed-fill hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-on-accent font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md flex items-center justify-center gap-2 border border-land-accent-fill/20"
           >
             <ArrowUpRight size={16} />
             Improve (Cost: {property.improveCost || 100} LAND)
@@ -148,7 +148,7 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
         <button
           onClick={claimIncome}
           disabled={!!pendingAction || (property.earnedIncome ?? 0) <= 0}
-          className="text-xs font-bold bg-land-success hover:bg-land-success/90 disabled:opacity-40 disabled:hover:bg-land-success text-land-bg px-3 py-1.5 rounded-lg border border-land-success/30 transition-all duration-200 shadow-md shadow-land-success/10 flex items-center gap-1"
+          className="text-xs font-bold bg-land-success-fill hover:bg-land-success-fill/90 disabled:opacity-40 disabled:hover:bg-land-success-fill text-land-on-accent px-3 py-1.5 rounded-lg border border-land-success-fill/30 transition-all duration-200 shadow-md shadow-land-success-fill/10 flex items-center gap-1"
         >
           Claim
         </button>

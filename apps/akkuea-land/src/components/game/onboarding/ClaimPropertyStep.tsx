@@ -91,14 +91,14 @@ export function ClaimPropertyStep({
                 disabled={!canClaim}
                 className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all duration-150 ${
                   isSelected
-                    ? "bg-land-accent border border-land-accent ring-2 ring-land-accent scale-105 shadow-lg shadow-land-accent/30"
+                    ? "bg-land-accent-fill border border-land-accent-fill ring-2 ring-land-accent-fill scale-105 shadow-lg shadow-land-accent-fill/30"
                     : canClaim
                       ? "bg-land-surface-raised border border-land-border-hover/50 hover:bg-land-border-hover cursor-pointer"
                       : "bg-land-surface/40 border border-land-border/60 opacity-20 cursor-not-allowed"
                 }`}
               >
                 <span
-                  className={`text-[10px] font-mono ${isSelected ? "text-land-bg font-bold" : "text-land-fg-muted"}`}
+                  className={`text-[10px] font-mono ${isSelected ? "text-land-on-accent font-bold" : "text-land-fg-muted"}`}
                 >
                   {prop.x},{prop.y}
                 </span>
@@ -138,7 +138,7 @@ export function ClaimPropertyStep({
               ? "bg-land-surface-raised border border-land-border-hover text-land-fg-muted cursor-not-allowed"
               : status === "pending"
                 ? "bg-land-surface-raised border border-land-border-hover text-land-fg-muted cursor-not-allowed"
-                : "bg-land-accent hover:bg-land-accent/90 text-land-bg shadow-land-accent/20"
+                : "bg-land-accent-fill hover:bg-land-accent-fill/90 text-land-on-accent shadow-land-accent-fill/20"
           }`}
         >
           {status === "pending" && (

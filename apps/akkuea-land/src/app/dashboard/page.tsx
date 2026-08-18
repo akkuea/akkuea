@@ -37,6 +37,7 @@ import { connectWalletKit } from "@/lib/walletKit";
 import { claimAllRentals } from "@/lib/claim-rental";
 import { TIMEOUTS } from "@/lib/constants";
 import { PilotCta } from "@/components/game/PilotCta";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -545,6 +546,7 @@ export default function DashboardPage() {
             <span className="text-land-fg-muted text-sm">Dashboard</span>
           </div>
           <div className="flex items-center gap-2.5">
+            <ThemeToggle />
             <div
               className={`w-2 h-2 rounded-full ${isConnected ? "bg-land-success" : "bg-land-danger"}`}
             />
@@ -645,7 +647,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleClaimAll}
                 disabled={claimableProperties.length === 0 || isClaimRunning}
-                className="w-full bg-gradient-to-r from-land-success to-land-accent hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-bg font-bold py-2.5 px-4 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 border border-land-success/20"
+                className="w-full bg-gradient-to-r from-land-success-fill to-land-accent-fill hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-on-accent font-bold py-2.5 px-4 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 border border-land-success-fill/20"
               >
                 <Coins size={15} />
                 {claimableProperties.length > 0
@@ -675,7 +677,7 @@ export default function DashboardPage() {
               </div>
               <a
                 href="/"
-                className="mt-1 bg-land-accent hover:bg-land-accent/90 text-land-bg font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2"
+                className="mt-1 bg-land-accent-fill hover:bg-land-accent-fill/90 text-land-on-accent font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2"
               >
                 <MapPin size={14} />
                 Open City Map

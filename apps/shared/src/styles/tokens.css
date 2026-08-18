@@ -1,0 +1,133 @@
+/* ─── Akkuea design tokens ──────────────────────────────────────────────── */
+/*
+ * Single source of truth for colour and typography across every Akkuea
+ * surface. Imported by `apps/webapp/src/app/globals.css` and
+ * `apps/akkuea-land/src/app/globals.css`.
+ *
+ * Do not redeclare these values in an app. An app may alias them to a
+ * domain-specific name (Akkuea Land maps them onto its `--land-*` layer),
+ * but the value must resolve back to a token declared here, so that
+ * changing a colour once changes it everywhere.
+ *
+ * Theme switching: the `.light` class is applied to <html> by each app's
+ * ThemeProvider. Because every downstream token is defined with `var()`
+ * rather than a literal, alias layers follow the theme automatically.
+ */
+
+:root {
+  /* Typography */
+  --font-geist-sans:
+    "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+  --font-geist-mono:
+    "SFMono-Regular", "IBM Plex Mono", "Menlo", "Monaco", monospace;
+
+  /* Core palette */
+  --background: #000000;
+  --foreground: #fafafa;
+  --card: #0a0a0a;
+  --card-foreground: #fafafa;
+  --primary: #ffffff;
+  --primary-foreground: #000000;
+  --secondary: #141414;
+  --secondary-foreground: #fafafa;
+  --muted: #1a1a1a;
+  --muted-foreground: #737373;
+  --accent: #ff3e00;
+  --accent-secondary: #00ff88;
+  --accent-foreground: #000000;
+  --destructive: #ff4444;
+  --border: #262626;
+  --border-hover: #404040;
+  --input: #1a1a1a;
+  --ring: #ffffff;
+  --glow-primary: rgba(255, 255, 255, 0.1);
+  --glow-accent: rgba(255, 62, 0, 0.4);
+  --noise-opacity: 0.03;
+
+  /* ── Extended palette ──
+   * Roles the webapp component library does not need yet but Akkuea Land
+   * does. They live here rather than in one app so both resolve them
+   * identically and a future webapp surface can adopt them without
+   * reinventing a value.
+   */
+
+  /* Third text tier, below --muted-foreground. Decorative separators,
+     disabled glyphs, empty-state fills. Not for body copy. */
+  --foreground-subtle: #4d4d4d;
+
+  /* Warm gold. Value-bearing figures: token balances, treasury, prices. */
+  --accent-tertiary: #f5a623;
+
+  /* Violet. Categorical only, for marketplace listing state. */
+  --accent-quaternary: #b388ff;
+
+  /* Amber. Advisory state, between --accent-secondary and --destructive. */
+  --warning: #ffab40;
+
+  /* ── Fill vs text ──
+   * A single colour cannot clear WCAG AA against both a near-black and a
+   * near-white ground, so each signal colour has two roles.
+   *
+   * FILL is the swatch itself: the token above, used as a background with
+   * --accent-ink on top. Fill values are deliberately identical in both
+   * themes, which is what lets --accent-ink stay a single fixed value.
+   *
+   * TEXT is the same hue set on the page background. In dark it is the fill
+   * value, which already clears AA on --background. In light it darkens,
+   * because the vivid fills sit at roughly 2:1 to 3.5:1 on white.
+   *
+   * Rule of thumb: a solid button or badge takes the fill token, coloured
+   * type and 1px borders take the text token. A translucent wash
+   * (10 to 20 percent) also takes the text token, so the wash and the type
+   * on it move together.
+   */
+  --accent-text: var(--accent);
+  --accent-secondary-text: var(--accent-secondary);
+  --accent-tertiary-text: var(--accent-tertiary);
+  --accent-quaternary-text: var(--accent-quaternary);
+  --warning-text: var(--warning);
+  --destructive-text: var(--destructive);
+
+  /* Fixed dark ink for text sitting on a filled accent swatch. Deliberately
+     theme-invariant: every fill above is a saturated mid-tone light enough
+     that dark ink clears WCAG AA (>= 4.5:1) on it in both themes, whereas
+     white ink does not. */
+  --accent-ink: #0a0a0a;
+}
+
+.light {
+  --background: #ffffff;
+  --foreground: #0a0a0a;
+  --card: #fafafa;
+  --card-foreground: #0a0a0a;
+  --primary: #0a0a0a;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f5f5;
+  --secondary-foreground: #0a0a0a;
+  --muted: #f0f0f0;
+  --muted-foreground: #737373;
+  --accent: #ff3e00;
+  --accent-secondary: #00c969;
+  --accent-foreground: #ffffff;
+  --destructive: #ff4444;
+  --border: #e5e5e5;
+  --border-hover: #d4d4d4;
+  --input: #f5f5f5;
+  --ring: #0a0a0a;
+  --glow-primary: rgba(0, 0, 0, 0.05);
+  --glow-accent: rgba(255, 62, 0, 0.2);
+  --noise-opacity: 0.02;
+
+  /* Extended palette, light. The fill values above are theme-invariant and
+     are not repeated here; only the text variants darken so they clear AA
+     against a white ground. Measured against #ffffff and the #fafafa card:
+     accent 5.39, secondary 5.67, tertiary 6.12, quaternary 7.91,
+     warning 5.34, destructive 5.39. */
+  --foreground-subtle: #a3a3a3;
+  --accent-text: #c23100;
+  --accent-secondary-text: #00734a;
+  --accent-tertiary-text: #8a5200;
+  --accent-quaternary-text: #5b2fb8;
+  --warning-text: #9a5800;
+  --destructive-text: #c62828;
+}

@@ -1,56 +1,7 @@
 @import "tailwindcss";
-
-:root {
-  --font-geist-sans:
-    "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
-  --font-geist-mono:
-    "SFMono-Regular", "IBM Plex Mono", "Menlo", "Monaco", monospace;
-  --background: #000000;
-  --foreground: #fafafa;
-  --card: #0a0a0a;
-  --card-foreground: #fafafa;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
-  --secondary: #141414;
-  --secondary-foreground: #fafafa;
-  --muted: #1a1a1a;
-  --muted-foreground: #737373;
-  --accent: #ff3e00;
-  --accent-secondary: #00ff88;
-  --accent-foreground: #000000;
-  --destructive: #ff4444;
-  --border: #262626;
-  --border-hover: #404040;
-  --input: #1a1a1a;
-  --ring: #ffffff;
-  --glow-primary: rgba(255, 255, 255, 0.1);
-  --glow-accent: rgba(255, 62, 0, 0.4);
-  --noise-opacity: 0.03;
-}
-
-.light {
-  --background: #ffffff;
-  --foreground: #0a0a0a;
-  --card: #fafafa;
-  --card-foreground: #0a0a0a;
-  --primary: #0a0a0a;
-  --primary-foreground: #ffffff;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #0a0a0a;
-  --muted: #f0f0f0;
-  --muted-foreground: #737373;
-  --accent: #ff3e00;
-  --accent-secondary: #00c969;
-  --accent-foreground: #ffffff;
-  --destructive: #ff4444;
-  --border: #e5e5e5;
-  --border-hover: #d4d4d4;
-  --input: #f5f5f5;
-  --ring: #0a0a0a;
-  --glow-primary: rgba(0, 0, 0, 0.05);
-  --glow-accent: rgba(255, 62, 0, 0.2);
-  --noise-opacity: 0.02;
-}
+/* Colour and typography tokens are shared with apps/akkuea-land.
+   Edit them in apps/shared/src/styles/tokens.css, not here. */
+@import "@akkuea/shared/styles/tokens.css";
 
 @theme inline {
   --color-background: var(--background);
@@ -69,6 +20,11 @@
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-border-hover: var(--border-hover);
+  --color-foreground-subtle: var(--foreground-subtle);
+  --color-accent-tertiary: var(--accent-tertiary);
+  --color-accent-quaternary: var(--accent-quaternary);
+  --color-warning: var(--warning);
+  --color-accent-ink: var(--accent-ink);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);

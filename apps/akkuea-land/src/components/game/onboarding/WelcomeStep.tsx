@@ -49,7 +49,7 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
         whileHover={{ scale: 1.03 }}
         whileTap={{ scale: 0.97 }}
         onClick={onNext}
-        className="rounded-xl bg-land-accent px-10 py-3.5 text-sm font-bold text-land-bg hover:bg-land-accent/90 transition-all duration-200 shadow-lg shadow-land-accent/20 hover:shadow-land-accent/35"
+        className="rounded-xl bg-land-accent-fill px-10 py-3.5 text-sm font-bold text-land-on-accent hover:bg-land-accent-fill/90 transition-all duration-200 shadow-lg shadow-land-accent-fill/20 hover:shadow-land-accent-fill/35"
       >
         Get Started
       </motion.button>

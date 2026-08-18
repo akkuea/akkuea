@@ -54,7 +54,7 @@ export const ListedPanel: React.FC<ListedPanelProps> = ({
       <button
         onClick={buyFromPlayer}
         disabled={!!pendingAction}
-        className="w-full bg-gradient-to-r from-tile-listed to-land-accent hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-bg font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md shadow-tile-listed/5 flex items-center justify-center gap-2 border border-tile-listed/20"
+        className="w-full bg-gradient-to-r from-tile-listed-fill to-land-accent-fill hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-on-accent font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md shadow-tile-listed-fill/5 flex items-center justify-center gap-2 border border-tile-listed-fill/20"
       >
         Buy Land Tile
       </button>

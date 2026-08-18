@@ -13,7 +13,7 @@ export default function LoginPage() {
           </p>
         </div>
         <button
-          className="w-full py-3 rounded-xl bg-land-accent text-land-bg font-bold text-sm hover:opacity-90 transition-opacity"
+          className="w-full py-3 rounded-xl bg-land-accent-fill text-land-on-accent font-bold text-sm hover:opacity-90 transition-opacity"
           type="button"
         >
           Connect Wallet

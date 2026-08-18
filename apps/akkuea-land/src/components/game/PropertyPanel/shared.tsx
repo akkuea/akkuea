@@ -39,7 +39,7 @@ export const BuildingLevelBar: React.FC<{ buildingLevel: BuildingLevel }> = ({
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-extrabold transition-all duration-300 ${
                   isCurrent
-                    ? "bg-gradient-to-br from-land-accent to-tile-listed text-land-bg ring-4 ring-land-accent/60 scale-110 shadow-lg shadow-land-accent/30"
+                    ? "bg-gradient-to-br from-land-accent-fill to-tile-listed-fill text-land-on-accent ring-4 ring-land-accent-fill/60 scale-110 shadow-lg shadow-land-accent-fill/30"
                     : isActive
                       ? "bg-land-accent text-land-accent"
                       : "bg-land-surface text-land-fg-muted border border-land-border"

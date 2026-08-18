@@ -71,7 +71,7 @@ export function ClaimLandStep({
             initial={{ scale: 0 }}
             animate={{ scale: [0, 1.2, 1] }}
             transition={{ duration: 0.5 }}
-            className="absolute -top-2 -right-2 bg-land-success text-land-bg p-1.5 rounded-full shadow-lg"
+            className="absolute -top-2 -right-2 bg-land-success-fill text-land-on-accent p-1.5 rounded-full shadow-lg"
           >
             <Sparkles className="h-4 w-4" />
           </motion.div>
@@ -141,7 +141,7 @@ export function ClaimLandStep({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={onNext}
-                className="w-full rounded-xl bg-land-success py-3.5 text-sm font-bold text-land-bg hover:bg-land-success/90 transition-all duration-200 shadow-lg shadow-land-success/20 flex items-center justify-center gap-2"
+                className="w-full rounded-xl bg-land-success-fill py-3.5 text-sm font-bold text-land-on-accent hover:bg-land-success-fill/90 transition-all duration-200 shadow-lg shadow-land-success-fill/20 flex items-center justify-center gap-2"
               >
                 Continue to Claim Property
                 <ArrowRight size={16} />
@@ -168,8 +168,8 @@ export function ClaimLandStep({
                   status === "pending"
                     ? "bg-land-surface-raised border border-land-border-hover/60 text-land-fg-muted cursor-not-allowed"
                     : status === "error"
-                      ? "bg-land-danger hover:bg-land-danger/90 text-land-bg shadow-land-danger/10"
-                      : "bg-land-accent hover:bg-land-accent/90 text-land-bg shadow-land-accent/20"
+                      ? "bg-land-danger-fill hover:bg-land-danger-fill/90 text-land-on-accent shadow-land-danger-fill/10"
+                      : "bg-land-accent-fill hover:bg-land-accent-fill/90 text-land-on-accent shadow-land-accent-fill/20"
                 }`}
               >
                 {status === "pending" && (

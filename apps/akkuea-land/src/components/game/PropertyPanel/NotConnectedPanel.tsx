@@ -44,7 +44,7 @@ export const NotConnectedPanel: React.FC<NotConnectedPanelProps> = ({
       </div>
       <button
         onClick={onConnect}
-        className="w-full bg-gradient-to-r from-land-accent to-tile-listed hover:opacity-90 text-land-bg font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-lg shadow-land-accent/10 flex items-center justify-center gap-2 border border-land-accent/20 active:scale-98"
+        className="w-full bg-gradient-to-r from-land-accent-fill to-tile-listed-fill hover:opacity-90 text-land-on-accent font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-lg shadow-land-accent-fill/10 flex items-center justify-center gap-2 border border-land-accent-fill/20 active:scale-98"
       >
         <Wallet size={16} />
         Connect Wallet

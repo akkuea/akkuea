@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Map, ShoppingBag, LayoutDashboard, Wallet } from "lucide-react";
 import { PilotCta } from "@/components/game/PilotCta";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 
 const NAV_LINKS = [
   { href: "/map", label: "Map", icon: Map },
@@ -62,6 +63,8 @@ export function GameShell({
 
         {/* Right side: LAND balance + wallet */}
         <div className="ml-auto flex items-center gap-3">
+          <ThemeToggle />
+
           {walletAddress && (
             <div className="flex items-center gap-1.5 bg-land-gold-dim border border-land-border rounded-lg px-3 py-1.5">
               <span className="text-land-gold text-xs font-mono font-bold">

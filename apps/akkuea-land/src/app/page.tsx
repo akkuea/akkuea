@@ -188,7 +188,7 @@ export default function SandboxPage() {
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 border ${
               isConnected
                 ? "bg-land-surface-raised hover:bg-land-border-hover text-land-fg border-land-border-hover"
-                : "bg-land-accent hover:bg-land-accent/90 text-land-bg border-land-accent/30 shadow-lg shadow-land-accent/10"
+                : "bg-land-accent-fill hover:bg-land-accent-fill/90 text-land-on-accent border-land-accent-fill/30 shadow-lg shadow-land-accent-fill/10"
             }`}
           >
             <Wallet size={14} />

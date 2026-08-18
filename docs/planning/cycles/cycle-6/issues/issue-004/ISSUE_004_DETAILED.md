@@ -2,13 +2,13 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                          |
-| --------------- | ------------------------------- |
-| Issue ID        | C6-004                          |
-| Area            | TOOLING                          |
-| Difficulty      | High                             |
-| Labels          | documentation, high              |
-| Dependencies    | None                              |
+| Attribute       | Value                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------ |
+| Issue ID        | C6-004                                                                                     |
+| Area            | TOOLING                                                                                    |
+| Difficulty      | High                                                                                       |
+| Labels          | documentation, high                                                                        |
+| Dependencies    | None                                                                                       |
 | Estimated Lines | 4000-5500 (Python diagram definitions, style module, generated docs embeds, README wiring) |
 
 **Description**

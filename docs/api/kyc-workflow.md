@@ -225,31 +225,15 @@ Source: `KYCController.ts:196-210`
 
 ---
 
-## Known gaps (current codebase state)
+## KYC Enforcement Status (Closed Gaps)
 
-### Gap 1: verifyDocument has no authentication
+### Gap 1: verifyDocument authentication (CLOSED)
 
-`POST /kyc/verify/:documentId` in `routes/kyc.ts:130-139` has **no authentication middleware**. Any HTTP client that knows a `documentId` can call this endpoint and approve or reject a document without credentials.
+`POST /kyc/verify/:documentId` in `routes/kyc.ts` enforces admin authentication. Requests must supply valid admin credentials matching `INTERNAL_API_KEY` (via `internal-api-key` or `x-internal-api-key` header) or `OPERATIONS_BACKEND_CREDENTIAL` (via `x-internal-api-key` header checked by `isInternalOperationsAuthorized`). Unauthenticated or invalid requests receive HTTP 401/403 errors.
 
-This endpoint must be protected before production. The recommended approach is to check `OPERATIONS_BACKEND_CREDENTIAL` (already defined in `.env.example`) or require the `x-user-address` header to match `OPERATIONS_ALLOWED_WALLETS`.
+### Gap 2: buyShares KYC enforcement (CLOSED)
 
-### Gap 2: buyShares does not enforce KYC status
-
-`POST /properties/:id/buy-shares` (`routes/properties.ts:156-183`) does not check `users.kycStatus` before allowing a share purchase. A user with `kycStatus = 'not_started'` can buy shares today.
-
-The `users.kycStatus = 'approved'` field exists in the schema and is correctly maintained by the KYC flow. The enforcement gate is the missing piece. The controller comment marks this feature as "planned for Cycle 2" (`PropertyController.ts:496`).
-
-**Intended integration (not yet implemented):**
-
-```typescript
-// Pseudocode for the intended guard in buyShares
-const kycStatus = await kycRepository.getUserKycStatus(buyer.id);
-if (kycStatus !== "approved") {
-  throw new AuthorizationError("KYC verification required to purchase shares");
-}
-```
-
-Until this guard is implemented, KYC approval is advisory, not enforced.
+`POST /properties/:id/buy-shares` (`PropertyController.ts` / `routes/properties.ts`) strictly enforces user KYC verification before allowing share purchases. The controller checks `buyer.kycStatus === 'approved'` and rejects any non-approved purchase attempts with a typed `AuthorizationError`.
 
 ---
 

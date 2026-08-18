@@ -85,13 +85,13 @@ This repository also contains a **substantially larger platform build that preda
 
 The repository is a **Bun monorepo** with four `bun` workspaces, plus the Rust contracts workspace built separately:
 
-| Workspace            | Path              | Role                                                               |
-| --------------------- | ----------------- | ------------------------------------------------------------------ |
-| `@akkuea/webapp`      | `apps/webapp`      | Next.js 16 frontend with React 19 - the existing platform build    |
-| `@akkuea/api`         | `apps/api`         | Elysia REST API running on Bun                                     |
-| `@akkuea/shared`      | `apps/shared`      | Types, utilities, and Stellar SDK helpers shared across workspaces |
-| `@akkuea/akkuea-land` | `apps/akkuea-land` | Next.js frontend for the tile-based game - the pilot's visual companion |
-| Contracts (not a `bun` workspace) | `apps/contracts` | Soroban smart contracts written in Rust - both the existing `defi-rwa` contract and the four `game-*` contracts |
+| Workspace                         | Path               | Role                                                                                                            |
+| --------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `@akkuea/webapp`                  | `apps/webapp`      | Next.js 16 frontend with React 19 - the existing platform build                                                 |
+| `@akkuea/api`                     | `apps/api`         | Elysia REST API running on Bun                                                                                  |
+| `@akkuea/shared`                  | `apps/shared`      | Types, utilities, and Stellar SDK helpers shared across workspaces                                              |
+| `@akkuea/akkuea-land`             | `apps/akkuea-land` | Next.js frontend for the tile-based game - the pilot's visual companion                                         |
+| Contracts (not a `bun` workspace) | `apps/contracts`   | Soroban smart contracts written in Rust - both the existing `defi-rwa` contract and the four `game-*` contracts |
 
 The pilot's own contract surface (income-participation token, whitelist, payout-split) is being built inside `apps/contracts` alongside the existing `defi-rwa` contract - see [`docs/strategy/product-brief.md`](docs/strategy/product-brief.md) for why they're kept separate rather than reusing `defi-rwa`.
 
@@ -265,20 +265,20 @@ akkuea/
 
 ## Documentation
 
-| Document                                                                               | Description                             |
-| -------------------------------------------------------------------------------------- | --------------------------------------- |
-| [`docs/strategy/product-brief.md`](docs/strategy/product-brief.md)                     | Canonical product direction - read first |
+| Document                                                                               | Description                                       |
+| -------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| [`docs/strategy/product-brief.md`](docs/strategy/product-brief.md)                     | Canonical product direction - read first          |
 | [`docs/strategy/roadmap.md`](docs/strategy/roadmap.md)                                 | Phase 1a/1b/2 roadmap, jurisdiction, partnerships |
-| [`docs/design-system/README.md`](docs/design-system/README.md)                        | Visual/interaction system               |
-| [`docs/local-setup.md`](docs/local-setup.md)                                           | Full local setup walkthrough            |
-| [`docs/architecture/system-architecture.md`](docs/architecture/system-architecture.md) | System design and component breakdown   |
-| [`docs/deployment/environment-variables.md`](docs/deployment/environment-variables.md) | Complete environment variable reference |
-| [`docs/deployment/deploy-contracts.md`](docs/deployment/deploy-contracts.md)           | Contract deployment to Stellar networks |
-| [`docs/api/overview.md`](docs/api/overview.md)                                         | API overview and authentication         |
-| [`docs/api/minting-workflow.md`](docs/api/minting-workflow.md)                         | Property tokenization API flow          |
-| [`docs/api/kyc-workflow.md`](docs/api/kyc-workflow.md)                                 | KYC verification API flow               |
-| [`docs/game/GAME_RULES.md`](docs/game/GAME_RULES.md)                                   | Akkuea Land rules                        |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md)                                                   | Contribution workflow and standards     |
+| [`docs/design-system/README.md`](docs/design-system/README.md)                         | Visual/interaction system                         |
+| [`docs/local-setup.md`](docs/local-setup.md)                                           | Full local setup walkthrough                      |
+| [`docs/architecture/system-architecture.md`](docs/architecture/system-architecture.md) | System design and component breakdown             |
+| [`docs/deployment/environment-variables.md`](docs/deployment/environment-variables.md) | Complete environment variable reference           |
+| [`docs/deployment/deploy-contracts.md`](docs/deployment/deploy-contracts.md)           | Contract deployment to Stellar networks           |
+| [`docs/api/overview.md`](docs/api/overview.md)                                         | API overview and authentication                   |
+| [`docs/api/minting-workflow.md`](docs/api/minting-workflow.md)                         | Property tokenization API flow                    |
+| [`docs/api/kyc-workflow.md`](docs/api/kyc-workflow.md)                                 | KYC verification API flow                         |
+| [`docs/game/GAME_RULES.md`](docs/game/GAME_RULES.md)                                   | Akkuea Land rules                                 |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md)                                                   | Contribution workflow and standards               |
 
 ---
 

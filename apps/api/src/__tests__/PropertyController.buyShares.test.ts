@@ -151,4 +151,21 @@ describe.skipIf(skipIfNoDatabase)('PropertyController.buyShares', () => {
     const prop = await propertyRepository.findById(propertyId);
     expect(prop!.availableShares).toBe(10);
   });
+
+  it('rejects share purchase with AuthorizationError if user kycStatus is not approved', async () => {
+    const unapprovedBuyerAddress = 'GUNAPPROVEDBUYERXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
+    const unapprovedUser = await userRepository.getOrCreateByWallet(unapprovedBuyerAddress);
+
+    for (const status of ['not_started', 'pending', 'rejected', 'expired'] as const) {
+      await kycRepository.updateUserKycStatus(unapprovedUser.id, status);
+
+      await expect(
+        PropertyController.buyShares(
+          propertyId,
+          { buyer: unapprovedBuyerAddress, shares: 1 },
+          unapprovedBuyerAddress,
+        ),
+      ).rejects.toThrow(/KYC/i);
+    }
+  });
 });

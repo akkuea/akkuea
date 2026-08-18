@@ -15,8 +15,8 @@ All four Akkuea Land game contracts were built with `stellar contract build` (ta
 - **Deployed on**: 2026-06-24
 - **Source of truth**: [`apps/shared/src/contracts/game-contracts.testnet.json`](../../apps/shared/src/contracts/game-contracts.testnet.json)
 
-| Contract           | Contract ID                                                | Deploy tx                                                           | Init tx                                                             |
-| ------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Contract            | Contract ID                                                | Deploy tx                                                          | Init tx                                                            |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | `GAME_PROPERTY_NFT` | `CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE` | `2b982bdbc7e29c7f334d35d57f9566d124fd9b30722f551fff23df310d298fc5` | `889d9a0f7da7c543cc6abeb913506eb55b6b31f67177c4d3f2fc18670c81bbb2` |
 | `GAME_LAND_TOKEN`   | `CBQBXOWI3YB5SFICLVPYHK2EL3SY3XIZUZA6QZIGGXDKMVXAT74IOR3K` | `3a7619ea0d637ac60f2d6c43dfac10cc7810c663b3ea65b84f54d7b1f07cbdf7` | `1e3d8961cce31d0d5016705ef1f8aecf78761ef1203136cb41ccc6c08729be53` |
 | `GAME_MARKETPLACE`  | `CDKRZTY5PFNA4DHI2GFPSTOAADI2WV7SXYVS4VMTDC6M7IKKIPQJP5A3` | `a84eabafffc0bf75bb75676c8add0616ff970cda82c75f2ebf439ca14528fbbb` | `4fbaa0df4a51c266fb3258490b202cd962209b04c495264d85096da5ef623560` |
@@ -41,8 +41,8 @@ Both instances were deployed from the same `rwa_defi_contract.wasm` (built with 
 - **Deployed on**: 2026-05-31
 - **Source of truth**: [`apps/shared/src/contracts.testnet.json`](../../apps/shared/src/contracts.testnet.json)
 
-| Contract            | Contract ID                                                | Deploy (create) tx                                                  |
-| ------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| Contract            | Contract ID                                                | Deploy (create) tx                                                 |
+| ------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
 | `REAL_ESTATE_TOKEN` | `CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4` | `ff4c6b52080df05d9ad443a6a3907894fb771e187b04dbd837306c62add89724` |
 | `DEFI_LENDING`      | `CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX` | `490a50682d4da46c85a8080cc5ae6b50d727bf1156c97a2c9a00c532c441bdd4` |
 

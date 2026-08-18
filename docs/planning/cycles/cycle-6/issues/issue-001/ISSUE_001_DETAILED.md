@@ -2,13 +2,13 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                          |
-| --------------- | ------------------------------- |
-| Issue ID        | C6-001                          |
-| Area            | CONTRACT                        |
-| Difficulty      | High                             |
-| Labels          | smart-contract, contracts, soroban, high |
-| Dependencies    | None                             |
+| Attribute       | Value                                                       |
+| --------------- | ----------------------------------------------------------- |
+| Issue ID        | C6-001                                                      |
+| Area            | CONTRACT                                                    |
+| Difficulty      | High                                                        |
+| Labels          | smart-contract, contracts, soroban, high                    |
+| Dependencies    | None                                                        |
 | Estimated Lines | 4500-6500 (implementation, tests, deployment scripts, docs) |
 
 **Description**

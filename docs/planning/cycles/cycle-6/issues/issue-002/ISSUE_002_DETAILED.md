@@ -2,13 +2,13 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                          |
-| --------------- | ------------------------------- |
-| Issue ID        | C6-002                          |
-| Area            | WEBAPP                          |
-| Difficulty      | High                             |
-| Labels          | frontend, high                   |
-| Dependencies    | C6-001                           |
+| Attribute       | Value                                                          |
+| --------------- | -------------------------------------------------------------- |
+| Issue ID        | C6-002                                                         |
+| Area            | WEBAPP                                                         |
+| Difficulty      | High                                                           |
+| Labels          | frontend, high                                                 |
+| Dependencies    | C6-001                                                         |
 | Estimated Lines | 4000-5500 (components, hooks, RPC integration, tests, stories) |
 
 **Description**

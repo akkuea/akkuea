@@ -2,13 +2,13 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                          |
-| --------------- | ------------------------------- |
-| Issue ID        | C6-005                          |
-| Area            | WEBAPP (Akkuea Land)             |
-| Difficulty      | High                             |
-| Labels          | frontend, high                   |
-| Dependencies    | None                              |
+| Attribute       | Value                                                                               |
+| --------------- | ----------------------------------------------------------------------------------- |
+| Issue ID        | C6-005                                                                              |
+| Area            | WEBAPP (Akkuea Land)                                                                |
+| Difficulty      | High                                                                                |
+| Labels          | frontend, high                                                                      |
+| Dependencies    | None                                                                                |
 | Estimated Lines | 4000-6000 (spans every component file in apps/akkuea-land plus shared token wiring) |
 
 **Description**

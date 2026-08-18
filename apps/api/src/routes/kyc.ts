@@ -2,6 +2,7 @@ import { Elysia } from 'elysia';
 import { KYCController } from '../controllers/KYCController';
 import { ApiError } from '../errors/ApiError';
 import { rateLimit, walletKeyGenerator, authPlugin } from '../middleware';
+import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
 
 const DOCUMENT_TYPES = [
   'passport',
@@ -224,11 +225,18 @@ const internalScoped = new Elysia().post(
       const key =
         headers['internal-api-key'] || headers['x-internal-api-key'] || headers['internal_api_key'];
       const expected = process.env.INTERNAL_API_KEY;
-      if (!expected) {
-        console.error('INTERNAL_API_KEY is not configured for /kyc/verify');
+      const isOpsAuthorized = isInternalOperationsAuthorized(
+        headers as Record<string, string | undefined>,
+      );
+      const isApiKeyAuthorized = Boolean(expected && key === expected);
+
+      if (!expected && !process.env.OPERATIONS_BACKEND_CREDENTIAL) {
+        console.error(
+          'Neither INTERNAL_API_KEY nor OPERATIONS_BACKEND_CREDENTIAL is configured for /kyc/verify',
+        );
         throw new ApiError(500, 'INTERNAL_SERVER_ERROR', 'Internal key configuration missing');
       }
-      if (key !== expected) {
+      if (!isApiKeyAuthorized && !isOpsAuthorized) {
         throw new ApiError(401, 'UNAUTHORIZED', 'Internal key required');
       }
 

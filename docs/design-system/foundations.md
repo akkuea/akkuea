@@ -12,30 +12,30 @@ Two themes, `dark` (default) and `light`, toggled by adding/removing a `.light` 
 
 ## Color tokens
 
-| Token | Dark | Light | Use |
-|---|---|---|---|
-| `--background` | `#000000` | `#ffffff` | Page background |
-| `--foreground` | `#fafafa` | `#0a0a0a` | Primary text |
-| `--card` | `#0a0a0a` | `#fafafa` | Card/panel surfaces |
-| `--card-foreground` | `#fafafa` | `#0a0a0a` | Text on cards |
-| `--primary` | `#ffffff` | `#0a0a0a` | Primary buttons/emphasis |
-| `--primary-foreground` | `#000000` | `#ffffff` | Text on primary surfaces |
-| `--secondary` | `#141414` | `#f5f5f5` | Secondary surfaces |
-| `--muted` | `#1a1a1a` | `#f0f0f0` | De-emphasized surfaces |
-| `--muted-foreground` | `#737373` | `#737373` | De-emphasized text (same in both themes) |
-| `--accent` | `#ff3e00` | `#ff3e00` | Primary signal color - same in both themes |
-| `--accent-secondary` | `#00ff88` | `#00c969` | Secondary signal color (success/positive) |
-| `--destructive` | `#ff4444` | `#ff4444` | Errors, destructive actions |
-| `--border` / `--border-hover` | `#262626` / `#404040` | `#e5e5e5` / `#d4d4d4` | Default and hover border states |
-| `--input` | `#1a1a1a` | `#f5f5f5` | Form control backgrounds |
-| `--ring` | `#ffffff` | `#0a0a0a` | Focus ring color |
-| `--glow-primary` / `--glow-accent` | rgba variants | rgba variants | Used by `.glow` / `.glow-accent` box-shadow utilities |
-| `--foreground-subtle` | `#4d4d4d` | `#a3a3a3` | Third text tier: separators, disabled glyphs, empty-state fills. Not body copy |
-| `--accent-tertiary` | `#f5a623` | `#f5a623` | Warm gold fill: token balances, treasury, prices |
-| `--accent-quaternary` | `#b388ff` | `#b388ff` | Violet fill, categorical: marketplace listing state |
-| `--warning` | `#ffab40` | `#ffab40` | Amber fill: advisory state between `--accent-secondary` and `--destructive` |
-| `--accent-ink` | `#0a0a0a` | `#0a0a0a` | Text on any filled accent swatch. Theme-invariant by design |
-| `--accent-text` and `-secondary` / `-tertiary` / `-quaternary` / `--warning-text` / `--destructive-text` | same as fill | darkened | The same hues set as type on the page background. See [Fill versus text](#fill-versus-text) |
+| Token                                                                                                    | Dark                  | Light                 | Use                                                                                         |
+| -------------------------------------------------------------------------------------------------------- | --------------------- | --------------------- | ------------------------------------------------------------------------------------------- |
+| `--background`                                                                                           | `#000000`             | `#ffffff`             | Page background                                                                             |
+| `--foreground`                                                                                           | `#fafafa`             | `#0a0a0a`             | Primary text                                                                                |
+| `--card`                                                                                                 | `#0a0a0a`             | `#fafafa`             | Card/panel surfaces                                                                         |
+| `--card-foreground`                                                                                      | `#fafafa`             | `#0a0a0a`             | Text on cards                                                                               |
+| `--primary`                                                                                              | `#ffffff`             | `#0a0a0a`             | Primary buttons/emphasis                                                                    |
+| `--primary-foreground`                                                                                   | `#000000`             | `#ffffff`             | Text on primary surfaces                                                                    |
+| `--secondary`                                                                                            | `#141414`             | `#f5f5f5`             | Secondary surfaces                                                                          |
+| `--muted`                                                                                                | `#1a1a1a`             | `#f0f0f0`             | De-emphasized surfaces                                                                      |
+| `--muted-foreground`                                                                                     | `#737373`             | `#737373`             | De-emphasized text (same in both themes)                                                    |
+| `--accent`                                                                                               | `#ff3e00`             | `#ff3e00`             | Primary signal color - same in both themes                                                  |
+| `--accent-secondary`                                                                                     | `#00ff88`             | `#00c969`             | Secondary signal color (success/positive)                                                   |
+| `--destructive`                                                                                          | `#ff4444`             | `#ff4444`             | Errors, destructive actions                                                                 |
+| `--border` / `--border-hover`                                                                            | `#262626` / `#404040` | `#e5e5e5` / `#d4d4d4` | Default and hover border states                                                             |
+| `--input`                                                                                                | `#1a1a1a`             | `#f5f5f5`             | Form control backgrounds                                                                    |
+| `--ring`                                                                                                 | `#ffffff`             | `#0a0a0a`             | Focus ring color                                                                            |
+| `--glow-primary` / `--glow-accent`                                                                       | rgba variants         | rgba variants         | Used by `.glow` / `.glow-accent` box-shadow utilities                                       |
+| `--foreground-subtle`                                                                                    | `#4d4d4d`             | `#a3a3a3`             | Third text tier: separators, disabled glyphs, empty-state fills. Not body copy              |
+| `--accent-tertiary`                                                                                      | `#f5a623`             | `#f5a623`             | Warm gold fill: token balances, treasury, prices                                            |
+| `--accent-quaternary`                                                                                    | `#b388ff`             | `#b388ff`             | Violet fill, categorical: marketplace listing state                                         |
+| `--warning`                                                                                              | `#ffab40`             | `#ffab40`             | Amber fill: advisory state between `--accent-secondary` and `--destructive`                 |
+| `--accent-ink`                                                                                           | `#0a0a0a`             | `#0a0a0a`             | Text on any filled accent swatch. Theme-invariant by design                                 |
+| `--accent-text` and `-secondary` / `-tertiary` / `-quaternary` / `--warning-text` / `--destructive-text` | same as fill          | darkened              | The same hues set as type on the page background. See [Fill versus text](#fill-versus-text) |
 
 **Rule:** `--accent` (red-orange) is the only color that does not change between themes - it is the one constant signal across both modes. Do not introduce a second theme-invariant color without a specific reason; the whole point is that everything else adapts to context except the one color meant to always mean "pay attention here."
 
@@ -49,19 +49,19 @@ Two themes, `dark` (default) and `light`, toggled by adding/removing a `.light` 
 
 All defined in `globals.css`, theme-aware unless noted:
 
-| Utility | Purpose |
-|---|---|
-| `.noise-bg` | Subtle SVG fractal-noise overlay (`--noise-opacity`, lower in light mode) |
-| `.grid-pattern` / `.grid-pattern-dense` | Background grid lines at 60px / 20px, using `--border` |
-| `.dot-pattern` | Radial-dot background grid |
-| `.scanlines` | CRT-style repeating horizontal line overlay |
-| `.glow` / `.glow-accent` / `.glow-text` | Box-shadow / text-shadow glow using `--glow-primary` / `--glow-accent` |
-| `.border-glow` | Animated gradient border sweep on hover |
-| `.gradient-text` / `.gradient-text-accent` | Clipped gradient text fills |
-| `.glass` | Backdrop-blur translucent surface, theme-aware background alpha |
-| `.hover-lift` / `.card-hover` | Standard hover elevation/border-color transitions |
-| `.status-dot` / `.status-dot-pulse` | Small glowing dot for live status, using `--accent-secondary` |
-| `.terminal-cursor::after` | Blinking `_` cursor, for terminal-style inputs/prompts |
+| Utility                                    | Purpose                                                                   |
+| ------------------------------------------ | ------------------------------------------------------------------------- |
+| `.noise-bg`                                | Subtle SVG fractal-noise overlay (`--noise-opacity`, lower in light mode) |
+| `.grid-pattern` / `.grid-pattern-dense`    | Background grid lines at 60px / 20px, using `--border`                    |
+| `.dot-pattern`                             | Radial-dot background grid                                                |
+| `.scanlines`                               | CRT-style repeating horizontal line overlay                               |
+| `.glow` / `.glow-accent` / `.glow-text`    | Box-shadow / text-shadow glow using `--glow-primary` / `--glow-accent`    |
+| `.border-glow`                             | Animated gradient border sweep on hover                                   |
+| `.gradient-text` / `.gradient-text-accent` | Clipped gradient text fills                                               |
+| `.glass`                                   | Backdrop-blur translucent surface, theme-aware background alpha           |
+| `.hover-lift` / `.card-hover`              | Standard hover elevation/border-color transitions                         |
+| `.status-dot` / `.status-dot-pulse`        | Small glowing dot for live status, using `--accent-secondary`             |
+| `.terminal-cursor::after`                  | Blinking `_` cursor, for terminal-style inputs/prompts                    |
 
 Animation keyframes available as utility classes: `.animate-flicker`, `.animate-pulse-subtle`, `.animate-float`, `.animate-rotate-slow`, `.animate-gradient-x`, `.animate-blink`, `.animate-shimmer`.
 
@@ -87,22 +87,22 @@ Both `apps/webapp` and `apps/akkuea-land` import the same file:
 
 Akkuea Land keeps its `--land-*` and `--tile-*` names, but every one of them is now an alias onto a shared token rather than an independent value:
 
-| Land token | Resolves to | Dark | Light |
-|---|---|---|---|
-| `--land-bg` | `--background` | `#000000` | `#ffffff` |
-| `--land-surface` | `--card` | `#0a0a0a` | `#fafafa` |
-| `--land-surface-raised` | `--secondary` | `#141414` | `#f5f5f5` |
+| Land token                              | Resolves to                   | Dark                  | Light                 |
+| --------------------------------------- | ----------------------------- | --------------------- | --------------------- |
+| `--land-bg`                             | `--background`                | `#000000`             | `#ffffff`             |
+| `--land-surface`                        | `--card`                      | `#0a0a0a`             | `#fafafa`             |
+| `--land-surface-raised`                 | `--secondary`                 | `#141414`             | `#f5f5f5`             |
 | `--land-border` / `--land-border-hover` | `--border` / `--border-hover` | `#262626` / `#404040` | `#e5e5e5` / `#d4d4d4` |
-| `--land-fg` | `--foreground` | `#fafafa` | `#0a0a0a` |
-| `--land-fg-muted` | `--muted-foreground` | `#737373` | `#737373` |
-| `--land-fg-subtle` | `--foreground-subtle` | `#4d4d4d` | `#a3a3a3` |
-| `--land-accent` | `--accent-text` | `#ff3e00` | `#c23100` |
-| `--land-gold` | `--accent-tertiary-text` | `#f5a623` | `#8a5200` |
-| `--land-success` | `--accent-secondary-text` | `#00ff88` | `#00734a` |
-| `--land-danger` | `--destructive-text` | `#ff4444` | `#c62828` |
-| `--land-warning` | `--warning-text` | `#ffab40` | `#9a5800` |
-| `--tile-listed` | `--accent-quaternary-text` | `#b388ff` | `#5b2fb8` |
-| `--font-game` | `--font-geist-sans` | Avenir Next stack | Avenir Next stack |
+| `--land-fg`                             | `--foreground`                | `#fafafa`             | `#0a0a0a`             |
+| `--land-fg-muted`                       | `--muted-foreground`          | `#737373`             | `#737373`             |
+| `--land-fg-subtle`                      | `--foreground-subtle`         | `#4d4d4d`             | `#a3a3a3`             |
+| `--land-accent`                         | `--accent-text`               | `#ff3e00`             | `#c23100`             |
+| `--land-gold`                           | `--accent-tertiary-text`      | `#f5a623`             | `#8a5200`             |
+| `--land-success`                        | `--accent-secondary-text`     | `#00ff88`             | `#00734a`             |
+| `--land-danger`                         | `--destructive-text`          | `#ff4444`             | `#c62828`             |
+| `--land-warning`                        | `--warning-text`              | `#ffab40`             | `#9a5800`             |
+| `--tile-listed`                         | `--accent-quaternary-text`    | `#b388ff`             | `#5b2fb8`             |
+| `--font-game`                           | `--font-geist-sans`           | Avenir Next stack     | Avenir Next stack     |
 
 The alias names are kept because they carry game meaning the core palette does not: "the colour of a treasury tile" is a more useful thing to write in a component than "accent tertiary". What changed is where the values come from.
 

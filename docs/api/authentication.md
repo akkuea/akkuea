@@ -145,9 +145,7 @@ const response = await fetch(`${API_BASE}/lending/pools`, {
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
   },
-  body: JSON.stringify({
-    /* pool data */
-  }),
+  body: JSON.stringify({/* pool data */}),
 });
 ```
 

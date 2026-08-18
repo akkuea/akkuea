@@ -157,7 +157,7 @@ export default function SandboxPage() {
               Metaverse Sandbox
             </span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-land-fg to-land-accent bg-clip-text text-transparent mt-2">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-land-fg to-land-accent bg-clip-text text-transparent mt-2">
             Akkuea Land Grid Panel
           </h1>
           <p className="text-land-fg-muted text-sm mt-1">

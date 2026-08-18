@@ -30,7 +30,7 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
         ))}
       </div>
 
-      <h1 className="mb-4 text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-land-fg to-land-accent bg-clip-text text-transparent">
+      <h1 className="mb-4 text-3xl font-extrabold tracking-tight bg-gradient-to-r from-land-fg to-land-accent bg-clip-text text-transparent">
         Welcome to Akkuea Land
       </h1>
 

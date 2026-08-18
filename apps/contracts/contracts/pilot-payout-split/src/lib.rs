@@ -53,6 +53,13 @@ pub struct DistributionSummary {
     pub dust: i128,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[contracttype]
+pub struct HolderPayout {
+    pub holder: Address,
+    pub amount: i128,
+}
+
 struct ExecutionGuard<'a> {
     env: &'a Env,
 }
@@ -96,6 +103,10 @@ impl PilotPayoutSplit {
     ) {
         if Storage::is_initialized(&env) {
             panic_with_error!(&env, PayoutError::AlreadyInitialized);
+        }
+
+        if operator == ally {
+            panic_with_error!(&env, PayoutError::SignerCollision);
         }
 
         Storage::set_address(&env, &DataKey::Admin, &admin);
@@ -208,11 +219,7 @@ impl PilotPayoutSplit {
             panic_with_error!(&env, PayoutError::InsufficientPayoutBalance);
         }
 
-        record.distributed = true;
-        Storage::set_evidence(&env, &cycle_id, &record);
-
-        usdc.transfer(&contract_address, &platform_fee_recipient, &platform_fee);
-
+        let mut payouts: Vec<HolderPayout> = Vec::new(&env);
         let mut distributed_total = 0i128;
         for i in 0..holders.len() {
             let holder = holders
@@ -236,13 +243,27 @@ impl PilotPayoutSplit {
                 distributed_total = distributed_total
                     .checked_add(payout)
                     .unwrap_or_else(|| panic_with_error!(&env, PayoutError::ArithmeticOverflow));
-                usdc.transfer(&contract_address, &holder, &payout);
+                payouts.push_back(HolderPayout {
+                    holder,
+                    amount: payout,
+                });
             }
         }
 
         let dust = holder_amount
             .checked_sub(distributed_total)
             .unwrap_or_else(|| panic_with_error!(&env, PayoutError::ArithmeticOverflow));
+
+        record.distributed = true;
+        Storage::set_evidence(&env, &cycle_id, &record);
+
+        usdc.transfer(&contract_address, &platform_fee_recipient, &platform_fee);
+        for i in 0..payouts.len() {
+            let payout = payouts
+                .get(i)
+                .unwrap_or_else(|| panic_with_error!(&env, PayoutError::InternalInvariant));
+            usdc.transfer(&contract_address, &payout.holder, &payout.amount);
+        }
 
         let summary = DistributionSummary {
             cycle_id: cycle_id.clone(),
@@ -697,6 +718,36 @@ mod tests {
         let s = setup();
         assert_eq!(s.token.total_supply(), 20);
         assert_eq!(s.token.holders().len(), 5);
+    }
+
+    #[test]
+    fn initialize_rejects_same_operator_and_ally() {
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let signer = Address::generate(&env);
+        let fee_recipient = Address::generate(&env);
+        let income_token = Address::generate(&env);
+        let whitelist = Address::generate(&env);
+        let usdc = Address::generate(&env);
+        let payout_id = env.register(PilotPayoutSplit, ());
+        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
+
+        let res = payout.try_initialize(
+            &admin,
+            &signer,
+            &signer,
+            &fee_recipient,
+            &income_token,
+            &whitelist,
+            &usdc,
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
     }
 
     #[test]

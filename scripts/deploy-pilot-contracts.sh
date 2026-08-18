@@ -9,10 +9,8 @@
 #   network        Stellar network to deploy to (default: testnet)
 #   identity       stellar CLI identity used as deployer/admin. For testnet it
 #                  is generated and funded if it does not exist (default: pilot-deployer)
-#   operator       Akkuea operator address required for evidence approval
-#                  (default: deployer address)
-#   ally           Allied agency signer address required for evidence approval
-#                  (default: deployer address)
+#   operator       Akkuea operator address required for evidence approval (required)
+#   ally           Allied agency signer address required for evidence approval (required)
 #   fee_recipient  Platform fee recipient address (default: deployer address)
 #   usdc_token     USDC SAC contract ID for the target network (required)
 #
@@ -38,10 +36,25 @@ if ! stellar keys address "$IDENTITY" >/dev/null 2>&1; then
 fi
 
 DEPLOYER="$(stellar keys address "$IDENTITY")"
-OPERATOR="${3:-$DEPLOYER}"
-ALLY="${4:-$DEPLOYER}"
+OPERATOR="${3:-}"
+ALLY="${4:-}"
 FEE_RECIPIENT="${5:-$DEPLOYER}"
 USDC_TOKEN="${6:-}"
+
+if [ -z "$OPERATOR" ]; then
+    echo "Operator address is required as argument 3." >&2
+    exit 1
+fi
+
+if [ -z "$ALLY" ]; then
+    echo "Ally signer address is required as argument 4." >&2
+    exit 1
+fi
+
+if [ "$OPERATOR" = "$ALLY" ]; then
+    echo "Operator and ally signer addresses must be distinct." >&2
+    exit 1
+fi
 
 if [ -z "$USDC_TOKEN" ]; then
     echo "USDC token contract ID is required as argument 6." >&2

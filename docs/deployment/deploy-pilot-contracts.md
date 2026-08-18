@@ -69,7 +69,7 @@ stellar keys address pilot-deployer
 You also need:
 
 - Operator public address.
-- Ally public address.
+- Ally public address. It must be distinct from the operator address.
 - Platform fee recipient public address.
 - USDC SAC contract ID for the target network.
 
@@ -276,13 +276,14 @@ Also add the deployment table to `docs/contracts/deployment.md` with:
 
 ## Troubleshooting
 
-| Error | Cause | Fix |
-| --- | --- | --- |
-| `InvalidEvidenceHash` | Evidence hash is not exactly 32 bytes | Hash the retained evidence file with a 32-byte digest and submit that value |
-| `ZeroAmount` | `total_income` is zero or negative | Submit a positive USDC amount |
-| `CycleAlreadyRecorded` | Evidence already exists for the cycle | Use a new cycle ID or redeploy in testnet |
-| `CycleAlreadyDistributed` | Distribution was already executed | Do not retry the same cycle |
-| `RecipientNotApproved` | A token holder is no longer whitelisted | Resolve the whitelist status before payout |
-| `InsufficientPayoutBalance` | Payout contract lacks USDC | Fund the payout contract with at least `total_income` |
-| `ContractPaused` | Admin paused the payout contract | Investigate and unpause only after the incident is resolved |
-| `Authorization failed` | Operator and ally did not both sign | Rebuild the transaction with both required Soroban auth entries |
+| Error                       | Cause                                   | Fix                                                                         |
+| --------------------------- | --------------------------------------- | --------------------------------------------------------------------------- |
+| `InvalidEvidenceHash`       | Evidence hash is not exactly 32 bytes   | Hash the retained evidence file with a 32-byte digest and submit that value |
+| `ZeroAmount`                | `total_income` is zero or negative      | Submit a positive USDC amount                                               |
+| `CycleAlreadyRecorded`      | Evidence already exists for the cycle   | Use a new cycle ID or redeploy in testnet                                   |
+| `CycleAlreadyDistributed`   | Distribution was already executed       | Do not retry the same cycle                                                 |
+| `RecipientNotApproved`      | A token holder is no longer whitelisted | Resolve the whitelist status before payout                                  |
+| `InsufficientPayoutBalance` | Payout contract lacks USDC              | Fund the payout contract with at least `total_income`                       |
+| `ContractPaused`            | Admin paused the payout contract        | Investigate and unpause only after the incident is resolved                 |
+| `SignerCollision`           | Operator and ally are the same address  | Re-initialize a fresh deployment with distinct signer addresses             |
+| `Authorization failed`      | Operator and ally did not both sign     | Rebuild the transaction with both required Soroban auth entries             |

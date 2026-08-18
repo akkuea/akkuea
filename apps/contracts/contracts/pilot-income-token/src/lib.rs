@@ -164,6 +164,13 @@ impl PilotIncomeToken {
             panic_with_error!(&env, IncomeTokenError::InvalidAmount);
         }
 
+        let whitelist_address = Storage::whitelist(&env)
+            .unwrap_or_else(|| panic_with_error!(&env, IncomeTokenError::NotInitialized));
+        let whitelist = WhitelistClient::new(&env, &whitelist_address);
+        if !whitelist.is_approved(&to) {
+            panic_with_error!(&env, IncomeTokenError::HolderNotApproved);
+        }
+
         Self::move_balance(&env, from, to, amount);
     }
 
@@ -425,5 +432,28 @@ mod tests {
 
         assert_eq!(s.token.balance(&s.holder_one), 500);
         assert_eq!(s.token.balance(&s.holder_two), 500);
+    }
+
+    #[test]
+    fn admin_transfer_rejects_unapproved_recipient() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        let res = s
+            .token
+            .try_transfer(&s.admin, &s.holder_one, &s.unapproved, &100);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::HolderNotApproved as u32
+            )))
+        );
     }
 }

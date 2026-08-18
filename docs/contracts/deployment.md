@@ -13,23 +13,23 @@ The three Cycle 6 pilot contracts were built with `stellar contract build` (targ
 - **Network**: testnet (`Test SDF Network ; September 2015`)
 - **Deployer / admin account**: `GCG62FA2P6OFRYBRSDD2D4FRWVZ5HFLM233KE5LGIL3OV4QRVM7YYBFY`
 - **Operator signer**: `GCG62FA2P6OFRYBRSDD2D4FRWVZ5HFLM233KE5LGIL3OV4QRVM7YYBFY`
-- **Ally signer**: `GCG62FA2P6OFRYBRSDD2D4FRWVZ5HFLM233KE5LGIL3OV4QRVM7YYBFY`
+- **Ally signer**: `GA6NZLRUHXNMOTD5WMQ342DKRTPTGR7AZZYVY7ARXJEL4KFVXZ3WZJ3N`
 - **Platform fee recipient**: `GCG62FA2P6OFRYBRSDD2D4FRWVZ5HFLM233KE5LGIL3OV4QRVM7YYBFY`
 - **USDC SAC**: `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`
 - **Deployed on**: 2026-08-18
 - **Source of truth**: [`apps/shared/src/contracts.testnet.json`](../../apps/shared/src/contracts.testnet.json)
 
-| Contract | Contract ID | Upload tx | Deploy tx | Init tx |
-| --- | --- | --- | --- | --- |
-| `PILOT_WHITELIST` | `CAOIML5WZYESSX5CPRFHA2OY7UXVW2ISJLL362OVX7MY3G7CMRWN3QA4` | `5b7602fa4c7bf84e5c7afe326abadc88cdc646167e61ff0bf8b82d0cebd413fe` | `3e7086788c38c8edc4d57c11f41481dd19401770a30533dfc636ef59bea4c529` | `8fb3027f1360c267463edacf50208a16faa7f568336a1fc9dc090cae2df35588` |
-| `PILOT_INCOME_TOKEN` | `CB7VETI4NSQJNLJ34PK2M637UIPNCZA3QYYBMQ5B76DK5OBLXS6OGKYS` | `cfb5088de68c0df1d95015e65de282ae505db125708267216ca0a8762bde5a76` | `ad7b41ca1fbfae055ba64e7f5de54c8eacce5cf82be123da9cea0e4de9f01c39` | `7a3100706433fdacfb4d89bd35066447cc3c6a751a8f2a7e7ce6b7d74ae57bcc` |
-| `PILOT_PAYOUT_SPLIT` | `CB33EZGTFZN73R3EKKEZ474WARXZURAFXO2GEU54P6HPWO5G3TRYR6HZ` | `a1df8ac826a226675d16ef89a35627a5b39efcfed193d306f78f76a796953e01` | `fb84cde5de1e5d061a70d281d0a43b3a6af2c12f3fe6cc41012ae92a4a1c73e9` | `4067dba74a20568face2ade5964b95268a491be8b3b78be3615fbbcedabdac24` |
+| Contract             | Contract ID                                                | Upload tx                                                          | Deploy tx                                                          | Init tx                                                            |
+| -------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `PILOT_WHITELIST`    | `CAOIML5WZYESSX5CPRFHA2OY7UXVW2ISJLL362OVX7MY3G7CMRWN3QA4` | `5b7602fa4c7bf84e5c7afe326abadc88cdc646167e61ff0bf8b82d0cebd413fe` | `3e7086788c38c8edc4d57c11f41481dd19401770a30533dfc636ef59bea4c529` | `8fb3027f1360c267463edacf50208a16faa7f568336a1fc9dc090cae2df35588` |
+| `PILOT_INCOME_TOKEN` | `CDQYJRBYP62Y2BSMDEUBJYM2I4V3JE2RL7TCR3JPTW42NRLUXWKUS3MZ` | `e1adc1932e3d6f74be916182f4f655392cb0e2b0f93d173991739928074a7457` | `5cad9ec764fd3cea61eb0f0a17239266cbea14a5559b66a11b0fd0e14960fd5f` | `e533c718aa704a75a267ac89adfe0923c3860b8d423fc441464ae48a1345ea4c` |
+| `PILOT_PAYOUT_SPLIT` | `CBGDO2GUWYSDU4SK3SNJJHYX6HRADUNXCU7TKJFFGLRWA4FSRZNLAJ4J` | `cf6a84f24f917c1a9f4e0ac7eb9b86bcb3d7c253bf24c4dd939255ab538f56b8` | `b06ddd1f63b8f9c74fd3bad723fcdb35c55d6ed46a268d61cd2c360938079471` | `bbfb87ac7d4248e10f38e08b71a731840ea060ef8849312d4d81462195ea9ab2` |
 
 Explorer links:
 
 - PILOT_WHITELIST: <https://stellar.expert/explorer/testnet/contract/CAOIML5WZYESSX5CPRFHA2OY7UXVW2ISJLL362OVX7MY3G7CMRWN3QA4>
-- PILOT_INCOME_TOKEN: <https://stellar.expert/explorer/testnet/contract/CB7VETI4NSQJNLJ34PK2M637UIPNCZA3QYYBMQ5B76DK5OBLXS6OGKYS>
-- PILOT_PAYOUT_SPLIT: <https://stellar.expert/explorer/testnet/contract/CB33EZGTFZN73R3EKKEZ474WARXZURAFXO2GEU54P6HPWO5G3TRYR6HZ>
+- PILOT_INCOME_TOKEN: <https://stellar.expert/explorer/testnet/contract/CDQYJRBYP62Y2BSMDEUBJYM2I4V3JE2RL7TCR3JPTW42NRLUXWKUS3MZ>
+- PILOT_PAYOUT_SPLIT: <https://stellar.expert/explorer/testnet/contract/CBGDO2GUWYSDU4SK3SNJJHYX6HRADUNXCU7TKJFFGLRWA4FSRZNLAJ4J>
 - USDC SAC: <https://stellar.expert/explorer/testnet/contract/CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA>
 
 Build, deployment, initialization, and verification commands: see [`docs/deployment/deploy-pilot-contracts.md`](../deployment/deploy-pilot-contracts.md).

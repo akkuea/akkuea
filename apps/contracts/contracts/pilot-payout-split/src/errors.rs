@@ -20,4 +20,5 @@ pub enum PayoutError {
     InsufficientPayoutBalance = 14,
     Reentrancy = 15,
     InternalInvariant = 16,
+    SignerCollision = 17,
 }

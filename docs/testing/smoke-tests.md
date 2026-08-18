@@ -46,11 +46,7 @@ These replace locally-duplicated values like `const VALID_STELLAR_ADDRESS = "G..
 Each factory returns a schema-compliant object with realistic defaults and accepts `Partial<T>` overrides:
 
 ```ts
-import {
-  createUser,
-  createProperty,
-  createLendingPool,
-} from "@akkuea/shared";
+import { createUser, createProperty, createLendingPool } from "@akkuea/shared";
 
 // Defaults - approved KYC user with Miami address
 const user = createUser();
@@ -118,10 +114,7 @@ describe("GET /users/:id", () => {
 ## Example: Webapp component test
 
 ```ts
-import {
-  createProperty,
-  MIAMI_PROPERTY_SCENARIO,
-} from "@akkuea/shared";
+import { createProperty, MIAMI_PROPERTY_SCENARIO } from "@akkuea/shared";
 
 test("PropertyCard renders price", () => {
   const property = createProperty({ totalValue: "3500000" });

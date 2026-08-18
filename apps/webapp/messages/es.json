@@ -44,14 +44,38 @@
       "transparent": "TRANSPARENTE",
       "efficient": "EFICIENTE",
       "items": {
-        "fractional": { "title": "Propiedad Fraccionada", "desc": "Posee bienes raíces con inversiones desde $100. Acciones en NFT garantizan propiedad transparente." },
-        "security": { "title": "Seguridad Institucional", "desc": "Billeteras multifirma, HSMs y seguro completo protegen tus inversiones." },
-        "defi": { "title": "Préstamos DeFi", "desc": "Usa bienes raíces como garantía o genera rendimientos proporcionando liquidez a pools." },
-        "emerging": { "title": "Mercados Emergentes", "desc": "Accede a mercados de alto crecimiento en América Latina y África." },
-        "oracles": { "title": "Oráculos de Chainlink", "desc": "Valoraciones en tiempo real impulsadas por oráculos aseguran precios precisos." },
-        "zk": { "title": "Privacidad ZK", "desc": "Pruebas de conocimiento cero verifican la elegibilidad sin revelar detalles sensibles." },
-        "settlement": { "title": "Liquidación Instantánea", "desc": "La blockchain de Stellar permite transacciones instantáneas con tarifas menores a $0.01." },
-        "kyc": { "title": "Cumplimiento KYC", "desc": "Cumplimiento normativo total. Solo inversores verificados." }
+        "fractional": {
+          "title": "Propiedad Fraccionada",
+          "desc": "Posee bienes raíces con inversiones desde $100. Acciones en NFT garantizan propiedad transparente."
+        },
+        "security": {
+          "title": "Seguridad Institucional",
+          "desc": "Billeteras multifirma, HSMs y seguro completo protegen tus inversiones."
+        },
+        "defi": {
+          "title": "Préstamos DeFi",
+          "desc": "Usa bienes raíces como garantía o genera rendimientos proporcionando liquidez a pools."
+        },
+        "emerging": {
+          "title": "Mercados Emergentes",
+          "desc": "Accede a mercados de alto crecimiento en América Latina y África."
+        },
+        "oracles": {
+          "title": "Oráculos de Chainlink",
+          "desc": "Valoraciones en tiempo real impulsadas por oráculos aseguran precios precisos."
+        },
+        "zk": {
+          "title": "Privacidad ZK",
+          "desc": "Pruebas de conocimiento cero verifican la elegibilidad sin revelar detalles sensibles."
+        },
+        "settlement": {
+          "title": "Liquidación Instantánea",
+          "desc": "La blockchain de Stellar permite transacciones instantáneas con tarifas menores a $0.01."
+        },
+        "kyc": {
+          "title": "Cumplimiento KYC",
+          "desc": "Cumplimiento normativo total. Solo inversores verificados."
+        }
       }
     },
     "HowItWorks": {
@@ -60,10 +84,22 @@
       "subtitle": "Empieza a invertir en bienes raíces tokenizados en cuatro sencillos pasos",
       "ready": "¿Listo para empezar? Conecta tu billetera arriba.",
       "steps": {
-        "connect": { "title": "Conectar Billetera", "desc": "Vincula tu billetera Stellar y completa la verificación KYC." },
-        "browse": { "title": "Explorar Propiedades", "desc": "Explora propiedades tokenizadas en América Latina y África con total transparencia." },
-        "invest": { "title": "Invertir", "desc": "Compra tokens de propiedad fraccionada con stablecoins. Recibe certificados NFT." },
-        "earn": { "title": "Ganar Rendimientos", "desc": "Cobra rentas, benefíciate de la apreciación o usa como garantía DeFi." }
+        "connect": {
+          "title": "Conectar Billetera",
+          "desc": "Vincula tu billetera Stellar y completa la verificación KYC."
+        },
+        "browse": {
+          "title": "Explorar Propiedades",
+          "desc": "Explora propiedades tokenizadas en América Latina y África con total transparencia."
+        },
+        "invest": {
+          "title": "Invertir",
+          "desc": "Compra tokens de propiedad fraccionada con stablecoins. Recibe certificados NFT."
+        },
+        "earn": {
+          "title": "Ganar Rendimientos",
+          "desc": "Cobra rentas, benefíciate de la apreciación o usa como garantía DeFi."
+        }
       }
     },
     "CTA": {

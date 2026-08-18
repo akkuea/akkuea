@@ -44,14 +44,38 @@
       "transparent": "TRANSPARENT",
       "efficient": "EFFICIENT",
       "items": {
-        "fractional": { "title": "Fractional Ownership", "desc": "Own premium real estate with investments starting at $100. NFT-based shares ensure transparent ownership." },
-        "security": { "title": "Institutional Security", "desc": "Multi-sig wallets, hardware security modules, and comprehensive insurance protect your investments." },
-        "defi": { "title": "DeFi Lending", "desc": "Use tokenized real estate as collateral or earn yields by providing liquidity to lending pools." },
-        "emerging": { "title": "Emerging Markets", "desc": "Access high-growth real estate markets in Latin America and Africa." },
-        "oracles": { "title": "Chainlink Oracles", "desc": "Real-time property valuations powered by Chainlink oracles ensure accurate pricing." },
-        "zk": { "title": "ZK Privacy", "desc": "Zero-knowledge proofs verify eligibility without revealing sensitive details." },
-        "settlement": { "title": "Instant Settlement", "desc": "Stellar blockchain enables near-instant transactions with fees under $0.01." },
-        "kyc": { "title": "KYC Compliant", "desc": "Fully compliant with regulatory requirements. Verified investors only." }
+        "fractional": {
+          "title": "Fractional Ownership",
+          "desc": "Own premium real estate with investments starting at $100. NFT-based shares ensure transparent ownership."
+        },
+        "security": {
+          "title": "Institutional Security",
+          "desc": "Multi-sig wallets, hardware security modules, and comprehensive insurance protect your investments."
+        },
+        "defi": {
+          "title": "DeFi Lending",
+          "desc": "Use tokenized real estate as collateral or earn yields by providing liquidity to lending pools."
+        },
+        "emerging": {
+          "title": "Emerging Markets",
+          "desc": "Access high-growth real estate markets in Latin America and Africa."
+        },
+        "oracles": {
+          "title": "Chainlink Oracles",
+          "desc": "Real-time property valuations powered by Chainlink oracles ensure accurate pricing."
+        },
+        "zk": {
+          "title": "ZK Privacy",
+          "desc": "Zero-knowledge proofs verify eligibility without revealing sensitive details."
+        },
+        "settlement": {
+          "title": "Instant Settlement",
+          "desc": "Stellar blockchain enables near-instant transactions with fees under $0.01."
+        },
+        "kyc": {
+          "title": "KYC Compliant",
+          "desc": "Fully compliant with regulatory requirements. Verified investors only."
+        }
       }
     },
     "HowItWorks": {
@@ -60,10 +84,22 @@
       "subtitle": "Start investing in tokenized real estate in four simple steps",
       "ready": "Ready to start? Connect your wallet above.",
       "steps": {
-        "connect": { "title": "Connect Wallet", "desc": "Link your Stellar wallet and complete KYC verification to unlock the platform." },
-        "browse": { "title": "Browse Properties", "desc": "Explore tokenized properties across Latin America and Africa with full transparency." },
-        "invest": { "title": "Invest", "desc": "Purchase fractional ownership tokens with stablecoins. Receive NFT certificates." },
-        "earn": { "title": "Earn Returns", "desc": "Collect rental income, benefit from appreciation, or use as DeFi collateral." }
+        "connect": {
+          "title": "Connect Wallet",
+          "desc": "Link your Stellar wallet and complete KYC verification to unlock the platform."
+        },
+        "browse": {
+          "title": "Browse Properties",
+          "desc": "Explore tokenized properties across Latin America and Africa with full transparency."
+        },
+        "invest": {
+          "title": "Invest",
+          "desc": "Purchase fractional ownership tokens with stablecoins. Receive NFT certificates."
+        },
+        "earn": {
+          "title": "Earn Returns",
+          "desc": "Collect rental income, benefit from appreciation, or use as DeFi collateral."
+        }
       }
     },
     "CTA": {

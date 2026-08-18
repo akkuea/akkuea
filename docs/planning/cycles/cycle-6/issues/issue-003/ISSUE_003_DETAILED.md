@@ -2,13 +2,13 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                          |
-| --------------- | ------------------------------- |
-| Issue ID        | C6-003                          |
-| Area            | API                              |
-| Difficulty      | High                             |
-| Labels          | backend, soroban, high           |
-| Dependencies    | None                              |
+| Attribute       | Value                                                              |
+| --------------- | ------------------------------------------------------------------ |
+| Issue ID        | C6-003                                                             |
+| Area            | API                                                                |
+| Difficulty      | High                                                               |
+| Labels          | backend, soroban, high                                             |
+| Dependencies    | None                                                               |
 | Estimated Lines | 4000-5000 (service layer, integration tests, API routes, panel UI) |
 
 **Description**

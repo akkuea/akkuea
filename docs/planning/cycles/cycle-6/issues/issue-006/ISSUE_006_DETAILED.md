@@ -2,13 +2,13 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                          |
-| --------------- | ------------------------------- |
-| Issue ID        | C6-006                          |
-| Area            | API                              |
-| Difficulty      | High                             |
-| Labels          | backend, error-handling, validation, high |
-| Dependencies    | None                              |
+| Attribute       | Value                                                                                                                                                                                    |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Issue ID        | C6-006                                                                                                                                                                                   |
+| Area            | API                                                                                                                                                                                      |
+| Difficulty      | High                                                                                                                                                                                     |
+| Labels          | backend, error-handling, validation, high                                                                                                                                                |
+| Dependencies    | None                                                                                                                                                                                     |
 | Estimated Lines | 4000+ (dominated by `bun.lock` regeneration across dependency upgrades; hand-authored fix and test code is smaller, roughly 300-600 lines, and that's expected and fine, see note below) |
 
 **Description**

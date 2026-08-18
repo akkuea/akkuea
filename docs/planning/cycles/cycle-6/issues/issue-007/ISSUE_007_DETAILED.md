@@ -2,13 +2,13 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                          |
-| --------------- | ------------------------------- |
-| Issue ID        | C6-007                          |
-| Area            | TOOLING (SHARED + API + WEBAPP)  |
-| Difficulty      | High                             |
-| Labels          | documentation, shared, backend, high |
-| Dependencies    | None                              |
+| Attribute       | Value                                                                                                           |
+| --------------- | --------------------------------------------------------------------------------------------------------------- |
+| Issue ID        | C6-007                                                                                                          |
+| Area            | TOOLING (SHARED + API + WEBAPP)                                                                                 |
+| Difficulty      | High                                                                                                            |
+| Labels          | documentation, shared, backend, high                                                                            |
+| Dependencies    | None                                                                                                            |
 | Estimated Lines | 4000-5000 (env schema + validator + tests across three workspaces, CI workflow, and a genuinely thorough guide) |
 
 **Description**

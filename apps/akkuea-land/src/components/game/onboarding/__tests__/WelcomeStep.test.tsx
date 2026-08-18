@@ -48,10 +48,14 @@ describe("WelcomeStep", () => {
 
     expect(view.getByText(/Welcome to Akkuea Land/i)).not.toBeNull();
     expect(
-      view.getByText(/Explore and buy virtual properties in a dynamic, live city grid/i)
+      view.getByText(
+        /Explore and buy virtual properties in a dynamic, live city grid/i,
+      ),
     ).not.toBeNull();
     expect(
-      view.getByText(/Your Stellar wallet has been set up securely through Pollar/i)
+      view.getByText(
+        /Your Stellar wallet has been set up securely through Pollar/i,
+      ),
     ).not.toBeNull();
   });
 
@@ -62,7 +66,7 @@ describe("WelcomeStep", () => {
 
     // The grid renders 25 tiles (5x5 = 25)
     const gridContainer = view.container.querySelector(
-      '[style*="grid-template-columns: repeat(5, 2.5rem)"]'
+      '[style*="grid-template-columns: repeat(5, 2.5rem)"]',
     );
     expect(gridContainer).not.toBeNull();
     expect(gridContainer?.children.length).toBe(25);

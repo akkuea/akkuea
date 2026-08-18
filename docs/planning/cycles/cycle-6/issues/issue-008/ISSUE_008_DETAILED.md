@@ -2,13 +2,13 @@
 
 ## Issue Metadata
 
-| Attribute       | Value                          |
-| --------------- | ------------------------------- |
-| Issue ID        | C6-008                          |
-| Area            | WEBAPP                          |
-| Difficulty      | High                             |
-| Labels          | frontend, backend, high          |
-| Dependencies    | C6-001                           |
+| Attribute       | Value                                                                             |
+| --------------- | --------------------------------------------------------------------------------- |
+| Issue ID        | C6-008                                                                            |
+| Area            | WEBAPP                                                                            |
+| Difficulty      | High                                                                              |
+| Labels          | frontend, backend, high                                                           |
+| Dependencies    | C6-001                                                                            |
 | Estimated Lines | 4000-5500 (onboarding UI, review queue UI, supporting API routes, tests, stories) |
 
 **Description**

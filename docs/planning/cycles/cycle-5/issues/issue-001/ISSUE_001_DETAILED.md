@@ -17,10 +17,7 @@ Create `apps/shared/src/types/game.ts` with the following types:
 
 ```typescript
 export type ImprovementLevel =
-  | "vacant"
-  | "residential"
-  | "commercial"
-  | "skyscraper";
+  "vacant" | "residential" | "commercial" | "skyscraper";
 
 export interface PropertyCoordinates {
   x: number;

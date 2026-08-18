@@ -10,14 +10,14 @@
 
 An oracle incident manifests as a typed `ContractError` from the Soroban contract (Issues #729 / #981 - `oracle.rs`). Public entry points panic via `panic_with_error` so the host surfaces the error code/name below:
 
-| ContractError           | Code | Meaning                                                        |
-| ----------------------- | ---- | -------------------------------------------------------------- |
-| `OracleNotConfigured`   | 26   | `set_oracle` was never called, or the oracle address was wiped |
-| `PriceNotAvailable`     | 23   | Oracle returned `None` for the requested asset                 |
-| `InvalidPrice`          | 24   | Oracle returned a zero or negative raw price                   |
-| `StalePrice`            | 22   | Price timestamp exceeds the configured `max_age` threshold     |
-| `PriceBelowFloor`       | 25   | Normalized price is below the configured `min_price` floor     |
-| `PriceScalingOverflow`  | 27   | Decimal normalization overflowed or underflowed                |
+| ContractError          | Code | Meaning                                                        |
+| ---------------------- | ---- | -------------------------------------------------------------- |
+| `OracleNotConfigured`  | 26   | `set_oracle` was never called, or the oracle address was wiped |
+| `PriceNotAvailable`    | 23   | Oracle returned `None` for the requested asset                 |
+| `InvalidPrice`         | 24   | Oracle returned a zero or negative raw price                   |
+| `StalePrice`           | 22   | Price timestamp exceeds the configured `max_age` threshold     |
+| `PriceBelowFloor`      | 25   | Normalized price is below the configured `min_price` floor     |
+| `PriceScalingOverflow` | 27   | Decimal normalization overflowed or underflowed                |
 
 All of these terminate every `borrow()` / `liquidate()` call that needs a price. `deposit()`, `withdraw()`, and `repay()` are **not** affected - existing depositors and borrowers can still exit positions. Only new borrowing and liquidations that reprice collateral are blocked.
 

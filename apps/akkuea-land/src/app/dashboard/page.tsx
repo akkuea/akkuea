@@ -115,7 +115,7 @@ const MOCK_PROPERTIES: DashboardProperty[] = [
       coordinates: { latitude: 4.71, longitude: -74.0 },
     },
     totalValue: "1200000",
-    tokenAddress: "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE",    // GAME_PROPERTY_NFT
+    tokenAddress: "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE", // GAME_PROPERTY_NFT
     totalShares: 5000,
     availableShares: 0,
     pricePerShare: "150",
@@ -141,7 +141,7 @@ const MOCK_PROPERTIES: DashboardProperty[] = [
       coordinates: { latitude: 35.68, longitude: 139.65 },
     },
     totalValue: "3500000",
-    tokenAddress: "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE",    // GAME_PROPERTY_NFT
+    tokenAddress: "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE", // GAME_PROPERTY_NFT
     totalShares: 10000,
     availableShares: 0,
     pricePerShare: "320",
@@ -167,7 +167,7 @@ const MOCK_PROPERTIES: DashboardProperty[] = [
       coordinates: { latitude: 51.51, longitude: -0.13 },
     },
     totalValue: "9000000",
-    tokenAddress: "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE",    // GAME_PROPERTY_NFT
+    tokenAddress: "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE", // GAME_PROPERTY_NFT
     totalShares: 20000,
     availableShares: 0,
     pricePerShare: "800",
@@ -193,7 +193,7 @@ const MOCK_PROPERTIES: DashboardProperty[] = [
       coordinates: { latitude: 24.1, longitude: 55.2 },
     },
     totalValue: "450000",
-    tokenAddress: "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE",    // GAME_PROPERTY_NFT
+    tokenAddress: "CCPUVGQAMDUUASHMXB7Z6F6XHCZI2WXOPR7DXEVPJBEGYZVJEABEABLE", // GAME_PROPERTY_NFT
     totalShares: 2000,
     availableShares: 0,
     pricePerShare: "75",

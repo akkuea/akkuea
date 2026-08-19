@@ -128,56 +128,56 @@ export default function SandboxPage() {
   // Helper to determine tile color on the map grid
   const getTileBorderClass = (p: GameProperty) => {
     if (!isConnected)
-      return "border-slate-800 hover:border-slate-700 bg-slate-900/40";
+      return "border-land-border hover:border-land-border-hover bg-land-surface/40";
     if (p.owner === address)
-      return "border-emerald-500/40 hover:border-emerald-400 bg-emerald-950/20";
+      return "border-land-success/40 hover:border-land-success bg-land-success/10";
     if (p.owner === TREASURY_ADDRESS)
-      return "border-amber-500/40 hover:border-amber-400 bg-amber-950/20";
-    return "border-purple-500/40 hover:border-purple-400 bg-purple-950/20";
+      return "border-land-gold/40 hover:border-land-gold bg-land-gold/10";
+    return "border-tile-listed/40 hover:border-tile-listed bg-tile-listed/10";
   };
 
   const getTileBadge = (p: GameProperty) => {
     if (!isConnected)
-      return <span className="text-slate-500">Not Connected</span>;
+      return <span className="text-land-fg-muted">Not Connected</span>;
     if (p.owner === address)
-      return <span className="text-emerald-400">Owned by You</span>;
+      return <span className="text-land-success">Owned by You</span>;
     if (p.owner === TREASURY_ADDRESS)
-      return <span className="text-amber-400">Treasury</span>;
-    return <span className="text-purple-400">Listed (Other)</span>;
+      return <span className="text-land-gold">Treasury</span>;
+    return <span className="text-tile-listed">Listed (Other)</span>;
   };
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-start p-4 md:p-8 font-sans overflow-hidden">
+    <main className="min-h-screen bg-land-bg text-land-fg flex flex-col items-center justify-start p-4 md:p-8 font-game overflow-hidden">
       {/* Top Banner */}
-      <div className="w-full max-w-6xl flex flex-col md:flex-row justify-between items-center gap-4 mb-8 border-b border-slate-900 pb-6">
+      <div className="w-full max-w-6xl flex flex-col md:flex-row justify-between items-center gap-4 mb-8 border-b border-land-border pb-6">
         <div>
           <div className="flex items-center gap-2">
-            <span className="bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
+            <span className="bg-land-accent/20 border border-land-accent/30 text-land-accent text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
               <Sparkles size={12} />
               Metaverse Sandbox
             </span>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-slate-100 to-indigo-300 bg-clip-text text-transparent mt-2">
+          <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-land-fg to-land-accent bg-clip-text text-transparent mt-2">
             Akkuea Land Grid Panel
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-land-fg-muted text-sm mt-1">
             Test and interact with property panels across all four dynamic
             blockchain ownership states.
           </p>
         </div>
 
         {/* Live Wallet Emulator */}
-        <div className="bg-slate-900/80 p-4 rounded-2xl border border-slate-800 flex items-center gap-4">
+        <div className="bg-land-surface/80 p-4 rounded-2xl border border-land-border flex items-center gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div
-                className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-emerald-500" : "bg-rose-500"}`}
+                className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-land-success" : "bg-land-danger"}`}
               />
-              <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+              <span className="text-xs text-land-fg-muted font-bold uppercase tracking-wider">
                 Stellar Connection Emulator
               </span>
             </div>
-            <p className="text-xs font-mono text-slate-400">
+            <p className="text-xs font-mono text-land-fg-muted">
               {isConnected && address
                 ? `${address.slice(0, 8)}...${address.slice(-8)}`
                 : "Disconnected"}
@@ -187,8 +187,8 @@ export default function SandboxPage() {
             onClick={() => (isConnected ? logout() : login())}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-2 border ${
               isConnected
-                ? "bg-slate-800 hover:bg-slate-700 text-white border-slate-750"
-                : "bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500/30 shadow-lg shadow-indigo-600/10"
+                ? "bg-land-surface-raised hover:bg-land-border-hover text-land-fg border-land-border-hover"
+                : "bg-land-accent-fill hover:bg-land-accent-fill/90 text-land-on-accent border-land-accent-fill/30 shadow-lg shadow-land-accent-fill/10"
             }`}
           >
             <Wallet size={14} />
@@ -201,9 +201,9 @@ export default function SandboxPage() {
       <div className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         {/* Map View Grid */}
         <div className="lg:col-span-2 space-y-5">
-          <div className="bg-slate-900/40 p-5 rounded-3xl border border-slate-900 backdrop-blur-md">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Grid size={16} className="text-indigo-400" />
+          <div className="bg-land-surface/40 p-5 rounded-3xl border border-land-border backdrop-blur-md">
+            <h3 className="text-sm font-bold text-land-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Grid size={16} className="text-land-accent" />
               Simulated World Map
             </h3>
 
@@ -216,28 +216,28 @@ export default function SandboxPage() {
                     onClick={() => setSelectedPropertyId(p.id)}
                     className={`text-left p-5 rounded-2xl border transition-all duration-300 flex flex-col gap-4 relative overflow-hidden group ${getTileBorderClass(
                       p,
-                    )} ${isSelected ? "ring-2 ring-indigo-500 scale-102 shadow-xl shadow-indigo-950/20" : ""}`}
+                    )} ${isSelected ? "ring-2 ring-land-accent scale-102 shadow-xl shadow-land-accent/20" : ""}`}
                   >
                     <div>
                       <div className="flex justify-between items-start">
-                        <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-950/80 px-2 py-0.5 rounded border border-slate-900/60">
+                        <span className="text-[10px] font-bold uppercase tracking-wider bg-land-bg/80 px-2 py-0.5 rounded border border-land-border/60">
                           Level {p.buildingLevel}
                         </span>
                         <span className="text-[10px] font-semibold">
                           {getTileBadge(p)}
                         </span>
                       </div>
-                      <h4 className="font-bold text-white group-hover:text-indigo-300 transition-colors mt-3 text-sm">
+                      <h4 className="font-bold text-land-fg group-hover:text-land-accent transition-colors mt-3 text-sm">
                         {p.name}
                       </h4>
-                      <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 leading-relaxed">
+                      <p className="text-[11px] text-land-fg-muted mt-1 line-clamp-2 leading-relaxed">
                         {p.description}
                       </p>
                     </div>
 
-                    <div className="flex justify-between items-center bg-slate-950/40 p-2 rounded-lg border border-slate-900/60 mt-auto">
-                      <span className="text-[10px] text-slate-500">Value</span>
-                      <span className="text-xs font-mono font-bold text-indigo-400">
+                    <div className="flex justify-between items-center bg-land-bg/40 p-2 rounded-lg border border-land-border/60 mt-auto">
+                      <span className="text-[10px] text-land-fg-muted">Value</span>
+                      <span className="text-xs font-mono font-bold text-land-accent">
                         {p.pricePerShare} LAND
                       </span>
                     </div>
@@ -248,34 +248,34 @@ export default function SandboxPage() {
           </div>
 
           {/* Sandbox Helper Notes */}
-          <div className="bg-indigo-950/10 p-5 rounded-3xl border border-indigo-950/30 flex items-start gap-4">
-            <HelpCircle className="text-indigo-400 shrink-0 mt-0.5" size={20} />
+          <div className="bg-land-accent/5 p-5 rounded-3xl border border-land-accent/30 flex items-start gap-4">
+            <HelpCircle className="text-land-accent shrink-0 mt-0.5" size={20} />
             <div className="space-y-1">
-              <h4 className="text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              <h4 className="text-xs font-bold text-land-accent uppercase tracking-wider">
                 How to test the states:
               </h4>
-              <ul className="text-xs text-slate-400 space-y-2 mt-2 list-disc list-inside">
+              <ul className="text-xs text-land-fg-muted space-y-2 mt-2 list-disc list-inside">
                 <li>
-                  <strong className="text-slate-200">Unowned State</strong>:
+                  <strong className="text-land-fg">Unowned State</strong>:
                   Click the Amber tile. Connect wallet to purchase from the
                   treasury.
                 </li>
                 <li>
-                  <strong className="text-slate-200">Owned State</strong>: Click
+                  <strong className="text-land-fg">Owned State</strong>: Click
                   the Green tile. Upgrading building level or creating a sale
                   listing triggers the signature simulator.
                 </li>
                 <li>
-                  <strong className="text-slate-200">Listed State</strong>:
+                  <strong className="text-land-fg">Listed State</strong>:
                   Click the Purple tile. If wallet is connected, purchase is
                   available.
                 </li>
                 <li>
-                  <strong className="text-slate-200">
+                  <strong className="text-land-fg">
                     Signature Guard State
                   </strong>
                   : Click{" "}
-                  <strong className="text-slate-200">Disconnect Wallet</strong>{" "}
+                  <strong className="text-land-fg">Disconnect Wallet</strong>{" "}
                   at the top. Notice that all transaction buttons are strictly
                   hidden behind the wallet connect guard!
                 </li>
@@ -285,12 +285,12 @@ export default function SandboxPage() {
         </div>
 
         {/* Right Info Space */}
-        <div className="lg:col-span-1 bg-slate-900/20 p-8 rounded-3xl border border-slate-900/60 text-center min-h-[300px] flex flex-col items-center justify-center gap-3">
-          <Layers className="text-slate-700 animate-pulse" size={42} />
-          <h4 className="font-bold text-slate-400 text-sm">
+        <div className="lg:col-span-1 bg-land-surface/20 p-8 rounded-3xl border border-land-border/60 text-center min-h-[300px] flex flex-col items-center justify-center gap-3">
+          <Layers className="text-land-fg-subtle animate-pulse" size={42} />
+          <h4 className="font-bold text-land-fg-muted text-sm">
             No Property Selected
           </h4>
-          <p className="text-xs text-slate-500 max-w-[200px] mx-auto leading-relaxed">
+          <p className="text-xs text-land-fg-muted max-w-[200px] mx-auto leading-relaxed">
             Click on any land tile in the grid to slide in the real-time
             interaction property panel.
           </p>

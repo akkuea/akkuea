@@ -9,6 +9,7 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./styles/tokens.css": "./src/styles/tokens.css",
     "./contracts.testnet.json": "./src/contracts.testnet.json",
     "./contracts.mainnet.json": "./src/contracts.mainnet.json",
     "./game-contracts.testnet.json": "./src/contracts/game-contracts.testnet.json"

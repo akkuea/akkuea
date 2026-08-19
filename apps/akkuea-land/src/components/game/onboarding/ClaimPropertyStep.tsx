@@ -5,6 +5,7 @@ import { useGameWallet } from "@/hooks/useGameWallet";
 import { buildBuyFromTreasuryXdr, TREASURY_ADDRESS } from "@/lib/soroban-tx";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, MapPin, CheckCircle, RefreshCw } from "lucide-react";
+import { PilotCta } from "@/components/game/PilotCta";
 
 // Generate a 5x5 grid of properties (coordinates 0,0 to 4,4)
 const GRID_SIZE = 5;
@@ -63,18 +64,18 @@ export function ClaimPropertyStep({
       className="space-y-6"
     >
       <div className="text-center">
-        <h2 className="mb-2 text-2xl font-extrabold tracking-tight text-white flex items-center justify-center gap-2">
-          <MapPin className="text-indigo-400 h-6 w-6" />
+        <h2 className="mb-2 text-2xl font-extrabold tracking-tight text-land-fg flex items-center justify-center gap-2">
+          <MapPin className="text-land-accent h-6 w-6" />
           Claim your first property
         </h2>
-        <p className="text-sm text-slate-400 max-w-sm mx-auto leading-relaxed">
+        <p className="text-sm text-land-fg-muted max-w-sm mx-auto leading-relaxed">
           Tap on any highlighted treasury tile on the grid below. It is yours
           completely free as a starting bonus!
         </p>
       </div>
 
       {/* 5x5 Grid Selector */}
-      <div className="mx-auto max-w-xs bg-slate-900/60 border border-slate-800/80 p-4 rounded-2xl shadow-xl">
+      <div className="mx-auto max-w-xs bg-land-surface/60 border border-land-border/80 p-4 rounded-2xl shadow-xl">
         <div className="grid grid-cols-5 gap-2">
           {STARTER_PROPERTIES.map((prop) => {
             const isSelected = selectedId === prop.id;
@@ -90,33 +91,33 @@ export function ClaimPropertyStep({
                 disabled={!canClaim}
                 className={`aspect-square rounded-xl flex flex-col items-center justify-center relative transition-all duration-150 ${
                   isSelected
-                    ? "bg-indigo-600 border border-indigo-400 ring-2 ring-indigo-500 scale-105 shadow-lg shadow-indigo-600/30"
+                    ? "bg-land-accent-fill border border-land-accent-fill ring-2 ring-land-accent-fill scale-105 shadow-lg shadow-land-accent-fill/30"
                     : canClaim
-                      ? "bg-slate-800 border border-slate-700/50 hover:bg-slate-750 cursor-pointer"
-                      : "bg-slate-900/40 border border-slate-950/60 opacity-20 cursor-not-allowed"
+                      ? "bg-land-surface-raised border border-land-border-hover/50 hover:bg-land-border-hover cursor-pointer"
+                      : "bg-land-surface/40 border border-land-border/60 opacity-20 cursor-not-allowed"
                 }`}
               >
                 <span
-                  className={`text-[10px] font-mono ${isSelected ? "text-white font-bold" : "text-slate-500"}`}
+                  className={`text-[10px] font-mono ${isSelected ? "text-land-on-accent font-bold" : "text-land-fg-muted"}`}
                 >
                   {prop.x},{prop.y}
                 </span>
 
                 {canClaim && !isSelected && (
-                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
+                  <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-land-accent rounded-full animate-pulse" />
                 )}
               </motion.button>
             );
           })}
         </div>
 
-        <div className="mt-3 flex justify-between text-[10px] text-slate-400 px-1">
+        <div className="mt-3 flex justify-between text-[10px] text-land-fg-muted px-1">
           <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded bg-slate-800 border border-slate-700/50" />
+            <span className="w-2.5 h-2.5 rounded bg-land-surface-raised border border-land-border-hover/50" />
             <span>Treasury (Free)</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 rounded bg-slate-900/40 opacity-20 border border-slate-950" />
+            <span className="w-2.5 h-2.5 rounded bg-land-surface/40 opacity-20 border border-land-border" />
             <span>Unavailable</span>
           </div>
         </div>
@@ -132,12 +133,12 @@ export function ClaimPropertyStep({
           }
           onClick={handleClaim}
           disabled={selectedId === null || status === "pending"}
-          className={`w-full rounded-xl py-3.5 text-sm font-bold text-white transition-all duration-200 flex items-center justify-center gap-2 shadow-lg ${
+          className={`w-full rounded-xl py-3.5 text-sm font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg ${
             selectedId === null
-              ? "bg-slate-800 border border-slate-750 text-slate-500 cursor-not-allowed"
+              ? "bg-land-surface-raised border border-land-border-hover text-land-fg-muted cursor-not-allowed"
               : status === "pending"
-                ? "bg-slate-800 border border-slate-700 text-slate-400 cursor-not-allowed"
-                : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20"
+                ? "bg-land-surface-raised border border-land-border-hover text-land-fg-muted cursor-not-allowed"
+                : "bg-land-accent-fill hover:bg-land-accent-fill/90 text-land-on-accent shadow-land-accent-fill/20"
           }`}
         >
           {status === "pending" && (
@@ -151,11 +152,13 @@ export function ClaimPropertyStep({
         {status !== "pending" && (
           <button
             onClick={onSkip}
-            className="w-full text-xs text-slate-400 hover:text-white transition duration-150 uppercase tracking-wider font-semibold text-center"
+            className="w-full text-xs text-land-fg-muted hover:text-land-fg transition duration-150 uppercase tracking-wider font-semibold text-center"
           >
             Skip this step
           </button>
         )}
+
+        <PilotCta />
       </div>
     </motion.div>
   );
@@ -203,15 +206,15 @@ function CelebrationScreen() {
         transition={{ duration: 0.6 }}
         className="space-y-4 z-10"
       >
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-2xl">
-          <CheckCircle className="h-10 w-10 text-emerald-400" />
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-land-success/10 text-land-success border border-land-success/20 shadow-2xl">
+          <CheckCircle className="h-10 w-10 text-land-success" />
         </div>
 
         <div>
-          <h2 className="text-3xl font-black tracking-tight text-white bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
+          <h2 className="text-3xl font-black tracking-tight text-land-fg bg-gradient-to-r from-land-success to-land-accent bg-clip-text text-transparent">
             Welcome, Landowner!
           </h2>
-          <p className="mt-2 text-sm text-slate-400 leading-relaxed max-w-xs mx-auto">
+          <p className="mt-2 text-sm text-land-fg-muted leading-relaxed max-w-xs mx-auto">
             You successfully claimed your first property on Stellar! We are
             loading the real-time city map for you now...
           </p>
@@ -223,13 +226,13 @@ function CelebrationScreen() {
 
 // Generate 40 vibrant, multi-colored confetti particles with randomized properties
 const CONFETTI_COLORS = [
-  "#10b981",
-  "#3b82f6",
-  "#f59e0b",
-  "#ec4899",
-  "#8b5cf6",
-  "#14b8a6",
-  "#f43f5e",
+  "var(--land-success)",
+  "var(--land-accent)",
+  "var(--land-gold)",
+  "var(--tile-listed)",
+  "var(--land-warning)",
+  "var(--land-fg)",
+  "var(--land-danger)",
 ];
 interface ConfettiParticle {
   color: string;

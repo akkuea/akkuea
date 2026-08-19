@@ -42,11 +42,11 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
   );
 
   const theme = {
-    bgGrad: "from-emerald-500/20 to-teal-500/5",
-    border: "border-emerald-500/30",
-    text: "text-emerald-400",
-    glow: "shadow-emerald-500/10",
-    badge: "bg-emerald-950/80 border-emerald-800 text-emerald-300",
+    bgGrad: "from-land-success/20 to-land-accent/5",
+    border: "border-land-success/30",
+    text: "text-land-success",
+    glow: "shadow-land-success/10",
+    badge: "bg-land-success/10 border-land-success text-land-success",
     title: "Owned by You",
   };
 
@@ -58,27 +58,27 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
           <button
             onClick={improveProperty}
             disabled={!!pendingAction}
-            className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md flex items-center justify-center gap-2 border border-indigo-400/20"
+            className="w-full bg-gradient-to-r from-land-accent-fill to-tile-listed-fill hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-on-accent font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md flex items-center justify-center gap-2 border border-land-accent-fill/20"
           >
             <ArrowUpRight size={16} />
             Improve (Cost: {property.improveCost || 100} LAND)
           </button>
-          <span className="text-[9px] text-slate-500 text-center block mt-1">
+          <span className="text-[9px] text-land-fg-muted text-center block mt-1">
             Upgrades building to Level {buildingLevel + 1}
           </span>
         </div>
       ) : (
-        <div className="text-center py-2.5 bg-slate-900/40 rounded-xl border border-slate-800/80">
-          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1">
-            <ShieldCheck size={12} className="text-teal-400" />
+        <div className="text-center py-2.5 bg-land-surface/40 rounded-xl border border-land-border/80">
+          <span className="text-[10px] text-land-fg-muted font-bold uppercase tracking-wider flex items-center justify-center gap-1">
+            <ShieldCheck size={12} className="text-land-accent" />
             Max Development Reached
           </span>
         </div>
       )}
 
       {/* List for Sale form */}
-      <div className="p-3.5 bg-slate-900/60 rounded-xl border border-slate-800 space-y-2.5">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+      <div className="p-3.5 bg-land-surface/60 rounded-xl border border-land-border space-y-2.5">
+        <span className="text-[10px] font-bold text-land-fg-muted uppercase tracking-wider block">
           List for Sale
         </span>
         <form
@@ -98,12 +98,12 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
               value={listPrice}
               onChange={(e) => setListPrice(e.target.value)}
               disabled={!!pendingAction}
-              className="w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none transition-colors"
+              className="w-full bg-land-bg border border-land-border focus:border-land-accent rounded-lg px-3 py-2 text-xs text-land-fg placeholder-land-fg-subtle focus:outline-none transition-colors"
               min="1"
             />
             <Coins
               size={12}
-              className="absolute right-2.5 top-3 text-slate-600"
+              className="absolute right-2.5 top-3 text-land-fg-subtle"
             />
           </div>
           <button
@@ -111,7 +111,7 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
             disabled={
               !!pendingAction || !listPrice || parseFloat(listPrice) <= 0
             }
-            className="bg-slate-800 hover:bg-slate-700 disabled:opacity-40 disabled:hover:bg-slate-800 text-slate-200 hover:text-white font-semibold text-xs px-3.5 rounded-lg border border-slate-750 transition-colors"
+            className="bg-land-surface-raised hover:bg-land-border-hover disabled:opacity-40 disabled:hover:bg-land-surface-raised text-land-fg font-semibold text-xs px-3.5 rounded-lg border border-land-border-hover transition-colors"
           >
             List
           </button>
@@ -135,20 +135,20 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
       footer={footer}
     >
       {/* Accrued Rental Income */}
-      <div className="bg-emerald-950/30 p-3.5 rounded-xl border border-emerald-500/20 mt-1 flex justify-between items-center">
+      <div className="bg-land-success/5 p-3.5 rounded-xl border border-land-success/20 mt-1 flex justify-between items-center">
         <div>
-          <span className="text-[10px] text-emerald-400/80 font-bold uppercase tracking-wider block">
+          <span className="text-[10px] text-land-success/80 font-bold uppercase tracking-wider block">
             Accrued Rental Income
           </span>
-          <span className="text-lg font-extrabold text-white flex items-center gap-1.5 mt-0.5">
-            <Coins size={16} className="text-emerald-400" />
+          <span className="text-lg font-extrabold text-land-fg flex items-center gap-1.5 mt-0.5">
+            <Coins size={16} className="text-land-success" />
             {property.earnedIncome ?? 0} LAND
           </span>
         </div>
         <button
           onClick={claimIncome}
           disabled={!!pendingAction || (property.earnedIncome ?? 0) <= 0}
-          className="text-xs font-bold bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 disabled:hover:bg-emerald-500 text-slate-950 px-3 py-1.5 rounded-lg border border-emerald-400/30 transition-all duration-200 shadow-md shadow-emerald-500/10 flex items-center gap-1"
+          className="text-xs font-bold bg-land-success-fill hover:bg-land-success-fill/90 disabled:opacity-40 disabled:hover:bg-land-success-fill text-land-on-accent px-3 py-1.5 rounded-lg border border-land-success-fill/30 transition-all duration-200 shadow-md shadow-land-success-fill/10 flex items-center gap-1"
         >
           Claim
         </button>

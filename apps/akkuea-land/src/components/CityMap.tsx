@@ -101,8 +101,10 @@ export function CityMap() {
 }
 
 function Tile({ tile }: { tile: TileState }) {
-  const bg = tile.owner ? "#4ade80" : "#e5e7eb";
-  const border = tile.listed ? "2px solid #f59e0b" : "1px solid #d1d5db";
+  const bg = tile.owner ? "var(--tile-owned)" : "var(--tile-empty)";
+  const border = tile.listed
+    ? "2px solid var(--tile-listed)"
+    : "1px solid var(--land-border)";
 
   return (
     <div

@@ -19,20 +19,20 @@ export const OtherPlayerPanel: React.FC<OtherPlayerPanelProps> = ({
   buildingLevel,
 }) => {
   const theme = {
-    bgGrad: "from-slate-500/10 to-slate-500/5",
-    border: "border-slate-800",
-    text: "text-slate-400",
+    bgGrad: "from-land-surface-raised/10 to-land-surface-raised/5",
+    border: "border-land-border",
+    text: "text-land-fg-muted",
     glow: "shadow-none",
-    badge: "bg-slate-950/80 border-slate-800 text-slate-400",
+    badge: "bg-land-bg/80 border-land-border text-land-fg-muted",
     title: "Other Player Property",
   };
 
   const footer = (
-    <div className="text-center p-3.5 bg-slate-900/60 rounded-2xl border border-slate-800/80 space-y-1.5">
-      <span className="text-xs font-bold text-slate-300">
+    <div className="text-center p-3.5 bg-land-surface/60 rounded-2xl border border-land-border/80 space-y-1.5">
+      <span className="text-xs font-bold text-land-fg">
         Property Not for Sale
       </span>
-      <p className="text-[10px] text-slate-500 leading-normal">
+      <p className="text-[10px] text-land-fg-muted leading-normal">
         This property is currently owned by another player and is not listed in
         the marketplace.
       </p>

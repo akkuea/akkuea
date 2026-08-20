@@ -57,6 +57,7 @@ export function WhitelistOnboardingForm() {
   // Uses inline state setter to avoid adding handleNext to the deps array.
   useEffect(() => {
     if (isConnected && currentStep === 1) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentStep((prev) => prev + 1);
     }
   }, [isConnected, currentStep]);
@@ -78,8 +79,8 @@ export function WhitelistOnboardingForm() {
         walletAddress: address,
       });
       setRequestStatus("pending");
-    } catch (err: any) {
-      setError(err.message || "Failed to submit whitelist request");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to submit whitelist request");
     } finally {
       setIsLoading(false);
     }
@@ -128,7 +129,7 @@ export function WhitelistOnboardingForm() {
         <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
           <ShieldCheck size={32} />
         </div>
-        <h2 className="text-2xl font-bold text-white">You're Whitelisted!</h2>
+        <h2 className="text-2xl font-bold text-white">You&apos;re Whitelisted!</h2>
         <p className="text-zinc-400">
           Your address has been approved for the pilot. You can now participate in offerings.
         </p>
@@ -204,7 +205,7 @@ export function WhitelistOnboardingForm() {
               >
                 <option value="passport">Passport</option>
                 <option value="national_id">National ID</option>
-                <option value="drivers_license">Driver's License</option>
+                <option value="drivers_license">Driver&apos;s License</option>
               </select>
             </div>
             <div>

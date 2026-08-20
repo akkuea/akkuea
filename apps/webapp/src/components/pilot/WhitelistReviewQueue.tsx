@@ -30,14 +30,15 @@ export function WhitelistReviewQueue() {
     try {
       const res = await apiClient.get<{ success: boolean; data: WhitelistRequest[] }>("/pilot/whitelist/pending");
       setRequests(res.data.data);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch requests");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to fetch requests");
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRequests();
   }, []);
 
@@ -61,8 +62,8 @@ export function WhitelistReviewQueue() {
       setSelectedRequest(null);
       setRejectionReason("");
       fetchRequests();
-    } catch (err: any) {
-      setReviewError(err.message || `Failed to ${action} request`);
+    } catch (err: unknown) {
+      setReviewError(err instanceof Error ? err.message : `Failed to ${action} request`);
     } finally {
       setIsReviewing(false);
     }

@@ -1,12 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { describe, expect, it, mock, beforeEach, afterEach } from "bun:test";
-import app from "../app";
 import { db } from "../db";
 import { whitelistService } from "../services/WhitelistService";
 import Elysia from "elysia";
 import { whitelistRoutes } from "./whitelist";
-import { eq } from "drizzle-orm";
-import { pilotWhitelistRequests } from "../db/schema/pilotWhitelist";
-
 // Mock whitelist service
 mock.module("../services/WhitelistService", () => {
   return {

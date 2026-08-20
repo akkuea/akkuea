@@ -1,9 +1,5 @@
 import { z, type RefinementCtx } from "zod";
-import {
-  stellarAddressSchema,
-  positiveAmountSchema,
-  percentageSchema,
-} from "@real-estate-defi/shared";
+import { positiveAmountSchema } from "@real-estate-defi/shared";
 
 const nonEmpty = (label: string) => z.string().min(1, `${label} is required`);
 

@@ -16,10 +16,6 @@ function mockFetch(handler: FetchMock): Decorator {
   };
 }
 
-// ---------------------------------------------------------------------------
-// Wallet address already resolved in status endpoint
-// ---------------------------------------------------------------------------
-const MOCK_ADDR = "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBDQCQZVQQ6BRVV12BKHA";
 
 /** Returns a status-endpoint mock for a given status value */
 function statusMock(status: string, rejectionReason?: string): FetchMock {

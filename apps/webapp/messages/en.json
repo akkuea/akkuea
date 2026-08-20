@@ -162,5 +162,44 @@
     "lending": "Lending",
     "map": "Map",
     "connect": "Connect"
+  },
+  "Treasury": {
+    "title": "Treasury",
+    "whatThisIs": "Where the accumulated platform fee is held, and what it is doing.",
+    "whyItExists": "The platform fee builds up in a Stellar account. Rather than leave it sitting idle, it is deposited into two DeFi venues that are already deployed and already audited: DeFindex's Blend strategy, and Etherfuse's Stablebonds. This is treasury management — the balance earns a return instead of nothing. It is not an exercise in producing numbers to point at.",
+    "howToVerify": "Because it settles on chain, the record is checkable by anyone. Every figure on this page is read from the vault contracts when the page loads; none of it is estimated or projected. The links below go to the contracts and the treasury account on stellar.expert, so you can confirm each number against the ledger yourself.",
+    "positionValue": "Position value",
+    "sharesHeld": "{shares} vault shares",
+    "noDepositYet": "No funds deposited into this venue yet.",
+    "vaultTotal": "Vault total",
+    "vaultFee": "Vault fee",
+    "paused": "Paused",
+    "viewVault": "Vault on stellar.expert",
+    "viewAccount": "Treasury account",
+    "viewTx": "Transaction",
+    "contractId": "Contract {id}",
+    "noVenuesConfigured": "No treasury venue is configured for this network yet, so there is no position to show.",
+    "venuesUnavailable": "Some venues could not be read",
+    "historyTitle": "Movements",
+    "historyNote": "Every recorded deposit and withdrawal, including attempts that the venue rejected.",
+    "column": {
+      "date": "Date",
+      "action": "Action",
+      "amount": "Amount",
+      "result": "Result",
+      "record": "On chain"
+    },
+    "operation": {
+      "deposit": "Deposit",
+      "withdraw": "Withdraw"
+    },
+    "status": {
+      "submitted": "Submitted",
+      "failed": "Failed"
+    },
+    "readFailed": "Could not read the treasury position",
+    "retry": "Retry",
+    "readAtNote": "Read live from Stellar {network}. Treasury account: {account}.",
+    "noAccountConfigured": "not configured"
   }
 }

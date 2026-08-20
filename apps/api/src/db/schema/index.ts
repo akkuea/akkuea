@@ -8,3 +8,4 @@ export * from './notificationDlq';
 export * from './auditLog';
 export * from './idempotency';
 export * from './pilotWhitelist';
+export * from './treasury';

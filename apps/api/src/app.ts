@@ -11,6 +11,7 @@ import { notificationDlqRoutes } from './routes/notificationDlq';
 import { authRoutes } from './routes/auth';
 import { adminRoutes } from './routes/admin';
 import { ledgerRoutes } from './routes/ledger';
+import { treasuryRoutes } from './routes/treasury';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware';
 
@@ -32,6 +33,7 @@ const app = new Elysia()
   .use(internalOperationsRoutes)
   .use(notificationDlqRoutes)
   .use(adminRoutes)
-  .use(ledgerRoutes);
+  .use(ledgerRoutes)
+  .use(treasuryRoutes);
 
 export default app;

@@ -15,6 +15,7 @@ import { internalOperationsRoutes } from './routes/internalOperations';
 import { notificationDlqRoutes } from './routes/notificationDlq';
 import { ledgerRoutes } from './routes/ledger';
 import { whitelistRoutes } from './routes/whitelist';
+import { treasuryRoutes } from './routes/treasury';
 import { errorHandler } from './middleware/errorHandler';
 import { cacheService } from './services/CacheService';
 import { NotificationService } from './services/NotificationService';
@@ -45,6 +46,11 @@ app
           { name: 'Notification DLQ', description: 'Dead letter queue for failed notifications' },
           { name: 'Ledger', description: 'Stellar ledger streaming via SSE' },
           { name: 'Pilot Whitelist', description: 'Investor self-serve whitelist request and operator review flow (C6-001)' },
+          {
+            name: 'Treasury',
+            description:
+              'Phase 1a treasury track: platform fee deposited into DeFindex and Etherfuse venues',
+          },
         ],
         components: {
           securitySchemes: {
@@ -80,6 +86,7 @@ app
   .use(notificationDlqRoutes)
   .use(ledgerRoutes)
   .use(whitelistRoutes)
+  .use(treasuryRoutes)
   .get('/health', async () => {
     const dbHealth = await checkDatabaseHealth();
 

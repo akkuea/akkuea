@@ -71,6 +71,13 @@
       "when": 1777449700003,
       "tag": "0009_treasury_track",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1787217575314,
+      "tag": "0010_empty_rhodey",
+      "breakpoints": true
     }
   ]
 }

@@ -24,7 +24,7 @@ const reviewBodySchema = z.object({
   actorWallet: z.string().min(50).max(64),
 });
 
-const internalKeyAuth = new Elysia({ name: 'internal-operations-auth' }).onBeforeHandle(
+export const internalKeyAuth = new Elysia({ name: 'internal-operations-auth' }).onBeforeHandle(
   ({ headers, set }) => {
     if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
       set.status = 403;

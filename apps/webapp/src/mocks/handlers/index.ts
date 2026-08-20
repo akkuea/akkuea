@@ -4,6 +4,7 @@ import { userHandlers } from "./users";
 import { transactionHandlers } from "./transactions";
 import { adminHandlers } from "./admin";
 import { portfolioPerformanceHandlers } from "./portfolioPerformance";
+import { whitelistHandlers } from "./whitelist";
 
 /**
  * All MSW request handlers, combined in one export.
@@ -16,4 +17,5 @@ export const handlers = [
   ...transactionHandlers,
   ...adminHandlers,
   ...portfolioPerformanceHandlers,
+  ...whitelistHandlers,
 ];

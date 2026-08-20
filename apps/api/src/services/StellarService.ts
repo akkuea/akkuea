@@ -330,6 +330,8 @@ export class StellarService {
           propertyId: this.asBigInt(args[2]),
           amount: this.asBigInt(args[3]),
         });
+      // SEP-41 token transfer allowance — NOT the pilot-whitelist approve.
+      // Pilot-whitelist approvals bypass this switch and use the legacy XDR path.
       case 'approve':
         return tokenClient.approve({
           owner: this.asAddress(args[0]),

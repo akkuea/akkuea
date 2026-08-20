@@ -6,11 +6,7 @@ import { internalKeyAuth } from './internalOperations';
 const requestSchema = t.Object({
   walletAddress: t.String({ maxLength: 56 }),
   fullName: t.String({ maxLength: 255 }),
-  idType: t.Union([
-    t.Literal('passport'),
-    t.Literal('national_id'),
-    t.Literal('drivers_license'),
-  ]),
+  idType: t.Union([t.Literal('passport'), t.Literal('national_id'), t.Literal('drivers_license')]),
   idReference: t.String({ maxLength: 255 }),
 });
 
@@ -34,10 +30,10 @@ export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
       tags: ['Pilot Whitelist'],
     },
   })
-  .group('', (app) => 
+  .group('', (app) =>
     app
       .use(internalKeyAuth)
-      .get('/pending', (ctx) => WhitelistController.pending(ctx), {
+      .get('/pending', () => WhitelistController.pending(), {
         detail: {
           summary: 'Get pending whitelist requests (Admin)',
           tags: ['Pilot Whitelist'],
@@ -52,5 +48,5 @@ export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
           summary: 'Review whitelist request (Admin)',
           tags: ['Pilot Whitelist'],
         },
-      })
+      }),
   );

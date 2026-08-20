@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, Button, Input, Modal, Badge, EmptyState, SectionErrorFallback } from "@/components/ui";
+import {
+  Card,
+  Button,
+  Input,
+  Modal,
+  Badge,
+  EmptyState,
+  SectionErrorFallback,
+} from "@/components/ui";
 import { apiClient } from "@/services/api/client";
 
 type WhitelistRequest = {
@@ -20,7 +28,8 @@ export function WhitelistReviewQueue() {
   const [error, setError] = useState<string | null>(null);
 
   // Review Modal state
-  const [selectedRequest, setSelectedRequest] = useState<WhitelistRequest | null>(null);
+  const [selectedRequest, setSelectedRequest] =
+    useState<WhitelistRequest | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
@@ -28,7 +37,10 @@ export function WhitelistReviewQueue() {
   const fetchRequests = async () => {
     setIsLoading(true);
     try {
-      const res = await apiClient.get<{ success: boolean; data: WhitelistRequest[] }>("/pilot/whitelist/pending");
+      const res = await apiClient.get<{
+        success: boolean;
+        data: WhitelistRequest[];
+      }>("/pilot/whitelist/pending");
       setRequests(res.data.data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch requests");
@@ -44,7 +56,7 @@ export function WhitelistReviewQueue() {
 
   const handleReviewAction = async (action: "approve" | "reject") => {
     if (!selectedRequest) return;
-    
+
     if (action === "reject" && !rejectionReason.trim()) {
       setReviewError("A reason is required when rejecting a request.");
       return;
@@ -57,13 +69,15 @@ export function WhitelistReviewQueue() {
         action,
         reason: action === "reject" ? rejectionReason : undefined,
       });
-      
+
       // Refresh list
       setSelectedRequest(null);
       setRejectionReason("");
       fetchRequests();
     } catch (err: unknown) {
-      setReviewError(err instanceof Error ? err.message : `Failed to ${action} request`);
+      setReviewError(
+        err instanceof Error ? err.message : `Failed to ${action} request`,
+      );
     } finally {
       setIsReviewing(false);
     }
@@ -85,37 +99,54 @@ export function WhitelistReviewQueue() {
   return (
     <div className="space-y-4">
       {requests.length === 0 ? (
-        <EmptyState 
-          title="No Pending Requests" 
-          description="There are no whitelist requests waiting for review in the queue." 
+        <EmptyState
+          title="No Pending Requests"
+          description="There are no whitelist requests waiting for review in the queue."
         />
       ) : (
         <div className="grid gap-4">
           {requests.map((req) => (
-            <Card key={req.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/80 backdrop-blur-md">
+            <Card
+              key={req.id}
+              className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/80 backdrop-blur-md"
+            >
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-white text-lg">{req.fullName}</h3>
-                  <Badge variant="outline" className="text-emerald-400 border-emerald-400/30">
+                  <h3 className="font-semibold text-white text-lg">
+                    {req.fullName}
+                  </h3>
+                  <Badge
+                    variant="outline"
+                    className="text-emerald-400 border-emerald-400/30"
+                  >
                     Pending
                   </Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
                   <div className="text-zinc-500">Wallet:</div>
-                  <div className="text-zinc-300 font-mono text-xs">{req.walletAddress}</div>
-                  
+                  <div className="text-zinc-300 font-mono text-xs">
+                    {req.walletAddress}
+                  </div>
+
                   <div className="text-zinc-500">ID Type:</div>
-                  <div className="text-zinc-300 capitalize">{req.idType.replace('_', ' ')}</div>
-                  
+                  <div className="text-zinc-300 capitalize">
+                    {req.idType.replace("_", " ")}
+                  </div>
+
                   <div className="text-zinc-500">ID Ref:</div>
                   <div className="text-zinc-300">{req.idReference}</div>
-                  
+
                   <div className="text-zinc-500">Submitted:</div>
-                  <div className="text-zinc-300">{new Date(req.createdAt).toLocaleString()}</div>
+                  <div className="text-zinc-300">
+                    {new Date(req.createdAt).toLocaleString()}
+                  </div>
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
-                <Button variant="outline" onClick={() => setSelectedRequest(req)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedRequest(req)}
+                >
                   Review
                 </Button>
               </div>
@@ -141,19 +172,27 @@ export function WhitelistReviewQueue() {
             <div className="bg-zinc-950 p-4 rounded-lg space-y-3 text-sm">
               <div className="flex justify-between border-b border-zinc-800 pb-2">
                 <span className="text-zinc-500">Full Name</span>
-                <span className="font-medium text-white">{selectedRequest.fullName}</span>
+                <span className="font-medium text-white">
+                  {selectedRequest.fullName}
+                </span>
               </div>
               <div className="flex justify-between border-b border-zinc-800 pb-2">
                 <span className="text-zinc-500">Wallet Address</span>
-                <span className="font-mono text-white text-xs">{selectedRequest.walletAddress}</span>
+                <span className="font-mono text-white text-xs">
+                  {selectedRequest.walletAddress}
+                </span>
               </div>
               <div className="flex justify-between border-b border-zinc-800 pb-2">
                 <span className="text-zinc-500">ID Type</span>
-                <span className="font-medium text-white capitalize">{selectedRequest.idType.replace('_', ' ')}</span>
+                <span className="font-medium text-white capitalize">
+                  {selectedRequest.idType.replace("_", " ")}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-zinc-500">ID Reference Number</span>
-                <span className="font-medium text-white">{selectedRequest.idReference}</span>
+                <span className="font-medium text-white">
+                  {selectedRequest.idReference}
+                </span>
               </div>
             </div>
 
@@ -164,7 +203,9 @@ export function WhitelistReviewQueue() {
             )}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-300">Rejection Reason (Optional)</label>
+              <label className="text-sm font-medium text-zinc-300">
+                Rejection Reason (Optional)
+              </label>
               <Input
                 placeholder="Required if rejecting..."
                 value={rejectionReason}

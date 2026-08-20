@@ -1,4 +1,3 @@
-
 import { db } from '../db';
 import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
 import { whitelistService } from '../services/WhitelistService';
@@ -15,11 +14,11 @@ export class WhitelistController {
     });
 
     if (existing) {
-      if (existing.status === "pending") {
-        throw new Error("A whitelist request is already pending for this address");
+      if (existing.status === 'pending') {
+        throw new Error('A whitelist request is already pending for this address');
       }
-      if (existing.status === "approved") {
-        throw new Error("This address is already whitelisted");
+      if (existing.status === 'approved') {
+        throw new Error('This address is already whitelisted');
       }
       // If previously rejected, allow re-submission: delete the old record
       // so the investor gets a clean slate after fixing whatever was wrong.
@@ -82,10 +81,10 @@ export class WhitelistController {
       return { success: true, status: 'none' };
     }
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       status: existing.status,
-      rejectionReason: existing.rejectionReason 
+      rejectionReason: existing.rejectionReason,
     };
   }
 }

@@ -11,19 +11,20 @@ function mockFetch(handler: FetchMock): Decorator {
     const original = globalThis.fetch;
     globalThis.fetch = handler as typeof fetch;
     const result = Story();
-    setTimeout(() => { globalThis.fetch = original; }, 0);
+    setTimeout(() => {
+      globalThis.fetch = original;
+    }, 0);
     return result;
   };
 }
 
-
 /** Returns a status-endpoint mock for a given status value */
 function statusMock(status: string, rejectionReason?: string): FetchMock {
   return async () =>
-    new Response(
-      JSON.stringify({ success: true, status, rejectionReason }),
-      { status: 200, headers: { "Content-Type": "application/json" } },
-    );
+    new Response(JSON.stringify({ success: true, status, rejectionReason }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
 }
 
 // ---------------------------------------------------------------------------
@@ -56,9 +57,7 @@ type Story = StoryObj<typeof WhitelistOnboardingForm>;
  * a "Start Application" CTA.
  */
 export const NoApplication: Story = {
-  decorators: [
-    mockFetch(statusMock("none")),
-  ],
+  decorators: [mockFetch(statusMock("none"))],
 };
 
 /**
@@ -66,7 +65,12 @@ export const NoApplication: Story = {
  */
 export const StatusLoading: Story = {
   decorators: [
-    mockFetch(() => new Promise(() => { /* never resolves */ })),
+    mockFetch(
+      () =>
+        new Promise(() => {
+          /* never resolves */
+        }),
+    ),
   ],
 };
 
@@ -74,18 +78,14 @@ export const StatusLoading: Story = {
  * Request is under review by the operator.
  */
 export const PendingReview: Story = {
-  decorators: [
-    mockFetch(statusMock("pending")),
-  ],
+  decorators: [mockFetch(statusMock("pending"))],
 };
 
 /**
  * Investor has been approved — whitelisted!
  */
 export const Approved: Story = {
-  decorators: [
-    mockFetch(statusMock("approved")),
-  ],
+  decorators: [mockFetch(statusMock("approved"))],
 };
 
 /**
@@ -97,7 +97,7 @@ export const Rejected: Story = {
       statusMock(
         "rejected",
         "Unable to verify the provided ID reference against available records. Please re-apply with a valid document number.",
-      )
+      ),
     ),
   ],
 };
@@ -109,9 +109,7 @@ export const Rejected: Story = {
  */
 export const FormStep1PersonalDetails: Story = {
   name: "Form — Step 1: Personal Details",
-  decorators: [
-    mockFetch(statusMock("none")),
-  ],
+  decorators: [mockFetch(statusMock("none"))],
 };
 
 /**
@@ -126,14 +124,17 @@ export const FormStep3Review: Story = {
       const url = typeof input === "string" ? input : input.toString();
       if (url.includes("/request")) {
         return new Response(
-          JSON.stringify({ success: true, data: { id: "new-req", status: "pending" } }),
+          JSON.stringify({
+            success: true,
+            data: { id: "new-req", status: "pending" },
+          }),
           { status: 200, headers: { "Content-Type": "application/json" } },
         );
       }
-      return new Response(
-        JSON.stringify({ success: true, status: "none" }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
+      return new Response(JSON.stringify({ success: true, status: "none" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }),
   ],
 };

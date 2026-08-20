@@ -12,7 +12,9 @@ function mockFetch(handler: FetchMock): Decorator {
     globalThis.fetch = handler as typeof fetch;
     const result = Story();
     // Restore after render (story cleanup)
-    setTimeout(() => { globalThis.fetch = original; }, 0);
+    setTimeout(() => {
+      globalThis.fetch = original;
+    }, 0);
     return result;
   };
 }
@@ -65,11 +67,12 @@ type Story = StoryObj<typeof WhitelistReviewQueue>;
 /** Two pending requests in the queue — the typical operator view. */
 export const WithRequests: Story = {
   decorators: [
-    mockFetch(async () =>
-      new Response(
-        JSON.stringify({ success: true, data: [mockRequest1, mockRequest2] }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      )
+    mockFetch(
+      async () =>
+        new Response(
+          JSON.stringify({ success: true, data: [mockRequest1, mockRequest2] }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
     ),
   ],
 };
@@ -77,11 +80,12 @@ export const WithRequests: Story = {
 /** No pending requests — shows the EmptyState component. */
 export const EmptyQueue: Story = {
   decorators: [
-    mockFetch(async () =>
-      new Response(
-        JSON.stringify({ success: true, data: [] }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      )
+    mockFetch(
+      async () =>
+        new Response(JSON.stringify({ success: true, data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
     ),
   ],
 };
@@ -90,7 +94,10 @@ export const EmptyQueue: Story = {
 export const LoadingState: Story = {
   decorators: [
     mockFetch(
-      () => new Promise(() => { /* intentionally never resolves */ })
+      () =>
+        new Promise(() => {
+          /* intentionally never resolves */
+        }),
     ),
   ],
 };
@@ -98,11 +105,12 @@ export const LoadingState: Story = {
 /** API returns an error — shows SectionErrorFallback with a Retry button. */
 export const ErrorState: Story = {
   decorators: [
-    mockFetch(async () =>
-      new Response(
-        JSON.stringify({ message: "Forbidden: admin access required" }),
-        { status: 403, headers: { "Content-Type": "application/json" } },
-      )
+    mockFetch(
+      async () =>
+        new Response(
+          JSON.stringify({ message: "Forbidden: admin access required" }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        ),
     ),
   ],
 };

@@ -45,7 +45,10 @@ app
           { name: 'Internal Operations', description: 'Internal property review and operations' },
           { name: 'Notification DLQ', description: 'Dead letter queue for failed notifications' },
           { name: 'Ledger', description: 'Stellar ledger streaming via SSE' },
-          { name: 'Pilot Whitelist', description: 'Investor self-serve whitelist request and operator review flow (C6-001)' },
+          {
+            name: 'Pilot Whitelist',
+            description: 'Investor self-serve whitelist request and operator review flow (C6-001)',
+          },
           {
             name: 'Treasury',
             description:

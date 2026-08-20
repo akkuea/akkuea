@@ -44,7 +44,7 @@ export class WhitelistService {
       'approve',
       [adminPublicKey, request.walletAddress],
       adminSecret,
-      adminPublicKey
+      adminPublicKey,
     );
 
     // Update database status

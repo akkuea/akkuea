@@ -1,6 +1,5 @@
 "use client";
 
-
 import { GridBackground } from "@/components/landing";
 import { ErrorBoundary } from "@/components/ui";
 import { WhitelistOnboardingForm } from "@/components/pilot/WhitelistOnboardingForm";

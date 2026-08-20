@@ -32,26 +32,33 @@ export const whitelistHandlers = [
     HttpResponse.json({ success: true, data: mockRequests }),
   ),
 
-  http.get(`${API_BASE}/pilot/whitelist/status/:walletAddress`, ({ params }) => {
-    const addr = params.walletAddress as string;
-    if (addr === "APPROVED_WALLET") {
-      return HttpResponse.json({ success: true, status: "approved" });
-    }
-    if (addr === "PENDING_WALLET") {
-      return HttpResponse.json({ success: true, status: "pending" });
-    }
-    if (addr === "REJECTED_WALLET") {
-      return HttpResponse.json({
-        success: true,
-        status: "rejected",
-        rejectionReason: "Unable to verify the provided ID reference against available records.",
-      });
-    }
-    return HttpResponse.json({ success: true, status: "none" });
-  }),
+  http.get(
+    `${API_BASE}/pilot/whitelist/status/:walletAddress`,
+    ({ params }) => {
+      const addr = params.walletAddress as string;
+      if (addr === "APPROVED_WALLET") {
+        return HttpResponse.json({ success: true, status: "approved" });
+      }
+      if (addr === "PENDING_WALLET") {
+        return HttpResponse.json({ success: true, status: "pending" });
+      }
+      if (addr === "REJECTED_WALLET") {
+        return HttpResponse.json({
+          success: true,
+          status: "rejected",
+          rejectionReason:
+            "Unable to verify the provided ID reference against available records.",
+        });
+      }
+      return HttpResponse.json({ success: true, status: "none" });
+    },
+  ),
 
   http.post(`${API_BASE}/pilot/whitelist/request`, () =>
-    HttpResponse.json({ success: true, data: { id: "new-req", status: "pending" } }),
+    HttpResponse.json({
+      success: true,
+      data: { id: "new-req", status: "pending" },
+    }),
   ),
 
   http.post(`${API_BASE}/pilot/whitelist/:id/review`, () =>

@@ -5,6 +5,7 @@ export { lendingApi } from "./lending";
 export { userApi } from "./users";
 export { transactionsApi } from "./transactions";
 export { adminOperationsApi } from "./adminOperations";
+export { treasuryApi } from "./treasury";
 export type {
   OperationalPropertyDetail,
   OperationalPropertyListItem,
@@ -12,3 +13,12 @@ export type {
   PropertyReviewStatus,
   ReviewAction,
 } from "./adminOperations";
+export type {
+  TreasuryHistory,
+  TreasuryHistoryEntry,
+  TreasuryPortfolio,
+  TreasuryPosition,
+  TreasurySnapshot,
+  TreasuryVenueId,
+  TreasuryVenueStatus,
+} from "./treasury";

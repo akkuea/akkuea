@@ -307,7 +307,10 @@ jobs:
         
         # Check for unsafe eval usage
         echo "3. Checking for unsafe eval usage..."
-        if grep -r "eval\|Function(" apps/ --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.next | grep -v "//.*eval\|//.*Function("; then
+        # Match real call sites only. A bare "eval" substring also matches
+        # ordinary words like "retrieval" and "evaluation", which is not unsafe
+        # dynamic code and previously failed this job on a doc comment.
+        if grep -rE "\beval\(|\bnew Function\(" apps/ --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.next | grep -v "//.*eval\|//.*Function("; then
           echo "Warning: Unsafe eval usage found"
           exit 1
         fi

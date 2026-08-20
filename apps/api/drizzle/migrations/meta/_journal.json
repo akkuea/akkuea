@@ -64,6 +64,13 @@
       "when": 1777449700002,
       "tag": "0008_idempotency_keys",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1777449700003,
+      "tag": "0009_treasury_track",
+      "breakpoints": true
     }
   ]
 }

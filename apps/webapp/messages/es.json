@@ -162,5 +162,44 @@
     "lending": "Préstamos",
     "map": "Mapa",
     "connect": "Conectar"
+  },
+  "Treasury": {
+    "title": "Tesorería",
+    "whatThisIs": "Dónde se guarda la comisión acumulada de la plataforma y qué está haciendo.",
+    "whyItExists": "La comisión de la plataforma se acumula en una cuenta de Stellar. En lugar de dejarla inactiva, se deposita en dos plataformas DeFi ya desplegadas y ya auditadas: la estrategia Blend de DeFindex y los Stablebonds de Etherfuse. Esto es gestión de tesorería — el saldo genera un rendimiento en vez de nada. No es un ejercicio para producir cifras que exhibir.",
+    "howToVerify": "Como se liquida en cadena, el registro es verificable por cualquiera. Cada cifra de esta página se lee de los contratos de los vaults al cargarla; ninguna es estimada ni proyectada. Los enlaces de abajo llevan a los contratos y a la cuenta de tesorería en stellar.expert, para que puedas confirmar cada número contra el ledger.",
+    "positionValue": "Valor de la posición",
+    "sharesHeld": "{shares} participaciones del vault",
+    "noDepositYet": "Aún no se han depositado fondos en esta plataforma.",
+    "vaultTotal": "Total del vault",
+    "vaultFee": "Comisión del vault",
+    "paused": "En pausa",
+    "viewVault": "Vault en stellar.expert",
+    "viewAccount": "Cuenta de tesorería",
+    "viewTx": "Transacción",
+    "contractId": "Contrato {id}",
+    "noVenuesConfigured": "Aún no hay ninguna plataforma de tesorería configurada para esta red, así que no hay posición que mostrar.",
+    "venuesUnavailable": "No se pudieron leer algunas plataformas",
+    "historyTitle": "Movimientos",
+    "historyNote": "Todos los depósitos y retiros registrados, incluidos los intentos que la plataforma rechazó.",
+    "column": {
+      "date": "Fecha",
+      "action": "Acción",
+      "amount": "Importe",
+      "result": "Resultado",
+      "record": "En cadena"
+    },
+    "operation": {
+      "deposit": "Depósito",
+      "withdraw": "Retiro"
+    },
+    "status": {
+      "submitted": "Enviado",
+      "failed": "Fallido"
+    },
+    "readFailed": "No se pudo leer la posición de tesorería",
+    "retry": "Reintentar",
+    "readAtNote": "Leído en vivo de Stellar {network}. Cuenta de tesorería: {account}.",
+    "noAccountConfigured": "sin configurar"
   }
 }

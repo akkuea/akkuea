@@ -8,4 +8,15 @@ export {
 } from "./clientConfig";
 export { RealEstateTokenContractClient } from "./realEstateToken";
 export { DefiLendingContractClient } from "./defiLending";
+export {
+  DefindexVaultContractClient,
+  DefindexVaultError,
+  toDefindexVaultError,
+  type AssetStrategySet,
+  type CurrentAssetInvestmentAllocation,
+  type StrategyAllocation,
+  type VaultDepositArgs,
+  type VaultMethodOptions,
+  type VaultWithdrawArgs,
+} from "./defindexVault";
 export * from "./game";

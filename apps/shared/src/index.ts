@@ -12,6 +12,17 @@ export {
 } from "./contracts/clientConfig";
 export { RealEstateTokenContractClient } from "./contracts/realEstateToken";
 export { DefiLendingContractClient } from "./contracts/defiLending";
+export {
+  DefindexVaultContractClient,
+  DefindexVaultError,
+  toDefindexVaultError,
+  type AssetStrategySet,
+  type CurrentAssetInvestmentAllocation,
+  type StrategyAllocation,
+  type VaultDepositArgs,
+  type VaultMethodOptions,
+  type VaultWithdrawArgs,
+} from "./contracts/defindexVault";
 export * from "./contracts/game";
 export * from "./utils/stellar";
 export * from "./utils/validation";

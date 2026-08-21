@@ -1,7 +1,7 @@
 /**
  * TypeScript bindings for the DeFindex Vault contract.
  *
- * GENERATED FILE — do not edit by hand. Produced with:
+ * GENERATED FILE, do not edit by hand. Produced with:
  *
  *   stellar contract bindings typescript \
  *     --network testnet \
@@ -10,7 +10,7 @@
  *
  * The spec below is downloaded from the WASM of the DeFindex USDC/Blend vault
  * deployed on Stellar testnet, so the interface here is the interface the
- * deployed contract actually exposes — not a transcription of documentation.
+ * deployed contract actually exposes, not a transcription of documentation.
  * The same vault WASM backs the CETES (Etherfuse Stablebond) vault, so one set
  * of bindings covers both treasury venues.
  *

@@ -61,7 +61,7 @@ export interface VaultWithdrawArgs {
  * Soroban surfaces two shapes of failure through the JS SDK:
  *   - a declared `Result::Err`, which the bindings hand back as an `Err` value;
  *   - a host trap (`Error(Contract, #N)`), thrown from `simulate`/`signAndSend`,
- *     which is what a nested call — a strategy, or the underlying token — does
+ *     which is what a nested call (a strategy, or the underlying token) does
  *     when it fails.
  *
  * Both end up here so callers only have to handle one thing.
@@ -225,8 +225,8 @@ export class DefindexVaultContractClient {
    *
    * The SDK builds the transaction without throwing when simulation fails; the
    * error only appears when `simulationData` is read, which for an unwary
-   * caller is at `signAndSend`. Reading it here moves a contract rejection —
-   * a paused strategy, an unfunded treasury account — to the point where the
+   * caller is at `signAndSend`. Reading it here moves a contract rejection,
+   * a paused strategy or an unfunded treasury account, to the point where the
    * call is made, where it can still be handled.
    */
   private async assemble(
@@ -263,7 +263,7 @@ export class DefindexVaultContractClient {
 
   /**
    * Every underlying asset the vault manages, with idle vs. invested split and
-   * the per-strategy allocation — including each strategy's `paused` flag.
+   * the per-strategy allocation, including each strategy's `paused` flag.
    */
   async fetchTotalManagedFunds(): Promise<CurrentAssetInvestmentAllocation[]> {
     return this.readResult(() => this.client.fetch_total_managed_funds());

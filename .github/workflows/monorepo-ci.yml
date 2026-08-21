@@ -190,10 +190,16 @@ jobs:
         # Record build times
         START_TIME=$(date +%s)
 
-        # Build webapp
-        cd apps/webapp
+        # Build shared first (required by webapp and api)
+        cd apps/shared
         bun_install
         bun run build
+        SHARED_BUILD_TIME=$(date +%s)
+
+        # Build webapp
+        cd ../webapp
+        bun_install
+        SKIP_ENV_VALIDATION=true bun run build
         WEBAPP_BUILD_TIME=$(date +%s)
 
         # Build API
@@ -201,23 +207,17 @@ jobs:
         bun_install
         bun run build
         API_BUILD_TIME=$(date +%s)
-
-        # Build shared
-        cd ../shared
-        bun_install
-        bun run build
-        SHARED_BUILD_TIME=$(date +%s)
         
         # Calculate build times
-        WEBAPP_TOTAL=$((WEBAPP_BUILD_TIME - START_TIME))
+        SHARED_TOTAL=$((SHARED_BUILD_TIME - START_TIME))
+        WEBAPP_TOTAL=$((WEBAPP_BUILD_TIME - SHARED_BUILD_TIME))
         API_TOTAL=$((API_BUILD_TIME - WEBAPP_BUILD_TIME))
-        SHARED_TOTAL=$((SHARED_BUILD_TIME - API_BUILD_TIME))
-        TOTAL=$((SHARED_BUILD_TIME - START_TIME))
+        TOTAL=$((API_BUILD_TIME - START_TIME))
         
         echo "Build times:"
+        echo "Shared: ${SHARED_TOTAL}s"
         echo "WebApp: ${WEBAPP_TOTAL}s"
         echo "API: ${API_TOTAL}s"
-        echo "Shared: ${SHARED_TOTAL}s"
         echo "Total: ${TOTAL}s"
         
         # Alert if build is slow (>5 minutes)

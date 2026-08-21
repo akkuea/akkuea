@@ -41,26 +41,40 @@ export const isStellarContractId = (val: string): boolean => {
 };
 
 export const stellarPublicKeySchema = z
-  .string({ required_error: "Must be a valid Stellar public key (56 characters starting with G)" })
+  .string({
+    required_error:
+      "Must be a valid Stellar public key (56 characters starting with G)",
+  })
   .refine(isStellarPublicKey, {
-    message: "Must be a valid Stellar public key (56 characters starting with G)",
+    message:
+      "Must be a valid Stellar public key (56 characters starting with G)",
   });
 
 export const stellarSecretSeedSchema = z
-  .string({ required_error: "Must be a valid Stellar secret seed (56 characters starting with S)" })
+  .string({
+    required_error:
+      "Must be a valid Stellar secret seed (56 characters starting with S)",
+  })
   .refine(isStellarSecretSeed, {
-    message: "Must be a valid Stellar secret seed (56 characters starting with S)",
+    message:
+      "Must be a valid Stellar secret seed (56 characters starting with S)",
   });
 
 export const stellarContractIdSchema = z
-  .string({ required_error: "Must be a valid Soroban contract ID (56 characters starting with C)" })
+  .string({
+    required_error:
+      "Must be a valid Soroban contract ID (56 characters starting with C)",
+  })
   .refine(isStellarContractId, {
-    message: "Must be a valid Soroban contract ID (56 characters starting with C)",
+    message:
+      "Must be a valid Soroban contract ID (56 characters starting with C)",
   });
 
-export const urlSchema = z.string({ required_error: "Must be a valid URL" }).url({
-  message: "Must be a valid URL (e.g. https://... or http://...)",
-});
+export const urlSchema = z
+  .string({ required_error: "Must be a valid URL" })
+  .url({
+    message: "Must be a valid URL (e.g. https://... or http://...)",
+  });
 
 export const portSchema = z
   .string()
@@ -73,7 +87,8 @@ export const booleanSchema = z
   .optional()
   .transform((val) => {
     if (typeof val === "boolean") return val;
-    if (typeof val === "string") return val.toLowerCase() === "true" || val === "1";
+    if (typeof val === "string")
+      return val.toLowerCase() === "true" || val === "1";
     return undefined;
   });
 
@@ -87,7 +102,9 @@ export const apiEnvSchema = z.object({
     .transform((val) => (val ? parseInt(val, 10) : 10)),
   DATABASE_SSL: booleanSchema,
   PORT: portSchema,
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+  NODE_ENV: z
+    .enum(["development", "production", "test"])
+    .default("development"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).optional(),
   WEBHOOK_SECRET: z
     .string({ required_error: "WEBHOOK_SECRET is required" })
@@ -122,7 +139,9 @@ export const apiEnvSchema = z.object({
     .min(1, "STELLAR_NETWORK_PASSPHRASE is required"),
   STELLAR_ADMIN_PUBLIC_KEY: stellarPublicKeySchema,
   STELLAR_ADMIN_SECRET: stellarSecretSeedSchema,
-  REAL_ESTATE_TOKEN_CONTRACT_ID: stellarContractIdSchema.optional().or(z.literal("")),
+  REAL_ESTATE_TOKEN_CONTRACT_ID: stellarContractIdSchema
+    .optional()
+    .or(z.literal("")),
   DEFI_RWA_CONTRACT_ID: stellarContractIdSchema.optional().or(z.literal("")),
 });
 

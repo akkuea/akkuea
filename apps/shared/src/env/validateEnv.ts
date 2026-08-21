@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { apiEnvSchema, webappEnvSchema, type ApiEnv, type WebappEnv } from "./schemas";
+import {
+  apiEnvSchema,
+  webappEnvSchema,
+  type ApiEnv,
+  type WebappEnv,
+} from "./schemas";
 
 export class EnvValidationError extends Error {
   public readonly issues: string[];

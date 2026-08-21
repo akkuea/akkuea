@@ -162,9 +162,11 @@ describe("Environment Validation Module", () => {
   describe("Webapp Environment Validation (validateWebappEnv)", () => {
     it("successfully validates a valid webapp environment", () => {
       const parsed = validateWebappEnv(VALID_WEBAPP_ENV);
-      expect(parsed.NEXT_PUBLIC_API_URL).toBe(VALID_WEBAPP_ENV.NEXT_PUBLIC_API_URL);
+      expect(parsed.NEXT_PUBLIC_API_URL).toBe(
+        VALID_WEBAPP_ENV.NEXT_PUBLIC_API_URL,
+      );
       expect(parsed.OPERATIONS_BACKEND_CREDENTIAL).toBe(
-        VALID_WEBAPP_ENV.OPERATIONS_BACKEND_CREDENTIAL
+        VALID_WEBAPP_ENV.OPERATIONS_BACKEND_CREDENTIAL,
       );
     });
 

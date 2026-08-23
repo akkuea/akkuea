@@ -48,3 +48,12 @@ export function getDefiRwaContractId(): string {
   }
   return CONTRACT_IDS.DEFI_LENDING[resolveNetworkKey()] ?? '';
 }
+
+/** Pilot Whitelist contract ID (env override → shared deployment artifact). */
+export function getPilotWhitelistContractId(): string {
+  const fromEnv = process.env.WHITELIST_CONTRACT_ID?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  return CONTRACT_IDS.PILOT_WHITELIST[resolveNetworkKey()] ?? '';
+}

@@ -15,7 +15,10 @@ mock.module('../services/WhitelistService', () => {
 });
 
 // Setup a minimal app for testing routes
-const testApp = new Elysia().use(whitelistRoutes);
+import { internalOperationsRoutes } from './internalOperations';
+const testApp = new Elysia().use(whitelistRoutes).use(internalOperationsRoutes);
+
+process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
 
 describe('Whitelist API Routes', () => {
   const mockWallet = 'GDK7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZ';
@@ -113,8 +116,9 @@ describe('Whitelist API Routes', () => {
     });
 
     const response = await testApp.handle(
-      new Request('http://localhost/pilot/whitelist/pending', {
+      new Request('http://localhost/internal/operations/pilot/whitelist/pending', {
         method: 'GET',
+        headers: { 'x-internal-api-key': 'test-secret' },
       }),
     );
 
@@ -126,9 +130,9 @@ describe('Whitelist API Routes', () => {
 
   it('should review a request', async () => {
     const response = await testApp.handle(
-      new Request('http://localhost/pilot/whitelist/req_id_1/review', {
+      new Request('http://localhost/internal/operations/pilot/whitelist/req_id_1/review', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-internal-api-key': 'test-secret' },
         body: JSON.stringify({ action: 'approve' }),
       }),
     );

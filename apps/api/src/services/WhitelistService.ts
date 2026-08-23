@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
+import { getPilotWhitelistContractId } from '../config/contracts';
 import { stellarService } from './StellarService';
 
 export class WhitelistService {
@@ -20,7 +21,7 @@ export class WhitelistService {
       throw new Error('Request is already approved');
     }
 
-    const contractId = process.env.WHITELIST_CONTRACT_ID;
+    const contractId = getPilotWhitelistContractId();
     const adminPublicKey = process.env.STELLAR_ADMIN_PUBLIC_KEY;
     const adminSecret = process.env.STELLAR_ADMIN_SECRET;
 
@@ -28,23 +29,11 @@ export class WhitelistService {
       throw new Error('Whitelist contract or admin credentials not configured');
     }
 
-    // Call the C6-001 pilot-whitelist contract's `approve(admin, address)` function.
-    // Contract source: apps/contracts/contracts/pilot-whitelist/src/lib.rs
-    // Signature: pub fn approve(env: Env, admin: Address, address: Address)
-    //
-    // Two arguments are required: the admin address (for on-chain auth) and the
-    // investor wallet address to whitelist.
-    //
-    // NOTE: StellarService's typed-client switch has a `case 'approve'` that routes
-    // to RealEstateTokenContractClient (the SEP-41 token allowance) — a completely
-    // different function. That typed path will fail for an unknown contract ID and
-    // fall through to the legacy XDR builder, which is the correct path here.
-    const txHash = await stellarService.callAndSubmitContract(
+    const txHash = await stellarService.submitWhitelistApprove(
       contractId,
-      'approve',
-      [adminPublicKey, request.walletAddress],
-      adminSecret,
       adminPublicKey,
+      adminSecret,
+      request.walletAddress
     );
 
     // Update database status

@@ -10,7 +10,8 @@ import {
   EmptyState,
   SectionErrorFallback,
 } from "@/components/ui";
-import { apiClient } from "@/services/api/client";
+import { adminOperationsApi } from "@/services/api/adminOperations";
+import { useWallet } from "@/components/auth/hooks/useWallet.hook";
 
 type WhitelistRequest = {
   id: string;
@@ -34,14 +35,13 @@ export function WhitelistReviewQueue() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
 
+  const { address: operatorWallet } = useWallet();
+
   const fetchRequests = async () => {
     setIsLoading(true);
     try {
-      const res = await apiClient.get<{
-        success: boolean;
-        data: WhitelistRequest[];
-      }>("/pilot/whitelist/pending");
-      setRequests(res.data.data);
+      const res = await adminOperationsApi.getPendingWhitelist(operatorWallet);
+      setRequests(res.data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch requests");
     } finally {
@@ -52,7 +52,7 @@ export function WhitelistReviewQueue() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRequests();
-  }, []);
+  }, [operatorWallet]);
 
   const handleReviewAction = async (action: "approve" | "reject") => {
     if (!selectedRequest) return;
@@ -65,10 +65,14 @@ export function WhitelistReviewQueue() {
     setIsReviewing(true);
     setReviewError(null);
     try {
-      await apiClient.post(`/pilot/whitelist/${selectedRequest.id}/review`, {
-        action,
-        reason: action === "reject" ? rejectionReason : undefined,
-      });
+      await adminOperationsApi.reviewWhitelistRequest(
+        operatorWallet,
+        selectedRequest.id,
+        {
+          action,
+          reason: action === "reject" ? rejectionReason : undefined,
+        },
+      );
 
       // Refresh list
       setSelectedRequest(null);

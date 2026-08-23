@@ -26,6 +26,10 @@ export const CONTRACT_IDS = {
     TESTNET: testnetContracts.contracts.DEFI_LENDING,
     MAINNET: mainnetContracts.DEFI_LENDING,
   },
+  PILOT_WHITELIST: {
+    TESTNET: testnetContracts.contracts.PILOT_WHITELIST,
+    MAINNET: mainnetContracts.PILOT_WHITELIST,
+  },
 } as const;
 
 export const ASSETS = {

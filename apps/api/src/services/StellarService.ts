@@ -8,6 +8,7 @@ import {
   Transaction,
   TransactionBuilder,
   xdr,
+  nativeToScVal,
 } from '@stellar/stellar-sdk';
 import {
   createNodeContractSigner,
@@ -196,6 +197,31 @@ export class StellarService {
         error instanceof Error ? error.message : 'Failed to prepare Soroban transaction',
       );
     }
+  }
+
+  async submitWhitelistApprove(
+    contractId: string,
+    adminPublicKey: string,
+    adminSecret: string,
+    walletAddress: string,
+  ): Promise<string> {
+    this.assertValidContractId(contractId);
+    this.assertValidAddress(adminPublicKey);
+    this.assertValidAddress(walletAddress);
+
+    const adminScVal = nativeToScVal(adminPublicKey, { type: 'address' });
+    const walletScVal = nativeToScVal(walletAddress, { type: 'address' });
+
+    const unsignedXdr = await this.callContractLegacy(
+      contractId,
+      'approve',
+      [adminScVal, walletScVal],
+      adminPublicKey
+    );
+    const transaction = TransactionBuilder.fromXDR(unsignedXdr, this.networkPassphrase);
+    const signer = Keypair.fromSecret(adminSecret);
+    transaction.sign(signer);
+    return this.submitTransaction(transaction.toXDR());
   }
 
   createKeypair(): { publicKey: string; secretKey: string } {

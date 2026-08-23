@@ -114,4 +114,21 @@ export const adminOperationsApi = {
       body: JSON.stringify(body),
     });
   },
+
+  async getPendingWhitelist(
+    operatorWallet: string | null,
+  ): Promise<{ success: boolean; data: any[] }> {
+    return adminFetch(`pilot/whitelist/pending`, operatorWallet);
+  },
+
+  async reviewWhitelistRequest(
+    operatorWallet: string | null,
+    requestId: string,
+    body: { action: "approve" | "reject"; reason?: string },
+  ): Promise<{ success: boolean; txHash?: string }> {
+    return adminFetch(`pilot/whitelist/${requestId}/review`, operatorWallet, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
 };

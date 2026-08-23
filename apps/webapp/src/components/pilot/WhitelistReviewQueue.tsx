@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Card,
   Button,
@@ -10,18 +10,11 @@ import {
   EmptyState,
   SectionErrorFallback,
 } from "@/components/ui";
-import { adminOperationsApi } from "@/services/api/adminOperations";
+import {
+  whitelistOperationsApi,
+  type WhitelistRequest,
+} from "@/services/api/adminOperations";
 import { useWallet } from "@/components/auth/hooks/useWallet.hook";
-
-type WhitelistRequest = {
-  id: string;
-  walletAddress: string;
-  fullName: string;
-  idType: string;
-  idReference: string;
-  status: string;
-  createdAt: string;
-};
 
 export function WhitelistReviewQueue() {
   const [requests, setRequests] = useState<WhitelistRequest[]>([]);
@@ -37,22 +30,22 @@ export function WhitelistReviewQueue() {
 
   const { address: operatorWallet } = useWallet();
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await adminOperationsApi.getPendingWhitelist(operatorWallet);
+      const res =
+        await whitelistOperationsApi.getPendingWhitelist(operatorWallet);
       setRequests(res.data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch requests");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [operatorWallet]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchRequests();
-  }, [operatorWallet]);
+    void fetchRequests();
+  }, [fetchRequests]);
 
   const handleReviewAction = async (action: "approve" | "reject") => {
     if (!selectedRequest) return;
@@ -65,7 +58,7 @@ export function WhitelistReviewQueue() {
     setIsReviewing(true);
     setReviewError(null);
     try {
-      await adminOperationsApi.reviewWhitelistRequest(
+      await whitelistOperationsApi.reviewWhitelistRequest(
         operatorWallet,
         selectedRequest.id,
         {
@@ -77,7 +70,7 @@ export function WhitelistReviewQueue() {
       // Refresh list
       setSelectedRequest(null);
       setRejectionReason("");
-      fetchRequests();
+      void fetchRequests();
     } catch (err: unknown) {
       setReviewError(
         err instanceof Error ? err.message : `Failed to ${action} request`,

@@ -33,7 +33,7 @@ export class WhitelistService {
       contractId,
       adminPublicKey,
       adminSecret,
-      request.walletAddress
+      request.walletAddress,
     );
 
     // Update database status

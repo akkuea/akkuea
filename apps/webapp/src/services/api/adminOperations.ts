@@ -114,10 +114,24 @@ export const adminOperationsApi = {
       body: JSON.stringify(body),
     });
   },
+};
 
+export interface WhitelistRequest {
+  id: string;
+  walletAddress: string;
+  fullName: string;
+  idType: string;
+  idReference: string;
+  status: string;
+  rejectionReason?: string | null;
+  createdAt: string;
+  reviewedAt?: string | null;
+}
+
+export const whitelistOperationsApi = {
   async getPendingWhitelist(
     operatorWallet: string | null,
-  ): Promise<{ success: boolean; data: any[] }> {
+  ): Promise<{ success: boolean; data: WhitelistRequest[] }> {
     return adminFetch(`pilot/whitelist/pending`, operatorWallet);
   },
 

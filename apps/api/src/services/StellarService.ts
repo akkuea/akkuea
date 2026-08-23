@@ -216,7 +216,7 @@ export class StellarService {
       contractId,
       'approve',
       [adminScVal, walletScVal],
-      adminPublicKey
+      adminPublicKey,
     );
     const transaction = TransactionBuilder.fromXDR(unsignedXdr, this.networkPassphrase);
     const signer = Keypair.fromSecret(adminSecret);

@@ -44,7 +44,10 @@ export function WhitelistReviewQueue() {
   }, [operatorWallet]);
 
   useEffect(() => {
-    void fetchRequests();
+    const timer = setTimeout(() => {
+      void fetchRequests();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchRequests]);
 
   const handleReviewAction = async (action: "approve" | "reject") => {

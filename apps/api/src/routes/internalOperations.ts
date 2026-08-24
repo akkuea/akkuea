@@ -1,4 +1,4 @@
-import { Elysia } from 'elysia';
+import { Elysia, t } from 'elysia';
 import { z } from 'zod';
 import {
   validateBody,
@@ -11,6 +11,7 @@ import {
   OperationalPropertyController,
   type OperationsQueue,
 } from '../controllers/OperationalPropertyController';
+import { WhitelistController } from '../controllers/WhitelistController';
 import { handleError } from '../utils/errors';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
 
@@ -24,7 +25,7 @@ const reviewBodySchema = z.object({
   actorWallet: z.string().min(50).max(64),
 });
 
-const internalKeyAuth = new Elysia({ name: 'internal-operations-auth' }).onBeforeHandle(
+export const internalKeyAuth = new Elysia({ name: 'internal-operations-auth' }).onBeforeHandle(
   ({ headers, set }) => {
     if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
       set.status = 403;
@@ -118,7 +119,32 @@ const reviewPropertyRoute = new Elysia()
     },
   );
 
+const reviewWhitelistSchema = t.Object({
+  action: t.Union([t.Literal('approve'), t.Literal('reject')]),
+  reason: t.Optional(t.String()),
+});
+
+const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
+  .use(internalKeyAuth)
+  .get('/pending', () => WhitelistController.pending(), {
+    detail: {
+      summary: 'Get pending whitelist requests (Admin)',
+      tags: ['Internal Operations'],
+    },
+  })
+  .post('/:id/review', (ctx) => WhitelistController.review(ctx), {
+    body: reviewWhitelistSchema,
+    params: t.Object({
+      id: t.String(),
+    }),
+    detail: {
+      summary: 'Review whitelist request (Admin)',
+      tags: ['Internal Operations'],
+    },
+  });
+
 export const internalOperationsRoutes = new Elysia({ prefix: '/internal/operations' })
   .use(listPropertiesRoute)
   .use(getPropertyOperationsRoute)
-  .use(reviewPropertyRoute);
+  .use(reviewPropertyRoute)
+  .use(whitelistOperationsRoute);

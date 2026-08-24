@@ -8,6 +8,7 @@ import {
   Transaction,
   TransactionBuilder,
   xdr,
+  nativeToScVal,
 } from '@stellar/stellar-sdk';
 import {
   createNodeContractSigner,
@@ -198,6 +199,31 @@ export class StellarService {
     }
   }
 
+  async submitWhitelistApprove(
+    contractId: string,
+    adminPublicKey: string,
+    adminSecret: string,
+    walletAddress: string,
+  ): Promise<string> {
+    this.assertValidContractId(contractId);
+    this.assertValidAddress(adminPublicKey);
+    this.assertValidAddress(walletAddress);
+
+    const adminScVal = nativeToScVal(adminPublicKey, { type: 'address' });
+    const walletScVal = nativeToScVal(walletAddress, { type: 'address' });
+
+    const unsignedXdr = await this.callContractLegacy(
+      contractId,
+      'approve',
+      [adminScVal, walletScVal],
+      adminPublicKey,
+    );
+    const transaction = TransactionBuilder.fromXDR(unsignedXdr, this.networkPassphrase);
+    const signer = Keypair.fromSecret(adminSecret);
+    transaction.sign(signer);
+    return this.submitTransaction(transaction.toXDR());
+  }
+
   createKeypair(): { publicKey: string; secretKey: string } {
     const keypair = Keypair.random();
 
@@ -330,6 +356,8 @@ export class StellarService {
           propertyId: this.asBigInt(args[2]),
           amount: this.asBigInt(args[3]),
         });
+      // SEP-41 token transfer allowance — NOT the pilot-whitelist approve.
+      // Pilot-whitelist approvals bypass this switch and use the legacy XDR path.
       case 'approve':
         return tokenClient.approve({
           owner: this.asAddress(args[0]),

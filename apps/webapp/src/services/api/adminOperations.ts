@@ -115,3 +115,34 @@ export const adminOperationsApi = {
     });
   },
 };
+
+export interface WhitelistRequest {
+  id: string;
+  walletAddress: string;
+  fullName: string;
+  idType: string;
+  idReference: string;
+  status: string;
+  rejectionReason?: string | null;
+  createdAt: string;
+  reviewedAt?: string | null;
+}
+
+export const whitelistOperationsApi = {
+  async getPendingWhitelist(
+    operatorWallet: string | null,
+  ): Promise<{ success: boolean; data: WhitelistRequest[] }> {
+    return adminFetch(`pilot/whitelist/pending`, operatorWallet);
+  },
+
+  async reviewWhitelistRequest(
+    operatorWallet: string | null,
+    requestId: string,
+    body: { action: "approve" | "reject"; reason?: string },
+  ): Promise<{ success: boolean; txHash?: string }> {
+    return adminFetch(`pilot/whitelist/${requestId}/review`, operatorWallet, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+};

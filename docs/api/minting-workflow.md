@@ -26,6 +26,8 @@ This document covers **tokenization only**. The share purchase flow is a databas
 
 ## Sequence diagram
 
+![Property Tokenization Sequence](../diagrams/03-tokenization-mint-vertical.svg)
+
 ```
   Client                 API (Elysia/Bun)              Database         Stellar Network
     |                         |                             |                   |

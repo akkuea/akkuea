@@ -95,6 +95,8 @@ The repository is a **Bun monorepo** with four `bun` workspaces, plus the Rust c
 
 The pilot's own contract surface (income-participation token, whitelist, payout-split) is being built inside `apps/contracts` alongside the existing `defi-rwa` contract - see [`docs/strategy/product-brief.md`](docs/strategy/product-brief.md) for why they're kept separate rather than reusing `defi-rwa`.
 
+![Akkuea System Architecture](docs/diagrams/01-system-architecture-vertical.svg)
+
 ### Data Flows
 
 The flows below describe the **existing platform build** (`defi-rwa` contract). The pilot's own flow (evidence submission → review → payout-split distribution) is diagrammed in [`docs/strategy/product-brief.md`](docs/strategy/product-brief.md).
@@ -260,6 +262,8 @@ akkuea/
 └── .github/
     └── workflows/        # GitHub Actions CI definitions
 ```
+
+![Monorepo Structure](docs/diagrams/08-monorepo-structure-vertical.svg)
 
 ---
 

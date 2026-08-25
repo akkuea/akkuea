@@ -31,13 +31,10 @@ IGNORED_EXTENSIONS = {
 # Explicit allowed exceptions for existing pre-date codebase files or external references
 ALLOWED_EXCEPTIONS = [
     ".github/workflows/",
-    "apps/contracts/",
-    "apps/akkuea-land/",
     "apps/api/src/index.ts",
     "apps/webapp/src/components/portfolio/PropertyReportCard.tsx",
     "docs/README.md",
     "docs/deployment/deploy-game-contracts.md",
-    "docs/planning/",
     "packages/nextjs/",
 ]
 

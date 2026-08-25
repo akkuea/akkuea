@@ -131,7 +131,7 @@ export function ClaimLandStep({
                         top: "10%",
                       }}
                     >
-                      ✦
+                      <Sparkles size={12} />
                     </motion.div>
                   ))}
                 </div>

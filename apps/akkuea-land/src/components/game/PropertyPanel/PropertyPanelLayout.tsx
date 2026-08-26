@@ -75,7 +75,9 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
 
             {/* Grid Location / Coords Bar */}
             <div className="flex justify-between items-center bg-land-bg/60 p-2.5 rounded-lg border border-land-border/60 text-xs mt-1">
-              <span className="text-land-fg-muted font-medium">Coordinates</span>
+              <span className="text-land-fg-muted font-medium">
+                Coordinates
+              </span>
               <span className="font-mono text-land-accent font-semibold">
                 {coordinates}
               </span>
@@ -122,7 +124,9 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
               <span className="font-bold text-land-danger block mb-0.5">
                 Transaction Error
               </span>
-              <span className="text-land-danger/90 leading-relaxed">{error}</span>
+              <span className="text-land-danger/90 leading-relaxed">
+                {error}
+              </span>
             </div>
           </div>
         )}

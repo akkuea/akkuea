@@ -236,7 +236,9 @@ export default function SandboxPage() {
                     </div>
 
                     <div className="flex justify-between items-center bg-land-bg/40 p-2 rounded-lg border border-land-border/60 mt-auto">
-                      <span className="text-[10px] text-land-fg-muted">Value</span>
+                      <span className="text-[10px] text-land-fg-muted">
+                        Value
+                      </span>
                       <span className="text-xs font-mono font-bold text-land-accent">
                         {p.pricePerShare} LAND
                       </span>
@@ -249,16 +251,18 @@ export default function SandboxPage() {
 
           {/* Sandbox Helper Notes */}
           <div className="bg-land-accent/5 p-5 rounded-3xl border border-land-accent/30 flex items-start gap-4">
-            <HelpCircle className="text-land-accent shrink-0 mt-0.5" size={20} />
+            <HelpCircle
+              className="text-land-accent shrink-0 mt-0.5"
+              size={20}
+            />
             <div className="space-y-1">
               <h4 className="text-xs font-bold text-land-accent uppercase tracking-wider">
                 How to test the states:
               </h4>
               <ul className="text-xs text-land-fg-muted space-y-2 mt-2 list-disc list-inside">
                 <li>
-                  <strong className="text-land-fg">Unowned State</strong>:
-                  Click the Amber tile. Connect wallet to purchase from the
-                  treasury.
+                  <strong className="text-land-fg">Unowned State</strong>: Click
+                  the Amber tile. Connect wallet to purchase from the treasury.
                 </li>
                 <li>
                   <strong className="text-land-fg">Owned State</strong>: Click
@@ -266,8 +270,8 @@ export default function SandboxPage() {
                   listing triggers the signature simulator.
                 </li>
                 <li>
-                  <strong className="text-land-fg">Listed State</strong>:
-                  Click the Purple tile. If wallet is connected, purchase is
+                  <strong className="text-land-fg">Listed State</strong>: Click
+                  the Purple tile. If wallet is connected, purchase is
                   available.
                 </li>
                 <li>
@@ -275,8 +279,8 @@ export default function SandboxPage() {
                     Signature Guard State
                   </strong>
                   : Click{" "}
-                  <strong className="text-land-fg">Disconnect Wallet</strong>{" "}
-                  at the top. Notice that all transaction buttons are strictly
+                  <strong className="text-land-fg">Disconnect Wallet</strong> at
+                  the top. Notice that all transaction buttons are strictly
                   hidden behind the wallet connect guard!
                 </li>
               </ul>

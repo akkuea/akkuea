@@ -6,7 +6,9 @@ import { CityMap } from "@/components/CityMap";
 function StatusBar() {
   const { connected, events } = useGameEvents();
   return (
-    <p className={`text-xs ${connected ? "text-land-success" : "text-land-danger"}`}>
+    <p
+      className={`text-xs ${connected ? "text-land-success" : "text-land-danger"}`}
+    >
       {connected ? "● Live" : "○ Connecting…"} - {events.length} events received
     </p>
   );

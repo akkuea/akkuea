@@ -3,6 +3,7 @@ name: WebApp – Preview CI Checks
 # Runs quality checks on pull requests targeting develop.
 # Vercel preview deployments are handled automatically by the Vercel GitHub
 # integration - no CLI steps needed here.
+# no-op touch to force a fresh scheduling of this workflow
 
 on:
   pull_request:

@@ -1,5 +1,6 @@
 name: WebApp - Quality and Security CI
 
+# no-op touch to force a fresh scheduling of this workflow
 on:
   push:
     branches: [main, develop]

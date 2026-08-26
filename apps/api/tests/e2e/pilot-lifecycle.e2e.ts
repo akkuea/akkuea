@@ -12,6 +12,7 @@ const ALLY_SECRET = process.env.PILOT_E2E_ALLY_SECRET;
 const WHITELIST_CONTRACT_ID = testnetContracts.contracts.PILOT_WHITELIST;
 const PAYOUT_SPLIT_CONTRACT_ID = testnetContracts.contracts.PILOT_PAYOUT_SPLIT;
 const USDC_CONTRACT_ID = testnetContracts.contracts.USDC_TOKEN;
+const PILOT_INCOME_TOKEN_ID = testnetContracts.contracts.PILOT_INCOME_TOKEN;
 
 const rpcUrl = testnetContracts.rpcUrl;
 const server = new rpc.Server(rpcUrl);
@@ -144,7 +145,7 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
     expect(sendRes.status).toBe('PENDING');
     
     let txStatus = await waitTxConfirm(sendRes.hash);
-    expect(txStatus.status).toBe('SUCCESS');
+    expect(txStatus.status).toBe(rpc.Api.GetTransactionStatus.SUCCESS);
 
     // 2. Execute Distribution
     const execOp = contract.call(
@@ -167,36 +168,73 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
     expect(execSendRes.status).toBe('PENDING');
     
     let execTxStatus = await waitTxConfirm(execSendRes.hash);
-    expect(execTxStatus.status).toBe('SUCCESS');
+    expect(execTxStatus.status).toBe(rpc.Api.GetTransactionStatus.SUCCESS);
   }, 60000); // 60s timeout
 
   it('Step 4: Asserts resulting USDC balances match the expected split', async () => {
-    // In a fully controlled environment, we would verify balances match the 10%/90% exactly 
-    // against the total income.
-    const platformFeeRecipient = operatorKeypair.publicKey(); // Assuming operator acts as fee recipient for testnet or we fetch it
-    // Wait, the fee recipient is hardcoded in initialization, so we can't easily know it without reading contract state or assuming it's the operator.
-    // For this e2e test, we will assert that the USDC contract is reachable and readable via RPC.
+    // 1. Read platform fee recipient from contract state
+    const payoutContractAddress = new Contract(PAYOUT_SPLIT_CONTRACT_ID).address().toScAddress();
     
+    const feeRecipientKeySymbol = xdr.LedgerKey.contractData(new xdr.LedgerKeyContractData({
+      contract: payoutContractAddress,
+      key: xdr.ScVal.scvSymbol('PlatformFeeRecipient'),
+      durability: xdr.ContractDataDurability.persistent(),
+    }));
+    
+    const feeRecipientKeyVec = xdr.LedgerKey.contractData(new xdr.LedgerKeyContractData({
+      contract: payoutContractAddress,
+      key: xdr.ScVal.scvVec([xdr.ScVal.scvSymbol('PlatformFeeRecipient')]),
+      durability: xdr.ContractDataDurability.persistent(),
+    }));
+
+    const ledgerEntriesRes = await server.getLedgerEntries(feeRecipientKeySymbol, feeRecipientKeyVec);
+    const entry = ledgerEntriesRes.entries[0];
+    expect(entry).toBeDefined();
+    const platformFeeRecipient = scValToNative(entry.val.contractData().val());
+
+    // 2. Read pro-rata recipients (holders) from income token via getter simulation
+    const incomeTokenContract = new Contract(PILOT_INCOME_TOKEN_ID);
+    const holdersOp = incomeTokenContract.call('holders');
+    
+    const sourceAccount = await server.getAccount(operatorKeypair.publicKey());
+    const txBuilderHolders = new TransactionBuilder(sourceAccount, { fee: '100', networkPassphrase });
+    txBuilderHolders.addOperation(holdersOp);
+    
+    const simResHolders = await server.simulateTransaction(txBuilderHolders.build());
+    expect(rpc.Api.isSimulationSuccess(simResHolders)).toBe(true);
+    
+    let holders: string[] = [];
+    if (rpc.Api.isSimulationSuccess(simResHolders) && simResHolders.result?.retval) {
+      holders = scValToNative(simResHolders.result.retval) as string[];
+    }
+    expect(holders.length).toBeGreaterThan(0);
+
+    // 3. Assert balances
     const usdcContract = new Contract(USDC_CONTRACT_ID);
     
-    const balanceOp = usdcContract.call(
-      'balance',
-      nativeToScVal(PAYOUT_SPLIT_CONTRACT_ID, { type: 'address' })
-    );
+    // Check fee recipient balance
+    const feeBalanceOp = usdcContract.call('balance', nativeToScVal(platformFeeRecipient, { type: 'address' }));
+    const txBuilderFee = new TransactionBuilder(sourceAccount, { fee: '100', networkPassphrase });
+    txBuilderFee.addOperation(feeBalanceOp);
+    
+    const simResFee = await server.simulateTransaction(txBuilderFee.build());
+    expect(rpc.Api.isSimulationSuccess(simResFee)).toBe(true);
+    if (rpc.Api.isSimulationSuccess(simResFee) && simResFee.result?.retval) {
+      const balance = BigInt(scValToNative(simResFee.result.retval));
+      // Expected fee is 1000 USDC droplets
+      expect(balance).toBeGreaterThanOrEqual(1000n);
+    }
 
-    const txBuilder = new TransactionBuilder(await server.getAccount(operatorKeypair.publicKey()), {
-      fee: '100',
-      networkPassphrase
-    });
-    txBuilder.addOperation(balanceOp);
-    const tx = txBuilder.build();
+    // Check one of the pro-rata recipients
+    const proRataBalanceOp = usdcContract.call('balance', nativeToScVal(holders[0], { type: 'address' }));
+    const txBuilderProRata = new TransactionBuilder(sourceAccount, { fee: '100', networkPassphrase });
+    txBuilderProRata.addOperation(proRataBalanceOp);
     
-    const simRes = await server.simulateTransaction(tx);
-    expect(rpc.Api.isSimulationSuccess(simRes)).toBe(true);
-    
-    if (rpc.Api.isSimulationSuccess(simRes) && simRes.result?.retval) {
-      const balance = scValToNative(simRes.result.retval);
-      expect(typeof balance === 'bigint' || typeof balance === 'number' || typeof balance === 'string').toBe(true);
+    const simResProRata = await server.simulateTransaction(txBuilderProRata.build());
+    expect(rpc.Api.isSimulationSuccess(simResProRata)).toBe(true);
+    if (rpc.Api.isSimulationSuccess(simResProRata) && simResProRata.result?.retval) {
+      const balance = BigInt(scValToNative(simResProRata.result.retval));
+      expect(balance).toBeGreaterThan(0n);
     }
   });
 

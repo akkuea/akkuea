@@ -464,6 +464,29 @@ export class NotificationService {
   }
 
   /**
+   * Notify an operator that a pilot ally has missed two or more consecutive
+   * expected evidence-reporting cycles for a `pilot-payout-split` contract.
+   */
+  async notifyPilotReportingEscalation(
+    operatorUserId: string,
+    contractId: string,
+    consecutiveMissed: number,
+    missedCycleIds: string[],
+    channel: NotificationChannel = 'IN_APP',
+  ): Promise<Notification> {
+    return this.createNotification({
+      userId: operatorUserId,
+      eventType: 'PILOT_REPORTING_ESCALATION',
+      title: 'Pilot Ally Reporting Escalation',
+      message: `The pilot ally has missed ${consecutiveMissed} consecutive evidence-reporting cycles (${missedCycleIds.join(', ')}). Review the payout split contract and follow up with the ally.`,
+      channel,
+      relatedEntityType: 'pilot_payout_split',
+      relatedEntityId: contractId,
+      metadata: { consecutiveMissed, missedCycleIds },
+    });
+  }
+
+  /**
    * Notify investment opportunity
    */
   async notifyInvestmentOpportunity(

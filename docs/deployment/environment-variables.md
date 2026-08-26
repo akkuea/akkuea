@@ -59,6 +59,23 @@ The KYC expiry job runs in the background to mark expired KYC records and send r
 | `KYC_EXPIRY_POLL_INTERVAL_MS`   | `86400000`    | No (default: 24h)    | How often the job runs, in milliseconds. Default is `86400000` (24 hours). Set lower in staging to test expiry behaviour without waiting a full day |
 | `KYC_EXPIRY_REMINDER_WINDOW_MS` | `2592000000`  | No (default: 30d)    | How far in advance to send the expiry reminder notification, in milliseconds. Default is `2592000000` (30 days)                                     |
 
+### Pilot Ally Reporting Escalation Job
+
+The escalation job proactively watches `pilot-payout-split`'s on-chain evidence history and notifies an operator when the pilot ally has missed two (configurable) or more consecutive expected reporting cycles, instead of leaving this as a passive dashboard-only signal. See `apps/api/src/workers/pilotEscalationJob.ts`.
+
+The reporting cadence, breach threshold, and re-notification cadence are all configurable because they are properties of a specific ally's agreement, which does not exist yet for the pilot. `PILOT_ESCALATION_AGREEMENT_START` and `PILOT_ESCALATION_OPERATOR_USER_ID` are required for the job to actually run; without them it logs a warning each tick and does nothing (it does not crash).
+
+| Variable                             | Example Value                         | Required                   | Description                                                                                                                                          |
+| ------------------------------------- | -------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PILOT_ESCALATION_JOB_ENABLED`        | `true`                                  | No (default: `true`)        | Set to `false` to disable the escalation background job entirely (e.g. in test environments)                                                          |
+| `PILOT_ESCALATION_AGREEMENT_START`    | `2026-01-15T00:00:00.000Z`              | Yes (to run)                | ISO date the ally's reporting agreement began. Without this the job skips every tick                                                                  |
+| `PILOT_ESCALATION_OPERATOR_USER_ID`   | `b3f1...` (a user UUID)                 | Yes (to run)                | User ID of the operator to notify through the existing notification pipeline. Without this the job skips every tick                                   |
+| `PILOT_ESCALATION_CADENCE_DAYS`       | `30`                                    | No (default: `30`)          | Expected evidence-reporting cadence, in days, per the ally's agreement                                                                                 |
+| `PILOT_ESCALATION_THRESHOLD_CYCLES`   | `2`                                     | No (default: `2`)           | Consecutive missed cycles that constitutes a breach                                                                                                    |
+| `PILOT_ESCALATION_POLL_INTERVAL_MS`   | `21600000`                              | No (default: 6h)            | How often the job runs, in milliseconds                                                                                                                |
+| `PILOT_ESCALATION_RENOTIFY_INTERVAL_MS` | `604800000`                           | No (default: 7d)            | While the same breach persists unresolved, how often to re-send the notification rather than staying silent forever. Not re-sent on every poll         |
+| `PILOT_PAYOUT_SPLIT_CONTRACT_ID`      | `CXXX...` (56 chars, starts with `C`)   | No (falls back to deployment artifact) | Overrides the resolved `pilot-payout-split` contract ID for this network                                                                    |
+
 ### Stellar / Soroban - Network
 
 | Variable                     | Example Value                         | Required | Description                                                                                                                                                              |

@@ -21,6 +21,7 @@ import { cacheService } from './services/CacheService';
 import { NotificationService } from './services/NotificationService';
 import { createNotificationWorkerFromEnv } from './workers/notificationWorker';
 import { createKycExpiryJobFromEnv } from './workers/kycExpiryJob';
+import { createPilotEscalationJobFromEnv } from './workers/pilotEscalationJob';
 import { validateApiEnv } from '@akkuea/shared';
 
 // Validate environment variables on startup (fails fast with actionable guide if missing)
@@ -130,6 +131,10 @@ notificationWorker?.start();
 const kycExpiryJob = createKycExpiryJobFromEnv();
 kycExpiryJob?.start();
 
+// Start the pilot ally reporting-cycle escalation job (opt-out via PILOT_ESCALATION_JOB_ENABLED=false)
+const pilotEscalationJob = createPilotEscalationJobFromEnv();
+pilotEscalationJob?.start();
+
 const shutdown = async (signal: string) => {
   console.log(`\n${signal} received, closing connections...`);
   await Promise.all([
@@ -137,6 +142,7 @@ const shutdown = async (signal: string) => {
     cacheService.disconnect(),
     notificationWorker?.stop() ?? Promise.resolve(),
     kycExpiryJob?.stop() ?? Promise.resolve(),
+    pilotEscalationJob?.stop() ?? Promise.resolve(),
   ]);
 
   console.log('Connections closed. Exiting...');

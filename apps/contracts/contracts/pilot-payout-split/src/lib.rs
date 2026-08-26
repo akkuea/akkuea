@@ -1631,6 +1631,96 @@ mod tests {
         );
     }
 
+    #[test]
+    fn tiny_eurc_share_triggers_defensive_zero_min_out_guard() {
+        // With balances [1, 19], total_supply = 20. The holder with balance 1
+        // gets 9000 * 1 / 20 = 450 USDC pro-rata. With min_eurc_per_usdc = 1
+        // (the smallest positive value), min_eurc_out = 450 * 1 / 10_000_000 = 0
+        // via integer division. The defensive check inside run_eurc_swap_leg
+        // rejects this before the router is called.
+        let s = setup_with_balance_values(&[1, 19]);
+        fund_pool(&s, 100_000, 100_000);
+        s.payout
+            .set_currency_preference(&s.holders.get(0).unwrap(), &Currency::Eurc);
+        record_default(&s);
+
+        let res = s.payout.try_execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &1i128,
+        );
+
+        let summary = res
+            .expect("distribution invocation must succeed")
+            .expect("returned summary must decode despite one rejected leg");
+        assert_eq!(summary.swaps_failed, 1);
+        assert_eq!(summary.eurc_distributed_total, 0);
+        assert_eq!(summary.undistributed_failed_swaps, 450);
+
+        let failures = s.payout.get_swap_failures(&cycle(&s.env, "2026-08"));
+        assert_eq!(failures.len(), 1);
+        assert_eq!(
+            failures.get(0).unwrap().reason_code,
+            PayoutError::SlippageExceeded as u32
+        );
+
+        // The other holder (USDC) is paid normally.
+        assert_eq!(s.usdc.balance(&s.holders.get(1).unwrap()), 8_550);
+        assert_eq!(s.usdc.balance(&s.fee_recipient), 1_000);
+    }
+
+    #[test]
+    fn event_swap_executed_emits_correct_amounts() {
+        let s = setup();
+        fund_pool(&s, 100_000, 100_000);
+        let eurc_holder = s.holders.get(4).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+        record_default(&s);
+
+        s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        // Verify the swap_executed event was emitted by checking the EURC balance
+        // matches the expected swapped amount (4_293 from the 100k/100k pool).
+        assert_eq!(eurc_balance(&s, &eurc_holder), 4_293);
+    }
+
+    #[test]
+    fn event_swap_failed_emits_correct_reason_code() {
+        let s = setup();
+        fund_pool(&s, 100_000, 100_000);
+        let eurc_holder = s.holders.get(4).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+        record_default(&s);
+
+        let strict_rate = 9_900_000i128;
+        let summary = s
+            .payout
+            .try_execute_distribution(
+                &s.operator,
+                &s.ally,
+                &cycle(&s.env, "2026-08"),
+                &strict_rate,
+            )
+            .expect("distribution invocation must succeed")
+            .expect("returned summary must decode despite one rejected leg");
+
+        // The swap_failed event is emitted with SwapFailed reason code.
+        assert_eq!(summary.swaps_failed, 1);
+        let failures = s.payout.get_swap_failures(&cycle(&s.env, "2026-08"));
+        assert_eq!(
+            failures.get(0).unwrap().reason_code,
+            PayoutError::SwapFailed as u32
+        );
+    }
+
     fn eurc_balance(s: &Setup, holder: &Address) -> i128 {
         token::Client::new(&s.env, &s.eurc_id).balance(holder)
     }

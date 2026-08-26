@@ -173,6 +173,8 @@ impl PilotPayoutSplit {
     }
 
     /// Execute the approved USDC payout for a cycle.
+    ///
+    /// Any un-distributed remainder (dust from integer division rounding) remains in the contract's balance.
     pub fn execute_distribution(env: Env, cycle_id: String) -> DistributionSummary {
         Self::require_not_paused(&env);
         let _guard = ExecutionGuard::acquire(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
@@ -486,7 +488,56 @@ mod tests {
     }
 
     #[test]
+    fn exact_dust_is_retained_in_contract() {
+        let s = setup_with_balance_values(&[1, 1, 1, 1, 1, 1, 1]); // 7 holders
+                                                                   // Total supply = 7.
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "dust-test"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/dust-test"),
+            &100, // Total income
+        );
+        let pre_balance = s.usdc.balance(&s.payout_id);
+
+        let summary = s.payout.execute_distribution(&cycle(&s.env, "dust-test"));
+
+        // Fee is 10% of 100 = 10
+        assert_eq!(summary.platform_fee, 10);
+        // Holder amount = 90
+        assert_eq!(summary.holder_amount, 90);
+        // Each holder gets 90 * 1 / 7 = 12
+        // Total distributed = 12 * 7 = 84
+        assert_eq!(summary.distributed_total, 84);
+        // Dust = 90 - 84 = 6
+        assert_eq!(summary.dust, 6);
+
+        // Contract balance should have decreased by (fee + distributed_total), leaving dust
+        let post_balance = s.usdc.balance(&s.payout_id);
+        assert_eq!(pre_balance - post_balance, 10 + 84); // 94 transferred out
+                                                         // The remaining 6 (dust) is kept in the contract.
+    }
+
+    #[test]
     fn revoked_holder_blocks_distribution() {
+        let s = setup();
+        s.whitelist
+            .revoke(&s.whitelist_admin, &s.holders.get(2).unwrap());
+        record_default(&s);
+
+        let res = s.payout.try_execute_distribution(&cycle(&s.env, "2026-08"));
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::RecipientNotApproved as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn double_distribution_for_same_cycle_is_rejected() {
         let s = setup();
         s.whitelist
             .revoke(&s.whitelist_admin, &s.holders.get(2).unwrap());

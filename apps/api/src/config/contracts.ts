@@ -57,3 +57,12 @@ export function getPilotWhitelistContractId(): string {
   }
   return CONTRACT_IDS.PILOT_WHITELIST[resolveNetworkKey()] ?? '';
 }
+
+/** Pilot Payout Split contract ID (env override → shared deployment artifact). */
+export function getPilotPayoutSplitContractId(): string {
+  const fromEnv = process.env.PILOT_PAYOUT_SPLIT_CONTRACT_ID?.trim();
+  if (fromEnv) {
+    return fromEnv;
+  }
+  return CONTRACT_IDS.PILOT_PAYOUT_SPLIT[resolveNetworkKey()] ?? '';
+}

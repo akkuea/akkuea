@@ -1,6 +1,6 @@
-use soroban_sdk::{contracttype, Address, Env, String};
+use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
-use crate::EvidenceRecord;
+use crate::{Currency, EvidenceRecord, SwapFailureRecord};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -12,9 +12,13 @@ pub enum DataKey {
     IncomeToken,
     Whitelist,
     UsdcToken,
+    EurcToken,
+    SwapRouter,
     Paused,
     Guard,
     Evidence(String),
+    CurrencyPreference(Address),
+    SwapFailures(String),
 }
 
 pub struct Storage;
@@ -49,5 +53,36 @@ impl Storage {
         env.storage()
             .persistent()
             .set(&DataKey::Evidence(cycle_id.clone()), record);
+    }
+
+    /// Explicit settlement-currency preference of a single holder.
+    /// Absence means USDC (the default), so existing holders are unaffected.
+    pub fn currency_preference(env: &Env, holder: &Address) -> Option<Currency> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::CurrencyPreference(holder.clone()))
+    }
+
+    pub fn set_currency_preference(env: &Env, holder: &Address, currency: &Currency) {
+        env.storage()
+            .persistent()
+            .set(&DataKey::CurrencyPreference(holder.clone()), currency);
+    }
+
+    /// On-chain record of swap legs rejected during a cycle's distribution.
+    /// Persisted so a rejected leg is auditable rather than silent.
+    pub fn swap_failures(env: &Env, cycle_id: &String) -> Vec<SwapFailureRecord> {
+        env.storage()
+            .persistent()
+            .get(&DataKey::SwapFailures(cycle_id.clone()))
+            .unwrap_or_else(|| Vec::new(env))
+    }
+
+    pub fn push_swap_failure(env: &Env, cycle_id: &String, record: &SwapFailureRecord) {
+        let mut failures = Self::swap_failures(env, cycle_id);
+        failures.push_back(record.clone());
+        env.storage()
+            .persistent()
+            .set(&DataKey::SwapFailures(cycle_id.clone()), &failures);
     }
 }

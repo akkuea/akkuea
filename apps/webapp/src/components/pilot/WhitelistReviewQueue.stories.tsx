@@ -2,7 +2,7 @@ import type { Meta, StoryObj, Decorator } from "@storybook/react";
 import { WhitelistReviewQueue } from "./WhitelistReviewQueue";
 
 // ---------------------------------------------------------------------------
-// Fetch mock helpers — avoids needing msw-storybook-addon
+// Fetch mock helpers, avoids needing msw-storybook-addon
 // ---------------------------------------------------------------------------
 type FetchMock = (input: RequestInfo | URL) => Promise<Response>;
 
@@ -64,7 +64,7 @@ type Story = StoryObj<typeof WhitelistReviewQueue>;
 // Stories
 // ---------------------------------------------------------------------------
 
-/** Two pending requests in the queue — the typical operator view. */
+/** Two pending requests in the queue, the typical operator view. */
 export const WithRequests: Story = {
   decorators: [
     mockFetch(
@@ -77,7 +77,7 @@ export const WithRequests: Story = {
   ],
 };
 
-/** No pending requests — shows the EmptyState component. */
+/** No pending requests, shows the EmptyState component. */
 export const EmptyQueue: Story = {
   decorators: [
     mockFetch(
@@ -90,7 +90,7 @@ export const EmptyQueue: Story = {
   ],
 };
 
-/** API fetch is slow — shows the loading spinner text. */
+/** API fetch is slow, shows the loading spinner text. */
 export const LoadingState: Story = {
   decorators: [
     mockFetch(
@@ -102,7 +102,7 @@ export const LoadingState: Story = {
   ],
 };
 
-/** API returns an error — shows SectionErrorFallback with a Retry button. */
+/** API returns an error, shows SectionErrorFallback with a Retry button. */
 export const ErrorState: Story = {
   decorators: [
     mockFetch(

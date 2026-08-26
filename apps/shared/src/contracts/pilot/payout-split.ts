@@ -37,8 +37,7 @@ if (typeof globalThis !== "undefined" && !globalThis.Buffer) {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId:
-      "CBGDO2GUWYSDU4SK3SNJJHYX6HRADUNXCU7TKJFFGLRWA4FSRZNLAJ4J",
+    contractId: "CBGDO2GUWYSDU4SK3SNJJHYX6HRADUNXCU7TKJFFGLRWA4FSRZNLAJ4J",
   },
 } as const;
 

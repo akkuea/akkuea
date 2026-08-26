@@ -25,7 +25,6 @@ import {
   Spec as ContractSpec,
 } from "@stellar/stellar-sdk/contract";
 
-
 // Timepoint and Duration are not exported by stellar-sdk/contract in v13.x
 export type Timepoint = bigint;
 export type Duration = bigint;
@@ -37,8 +36,7 @@ if (typeof globalThis !== "undefined" && !globalThis.Buffer) {
 export const networks = {
   testnet: {
     networkPassphrase: "Test SDF Network ; September 2015",
-    contractId:
-      "CAOIML5WZYESSX5CPRFHA2OY7UXVW2ISJLL362OVX7MY3G7CMRWN3QA4",
+    contractId: "CAOIML5WZYESSX5CPRFHA2OY7UXVW2ISJLL362OVX7MY3G7CMRWN3QA4",
   },
 } as const;
 

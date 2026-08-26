@@ -1616,9 +1616,8 @@ mod tests {
 
         assert_eq!(summary.holder_count, 10);
         assert_eq!(summary.swaps_failed, 0);
-        assert_eq!(
+        assert!(
             summary.eurc_distributed_total > 0,
-            true,
             "mixed-currency budget run must include successful swap legs"
         );
         assert!(

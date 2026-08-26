@@ -21,4 +21,14 @@ pub enum PayoutError {
     Reentrancy = 15,
     InternalInvariant = 16,
     SignerCollision = 17,
+    /// A per-holder swap leg failed at the external venue (illiquidity, venue error).
+    /// The leg is rejected for that holder only; other holders are unaffected.
+    SwapFailed = 18,
+    /// The swap delivered less than the signed minimum-received bound.
+    SlippageExceeded = 19,
+    /// EURC/swap-router configuration is missing or inconsistent.
+    RouterNotConfigured = 20,
+    /// A cycle with EURC-preference holders was executed without a positive
+    /// minimum exchange rate bound.
+    InvalidMinRate = 21,
 }

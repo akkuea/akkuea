@@ -29,6 +29,7 @@
     "deploy:contracts": "./scripts/deploy.sh",
     "format": "prettier --write \"**/*.{js,ts,tsx,json,md,rs}\" \"!apps/contracts/**\"",
     "smoke": "./scripts/smoke/run-smoke-tests.sh",
+    "smoke:pilot": "cd apps/api && bun test tests/e2e/pilot-lifecycle.e2e.ts",
     "storybook": "cd apps/webapp && bun run storybook",
     "build-storybook": "cd apps/webapp && bun run build-storybook"
   },

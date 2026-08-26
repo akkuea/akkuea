@@ -102,7 +102,8 @@ async function getIdentifier(
 
 export async function walletKeyGenerator(ctx: Pick<Context, 'request' | 'set'>): Promise<string> {
   const getAuthenticatedUser = (ctx as Record<string, unknown>)['getAuthenticatedUser'] as
-    (() => Promise<{ id: string; walletAddress: string }>) | undefined;
+    | (() => Promise<{ id: string; walletAddress: string }>)
+    | undefined;
 
   if (typeof getAuthenticatedUser === 'function') {
     try {

@@ -3,7 +3,12 @@
 import { cn } from "@/lib/utils";
 
 type BadgeVariant =
-  "default" | "success" | "warning" | "danger" | "info" | "outline";
+  | "default"
+  | "success"
+  | "warning"
+  | "danger"
+  | "info"
+  | "outline";
 
 interface BadgeProps {
   variant?: BadgeVariant;

@@ -45,7 +45,9 @@ export const ListedPanel: React.FC<ListedPanelProps> = ({
   const footer = (
     <div className="space-y-3">
       <div className="flex justify-between items-center bg-land-surface/50 p-3 rounded-xl border border-land-border">
-        <span className="text-xs text-land-fg-muted font-medium">Asking Price</span>
+        <span className="text-xs text-land-fg-muted font-medium">
+          Asking Price
+        </span>
         <span className="text-sm font-extrabold text-land-fg flex items-center gap-1">
           <Coins size={14} className="text-tile-listed" />
           {property.pricePerShare} LAND

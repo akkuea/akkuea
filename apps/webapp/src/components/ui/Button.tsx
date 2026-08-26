@@ -6,7 +6,12 @@ import { Loader2, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ButtonVariant =
-  "primary" | "secondary" | "outline" | "ghost" | "danger" | "accent";
+  | "primary"
+  | "secondary"
+  | "outline"
+  | "ghost"
+  | "danger"
+  | "accent";
 type ButtonSize = "sm" | "md" | "lg";
 
 interface ButtonProps extends Omit<

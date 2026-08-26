@@ -74,12 +74,8 @@
           "name": "kyc_documents_user_id_users_id_fk",
           "tableFrom": "kyc_documents",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -169,9 +165,7 @@
         "users_wallet_address_unique": {
           "name": "users_wallet_address_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "wallet_address"
-          ]
+          "columns": ["wallet_address"]
         }
       },
       "policies": {},
@@ -309,12 +303,8 @@
           "name": "properties_owner_id_users_id_fk",
           "tableFrom": "properties",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -324,9 +314,7 @@
         "properties_soroban_property_id_unique": {
           "name": "properties_soroban_property_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "soroban_property_id"
-          ]
+          "columns": ["soroban_property_id"]
         }
       },
       "policies": {},
@@ -390,12 +378,8 @@
           "name": "property_documents_property_id_properties_id_fk",
           "tableFrom": "property_documents",
           "tableTo": "properties",
-          "columnsFrom": [
-            "property_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["property_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -461,12 +445,8 @@
           "name": "share_ownerships_property_id_properties_id_fk",
           "tableFrom": "share_ownerships",
           "tableTo": "properties",
-          "columnsFrom": [
-            "property_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["property_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -474,12 +454,8 @@
           "name": "share_ownerships_owner_id_users_id_fk",
           "tableFrom": "share_ownerships",
           "tableTo": "users",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -565,12 +541,8 @@
           "name": "borrow_positions_pool_id_lending_pools_id_fk",
           "tableFrom": "borrow_positions",
           "tableTo": "lending_pools",
-          "columnsFrom": [
-            "pool_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["pool_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -578,12 +550,8 @@
           "name": "borrow_positions_borrower_id_users_id_fk",
           "tableFrom": "borrow_positions",
           "tableTo": "users",
-          "columnsFrom": [
-            "borrower_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["borrower_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -657,12 +625,8 @@
           "name": "deposit_positions_pool_id_lending_pools_id_fk",
           "tableFrom": "deposit_positions",
           "tableTo": "lending_pools",
-          "columnsFrom": [
-            "pool_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["pool_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -670,12 +634,8 @@
           "name": "deposit_positions_depositor_id_users_id_fk",
           "tableFrom": "deposit_positions",
           "tableTo": "users",
-          "columnsFrom": [
-            "depositor_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["depositor_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -888,12 +848,8 @@
           "name": "transactions_from_user_id_users_id_fk",
           "tableFrom": "transactions",
           "tableTo": "users",
-          "columnsFrom": [
-            "from_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["from_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -901,12 +857,8 @@
           "name": "transactions_to_user_id_users_id_fk",
           "tableFrom": "transactions",
           "tableTo": "users",
-          "columnsFrom": [
-            "to_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["to_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1064,12 +1016,8 @@
           "name": "notifications_user_id_users_id_fk",
           "tableFrom": "notifications",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1511,9 +1459,7 @@
         "pilot_whitelist_requests_wallet_address_unique": {
           "name": "pilot_whitelist_requests_wallet_address_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "wallet_address"
-          ]
+          "columns": ["wallet_address"]
         }
       },
       "policies": {},
@@ -1752,11 +1698,7 @@
     "public.kyc_document_status": {
       "name": "kyc_document_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "approved",
-        "rejected"
-      ]
+      "values": ["pending", "approved", "rejected"]
     },
     "public.kyc_document_type": {
       "name": "kyc_document_type",
@@ -1773,65 +1715,32 @@
     "public.kyc_status": {
       "name": "kyc_status",
       "schema": "public",
-      "values": [
-        "not_started",
-        "pending",
-        "approved",
-        "rejected",
-        "expired"
-      ]
+      "values": ["not_started", "pending", "approved", "rejected", "expired"]
     },
     "public.kyc_tier": {
       "name": "kyc_tier",
       "schema": "public",
-      "values": [
-        "none",
-        "basic",
-        "verified",
-        "accredited"
-      ]
+      "values": ["none", "basic", "verified", "accredited"]
     },
     "public.property_document_type": {
       "name": "property_document_type",
       "schema": "public",
-      "values": [
-        "deed",
-        "appraisal",
-        "inspection",
-        "insurance",
-        "other"
-      ]
+      "values": ["deed", "appraisal", "inspection", "insurance", "other"]
     },
     "public.property_review_status": {
       "name": "property_review_status",
       "schema": "public",
-      "values": [
-        "pending_review",
-        "approved",
-        "rejected",
-        "changes_requested",
-        "on_hold"
-      ]
+      "values": ["pending_review", "approved", "rejected", "changes_requested", "on_hold"]
     },
     "public.property_type": {
       "name": "property_type",
       "schema": "public",
-      "values": [
-        "residential",
-        "commercial",
-        "industrial",
-        "land",
-        "mixed"
-      ]
+      "values": ["residential", "commercial", "industrial", "land", "mixed"]
     },
     "public.transaction_status": {
       "name": "transaction_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "confirmed",
-        "failed"
-      ]
+      "values": ["pending", "confirmed", "failed"]
     },
     "public.transaction_type": {
       "name": "transaction_type",
@@ -1850,22 +1759,12 @@
     "public.notification_channel": {
       "name": "notification_channel",
       "schema": "public",
-      "values": [
-        "IN_APP",
-        "EMAIL",
-        "SMS"
-      ]
+      "values": ["IN_APP", "EMAIL", "SMS"]
     },
     "public.notification_delivery_status": {
       "name": "notification_delivery_status",
       "schema": "public",
-      "values": [
-        "PENDING",
-        "SENT",
-        "DELIVERED",
-        "FAILED",
-        "BOUNCED"
-      ]
+      "values": ["PENDING", "SENT", "DELIVERED", "FAILED", "BOUNCED"]
     },
     "public.notification_event_type": {
       "name": "notification_event_type",
@@ -1890,20 +1789,12 @@
     "public.pilot_whitelist_id_type": {
       "name": "pilot_whitelist_id_type",
       "schema": "public",
-      "values": [
-        "passport",
-        "national_id",
-        "drivers_license"
-      ]
+      "values": ["passport", "national_id", "drivers_license"]
     },
     "public.pilot_whitelist_status": {
       "name": "pilot_whitelist_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "approved",
-        "rejected"
-      ]
+      "values": ["pending", "approved", "rejected"]
     }
   },
   "schemas": {},

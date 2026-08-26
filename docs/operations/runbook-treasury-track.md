@@ -30,9 +30,9 @@ Both venues are DeFindex Vaults and share one contract interface. Etherfuse does
 publish a direct Soroban mint/redeem interface for Stablebonds; the documented
 on-chain path is the DeFindex strategy, which is what this integration uses.
 
-| Venue ID | Vault | Underlying asset | Strategy |
-| --- | --- | --- | --- |
-| `defindex-blend` | `CBMVK2JK6NTOT2O4HNQAIQFJY232BHKGLIMXDVQVHIIZKDACXDFZDWHN` | USDC (`CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU`) | `USDC Blend Strategy` |
+| Venue ID               | Vault                                                      | Underlying asset                                                   | Strategy               |
+| ---------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------- |
+| `defindex-blend`       | `CBMVK2JK6NTOT2O4HNQAIQFJY232BHKGLIMXDVQVHIIZKDACXDFZDWHN` | USDC (`CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU`)  | `USDC Blend Strategy`  |
 | `etherfuse-stablebond` | `CBIS5TEMTNNOTBE3WXPQUAGUEDYZZVIWAKTXEQCOUJ34OJJ3FJ5NLF2P` | CETES (`CC72F57YTPX76HAA64JQOEGHQAPSADQWSY5DWVBR66JINPFDLNCQYHIC`) | `CETES Blend Strategy` |
 
 Both addresses are **testnet**, taken from the upstream deployment registry at
@@ -78,13 +78,13 @@ interface in this repo is the interface the chain exposes.
 
 ## Configuration
 
-| Variable | Purpose |
-| --- | --- |
-| `TREASURY_SOURCE_PUBLIC_KEY` | Account holding the platform fee. Falls back to `STELLAR_ADMIN_PUBLIC_KEY`. |
-| `TREASURY_SOURCE_SECRET` | Signing key for deposits/withdrawals. Falls back to `STELLAR_ADMIN_SECRET`. |
-| `OPERATIONS_BACKEND_CREDENTIAL` | Value of the `x-internal-api-key` header required for movements. |
-| `STELLAR_NETWORK` | `testnet` or `mainnet`; selects the venue defaults. |
-| `STELLAR_RPC_URL` | Soroban RPC endpoint. |
+| Variable                        | Purpose                                                                     |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| `TREASURY_SOURCE_PUBLIC_KEY`    | Account holding the platform fee. Falls back to `STELLAR_ADMIN_PUBLIC_KEY`. |
+| `TREASURY_SOURCE_SECRET`        | Signing key for deposits/withdrawals. Falls back to `STELLAR_ADMIN_SECRET`. |
+| `OPERATIONS_BACKEND_CREDENTIAL` | Value of the `x-internal-api-key` header required for movements.            |
+| `STELLAR_NETWORK`               | `testnet` or `mainnet`; selects the venue defaults.                         |
+| `STELLAR_RPC_URL`               | Soroban RPC endpoint.                                                       |
 
 Read endpoints work with only `TREASURY_SOURCE_PUBLIC_KEY` set. Without a public key
 the API still reports vault totals but the platform's own position reads as zero.
@@ -120,22 +120,22 @@ The API surfaces the contract error name and code in `details.venueError` and
 `details.contractErrorCode`, so the response says exactly which contract rejected the
 call and why.
 
-| API code | HTTP | Contract error | What happened | Action |
-| --- | --- | --- | --- | --- |
-| `TREASURY_VENUE_PAUSED` | 503 | `StrategyPaused` (144), `StrategyPausedOrNotFound` (141) | DeFindex paused the strategy, usually as an emergency measure | Do not retry. Check DeFindex status; funds already deposited are still in the vault and can normally still be withdrawn. |
-| `TREASURY_INSUFFICIENT_VENUE_LIQUIDITY` | 409 | `InsufficientManagedFunds` (114), `UnwindMoreThanAvailable` (128), `AmountOverTotalSupply` (124) | The withdrawal is larger than the venue can service right now | Retry with a smaller amount, or wait for Blend liquidity to recover. |
-| `TREASURY_INSUFFICIENT_BALANCE` | 409 | SAC `BalanceError` (10), `InsufficientBalance` (111) | The treasury account does not hold enough of the asset | Confirm the platform fee balance before retrying. |
-| `TREASURY_TRUSTLINE_MISSING` | 409 | SAC `TrustlineMissingError` (13) | The treasury account has no trustline for USDC/CETES | Establish the trustline, then retry. This is the first failure a brand-new treasury account hits. |
-| `TREASURY_ASSET_NOT_AUTHORIZED` | 409 | SAC `BalanceDeauthorizedError` (11) | The issuer has not authorized the account to hold the asset | Contact the issuer. |
-| `TREASURY_AMOUNT_REJECTED` | 422 | `AmountBelowMinDust` (451), `InsufficientAmount` (117) | Amount below the venue's minimum | Increase the amount. |
-| `TREASURY_SLIPPAGE_EXCEEDED` | 409 | `UnderlyingAmountBelowMin` (452), `BTokensAmountBelowMin` (453) | The movement would settle below the slippage floor | Retry with a wider `slippageBps`. |
-| `TREASURY_DEADLINE_EXPIRED` | 409 | `DeadlineExpired` (421) | The strategy's deadline passed mid-flight | Retry. |
-| `TREASURY_UNAUTHORIZED` | 403 | `Unauthorized` (130) | The configured key is not permitted for this operation | Check `TREASURY_SOURCE_SECRET`. |
-| `TREASURY_VENUE_REJECTED` | 502 | `ExternalError` (422), `SupplyNotFound` (455), `StrategyInvestError` (143) | Blend itself rejected the call | Check Blend pool status. A Blend-side pricing failure surfaces here. |
-| `TREASURY_VENUE_ERROR` | 502 | anything else | An unmodelled venue failure | Read `details.contractErrorCode` and add a mapping if it recurs. |
-| `TREASURY_VENUE_NOT_CONFIGURED` | 503 | — | No addresses for this venue on this network | Set the env vars above. |
-| `TREASURY_SOURCE_NOT_CONFIGURED` | 503 | — | No signing key | Set `TREASURY_SOURCE_SECRET`. |
-| `TREASURY_VENUE_ASSET_MISMATCH` | 502 | — | The configured vault does not manage the configured asset | The vault or the config changed. Re-verify addresses against the registry before moving any funds. |
+| API code                                | HTTP | Contract error                                                                                   | What happened                                                 | Action                                                                                                                   |
+| --------------------------------------- | ---- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `TREASURY_VENUE_PAUSED`                 | 503  | `StrategyPaused` (144), `StrategyPausedOrNotFound` (141)                                         | DeFindex paused the strategy, usually as an emergency measure | Do not retry. Check DeFindex status; funds already deposited are still in the vault and can normally still be withdrawn. |
+| `TREASURY_INSUFFICIENT_VENUE_LIQUIDITY` | 409  | `InsufficientManagedFunds` (114), `UnwindMoreThanAvailable` (128), `AmountOverTotalSupply` (124) | The withdrawal is larger than the venue can service right now | Retry with a smaller amount, or wait for Blend liquidity to recover.                                                     |
+| `TREASURY_INSUFFICIENT_BALANCE`         | 409  | SAC `BalanceError` (10), `InsufficientBalance` (111)                                             | The treasury account does not hold enough of the asset        | Confirm the platform fee balance before retrying.                                                                        |
+| `TREASURY_TRUSTLINE_MISSING`            | 409  | SAC `TrustlineMissingError` (13)                                                                 | The treasury account has no trustline for USDC/CETES          | Establish the trustline, then retry. This is the first failure a brand-new treasury account hits.                        |
+| `TREASURY_ASSET_NOT_AUTHORIZED`         | 409  | SAC `BalanceDeauthorizedError` (11)                                                              | The issuer has not authorized the account to hold the asset   | Contact the issuer.                                                                                                      |
+| `TREASURY_AMOUNT_REJECTED`              | 422  | `AmountBelowMinDust` (451), `InsufficientAmount` (117)                                           | Amount below the venue's minimum                              | Increase the amount.                                                                                                     |
+| `TREASURY_SLIPPAGE_EXCEEDED`            | 409  | `UnderlyingAmountBelowMin` (452), `BTokensAmountBelowMin` (453)                                  | The movement would settle below the slippage floor            | Retry with a wider `slippageBps`.                                                                                        |
+| `TREASURY_DEADLINE_EXPIRED`             | 409  | `DeadlineExpired` (421)                                                                          | The strategy's deadline passed mid-flight                     | Retry.                                                                                                                   |
+| `TREASURY_UNAUTHORIZED`                 | 403  | `Unauthorized` (130)                                                                             | The configured key is not permitted for this operation        | Check `TREASURY_SOURCE_SECRET`.                                                                                          |
+| `TREASURY_VENUE_REJECTED`               | 502  | `ExternalError` (422), `SupplyNotFound` (455), `StrategyInvestError` (143)                       | Blend itself rejected the call                                | Check Blend pool status. A Blend-side pricing failure surfaces here.                                                     |
+| `TREASURY_VENUE_ERROR`                  | 502  | anything else                                                                                    | An unmodelled venue failure                                   | Read `details.contractErrorCode` and add a mapping if it recurs.                                                         |
+| `TREASURY_VENUE_NOT_CONFIGURED`         | 503  | —                                                                                                | No addresses for this venue on this network                   | Set the env vars above.                                                                                                  |
+| `TREASURY_SOURCE_NOT_CONFIGURED`        | 503  | —                                                                                                | No signing key                                                | Set `TREASURY_SOURCE_SECRET`.                                                                                            |
+| `TREASURY_VENUE_ASSET_MISMATCH`         | 502  | —                                                                                                | The configured vault does not manage the configured asset     | The vault or the config changed. Re-verify addresses against the registry before moving any funds.                       |
 
 ### A note on price staleness
 

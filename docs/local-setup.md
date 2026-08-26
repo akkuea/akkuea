@@ -48,7 +48,7 @@ bun install
 
 ### 3. Environment Configuration
 
-You need to set up environment variables for the API and Webapp.
+You need to set up environment variables for the API and Webapp. For a complete guide detailing where to obtain real development values for every single variable, see the [Environment Variable Setup Guide](ENV_SETUP.md).
 
 #### API Configuration
 

@@ -223,7 +223,7 @@ function assertSlippage(slippageBps: number): number {
  * otherwise would be worse than saying so.
  *
  * Note on price feeds: these two vaults are single-asset, and their deposit and
- * withdraw paths do not consult an oracle — verified by simulating a deposit
+ * withdraw paths do not consult an oracle, verified by simulating a deposit
  * against the deployed testnet vault and reading the call tree, which contains
  * only balance reads, a token transfer and the strategy call. A Blend-side
  * pricing failure would surface as `ExternalError` from the strategy, which is
@@ -410,7 +410,7 @@ function defaultVaultClientFactory(venue: TreasuryVenue, signerSecret?: string):
  * Deposits the accumulated platform fee into already-deployed, already-audited
  * DeFi venues, reads the resulting position back off chain, and keeps a local
  * record of both. Every number this service reports about a position is read
- * from the vault contract at request time — nothing here is estimated, and the
+ * from the vault contract at request time, nothing here is estimated, and the
  * stored snapshots are a cache of past reads, not a substitute for them.
  */
 export class TreasuryService {
@@ -575,7 +575,7 @@ export class TreasuryService {
    * Withdraw `amount` of the venue's underlying asset back to the treasury.
    *
    * The vault burns shares, not asset amounts, so the requested amount is
-   * converted using the vault's live share price — the same rule of three
+   * converted using the vault's live share price, the same rule of three
    * DeFindex documents: `shares = total_supply * amount / total_managed`.
    */
   async withdraw(request: TreasuryMovementRequest): Promise<TreasuryMovementResult> {

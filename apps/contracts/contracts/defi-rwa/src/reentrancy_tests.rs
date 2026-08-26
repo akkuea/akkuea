@@ -287,7 +287,7 @@ fn test_borrow_rejected_at_checks_no_state_mutation() {
     // Try to borrow with sufficient LTV but insufficient health factor.
     // Collateral: 100 XLM * $1.00 = $100
     // Borrow: 70 USDC (passes collateral_factor: 70 ≤ 100*0.75=75)
-    // Health factor = (100 * 0.8) / 70 ≈ 1.14 < 1.5 ❌
+    // Health factor = (100 * 0.8) / 70 ≈ 1.14 < 1.5 [invalid]
     t.client.borrow(
         &t.borrower,
         &t.pool_id,

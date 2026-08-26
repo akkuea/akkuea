@@ -26,8 +26,8 @@ import { cn, truncateAddress } from "@/lib/utils";
 /**
  * Render an asset amount that arrived from the API as a decimal string.
  *
- * The string is kept as the source of truth and only trimmed for display —
- * never parsed into a float and re-rendered — so what a reader sees always
+ * The string is kept as the source of truth and only trimmed for display,
+ * never parsed into a float and re-rendered, so what a reader sees always
  * matches what the ledger holds.
  */
 function formatAssetAmount(value: string, maxDecimals = 4): string {
@@ -154,7 +154,7 @@ function HistoryRow({
         {t(`operation.${entry.operation}`)}
       </td>
       <td className="py-2 pr-4 tabular-nums text-zinc-300">
-        {entry.amount ? formatAssetAmount(entry.amount) : "—"} {entry.assetCode}
+        {entry.amount ? formatAssetAmount(entry.amount) : "-"} {entry.assetCode}
       </td>
       <td className="py-2 pr-4">
         <span
@@ -180,7 +180,7 @@ function HistoryRow({
             <ExternalLink className="h-3 w-3" aria-hidden="true" />
           </a>
         ) : (
-          <span className="text-zinc-600">—</span>
+          <span className="text-zinc-600">-</span>
         )}
       </td>
     </tr>

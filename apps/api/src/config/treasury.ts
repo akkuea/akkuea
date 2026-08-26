@@ -11,14 +11,14 @@ import { resolveNetworkKey } from './contracts';
  * Both venues are DeFindex Vaults, and both are reachable through the same
  * contract interface:
  *
- *  - `defindex-blend`       — a USDC vault whose only strategy lends into Blend.
- *  - `etherfuse-stablebond` — a CETES vault. CETES is Etherfuse's tokenized
+ *  - `defindex-blend`       (a USDC vault whose only strategy lends into Blend).
+ *  - `etherfuse-stablebond` (a CETES vault). CETES is Etherfuse's tokenized
  *                             Mexican sovereign-debt Stablebond; the vault's
  *                             strategy holds it and lends it on Blend.
  *
  * Etherfuse does not publish a direct Soroban mint/redeem interface for
- * Stablebonds — the on-chain path documented by both projects is the DeFindex
- * strategy — so that is the path used here.
+ * Stablebonds, the on-chain path documented by both projects is the DeFindex
+ * strategy, so that is the path used here.
  *
  * Addresses below are copied from the upstream deployment registry
  * (https://github.com/defindex-io/stellar-contracts/blob/main/public/testnet.contracts.json)
@@ -73,7 +73,7 @@ const VENUE_DEFAULTS: Record<
 > = {
   'defindex-blend': {
     TESTNET: {
-      // `usdc_paltalabs_vault` — strategy `USDC Blend Strategy`
+      // `usdc_paltalabs_vault`, strategy `USDC Blend Strategy`
       vaultContractId: 'CBMVK2JK6NTOT2O4HNQAIQFJY232BHKGLIMXDVQVHIIZKDACXDFZDWHN',
       // SAC for USDC:GATALTGTWIOT6BUDBCZM3Q4OQ4BO2COLOAZ7IYSKPLC2PMSOPPGF5V56
       assetContractId: 'CAQCFVLOBK5GIULPNZRGATJJMIZL5BSP7X5YJVMGCPTUEPFM4AVSRCJU',
@@ -84,7 +84,7 @@ const VENUE_DEFAULTS: Record<
   },
   'etherfuse-stablebond': {
     TESTNET: {
-      // `cetes_paltalabs_vault` — strategy `CETES Blend Strategy`
+      // `cetes_paltalabs_vault`, strategy `CETES Blend Strategy`
       vaultContractId: 'CBIS5TEMTNNOTBE3WXPQUAGUEDYZZVIWAKTXEQCOUJ34OJJ3FJ5NLF2P',
       // SAC for CETES:GC3CW7EDYRTWQ635VDIGY6S4ZUF5L6TQ7AA4MWS7LEQDBLUSZXV7UPS4
       assetContractId: 'CC72F57YTPX76HAA64JQOEGHQAPSADQWSY5DWVBR66JINPFDLNCQYHIC',
@@ -132,7 +132,7 @@ function readEnv(name: string): string | undefined {
 /**
  * Resolve one venue, or `null` when it is not configured for the active
  * network. A null venue is a normal state (mainnet before the vault exists),
- * not an error — callers report it as unconfigured rather than throwing.
+ * not an error, callers report it as unconfigured rather than throwing.
  */
 export function getTreasuryVenue(id: TreasuryVenueId): TreasuryVenue | null {
   const network = resolveNetworkKey();

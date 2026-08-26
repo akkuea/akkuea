@@ -53,7 +53,7 @@ type Story = StoryObj<typeof WhitelistOnboardingForm>;
 // ---------------------------------------------------------------------------
 
 /**
- * Wallet not connected and no existing request — shows the EmptyState with
+ * Wallet not connected and no existing request, shows the EmptyState with
  * a "Start Application" CTA.
  */
 export const NoApplication: Story = {
@@ -61,7 +61,7 @@ export const NoApplication: Story = {
 };
 
 /**
- * Loading state — status check is in flight.
+ * Loading state, status check is in flight.
  */
 export const StatusLoading: Story = {
   decorators: [
@@ -82,14 +82,14 @@ export const PendingReview: Story = {
 };
 
 /**
- * Investor has been approved — whitelisted!
+ * Investor has been approved, whitelisted!
  */
 export const Approved: Story = {
   decorators: [mockFetch(statusMock("approved"))],
 };
 
 /**
- * Investor was rejected — rejection reason is displayed clearly.
+ * Investor was rejected, rejection reason is displayed clearly.
  */
 export const Rejected: Story = {
   decorators: [
@@ -103,22 +103,22 @@ export const Rejected: Story = {
 };
 
 /**
- * Stepper step 1 — Personal Details form (initial active state).
+ * Stepper step 1, Personal Details form (initial active state).
  * The status fetch returns "none" so the form renders after clicking Start.
  * NOTE: In Storybook, click "Start Application" on the EmptyState to reach this view.
  */
 export const FormStep1PersonalDetails: Story = {
-  name: "Form — Step 1: Personal Details",
+  name: "Form, Step 1: Personal Details",
   decorators: [mockFetch(statusMock("none"))],
 };
 
 /**
- * Stepper step 3 — Review & Submit summary.
+ * Stepper step 3, Review & Submit summary.
  * The fetch mock simulates a completed form: status=none so the form renders,
  * and the POST /request is mocked to succeed.
  */
 export const FormStep3Review: Story = {
-  name: "Form — Step 3: Review & Submit",
+  name: "Form, Step 3: Review & Submit",
   decorators: [
     mockFetch(async (input) => {
       const url = typeof input === "string" ? input : input.toString();

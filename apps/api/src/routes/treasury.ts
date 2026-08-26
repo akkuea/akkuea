@@ -28,8 +28,8 @@ const movementBodySchema = z.object({
 /**
  * Read-only treasury endpoints.
  *
- * Position data is public on the ledger already, so exposing it needs no auth —
- * the point of the treasury track is that anyone can check it.
+ * Position data is public on the ledger already, so exposing it needs no auth.
+ * The point of the treasury track is that anyone can check it.
  */
 const publicTreasuryRoutes = new Elysia()
   .get(

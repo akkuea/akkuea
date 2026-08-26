@@ -42,10 +42,17 @@ jobs:
         run: |
           bun install --frozen-lockfile
 
+      - name: Build shared library (required for webapp type checking)
+        run: |
+          cd apps/shared
+          bun run build
+
       - name: Type checking
         run: |
           cd apps/webapp
           bun run type-check
+        env:
+          SKIP_ENV_VALIDATION: "true"
 
       - name: ESLint checking
         run: |
@@ -61,11 +68,15 @@ jobs:
         run: |
           cd apps/webapp
           bun run build
+        env:
+          SKIP_ENV_VALIDATION: "true"
 
       - name: Run unit tests
         run: |
           cd apps/webapp
           bun test --coverage --coverage-threshold=60
+        env:
+          SKIP_ENV_VALIDATION: "true"
 
       # - name: E2E tests
       #   run: |
@@ -121,6 +132,11 @@ jobs:
         run: |
           bun install --frozen-lockfile
 
+      - name: Build shared library (required for webapp security checks)
+        run: |
+          cd apps/shared
+          bun run build
+
       - name: Audit dependencies
         run: bash .github/scripts/dependency-audit.sh .
 
@@ -147,12 +163,17 @@ jobs:
           cd apps/webapp
           bunx eslint src/ --ext .ts,.tsx || true
 
+      - name: Build shared library (required for webapp build)
+        run: |
+          cd apps/shared
+          bun run build
+
       - name: Check CSP headers
         run: |
           cd apps/webapp
 
           # Build app first
-          bun run build
+          SKIP_ENV_VALIDATION=true bun run build
 
           # Check if CSP headers are configured
           if [ -f "next.config.js" ] || [ -f "next.config.ts" ]; then

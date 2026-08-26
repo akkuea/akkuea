@@ -28,3 +28,4 @@ export * from "./utils/stellar";
 export * from "./utils/validation";
 export * from "./utils/format";
 export * from "./utils/bigintMath";
+export * from "./env";

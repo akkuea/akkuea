@@ -1217,7 +1217,7 @@ fn test_borrow_with_sufficient_collateral() {
     // Calculate expected health factor:
     // Collateral value = 2000 XLM * $1.00 = $2000
     // Debt value = 1000 USDC = $1000
-    // Health factor = (2000 * 0.8) / 1000 = 1.6 * PRECISION > 1.5 * PRECISION ✓
+    // Health factor = (2000 * 0.8) / 1000 = 1.6 * PRECISION > 1.5 * PRECISION [valid]
 
     // Execute borrow
     let position = env.as_contract(&contract_id, || {
@@ -1338,7 +1338,7 @@ fn test_borrow_with_insufficient_collateral() {
     // Try to borrow with sufficient LTV but insufficient health factor.
     // Collateral: 1000 XLM * $1.00 = $1000
     // Borrow: 700 USDC (passes collateral_factor: 700 ≤ 1000*0.75=750)
-    // Health factor = (1000 * 0.8) / 700 ≈ 1.14 < 1.5 ❌
+    // Health factor = (1000 * 0.8) / 700 ≈ 1.14 < 1.5 [invalid]
     let borrow_amount = 700_000_000; // 700 USDC
     let collateral_amount = 1_000_000_000; // 1000 XLM
 

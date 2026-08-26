@@ -396,7 +396,7 @@ export function ClaimPropertyStep({
 function CelebrationScreen() {
   return (
     <div className="text-center animate-fade-in">
-      <div className="mb-4 text-6xl">🎉</div>
+      <div className="mb-4 text-6xl">[Celebration]</div>
       <h2 className="text-2xl font-bold text-white">You own a property!</h2>
       <p className="mt-2 text-sm text-surface-600">
         Heading to the city map...

@@ -24,7 +24,8 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "generate:pilot-bindings": "stellar contract bindings typescript --contract-id CAOIML5WZYESSX5CPRFHA2OY7UXVW2ISJLL362OVX7MY3G7CMRWN3QA4 --rpc-url https://soroban-testnet.stellar.org --network-passphrase \"Test SDF Network ; September 2015\" --output-dir src/contracts/pilot/generated/whitelist --overwrite && stellar contract bindings typescript --contract-id CDQYJRBYP62Y2BSMDEUBJYM2I4V3JE2RL7TCR3JPTW42NRLUXWKUS3MZ --rpc-url https://soroban-testnet.stellar.org --network-passphrase \"Test SDF Network ; September 2015\" --output-dir src/contracts/pilot/generated/income-token --overwrite && stellar contract bindings typescript --contract-id CBGDO2GUWYSDU4SK3SNJJHYX6HRADUNXCU7TKJFFGLRWA4FSRZNLAJ4J --rpc-url https://soroban-testnet.stellar.org --network-passphrase \"Test SDF Network ; September 2015\" --output-dir src/contracts/pilot/generated/payout-split --overwrite"
   },
   "keywords": [
     "stellar",

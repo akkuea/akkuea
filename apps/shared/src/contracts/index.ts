@@ -19,5 +19,19 @@ export {
   type VaultMethodOptions,
   type VaultWithdrawArgs,
 } from "./defindexVault";
+export {
+  PilotPayoutContractClient,
+  PilotIncomeTokenContractClient,
+  PilotWhitelistContractClient,
+  type DistributionSummary,
+  type EvidenceRecord,
+  type PilotEvidenceRecord,
+  type EvidenceStatus,
+  type PilotEvidenceStatusTag,
+  type FlagDisputeArgs,
+  type RecordEvidenceArgs,
+  type ReviewEvidenceArgs,
+  type SubmitEvidenceArgs,
+} from "./pilotPayout";
 export * from "./game";
 export * from "./pilot";

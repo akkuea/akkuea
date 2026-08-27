@@ -188,8 +188,10 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
     }));
 
     const ledgerEntriesRes = await server.getLedgerEntries(feeRecipientKeySymbol, feeRecipientKeyVec);
+    expect(ledgerEntriesRes.entries.length).toBeGreaterThan(0);
     const entry = ledgerEntriesRes.entries[0];
     expect(entry).toBeDefined();
+    if (!entry) throw new Error('Platform fee recipient entry not found');
     const platformFeeRecipient = scValToNative(entry.val.contractData().val());
 
     // 2. Read pro-rata recipients (holders) from income token via getter simulation
@@ -211,6 +213,9 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
 
     // 3. Assert balances
     const usdcContract = new Contract(USDC_CONTRACT_ID);
+    const totalIncome = 10000n;
+    const expectedFee = (totalIncome * 10n) / 100n;
+    const expectedRemainder = totalIncome - expectedFee;
     
     // Check fee recipient balance
     const feeBalanceOp = usdcContract.call('balance', nativeToScVal(platformFeeRecipient, { type: 'address' }));
@@ -221,21 +226,24 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
     expect(rpc.Api.isSimulationSuccess(simResFee)).toBe(true);
     if (rpc.Api.isSimulationSuccess(simResFee) && simResFee.result?.retval) {
       const balance = BigInt(scValToNative(simResFee.result.retval));
-      // Expected fee is 1000 USDC droplets
-      expect(balance).toBeGreaterThanOrEqual(1000n);
+      expect(balance).toBe(expectedFee);
     }
 
-    // Check one of the pro-rata recipients
-    const proRataBalanceOp = usdcContract.call('balance', nativeToScVal(holders[0], { type: 'address' }));
-    const txBuilderProRata = new TransactionBuilder(sourceAccount, { fee: '100', networkPassphrase });
-    txBuilderProRata.addOperation(proRataBalanceOp);
-    
-    const simResProRata = await server.simulateTransaction(txBuilderProRata.build());
-    expect(rpc.Api.isSimulationSuccess(simResProRata)).toBe(true);
-    if (rpc.Api.isSimulationSuccess(simResProRata) && simResProRata.result?.retval) {
-      const balance = BigInt(scValToNative(simResProRata.result.retval));
-      expect(balance).toBeGreaterThan(0n);
+    // Check all pro-rata recipients and sum their balances
+    let totalHoldersBalance = 0n;
+    for (const holder of holders) {
+      const proRataBalanceOp = usdcContract.call('balance', nativeToScVal(holder, { type: 'address' }));
+      const txBuilderProRata = new TransactionBuilder(sourceAccount, { fee: '100', networkPassphrase });
+      txBuilderProRata.addOperation(proRataBalanceOp);
+      
+      const simResProRata = await server.simulateTransaction(txBuilderProRata.build());
+      expect(rpc.Api.isSimulationSuccess(simResProRata)).toBe(true);
+      if (rpc.Api.isSimulationSuccess(simResProRata) && simResProRata.result?.retval) {
+        totalHoldersBalance += BigInt(scValToNative(simResProRata.result.retval));
+      }
     }
+    
+    expect(totalHoldersBalance).toBe(expectedRemainder);
   });
 
   async function waitTxConfirm(hash: string): Promise<rpc.Api.GetTransactionResponse> {

@@ -57,6 +57,7 @@ Welcome to Akkuea's documentation. **Start with [`strategy/product-brief.md`](st
 - [Oracle Failure Runbook](operations/runbook-oracle-failure.md) - price feed outage, stale data response, backup oracle switch
 - [Role Management Runbook](operations/runbook-role-management.md) - grant/revoke EmergencyGuard, admin transfer procedure
 - [Dividend Distribution](operations/runbook-dividends-placeholder.md) - placeholder pending Issue #722
+- [Pilot Review SLA](operations/pilot-review-sla.md) - whitelist and evidence review turnaround target, metrics endpoint, how to change the number
 
 ## 🧪 Testing & Other Guides
 

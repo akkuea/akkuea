@@ -1,10 +1,17 @@
 # @akkuea/shared
 
-Shared types, validation, Stellar SDK helpers, contract-ID resolution, and test factories for the Akkuea monorepo. Imported identically by all three TypeScript workspaces (`apps/webapp`, `apps/api`, `apps/akkuea-land`).
+Shared types, validation, Stellar SDK helpers, contract-ID resolution, and test
+factories for the Akkuea monorepo. Imported by all three TypeScript workspaces
+(`apps/webapp`, `apps/api`, `apps/akkuea-land`).
 
 ## Generating Soroban TypeScript Bindings
 
-Contract client bindings are generated using `stellar contract bindings typescript` against deployed contract IDs from `contracts.testnet.json` (or `contracts.mainnet.json`). The generated output is post-processed to follow the project's quality standards (inlined into single files, `import type` for type-only imports, `globalThis` polyfill guard, `override` on deploy/options, local `Timepoint`/`Duration` aliases).
+Contract client bindings are generated using `stellar contract bindings typescript`
+against deployed contract IDs from `contracts.testnet.json` (or
+`contracts.mainnet.json`). The generated output is post-processed to follow the
+project's quality standards: inlined into single files, `import type` for type-only
+imports, `globalThis` polyfill guard, `override` on deploy/options, local
+`Timepoint`/`Duration` aliases.
 
 ### Pilot contracts
 
@@ -15,11 +22,11 @@ bun run generate:pilot-bindings
 
 This regenerates the typed clients for all three pilot contracts:
 
-| Contract | Wrapper module | Generated source |
-|----------|---------------|-----------------|
-| `pilot-whitelist` | `src/contracts/pilot/whitelist.ts` | `src/contracts/pilot/generated/whitelist/` |
-| `pilot-income-token` | `src/contracts/pilot/income-token.ts` | `src/contracts/pilot/generated/income-token/` |
-| `pilot-payout-split` | `src/contracts/pilot/payout-split.ts` | `src/contracts/pilot/generated/payout-split/` |
+- `pilot-whitelist` - wrapper: `src/contracts/pilot/whitelist.ts`
+- `pilot-income-token` - wrapper: `src/contracts/pilot/income-token.ts`
+- `pilot-payout-split` - wrapper: `src/contracts/pilot/payout-split.ts`
+
+Raw generated output is in `src/contracts/pilot/generated/`.
 
 After regeneration:
 
@@ -29,7 +36,8 @@ After regeneration:
 
 ### Game contracts
 
-Game contract bindings (`game-property-nft`, `game-land-token`, `game-engine`, `game-marketplace`) follow the same pattern under `src/contracts/game/`.
+Game contract bindings (`game-property-nft`, `game-land-token`, `game-engine`,
+`game-marketplace`) follow the same pattern under `src/contracts/game/`.
 
 ## Re-adding contract IDs
 
@@ -37,6 +45,7 @@ After a redeploy, update the appropriate JSON file:
 
 - Testnet: `apps/shared/src/contracts.testnet.json`
 - Mainnet: `apps/shared/src/contracts.mainnet.json`
-- Game contracts (testnet): `apps/shared/src/contracts/game-contracts.testnet.json`
+- Game contracts (testnet):
+  `apps/shared/src/contracts/game-contracts.testnet.json`
 
 Then regenerate bindings as described above.

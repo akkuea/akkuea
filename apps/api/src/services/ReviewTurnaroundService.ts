@@ -28,7 +28,9 @@ export interface EvidenceReaderLike {
 }
 
 export type EvidenceUnavailableReason =
-  'agreement_start_not_configured' | 'contract_not_configured' | 'rpc_error';
+  | 'agreement_start_not_configured'
+  | 'contract_not_configured'
+  | 'rpc_error';
 
 export interface EvidenceTurnaroundMetrics extends ReviewTurnaroundMetrics {
   available: boolean;

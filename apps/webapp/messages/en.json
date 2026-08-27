@@ -204,5 +204,106 @@
   },
   "PilotAdmin": {
     "title": "Admin"
+  },
+  "Pilot": {
+    "ally": {
+      "pageTitle": "Report income evidence",
+      "pageSubtitle": "Submit this cycle's income statement and follow it through review. The file stays on your device: only its hash reaches the chain."
+    },
+    "operator": {
+      "pageTitle": "Evidence review",
+      "pageSubtitle": "Approve or reject the ally's reported cycles, then execute the payout once a cycle is approved."
+    },
+    "investor": {
+      "pageTitle": "Your pilot position",
+      "pageSubtitle": "Holdings, the ally's cycle-by-cycle payment record, and the property behind it. Every status is read from the contract."
+    },
+    "cycleStatus": {
+      "on_time": "On time",
+      "late": "Late",
+      "disputed": "Disputed",
+      "not_received": "Not received",
+      "pending": "Pending"
+    },
+    "evidenceStatus": {
+      "submitted": "Submitted",
+      "under_review": "In review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "disputed": "Disputed"
+    },
+    "timeline": {
+      "title": "Income cycles",
+      "emptyTitle": "No cycles yet",
+      "emptyDescription": "The pilot has not reached its first income cycle. Statuses appear here as soon as the ally reports one.",
+      "staleReading": "Showing the last reading that succeeded.",
+      "expected": "Expected {date}",
+      "expectedAndPaid": "Expected {date}, paid {paidDate}",
+      "escalationTitle": "The ally has not reported for {count} consecutive cycles",
+      "escalationDescription": "No income evidence reached the payout contract for these cycles. This is an on-chain fact, not an estimate: the contract holds no record for them."
+    },
+    "submission": {
+      "title": "Evidence for {cycle}",
+      "subtitle": "The file stays on your device. Only its SHA-256 hash is written on-chain.",
+      "connectTitle": "Connect your wallet to submit evidence",
+      "connectDescription": "Submissions are signed by the ally address registered in the payout contract.",
+      "connect": "Connect wallet",
+      "fileLabel": "Income statement",
+      "hashing": "Hashing locally",
+      "linkLabel": "Evidence link",
+      "linkHint": "Where a reviewer can retrieve the statement to check it against the hash.",
+      "amountLabel": "Total income (USDC)",
+      "submit": "Submit for review",
+      "submitted": "Submitted. The operator can now review this cycle.",
+      "rejectedPrefix": "Rejected: {reason}",
+      "lockedNotice": "This cycle is already recorded on-chain. A new submission is only possible after a rejection.",
+      "pausedNotice": "The payout contract is paused. Submissions are disabled until an admin resumes it.",
+      "hashUnavailable": "Could not hash the selected file.",
+      "submitFailed": "The submission was not accepted on-chain."
+    },
+    "queue": {
+      "title": "Review queue",
+      "emptyTitle": "Nothing waiting on review",
+      "emptyDescription": "Every cycle the ally has reported is either distributed or already resolved.",
+      "connectNotice": "Connect the operator wallet to approve, reject, or distribute.",
+      "connect": "Connect wallet",
+      "pausedNotice": "The payout contract is paused. Review actions are disabled until an admin resumes it.",
+      "reported": "Reported {amount}",
+      "openStatement": "Open the statement to check it against the hash",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Required to reject, optional to approve",
+      "startReview": "Start review",
+      "approve": "Approve",
+      "reject": "Reject",
+      "reasonHint": "A rejection without a reason is refused by the contract, so the ally always learns what to correct.",
+      "distribute": "Execute distribution",
+      "distributeHint": "Both the operator and the ally have already signed this cycle's evidence, which is what the contract requires before money moves.",
+      "connectFirst": "Connect the operator wallet to act on this cycle.",
+      "actionFailed": "The transaction was not accepted on-chain."
+    },
+    "holdings": {
+      "title": "Your holdings",
+      "connectTitle": "Connect your wallet to see your position",
+      "connectDescription": "The cycle history below is public and does not need a wallet.",
+      "connect": "Connect wallet",
+      "emptyTitle": "No holdings yet",
+      "emptyDescription": "This wallet does not hold the pilot income token. Once tokens are issued to it, your position and payouts appear here.",
+      "staleReading": "Showing the last reading that succeeded.",
+      "whitelisted": "Approved on the pilot whitelist",
+      "notWhitelisted": "Not approved on the pilot whitelist",
+      "notWhitelistedHint": "The payout contract skips holders who are not approved, so approval is required to receive a distribution.",
+      "tokensHeld": "Tokens held",
+      "shareOfSupply": "Share of supply",
+      "shareHint": "of {supply} issued",
+      "distributedToYou": "Distributed to you",
+      "distributedHint": "Across every completed cycle"
+    },
+    "property": {
+      "title": "Property evidence",
+      "subtitle": "An independent look at the property behind the income, alongside the hashed statement.",
+      "emptyTitle": "No property capture yet",
+      "emptyDescription": "The ally's property has not been captured in 3D. The cycle history above is unaffected.",
+      "defaultName": "Pilot property"
+    }
   }
 }

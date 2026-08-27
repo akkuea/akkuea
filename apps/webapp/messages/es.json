@@ -204,5 +204,106 @@
   },
   "PilotAdmin": {
     "title": "Administrador"
+  },
+  "Pilot": {
+    "ally": {
+      "pageTitle": "Reportar evidencia de ingresos",
+      "pageSubtitle": "Envía el estado de ingresos de este ciclo y sigue su revisión. El archivo permanece en tu dispositivo: solo su hash llega a la cadena."
+    },
+    "operator": {
+      "pageTitle": "Revisión de evidencia",
+      "pageSubtitle": "Aprueba o rechaza los ciclos reportados por el aliado y ejecuta el pago cuando un ciclo quede aprobado."
+    },
+    "investor": {
+      "pageTitle": "Tu posición en el piloto",
+      "pageSubtitle": "Tenencias, el historial de pagos ciclo a ciclo del aliado y la propiedad detrás. Cada estado se lee del contrato."
+    },
+    "cycleStatus": {
+      "on_time": "A tiempo",
+      "late": "Tarde",
+      "disputed": "En disputa",
+      "not_received": "No recibido",
+      "pending": "Pendiente"
+    },
+    "evidenceStatus": {
+      "submitted": "Enviada",
+      "under_review": "En revisión",
+      "approved": "Aprobada",
+      "rejected": "Rechazada",
+      "disputed": "En disputa"
+    },
+    "timeline": {
+      "title": "Ciclos de ingresos",
+      "emptyTitle": "Aún no hay ciclos",
+      "emptyDescription": "El piloto todavía no llega a su primer ciclo de ingresos. Los estados aparecen aquí en cuanto el aliado reporte uno.",
+      "staleReading": "Mostrando la última lectura que sí funcionó.",
+      "expected": "Esperado el {date}",
+      "expectedAndPaid": "Esperado el {date}, pagado el {paidDate}",
+      "escalationTitle": "El aliado no reporta desde hace {count} ciclos consecutivos",
+      "escalationDescription": "Ninguna evidencia de ingresos llegó al contrato de pagos en esos ciclos. Es un hecho on-chain, no una estimación: el contrato no guarda registro de ellos."
+    },
+    "submission": {
+      "title": "Evidencia de {cycle}",
+      "subtitle": "El archivo permanece en tu dispositivo. Solo su hash SHA-256 se escribe on-chain.",
+      "connectTitle": "Conecta tu billetera para enviar evidencia",
+      "connectDescription": "Los envíos los firma la dirección del aliado registrada en el contrato de pagos.",
+      "connect": "Conectar billetera",
+      "fileLabel": "Estado de ingresos",
+      "hashing": "Calculando el hash localmente",
+      "linkLabel": "Enlace de la evidencia",
+      "linkHint": "Dónde puede un revisor obtener el estado para contrastarlo con el hash.",
+      "amountLabel": "Ingreso total (USDC)",
+      "submit": "Enviar a revisión",
+      "submitted": "Enviado. El operador ya puede revisar este ciclo.",
+      "rejectedPrefix": "Rechazado: {reason}",
+      "lockedNotice": "Este ciclo ya está registrado on-chain. Solo se puede volver a enviar tras un rechazo.",
+      "pausedNotice": "El contrato de pagos está pausado. Los envíos quedan deshabilitados hasta que un administrador lo reanude.",
+      "hashUnavailable": "No se pudo calcular el hash del archivo seleccionado.",
+      "submitFailed": "El envío no fue aceptado on-chain."
+    },
+    "queue": {
+      "title": "Cola de revisión",
+      "emptyTitle": "No hay nada esperando revisión",
+      "emptyDescription": "Todos los ciclos que el aliado reportó están distribuidos o ya resueltos.",
+      "connectNotice": "Conecta la billetera del operador para aprobar, rechazar o distribuir.",
+      "connect": "Conectar billetera",
+      "pausedNotice": "El contrato de pagos está pausado. Las acciones de revisión quedan deshabilitadas hasta que un administrador lo reanude.",
+      "reported": "Reportó {amount}",
+      "openStatement": "Abrir el estado para contrastarlo con el hash",
+      "reasonLabel": "Motivo",
+      "reasonPlaceholder": "Obligatorio para rechazar, opcional para aprobar",
+      "startReview": "Iniciar revisión",
+      "approve": "Aprobar",
+      "reject": "Rechazar",
+      "reasonHint": "El contrato rechaza una negativa sin motivo, así el aliado siempre sabe qué corregir.",
+      "distribute": "Ejecutar distribución",
+      "distributeHint": "El operador y el aliado ya firmaron la evidencia de este ciclo, que es lo que el contrato exige antes de mover dinero.",
+      "connectFirst": "Conecta la billetera del operador para actuar sobre este ciclo.",
+      "actionFailed": "La transacción no fue aceptada on-chain."
+    },
+    "holdings": {
+      "title": "Tus tenencias",
+      "connectTitle": "Conecta tu billetera para ver tu posición",
+      "connectDescription": "El historial de ciclos de abajo es público y no requiere billetera.",
+      "connect": "Conectar billetera",
+      "emptyTitle": "Aún no tienes tenencias",
+      "emptyDescription": "Esta billetera no tiene el token de ingresos del piloto. Cuando se le emitan tokens, tu posición y tus pagos aparecerán aquí.",
+      "staleReading": "Mostrando la última lectura que sí funcionó.",
+      "whitelisted": "Aprobada en la lista blanca del piloto",
+      "notWhitelisted": "No aprobada en la lista blanca del piloto",
+      "notWhitelistedHint": "El contrato de pagos omite a los tenedores no aprobados, así que la aprobación es necesaria para recibir una distribución.",
+      "tokensHeld": "Tokens en tenencia",
+      "shareOfSupply": "Participación del suministro",
+      "shareHint": "de {supply} emitidos",
+      "distributedToYou": "Distribuido a ti",
+      "distributedHint": "En todos los ciclos completados"
+    },
+    "property": {
+      "title": "Evidencia de la propiedad",
+      "subtitle": "Una mirada independiente a la propiedad detrás de los ingresos, junto al estado con hash.",
+      "emptyTitle": "Aún no hay captura de la propiedad",
+      "emptyDescription": "La propiedad del aliado todavía no se capturó en 3D. El historial de ciclos de arriba no se ve afectado.",
+      "defaultName": "Propiedad del piloto"
+    }
   }
 }

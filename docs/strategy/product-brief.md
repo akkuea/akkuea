@@ -97,7 +97,7 @@ Engineering/output metrics (what the build itself must hit, independent of wheth
 
 - Full contract suite (income token, whitelist gate, payout-split logic) deployed and exercised end-to-end on testnet, with test coverage on all three contracts, before any mainnet integration work begins.
 - Defined gas/fee cost per payout transaction, measured on testnet.
-- Whitelist-review and evidence-review turnaround time (SLA) defined and tracked.
+- Whitelist-review and evidence-review turnaround time (SLA) defined and tracked. Provisional target (48 hours) and measurement: [`docs/operations/pilot-review-sla.md`](../operations/pilot-review-sla.md).
 
 ---
 

@@ -113,6 +113,29 @@ The reporting cadence, breach threshold, and re-notification cadence are all con
 
 ---
 
+### Webapp - Pilot Dashboard
+
+Read by `apps/webapp` in the browser, so every variable here is public by
+design. None of them is a secret, and none should ever hold one.
+
+Contract IDs are optional overrides: with all three empty, the dashboard reads
+the committed deployment artifacts in `apps/shared/src/contracts.<network>.json`,
+which is the normal case. Set them only to point a local dashboard at a custom
+deployment. See `docs/deployment/deploy-pilot-contracts.md`.
+
+| Variable                                     | Example Value                         | Required | Description                                                                                                                                     |
+| -------------------------------------------- | ------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_STELLAR_NETWORK`                | `testnet`                             | No       | Network the pilot dashboard reads from. `testnet` (default) or `mainnet`                                                                        |
+| `NEXT_PUBLIC_SOROBAN_RPC_URL`                | `https://soroban-testnet.stellar.org` | No       | Soroban RPC override. Defaults to the public endpoint for the selected network                                                                  |
+| `NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | No       | Overrides the payout-split contract ID from the deployment artifact                                                                             |
+| `NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | No       | Overrides the income token contract ID from the deployment artifact                                                                             |
+| `NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID`    | `CXXX...` (56 chars, starts with `C`) | No       | Overrides the whitelist contract ID from the deployment artifact                                                                                |
+| `NEXT_PUBLIC_PILOT_START_CYCLE`              | `2026-01`                             | No       | First income cycle the dashboard reports on, as `YYYY-MM`. Cycles are enumerated from here to the current month. Defaults to `2026-01`          |
+| `NEXT_PUBLIC_PILOT_PAYMENT_DAY`              | `5`                                   | No       | Day of the month, in the month after the cycle, that the ally's income is due. A term of the ally's agreement, not a software constant. Default `5` |
+| `NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL`       | `https://example.org/property.splat`  | No       | Gaussian splat capture of the ally's property, shown in the investor view. Absent renders a documented empty state                              |
+
+---
+
 ## Network Passphrase Reference
 
 | Network            | `STELLAR_NETWORK_PASSPHRASE`                     |

@@ -32,7 +32,7 @@ pilot-income-token
   reads pilot-whitelist at mint time
 
 pilot-payout-split
-  stores monthly evidence hash/link records
+  stores monthly evidence hash/link records with a review status
   requires operator + ally auth to approve income cycles
   distributes USDC: 10% platform fee, 90% pro-rata to token holders
   reads pilot-income-token and pilot-whitelist at payout time
@@ -46,6 +46,22 @@ mirroring the payout-split exit state so either contract can be read
 independently for a consistent picture. No fund-recovery or unwind logic
 exists in either contract; that question remains open (Known Risk #5 in the
 product brief).
+
+Each cycle's evidence carries an on-chain review status, which is what the
+pilot dashboard renders:
+
+```text
+(no record)  ally has not reported this cycle
+Submitted    ally submitted, waiting on the operator
+UnderReview  operator opened the cycle
+Approved     operator approved, distribution can execute
+Rejected     operator rejected with a reason, ally may submit again
+Disputed     admin or operator flagged a problem, distribution blocked
+```
+
+Only an `Approved` cycle can be distributed. The co-signed `record_evidence`
+path lands directly on `Approved`, because both required signers authorized the
+same invocation.
 
 The deployment order is mandatory:
 
@@ -229,6 +245,54 @@ stellar contract invoke \
 
 The contract stores only the hash and link, never the underlying file.
 
+A cycle recorded this way lands with status `Approved`, because both required
+signers authorized the same invocation.
+
+### Reviewed path (used by the pilot dashboard)
+
+The dashboard splits the same outcome into steps a person can follow, so an
+investor can see that a human reviewed the evidence rather than being asked to
+take the result on trust. The ally signs alone, the operator reviews, and only
+an `Approved` cycle can be distributed.
+
+```bash
+# 1. The ally submits. Status becomes Submitted.
+stellar contract invoke \
+  --id $PILOT_PAYOUT_SPLIT \
+  --source-account pilot-ally \
+  --network testnet \
+  -- submit_evidence \
+  --ally $ALLY_ADDRESS \
+  --cycle_id "2026-08" \
+  --evidence_hash <32-byte-hash> \
+  --evidence_link "ipfs://..." \
+  --total_income 10000000
+
+# 2. Optional: the operator opens it, so the ally sees it was picked up.
+stellar contract invoke \
+  --id $PILOT_PAYOUT_SPLIT \
+  --source-account pilot-operator \
+  --network testnet \
+  -- start_review \
+  --operator $OPERATOR_ADDRESS \
+  --cycle_id "2026-08"
+
+# 3. The operator approves, or rejects with a reason the ally can act on.
+stellar contract invoke \
+  --id $PILOT_PAYOUT_SPLIT \
+  --source-account pilot-operator \
+  --network testnet \
+  -- review_evidence \
+  --operator $OPERATOR_ADDRESS \
+  --cycle_id "2026-08" \
+  --approved true \
+  --reason "Bank statement matches the reported amount"
+```
+
+A rejected cycle can be corrected and submitted again. The admin or the
+operator can also call `flag_dispute` with a reason, which blocks distribution
+and shows as `Disputed` in the investor timeline.
+
 ---
 
 ## Step 6 - Fund And Execute Distribution
@@ -285,14 +349,18 @@ Also add the deployment table to `docs/contracts/deployment.md` with:
 
 ## Troubleshooting
 
-| Error                       | Cause                                   | Fix                                                                         |
-| --------------------------- | --------------------------------------- | --------------------------------------------------------------------------- |
-| `InvalidEvidenceHash`       | Evidence hash is not exactly 32 bytes   | Hash the retained evidence file with a 32-byte digest and submit that value |
-| `ZeroAmount`                | `total_income` is zero or negative      | Submit a positive USDC amount                                               |
-| `CycleAlreadyRecorded`      | Evidence already exists for the cycle   | Use a new cycle ID or redeploy in testnet                                   |
-| `CycleAlreadyDistributed`   | Distribution was already executed       | Do not retry the same cycle                                                 |
-| `RecipientNotApproved`      | A token holder is no longer whitelisted | Resolve the whitelist status before payout                                  |
-| `InsufficientPayoutBalance` | Payout contract lacks USDC              | Fund the payout contract with at least `total_income`                       |
-| `ContractPaused`            | Admin paused the payout contract        | Investigate and unpause only after the incident is resolved                 |
-| `SignerCollision`           | Operator and ally are the same address  | Re-initialize a fresh deployment with distinct signer addresses             |
-| `Authorization failed`      | Operator and ally did not both sign     | Rebuild the transaction with both required Soroban auth entries             |
+| Error                       | Cause                                    | Fix                                                                         |
+| --------------------------- | ---------------------------------------- | --------------------------------------------------------------------------- |
+| `InvalidEvidenceHash`       | Evidence hash is not exactly 32 bytes    | Hash the retained evidence file with a 32-byte digest and submit that value |
+| `ZeroAmount`                | `total_income` is zero or negative       | Submit a positive USDC amount                                               |
+| `CycleAlreadyRecorded`      | Evidence already exists for the cycle    | Use a new cycle ID or redeploy in testnet                                   |
+| `CycleAlreadyDistributed`   | Distribution was already executed        | Do not retry the same cycle                                                 |
+| `RecipientNotApproved`      | A token holder is no longer whitelisted  | Resolve the whitelist status before payout                                  |
+| `InsufficientPayoutBalance` | Payout contract lacks USDC               | Fund the payout contract with at least `total_income`                       |
+| `ContractPaused`            | Admin paused the payout contract         | Investigate and unpause only after the incident is resolved                 |
+| `SignerCollision`           | Operator and ally are the same address   | Re-initialize a fresh deployment with distinct signer addresses             |
+| `Authorization failed`      | Operator and ally did not both sign      | Rebuild the transaction with both required Soroban auth entries             |
+| `EvidenceNotApproved`       | Cycle is not in the `Approved` status    | Review the cycle first, or resolve the rejection or dispute behind it       |
+| `InvalidStatusTransition`   | Review requested on a settled cycle      | Only `Submitted` or `UnderReview` cycles can be reviewed                    |
+| `MissingReviewReason`       | Rejection or dispute sent with no reason | Supply a reason: the contract will not record one without it                |
+| `EvidenceNotFound`          | No evidence exists for the cycle         | The ally must submit the cycle before it can be reviewed                    |

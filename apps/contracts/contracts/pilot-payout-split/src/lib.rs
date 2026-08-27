@@ -744,7 +744,8 @@ mod tests {
         contracterror,
         testutils::{Address as _, MockAuth, MockAuthInvoke},
         token::StellarAssetClient,
-        Error, IntoVal,
+        xdr::ScVal,
+        Error, IntoVal, TryFromVal,
     };
 
     /// Minimum exchange rate used throughout tests: 0.95 EURC per USDC.
@@ -1696,6 +1697,39 @@ mod tests {
         let status = s.payout.exit_status().expect("exit must be recorded");
         assert_eq!(status.reason, reason);
         assert_eq!(status.at, s.env.ledger().timestamp());
+    }
+
+    #[test]
+    fn contract_types_round_trip_through_xdr_scval() {
+        let s = setup();
+        let reason = String::from_str(&s.env, "ally ceased operations");
+        s.payout.exit(&s.operator, &s.ally, &reason);
+        let record = s.payout.exit_status().expect("exit must be recorded");
+
+        // The `contracttype` derive implements the ScVal (XDR) encoding that
+        // off-chain clients and `stellar contract invoke` use. Verify the new
+        // types round-trip through it, in both directions.
+        let scval: ScVal = (&record)
+            .try_into()
+            .expect("exit record must encode to ScVal");
+        assert!(matches!(scval, ScVal::Map(Some(_))));
+        let decoded: ExitRecord =
+            TryFromVal::try_from_val(&s.env, &scval).expect("exit record must decode");
+        assert_eq!(decoded, record);
+
+        let event = events::ExitRecordedEvent {
+            operator: s.operator.clone(),
+            ally: s.ally.clone(),
+            reason,
+            at: record.at,
+        };
+        let event_scval: ScVal = (&event)
+            .try_into()
+            .expect("exit event must encode to ScVal");
+        assert!(matches!(event_scval, ScVal::Map(Some(_))));
+        let decoded_event: events::ExitRecordedEvent =
+            TryFromVal::try_from_val(&s.env, &event_scval).expect("exit event must decode");
+        assert_eq!(decoded_event, event);
     }
 
     #[test]

@@ -278,7 +278,7 @@ impl PilotIncomeToken {
 mod tests {
     use super::*;
     use pilot_whitelist::{PilotWhitelist, PilotWhitelistClient};
-    use soroban_sdk::{testutils::Address as _, vec, Error};
+    use soroban_sdk::{testutils::Address as _, vec, xdr::ScVal, Error, TryFromVal};
 
     struct Setup {
         env: Env,
@@ -597,5 +597,41 @@ mod tests {
             )))
         );
         assert_eq!(s.token.wound_down_status(), None);
+    }
+
+    #[test]
+    fn contract_types_round_trip_through_xdr_scval() {
+        let s = setup();
+        s.env.mock_all_auths();
+        let reason = String::from_str(&s.env, "ally ceased operations");
+        s.token.mark_wound_down(&s.admin, &reason);
+        let record = s
+            .token
+            .wound_down_status()
+            .expect("wound-down must be recorded");
+
+        // The `contracttype` derive implements the ScVal (XDR) encoding that
+        // off-chain clients and `stellar contract invoke` use. Verify the new
+        // types round-trip through it, in both directions.
+        let scval: ScVal = (&record)
+            .try_into()
+            .expect("wound-down record must encode to ScVal");
+        assert!(matches!(scval, ScVal::Map(Some(_))));
+        let decoded: WoundDownRecord =
+            TryFromVal::try_from_val(&s.env, &scval).expect("wound-down record must decode");
+        assert_eq!(decoded, record);
+
+        let event = events::WoundDownRecordedEvent {
+            admin: s.admin.clone(),
+            reason,
+            at: record.at,
+        };
+        let event_scval: ScVal = (&event)
+            .try_into()
+            .expect("wound-down event must encode to ScVal");
+        assert!(matches!(event_scval, ScVal::Map(Some(_))));
+        let decoded_event: events::WoundDownRecordedEvent =
+            TryFromVal::try_from_val(&s.env, &event_scval).expect("wound-down event must decode");
+        assert_eq!(decoded_event, event);
     }
 }

@@ -2,7 +2,8 @@
 #![allow(linker_messages)]
 
 use soroban_sdk::{
-    contract, contractclient, contractimpl, panic_with_error, Address, Env, String, Vec,
+    contract, contractclient, contractimpl, contracttype, panic_with_error, Address, Env, String,
+    Vec,
 };
 
 mod errors;
@@ -15,6 +16,20 @@ use storage::{DataKey, Storage};
 #[contractclient(name = "WhitelistClient")]
 pub trait Whitelist {
     fn is_approved(env: Env, address: Address) -> bool;
+}
+
+/// Durable on-chain record of a permanent pilot wind-down. Written exactly
+/// once by `mark_wound_down` and never removed, mirroring the payout-split
+/// contract's `ExitRecord` so a client reading either contract independently
+/// sees a consistent terminal picture without any cross-contract call.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[contracttype]
+pub struct WoundDownRecord {
+    /// Free-text reason supplied by the admin (see
+    /// docs/strategy/decision-log.md for the recorded representation decision).
+    pub reason: String,
+    /// Ledger timestamp of the `mark_wound_down` invocation.
+    pub at: u64,
 }
 
 #[contract]
@@ -172,6 +187,46 @@ impl PilotIncomeToken {
         }
 
         Self::move_balance(&env, from, to, amount);
+    }
+
+    /// Permanently mark the pilot as wound down.
+    ///
+    /// One-way and irreversible: once set, the marker can never be cleared and
+    /// no un-wind-down function exists. Admin-gated, matching every other
+    /// state-changing function on this contract, so the same platform key that
+    /// mints and corrects balances owns the terminal state too.
+    ///
+    /// This is an independent write from `exit` on the payout-split contract:
+    /// each contract stores and exposes its own terminal marker, so a client
+    /// reading either contract alone gets a complete answer without a
+    /// cross-contract call at read time. Recording the fact of wind-down only;
+    /// no fund-recovery, refund, or unwind logic is implemented here (that
+    /// remains an open product/legal question, Known Risk #5 in the product
+    /// brief).
+    pub fn mark_wound_down(env: Env, admin: Address, reason: String) {
+        admin.require_auth();
+        Self::require_admin(&env, &admin);
+
+        if Storage::wound_down_record(&env).is_some() {
+            panic_with_error!(&env, IncomeTokenError::AlreadyWoundDown);
+        }
+
+        if reason.is_empty() {
+            panic_with_error!(&env, IncomeTokenError::MissingWoundDownReason);
+        }
+
+        let record = WoundDownRecord {
+            reason: reason.clone(),
+            at: env.ledger().timestamp(),
+        };
+        Storage::set_wound_down_record(&env, &record);
+        events::emit_wound_down_recorded(&env, admin, reason, record.at);
+    }
+
+    /// Return the terminal wound-down record, or `None` while the pilot is
+    /// active. Read-only and self-contained: no cross-contract call is needed.
+    pub fn wound_down_status(env: Env) -> Option<WoundDownRecord> {
+        Storage::wound_down_record(&env)
     }
 
     fn require_admin(env: &Env, caller: &Address) {
@@ -455,5 +510,92 @@ mod tests {
                 IncomeTokenError::HolderNotApproved as u32
             )))
         );
+    }
+
+    #[test]
+    fn wound_down_status_is_none_by_default() {
+        let s = setup();
+        assert_eq!(s.token.wound_down_status(), None);
+    }
+
+    #[test]
+    fn admin_marks_wound_down_records_reason_and_timestamp() {
+        let s = setup();
+        s.env.mock_all_auths();
+
+        let reason = String::from_str(&s.env, "ally ceased operations");
+        s.token.mark_wound_down(&s.admin, &reason);
+
+        let status = s
+            .token
+            .wound_down_status()
+            .expect("wound-down must be recorded");
+        assert_eq!(status.reason, reason);
+        assert_eq!(status.at, s.env.ledger().timestamp());
+    }
+
+    #[test]
+    fn non_admin_cannot_mark_wound_down() {
+        let s = setup();
+        s.env.mock_all_auths();
+
+        let res = s
+            .token
+            .try_mark_wound_down(&s.holder_one, &String::from_str(&s.env, "rogue wind-down"));
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::Unauthorized as u32
+            )))
+        );
+        assert_eq!(s.token.wound_down_status(), None);
+    }
+
+    #[test]
+    fn mark_wound_down_is_one_way() {
+        let s = setup();
+        s.env.mock_all_auths();
+
+        s.token.mark_wound_down(
+            &s.admin,
+            &String::from_str(&s.env, "ally ceased operations"),
+        );
+
+        let res = s
+            .token
+            .try_mark_wound_down(&s.admin, &String::from_str(&s.env, "changed mind"));
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::AlreadyWoundDown as u32
+            )))
+        );
+
+        // The original record is untouched.
+        let status = s.token.wound_down_status().unwrap();
+        assert_eq!(
+            status.reason,
+            String::from_str(&s.env, "ally ceased operations")
+        );
+    }
+
+    #[test]
+    fn mark_wound_down_with_empty_reason_is_rejected() {
+        let s = setup();
+        s.env.mock_all_auths();
+
+        let res = s
+            .token
+            .try_mark_wound_down(&s.admin, &String::from_str(&s.env, ""));
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::MissingWoundDownReason as u32
+            )))
+        );
+        assert_eq!(s.token.wound_down_status(), None);
     }
 }

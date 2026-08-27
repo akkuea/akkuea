@@ -1,5 +1,7 @@
 use soroban_sdk::{contracttype, Address, Env, Vec};
 
+use crate::WoundDownRecord;
+
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DataKey {
@@ -12,6 +14,7 @@ pub enum DataKey {
     Balance(Address),
     Holders,
     Minted,
+    WoundDown,
 }
 
 pub struct Storage;
@@ -81,5 +84,17 @@ impl Storage {
 
     pub fn set_minted(env: &Env) {
         env.storage().instance().set(&DataKey::Minted, &true);
+    }
+
+    /// The terminal wound-down record, if the pilot has been permanently ended
+    /// via `mark_wound_down`. Absence means the pilot is still active. Stored in
+    /// instance storage: a single contract-wide fact, set once and never
+    /// removed, readable without any cross-contract call.
+    pub fn wound_down_record(env: &Env) -> Option<WoundDownRecord> {
+        env.storage().instance().get(&DataKey::WoundDown)
+    }
+
+    pub fn set_wound_down_record(env: &Env, record: &WoundDownRecord) {
+        env.storage().instance().set(&DataKey::WoundDown, record);
     }
 }

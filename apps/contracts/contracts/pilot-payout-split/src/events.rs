@@ -131,3 +131,27 @@ pub fn emit_swap_failed(
         },
     );
 }
+
+/// Emitted once when the ally/property relationship is permanently terminated.
+/// Clients can watch this to render the terminal state without polling
+/// `exit_status`.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ExitRecordedEvent {
+    pub operator: Address,
+    pub ally: Address,
+    pub reason: String,
+    pub at: u64,
+}
+
+pub fn emit_exit_recorded(env: &Env, operator: Address, ally: Address, reason: String, at: u64) {
+    env.events().publish(
+        (symbol_short!("exit"),),
+        ExitRecordedEvent {
+            operator,
+            ally,
+            reason,
+            at,
+        },
+    );
+}

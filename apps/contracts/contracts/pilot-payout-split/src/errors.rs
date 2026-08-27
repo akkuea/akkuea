@@ -31,4 +31,10 @@ pub enum PayoutError {
     /// A cycle with EURC-preference holders was executed without a positive
     /// minimum exchange rate bound.
     InvalidMinRate = 21,
+    /// The ally/property relationship has been permanently terminated via
+    /// `exit`; evidence recording and distribution execution are rejected
+    /// forever after. Distinct from `ContractPaused`, which is reversible.
+    ContractExited = 22,
+    /// `exit` was invoked without a non-empty reason string.
+    MissingExitReason = 23,
 }

@@ -59,6 +59,16 @@ See [`integration-decisions.md`](integration-decisions.md) for the full verifica
 
 **Not hardcoded:** The router address is stored in contract storage at initialization (like `income_token` and `whitelist`), never hardcoded. This allows upgrading the venue without redeploying the payout contract.
 
+## Exit-state reason representation (C7-002, ally/property exit)
+
+**Adopted: free-text string stored on-chain** for the exit reason on `pilot-payout-split` (`exit`) and the mirrored `pilot-income-token` marker (`mark_wound_down`), recorded as `ExitRecord { reason: String, at: u64 }` / `WoundDownRecord { reason: String, at: u64 }`.
+
+**Why a string rather than a bounded enum:** real-world exit causes cannot be enumerated up front (ally bankruptcy, property sale, regulatory pressure, mutual agreement, operational failure, and combinations). An enum would force the dashboard to misclassify or carry an `Other` catch-all anyway, and adding a variant later requires a contract upgrade. The string is renderable directly from on-chain state, which is exactly what the issue requires ("render why and when the exit happened without any off-chain state").
+
+**Why a string rather than a hash-plus-off-chain-link:** the evidence records in this same contract deliberately use a link-plus-hash pattern because evidence is a large artifact that belongs off-chain. An exit reason is a short human fact; linking it off-chain would re-introduce the off-chain dependency the issue explicitly rules out for this feature and would make the terminal state unreadable to a client that only reads the chain.
+
+**Why the mirrored `pilot-income-token` marker is a separate admin-gated write rather than auto-propagated from `pilot-payout-split`'s `exit`:** the issue requires `exit` to be gated by exactly the same two-signer authorization as `execute_distribution` (operator + ally). Auto-propagating the marker would force one of two bad options: (a) require the income-token admin (a third key) to co-sign every exit, silently widening the documented two-signer gate, or (b) make the token trust the payout-split contract as a configured authority, adding a deployment-order coupling where a misconfigured authority strands exit entirely. Keeping the two writes independent means each contract's terminal state is set by the party that owns that contract's keys (operator + ally for the payout-split exit, the token admin for the wind-down marker), and both states remain independently readable with no cross-contract call at read time. The dashboard/operator tooling issues both calls when ending a pilot; a later cycle can add an orchestration contract if atomicity is ever required.
+
 ## Jurisdiction
 
 **Resolved by sequencing, not by picking one option outright.** Brazil + an existing CVM-authorized platform is the target regulatory path, pursued explicitly as Phase 2 - not a Phase 1 prerequisite. Negotiating a distribution partnership with a regulated platform is itself a slow BD process that could strand the already-verified Stellar-native architecture if required before the pilot can launch. Full research findings (Brazil, Marshall Islands, El Salvador ruled out as heavy-touch, Mexico ruled out as unfavorable) are in [`roadmap.md`](roadmap.md).

@@ -16,7 +16,11 @@ import { BaseRepository } from './BaseRepository';
  * Filter options for querying properties
  */
 export type PropertyReviewStatus =
-  'pending_review' | 'approved' | 'rejected' | 'changes_requested' | 'on_hold';
+  | 'pending_review'
+  | 'approved'
+  | 'rejected'
+  | 'changes_requested'
+  | 'on_hold';
 
 export interface PropertyFilter {
   ownerId?: string;

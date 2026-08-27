@@ -18,9 +18,11 @@ function agreementStartForDueCycles(n: number): Date {
 
 function makeReader(evidenceByCycle: Record<string, boolean>) {
   return {
-    hasEvidence: mock(async (cycleId: string): Promise<EvidenceLookupResult> => ({
-      present: evidenceByCycle[cycleId] ?? false,
-    })),
+    hasEvidence: mock(
+      async (cycleId: string): Promise<EvidenceLookupResult> => ({
+        present: evidenceByCycle[cycleId] ?? false,
+      }),
+    ),
   };
 }
 

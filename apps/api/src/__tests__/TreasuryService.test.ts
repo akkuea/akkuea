@@ -397,7 +397,8 @@ describe('TreasuryService movements', () => {
 
   it('deposits with a slippage floor derived from the requested amount', async () => {
     let capturedArgs:
-      { amountsDesired: bigint[]; amountsMin: bigint[]; invest: boolean } | undefined;
+      | { amountsDesired: bigint[]; amountsMin: bigint[]; invest: boolean }
+      | undefined;
 
     const service = new TreasuryService(
       () =>

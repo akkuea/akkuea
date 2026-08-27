@@ -688,7 +688,8 @@ export class TreasuryService {
     apiError: ApiError;
   }): Promise<void> {
     const details = params.apiError.details as
-      { venueError?: string; contractErrorCode?: number | null } | undefined;
+      | { venueError?: string; contractErrorCode?: number | null }
+      | undefined;
 
     await TreasuryRepository.recordTransaction({
       venue: params.venue.id,

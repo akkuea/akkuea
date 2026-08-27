@@ -4,10 +4,11 @@ import { ErrorBoundary } from "@/components/ui";
 import { WhitelistReviewQueue } from "@/components/pilot/WhitelistReviewQueue";
 
 export async function generateMetadata({
-  params: { locale },
+  params,
 }: {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
+  const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "PilotAdmin" });
   return {
     title: `Whitelist Review | ${t("title", { fallback: "Admin" })}`,

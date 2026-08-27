@@ -201,5 +201,8 @@
     "retry": "Retry",
     "readAtNote": "Read live from Stellar {network}. Treasury account: {account}.",
     "noAccountConfigured": "not configured"
+  },
+  "PilotAdmin": {
+    "title": "Admin"
   }
 }

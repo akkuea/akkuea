@@ -36,7 +36,16 @@ pilot-payout-split
   requires operator + ally auth to approve income cycles
   distributes USDC: 10% platform fee, 90% pro-rata to token holders
   reads pilot-income-token and pilot-whitelist at payout time
+  one-way exit state (operator + ally): permanently blocks evidence
+  recording and distribution; exit_status() exposes reason and timestamp
 ```
+
+The pilot also carries a terminal wind-down marker on `pilot-income-token`
+(`mark_wound_down`, admin-only, one-way; `wound_down_status()` to read it),
+mirroring the payout-split exit state so either contract can be read
+independently for a consistent picture. No fund-recovery or unwind logic
+exists in either contract; that question remains open (Known Risk #5 in the
+product brief).
 
 The deployment order is mandatory:
 

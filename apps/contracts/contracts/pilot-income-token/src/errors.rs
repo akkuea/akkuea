@@ -16,4 +16,8 @@ pub enum IncomeTokenError {
     SupplyOverflow = 10,
     InsufficientBalance = 11,
     InternalInvariant = 12,
+    /// The pilot has already been marked wound down; the marker is one-way.
+    AlreadyWoundDown = 13,
+    /// `mark_wound_down` was invoked without a non-empty reason string.
+    MissingWoundDownReason = 14,
 }

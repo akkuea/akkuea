@@ -123,6 +123,22 @@ pub struct HolderPayout {
     pub amount: i128,
 }
 
+/// Durable on-chain record of a permanent ally/property exit. Written exactly
+/// once by `exit` and never removed: it is the terminal counterpart to the
+/// reversible `pause` flag, letting a client distinguish "temporarily paused"
+/// from "this pilot is over" without any off-chain state.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[contracttype]
+pub struct ExitRecord {
+    /// Free-text reason supplied by the two signing parties. Deliberately a
+    /// string rather than an enum or hash-plus-off-chain-link so the dashboard
+    /// can render why the exit happened directly from on-chain state (see
+    /// docs/strategy/decision-log.md for the recorded rationale).
+    pub reason: String,
+    /// Ledger timestamp of the `exit` invocation.
+    pub at: u64,
+}
+
 /// Internal per-holder delivery plan resolved before any funds move.
 /// `contracttype` provides the val conversions required by `soroban_sdk::Vec`.
 #[contracttype]
@@ -227,6 +243,7 @@ impl PilotPayoutSplit {
         ally.require_auth();
         Self::require_operator(&env, &operator);
         Self::require_ally(&env, &ally);
+        Self::require_not_exited(&env);
         Self::require_not_paused(&env);
 
         if total_income <= 0 {
@@ -289,6 +306,7 @@ impl PilotPayoutSplit {
         ally.require_auth();
         Self::require_operator(&env, &operator);
         Self::require_ally(&env, &ally);
+        Self::require_not_exited(&env);
         Self::require_not_paused(&env);
         let _guard = ExecutionGuard::acquire(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
 
@@ -611,6 +629,55 @@ impl PilotPayoutSplit {
         Storage::is_paused(&env)
     }
 
+    /// Permanently terminate the ally/property relationship.
+    ///
+    /// One-way and irreversible: once called, `record_evidence` and
+    /// `execute_distribution` reject every subsequent invocation with
+    /// `PayoutError::ContractExited`, and no un-exit or reversal function
+    /// exists. This is deliberately a separate gate from `pause`/`unpause`:
+    /// pause is reversible and operational, exit is terminal and factual, so a
+    /// client can always tell "temporarily paused" from "this pilot is over."
+    ///
+    /// Gated by the same two-signer authorization as
+    /// `execute_distribution`: both `operator` and `ally` must authorize the
+    /// same invocation, since ending the relationship is at least as
+    /// consequential as approving a distribution. The `reason` is stored and
+    /// exposed on-chain via `exit_status` so a client can render why and when
+    /// the exit happened without any off-chain state.
+    ///
+    /// This function records the fact of exit only. It does not attempt any
+    /// fund-recovery, refund, pro-rata unwind, or legal wind-down logic: what
+    /// happens to already-collected or future funds is an open product/legal
+    /// question (Known Risk #5 in the product brief) that this contract change
+    /// deliberately does not answer.
+    pub fn exit(env: Env, operator: Address, ally: Address, reason: String) {
+        operator.require_auth();
+        ally.require_auth();
+        Self::require_operator(&env, &operator);
+        Self::require_ally(&env, &ally);
+        Self::require_not_exited(&env);
+
+        if reason.is_empty() {
+            panic_with_error!(&env, PayoutError::MissingExitReason);
+        }
+
+        let record = ExitRecord {
+            reason: reason.clone(),
+            at: env.ledger().timestamp(),
+        };
+        Storage::set_exit_record(&env, &record);
+        events::emit_exit_recorded(&env, operator, ally, reason, record.at);
+    }
+
+    /// Return the terminal exit record, or `None` while the pilot is active.
+    ///
+    /// Read-only and self-contained: a client needs no cross-contract call and
+    /// no off-chain state to distinguish "not exited" (None) from a permanent
+    /// exit (the recorded reason and timestamp).
+    pub fn exit_status(env: Env) -> Option<ExitRecord> {
+        Storage::exit_record(&env)
+    }
+
     /// Return an evidence record for a cycle, if present.
     pub fn get_evidence(env: Env, cycle_id: String) -> Option<EvidenceRecord> {
         Storage::evidence(&env, &cycle_id)
@@ -659,6 +726,12 @@ impl PilotPayoutSplit {
             panic_with_error!(env, PayoutError::ContractPaused);
         }
     }
+
+    fn require_not_exited(env: &Env) {
+        if Storage::exit_record(env).is_some() {
+            panic_with_error!(env, PayoutError::ContractExited);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -671,7 +744,8 @@ mod tests {
         contracterror,
         testutils::{Address as _, MockAuth, MockAuthInvoke},
         token::StellarAssetClient,
-        Error, IntoVal,
+        xdr::ScVal,
+        Error, IntoVal, TryFromVal,
     };
 
     /// Minimum exchange rate used throughout tests: 0.95 EURC per USDC.
@@ -1466,6 +1540,234 @@ mod tests {
             res,
             Err(Ok(Error::from_contract_error(
                 PayoutError::Unauthorized as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn exit_requires_both_signers() {
+        // Symmetric to `single_signer_attempt_is_rejected` for
+        // `execute_distribution`: only the operator's signature is provided, so
+        // the missing `ally.require_auth()` must reject the invocation and no
+        // exit state may be written.
+        let env = Env::default();
+        let admin = Address::generate(&env);
+        let operator = Address::generate(&env);
+        let ally = Address::generate(&env);
+        let fee_recipient = Address::generate(&env);
+        let income_token = Address::generate(&env);
+        let whitelist = Address::generate(&env);
+        let usdc = Address::generate(&env);
+        let eurc = Address::generate(&env);
+        let router = Address::generate(&env);
+        let payout_id = env.register(PilotPayoutSplit, ());
+        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
+
+        payout.initialize(
+            &admin,
+            &operator,
+            &ally,
+            &fee_recipient,
+            &income_token,
+            &whitelist,
+            &usdc,
+            &eurc,
+            &router,
+        );
+
+        let reason = String::from_str(&env, "ally ceased operations");
+        env.mock_auths(&[MockAuth {
+            address: &operator,
+            invoke: &MockAuthInvoke {
+                contract: &payout_id,
+                fn_name: "exit",
+                args: (operator.clone(), ally.clone(), reason.clone()).into_val(&env),
+                sub_invokes: &[],
+            },
+        }]);
+
+        let res = payout.try_exit(&operator, &ally, &reason);
+
+        assert!(res.is_err());
+        assert_eq!(payout.exit_status(), None);
+    }
+
+    #[test]
+    fn exit_with_empty_reason_is_rejected() {
+        let s = setup();
+
+        let res = s
+            .payout
+            .try_exit(&s.operator, &s.ally, &String::from_str(&s.env, ""));
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::MissingExitReason as u32
+            )))
+        );
+        assert_eq!(s.payout.exit_status(), None);
+    }
+
+    #[test]
+    fn exited_contract_blocks_record_evidence() {
+        let s = setup();
+        s.payout.exit(
+            &s.operator,
+            &s.ally,
+            &String::from_str(&s.env, "ally ceased operations"),
+        );
+
+        let res = s.payout.try_record_evidence(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "exited"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/exited"),
+            &10_000,
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn exited_contract_blocks_execute_distribution() {
+        let s = setup();
+        record_default(&s);
+        s.payout.exit(
+            &s.operator,
+            &s.ally,
+            &String::from_str(&s.env, "ally ceased operations"),
+        );
+
+        let res = s.payout.try_execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn exit_is_one_way() {
+        let s = setup();
+        let reason = String::from_str(&s.env, "ally ceased operations");
+        s.payout.exit(&s.operator, &s.ally, &reason);
+
+        // A second exit, even with a different reason, is rejected: the
+        // relationship is permanently terminated and no un-exit exists.
+        let res = s.payout.try_exit(
+            &s.operator,
+            &s.ally,
+            &String::from_str(&s.env, "changed mind"),
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        // The original record is untouched.
+        let status = s.payout.exit_status().unwrap();
+        assert_eq!(status.reason, reason);
+    }
+
+    #[test]
+    fn exit_status_reports_not_exited_then_record() {
+        let s = setup();
+        assert_eq!(s.payout.exit_status(), None);
+
+        let reason = String::from_str(&s.env, "property sold to new owner");
+        s.payout.exit(&s.operator, &s.ally, &reason);
+
+        let status = s.payout.exit_status().expect("exit must be recorded");
+        assert_eq!(status.reason, reason);
+        assert_eq!(status.at, s.env.ledger().timestamp());
+    }
+
+    #[test]
+    fn contract_types_round_trip_through_xdr_scval() {
+        let s = setup();
+        let reason = String::from_str(&s.env, "ally ceased operations");
+        s.payout.exit(&s.operator, &s.ally, &reason);
+        let record = s.payout.exit_status().expect("exit must be recorded");
+
+        // The `contracttype` derive implements the ScVal (XDR) encoding that
+        // off-chain clients and `stellar contract invoke` use. Verify the new
+        // types round-trip through it, in both directions.
+        let scval: ScVal = (&record)
+            .try_into()
+            .expect("exit record must encode to ScVal");
+        assert!(matches!(scval, ScVal::Map(Some(_))));
+        let decoded: ExitRecord =
+            TryFromVal::try_from_val(&s.env, &scval).expect("exit record must decode");
+        assert_eq!(decoded, record);
+
+        let event = events::ExitRecordedEvent {
+            operator: s.operator.clone(),
+            ally: s.ally.clone(),
+            reason,
+            at: record.at,
+        };
+        let event_scval: ScVal = (&event)
+            .try_into()
+            .expect("exit event must encode to ScVal");
+        assert!(matches!(event_scval, ScVal::Map(Some(_))));
+        let decoded_event: events::ExitRecordedEvent =
+            TryFromVal::try_from_val(&s.env, &event_scval).expect("exit event must decode");
+        assert_eq!(decoded_event, event);
+    }
+
+    #[test]
+    fn exit_is_independent_of_pause() {
+        let s = setup();
+
+        // Exit is permitted while paused: the two gates are independent.
+        s.payout.pause(&s.admin);
+        let reason = String::from_str(&s.env, "ally ceased operations");
+        s.payout.exit(&s.operator, &s.ally, &reason);
+        assert!(s.payout.is_paused());
+        assert!(s.payout.exit_status().is_some());
+
+        // Unpause after exit works and must not clear the terminal state.
+        s.payout.unpause(&s.admin);
+        assert!(!s.payout.is_paused());
+        assert!(s.payout.exit_status().is_some());
+
+        // Re-pausing after exit is still possible: pause stays reversible.
+        s.payout.pause(&s.admin);
+        assert!(s.payout.is_paused());
+        assert!(s.payout.exit_status().is_some());
+
+        // For a contract that is both paused and exited, the terminal error
+        // wins: pause is reversible, exit is not, so the permanent fact is the
+        // one a client should see.
+        let res = s.payout.try_record_evidence(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "both"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/both"),
+            &10_000,
+        );
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
             )))
         );
     }

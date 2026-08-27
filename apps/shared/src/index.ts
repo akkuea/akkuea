@@ -24,6 +24,7 @@ export {
   type VaultWithdrawArgs,
 } from "./contracts/defindexVault";
 export * from "./contracts/game";
+export * from "./contracts/pilot";
 export * from "./utils/stellar";
 export * from "./utils/validation";
 export * from "./utils/format";

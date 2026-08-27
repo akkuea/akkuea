@@ -17,7 +17,6 @@ import type { ConnectionStatus } from "@/hooks/useLiveUpdates";
 import { useWallet } from "@/components/auth/hooks";
 import type { PilotEvidenceDetail } from "@/services/pilot/reads";
 import {
-  executeDistribution,
   reviewEvidence,
   startReview,
   type SignXdr,
@@ -61,9 +60,9 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
   const t = useTranslations("Pilot");
   const { address, signTransaction } = wallet;
   const [reason, setReason] = useState("");
-  const [pending, setPending] = useState<
-    "open" | "approve" | "reject" | "distribute" | null
-  >(null);
+  const [pending, setPending] = useState<"open" | "approve" | "reject" | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   const status = cycle.evidence?.status;
@@ -71,7 +70,7 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
   const canDistribute = status === "approved" && !cycle.distribution;
 
   async function run(
-    action: "open" | "approve" | "reject" | "distribute",
+    action: "open" | "approve" | "reject",
     operation: () => Promise<unknown>,
   ) {
     if (!address) {
@@ -209,25 +208,10 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
       )}
 
       {canDistribute && (
-        <div className="mt-4">
-          <Button
-            size="sm"
-            disabled={blocked}
-            isLoading={pending === "distribute"}
-            onClick={() =>
-              void run("distribute", () =>
-                executeDistribution(
-                  address as string,
-                  cycle.cycleId,
-                  signTransaction,
-                ),
-              )
-            }
-          >
-            {t("queue.distribute")}
-          </Button>
-          <p className="mt-2 text-xs text-neutral-500">
-            {t("queue.distributeHint")}
+        <div className="mt-4 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
+          <p className="text-xs text-neutral-300">{t("queue.readyToDistribute")}</p>
+          <p className="mt-1 text-xs text-neutral-500">
+            {t("queue.distributeCosignNotice")}
           </p>
         </div>
       )}

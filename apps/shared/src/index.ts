@@ -21,6 +21,7 @@ export {
   type PilotEvidenceRecord,
   type EvidenceStatus,
   type PilotEvidenceStatusTag,
+  type ExecuteDistributionArgs,
   type FlagDisputeArgs,
   type RecordEvidenceArgs,
   type ReviewEvidenceArgs,

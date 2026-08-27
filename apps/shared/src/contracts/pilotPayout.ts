@@ -104,6 +104,14 @@ export interface RecordEvidenceArgs extends SubmitEvidenceArgs {
   operator: string;
 }
 
+export interface ExecuteDistributionArgs {
+  operator: string;
+  ally: string;
+  cycleId: string;
+  /** Price floor for EURC settlement, scaled by the contract's denominator. */
+  minEurcPerUsdc: bigint;
+}
+
 export interface FlagDisputeArgs {
   /** Admin or operator address. Anyone else is rejected on-chain. */
   caller: string;
@@ -228,11 +236,27 @@ export class PilotPayoutContractClient {
     );
   }
 
+  /**
+   * Execute an approved cycle's payout.
+   *
+   * Both the operator and the ally authorize the same invocation, and the pair
+   * also supplies `minEurcPerUsdc`, the price floor for any EURC-preference
+   * holder in the cycle. A pilot settling only in USDC passes zero: the
+   * contract ignores the bound when no holder opted into EURC.
+   */
   executeDistribution(
-    cycleId: string,
+    args: ExecuteDistributionArgs,
     options?: MethodOptions,
   ): Promise<AssembledTransaction<DistributionSummary>> {
-    return this.client.execute_distribution({ cycle_id: cycleId }, options);
+    return this.client.execute_distribution(
+      {
+        operator: args.operator,
+        ally: args.ally,
+        cycle_id: args.cycleId,
+        min_eurc_per_usdc: args.minEurcPerUsdc,
+      },
+      options,
+    );
   }
 }
 

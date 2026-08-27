@@ -276,10 +276,10 @@
       "approve": "Aprobar",
       "reject": "Rechazar",
       "reasonHint": "El contrato rechaza una negativa sin motivo, así el aliado siempre sabe qué corregir.",
-      "distribute": "Ejecutar distribución",
-      "distributeHint": "El operador y el aliado ya firmaron la evidencia de este ciclo, que es lo que el contrato exige antes de mover dinero.",
       "connectFirst": "Conecta la billetera del operador para actuar sobre este ciclo.",
-      "actionFailed": "La transacción no fue aceptada on-chain."
+      "actionFailed": "La transacción no fue aceptada on-chain.",
+      "readyToDistribute": "Aprobado y listo para distribuir.",
+      "distributeCosignNotice": "El contrato de pagos exige que el operador y el aliado autoricen la misma transacción. Ejecutala con ambos firmantes siguiendo docs/deployment/deploy-pilot-contracts.md hasta que la integración de billetera pueda producir una segunda entrada de autorización."
     },
     "holdings": {
       "title": "Tus tenencias",

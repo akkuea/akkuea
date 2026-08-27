@@ -276,10 +276,10 @@
       "approve": "Approve",
       "reject": "Reject",
       "reasonHint": "A rejection without a reason is refused by the contract, so the ally always learns what to correct.",
-      "distribute": "Execute distribution",
-      "distributeHint": "Both the operator and the ally have already signed this cycle's evidence, which is what the contract requires before money moves.",
       "connectFirst": "Connect the operator wallet to act on this cycle.",
-      "actionFailed": "The transaction was not accepted on-chain."
+      "actionFailed": "The transaction was not accepted on-chain.",
+      "readyToDistribute": "Approved and ready to distribute.",
+      "distributeCosignNotice": "The payout contract requires the operator and the ally to authorize the same transaction. Run it with both signers following docs/deployment/deploy-pilot-contracts.md until the wallet integration can produce a second auth entry."
     },
     "holdings": {
       "title": "Your holdings",

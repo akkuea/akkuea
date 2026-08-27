@@ -96,17 +96,38 @@ export async function flagDispute(
 }
 
 /**
+ * Price floor for EURC settlement, scaled by the contract's rate denominator.
+ *
+ * The pilot settles in USDC, and the contract ignores this bound when no holder
+ * has opted into EURC, so zero is correct until a holder does.
+ */
+export const DEFAULT_MIN_EURC_PER_USDC = BigInt(0);
+
+/**
  * Executes an approved cycle's payout.
  *
- * The contract itself gates this on approved evidence, so a rejected, disputed,
- * or still-pending cycle fails on-chain rather than relying on the UI to hide
- * the button.
+ * The contract requires the operator and the ally to authorize the same
+ * invocation, so this cannot be driven by one connected wallet alone: the
+ * signer has to be able to produce both auth entries. The contract also gates
+ * on approved evidence, so a rejected, disputed, or still-pending cycle fails
+ * on-chain rather than relying on the UI to hide the action.
  */
 export async function executeDistribution(
-  caller: string,
-  cycleId: string,
+  args: {
+    operator: string;
+    ally: string;
+    cycleId: string;
+    minEurcPerUsdc?: bigint;
+  },
   signXdr: SignXdr,
 ): Promise<PilotTxResult> {
-  const client = payoutClient(caller, signXdr);
-  return send(await client.executeDistribution(cycleId));
+  const client = payoutClient(args.operator, signXdr);
+  return send(
+    await client.executeDistribution({
+      operator: args.operator,
+      ally: args.ally,
+      cycleId: args.cycleId,
+      minEurcPerUsdc: args.minEurcPerUsdc ?? DEFAULT_MIN_EURC_PER_USDC,
+    }),
+  );
 }

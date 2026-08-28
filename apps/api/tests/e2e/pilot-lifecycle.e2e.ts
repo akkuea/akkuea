@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'bun:test';
-import { Keypair, Contract, rpc, Networks, TransactionBuilder, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
+import { Keypair, Contract, rpc, TransactionBuilder, nativeToScVal, scValToNative, xdr } from '@stellar/stellar-sdk';
 import testnetContracts from '../../../shared/src/contracts.testnet.json';
 
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3001';
@@ -135,16 +135,16 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
       networkPassphrase
     });
     txBuilder.addOperation(recordOp);
-    let tx = txBuilder.build();
+    const tx = txBuilder.build();
 
     // Prepare transaction to gather auth entries for both signers
-    let preparedTx = await server.prepareTransaction(tx);
+    const preparedTx = await server.prepareTransaction(tx);
     preparedTx.sign(operatorKeypair, allyKeypair);
     
-    let sendRes = await server.sendTransaction(preparedTx);
+    const sendRes = await server.sendTransaction(preparedTx);
     expect(sendRes.status).toBe('PENDING');
     
-    let txStatus = await waitTxConfirm(sendRes.hash);
+    const txStatus = await waitTxConfirm(sendRes.hash);
     expect(txStatus.status).toBe(rpc.Api.GetTransactionStatus.SUCCESS);
 
     // 2. Execute Distribution
@@ -159,15 +159,15 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
       networkPassphrase
     });
     execTxBuilder.addOperation(execOp);
-    let execTx = execTxBuilder.build();
+    const execTx = execTxBuilder.build();
 
-    let preparedExecTx = await server.prepareTransaction(execTx);
+    const preparedExecTx = await server.prepareTransaction(execTx);
     preparedExecTx.sign(operatorKeypair); // Only operator needs to sign execution
     
-    let execSendRes = await server.sendTransaction(preparedExecTx);
+    const execSendRes = await server.sendTransaction(preparedExecTx);
     expect(execSendRes.status).toBe('PENDING');
     
-    let execTxStatus = await waitTxConfirm(execSendRes.hash);
+    const execTxStatus = await waitTxConfirm(execSendRes.hash);
     expect(execTxStatus.status).toBe(rpc.Api.GetTransactionStatus.SUCCESS);
   }, 60000); // 60s timeout
 

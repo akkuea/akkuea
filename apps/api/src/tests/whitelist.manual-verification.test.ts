@@ -13,16 +13,7 @@ import { whitelistRoutes } from '../routes/whitelist';
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
 
-// Mock WhitelistService to avoid needing real Stellar credentials
-mock.module('../services/WhitelistService', () => {
-  return {
-    whitelistService: {
-      approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
-      rejectRequest: mock(() => Promise.resolve()),
-    },
-  };
-});
-
+// Setup a minimal app for testing routes
 import { internalOperationsRoutes } from '../routes/internalOperations';
 const testApp = new Elysia().use(whitelistRoutes).use(internalOperationsRoutes);
 
@@ -46,6 +37,16 @@ let mockDbStore: any[] = [];
 
 beforeEach(() => {
   mockDbStore = [];
+
+  // Mock whitelist service (re-apply after each mock.restore)
+  mock.module('../services/WhitelistService', () => {
+    return {
+      whitelistService: {
+        approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
+        rejectRequest: mock(() => Promise.resolve()),
+      },
+    };
+  });
 
   (db as any).query = {
     pilotWhitelistRequests: {

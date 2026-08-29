@@ -4,15 +4,6 @@ import { db } from '../db';
 import { whitelistService } from '../services/WhitelistService';
 import Elysia from 'elysia';
 import { whitelistRoutes } from './whitelist';
-// Mock whitelist service
-mock.module('../services/WhitelistService', () => {
-  return {
-    whitelistService: {
-      approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
-      rejectRequest: mock(() => Promise.resolve()),
-    },
-  };
-});
 
 // Setup a minimal app for testing routes
 import { internalOperationsRoutes } from './internalOperations';
@@ -26,6 +17,16 @@ describe('Whitelist API Routes', () => {
 
   beforeEach(() => {
     mockDbStore = [];
+
+    // Mock whitelist service (re-apply after each mock.restore)
+    mock.module('../services/WhitelistService', () => {
+      return {
+        whitelistService: {
+          approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
+          rejectRequest: mock(() => Promise.resolve()),
+        },
+      };
+    });
 
     // Extract a Stellar address from a drizzle SQL expression
     function extractWalletAddress(obj: any): string | undefined {
@@ -98,7 +99,10 @@ describe('Whitelist API Routes', () => {
     const response = await testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-bypass-ratelimit': 'true',
+        },
         body: JSON.stringify({
           walletAddress: mockWallet,
           fullName: 'Test User',
@@ -126,7 +130,10 @@ describe('Whitelist API Routes', () => {
     const response = await testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-bypass-ratelimit': 'true',
+        },
         body: JSON.stringify({
           walletAddress: mockWallet,
           fullName: 'Test User 2',
@@ -193,7 +200,10 @@ describe('Whitelist API Routes', () => {
     const response = await testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-bypass-ratelimit': 'true',
+        },
         body: JSON.stringify({
           walletAddress: resubmitWallet,
           fullName: 'New Submission',
@@ -225,7 +235,10 @@ describe('Whitelist API Routes', () => {
     const response = await testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-bypass-ratelimit': 'true',
+        },
         body: JSON.stringify({
           walletAddress: mockWallet,
           fullName: 'Test User',
@@ -248,7 +261,10 @@ describe('Whitelist API Routes', () => {
     const response = await testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-test-bypass-ratelimit': 'true',
+        },
         body: JSON.stringify({
           walletAddress: mockWallet,
           fullName: 'Test User',

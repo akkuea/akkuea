@@ -51,9 +51,11 @@ export interface PilotTxResult {
   hash: string;
 }
 
-async function send(
-  tx: { signAndSend: () => Promise<{ sendTransactionResponse?: { hash?: string } | null }> },
-): Promise<PilotTxResult> {
+async function send(tx: {
+  signAndSend: () => Promise<{
+    sendTransactionResponse?: { hash?: string } | null;
+  }>;
+}): Promise<PilotTxResult> {
   const sent = await tx.signAndSend();
   return { hash: sent.sendTransactionResponse?.hash ?? "" };
 }
@@ -79,7 +81,12 @@ export async function startReview(
 
 /** The operator approves, or rejects with a reason the ally and investors see. */
 export async function reviewEvidence(
-  args: { operator: string; cycleId: string; approved: boolean; reason: string },
+  args: {
+    operator: string;
+    cycleId: string;
+    approved: boolean;
+    reason: string;
+  },
   signXdr: SignXdr,
 ): Promise<PilotTxResult> {
   const client = payoutClient(args.operator, signXdr);

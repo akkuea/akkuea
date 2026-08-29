@@ -209,7 +209,9 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
 
       {canDistribute && (
         <div className="mt-4 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-          <p className="text-xs text-neutral-300">{t("queue.readyToDistribute")}</p>
+          <p className="text-xs text-neutral-300">
+            {t("queue.readyToDistribute")}
+          </p>
           <p className="mt-1 text-xs text-neutral-500">
             {t("queue.distributeCosignNotice")}
           </p>

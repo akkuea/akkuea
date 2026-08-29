@@ -39,7 +39,9 @@ describe("EvidenceReviewQueue", () => {
         connectionStatus="connecting"
       />,
     );
-    expect(within(view.container).queryByLabelText(/loading text/i)).not.toBeNull();
+    expect(
+      within(view.container).queryByLabelText(/loading text/i),
+    ).not.toBeNull();
   });
 
   it("shows the error message when nothing has loaded", () => {

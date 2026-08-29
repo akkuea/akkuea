@@ -52,7 +52,9 @@ describe("InvestorHoldingsCard", () => {
         holdings={{ ...sampleHoldings, balance: BigInt(0) }}
       />,
     );
-    expect(within(view.container).queryByText(/no holdings yet/i)).not.toBeNull();
+    expect(
+      within(view.container).queryByText(/no holdings yet/i),
+    ).not.toBeNull();
   });
 
   it("asks for a wallet when none is connected", () => {
@@ -66,7 +68,9 @@ describe("InvestorHoldingsCard", () => {
       />,
     );
     expect(
-      within(view.container).queryByText(/connect your wallet to see your position/i),
+      within(view.container).queryByText(
+        /connect your wallet to see your position/i,
+      ),
     ).not.toBeNull();
   });
 
@@ -89,7 +93,9 @@ describe("InvestorHoldingsCard", () => {
       />,
     );
     expect(
-      within(view.container).queryByText(/not approved on the pilot whitelist/i),
+      within(view.container).queryByText(
+        /not approved on the pilot whitelist/i,
+      ),
     ).not.toBeNull();
   });
 });

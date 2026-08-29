@@ -13,11 +13,7 @@
 
 /** Evidence lifecycle as stored on-chain by the payout-split contract. */
 export type PilotEvidenceStatus =
-  | "submitted"
-  | "under_review"
-  | "approved"
-  | "rejected"
-  | "disputed";
+  "submitted" | "under_review" | "approved" | "rejected" | "disputed";
 
 /**
  * Payment status an investor sees for a single income cycle.
@@ -26,11 +22,7 @@ export type PilotEvidenceStatus =
  * different question from where the ally's evidence sits in review.
  */
 export type PilotCycleStatus =
-  | "on_time"
-  | "late"
-  | "disputed"
-  | "not_received"
-  | "pending";
+  "on_time" | "late" | "disputed" | "not_received" | "pending";
 
 /**
  * A single cycle as read from the payout-split contract.

@@ -74,7 +74,8 @@ function toStatus(record: PilotEvidenceRecord): PilotEvidenceStatus {
  * shows a total the chain would disagree with.
  */
 export function holderAmountFor(totalIncome: bigint): bigint {
-  const platformFee = (totalIncome * PLATFORM_FEE_PERCENT) / PERCENT_DENOMINATOR;
+  const platformFee =
+    (totalIncome * PLATFORM_FEE_PERCENT) / PERCENT_DENOMINATOR;
   return totalIncome - platformFee;
 }
 

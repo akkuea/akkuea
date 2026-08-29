@@ -113,6 +113,10 @@ afterEach(() => {
 });
 
 describe("InvestModal accessibility", () => {
+  // Times out at bun's 5s default on the CI runner once this workspace's suite
+  // grew, while finishing in ~20ms locally and in a CPU-limited Linux container
+  // running the same `bun test --coverage` command. The assertions below are not
+  // timing-dependent, so the budget is raised rather than the test weakened.
   it("keeps focus within the modal while tabbing", () => {
     const { getByRole, getAllByRole } = render(
       <InvestModal
@@ -138,7 +142,7 @@ describe("InvestModal accessibility", () => {
     closeButton.focus();
     fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
     expect(document.activeElement).toBe(lastButton);
-  });
+  }, 30_000);
 
   it("has no critical axe violations", async () => {
     const { container } = render(

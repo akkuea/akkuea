@@ -1,3 +1,4 @@
+import { afterEach } from "bun:test";
 import { JSDOM } from "jsdom";
 
 /**
@@ -25,6 +26,18 @@ const dom: JsdomInstance =
   });
 
 cache[CACHE_KEY] = dom;
+
+// Sharing one realm means sharing one document, so anything a test leaves
+// attached stays visible to body-scoped queries in whatever runs next. Testing
+// Library unmounts its own containers, but a render that threw, or one made
+// outside it, does not get cleaned up. Body-scoped queries then see both trees:
+// a leftover button lands in the middle of another file's focus-order
+// assertions, and the failure depends on file order.
+dom.window.document.body.innerHTML = "";
+
+afterEach(() => {
+  dom.window.document.body.innerHTML = "";
+});
 
 Object.defineProperty(globalThis, "window", {
   value: dom.window,

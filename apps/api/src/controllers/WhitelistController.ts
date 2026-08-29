@@ -67,16 +67,16 @@ export class WhitelistController {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async review(ctx: any) {
     const { id } = ctx.params;
-    const { action, reason } = ctx.body;
+    const { action, reason, actorWallet } = ctx.body;
 
     if (action === 'approve') {
-      const txHash = await whitelistService.approveRequest(id);
+      const txHash = await whitelistService.approveRequest(id, actorWallet);
       return { success: true, txHash };
     } else if (action === 'reject') {
       if (!reason) {
         throw new Error('Rejection reason is required');
       }
-      await whitelistService.rejectRequest(id, reason);
+      await whitelistService.rejectRequest(id, reason, actorWallet);
       return { success: true };
     } else {
       throw new Error('Invalid action');

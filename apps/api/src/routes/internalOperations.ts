@@ -122,6 +122,11 @@ const reviewPropertyRoute = new Elysia()
 const reviewWhitelistSchema = t.Object({
   action: t.Union([t.Literal('approve'), t.Literal('reject')]),
   reason: t.Optional(t.String()),
+  /**
+   * The Stellar public key of the operator performing the review.
+   * Required so the audit trail can record who approved or rejected the request.
+   */
+  actorWallet: t.String({ minLength: 50, maxLength: 64 }),
 });
 
 const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })

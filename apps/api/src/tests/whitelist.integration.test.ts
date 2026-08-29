@@ -24,7 +24,6 @@ import { WhitelistService } from '../services/WhitelistService';
 import { db } from '../db';
 import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
 import { eq } from 'drizzle-orm';
-import { closeDatabaseConnection } from '../db';
 
 const RUN = process.env.RUN_WHITELIST_INTEGRATION_TESTS === '1';
 const NETWORK_PASSPHRASE = 'Test SDF Network ; September 2015';
@@ -64,9 +63,9 @@ afterAll(async () => {
       // Ignore cleanup errors
     }
   }
-  if (!SKIP_DB) {
-    await closeDatabaseConnection();
-  }
+  // Do NOT call closeDatabaseConnection() here. It tears down the shared
+  // postgres pool, killing the DB connection for every other test file that
+  // runs after this one in the same bun test process.
 });
 
 describeIntegration('whitelist integration: approveRequest against real contract (testnet)', () => {

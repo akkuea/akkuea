@@ -1,3 +1,4 @@
+import "./jsdomListenerSignal";
 import type { ReactElement } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { render, within, type RenderResult } from "@testing-library/react";

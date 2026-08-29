@@ -1,7 +1,12 @@
 import {
-  PilotIncomeTokenContractClient,
-  PilotPayoutContractClient,
-  PilotWhitelistContractClient,
+  buildContractClientOptions,
+  PilotIncomeTokenClient,
+  PilotPayoutSplitClient,
+  PilotWhitelistClient,
+  readEvidence,
+  type PilotIncomeTokenClientInterface,
+  type PilotPayoutSplitClientInterface,
+  type PilotWhitelistClientInterface,
   type PilotCycleRecord,
   type PilotEvidenceRecord,
   type PilotEvidenceStatus,
@@ -36,19 +41,18 @@ function clients() {
     networkPassphrase: pilotNetworkPassphrase(),
     rpcUrl: pilotRpcUrl(),
   };
+  // The generated clients build their call surface from the contract spec at
+  // runtime; the matching interface is what describes it to TypeScript.
   return {
-    payout: PilotPayoutContractClient.fromConfig({
-      ...shared,
-      contractId: ids.payoutSplit,
-    }),
-    incomeToken: PilotIncomeTokenContractClient.fromConfig({
-      ...shared,
-      contractId: ids.incomeToken,
-    }),
-    whitelist: PilotWhitelistContractClient.fromConfig({
-      ...shared,
-      contractId: ids.whitelist,
-    }),
+    payout: new PilotPayoutSplitClient(
+      buildContractClientOptions({ ...shared, contractId: ids.payoutSplit }),
+    ) as unknown as PilotPayoutSplitClientInterface,
+    incomeToken: new PilotIncomeTokenClient(
+      buildContractClientOptions({ ...shared, contractId: ids.incomeToken }),
+    ) as unknown as PilotIncomeTokenClientInterface,
+    whitelist: new PilotWhitelistClient(
+      buildContractClientOptions({ ...shared, contractId: ids.whitelist }),
+    ) as unknown as PilotWhitelistClientInterface,
   };
 }
 
@@ -149,7 +153,7 @@ export async function fetchPilotCycles(
 
   const records = await Promise.all(
     cycleIds.map(async (cycleId) => {
-      const record = await payout.getEvidence(cycleId);
+      const record = await readEvidence(payout, cycleId);
       return toDetail(cycleId, expectedAtFor(cycleId, paymentDay), record);
     }),
   );
@@ -161,13 +165,13 @@ export async function fetchPilotCycle(
   cycleId: string,
 ): Promise<PilotEvidenceDetail> {
   const { payout } = clients();
-  const record = await payout.getEvidence(cycleId);
+  const record = await readEvidence(payout, cycleId);
   return toDetail(cycleId, expectedAtFor(cycleId, pilotPaymentDay()), record);
 }
 
 export async function fetchPayoutPaused(): Promise<boolean> {
   const { payout } = clients();
-  const tx = await payout.isPaused();
+  const tx = await payout.is_paused();
   return tx.result;
 }
 
@@ -188,11 +192,11 @@ export async function fetchPilotHoldings(
 
   const [balance, totalSupply, decimals, symbol, whitelisted] =
     await Promise.all([
-      incomeToken.balance(address).then((tx) => tx.result),
-      incomeToken.totalSupply().then((tx) => tx.result),
+      incomeToken.balance({ id: address }).then((tx) => tx.result),
+      incomeToken.total_supply().then((tx) => tx.result),
       incomeToken.decimals().then((tx) => tx.result),
       incomeToken.symbol().then((tx) => tx.result),
-      whitelist.isApproved(address).then((tx) => tx.result),
+      whitelist.is_approved({ address }).then((tx) => tx.result),
     ]);
 
   return { balance, totalSupply, decimals, symbol, whitelisted };

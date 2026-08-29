@@ -1,6 +1,7 @@
 import {
-  PilotPayoutContractClient,
-  type SubmitEvidenceArgs,
+  buildContractClientOptions,
+  PilotPayoutSplitClient,
+  type PilotPayoutSplitClientInterface,
 } from "@real-estate-defi/shared";
 import {
   assertPilotDeployed,
@@ -34,16 +35,19 @@ function payoutClient(publicKey: string, signXdr: SignXdr) {
   assertPilotDeployed(ids);
   const networkPassphrase = pilotNetworkPassphrase();
 
-  return PilotPayoutContractClient.fromConfig({
-    contractId: ids.payoutSplit,
-    networkPassphrase,
-    rpcUrl: pilotRpcUrl(),
-    publicKey,
-    signTransaction: async (xdr) => ({
-      signedTxXdr: await signXdr(xdr, networkPassphrase),
-      signerAddress: publicKey,
+  // See reads.ts: the interface is what types the spec-driven call surface.
+  return new PilotPayoutSplitClient(
+    buildContractClientOptions({
+      contractId: ids.payoutSplit,
+      networkPassphrase,
+      rpcUrl: pilotRpcUrl(),
+      publicKey,
+      signTransaction: async (xdr: string) => ({
+        signedTxXdr: await signXdr(xdr, networkPassphrase),
+        signerAddress: publicKey,
+      }),
     }),
-  });
+  ) as unknown as PilotPayoutSplitClientInterface;
 }
 
 /** Result of a submitted pilot transaction. */
@@ -60,13 +64,31 @@ async function send(tx: {
   return { hash: sent.sendTransactionResponse?.hash ?? "" };
 }
 
+export interface SubmitEvidenceArgs {
+  ally: string;
+  cycleId: string;
+  /** SHA-256 digest of the evidence file. Exactly 32 bytes. */
+  evidenceHash: Buffer;
+  evidenceLink: string;
+  /** Reported income for the cycle, in USDC stroops. */
+  totalIncome: bigint;
+}
+
 /** The ally submits a cycle's evidence, moving it into the review queue. */
 export async function submitEvidence(
   args: SubmitEvidenceArgs,
   signXdr: SignXdr,
 ): Promise<PilotTxResult> {
   const client = payoutClient(args.ally, signXdr);
-  return send(await client.submitEvidence(args));
+  return send(
+    await client.submit_evidence({
+      ally: args.ally,
+      cycle_id: args.cycleId,
+      evidence_hash: args.evidenceHash,
+      evidence_link: args.evidenceLink,
+      total_income: args.totalIncome,
+    }),
+  );
 }
 
 /** The operator opens a submitted cycle, so the ally can see it was picked up. */
@@ -76,7 +98,7 @@ export async function startReview(
   signXdr: SignXdr,
 ): Promise<PilotTxResult> {
   const client = payoutClient(operator, signXdr);
-  return send(await client.startReview(operator, cycleId));
+  return send(await client.start_review({ operator, cycle_id: cycleId }));
 }
 
 /** The operator approves, or rejects with a reason the ally and investors see. */
@@ -90,7 +112,14 @@ export async function reviewEvidence(
   signXdr: SignXdr,
 ): Promise<PilotTxResult> {
   const client = payoutClient(args.operator, signXdr);
-  return send(await client.reviewEvidence(args));
+  return send(
+    await client.review_evidence({
+      operator: args.operator,
+      cycle_id: args.cycleId,
+      approved: args.approved,
+      reason: args.reason,
+    }),
+  );
 }
 
 /** Flags a cycle as disputed. The admin or the operator may call this. */
@@ -99,7 +128,13 @@ export async function flagDispute(
   signXdr: SignXdr,
 ): Promise<PilotTxResult> {
   const client = payoutClient(args.caller, signXdr);
-  return send(await client.flagDispute(args));
+  return send(
+    await client.flag_dispute({
+      caller: args.caller,
+      cycle_id: args.cycleId,
+      reason: args.reason,
+    }),
+  );
 }
 
 /**
@@ -130,11 +165,11 @@ export async function executeDistribution(
 ): Promise<PilotTxResult> {
   const client = payoutClient(args.operator, signXdr);
   return send(
-    await client.executeDistribution({
+    await client.execute_distribution({
       operator: args.operator,
       ally: args.ally,
-      cycleId: args.cycleId,
-      minEurcPerUsdc: args.minEurcPerUsdc ?? DEFAULT_MIN_EURC_PER_USDC,
+      cycle_id: args.cycleId,
+      min_eurc_per_usdc: args.minEurcPerUsdc ?? DEFAULT_MIN_EURC_PER_USDC,
     }),
   );
 }

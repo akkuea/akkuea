@@ -13,21 +13,6 @@ export {
 export { RealEstateTokenContractClient } from "./contracts/realEstateToken";
 export { DefiLendingContractClient } from "./contracts/defiLending";
 export {
-  PilotPayoutContractClient,
-  PilotIncomeTokenContractClient,
-  PilotWhitelistContractClient,
-  type DistributionSummary,
-  type EvidenceRecord,
-  type PilotEvidenceRecord,
-  type EvidenceStatus,
-  type PilotEvidenceStatusTag,
-  type ExecuteDistributionArgs,
-  type FlagDisputeArgs,
-  type RecordEvidenceArgs,
-  type ReviewEvidenceArgs,
-  type SubmitEvidenceArgs,
-} from "./contracts/pilotPayout";
-export {
   DefindexVaultContractClient,
   DefindexVaultError,
   toDefindexVaultError,

@@ -125,20 +125,65 @@ describe("InvestModal accessibility", () => {
       />,
     );
 
-    const closeButton = getByRole("button", { name: /close dialog/i });
-    const buttons = getAllByRole("button");
+    // TEMPORARY INSTRUMENTATION, to be reverted with the real fix.
+    // This test takes 34s on the GitHub runner and under 1s everywhere else
+    // (macOS, and linux/amd64 containers on the same bun, jsdom and lockfile),
+    // so the cost has to be measured where it actually happens. The two
+    // baselines below separate "the whole machine is slow" from "this one
+    // operation is slow".
+    const mark = (label: string, run: () => void) => {
+      const started = performance.now();
+      run();
+      console.log(
+        `INSTR ${label}: ${(performance.now() - started).toFixed(1)}ms`,
+      );
+    };
+
+    mark("baseline_cpu_1e7_iterations", () => {
+      let sink = 0;
+      for (let i = 0; i < 1e7; i += 1) {
+        sink += i;
+      }
+      if (sink < 0) throw new Error("unreachable");
+    });
+
+    mark("baseline_200_getComputedStyle", () => {
+      for (let i = 0; i < 200; i += 1) {
+        window.getComputedStyle(document.body);
+      }
+    });
+
+    console.log(
+      `INSTR dom_elements: ${document.body.querySelectorAll("*").length}`,
+      `dom_buttons: ${document.body.querySelectorAll("button").length}`,
+    );
+
+    let closeButton!: HTMLElement;
+    mark("getByRole_with_accessible_name", () => {
+      closeButton = getByRole("button", { name: /close dialog/i });
+    });
+
+    let buttons!: HTMLElement[];
+    mark("getAllByRole_no_name", () => {
+      buttons = getAllByRole("button");
+    });
+
     const lastButton = buttons[buttons.length - 1];
 
     // Close is first in tab order; Tab from the last control must wrap back.
     expect(buttons[0]).toBe(closeButton);
-    lastButton.focus();
-    fireEvent.keyDown(document, { key: "Tab" });
+    mark("focus_last_button", () => lastButton.focus());
+    mark("keydown_tab", () => fireEvent.keyDown(document, { key: "Tab" }));
     expect(document.activeElement).toBe(closeButton);
 
-    closeButton.focus();
-    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+    mark("focus_close_button", () => closeButton.focus());
+    mark("keydown_shift_tab", () =>
+      fireEvent.keyDown(document, { key: "Tab", shiftKey: true }),
+    );
     expect(document.activeElement).toBe(lastButton);
-  });
+    // Temporary budget so the instrumented run reports every mark instead of
+    // being cut short at the default 5s. Reverted with the instrumentation.
+  }, 120_000);
 
   it("has no critical axe violations", async () => {
     const { container } = render(

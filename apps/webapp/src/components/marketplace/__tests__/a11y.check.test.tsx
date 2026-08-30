@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 import "@/test/setup-dom";
 import { afterEach, describe, expect, it, mock } from "bun:test";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, configure, fireEvent, render } from "@testing-library/react";
 import {
   forwardRef,
   type ButtonHTMLAttributes,
@@ -11,6 +11,16 @@ import {
 } from "react";
 import axe from "axe-core";
 import type { PropertyInfo } from "@real-estate-defi/shared";
+
+// TEMPORARY INSTRUMENTATION, to be reverted with the real fix.
+// When a query fails, Testing Library serialises the whole container into the
+// error message. The same pattern already costs akkuea-land's CityMap test 140s
+// locally, so the theory is that this test is failing on the runner and paying
+// for the dump rather than being slow at the query itself. Stripping the dump
+// makes the underlying error legible, and fast if the theory holds.
+configure({
+  getElementError: (message) => new Error(message ?? "element not found"),
+});
 
 mock.module("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => (

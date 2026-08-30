@@ -22,3 +22,6 @@ export type {
   PayoutInitializedEvent,
 } from "./payout-split";
 export { PayoutError } from "./payout-split";
+export type { EvidenceStatus } from "./payout-split";
+export { readEvidence } from "./evidence";
+export type { PilotEvidenceRecord, PilotEvidenceStatusTag } from "./evidence";

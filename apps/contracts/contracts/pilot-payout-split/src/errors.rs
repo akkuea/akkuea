@@ -37,4 +37,12 @@ pub enum PayoutError {
     ContractExited = 22,
     /// `exit` was invoked without a non-empty reason string.
     MissingExitReason = 23,
+    /// Distribution was requested for a cycle whose evidence is not approved.
+    EvidenceNotApproved = 24,
+    /// A review was requested on a cycle that is not awaiting one.
+    InvalidStatusTransition = 25,
+    /// A rejection or dispute was submitted without a reason string.
+    MissingReviewReason = 26,
+    /// No evidence record exists for the cycle.
+    EvidenceNotFound = 27,
 }

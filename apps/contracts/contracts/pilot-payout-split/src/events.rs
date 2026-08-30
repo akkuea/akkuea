@@ -155,3 +155,96 @@ pub fn emit_exit_recorded(env: &Env, operator: Address, ally: Address, reason: S
         },
     );
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EvidenceSubmittedEvent {
+    pub ally: Address,
+    pub cycle_id: String,
+    pub total_income: i128,
+    pub submitted_at: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EvidenceReviewedEvent {
+    pub operator: Address,
+    pub cycle_id: String,
+    pub approved: bool,
+    pub reason: String,
+    pub reviewed_at: u64,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EvidenceDisputedEvent {
+    pub caller: Address,
+    pub cycle_id: String,
+    pub reason: String,
+    pub disputed_at: u64,
+}
+
+/// Emitted when the ally submits evidence and the cycle enters review.
+pub fn emit_evidence_submitted(
+    env: &Env,
+    ally: Address,
+    cycle_id: String,
+    total_income: i128,
+    submitted_at: u64,
+) {
+    env.events().publish(
+        (symbol_short!("submit"), cycle_id.clone()),
+        EvidenceSubmittedEvent {
+            ally,
+            cycle_id,
+            total_income,
+            submitted_at,
+        },
+    );
+}
+
+/// Emitted when the operator opens a submitted cycle for review.
+pub fn emit_review_started(env: &Env, operator: Address, cycle_id: String) {
+    env.events()
+        .publish((symbol_short!("review"), cycle_id), operator);
+}
+
+/// Emitted when the operator approves or rejects a cycle's evidence.
+pub fn emit_evidence_reviewed(
+    env: &Env,
+    operator: Address,
+    cycle_id: String,
+    approved: bool,
+    reason: String,
+    reviewed_at: u64,
+) {
+    env.events().publish(
+        (symbol_short!("reviewed"), cycle_id.clone()),
+        EvidenceReviewedEvent {
+            operator,
+            cycle_id,
+            approved,
+            reason,
+            reviewed_at,
+        },
+    );
+}
+
+/// Emitted when a cycle is flagged as disputed by the admin or the operator.
+pub fn emit_evidence_disputed(
+    env: &Env,
+    caller: Address,
+    cycle_id: String,
+    reason: String,
+    disputed_at: u64,
+) {
+    env.events().publish(
+        (symbol_short!("dispute"), cycle_id.clone()),
+        EvidenceDisputedEvent {
+            caller,
+            cycle_id,
+            reason,
+            disputed_at,
+        },
+    );
+}

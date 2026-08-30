@@ -85,6 +85,26 @@ pub struct EurcSwapPathStatus {
     pub eurc_token: Address,
 }
 
+/// Human review lifecycle of a cycle's income evidence.
+///
+/// The pilot's credibility argument rests on an investor being able to see that
+/// a real person reviewed the ally's evidence, so every transition here is an
+/// on-chain fact with its own event, not a client-side label.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum EvidenceStatus {
+    /// The ally submitted evidence and it is waiting for the operator.
+    Submitted,
+    /// The operator opened the cycle and is reviewing it.
+    UnderReview,
+    /// The operator approved the evidence. Distribution can execute.
+    Approved,
+    /// The operator rejected the evidence. The ally may submit again.
+    Rejected,
+    /// The admin or operator flagged a dispute. Distribution is blocked.
+    Disputed,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[contracttype]
 pub struct EvidenceRecord {
@@ -94,6 +114,20 @@ pub struct EvidenceRecord {
     pub total_income: i128,
     pub recorded_at: u64,
     pub distributed: bool,
+    /// Where this cycle sits in the human review lifecycle.
+    pub status: EvidenceStatus,
+    /// Ledger timestamp the ally submitted the evidence.
+    pub submitted_at: u64,
+    /// Ledger timestamp the operator reviewed it. Zero while unreviewed.
+    pub reviewed_at: u64,
+    /// Operator's stated reason on rejection or dispute. Empty otherwise.
+    pub review_reason: String,
+    /// Ledger timestamp the payout executed. Zero until it does.
+    ///
+    /// Stored on the record rather than left to events, because an investor
+    /// judging on-time against late needs this fact to outlive the RPC's event
+    /// retention window.
+    pub distributed_at: u64,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -262,16 +296,165 @@ impl PilotPayoutSplit {
             panic_with_error!(&env, PayoutError::CycleAlreadyRecorded);
         }
 
+        let now = env.ledger().timestamp();
         let record = EvidenceRecord {
             cycle_id: cycle_id.clone(),
             evidence_hash,
             evidence_link,
             total_income,
-            recorded_at: env.ledger().timestamp(),
+            recorded_at: now,
             distributed: false,
+            // Both required signers authorized this same invocation, which is
+            // exactly what the separate submit and review path ends in, so the
+            // cycle lands already approved.
+            status: EvidenceStatus::Approved,
+            submitted_at: now,
+            reviewed_at: now,
+            review_reason: String::from_str(&env, ""),
+            distributed_at: 0,
         };
         Storage::set_evidence(&env, &cycle_id, &record);
         events::emit_evidence_recorded(&env, operator, ally, cycle_id, total_income);
+    }
+
+    /// Submit a cycle's income evidence for review.
+    ///
+    /// Only the ally signs. The cycle enters `Submitted` and waits for the
+    /// operator, which is what makes the review queue an on-chain fact rather
+    /// than an off-chain bookkeeping table. A cycle previously rejected may be
+    /// submitted again; an approved or distributed cycle may not.
+    pub fn submit_evidence(
+        env: Env,
+        ally: Address,
+        cycle_id: String,
+        evidence_hash: Bytes,
+        evidence_link: String,
+        total_income: i128,
+    ) {
+        ally.require_auth();
+        Self::require_ally(&env, &ally);
+        Self::require_not_paused(&env);
+
+        if total_income <= 0 {
+            panic_with_error!(&env, PayoutError::ZeroAmount);
+        }
+
+        if evidence_hash.len() != REQUIRED_EVIDENCE_HASH_BYTES {
+            panic_with_error!(&env, PayoutError::InvalidEvidenceHash);
+        }
+
+        if evidence_link.is_empty() {
+            panic_with_error!(&env, PayoutError::MissingEvidenceLink);
+        }
+
+        if let Some(existing) = Storage::evidence(&env, &cycle_id) {
+            if existing.status != EvidenceStatus::Rejected {
+                panic_with_error!(&env, PayoutError::CycleAlreadyRecorded);
+            }
+        }
+
+        let now = env.ledger().timestamp();
+        let record = EvidenceRecord {
+            cycle_id: cycle_id.clone(),
+            evidence_hash,
+            evidence_link,
+            total_income,
+            recorded_at: now,
+            distributed: false,
+            status: EvidenceStatus::Submitted,
+            submitted_at: now,
+            reviewed_at: 0,
+            review_reason: String::from_str(&env, ""),
+            distributed_at: 0,
+        };
+        Storage::set_evidence(&env, &cycle_id, &record);
+        events::emit_evidence_submitted(&env, ally, cycle_id, total_income, now);
+    }
+
+    /// Move a submitted cycle into `UnderReview`.
+    ///
+    /// This exists so an ally can see that their submission was actually picked
+    /// up, instead of staring at an unchanged `Submitted` badge for days.
+    pub fn start_review(env: Env, operator: Address, cycle_id: String) {
+        operator.require_auth();
+        Self::require_operator(&env, &operator);
+        Self::require_not_paused(&env);
+
+        let mut record = Storage::evidence(&env, &cycle_id)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::EvidenceNotFound));
+
+        if record.status != EvidenceStatus::Submitted {
+            panic_with_error!(&env, PayoutError::InvalidStatusTransition);
+        }
+
+        record.status = EvidenceStatus::UnderReview;
+        Storage::set_evidence(&env, &cycle_id, &record);
+        events::emit_review_started(&env, operator, cycle_id);
+    }
+
+    /// Approve or reject a cycle's evidence, with a reason on rejection.
+    pub fn review_evidence(
+        env: Env,
+        operator: Address,
+        cycle_id: String,
+        approved: bool,
+        reason: String,
+    ) {
+        operator.require_auth();
+        Self::require_operator(&env, &operator);
+        Self::require_not_paused(&env);
+
+        let mut record = Storage::evidence(&env, &cycle_id)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::EvidenceNotFound));
+
+        if record.status != EvidenceStatus::Submitted
+            && record.status != EvidenceStatus::UnderReview
+        {
+            panic_with_error!(&env, PayoutError::InvalidStatusTransition);
+        }
+
+        // A rejection an investor cannot read the reason for is not a review.
+        if !approved && reason.is_empty() {
+            panic_with_error!(&env, PayoutError::MissingReviewReason);
+        }
+
+        let now = env.ledger().timestamp();
+        record.status = if approved {
+            EvidenceStatus::Approved
+        } else {
+            EvidenceStatus::Rejected
+        };
+        record.reviewed_at = now;
+        record.review_reason = reason.clone();
+        Storage::set_evidence(&env, &cycle_id, &record);
+        events::emit_evidence_reviewed(&env, operator, cycle_id, approved, reason, now);
+    }
+
+    /// Flag a cycle as disputed. Callable by the admin or the operator.
+    ///
+    /// A disputed cycle cannot be distributed until it is resubmitted and
+    /// reviewed again, and it counts against the ally in the investor timeline.
+    pub fn flag_dispute(env: Env, caller: Address, cycle_id: String, reason: String) {
+        caller.require_auth();
+        Self::require_admin_or_operator(&env, &caller);
+
+        if reason.is_empty() {
+            panic_with_error!(&env, PayoutError::MissingReviewReason);
+        }
+
+        let mut record = Storage::evidence(&env, &cycle_id)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::EvidenceNotFound));
+
+        if record.distributed {
+            panic_with_error!(&env, PayoutError::CycleAlreadyDistributed);
+        }
+
+        let now = env.ledger().timestamp();
+        record.status = EvidenceStatus::Disputed;
+        record.reviewed_at = now;
+        record.review_reason = reason.clone();
+        Storage::set_evidence(&env, &cycle_id, &record);
+        events::emit_evidence_disputed(&env, caller, cycle_id, reason, now);
     }
 
     /// Execute the approved payout for a cycle, honoring each holder's
@@ -315,6 +498,12 @@ impl PilotPayoutSplit {
 
         if record.distributed {
             panic_with_error!(&env, PayoutError::CycleAlreadyDistributed);
+        }
+
+        // Money only moves behind an explicit human approval. A submitted,
+        // under review, rejected, or disputed cycle stops here.
+        if record.status != EvidenceStatus::Approved {
+            panic_with_error!(&env, PayoutError::EvidenceNotApproved);
         }
 
         let income_token_address = Storage::address(&env, &DataKey::IncomeToken)
@@ -406,6 +595,7 @@ impl PilotPayoutSplit {
             .unwrap_or_else(|| panic_with_error!(&env, PayoutError::ArithmeticOverflow));
 
         record.distributed = true;
+        record.distributed_at = env.ledger().timestamp();
         Storage::set_evidence(&env, &cycle_id, &record);
 
         usdc.transfer(&contract_address, &platform_fee_recipient, &platform_fee);
@@ -705,6 +895,16 @@ impl PilotPayoutSplit {
         }
     }
 
+    fn require_admin_or_operator(env: &Env, caller: &Address) {
+        let admin = Storage::address(env, &DataKey::Admin)
+            .unwrap_or_else(|| panic_with_error!(env, PayoutError::NotInitialized));
+        let operator = Storage::address(env, &DataKey::Operator)
+            .unwrap_or_else(|| panic_with_error!(env, PayoutError::NotInitialized));
+        if admin != caller.clone() && operator != caller.clone() {
+            panic_with_error!(env, PayoutError::Unauthorized);
+        }
+    }
+
     fn require_operator(env: &Env, caller: &Address) {
         let operator = Storage::address(env, &DataKey::Operator)
             .unwrap_or_else(|| panic_with_error!(env, PayoutError::NotInitialized));
@@ -742,7 +942,7 @@ mod tests {
     use pilot_whitelist::{PilotWhitelist, PilotWhitelistClient};
     use soroban_sdk::{
         contracterror,
-        testutils::{Address as _, MockAuth, MockAuthInvoke},
+        testutils::{Address as _, Ledger, MockAuth, MockAuthInvoke},
         token::StellarAssetClient,
         xdr::ScVal,
         Error, IntoVal, TryFromVal,
@@ -914,6 +1114,9 @@ mod tests {
     fn setup_with_balance_values(balance_values: &[i128]) -> Setup {
         let env = Env::default();
         env.mock_all_auths();
+        // A zero ledger timestamp would make every recorded timestamp
+        // indistinguishable from "never happened", so pin a real instant.
+        env.ledger().set_timestamp(1_772_323_200);
 
         let admin = Address::generate(&env);
         let operator = Address::generate(&env);
@@ -1040,6 +1243,7 @@ mod tests {
 
         let record = s.payout.get_evidence(&cycle(&s.env, "2026-08")).unwrap();
         assert!(record.distributed);
+        assert!(record.distributed_at > 0);
     }
 
     #[test]
@@ -2024,5 +2228,284 @@ mod tests {
 
     fn eurc_balance(s: &Setup, holder: &Address) -> i128 {
         token::Client::new(&s.env, &s.eurc_id).balance(holder)
+    }
+
+    #[test]
+    fn ally_submission_enters_review_queue() {
+        let s = setup();
+        s.payout.submit_evidence(
+            &s.ally,
+            &cycle(&s.env, "2026-09"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://statement"),
+            &10_000,
+        );
+
+        let record = s.payout.get_evidence(&cycle(&s.env, "2026-09")).unwrap();
+        assert_eq!(record.status, EvidenceStatus::Submitted);
+        assert_eq!(record.reviewed_at, 0);
+        assert!(record.review_reason.is_empty());
+    }
+
+    #[test]
+    fn submitted_cycle_moves_through_review_to_approved() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        s.payout.submit_evidence(
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://statement"),
+            &10_000,
+        );
+
+        s.payout.start_review(&s.operator, &c);
+        assert_eq!(
+            s.payout.get_evidence(&c).unwrap().status,
+            EvidenceStatus::UnderReview
+        );
+
+        s.payout.review_evidence(
+            &s.operator,
+            &c,
+            &true,
+            &String::from_str(&s.env, "Bank statement matches"),
+        );
+        assert_eq!(
+            s.payout.get_evidence(&c).unwrap().status,
+            EvidenceStatus::Approved
+        );
+    }
+
+    #[test]
+    fn rejection_records_reason_and_allows_resubmission() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        s.payout.submit_evidence(
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://wrong"),
+            &10_000,
+        );
+        s.payout.review_evidence(
+            &s.operator,
+            &c,
+            &false,
+            &String::from_str(&s.env, "Statement does not cover the full month"),
+        );
+
+        let rejected = s.payout.get_evidence(&c).unwrap();
+        assert_eq!(rejected.status, EvidenceStatus::Rejected);
+        assert_eq!(
+            rejected.review_reason,
+            String::from_str(&s.env, "Statement does not cover the full month")
+        );
+
+        s.payout.submit_evidence(
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://corrected"),
+            &12_000,
+        );
+        let resubmitted = s.payout.get_evidence(&c).unwrap();
+        assert_eq!(resubmitted.status, EvidenceStatus::Submitted);
+        assert_eq!(resubmitted.total_income, 12_000);
+        assert!(resubmitted.review_reason.is_empty());
+    }
+
+    #[test]
+    fn rejection_without_a_reason_is_refused() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        s.payout.submit_evidence(
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://statement"),
+            &10_000,
+        );
+
+        let res =
+            s.payout
+                .try_review_evidence(&s.operator, &c, &false, &String::from_str(&s.env, ""));
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::MissingReviewReason as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn distribution_is_blocked_until_evidence_is_approved() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        s.payout.submit_evidence(
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://statement"),
+            &10_000,
+        );
+
+        let res = s
+            .payout
+            .try_execute_distribution(&s.operator, &s.ally, &c, &TEST_MIN_RATE);
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::EvidenceNotApproved as u32
+            )))
+        );
+
+        s.payout.review_evidence(
+            &s.operator,
+            &c,
+            &true,
+            &String::from_str(&s.env, "Verified"),
+        );
+        let summary = s
+            .payout
+            .execute_distribution(&s.operator, &s.ally, &c, &TEST_MIN_RATE);
+        assert_eq!(summary.total_income, 10_000);
+    }
+
+    #[test]
+    fn rejected_cycle_cannot_be_distributed() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        s.payout.submit_evidence(
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://statement"),
+            &10_000,
+        );
+        s.payout.review_evidence(
+            &s.operator,
+            &c,
+            &false,
+            &String::from_str(&s.env, "Missing landlord signature"),
+        );
+
+        let res = s
+            .payout
+            .try_execute_distribution(&s.operator, &s.ally, &c, &TEST_MIN_RATE);
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::EvidenceNotApproved as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn dispute_blocks_an_already_approved_cycle() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://statement"),
+            &10_000,
+        );
+        assert_eq!(
+            s.payout.get_evidence(&c).unwrap().status,
+            EvidenceStatus::Approved
+        );
+
+        s.payout.flag_dispute(
+            &s.admin,
+            &c,
+            &String::from_str(&s.env, "Investor reported a mismatch"),
+        );
+
+        let disputed = s.payout.get_evidence(&c).unwrap();
+        assert_eq!(disputed.status, EvidenceStatus::Disputed);
+        let res = s
+            .payout
+            .try_execute_distribution(&s.operator, &s.ally, &c, &TEST_MIN_RATE);
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::EvidenceNotApproved as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn dispute_after_distribution_is_refused() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://statement"),
+            &10_000,
+        );
+        s.payout
+            .execute_distribution(&s.operator, &s.ally, &c, &TEST_MIN_RATE);
+
+        let res = s
+            .payout
+            .try_flag_dispute(&s.admin, &c, &String::from_str(&s.env, "Too late"));
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::CycleAlreadyDistributed as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn review_of_an_unknown_cycle_is_refused() {
+        let s = setup();
+        let res = s
+            .payout
+            .try_start_review(&s.operator, &cycle(&s.env, "2026-12"));
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::EvidenceNotFound as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn approved_cycle_cannot_be_reviewed_again() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        s.payout.submit_evidence(
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://statement"),
+            &10_000,
+        );
+        s.payout.review_evidence(
+            &s.operator,
+            &c,
+            &true,
+            &String::from_str(&s.env, "Verified"),
+        );
+
+        let res = s.payout.try_review_evidence(
+            &s.operator,
+            &c,
+            &false,
+            &String::from_str(&s.env, "Changed my mind"),
+        );
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::InvalidStatusTransition as u32
+            )))
+        );
     }
 }

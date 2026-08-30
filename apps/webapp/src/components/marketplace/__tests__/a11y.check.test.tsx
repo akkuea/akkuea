@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 import "@/test/setup-dom";
 import { afterEach, describe, expect, it, mock } from "bun:test";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, within } from "@testing-library/react";
 import {
   forwardRef,
   type ButtonHTMLAttributes,
@@ -114,7 +114,7 @@ afterEach(() => {
 
 describe("InvestModal accessibility", () => {
   it("keeps focus within the modal while tabbing", () => {
-    const { getByRole, getAllByRole } = render(
+    const { container } = render(
       <InvestModal
         property={property}
         isOpen
@@ -124,6 +124,11 @@ describe("InvestModal accessibility", () => {
         onConnectWallet={() => Promise.resolve()}
       />,
     );
+
+    // Scoped to this render rather than the document body, the same way
+    // renderWithIntl scopes its queries. A body-scoped query here matches
+    // whatever earlier files left attached, which is what tab order is not.
+    const { getByRole, getAllByRole } = within(container);
 
     const closeButton = getByRole("button", { name: /close dialog/i });
     const buttons = getAllByRole("button");

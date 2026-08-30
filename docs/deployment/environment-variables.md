@@ -65,16 +65,16 @@ The escalation job proactively watches `pilot-payout-split`'s on-chain evidence 
 
 The reporting cadence, breach threshold, and re-notification cadence are all configurable because they are properties of a specific ally's agreement, which does not exist yet for the pilot. `PILOT_ESCALATION_AGREEMENT_START` and `PILOT_ESCALATION_OPERATOR_USER_ID` are required for the job to actually run; without them it logs a warning each tick and does nothing (it does not crash).
 
-| Variable                             | Example Value                         | Required                   | Description                                                                                                                                          |
-| ------------------------------------- | -------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PILOT_ESCALATION_JOB_ENABLED`        | `true`                                  | No (default: `true`)        | Set to `false` to disable the escalation background job entirely (e.g. in test environments)                                                          |
-| `PILOT_ESCALATION_AGREEMENT_START`    | `2026-01-15T00:00:00.000Z`              | Yes (to run)                | ISO date the ally's reporting agreement began. Without this the job skips every tick                                                                  |
-| `PILOT_ESCALATION_OPERATOR_USER_ID`   | `b3f1...` (a user UUID)                 | Yes (to run)                | User ID of the operator to notify through the existing notification pipeline. Without this the job skips every tick                                   |
-| `PILOT_ESCALATION_CADENCE_DAYS`       | `30`                                    | No (default: `30`)          | Expected evidence-reporting cadence, in days, per the ally's agreement                                                                                 |
-| `PILOT_ESCALATION_THRESHOLD_CYCLES`   | `2`                                     | No (default: `2`)           | Consecutive missed cycles that constitutes a breach                                                                                                    |
-| `PILOT_ESCALATION_POLL_INTERVAL_MS`   | `21600000`                              | No (default: 6h)            | How often the job runs, in milliseconds                                                                                                                |
-| `PILOT_ESCALATION_RENOTIFY_INTERVAL_MS` | `604800000`                           | No (default: 7d)            | While the same breach persists unresolved, how often to re-send the notification rather than staying silent forever. Not re-sent on every poll         |
-| `PILOT_PAYOUT_SPLIT_CONTRACT_ID`      | `CXXX...` (56 chars, starts with `C`)   | No (falls back to deployment artifact) | Overrides the resolved `pilot-payout-split` contract ID for this network                                                                    |
+| Variable                                | Example Value                         | Required                               | Description                                                                                                                                    |
+| --------------------------------------- | ------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PILOT_ESCALATION_JOB_ENABLED`          | `true`                                | No (default: `true`)                   | Set to `false` to disable the escalation background job entirely (e.g. in test environments)                                                   |
+| `PILOT_ESCALATION_AGREEMENT_START`      | `2026-01-15T00:00:00.000Z`            | Yes (to run)                           | ISO date the ally's reporting agreement began. Without this the job skips every tick                                                           |
+| `PILOT_ESCALATION_OPERATOR_USER_ID`     | `b3f1...` (a user UUID)               | Yes (to run)                           | User ID of the operator to notify through the existing notification pipeline. Without this the job skips every tick                            |
+| `PILOT_ESCALATION_CADENCE_DAYS`         | `30`                                  | No (default: `30`)                     | Expected evidence-reporting cadence, in days, per the ally's agreement                                                                         |
+| `PILOT_ESCALATION_THRESHOLD_CYCLES`     | `2`                                   | No (default: `2`)                      | Consecutive missed cycles that constitutes a breach                                                                                            |
+| `PILOT_ESCALATION_POLL_INTERVAL_MS`     | `21600000`                            | No (default: 6h)                       | How often the job runs, in milliseconds                                                                                                        |
+| `PILOT_ESCALATION_RENOTIFY_INTERVAL_MS` | `604800000`                           | No (default: 7d)                       | While the same breach persists unresolved, how often to re-send the notification rather than staying silent forever. Not re-sent on every poll |
+| `PILOT_PAYOUT_SPLIT_CONTRACT_ID`        | `CXXX...` (56 chars, starts with `C`) | No (falls back to deployment artifact) | Overrides the resolved `pilot-payout-split` contract ID for this network                                                                       |
 
 ### Pilot Review Turnaround SLA
 
@@ -120,6 +120,29 @@ Whitelist-review and evidence-review turnaround against the documented SLA (see 
 | Variable                        | Example Value                         | Required | Description                                                                                                                                                                          |
 | ------------------------------- | ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `REAL_ESTATE_TOKEN_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | Yes      | The Soroban contract ID produced after deploying `real_estate_defi_contracts.wasm`. Obtained from the output of `stellar contract deploy`. See `docs/deployment/deploy-contracts.md` |
+
+---
+
+### Webapp - Pilot Dashboard
+
+Read by `apps/webapp` in the browser, so every variable here is public by
+design. None of them is a secret, and none should ever hold one.
+
+Contract IDs are optional overrides: with all three empty, the dashboard reads
+the committed deployment artifacts in `apps/shared/src/contracts.<network>.json`,
+which is the normal case. Set them only to point a local dashboard at a custom
+deployment. See `docs/deployment/deploy-pilot-contracts.md`.
+
+| Variable                                     | Example Value                         | Required | Description                                                                                                                                         |
+| -------------------------------------------- | ------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_STELLAR_NETWORK`                | `testnet`                             | No       | Network the pilot dashboard reads from. `testnet` (default) or `mainnet`                                                                            |
+| `NEXT_PUBLIC_SOROBAN_RPC_URL`                | `https://soroban-testnet.stellar.org` | No       | Soroban RPC override. Defaults to the public endpoint for the selected network                                                                      |
+| `NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | No       | Overrides the payout-split contract ID from the deployment artifact                                                                                 |
+| `NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | No       | Overrides the income token contract ID from the deployment artifact                                                                                 |
+| `NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID`    | `CXXX...` (56 chars, starts with `C`) | No       | Overrides the whitelist contract ID from the deployment artifact                                                                                    |
+| `NEXT_PUBLIC_PILOT_START_CYCLE`              | `2026-01`                             | No       | First income cycle the dashboard reports on, as `YYYY-MM`. Cycles are enumerated from here to the current month. Defaults to `2026-01`              |
+| `NEXT_PUBLIC_PILOT_PAYMENT_DAY`              | `5`                                   | No       | Day of the month, in the month after the cycle, that the ally's income is due. A term of the ally's agreement, not a software constant. Default `5` |
+| `NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL`       | `https://example.org/property.splat`  | No       | Gaussian splat capture of the ally's property, shown in the investor view. Absent renders a documented empty state                                  |
 
 ---
 

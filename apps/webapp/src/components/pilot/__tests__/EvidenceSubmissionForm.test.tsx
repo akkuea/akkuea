@@ -1,5 +1,5 @@
 import "@/test/setup-dom";
-import { within } from "@testing-library/react";
+import { cleanup, within } from "@testing-library/react";
 import { renderWithIntl as render } from "@/test/renderWithIntl";
 import {
   EvidenceSubmissionFormView,
@@ -41,6 +41,13 @@ function renderForm(props: Record<string, unknown> = {}) {
     />,
   );
 }
+
+// Every render in a bun test process shares one document. Without this the
+// markup stays attached to the body for every file that runs afterwards, and
+// a body-scoped query in one of them matches this file's leftovers.
+afterEach(() => {
+  cleanup();
+});
 
 describe("EvidenceSubmissionForm", () => {
   it("asks for a wallet when none is connected", () => {

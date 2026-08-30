@@ -1,5 +1,5 @@
 import "@/test/setup-dom";
-import { within } from "@testing-library/react";
+import { cleanup, within } from "@testing-library/react";
 import { renderWithIntl as render } from "@/test/renderWithIntl";
 import {
   EvidenceReviewQueueView,
@@ -27,6 +27,13 @@ const baseProps = {
   connectionStatus: "connected" as const,
   onRefresh: () => {},
 };
+
+// Every render in a bun test process shares one document. Without this the
+// markup stays attached to the body for every file that runs afterwards, and
+// a body-scoped query in one of them matches this file's leftovers.
+afterEach(() => {
+  cleanup();
+});
 
 describe("EvidenceReviewQueue", () => {
   it("shows a skeleton while the first read is in flight", () => {

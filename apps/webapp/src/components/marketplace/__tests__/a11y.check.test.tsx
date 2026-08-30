@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 import "@/test/setup-dom";
 import { afterEach, describe, expect, it, mock } from "bun:test";
-import { cleanup, configure, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, within } from "@testing-library/react";
 import {
   forwardRef,
   type ButtonHTMLAttributes,
@@ -11,16 +11,6 @@ import {
 } from "react";
 import axe from "axe-core";
 import type { PropertyInfo } from "@real-estate-defi/shared";
-
-// TEMPORARY INSTRUMENTATION, to be reverted with the real fix.
-// When a query fails, Testing Library serialises the whole container into the
-// error message. The same pattern already costs akkuea-land's CityMap test 140s
-// locally, so the theory is that this test is failing on the runner and paying
-// for the dump rather than being slow at the query itself. Stripping the dump
-// makes the underlying error legible, and fast if the theory holds.
-configure({
-  getElementError: (message) => new Error(message ?? "element not found"),
-});
 
 mock.module("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => (
@@ -124,7 +114,7 @@ afterEach(() => {
 
 describe("InvestModal accessibility", () => {
   it("keeps focus within the modal while tabbing", () => {
-    const { getByRole, getAllByRole } = render(
+    const { container } = render(
       <InvestModal
         property={property}
         isOpen
@@ -135,65 +125,25 @@ describe("InvestModal accessibility", () => {
       />,
     );
 
-    // TEMPORARY INSTRUMENTATION, to be reverted with the real fix.
-    // This test takes 34s on the GitHub runner and under 1s everywhere else
-    // (macOS, and linux/amd64 containers on the same bun, jsdom and lockfile),
-    // so the cost has to be measured where it actually happens. The two
-    // baselines below separate "the whole machine is slow" from "this one
-    // operation is slow".
-    const mark = (label: string, run: () => void) => {
-      const started = performance.now();
-      run();
-      console.log(
-        `INSTR ${label}: ${(performance.now() - started).toFixed(1)}ms`,
-      );
-    };
+    // Scoped to this render rather than the document body, the same way
+    // renderWithIntl scopes its queries. A body-scoped query here matches
+    // whatever earlier files left attached, which is what tab order is not.
+    const { getByRole, getAllByRole } = within(container);
 
-    mark("baseline_cpu_1e7_iterations", () => {
-      let sink = 0;
-      for (let i = 0; i < 1e7; i += 1) {
-        sink += i;
-      }
-      if (sink < 0) throw new Error("unreachable");
-    });
-
-    mark("baseline_200_getComputedStyle", () => {
-      for (let i = 0; i < 200; i += 1) {
-        window.getComputedStyle(document.body);
-      }
-    });
-
-    console.log(
-      `INSTR dom_elements: ${document.body.querySelectorAll("*").length}`,
-      `dom_buttons: ${document.body.querySelectorAll("button").length}`,
-    );
-
-    let closeButton!: HTMLElement;
-    mark("getByRole_with_accessible_name", () => {
-      closeButton = getByRole("button", { name: /close dialog/i });
-    });
-
-    let buttons!: HTMLElement[];
-    mark("getAllByRole_no_name", () => {
-      buttons = getAllByRole("button");
-    });
-
+    const closeButton = getByRole("button", { name: /close dialog/i });
+    const buttons = getAllByRole("button");
     const lastButton = buttons[buttons.length - 1];
 
     // Close is first in tab order; Tab from the last control must wrap back.
     expect(buttons[0]).toBe(closeButton);
-    mark("focus_last_button", () => lastButton.focus());
-    mark("keydown_tab", () => fireEvent.keyDown(document, { key: "Tab" }));
+    lastButton.focus();
+    fireEvent.keyDown(document, { key: "Tab" });
     expect(document.activeElement).toBe(closeButton);
 
-    mark("focus_close_button", () => closeButton.focus());
-    mark("keydown_shift_tab", () =>
-      fireEvent.keyDown(document, { key: "Tab", shiftKey: true }),
-    );
+    closeButton.focus();
+    fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
     expect(document.activeElement).toBe(lastButton);
-    // Temporary budget so the instrumented run reports every mark instead of
-    // being cut short at the default 5s. Reverted with the instrumentation.
-  }, 120_000);
+  });
 
   it("has no critical axe violations", async () => {
     const { container } = render(

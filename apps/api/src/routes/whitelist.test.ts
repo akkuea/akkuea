@@ -14,9 +14,24 @@ process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
 describe('Whitelist API Routes', () => {
   const mockWallet = 'GDK7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZ';
   let mockDbStore: any[] = [];
+  const savedDbProps: string[] = [];
+
+  function extractWalletAddress(obj: any): string | undefined {
+    if (obj == null || typeof obj !== 'object') return undefined;
+    if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
+      for (const chunk of obj.queryChunks) {
+        if (chunk?.constructor?.name === 'Param' && typeof chunk.value === 'string') {
+          return chunk.value;
+        }
+      }
+    }
+    if ('value' in obj && typeof obj.value === 'string') return obj.value;
+    return undefined;
+  }
 
   beforeEach(() => {
     mockDbStore = [];
+    savedDbProps.length = 0;
 
     // Mock whitelist service (re-apply after each mock.restore)
     mock.module('../services/WhitelistService', () => {
@@ -28,20 +43,14 @@ describe('Whitelist API Routes', () => {
       };
     });
 
-    // Extract a Stellar address from a drizzle SQL expression
-    function extractWalletAddress(obj: any): string | undefined {
-      if (obj == null || typeof obj !== 'object') return undefined;
-      // Check for Param object (drizzle eq() result)
-      if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
-        for (const chunk of obj.queryChunks) {
-          if (chunk?.constructor?.name === 'Param' && typeof chunk.value === 'string') {
-            return chunk.value;
-          }
-        }
+    // Save original db properties so we can restore them in afterEach.
+    // Direct property assignment on the db Proxy mutates _dbTarget, which
+    // persists across test files in the same bun process. mock.restore()
+    // only undoes mock() calls, not these mutations.
+    for (const prop of ['query', 'insert', 'update', 'delete']) {
+      if (Object.prototype.hasOwnProperty.call(db, prop)) {
+        savedDbProps.push(prop);
       }
-      // Fallback: check common expression properties
-      if ('value' in obj && typeof obj.value === 'string') return obj.value;
-      return undefined;
     }
 
     // Mock db queries
@@ -93,6 +102,13 @@ describe('Whitelist API Routes', () => {
 
   afterEach(() => {
     mock.restore();
+    // Delete the properties we directly assigned on the db Proxy so the
+    // Proxy's lazy getter reconnects to the real drizzle instance.
+    for (const prop of savedDbProps) {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+      delete (db as any)[prop];
+    }
+    savedDbProps.length = 0;
   });
 
   it('should submit a new whitelist request successfully', async () => {

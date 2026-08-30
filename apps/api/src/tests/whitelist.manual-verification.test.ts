@@ -34,9 +34,11 @@ function extractWalletAddress(obj: any): string | undefined {
 }
 
 let mockDbStore: any[] = [];
+const savedDbProps: string[] = [];
 
 beforeEach(() => {
   mockDbStore = [];
+  savedDbProps.length = 0;
 
   // Mock whitelist service (re-apply after each mock.restore)
   mock.module('../services/WhitelistService', () => {
@@ -47,6 +49,12 @@ beforeEach(() => {
       },
     };
   });
+
+  for (const prop of ['query', 'insert', 'update', 'delete']) {
+    if (Object.prototype.hasOwnProperty.call(db, prop)) {
+      savedDbProps.push(prop);
+    }
+  }
 
   (db as any).query = {
     pilotWhitelistRequests: {
@@ -90,6 +98,11 @@ beforeEach(() => {
 
 afterEach(() => {
   mock.restore();
+  for (const prop of savedDbProps) {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    delete (db as any)[prop];
+  }
+  savedDbProps.length = 0;
 });
 
 async function postWhitelistRequest(wallet: string, name = 'Test User', bypassRateLimit = true) {

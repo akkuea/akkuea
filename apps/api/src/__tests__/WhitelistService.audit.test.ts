@@ -12,7 +12,9 @@ import { describe, expect, it, mock, beforeEach } from 'bun:test';
 // Jest's jest.mock: declarations are hoisted before imports.
 // ---------------------------------------------------------------------------
 
-const mockLogAction = mock(() => Promise.resolve());
+import type { AuditLogActionInput } from '../services/AuditService';
+
+const mockLogAction = mock((_input: AuditLogActionInput) => Promise.resolve());
 
 mock.module('../services/AuditService', () => ({
   auditService: { logAction: mockLogAction },

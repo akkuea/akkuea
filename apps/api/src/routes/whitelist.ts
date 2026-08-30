@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { WhitelistController } from '../controllers/WhitelistController';
 import { handleError } from '../utils/errors';
 import { validateQuery } from '../middleware/validation';
+import { rateLimit } from '../middleware';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
 
 const requestSchema = t.Object({
@@ -55,12 +56,20 @@ const whitelistMetricsRoute = new Elysia().use(validateQuery(metricsQuerySchema)
 
 export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
   .post('/request', (ctx) => WhitelistController.request(ctx), {
+    beforeHandle: [rateLimit()],
     body: requestSchema,
     detail: {
       summary: 'Submit whitelist request',
+      description:
+        'Public, unauthenticated KYC intake endpoint. Rate-limited to 10 requests per minute per IP (same default as other public endpoints in this API). This endpoint accepts PII (full name, ID type, ID reference), so abuse protection is critical.',
       tags: ['Pilot Whitelist'],
     },
   })
+  // GET /status is intentionally not rate-limited: the response contains only
+  // coarse application state (pending/approved/rejected/none), no PII is
+  // returned, and the endpoint is read-only. Rate limiting is not required for
+  // the current pilot threat model. Revisit if response data expands or
+  // enumeration becomes operationally relevant.
   .get('/status/:walletAddress', (ctx) => WhitelistController.status(ctx), {
     params: t.Object({ walletAddress: t.String() }),
     detail: {

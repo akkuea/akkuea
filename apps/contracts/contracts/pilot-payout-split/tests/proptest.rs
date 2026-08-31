@@ -6,6 +6,7 @@ use soroban_sdk::{
     testutils::Address as _, token::StellarAssetClient, Address, Bytes, Env, String, Vec,
 };
 
+#[allow(dead_code)]
 struct Setup {
     env: Env,
     admin: Address,

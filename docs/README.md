@@ -28,7 +28,7 @@ Welcome to Akkuea's documentation. **Start with [`strategy/product-brief.md`](st
 
 > Start here for any production or testnet launch of the existing `defi-rwa` platform contract. Akkuea Land has its own deployment guide (below).
 
-- [Environment Variables](deployment/environment-variables.md) - complete `.env` reference, secret warnings, network passphrases
+- [Environment Variables](deployment/environment-variables.md) (see also: [Environment Setup Guide](ENV_SETUP.md)) - complete `.env` reference, secret warnings, network passphrases
 - [Deploy Contracts](deployment/deploy-contracts.md) - build, deploy, oracle setup, pool creation, role grants
 - [Post-Deploy Checklist](deployment/post-deploy-checklist.md) - Day 0 action list: liveness, oracle, roles, pool, API verification
 - [Deployment Records](contracts/deployment.md) - testnet/mainnet contract IDs and the mainnet approval checklist
@@ -57,6 +57,7 @@ Welcome to Akkuea's documentation. **Start with [`strategy/product-brief.md`](st
 - [Oracle Failure Runbook](operations/runbook-oracle-failure.md) - price feed outage, stale data response, backup oracle switch
 - [Role Management Runbook](operations/runbook-role-management.md) - grant/revoke EmergencyGuard, admin transfer procedure
 - [Dividend Distribution](operations/runbook-dividends-placeholder.md) - placeholder pending Issue #722
+- [Pilot Review SLA](operations/pilot-review-sla.md) - whitelist and evidence review turnaround target, metrics endpoint, how to change the number
 
 ## 🧪 Testing & Other Guides
 

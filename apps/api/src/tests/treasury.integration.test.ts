@@ -4,14 +4,14 @@
  * assertion is about what the deployed contracts actually return.
  *
  * Two venues are covered:
- *   - `defindex-blend`       — DeFindex USDC vault, strategy `USDC Blend Strategy`
- *   - `etherfuse-stablebond` — DeFindex CETES vault, strategy `CETES Blend Strategy`
+ *   - `defindex-blend`       (DeFindex USDC vault, strategy `USDC Blend Strategy`)
+ *   - `etherfuse-stablebond` (DeFindex CETES vault, strategy `CETES Blend Strategy`)
  *     (CETES is Etherfuse's tokenized Mexican sovereign-debt Stablebond)
  *
  * Reads are simulations and move no funds. The deposit test also runs against
  * the real vault: it assembles and simulates a genuine `deposit` from a
  * freshly funded account, which the deployed contract rejects at the token
- * transfer. That failure is the point — it proves the argument encoding is
+ * transfer. That failure is the point, it proves the argument encoding is
  * accepted by the live WASM and that a real on-chain error decodes into the
  * typed error the API maps to an HTTP response.
  *

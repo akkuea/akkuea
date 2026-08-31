@@ -38,6 +38,37 @@ See [`integration-decisions.md`](integration-decisions.md) for the full verifica
 
 **Trustless Work was dropped from the core pilot entirely**, correcting the original 2026-08-12 "integrate day one" recommendation, which was based on the existence and name of a repo rather than its actual contents. When directly asked "do we actually need this," reading the README in full showed a bilateral single-recipient escrow that doesn't fit pro-rata distribution to N holders, requires its own hosted backend, and stacks its own fee on top of Akkuea's. Replaced by Akkuea's own payout-split contract.
 
+## Soroswap swap-venue verification (C7-001, EURC settlement)
+
+**Adopted:** Soroswap AMM router as the on-chain swap venue for USDC-to-EURC conversion in the pilot payout-split contract.
+
+**What was verified (primary sources, not marketing claims):**
+
+1. **Repository:** `github.com/soroswap/core` (Apache-2.0 license, 1,332 commits, 21 stars). The `contracts/router` crate exposes `swap_exact_tokens_for_tokens`, the single-hop exact-input function Akkuea's payout contract calls. The function signature matches the `SoroswapRouterClient` trait declared in `pilot-payout-split/src/lib.rs`.
+2. **Deployed contract IDs (read from `public/mainnet.contracts.json` and `public/testnet.contracts.json` in the Soroswap repo):**
+   - Testnet Router: `CCJUD55AG6W5HAI5LRVNKAE5WDP5XGZBUDS5WNTIVDU7O264UZZE7BRD`
+   - Mainnet Router: `CAG5LRYQ5JVEUI5TEID72EYOVX44TTUJT5BQR2J6J77FH65PCCFAJDDH`
+3. **Audit:** OtterSec, dated 2024-02-22, available at `github.com/soroswap/core/blob/main/audits/2024-02-22_soroswap_ottersec_audit.pdf`. The audit covers the Router, Factory, and Pair contracts.
+4. **Fee model:** Constant-product with a 0.3% fee (997/1000 numerator), consistent with the fee math in the `MockSoroswapRouter` test double. The mock's `get_amount_out` formula (`(in*997*out_reserve) / (in_reserve*1000 + in*997)`) matches the Soroswap library implementation.
+5. **Integration pattern:** The payout contract pulls `path[0]` (USDC) from its own address and receives `path[1]` (EURC) back, matching the router's `to` address semantics. This is the same pull-from-caller pattern used by every Soroswap SDK consumer.
+
+**Why Soroswap over alternatives:**
+- Soroswap is the most widely deployed and audited Soroban AMM on Stellar. The router is already used by the Soroswap aggregator, which routes across Soroswap, Phoenix, Aquarius, and Stellar DEX.
+- Building a bespoke swap mechanism is explicitly ruled out by this project's own principle of verifying before integrating and never building from scratch what already exists and is audited.
+- The contract interface is simple (single-hop exact-input swap) and maps cleanly to the payout contract's settlement needs.
+
+**Not hardcoded:** The router address is stored in contract storage at initialization (like `income_token` and `whitelist`), never hardcoded. This allows upgrading the venue without redeploying the payout contract.
+
+## Exit-state reason representation (C7-002, ally/property exit)
+
+**Adopted: free-text string stored on-chain** for the exit reason on `pilot-payout-split` (`exit`) and the mirrored `pilot-income-token` marker (`mark_wound_down`), recorded as `ExitRecord { reason: String, at: u64 }` / `WoundDownRecord { reason: String, at: u64 }`.
+
+**Why a string rather than a bounded enum:** real-world exit causes cannot be enumerated up front (ally bankruptcy, property sale, regulatory pressure, mutual agreement, operational failure, and combinations). An enum would force the dashboard to misclassify or carry an `Other` catch-all anyway, and adding a variant later requires a contract upgrade. The string is renderable directly from on-chain state, which is exactly what the issue requires ("render why and when the exit happened without any off-chain state").
+
+**Why a string rather than a hash-plus-off-chain-link:** the evidence records in this same contract deliberately use a link-plus-hash pattern because evidence is a large artifact that belongs off-chain. An exit reason is a short human fact; linking it off-chain would re-introduce the off-chain dependency the issue explicitly rules out for this feature and would make the terminal state unreadable to a client that only reads the chain.
+
+**Why the mirrored `pilot-income-token` marker is a separate admin-gated write rather than auto-propagated from `pilot-payout-split`'s `exit`:** the issue requires `exit` to be gated by exactly the same two-signer authorization as `execute_distribution` (operator + ally). Auto-propagating the marker would force one of two bad options: (a) require the income-token admin (a third key) to co-sign every exit, silently widening the documented two-signer gate, or (b) make the token trust the payout-split contract as a configured authority, adding a deployment-order coupling where a misconfigured authority strands exit entirely. Keeping the two writes independent means each contract's terminal state is set by the party that owns that contract's keys (operator + ally for the payout-split exit, the token admin for the wind-down marker), and both states remain independently readable with no cross-contract call at read time. The dashboard/operator tooling issues both calls when ending a pilot; a later cycle can add an orchestration contract if atomicity is ever required.
+
 ## Jurisdiction
 
 **Resolved by sequencing, not by picking one option outright.** Brazil + an existing CVM-authorized platform is the target regulatory path, pursued explicitly as Phase 2 - not a Phase 1 prerequisite. Negotiating a distribution partnership with a regulated platform is itself a slow BD process that could strand the already-verified Stellar-native architecture if required before the pilot can launch. Full research findings (Brazil, Marshall Islands, El Salvador ruled out as heavy-touch, Mexico ruled out as unfavorable) are in [`roadmap.md`](roadmap.md).

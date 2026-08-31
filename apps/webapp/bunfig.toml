@@ -1,0 +1,10 @@
+# Scopes `bun test`'s file discovery to unit tests under `src/`.
+#
+# Without this, `bun test` recursively picks up every `*.spec.ts` in the
+# project, including the Playwright specs under `e2e/`. Those are written for
+# Playwright's own runner (`playwright test`, see playwright.config.ts) and
+# import `test`/`expect` from `@playwright/test`, not `bun:test`; bun trying
+# to load them crashes with "Playwright Test did not expect test.describe()
+# to be called here" and fails the whole unit-test run.
+[test]
+root = "./src"

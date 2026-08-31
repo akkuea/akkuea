@@ -347,6 +347,9 @@ bun run test
 cd apps/api && bun test
 cd apps/webapp && bun test
 cd apps/contracts && cargo test
+
+# Run the webapp's Playwright e2e suite (see apps/webapp/README.md#testing)
+cd apps/webapp && bun run test:e2e
 ```
 
 ### What makes a good test
@@ -373,7 +376,7 @@ Akkuea runs five GitHub Actions workflows on every pull request. **All five must
 | ------------------ | --------------------------------------------------------------------------------------------------------- |
 | `monorepo-ci.yml`  | Workspace integrity, dependency consistency, cross-workspace type compatibility, security compliance scan |
 | `api-ci.yml`       | API lint, type-check, unit and integration tests, build                                                   |
-| `webapp-ci.yml`    | Webapp lint, type-check, unit tests, build                                                                |
+| `webapp-ci.yml`    | Webapp lint, type-check, unit tests, build, Playwright e2e tests (isolated job)                            |
 | `shared-ci.yml`    | Shared library lint, type-check, build                                                                    |
 | `contracts-ci.yml` | Rust format (`rustfmt`), linting (`cargo clippy`), unit tests, WASM build                                 |
 

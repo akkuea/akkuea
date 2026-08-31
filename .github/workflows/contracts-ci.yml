@@ -181,6 +181,16 @@ jobs:
           fi
           echo "Coverage: $COVERAGE%"
           
+      - name: Filter llvm-cov phantom counters on derive-attribute lines
+        # llvm-cov attributes a never-incremented counter to Soroban
+        # #[contracttype]/#[contracterror]/#[contractclient] attribute lines
+        # (the derive expansion is inlined), so Codecov reports false missing
+        # lines. Strip them before upload; genuine gaps are untouched. See
+        # scripts/filter-coverage-derive-lines.py for the full rationale.
+        run: |
+          cd apps/contracts
+          python3 ../../scripts/filter-coverage-derive-lines.py lcov.info lcov.info
+          
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:

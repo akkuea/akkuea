@@ -20,3 +20,4 @@ export {
   type VaultWithdrawArgs,
 } from "./defindexVault";
 export * from "./game";
+export * from "./pilot";

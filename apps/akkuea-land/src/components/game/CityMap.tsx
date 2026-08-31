@@ -66,12 +66,12 @@ const PropertyTile = React.memo(function PropertyTile({
   const isUnowned = !property.owner;
 
   const tooltipLines = [
-    `📍 (${row}, ${col})`,
-    `👤 ${abbreviateAddress(property.owner)}`,
-    `🏗 ${BUILDING_NAMES[property.buildingLevel]}`,
+    `Coords: (${row}, ${col})`,
+    `Owner: ${abbreviateAddress(property.owner)}`,
+    `Level: ${BUILDING_NAMES[property.buildingLevel]}`,
   ];
   if (property.isListed) {
-    tooltipLines.push(`💰 ${property.pricePerShare} LAND`);
+    tooltipLines.push(`Price: ${property.pricePerShare} LAND`);
   }
   const tooltip = tooltipLines.join("\n");
 

@@ -188,7 +188,7 @@ Run from the repository root:
 
 ## Environment Variables
 
-All required environment variables are documented in [`docs/deployment/environment-variables.md`](docs/deployment/environment-variables.md). The source of truth is `apps/api/.env.example`.
+All required environment variables are documented in [`docs/deployment/environment-variables.md`](docs/deployment/environment-variables.md). For step-by-step instructions on obtaining real values for local development, see the [`docs/ENV_SETUP.md`](docs/ENV_SETUP.md) guide. The source of truth for variables is `apps/api/.env.example`.
 
 Key categories:
 
@@ -275,6 +275,7 @@ akkuea/
 | [`docs/strategy/roadmap.md`](docs/strategy/roadmap.md)                                 | Phase 1a/1b/2 roadmap, jurisdiction, partnerships |
 | [`docs/design-system/README.md`](docs/design-system/README.md)                         | Visual/interaction system                         |
 | [`docs/local-setup.md`](docs/local-setup.md)                                           | Full local setup walkthrough                      |
+| [`docs/ENV_SETUP.md`](docs/ENV_SETUP.md)                                               | Local environment variable setup guide            |
 | [`docs/architecture/system-architecture.md`](docs/architecture/system-architecture.md) | System design and component breakdown             |
 | [`docs/deployment/environment-variables.md`](docs/deployment/environment-variables.md) | Complete environment variable reference           |
 | [`docs/deployment/deploy-contracts.md`](docs/deployment/deploy-contracts.md)           | Contract deployment to Stellar networks           |

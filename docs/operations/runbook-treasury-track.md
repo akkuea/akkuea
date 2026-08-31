@@ -1,6 +1,6 @@
 # Runbook: Phase 1a Treasury Track (DeFindex + Etherfuse)
 
-**Severity:** Medium — treasury movements are blocked; platform operations are unaffected
+**Severity:** Medium. Treasury movements are blocked; platform operations are unaffected
 **Audience:** On-call operators with the internal operations API key
 **Related source:** `apps/api/src/services/TreasuryService.ts`, `apps/api/src/config/treasury.ts`, `apps/shared/src/contracts/defindexVault.ts`
 
@@ -133,14 +133,14 @@ call and why.
 | `TREASURY_UNAUTHORIZED`                 | 403  | `Unauthorized` (130)                                                                             | The configured key is not permitted for this operation        | Check `TREASURY_SOURCE_SECRET`.                                                                                          |
 | `TREASURY_VENUE_REJECTED`               | 502  | `ExternalError` (422), `SupplyNotFound` (455), `StrategyInvestError` (143)                       | Blend itself rejected the call                                | Check Blend pool status. A Blend-side pricing failure surfaces here.                                                     |
 | `TREASURY_VENUE_ERROR`                  | 502  | anything else                                                                                    | An unmodelled venue failure                                   | Read `details.contractErrorCode` and add a mapping if it recurs.                                                         |
-| `TREASURY_VENUE_NOT_CONFIGURED`         | 503  | —                                                                                                | No addresses for this venue on this network                   | Set the env vars above.                                                                                                  |
-| `TREASURY_SOURCE_NOT_CONFIGURED`        | 503  | —                                                                                                | No signing key                                                | Set `TREASURY_SOURCE_SECRET`.                                                                                            |
-| `TREASURY_VENUE_ASSET_MISMATCH`         | 502  | —                                                                                                | The configured vault does not manage the configured asset     | The vault or the config changed. Re-verify addresses against the registry before moving any funds.                       |
+| `TREASURY_VENUE_NOT_CONFIGURED`         | 503  | -                                                                                                | No addresses for this venue on this network                   | Set the env vars above.                                                                                                  |
+| `TREASURY_SOURCE_NOT_CONFIGURED`        | 503  | -                                                                                                | No signing key                                                | Set `TREASURY_SOURCE_SECRET`.                                                                                            |
+| `TREASURY_VENUE_ASSET_MISMATCH`         | 502  | -                                                                                                | The configured vault does not manage the configured asset     | The vault or the config changed. Re-verify addresses against the registry before moving any funds.                       |
 
 ### A note on price staleness
 
 These two vaults are single-asset. Their deposit and withdraw paths do not consult a
-price oracle — confirmed by simulating a real deposit against the deployed testnet
+price oracle, confirmed by simulating a real deposit against the deployed testnet
 vault and reading the call tree, which contains only balance reads, a token transfer
 and the strategy call. There is therefore no staleness check to perform on this path.
 A Blend-side pricing failure would arrive as a strategy `ExternalError` and is mapped
@@ -156,7 +156,7 @@ This is unrelated to the platform's own valuation oracle; see
 A rejected deposit is written to `treasury_transactions` with `status = 'failed'` and
 the contract error, before the error is returned to the caller. `GET /history`
 therefore shows attempts that did not land, not only the ones that did. Do not delete
-these rows to tidy up a report — a history that only shows successes is not the
+these rows to tidy up a report, a history that only shows successes is not the
 checkable record this track exists to produce.
 
 ---
@@ -178,11 +178,11 @@ so the required CI workflows stay hermetic.
 ### SDK version requirement
 
 `apps/shared` and `apps/api` require `@stellar/stellar-sdk` **>= 14**. On 13.3.0 every
-read of the CETES vault fails with `TypeError: Bad union switch: 1` — that SDK cannot
+read of the CETES vault fails with `TypeError: Bad union switch: 1`, and that SDK cannot
 parse the Soroban transaction data the current testnet RPC returns for that contract.
 The USDC vault is unaffected, and the Rust CLI reads both fine, so the failure is
 purely client-side. 14.0.0 is the verified minimum; the workspace is on `^14.2.0`,
-matching `apps/akkuea-land`. `apps/webapp` stays on 13.3.0 — it never talks to these
+matching `apps/akkuea-land`. `apps/webapp` stays on 13.3.0, and it never talks to these
 vaults directly.
 
 Do not downgrade those two packages below 14 without re-checking this.

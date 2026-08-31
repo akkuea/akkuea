@@ -1,6 +1,11 @@
 import { db } from '../db';
 import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
 import { whitelistService } from '../services/WhitelistService';
+import {
+  reviewTurnaroundService,
+  type ReviewMetricsResult,
+} from '../services/ReviewTurnaroundService';
+import type { MetricsWindowQuery } from '../services/reviewTurnaround';
 import { eq } from 'drizzle-orm';
 
 export class WhitelistController {
@@ -49,6 +54,14 @@ export class WhitelistController {
     });
 
     return { success: true, data: requests };
+  }
+
+  static async metrics(query: MetricsWindowQuery = {}): Promise<{
+    success: true;
+    data: ReviewMetricsResult;
+  }> {
+    const data = await reviewTurnaroundService.getMetrics(query);
+    return { success: true, data };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

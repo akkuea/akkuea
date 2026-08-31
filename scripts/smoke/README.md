@@ -45,6 +45,21 @@ WEBAPP_BASE_URL=https://app.akkuea.com \
 | `WEBAPP_BASE_URL`    | _(unset = skip)_        | If set, also `GET /` on the webapp |
 | `SMOKE_TIMEOUT_SECS` | `10`                    | curl connect/max time per request  |
 
+## Pilot E2E Suite
+
+A true end-to-end integration suite for the pilot lifecycle is available to exercise the deployed testnet contracts (`pilot-whitelist` and `pilot-payout-split`).
+
+```bash
+bun run smoke:pilot
+```
+
+**Required Environment Variables (DO NOT COMMIT REAL SECRETS):**
+- `API_BASE_URL`: Base URL of the API under test (e.g. `http://localhost:3001`).
+- `OPERATIONS_BACKEND_CREDENTIAL`: The shared secret to access `/internal/operations/*` API routes.
+- `PILOT_E2E_OPERATOR_SECRET`: The funded testnet key for the operator role.
+- `PILOT_E2E_ALLY_SECRET`: The funded testnet key for the ally role.
+- `PILOT_E2E_HOLDER_SECRET`: (Optional) Funded testnet key for a pilot income token holder, if further on-chain assertions are added.
+
 ## What it checks
 
 1. **`GET /health`** - HTTP 200, `status === "healthy"`, DB healthy

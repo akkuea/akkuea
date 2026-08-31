@@ -3,9 +3,7 @@ use pilot_payout_split::{PilotPayoutSplit, PilotPayoutSplitClient};
 use pilot_whitelist::{PilotWhitelist, PilotWhitelistClient};
 use proptest::prelude::*;
 use soroban_sdk::{
-    testutils::Address as _,
-    token::StellarAssetClient,
-    Address, Bytes, Env, String, Vec,
+    testutils::Address as _, token::StellarAssetClient, Address, Bytes, Env, String, Vec,
 };
 
 struct Setup {

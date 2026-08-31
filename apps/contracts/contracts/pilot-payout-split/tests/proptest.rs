@@ -3,7 +3,7 @@ use pilot_payout_split::{PilotPayoutSplit, PilotPayoutSplitClient};
 use pilot_whitelist::{PilotWhitelist, PilotWhitelistClient};
 use proptest::prelude::*;
 use soroban_sdk::{
-    testutils::{Address as _, MockAuth, MockAuthInvoke},
+    testutils::Address as _,
     token::StellarAssetClient,
     Address, Bytes, Env, String, Vec,
 };
@@ -64,6 +64,10 @@ fn setup_with_balance_values(balance_values: &[i128]) -> (Setup, std::vec::Vec<A
     let usdc_contract = env.register_stellar_asset_contract_v2(usdc_admin);
     let usdc = StellarAssetClient::new(&env, &usdc_contract.address());
 
+    let eurc_admin = Address::generate(&env);
+    let eurc_contract = env.register_stellar_asset_contract_v2(eurc_admin);
+    let swap_router = Address::generate(&env);
+
     let payout_id = env.register(PilotPayoutSplit, ());
     let payout = PilotPayoutSplitClient::new(&env, &payout_id);
     payout.initialize(
@@ -74,6 +78,8 @@ fn setup_with_balance_values(balance_values: &[i128]) -> (Setup, std::vec::Vec<A
         &income_token_id,
         &whitelist_id,
         &usdc_contract.address(),
+        &eurc_contract.address(),
+        &swap_router,
     );
 
     usdc.mint(&payout_id, &i128::MAX);
@@ -121,7 +127,12 @@ proptest! {
             &total_income,
         );
 
-        let summary = s.payout.execute_distribution(&cycle(&s.env, "test-cycle"));
+        let summary = s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "test-cycle"),
+            &0i128,
+        );
 
         // 1. The fee plus the sum of all pro-rata distributions never exceeds the total income for the cycle.
         prop_assert!(summary.platform_fee + summary.distributed_total <= total_income);

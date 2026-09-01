@@ -1,6 +1,70 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    ":semanticCommits",
+    ":semanticCommitTypeAll(chore)"
+  ],
+  "baseBranchPatterns": ["develop"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "timezone": "America/Costa_Rica",
+  "schedule": ["before 6am on monday"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 6am on monday"]
+  },
+  "ignorePaths": ["apps/shared/src/contracts/**/generated/**"],
+  "packageRules": [
+    {
+      "description": "Group bun workspace patch updates",
+      "matchManagers": ["bun"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "bun patch"
+    },
+    {
+      "description": "Group cargo patch updates",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["patch"],
+      "groupName": "cargo patch"
+    },
+    {
+      "description": "Group Pollar packages",
+      "matchPackageNames": ["@pollar/**"],
+      "groupName": "pollar"
+    },
+    {
+      "description": "0.x minors can be breaking; require dashboard approval",
+      "matchCurrentVersion": "<1.0.0",
+      "matchUpdateTypes": ["minor"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "Majors require Dependency Dashboard approval",
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    },
+    {
+      "description": "soroban-sdk majors are a contract migration, not a chore",
+      "matchPackageNames": ["soroban-sdk"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
+    },
+    {
+      "description": "Python in CI is only used by the style quality gate",
+      "matchPackageNames": ["python"],
+      "enabled": false
+    },
+    {
+      "description": "bun-types is set to latest by design",
+      "matchPackageNames": ["bun-types"],
+      "enabled": false
+    },
+    {
+      "description": "Pin GitHub Actions to commit SHA",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    }
   ]
 }

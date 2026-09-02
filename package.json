@@ -65,6 +65,7 @@
     "file-type": "^21.3.4",
     "minimatch": ">=10.2.1",
     "eslint-visitor-keys": "^5.0.1",
-    "browserslist": "^4.28.8"
+    "browserslist": "^4.28.8",
+    "next": "16.2.11"
   }
 }

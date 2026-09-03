@@ -166,12 +166,9 @@ fn test_rounding_dust_policy_deterministic() {
         &cycle(&s.env, "link"),
         &100,
     );
-    let summary = s.payout.execute_distribution(
-        &s.operator,
-        &s.ally,
-        &cycle(&s.env, "dust-cycle"),
-        &0,
-    );
+    let summary =
+        s.payout
+            .execute_distribution(&s.operator, &s.ally, &cycle(&s.env, "dust-cycle"), &0);
     assert_eq!(summary.platform_fee, 10);
     assert_eq!(summary.distributed_total, 88);
     assert_eq!(summary.dust, 2);
@@ -180,12 +177,9 @@ fn test_rounding_dust_policy_deterministic() {
 #[test]
 fn test_rejection_path_regression() {
     let (s, _) = setup_with_balance_values(&[100]);
-    let res = s.payout.try_execute_distribution(
-        &s.operator,
-        &s.ally,
-        &cycle(&s.env, "nonexistent"),
-        &0,
-    );
+    let res =
+        s.payout
+            .try_execute_distribution(&s.operator, &s.ally, &cycle(&s.env, "nonexistent"), &0);
     assert_eq!(
         res.err().unwrap().unwrap(),
         pilot_payout_split::PayoutError::CycleNotRecorded.into()

@@ -9,15 +9,9 @@ use soroban_sdk::{
 #[allow(dead_code)]
 struct Setup {
     env: Env,
-    admin: Address,
     operator: Address,
     ally: Address,
-    fee_recipient: Address,
-    whitelist_admin: Address,
-    whitelist: PilotWhitelistClient<'static>,
-    token: PilotIncomeTokenClient<'static>,
     payout: PilotPayoutSplitClient<'static>,
-    payout_id: Address,
     usdc: StellarAssetClient<'static>,
 }
 
@@ -86,15 +80,9 @@ fn setup_with_balance_values(balance_values: &[i128]) -> (Setup, std::vec::Vec<A
     (
         Setup {
             env,
-            admin,
             operator,
             ally,
-            fee_recipient,
-            whitelist_admin,
-            whitelist,
-            token,
             payout,
-            payout_id,
             usdc,
         },
         holder_vec,
@@ -113,7 +101,7 @@ proptest! {
     #[test]
     fn test_distribution_properties(
         total_income in 1i128..1_000_000_000_000_000_000,
-        balances in prop::collection::vec(1i128..1_000_000_000_000, 1..50)
+        balances in prop::collection::vec(1i128..1_000_000_000_000, 0..50)
     ) {
         let (s, holders_vec) = setup_with_balance_values(&balances);
 
@@ -151,6 +139,11 @@ proptest! {
         let remainder = total_income - expected_fee;
         prop_assert_eq!(summary.distributed_total + summary.dust, remainder);
 
+        if balances.is_empty() {
+            prop_assert_eq!(summary.distributed_total, 0);
+            prop_assert_eq!(summary.dust, remainder);
+        }
+
         // 5. Distribution is monotonic in holder balance: a holder with a strictly larger balance never receives a strictly smaller payout than a holder with a smaller balance, all else equal.
         let mut payouts: std::vec::Vec<(i128, i128)> = holders_vec.iter().zip(balances.iter()).map(|(h, &b)| {
             (b, s.usdc.balance(h))
@@ -160,4 +153,41 @@ proptest! {
             prop_assert!(payouts[i-1].1 <= payouts[i].1);
         }
     }
+}
+
+#[test]
+fn test_rounding_dust_policy_deterministic() {
+    let (s, _) = setup_with_balance_values(&[33, 33, 34]);
+    s.payout.record_evidence(
+        &s.operator,
+        &s.ally,
+        &cycle(&s.env, "dust-cycle"),
+        &evidence_hash(&s.env),
+        &cycle(&s.env, "link"),
+        &100,
+    );
+    let summary = s.payout.execute_distribution(
+        &s.operator,
+        &s.ally,
+        &cycle(&s.env, "dust-cycle"),
+        &0,
+    );
+    assert_eq!(summary.platform_fee, 10);
+    assert_eq!(summary.distributed_total, 88);
+    assert_eq!(summary.dust, 2);
+}
+
+#[test]
+fn test_rejection_path_regression() {
+    let (s, _) = setup_with_balance_values(&[100]);
+    let res = s.payout.try_execute_distribution(
+        &s.operator,
+        &s.ally,
+        &cycle(&s.env, "nonexistent"),
+        &0,
+    );
+    assert_eq!(
+        res.err().unwrap().unwrap(),
+        pilot_payout_split::PayoutError::CycleNotRecorded.into()
+    );
 }

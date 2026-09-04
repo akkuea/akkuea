@@ -27,8 +27,37 @@ done < "${ALLOWLIST}"
 echo "Running bun audit --audit-level=${LEVEL} in ${WORKDIR:-.}"
 echo "Allowlisted advisories: ${#ignore_flags[@]}"
 
-if [[ ${#ignore_flags[@]} -eq 0 ]]; then
-  bun audit --audit-level="${LEVEL}"
-else
-  bun audit --audit-level="${LEVEL}" "${ignore_flags[@]}"
-fi
+audit_with_retry() {
+  local max_attempts=3
+  local attempt=1
+
+  while [ $attempt -le $max_attempts ]; do
+    echo "Running bun audit (attempt $attempt of $max_attempts)..."
+    
+    set +e
+    if [[ ${#ignore_flags[@]} -eq 0 ]]; then
+      bun audit --audit-level="${LEVEL}"
+    else
+      bun audit --audit-level="${LEVEL}" "${ignore_flags[@]}"
+    fi
+    local exit_code=$?
+    set -e
+
+    if [ $exit_code -eq 0 ]; then
+      echo "✅ Audit passed"
+      return 0
+    fi
+
+    if [ $attempt -lt $max_attempts ]; then
+      echo "Audit failed, retrying in 30 seconds..."
+      sleep 30
+    fi
+
+    attempt=$((attempt + 1))
+  done
+
+  echo "❌ Audit failed after $max_attempts attempts"
+  return 1
+}
+
+audit_with_retry

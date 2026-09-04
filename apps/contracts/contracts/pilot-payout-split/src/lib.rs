@@ -528,7 +528,7 @@ impl PilotPayoutSplit {
         let holders = income_token.holders();
         let total_supply = income_token.total_supply();
 
-        if !holders.is_empty() && total_supply <= 0 {
+        if holders.is_empty() || total_supply <= 0 {
             panic_with_error!(&env, PayoutError::EmptyHolderSet);
         }
 

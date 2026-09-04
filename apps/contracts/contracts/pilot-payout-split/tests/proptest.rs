@@ -114,6 +114,17 @@ proptest! {
             &total_income,
         );
 
+        if balances.is_empty() {
+            let result = s.payout.try_execute_distribution(
+                &s.operator,
+                &s.ally,
+                &cycle(&s.env, "test-cycle"),
+                &0i128,
+            );
+            prop_assert_eq!(result.err().unwrap().unwrap(), pilot_payout_split::PayoutError::EmptyHolderSet.into());
+            return Ok(());
+        }
+
         let summary = s.payout.execute_distribution(
             &s.operator,
             &s.ally,
@@ -139,10 +150,6 @@ proptest! {
         let remainder = total_income - expected_fee;
         prop_assert_eq!(summary.distributed_total + summary.dust, remainder);
 
-        if balances.is_empty() {
-            prop_assert_eq!(summary.distributed_total, 0);
-            prop_assert_eq!(summary.dust, remainder);
-        }
 
         // 5. Distribution is monotonic in holder balance: a holder with a strictly larger balance never receives a strictly smaller payout than a holder with a smaller balance, all else equal.
         let mut payouts: std::vec::Vec<(i128, i128)> = holders_vec.iter().zip(balances.iter()).map(|(h, &b)| {

@@ -2,12 +2,9 @@ import "./jsdomListenerSignal";
 import type { ReactElement } from "react";
 import { NextIntlClientProvider } from "next-intl";
 import { render, within, type RenderResult } from "@testing-library/react";
-import type { AbstractIntlMessages } from "next-intl";
 import enMessages from "../../messages/en.json";
 
-// The catalogue contains an array of marquee strings, which next-intl's message
-// type does not model. The provider handles it fine at runtime.
-const messages = enMessages as unknown as AbstractIntlMessages;
+const messages = enMessages;
 
 /**
  * Renders a translated component with the real English message catalogue.

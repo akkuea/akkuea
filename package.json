@@ -64,6 +64,7 @@
     "axios": "^1.13.5",
     "file-type": "^21.3.4",
     "minimatch": ">=10.2.1",
-    "eslint-visitor-keys": "^5.0.1"
+    "eslint-visitor-keys": "^5.0.1",
+    "toml": "^4.2.0"
   }
 }

@@ -44,7 +44,7 @@ audit_with_retry() {
     set -e
 
     if [ $exit_code -eq 0 ]; then
-      echo "✅ Audit passed"
+      echo "Audit passed"
       return 0
     fi
 
@@ -56,7 +56,7 @@ audit_with_retry() {
     attempt=$((attempt + 1))
   done
 
-  echo "❌ Audit failed after $max_attempts attempts"
+  echo "Audit failed after $max_attempts attempts"
   return 1
 }
 

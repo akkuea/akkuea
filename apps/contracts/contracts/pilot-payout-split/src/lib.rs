@@ -478,6 +478,9 @@ impl PilotPayoutSplit {
     /// share stays in this contract, is reported through the returned summary,
     /// recorded on-chain via `get_swap_failures`, and emitted as a typed event;
     /// all other holders are paid normally.
+    /// Dust policy: Any rounding remainder (dust) from the integer arithmetic of
+    /// pro-rata division across holders stays in the contract. It is accounted for
+    /// in the returned summary's `dust` field.
     pub fn execute_distribution(
         env: Env,
         operator: Address,

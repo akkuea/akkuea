@@ -478,6 +478,11 @@ impl PilotPayoutSplit {
     /// share stays in this contract, is reported through the returned summary,
     /// recorded on-chain via `get_swap_failures`, and emitted as a typed event;
     /// all other holders are paid normally.
+    ///
+    /// Rounding-dust policy: The 10% platform fee is calculated via integer division (truncating towards zero).
+    /// The remainder (total_income - platform_fee) is the holder_amount. The pro-rata distributions are also
+    /// calculated via integer division. Any remaining dust from the pro-rata split is kept in the contract and
+    /// reported as `dust` in the `DistributionSummary`.
     pub fn execute_distribution(
         env: Env,
         operator: Address,
@@ -935,7 +940,7 @@ impl PilotPayoutSplit {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     extern crate std;
     use pilot_income_token::{PilotIncomeToken, PilotIncomeTokenClient};
@@ -2509,3 +2514,6 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod proptests;

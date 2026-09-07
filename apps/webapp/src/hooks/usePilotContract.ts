@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  buildCycleTimeline,
-  type PilotCycleTimeline,
-} from "@akkuea/shared";
+import { buildCycleTimeline, type PilotCycleTimeline } from "@akkuea/shared";
 import type { ConnectionStatus } from "@/hooks/useLiveUpdates";
 import {
   fetchPilotCycles,

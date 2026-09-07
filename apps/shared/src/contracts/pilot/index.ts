@@ -24,4 +24,7 @@ export type {
 export { PayoutError } from "./payout-split.js";
 export type { EvidenceStatus } from "./payout-split.js";
 export { readEvidence } from "./evidence.js";
-export type { PilotEvidenceRecord, PilotEvidenceStatusTag } from "./evidence.js";
+export type {
+  PilotEvidenceRecord,
+  PilotEvidenceStatusTag,
+} from "./evidence.js";

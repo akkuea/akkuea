@@ -1,7 +1,4 @@
-import type {
-  PropertyInfo,
-  ShareOwnership as SharedShareOwnership,
-} from '@akkuea/shared';
+import type { PropertyInfo, ShareOwnership as SharedShareOwnership } from '@akkuea/shared';
 import {
   ValidationError,
   NotFoundError,

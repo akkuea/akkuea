@@ -1,10 +1,6 @@
 import { z } from 'zod';
 import type { PropertyInfo } from '@akkuea/shared';
-import {
-  stellarAddressSchema,
-  positiveAmountSchema,
-  propertyLocationSchema,
-} from '@akkuea/shared';
+import { stellarAddressSchema, positiveAmountSchema, propertyLocationSchema } from '@akkuea/shared';
 
 /**
  * DTO for creating a new property

@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
   }
 
   const txHash = tx.hash();
-  const hashHex = "0x" + txHash.toString("hex");
+  const hashHex = "0x" + Buffer.from(txHash).toString("hex");
 
   const credentials = Buffer.from(`${appId}:${appCredential}`).toString(
     "base64",

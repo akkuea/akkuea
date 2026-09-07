@@ -1,4 +1,4 @@
-import type { PropertyInfo, ShareOwnership } from "@real-estate-defi/shared";
+import type { PropertyInfo, ShareOwnership } from "@akkuea/shared";
 import { apiClient } from "./client";
 import type { PaginatedResponse, PaginationParams } from "./types";
 

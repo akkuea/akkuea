@@ -21,8 +21,7 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@real-estate-defi/shared": ["../shared/src"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [

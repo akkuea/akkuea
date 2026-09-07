@@ -1,4 +1,4 @@
-import type { KycDocument } from '@real-estate-defi/shared';
+import type { KycDocument } from '@akkuea/shared';
 import { ApiError } from '../errors/ApiError';
 import { kycRepository } from '../repositories/KYCRepository';
 import { userRepository } from '../repositories/UserRepository';

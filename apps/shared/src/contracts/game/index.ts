@@ -1,13 +1,13 @@
-export { PropertyNftClient } from "./property-nft";
+export { PropertyNftClient } from "./property-nft.js";
 export type {
   PropertyMeta,
   PropertyOwner,
   PropertyCoords,
   PropertyState,
   PropertyNftClientInterface,
-} from "./property-nft";
-export { LandTokenClient } from "./land-token";
-export type { DataKey } from "./land-token";
-export { MarketplaceClient } from "./marketplace";
-export { EngineClient } from "./engine";
-export type { StorageKey } from "./engine";
+} from "./property-nft.js";
+export { LandTokenClient } from "./land-token.js";
+export type { DataKey } from "./land-token.js";
+export { MarketplaceClient } from "./marketplace.js";
+export { EngineClient } from "./engine.js";
+export type { StorageKey } from "./engine.js";

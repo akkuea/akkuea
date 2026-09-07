@@ -1,7 +1,4 @@
-import type {
-  Transaction,
-  PaginatedTransactionResponse,
-} from "@real-estate-defi/shared";
+import type { Transaction, PaginatedTransactionResponse } from "@akkuea/shared";
 import { MOCK_WALLET_ADDRESS } from "./users";
 
 const POOL_USDC = "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5";

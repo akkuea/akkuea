@@ -2,7 +2,7 @@ import type {
   PaginationParams,
   PaginationMeta,
   PaginatedResponse,
-} from "../types/pagination";
+} from "../types/pagination.js";
 
 /**
  * Default pagination values

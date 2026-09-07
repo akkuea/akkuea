@@ -5,7 +5,7 @@ import { AlertTriangle, CalendarClock, FileWarning } from "lucide-react";
 import type {
   PilotCycleTimeline,
   PilotCycleTimelineEntry,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 import type { ConnectionStatus } from "@/hooks/useLiveUpdates";
 import {
   Card,

@@ -5,7 +5,7 @@ import {
   nonNegativeAmountSchema,
   basisPointsSchema,
   isoDateSchema,
-} from "./common.schema";
+} from "./common.schema.js";
 
 /**
  * Schema for LendingPool

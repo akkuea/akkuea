@@ -2,8 +2,8 @@ import type {
   RealEstateValuationPayload,
   ValuationRecord,
   ContractValuationPayload,
-} from '@real-estate-defi/shared';
-import { ValidationService } from '@real-estate-defi/shared';
+} from '@akkuea/shared';
+import { ValidationService } from '@akkuea/shared';
 import { ValuationRepository } from '../repositories/ValuationRepository';
 
 const FRESHNESS_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours

@@ -17,7 +17,7 @@ on:
       - '.github/**'
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '24'
   BUN_VERSION: '1.x'
 
 jobs:

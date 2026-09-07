@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import axe from "axe-core";
-import type { PropertyInfo } from "@real-estate-defi/shared";
+import type { PropertyInfo } from "@akkuea/shared";
 
 mock.module("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => (

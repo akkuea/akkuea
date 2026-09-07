@@ -2,7 +2,7 @@ import type {
   LendingPool,
   DepositPosition,
   BorrowPosition,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 
 const MOCK_USER_ADDRESS =
   "GDEMOUSER1234567890AKKUEA00000000000000000000000000000000";

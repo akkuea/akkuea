@@ -10,7 +10,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import type { LendingPool } from "@real-estate-defi/shared";
+import type { LendingPool } from "@akkuea/shared";
 import { Modal, Badge, Button, Toggle } from "@/components/ui";
 import { Form, FormInput } from "@/components/forms";
 import {

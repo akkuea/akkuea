@@ -1,4 +1,4 @@
-import type { User, KycDocument } from "@real-estate-defi/shared";
+import type { User, KycDocument } from "@akkuea/shared";
 
 export const MOCK_WALLET_ADDRESS =
   "GDEMOUSER1234567890AKKUEA00000000000000000000000000000000";

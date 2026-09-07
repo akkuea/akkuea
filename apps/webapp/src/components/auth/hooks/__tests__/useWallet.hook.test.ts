@@ -2,16 +2,9 @@ import "@/test/setup-dom";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
 
-interface MockWalletOption {
-  id: string;
-}
-
 interface MockKit {
-  openModal: (opts: {
-    onWalletSelected: (option: MockWalletOption) => Promise<void> | void;
-    onClosed: () => void;
-  }) => Promise<void>;
-  setWallet: (id: string) => void;
+  authModal: () => Promise<{ address: string }>;
+  selectedModule: { productId: string };
   getAddress: () => Promise<{ address: string }>;
   getNetwork: () => Promise<{ networkPassphrase: string }>;
 }
@@ -53,11 +46,11 @@ function resetStore() {
 
 function makeMockKit(overrides: Partial<MockKit> = {}): MockKit {
   return {
-    setWallet: () => {},
     getAddress: async () => ({ address: "GADDRESSRECONNECTED" }),
     getNetwork: async () => ({ networkPassphrase: TEST_NETWORK_PASSPHRASE }),
-    openModal: async (opts) => {
-      opts.onClosed();
+    selectedModule: { productId: "freighter" },
+    authModal: async () => {
+      throw { code: -1, message: "The user closed the modal." };
     },
     ...overrides,
   };
@@ -98,9 +91,7 @@ describe("useWallet - reconnection flow", () => {
       pendingAction,
     });
     mockKit = makeMockKit({
-      openModal: async (opts) => {
-        await opts.onWalletSelected({ id: "freighter" });
-      },
+      authModal: async () => ({ address: "GADDRESSRECONNECTED" }),
     });
 
     const { result } = renderHook(() => useWallet());
@@ -124,9 +115,7 @@ describe("useWallet - reconnection flow", () => {
       pendingAction,
     });
     mockKit = makeMockKit({
-      openModal: async (opts) => {
-        await opts.onWalletSelected({ id: "freighter" });
-      },
+      authModal: async () => ({ address: "GADDRESSRECONNECTED" }),
     });
 
     const { result } = renderHook(() => useWallet());
@@ -143,12 +132,9 @@ describe("useWallet - reconnection flow", () => {
   it("a failed reconnect attempt (resetSession) does not clear isWalletDisconnected", async () => {
     useAuthenticationStore.setState({ isWalletDisconnected: true });
     mockKit = makeMockKit({
-      openModal: async (opts) => {
-        // Selection succeeds but the address lookup fails, forcing the
-        // onWalletSelected catch branch (store.resetSession()).
-        await opts.onWalletSelected({ id: "freighter" });
-      },
-      getAddress: async () => {
+      // A genuine kit failure (not a user-cancelled modal) after selection
+      // forces the catch branch (store.resetSession()).
+      authModal: async () => {
         throw new Error("kit unavailable");
       },
     });

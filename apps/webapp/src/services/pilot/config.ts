@@ -1,4 +1,4 @@
-import { CONTRACT_IDS, API_ENDPOINTS } from "@real-estate-defi/shared";
+import { CONTRACT_IDS, API_ENDPOINTS } from "@akkuea/shared";
 import { Networks } from "@stellar/stellar-sdk";
 
 /**

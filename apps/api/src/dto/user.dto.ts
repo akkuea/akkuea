@@ -4,7 +4,7 @@ import {
   kycStatusSchema,
   kycTierSchema,
   isoDateSchema,
-} from '@real-estate-defi/shared';
+} from '@akkuea/shared';
 
 /**
  * Create user request schema

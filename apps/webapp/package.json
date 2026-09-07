@@ -33,10 +33,10 @@
     "lucide-react": "^0.468.0",
     "next": "16.2.11",
     "next-intl": "4.14.2",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-hook-form": "^7.71.1",
-    "recharts": "2.15.3",
+    "recharts": "2.15.4",
     "smart-account-kit": "0.7.0",
     "zod": "^3.25.76",
     "zustand": "^5.0.11"

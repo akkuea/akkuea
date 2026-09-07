@@ -2,7 +2,7 @@ import type {
   LendingPool,
   DepositPosition,
   BorrowPosition,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 import { apiClient } from "./client";
 
 /**

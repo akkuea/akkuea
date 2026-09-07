@@ -41,7 +41,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@creit.tech/stellar-wallets-kit": "^1.9.5",
+    "@creit.tech/stellar-wallets-kit": "^2.6.0",
     "@hookform/resolvers": "^5.9.1",
     "@testing-library/jest-dom": "^6.10.0",
     "@testing-library/react": "^16.3.2",
@@ -52,10 +52,10 @@
     "eslint": "^9.39.5",
     "jest": "^30.4.2",
     "react-hook-form": "^7.85.0",
-    "@stellar/stellar-sdk": "^13.3.0"
+    "@stellar/stellar-sdk": "^17.0.1"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "packageManager": "bun@1.2.23",
   "overrides": {

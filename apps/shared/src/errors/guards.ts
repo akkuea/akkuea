@@ -1,5 +1,5 @@
-import { AppError } from "./AppError";
-import type { SerializedError } from "./AppError";
+import { AppError } from "./AppError.js";
+import type { SerializedError } from "./AppError.js";
 import {
   ValidationError,
   NotFoundError,
@@ -8,8 +8,8 @@ import {
   BlockchainError,
   RateLimitError,
   NotImplementedError,
-} from "./types";
-import { ErrorCode } from "./codes";
+} from "./types.js";
+import { ErrorCode } from "./codes.js";
 
 /**
  * Check if value is an AppError (uses duck-typing for cross-workspace compatibility)

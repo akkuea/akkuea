@@ -5,7 +5,7 @@ import type {
   LendingPool,
   DepositPosition,
   BorrowPosition,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 import { lendingApi } from "@/services/api";
 import { useLiveUpdates, type ConnectionStatus } from "@/hooks/useLiveUpdates";
 import { TIMEOUTS } from "@/lib/constants";

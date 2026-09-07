@@ -1,4 +1,4 @@
-import { buildCycleTimeline } from "@real-estate-defi/shared";
+import { buildCycleTimeline } from "@akkuea/shared";
 import type {
   PilotEvidenceDetail,
   PilotHoldings,

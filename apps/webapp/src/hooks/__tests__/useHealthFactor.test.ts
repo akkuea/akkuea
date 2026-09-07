@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { useHealthFactor } from "../useHealthFactor";
-import type { BorrowPosition } from "@real-estate-defi/shared";
-import { createBorrowPosition } from "@real-estate-defi/shared";
+import type { BorrowPosition } from "@akkuea/shared";
+import { createBorrowPosition } from "@akkuea/shared";
 
 /**
  * useHealthFactor is a pure useMemo hook - calling it with a React ref is

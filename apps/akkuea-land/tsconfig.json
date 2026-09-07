@@ -17,7 +17,6 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@akkuea/shared": ["../shared/src"],
       "@webapp/*": ["../webapp/src/*"]
     },
     "plugins": [

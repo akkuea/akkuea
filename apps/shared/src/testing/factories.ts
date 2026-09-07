@@ -12,7 +12,7 @@ import type {
   BorrowPosition,
   Transaction,
   OraclePrice,
-} from "../schemas";
+} from "../schemas/index.js";
 import {
   VALID_STELLAR_ADDRESS,
   VALID_STELLAR_ADDRESS_2,
@@ -21,7 +21,7 @@ import {
   VALID_TX_HASH,
   BASE_DATE,
   UPDATED_DATE,
-} from "./constants";
+} from "./constants.js";
 
 let _seq = 0;
 /** Returns a deterministic UUID with an incrementing suffix to avoid collisions. */

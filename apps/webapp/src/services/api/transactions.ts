@@ -2,7 +2,7 @@ import type {
   Transaction,
   TransactionQueryParams,
   PaginatedTransactionResponse,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 import { apiClient } from "./client";
 
 /**

@@ -34,11 +34,9 @@ function extractWalletAddress(obj: any): string | undefined {
 }
 
 let mockDbStore: any[] = [];
-const savedDbProps: string[] = [];
 
 beforeEach(() => {
   mockDbStore = [];
-  savedDbProps.length = 0;
 
   // Mock whitelist service (re-apply after each mock.restore)
   mock.module('../services/WhitelistService', () => {
@@ -49,12 +47,6 @@ beforeEach(() => {
       },
     };
   });
-
-  for (const prop of ['query', 'insert', 'update', 'delete']) {
-    if (Object.prototype.hasOwnProperty.call(db, prop)) {
-      savedDbProps.push(prop);
-    }
-  }
 
   (db as any).query = {
     pilotWhitelistRequests: {
@@ -98,11 +90,14 @@ beforeEach(() => {
 
 afterEach(() => {
   mock.restore();
-  for (const prop of savedDbProps) {
-    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+  // Direct property assignment on the db Proxy mutates _dbTarget, which
+  // persists across test files in the same bun process. mock.restore()
+  // only undoes mock() calls, not these mutations, so delete them
+  // unconditionally: beforeEach always re-populates all four from scratch,
+  // so there's no prior legitimate state to preserve.
+  for (const prop of ['query', 'insert', 'update', 'delete']) {
     delete (db as any)[prop];
   }
-  savedDbProps.length = 0;
 });
 
 async function postWhitelistRequest(wallet: string, name = 'Test User', bypassRateLimit = true) {
@@ -132,7 +127,7 @@ describe('Whitelist manual verification', () => {
     const res = await postWhitelistRequest(wallet);
     expect(res.status).toBe(200);
 
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.success).toBe(true);
     expect(body.data.status).toBe('pending');
     expect(body.data.walletAddress).toBe(wallet);
@@ -200,7 +195,7 @@ describe('Whitelist manual verification', () => {
     const res = await postWhitelistRequest(WALLET_B, 'New Submission');
     expect(res.status).toBe(200);
 
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.data.status).toBe('pending');
     expect(body.data.fullName).toBe('New Submission');
 
@@ -226,7 +221,7 @@ describe('Whitelist manual verification', () => {
       new Request(`http://localhost/pilot/whitelist/status/${WALLET_56}`),
     );
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.status).toBe('none');
   });
 

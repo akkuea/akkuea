@@ -9,7 +9,7 @@
 import { describe, test, expect, afterAll } from 'bun:test';
 import { ValuationRepository } from '../repositories/ValuationRepository';
 import { closeDatabaseConnection } from '../db';
-import type { ValuationRecord } from '@real-estate-defi/shared';
+import type { ValuationRecord } from '@akkuea/shared';
 import { db } from '../db';
 import { valuations } from '../db/schema/valuations';
 import { eq } from 'drizzle-orm';

@@ -2,7 +2,7 @@ import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
 import { Elysia } from 'elysia';
 import { propertyRoutes } from '../routes/properties';
 import jwt from 'jsonwebtoken';
-import { VALID_UUID } from '@real-estate-defi/shared';
+import { VALID_UUID } from '@akkuea/shared';
 const TEST_WALLET = 'GCVCMAB2RFWXYUOURL7XY3MW6LZUK6FQ5T6E7UFRHH4Y6OL43WER4QYF'; // Unique wallet for property tests
 const NON_EXISTENT_UUID = crypto.randomUUID();
 import { userRepository } from '../repositories/UserRepository';

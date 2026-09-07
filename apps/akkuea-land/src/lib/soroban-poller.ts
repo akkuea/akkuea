@@ -25,10 +25,9 @@ function parseEvent(
   const topics = raw.topic;
 
   const eventTypeTopic = topics[0];
-  if (!eventTypeTopic || eventTypeTopic.switch().name !== "scvSymbol")
-    return null;
+  if (!eventTypeTopic || eventTypeTopic.type !== "scvSymbol") return null;
 
-  const eventType = eventTypeTopic.sym().toString();
+  const eventType = eventTypeTopic.sym.toString();
 
   const base = {
     ledger: raw.ledger,
@@ -39,10 +38,10 @@ function parseEvent(
 
   const str = (v: xdr.ScVal | null): string => {
     if (!v) return "";
-    if (v.switch().name === "scvString") return v.str().toString();
-    if (v.switch().name === "scvSymbol") return v.sym().toString();
-    if (v.switch().name === "scvAddress") return v.address().toString();
-    if (v.switch().name === "scvI128") return v.i128().lo().toString();
+    if (v.type === "scvString") return v.str.toString();
+    if (v.type === "scvSymbol") return v.sym.toString();
+    if (v.type === "scvAddress") return v.address.toString();
+    if (v.type === "scvI128") return v.i128.lo.toString();
     return "";
   };
 

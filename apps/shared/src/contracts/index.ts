@@ -5,9 +5,9 @@ export {
   createNodeContractSigner,
   resolveSorobanRpcUrl,
   type SorobanClientConfig,
-} from "./clientConfig";
-export { RealEstateTokenContractClient } from "./realEstateToken";
-export { DefiLendingContractClient } from "./defiLending";
+} from "./clientConfig.js";
+export { RealEstateTokenContractClient } from "./realEstateToken.js";
+export { DefiLendingContractClient } from "./defiLending.js";
 export {
   DefindexVaultContractClient,
   DefindexVaultError,
@@ -18,6 +18,6 @@ export {
   type VaultDepositArgs,
   type VaultMethodOptions,
   type VaultWithdrawArgs,
-} from "./defindexVault";
-export * from "./game";
-export * from "./pilot";
+} from "./defindexVault.js";
+export * from "./game/index.js";
+export * from "./pilot/index.js";

@@ -10,8 +10,8 @@ import {
   createBorrowPosition,
   createTransaction,
   createKycDocument,
-} from "./factories";
-import { VALID_STELLAR_ADDRESS, VALID_STELLAR_ADDRESS_2 } from "./constants";
+} from "./factories.js";
+import { VALID_STELLAR_ADDRESS, VALID_STELLAR_ADDRESS_2 } from "./constants.js";
 
 // ---------------------------------------------------------------------------
 // Miami property tokenisation scenario

@@ -3,7 +3,7 @@ import {
   stellarAddressSchema,
   isoDateSchema,
   positiveAmountSchema,
-} from "./common.schema";
+} from "./common.schema.js";
 
 /**
  * KYC status enum

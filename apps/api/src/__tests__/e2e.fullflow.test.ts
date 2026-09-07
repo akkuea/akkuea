@@ -379,7 +379,7 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
       );
 
       expect(response.status).toBe(200);
-      const position = await response.json();
+      const position = (await response.json()) as any;
       expect(position.poolId).toBe(poolId);
       expect(position.borrowerId).toBe(buyerKycOkId);
       expect(parseFloat(position.principal)).toBe(300);

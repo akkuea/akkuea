@@ -8,7 +8,7 @@ export {
   isoDateSchema,
   unixTimestampSchema,
   transactionHashSchema,
-} from "./common.schema";
+} from "./common.schema.js";
 
 // Property schemas and types
 export {
@@ -23,7 +23,7 @@ export {
   type PropertyInfoInput,
   type PropertyInfoOutput,
   type ShareOwnershipInput,
-} from "./property.schema";
+} from "./property.schema.js";
 
 // Lending schemas and types
 export {
@@ -36,7 +36,7 @@ export {
   type LendingPoolInput,
   type DepositPositionInput,
   type BorrowPositionInput,
-} from "./lending.schema";
+} from "./lending.schema.js";
 
 // Transaction schemas and types
 export {
@@ -55,7 +55,7 @@ export {
   type TransactionInput,
   type TransactionFilterInput,
   type TransactionQueryParamsInput,
-} from "./transaction.schema";
+} from "./transaction.schema.js";
 
 // User schemas and types
 export {
@@ -72,4 +72,4 @@ export {
   type UserInput,
   type KycDocumentInput,
   type OraclePriceInput,
-} from "./user.schema";
+} from "./user.schema.js";

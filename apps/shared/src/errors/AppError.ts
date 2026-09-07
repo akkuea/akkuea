@@ -1,4 +1,4 @@
-import { ErrorCode, errorCodeToStatus } from "./codes";
+import { ErrorCode, errorCodeToStatus } from "./codes.js";
 
 /**
  * Serialized error format

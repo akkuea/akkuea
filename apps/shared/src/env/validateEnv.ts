@@ -4,7 +4,7 @@ import {
   webappEnvSchema,
   type ApiEnv,
   type WebappEnv,
-} from "./schemas";
+} from "./schemas.js";
 
 export class EnvValidationError extends Error {
   public readonly issues: string[];

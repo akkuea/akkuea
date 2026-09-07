@@ -3,7 +3,7 @@ import type {
   RiskLevel,
   RiskStateTransition,
   LiquidationReadiness,
-} from '@real-estate-defi/shared';
+} from '@akkuea/shared';
 import type { BorrowPosition } from '../db/schema';
 import { RiskMonitoringRepository } from '../repositories/RiskMonitoringRepository';
 

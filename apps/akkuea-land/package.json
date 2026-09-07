@@ -14,7 +14,7 @@
     "next": "16.2.11",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "@stellar/stellar-sdk": "^14.6.1",
+    "@stellar/stellar-sdk": "^17.0.1",
     "@akkuea/shared": "workspace:*",
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",
@@ -22,7 +22,7 @@
     "react-hook-form": "^7.71.1",
     "zod": "^3.25.76",
     "@hookform/resolvers": "^3.10.0",
-    "@creit.tech/stellar-wallets-kit": "^1.9.5",
+    "@creit.tech/stellar-wallets-kit": "^2.6.0",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

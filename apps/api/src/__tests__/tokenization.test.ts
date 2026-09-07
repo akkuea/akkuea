@@ -3,7 +3,7 @@ import { Elysia } from 'elysia';
 import { propertyRoutes } from '../routes/properties';
 import { TokenizationService } from '../services/TokenizationService';
 import { logger } from '../services/logger';
-import { VALID_UUID as PROPERTY_ID } from '@real-estate-defi/shared';
+import { VALID_UUID as PROPERTY_ID } from '@akkuea/shared';
 const OWNER_WALLET = 'GBQ6M5OBU64ATKSRH4OKW2IFQCB5R6Q73F4VMK6KQ37C5G6GQ6FJTYA3';
 const ADMIN_WALLET = 'GC3C4X5R7N2X7CII7SPRD4U6ZLKZKAJZDW6N4Q4QAV3FJ7Q3N7GJ5P6L';
 const CONTRACT_ID = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4';

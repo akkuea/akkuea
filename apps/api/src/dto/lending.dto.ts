@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { stellarAddressSchema, positiveAmountSchema } from '@real-estate-defi/shared';
+import { stellarAddressSchema, positiveAmountSchema } from '@akkuea/shared';
 
 /**
  * Decimal string that allows zero (for rates/factors)

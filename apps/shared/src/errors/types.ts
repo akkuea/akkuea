@@ -1,5 +1,5 @@
-import { AppError } from "./AppError";
-import { ErrorCode } from "./codes";
+import { AppError } from "./AppError.js";
+import { ErrorCode } from "./codes.js";
 
 /**
  * Validation error with field-level details

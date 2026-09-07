@@ -1,5 +1,5 @@
 import { describe, expect, it, spyOn, beforeEach, afterEach } from 'bun:test';
-import type { PropertyInfo } from '@real-estate-defi/shared';
+import type { PropertyInfo } from '@akkuea/shared';
 import { MarketplaceController } from '../controllers/MarketplaceController';
 import { propertyRepository, type PropertyListRow } from '../repositories/PropertyRepository';
 import { userRepository } from '../repositories/UserRepository';

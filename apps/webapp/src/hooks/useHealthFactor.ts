@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { BorrowPosition } from "@real-estate-defi/shared";
+import type { BorrowPosition } from "@akkuea/shared";
 
 export type HealthFactorStatus = "safe" | "warning" | "critical" | "none";
 

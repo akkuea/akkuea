@@ -20,6 +20,7 @@ import {
   TransactionBuilder,
   nativeToScVal,
   rpc as SorobanRpc,
+  scValToNative,
   xdr,
 } from "@stellar/stellar-sdk";
 import gameContractsTestnet from "@akkuea/shared/game-contracts.testnet.json";
@@ -439,7 +440,8 @@ export async function fetchLandBalance(address: string): Promise<string> {
     throw new Error("No return value from balance_of");
   }
 
-  return sim.result.retval.i128()?.toString() ?? "0";
+  if (sim.result.retval.type !== "scvI128") return "0";
+  return scValToNative(sim.result.retval).toString();
 }
 
 // ── Transaction submission & polling ─────────────────────────────────────────

@@ -2,6 +2,7 @@
   "name": "@akkuea/shared",
   "version": "1.0.0",
   "description": "Shared utilities and types for Real Estate DeFi platform",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -48,7 +49,7 @@
     "typescript-eslint": "^8.57.0"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "^14.2.0",
+    "@stellar/stellar-sdk": "^17.0.1",
     "zod": "^3.25.76"
   },
   "resolutions": {

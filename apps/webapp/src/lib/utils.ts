@@ -1,5 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
-import { STELLAR_NETWORKS } from "@real-estate-defi/shared";
+import { STELLAR_NETWORKS } from "@akkuea/shared";
 
 export function cn(...inputs: ClassValue[]) {
   return clsx(inputs);

@@ -49,7 +49,10 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
       })
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as {
+      success: boolean;
+      data: { id: string; walletAddress: string; status: string };
+    };
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
     expect(data.data.walletAddress).toBe(investorKeypair.publicKey());
@@ -71,7 +74,7 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
       body: JSON.stringify({ action: 'approve' })
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as { success: boolean; txHash: string };
     expect(response.status).toBe(200);
     expect(data.success).toBe(true);
     expect(data.txHash).toBeDefined();
@@ -178,13 +181,13 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
     const feeRecipientKeySymbol = xdr.LedgerKey.contractData(new xdr.LedgerKeyContractData({
       contract: payoutContractAddress,
       key: xdr.ScVal.scvSymbol('PlatformFeeRecipient'),
-      durability: xdr.ContractDataDurability.persistent(),
+      durability: xdr.ContractDataDurability.persistent,
     }));
     
     const feeRecipientKeyVec = xdr.LedgerKey.contractData(new xdr.LedgerKeyContractData({
       contract: payoutContractAddress,
       key: xdr.ScVal.scvVec([xdr.ScVal.scvSymbol('PlatformFeeRecipient')]),
-      durability: xdr.ContractDataDurability.persistent(),
+      durability: xdr.ContractDataDurability.persistent,
     }));
 
     const ledgerEntriesRes = await server.getLedgerEntries(feeRecipientKeySymbol, feeRecipientKeyVec);
@@ -192,7 +195,10 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
     const entry = ledgerEntriesRes.entries[0];
     expect(entry).toBeDefined();
     if (!entry) throw new Error('Platform fee recipient entry not found');
-    const platformFeeRecipient = scValToNative(entry.val.contractData().val());
+    if (entry.val.type !== 'contractData') {
+      throw new Error('Platform fee recipient ledger entry is not contract data');
+    }
+    const platformFeeRecipient = scValToNative(entry.val.contractData.val);
 
     // 2. Read pro-rata recipients (holders) from income token via getter simulation
     const incomeTokenContract = new Contract(PILOT_INCOME_TOKEN_ID);

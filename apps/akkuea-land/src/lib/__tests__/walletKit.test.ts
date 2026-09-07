@@ -21,13 +21,11 @@ import {
 const ADDRESS = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
 
 const mockGetAddress = vi.fn();
-const mockOpenModal = vi.fn();
-const mockSetWallet = vi.fn();
+const mockAuthModal = vi.fn();
 
 const stubKit: SelectableWalletKit = {
   getAddress: mockGetAddress,
-  openModal: mockOpenModal,
-  setWallet: mockSetWallet,
+  authModal: mockAuthModal,
 };
 
 beforeEach(() => {
@@ -41,40 +39,28 @@ describe("ensureWalletSelected", () => {
     const address = await ensureWalletSelected(stubKit);
 
     expect(address).toBe(ADDRESS);
-    expect(mockOpenModal).not.toHaveBeenCalled();
-    expect(mockSetWallet).not.toHaveBeenCalled();
+    expect(mockAuthModal).not.toHaveBeenCalled();
   });
 
-  it("opens the picker, sets the chosen wallet, and returns its address when none is selected", async () => {
-    mockGetAddress
-      .mockRejectedValueOnce(new Error("no wallet selected"))
-      .mockResolvedValueOnce({ address: ADDRESS });
-    mockOpenModal.mockImplementation(
-      (params: Parameters<SelectableWalletKit["openModal"]>[0]) => {
-        params.onWalletSelected({ id: "freighter" });
-        return Promise.resolve();
-      },
-    );
+  it("opens the picker and returns the selected wallet's address when none is selected", async () => {
+    mockGetAddress.mockRejectedValueOnce(new Error("no wallet selected"));
+    mockAuthModal.mockResolvedValueOnce({ address: ADDRESS });
 
     const address = await ensureWalletSelected(stubKit);
 
-    expect(mockOpenModal).toHaveBeenCalledTimes(1);
-    expect(mockSetWallet).toHaveBeenCalledWith("freighter");
+    expect(mockAuthModal).toHaveBeenCalledTimes(1);
     expect(address).toBe(ADDRESS);
   });
 
   it("returns null when the user closes the picker without selecting", async () => {
     mockGetAddress.mockRejectedValue(new Error("no wallet selected"));
-    mockOpenModal.mockImplementation(
-      (params: Parameters<SelectableWalletKit["openModal"]>[0]) => {
-        params.onClosed?.(new Error("modal closed"));
-        return Promise.resolve();
-      },
-    );
+    mockAuthModal.mockRejectedValue({
+      code: -1,
+      message: "The user closed the modal.",
+    });
 
     const address = await ensureWalletSelected(stubKit);
 
     expect(address).toBeNull();
-    expect(mockSetWallet).not.toHaveBeenCalled();
   });
 });

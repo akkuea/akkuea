@@ -1,4 +1,4 @@
-import type { User, Transaction, KycDocument } from "@real-estate-defi/shared";
+import type { User, Transaction, KycDocument } from "@akkuea/shared";
 import { apiClient } from "./client";
 
 /**

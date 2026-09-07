@@ -1,8 +1,8 @@
 // Base error
-export { AppError, type SerializedError } from "./AppError";
+export { AppError, type SerializedError } from "./AppError.js";
 
 // Error codes
-export { ErrorCode, errorCodeToStatus } from "./codes";
+export { ErrorCode, errorCodeToStatus } from "./codes.js";
 
 // Specific error types
 export {
@@ -17,7 +17,7 @@ export {
   RateLimitError,
   NotImplementedError,
   type FieldError,
-} from "./types";
+} from "./types.js";
 
 // Type guards
 export {
@@ -32,4 +32,4 @@ export {
   hasErrorCode,
   isSerializedError,
   toAppError,
-} from "./guards";
+} from "./guards.js";

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ClipboardCheck, ExternalLink, Hash, Wallet } from "lucide-react";
-import type { PilotEvidenceStatus } from "@real-estate-defi/shared";
+import type { PilotEvidenceStatus } from "@akkuea/shared";
 import {
   Button,
   Card,

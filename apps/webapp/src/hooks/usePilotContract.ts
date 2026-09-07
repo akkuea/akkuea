@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   buildCycleTimeline,
   type PilotCycleTimeline,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 import type { ConnectionStatus } from "@/hooks/useLiveUpdates";
 import {
   fetchPilotCycles,

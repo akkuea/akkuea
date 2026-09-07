@@ -41,7 +41,7 @@ import {
   staggerItem,
   fadeInUp,
 } from "@/lib/animations";
-import type { LendingPool } from "@real-estate-defi/shared";
+import type { LendingPool } from "@akkuea/shared";
 import { useLendingPools } from "@/hooks/useLendingPools";
 import { useHealthFactor } from "@/hooks/useHealthFactor";
 import {

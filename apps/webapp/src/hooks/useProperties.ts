@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { PropertyInfo } from "@real-estate-defi/shared";
+import type { PropertyInfo } from "@akkuea/shared";
 import { propertyApi } from "@/services/api/properties";
 import { useLiveUpdates, type ConnectionStatus } from "@/hooks/useLiveUpdates";
 import { useAsyncState } from "@/hooks/useAsyncState";

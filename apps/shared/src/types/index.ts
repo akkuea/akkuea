@@ -4,12 +4,12 @@ export type {
   PropertyDocument,
   PropertyInfo,
   ShareOwnership,
-} from "../schemas/property.schema";
+} from "../schemas/property.schema.js";
 export type {
   LendingPool,
   DepositPosition,
   BorrowPosition,
-} from "../schemas/lending.schema";
+} from "../schemas/lending.schema.js";
 export type {
   TransactionType,
   TransactionStatus,
@@ -17,17 +17,17 @@ export type {
   TransactionFilter,
   TransactionQueryParams,
   PaginatedTransactionResponse,
-} from "../schemas/transaction.schema";
+} from "../schemas/transaction.schema.js";
 export type {
   KycStatus,
   KycTier,
   KycDocument,
   User,
   OraclePrice,
-} from "../schemas/user.schema";
+} from "../schemas/user.schema.js";
 
 // Observability contracts
-export * from "./observability";
+export * from "./observability.js";
 
 // Real-estate valuation types
 export type ValuationMethodology =
@@ -77,9 +77,9 @@ export interface ContractValuationPayload {
   sourceHash: string;
   confidence: number;
 }
-export * from "./risk";
-export * from "./pagination";
-export * from "./api";
+export * from "./risk.js";
+export * from "./pagination.js";
+export * from "./api.js";
 export type {
   GameEvent,
   GameEventType,
@@ -88,7 +88,7 @@ export type {
   PropertyListedEvent,
   PropertyTransferredEvent,
   RentCollectedEvent,
-} from "./game-events";
+} from "./game-events.js";
 
 // ─── Akkuea Land game types (Cycle 5) ────────────────────────────────────────
 export type {
@@ -103,7 +103,7 @@ export type {
   Listing,
   PropertyImprovedEvent,
   RentalClaimedEvent,
-} from "./game";
+} from "./game.js";
 
 export {
   STARTING_BALANCE,
@@ -119,4 +119,4 @@ export {
   MIN_LISTING_PRICE,
   IMPROVEMENT_MULTIPLIER,
   IMPROVEMENT_UPGRADE_COST,
-} from "./game";
+} from "./game.js";

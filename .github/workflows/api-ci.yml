@@ -13,7 +13,7 @@ on:
       - '.github/workflows/api-ci.yml'
 
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   BUN_VERSION: '1.x'
 
 jobs:

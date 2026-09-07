@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { PropertyInfo } from "@real-estate-defi/shared";
+import type { PropertyInfo } from "@akkuea/shared";
 import {
   filterAndSortProperties,
   MARKETPLACE_ALL_REGIONS,

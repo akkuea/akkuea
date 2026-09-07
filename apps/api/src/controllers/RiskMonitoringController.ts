@@ -1,4 +1,4 @@
-import type { PositionHealth, LiquidationReadiness } from '@real-estate-defi/shared';
+import type { PositionHealth, LiquidationReadiness } from '@akkuea/shared';
 import type { BorrowPosition } from '../db/schema';
 import { RiskMonitoringService } from '../services/RiskMonitoringService';
 import { lendingRepository } from '../repositories/LendingRepository';

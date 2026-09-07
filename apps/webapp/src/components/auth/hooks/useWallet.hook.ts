@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
-import { WalletNetwork } from "@creit.tech/stellar-wallets-kit";
+import { Networks } from "@creit.tech/stellar-wallets-kit";
 import { useAuthenticationStore } from "../store/data/slices/authentication.slice";
 import { initializeWalletKit, getWalletKit } from "../constant/walletKit";
 import { isSignableWalletProvider, walletRegistry } from "@/services/wallet";
@@ -36,9 +36,7 @@ export const useWallet = () => {
 
   useEffect(() => {
     const network =
-      store.network === "mainnet"
-        ? WalletNetwork.PUBLIC
-        : WalletNetwork.TESTNET;
+      store.network === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
     initializeWalletKit(network);
   }, [store.network]);
 
@@ -52,7 +50,7 @@ export const useWallet = () => {
   }, []);
 
   /**
-   * Passive reconnection check: the Stellar Wallets Kit (v1.9.5) exposes no
+   * Passive reconnection check: the Stellar Wallets Kit exposes no
    * onAccountChange/onNetworkChange subscription, so the only way to notice an
    * extension lock, revoked session, or out-of-band network switch is to probe
    * it. We probe on window focus rather than on an interval - cheap, and it
@@ -81,9 +79,7 @@ export const useWallet = () => {
         ]);
 
         const expectedPassphrase =
-          store.network === "mainnet"
-            ? WalletNetwork.PUBLIC
-            : WalletNetwork.TESTNET;
+          store.network === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
 
         if (
           address !== store.address ||
@@ -112,34 +108,32 @@ export const useWallet = () => {
     try {
       store.setIsConnecting(true);
 
-      await kit.openModal({
-        onWalletSelected: async (option) => {
-          try {
-            kit.setWallet(option.id);
-            store.setSelectedWalletId(option.id);
+      const { address } = await kit.authModal();
+      store.setSelectedWalletId(kit.selectedModule.productId);
+      store.setAddress(address);
+      store.setIsConnected(true);
 
-            const { address } = await kit.getAddress();
-            store.setAddress(address);
-            store.setIsConnected(true);
-
-            const result = await fetchBalance(address, store.network);
-            applyBalanceResult(result, store);
-          } catch (error) {
-            console.error("Error connecting wallet:", error);
-            // Same reasoning as connectWith(): don't wipe the reconnection
-            // banner via a full reset() when the (re)connect attempt itself
-            // is what failed.
-            store.resetSession();
-          } finally {
-            store.setIsConnecting(false);
-          }
-        },
-        onClosed: () => {
-          store.setIsConnecting(false);
-        },
-      });
+      const result = await fetchBalance(address, store.network);
+      applyBalanceResult(result, store);
     } catch (error) {
-      console.error("Error opening modal:", error);
+      // authModal() rejects with { code: -1, message: "The user closed the
+      // modal." } when the user dismisses the picker without selecting a
+      // wallet - that's not a failure, just a no-op like the old onClosed.
+      const userClosedModal =
+        typeof error === "object" &&
+        error !== null &&
+        "message" in error &&
+        (error as { message?: unknown }).message ===
+          "The user closed the modal.";
+
+      if (!userClosedModal) {
+        console.error("Error connecting wallet:", error);
+        // Same reasoning as connectWith(): don't wipe the reconnection
+        // banner via a full reset() when the (re)connect attempt itself
+        // is what failed.
+        store.resetSession();
+      }
+    } finally {
       store.setIsConnecting(false);
     }
   }, [store]);

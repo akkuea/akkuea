@@ -4,11 +4,11 @@ export type {
   ApiPaginationParams as PaginationParams,
   ApiResponse,
   RequestConfig,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 
 export {
   ApiAuthenticationError as AuthenticationError,
   ApiNetworkError as NetworkError,
   ApiRequestError,
   ApiTimeoutError as TimeoutError,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";

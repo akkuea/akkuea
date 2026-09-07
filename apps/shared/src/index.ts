@@ -1,17 +1,17 @@
-export * from "./types";
-export * from "./schemas";
-export * from "./utils";
-export * from "./constants";
-export * from "./errors";
-export * from "./testing";
+export * from "./types/index.js";
+export * from "./schemas/index.js";
+export * from "./utils/index.js";
+export * from "./constants/index.js";
+export * from "./errors/index.js";
+export * from "./testing/index.js";
 export {
   buildContractClientOptions,
   createNodeContractSigner,
   resolveSorobanRpcUrl,
   type SorobanClientConfig,
-} from "./contracts/clientConfig";
-export { RealEstateTokenContractClient } from "./contracts/realEstateToken";
-export { DefiLendingContractClient } from "./contracts/defiLending";
+} from "./contracts/clientConfig.js";
+export { RealEstateTokenContractClient } from "./contracts/realEstateToken.js";
+export { DefiLendingContractClient } from "./contracts/defiLending.js";
 export {
   DefindexVaultContractClient,
   DefindexVaultError,
@@ -22,11 +22,11 @@ export {
   type VaultDepositArgs,
   type VaultMethodOptions,
   type VaultWithdrawArgs,
-} from "./contracts/defindexVault";
-export * from "./contracts/game";
-export * from "./contracts/pilot";
-export * from "./utils/stellar";
-export * from "./utils/validation";
-export * from "./utils/format";
-export * from "./utils/bigintMath";
-export * from "./env";
+} from "./contracts/defindexVault.js";
+export * from "./contracts/game/index.js";
+export * from "./contracts/pilot/index.js";
+export * from "./utils/stellar.js";
+export * from "./utils/validation.js";
+export * from "./utils/format.js";
+export * from "./utils/bigintMath.js";
+export * from "./env/index.js";

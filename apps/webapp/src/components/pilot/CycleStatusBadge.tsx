@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import type { PilotCycleStatus } from "@real-estate-defi/shared";
+import type { PilotCycleStatus } from "@akkuea/shared";
 import { Badge } from "@/components/ui";
 
 /**

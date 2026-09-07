@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import type { PropertyInfo } from '@real-estate-defi/shared';
+import type { PropertyInfo } from '@akkuea/shared';
 import {
   stellarAddressSchema,
   positiveAmountSchema,
   propertyLocationSchema,
-} from '@real-estate-defi/shared';
+} from '@akkuea/shared';
 
 /**
  * DTO for creating a new property

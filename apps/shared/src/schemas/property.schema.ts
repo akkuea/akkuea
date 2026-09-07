@@ -4,7 +4,7 @@ import {
   positiveAmountSchema,
   isoDateSchema,
   percentageSchema,
-} from "./common.schema";
+} from "./common.schema.js";
 
 /**
  * Schema for property location

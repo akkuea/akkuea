@@ -5,7 +5,7 @@ import type {
   PropertyInfo,
   BorrowPosition,
   DepositPosition,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 import { propertyApi } from "@/services/api/properties";
 import { lendingApi } from "@/services/api/lending";
 import { userApi } from "@/services/api/users";

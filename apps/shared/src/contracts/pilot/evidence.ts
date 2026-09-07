@@ -2,7 +2,7 @@ import { scValToNative } from "@stellar/stellar-sdk";
 import type {
   EvidenceStatus,
   PilotPayoutSplitClientInterface,
-} from "./payout-split";
+} from "./payout-split.js";
 
 /**
  * Reading a cycle's evidence record.

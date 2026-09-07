@@ -1,7 +1,7 @@
 import type {
   PropertyInfo,
   ShareOwnership as SharedShareOwnership,
-} from '@real-estate-defi/shared';
+} from '@akkuea/shared';
 import {
   ValidationError,
   NotFoundError,
@@ -9,7 +9,7 @@ import {
   AuthorizationError,
   parseDecimalStringToBigInt,
   formatBigIntAsDecimalString,
-} from '@real-estate-defi/shared';
+} from '@akkuea/shared';
 import { and, eq } from 'drizzle-orm';
 import { logger } from '../services/logger';
 import { db } from '../db';

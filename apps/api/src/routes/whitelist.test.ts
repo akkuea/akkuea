@@ -14,7 +14,6 @@ process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
 describe('Whitelist API Routes', () => {
   const mockWallet = 'GDK7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZ';
   let mockDbStore: any[] = [];
-  const savedDbProps: string[] = [];
 
   function extractWalletAddress(obj: any): string | undefined {
     if (obj == null || typeof obj !== 'object') return undefined;
@@ -31,7 +30,6 @@ describe('Whitelist API Routes', () => {
 
   beforeEach(() => {
     mockDbStore = [];
-    savedDbProps.length = 0;
 
     // Mock whitelist service (re-apply after each mock.restore)
     mock.module('../services/WhitelistService', () => {
@@ -42,16 +40,6 @@ describe('Whitelist API Routes', () => {
         },
       };
     });
-
-    // Save original db properties so we can restore them in afterEach.
-    // Direct property assignment on the db Proxy mutates _dbTarget, which
-    // persists across test files in the same bun process. mock.restore()
-    // only undoes mock() calls, not these mutations.
-    for (const prop of ['query', 'insert', 'update', 'delete']) {
-      if (Object.prototype.hasOwnProperty.call(db, prop)) {
-        savedDbProps.push(prop);
-      }
-    }
 
     // Mock db queries
     (db as any).query = {
@@ -102,13 +90,14 @@ describe('Whitelist API Routes', () => {
 
   afterEach(() => {
     mock.restore();
-    // Delete the properties we directly assigned on the db Proxy so the
-    // Proxy's lazy getter reconnects to the real drizzle instance.
-    for (const prop of savedDbProps) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+    // Direct property assignment on the db Proxy mutates _dbTarget, which
+    // persists across test files in the same bun process. mock.restore()
+    // only undoes mock() calls, not these mutations, so delete them
+    // unconditionally: beforeEach always re-populates all four from scratch,
+    // so there's no prior legitimate state to preserve.
+    for (const prop of ['query', 'insert', 'update', 'delete']) {
       delete (db as any)[prop];
     }
-    savedDbProps.length = 0;
   });
 
   it('should submit a new whitelist request successfully', async () => {
@@ -129,7 +118,7 @@ describe('Whitelist API Routes', () => {
     );
 
     expect(response.status).toBe(200);
-    const result = await response.json();
+    const result = (await response.json()) as any;
     expect(result.success).toBe(true);
     expect(result.data.walletAddress).toBe(mockWallet);
     expect(result.data.status).toBe('pending');
@@ -177,7 +166,7 @@ describe('Whitelist API Routes', () => {
     );
 
     expect(response.status).toBe(200);
-    const result = await response.json();
+    const result = (await response.json()) as any;
     expect(result.success).toBe(true);
     expect(result.data.length).toBe(1);
   });
@@ -192,7 +181,7 @@ describe('Whitelist API Routes', () => {
     );
 
     const status = response.status;
-    const result = await response.json();
+    const result = (await response.json()) as any;
     console.log('REVIEW RESPONSE:', status, result);
     expect(status).toBe(200);
     expect(result.success).toBe(true);
@@ -230,7 +219,7 @@ describe('Whitelist API Routes', () => {
     );
 
     expect(response.status).toBe(200);
-    const result = await response.json();
+    const result = (await response.json()) as any;
     expect(result.success).toBe(true);
     expect(result.data.status).toBe('pending');
     expect(result.data.fullName).toBe('New Submission');

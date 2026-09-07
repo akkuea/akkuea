@@ -20,7 +20,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           fetch-depth: 0
 
@@ -34,7 +34,7 @@ jobs:
           fi
 
       - name: Generate changelog with git-cliff
-        uses: orhun/git-cliff-action@v3
+        uses: orhun/git-cliff-action@b946ed27a675d653b308f29a7bbad813b85bf7aa # v3
         id: cliff
         with:
           config: cliff.toml
@@ -44,14 +44,14 @@ jobs:
           GITHUB_REPO: ${{ github.repository }}
 
       - name: Commit updated CHANGELOG.md
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@b863ae1933cb653a53c021fe36dbb774e1fb9403 # v5
         with:
           commit_message: "chore(changelog): update for ${{ steps.version.outputs.tag }} [skip ci]"
           file_pattern: CHANGELOG.md
           branch: main
 
       - name: Attach changelog to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         if: github.event_name == 'push'
         with:
           tag_name: ${{ steps.version.outputs.tag }}

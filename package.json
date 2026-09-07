@@ -66,6 +66,7 @@
     "minimatch": ">=10.2.1",
     "eslint-visitor-keys": "^5.0.1",
     "browserslist": "^4.28.8",
-    "next": "16.2.11"
+    "next": "16.2.11",
+    "toml": "^4.2.0"
   }
 }

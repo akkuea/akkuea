@@ -954,7 +954,7 @@ pub mod tests {
     };
 
     /// Minimum exchange rate used throughout tests: 0.95 EURC per USDC.
-    const TEST_MIN_RATE: i128 = 9_500_000;
+    pub(crate) const TEST_MIN_RATE: i128 = 9_500_000;
 
     #[contracterror]
     #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -1080,7 +1080,7 @@ pub mod tests {
         }
     }
 
-    struct Setup {
+    pub(crate) struct Setup {
         env: Env,
         admin: Address,
         operator: Address,
@@ -1100,7 +1100,7 @@ pub mod tests {
         router_id: Address,
     }
 
-    fn evidence_hash(env: &Env) -> Bytes {
+    pub(crate) fn evidence_hash(env: &Env) -> Bytes {
         Bytes::from_array(env, &[7u8; 32])
     }
 
@@ -1108,7 +1108,7 @@ pub mod tests {
         Bytes::from_array(env, &[7u8; 12])
     }
 
-    fn cycle(env: &Env, value: &str) -> String {
+    pub(crate) fn cycle(env: &Env, value: &str) -> String {
         String::from_str(env, value)
     }
 
@@ -1116,7 +1116,7 @@ pub mod tests {
         setup_with_balance_values(&[1, 2, 3, 4, 10])
     }
 
-    fn setup_with_balance_values(balance_values: &[i128]) -> Setup {
+    pub(crate) fn setup_with_balance_values(balance_values: &[i128]) -> Setup {
         let env = Env::default();
         env.mock_all_auths();
         // A zero ledger timestamp would make every recorded timestamp
@@ -1202,13 +1202,13 @@ pub mod tests {
         }
     }
 
-    fn fund_pool(s: &Setup, usdc_reserve: i128, eurc_reserve: i128) {
+    pub(crate) fn fund_pool(s: &Setup, usdc_reserve: i128, eurc_reserve: i128) {
         s.usdc.mint(&s.router_id, &usdc_reserve);
         s.eurc.mint(&s.router_id, &eurc_reserve);
         s.router.set_reserves(&usdc_reserve, &eurc_reserve);
     }
 
-    fn record_default(s: &Setup) {
+    pub(crate) fn record_default(s: &Setup) {
         s.payout.record_evidence(
             &s.operator,
             &s.ally,

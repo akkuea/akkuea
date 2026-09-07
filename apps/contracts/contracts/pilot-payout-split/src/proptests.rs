@@ -1,11 +1,13 @@
 #[cfg(test)]
 mod tests {
+    extern crate std;
     use crate::{
-        tests::{cycle, evidence_hash, fund_pool, record_default, setup_with_balance_values, Setup, TEST_MIN_RATE},
-        PayoutError, PilotPayoutSplit,
+        tests::{
+            cycle, evidence_hash, setup_with_balance_values, TEST_MIN_RATE,
+        },
     };
     use proptest::prelude::*;
-    use soroban_sdk::{testutils::MockAuth, testutils::MockAuthInvoke, Address, Env, IntoVal, String, Vec as SorobanVec};
+    use soroban_sdk::String;
 
     // The rounding-dust policy documented deterministic test.
     // The policy: The 10% platform fee is calculated via integer division (truncating towards zero).
@@ -17,7 +19,7 @@ mod tests {
         // Balances: 1, 1, 1 (Total = 3)
         let s = setup_with_balance_values(&[1, 1, 1]);
         s.usdc.mint(&s.payout_id, &100_000);
-        
+
         let cycle_id = cycle(&s.env, "dust-test");
         s.payout.record_evidence(
             &s.operator,
@@ -27,7 +29,7 @@ mod tests {
             &String::from_str(&s.env, "ipfs://evidence"),
             &100, // total_income
         );
-        
+
         let cycle_id2 = cycle(&s.env, "dust-test-2");
         s.payout.record_evidence(
             &s.operator,
@@ -37,18 +39,18 @@ mod tests {
             &String::from_str(&s.env, "ipfs://evidence2"),
             &101, // total_income
         );
-        
-        let summary = s.payout.execute_distribution(
-            &s.operator,
-            &s.ally,
-            &cycle_id2,
-            &TEST_MIN_RATE,
-        );
-        
+
+        let summary =
+            s.payout
+                .execute_distribution(&s.operator, &s.ally, &cycle_id2, &TEST_MIN_RATE);
+
         assert_eq!(summary.platform_fee, 10);
         assert_eq!(summary.distributed_total, 90); // 30 * 3
         assert_eq!(summary.dust, 1);
-        assert_eq!(summary.platform_fee + summary.distributed_total + summary.dust, 101);
+        assert_eq!(
+            summary.platform_fee + summary.distributed_total + summary.dust,
+            101
+        );
     }
 
     proptest! {
@@ -60,7 +62,7 @@ mod tests {
             balances in prop::collection::vec(1i128..1_000_000_000i128, 0..20)
         ) {
             let s = setup_with_balance_values(&balances);
-            
+
             if balances.is_empty() {
                 // If there are no holders, the contract panics with EmptyHolderSet, which is expected.
                 // We test this explicitly to ensure the typed error is returned.
@@ -74,14 +76,14 @@ mod tests {
                     &String::from_str(&s.env, "ipfs://fuzz"),
                     &total_income,
                 );
-                
+
                 let res = s.payout.try_execute_distribution(
                     &s.operator,
                     &s.ally,
                     &cycle_id,
                     &TEST_MIN_RATE,
                 );
-                
+
                 assert!(res.is_err());
                 return Ok(());
             }
@@ -103,13 +105,13 @@ mod tests {
                 &cycle_id,
                 &TEST_MIN_RATE,
             );
-            
+
             // Fuzz holder-set size (including the 0- and 1-holder edges) and balance skew (including one holder holding nearly all supply, and one holding a dust amount).
             // No fuzzed input produces a panic; every rejection path surfaces as the project's existing typed error
             if summary_result.is_err() {
                 return Ok(());
             }
-            
+
             let summary = summary_result.unwrap().unwrap();
 
             // 1. The fee plus the sum of all pro-rata distributions never exceeds the total income for the cycle.
@@ -138,7 +140,7 @@ mod tests {
                 let payout = final_balance;
                 previous_payouts.push((*balance, payout));
             }
-            
+
             for (bal1, pay1) in &previous_payouts {
                 for (bal2, pay2) in &previous_payouts {
                     if bal1 > bal2 {

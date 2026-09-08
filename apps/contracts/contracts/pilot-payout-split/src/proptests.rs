@@ -80,7 +80,11 @@ mod tests {
                     &TEST_MIN_RATE,
                 );
 
-                assert!(res.is_ok() && res.unwrap().is_err());
+                assert_eq!(
+                    res,
+                   Err(Ok(soroban_sdk::Error::from_contract_error(
+                      crate::PayoutError::EmptyHolderSet as u32
+                   ))));
                 return Ok(());
             }
 

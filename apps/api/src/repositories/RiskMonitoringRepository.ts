@@ -1,4 +1,4 @@
-import type { RiskStateTransition } from '@real-estate-defi/shared';
+import type { RiskStateTransition } from '@akkuea/shared';
 
 export class RiskMonitoringRepository {
   private transitions: RiskStateTransition[] = [];

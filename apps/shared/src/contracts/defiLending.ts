@@ -2,23 +2,23 @@ import type {
   AssembledTransaction,
   MethodOptions,
 } from "@stellar/stellar-sdk/contract";
-import type { Client as CombinedContractClient } from "./generated/rwaDefi";
+import type { Client as CombinedContractClient } from "./generated/rwaDefi.js";
 import {
   Client as GeneratedRwaDefiClient,
   type BorrowPosition,
   type DepositPosition,
   type LendingPool,
-} from "./generated/rwaDefi";
+} from "./generated/rwaDefi.js";
 import {
   buildContractClientOptions,
   type SorobanClientConfig,
-} from "./clientConfig";
+} from "./clientConfig.js";
 
 export type {
   BorrowPosition,
   DepositPosition,
   LendingPool,
-} from "./generated/rwaDefi";
+} from "./generated/rwaDefi.js";
 
 export interface CreatePoolArgs {
   admin: string;

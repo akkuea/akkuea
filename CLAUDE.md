@@ -93,6 +93,7 @@ This repo runs five required GitHub Actions workflows on every pull request (`mo
 ```bash
 bun run typecheck
 bun run lint
+bun run format
 bun run test
 bun run build
 
@@ -103,6 +104,8 @@ cargo clippy -- -D warnings
 cargo test
 stellar contract build
 ```
+
+Each of the four TS-workspace CI jobs (`monorepo-ci.yml`, `api-ci.yml`, `webapp-ci.yml`, `shared-ci.yml`) runs its own scoped `prettier --check` as a required step; there is no local `format:check` script, so `bun run format` (which writes fixes via `prettier --write`) is the local equivalent, run before typecheck/lint so the diff is settled first. Do not skip this: a change that only touches TypeScript can still fail CI purely on formatting. After running it, check `git diff` covers only files this change actually touches; a full-repo `bun run format` run will also reformat any pre-existing drift elsewhere in the repo, and that unrelated reformatting must not be swept into the same commit.
 
 If a check fails, fix the root cause and re-run it, don't suppress or skip it. If a workflow failure looks unrelated to the change (flaky test, transient network error), say so explicitly rather than silently ignoring it.
 

@@ -11,7 +11,7 @@ import {
   Gift,
   ExternalLink,
 } from "lucide-react";
-import type { Transaction } from "@real-estate-defi/shared";
+import type { Transaction } from "@akkuea/shared";
 import { Badge } from "@/components/ui";
 import { formatCurrency, getExplorerUrl } from "@/lib/utils";
 import { useWallet } from "@/components/auth/hooks";

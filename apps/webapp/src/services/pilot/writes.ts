@@ -2,7 +2,7 @@ import {
   buildContractClientOptions,
   PilotPayoutSplitClient,
   type PilotPayoutSplitClientInterface,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 import {
   assertPilotDeployed,
   pilotContractIds,

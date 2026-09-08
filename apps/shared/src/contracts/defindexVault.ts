@@ -5,17 +5,17 @@ import {
   StrategyError as VAULT_STRATEGY_ERRORS,
   type AssetStrategySet,
   type CurrentAssetInvestmentAllocation,
-} from "./generated/defindexVault";
+} from "./generated/defindexVault.js";
 import {
   buildContractClientOptions,
   type SorobanClientConfig,
-} from "./clientConfig";
+} from "./clientConfig.js";
 
 export type {
   AssetStrategySet,
   CurrentAssetInvestmentAllocation,
   StrategyAllocation,
-} from "./generated/defindexVault";
+} from "./generated/defindexVault.js";
 
 /**
  * Per-call transaction knobs accepted by the generated bindings. Declared here

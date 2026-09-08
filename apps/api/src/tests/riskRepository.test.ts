@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
 import { RiskMonitoringRepository } from '../repositories/RiskMonitoringRepository';
-import type { RiskStateTransition } from '@real-estate-defi/shared';
+import type { RiskStateTransition } from '@akkuea/shared';
 
 describe('RiskMonitoringRepository', () => {
   let repository: RiskMonitoringRepository;

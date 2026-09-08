@@ -3,7 +3,7 @@ import type {
   ClientOptions,
   SignTransaction,
 } from "@stellar/stellar-sdk/contract";
-import { API_ENDPOINTS } from "../constants";
+import { API_ENDPOINTS } from "../constants/index.js";
 
 export interface SorobanClientConfig {
   contractId: string;

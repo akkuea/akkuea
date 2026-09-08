@@ -1,8 +1,8 @@
 import { describe, test, expect, spyOn, mock, beforeEach, afterEach } from 'bun:test';
 import { OracleService } from '../services/OracleService';
 import { ValuationRepository } from '../repositories/ValuationRepository';
-import type { RealEstateValuationPayload, ValuationRecord } from '@real-estate-defi/shared';
-import { ValidationService } from '@real-estate-defi/shared';
+import type { RealEstateValuationPayload, ValuationRecord } from '@akkuea/shared';
+import { ValidationService } from '@akkuea/shared';
 
 // In-memory store used by the spies below.
 // Using spyOn instead of mock.module so the mock is properly scoped to this file

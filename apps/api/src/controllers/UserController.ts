@@ -1,4 +1,4 @@
-import type { User, Transaction, PropertyInfo } from '@real-estate-defi/shared';
+import type { User, Transaction, PropertyInfo } from '@akkuea/shared';
 import type { AuthContext } from '../middleware/auth';
 import { userRepository } from '../repositories/UserRepository';
 import { ApiError } from '../errors/ApiError';

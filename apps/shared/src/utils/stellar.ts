@@ -169,10 +169,9 @@ export class StellarService {
           transaction.toXDR(),
         );
         const envelope = xdr.TransactionEnvelope.fromXDR(signedXdr, "base64");
-        const txEnv = envelope.v1();
-        if (txEnv?.signatures) {
+        if (envelope.type === "envelopeTypeTx") {
           Object.defineProperty(transaction, "signatures", {
-            value: txEnv.signatures,
+            value: envelope.v1.signatures,
             enumerable: true,
           });
         }

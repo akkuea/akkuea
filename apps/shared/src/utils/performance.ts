@@ -19,7 +19,7 @@ import type {
   MetricPayload,
   TimingMetric,
   OperationStatus,
-} from "../types/observability";
+} from "../types/observability.js";
 
 // ---------------------------------------------------------------------------
 // Timer primitive

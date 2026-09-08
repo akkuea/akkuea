@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import type { RealEstateValuationPayload } from '@real-estate-defi/shared';
+import type { RealEstateValuationPayload } from '@akkuea/shared';
 import { ValuationController } from '../controllers/ValuationController';
 
 export const oracleRoutes = new Elysia({ prefix: '/oracle' })

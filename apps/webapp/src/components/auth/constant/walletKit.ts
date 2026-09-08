@@ -1,29 +1,29 @@
-import {
-  StellarWalletsKit,
-  WalletNetwork,
-  allowAllModules,
-} from "@creit.tech/stellar-wallets-kit";
+import { StellarWalletsKit, Networks } from "@creit.tech/stellar-wallets-kit";
+import { defaultModules } from "@creit.tech/stellar-wallets-kit/modules/utils";
 
-// Singleton instance
-let kitInstance: StellarWalletsKit | null = null;
+// StellarWalletsKit v2 exposes a static API (init once, then call the class
+// directly), so this module just tracks whether init() has run rather than
+// holding an instance.
+let initialized = false;
 
 export const initializeWalletKit = (
-  network: WalletNetwork = WalletNetwork.TESTNET,
-): StellarWalletsKit => {
-  if (!kitInstance) {
-    kitInstance = new StellarWalletsKit({
+  network: Networks = Networks.TESTNET,
+): typeof StellarWalletsKit => {
+  if (!initialized) {
+    StellarWalletsKit.init({
       network,
       selectedWalletId: undefined,
-      modules: allowAllModules(),
+      modules: defaultModules(),
     });
+    initialized = true;
   }
-  return kitInstance;
+  return StellarWalletsKit;
 };
 
-export const getWalletKit = (): StellarWalletsKit | null => {
-  return kitInstance;
+export const getWalletKit = (): typeof StellarWalletsKit | null => {
+  return initialized ? StellarWalletsKit : null;
 };
 
 export const resetWalletKit = (): void => {
-  kitInstance = null;
+  initialized = false;
 };

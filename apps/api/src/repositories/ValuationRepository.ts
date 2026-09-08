@@ -1,5 +1,5 @@
 import { desc, eq } from 'drizzle-orm';
-import type { ValuationRecord } from '@real-estate-defi/shared';
+import type { ValuationRecord } from '@akkuea/shared';
 import { db } from '../db';
 import { valuations } from '../db/schema/valuations';
 

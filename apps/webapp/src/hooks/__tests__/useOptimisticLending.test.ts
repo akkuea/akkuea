@@ -3,13 +3,13 @@ import type {
   LendingPool,
   DepositPosition,
   BorrowPosition,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 import {
   VALID_STELLAR_ADDRESS,
   createLendingPool,
   createDepositPosition,
   createBorrowPosition,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 import { lendingApi } from "@/services/api";
 
 // ---------------------------------------------------------------------------

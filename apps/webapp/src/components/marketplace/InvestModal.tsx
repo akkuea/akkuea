@@ -9,7 +9,7 @@ import {
   Lock,
   Wallet,
 } from "lucide-react";
-import type { PropertyInfo } from "@real-estate-defi/shared";
+import type { PropertyInfo } from "@akkuea/shared";
 import { Badge, Button, Input, Modal } from "@/components/ui";
 import {
   formatCurrency,

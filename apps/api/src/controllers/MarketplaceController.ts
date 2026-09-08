@@ -1,5 +1,5 @@
-import type { PropertyInfo } from '@real-estate-defi/shared';
-import { NotFoundError, ValidationError } from '@real-estate-defi/shared';
+import type { PropertyInfo } from '@akkuea/shared';
+import { NotFoundError, ValidationError } from '@akkuea/shared';
 import { logger } from '../services/logger';
 import {
   propertyRepository,

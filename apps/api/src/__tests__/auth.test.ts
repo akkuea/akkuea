@@ -76,7 +76,7 @@ describe('Auth Routes Integration Tests', () => {
 
     // 2. Sign challenge
     const signatureBuffer = keypair.sign(Buffer.from(nonce));
-    const signature = signatureBuffer.toString('base64');
+    const signature = Buffer.from(signatureBuffer).toString('base64');
 
     // 3. Verify session
     const sessionRes = await app.handle(
@@ -108,7 +108,7 @@ describe('Auth Routes Integration Tests', () => {
     // 2. Sign with a DIFFERENT key
     const badKeypair = Keypair.random();
     const badSignatureBuffer = badKeypair.sign(Buffer.from(nonce));
-    const badSignature = badSignatureBuffer.toString('base64');
+    const badSignature = Buffer.from(badSignatureBuffer).toString('base64');
 
     // 3. Verify session
     const sessionRes = await app.handle(
@@ -124,7 +124,7 @@ describe('Auth Routes Integration Tests', () => {
 
   it('POST /auth/session should reject request without a challenge', async () => {
     const signatureBuffer = keypair.sign(Buffer.from('fake-nonce'));
-    const signature = signatureBuffer.toString('base64');
+    const signature = Buffer.from(signatureBuffer).toString('base64');
 
     const sessionRes = await app.handle(
       new Request('http://localhost/auth/session', {
@@ -153,7 +153,7 @@ describe('Auth Routes Integration Tests', () => {
 
     // 3. Sign the nonce with the correct key
     const signatureBuffer = keypair.sign(Buffer.from(nonce));
-    const signature = signatureBuffer.toString('base64');
+    const signature = Buffer.from(signatureBuffer).toString('base64');
 
     // 4. Attempt to create session - should reject as expired
     const sessionRes = await app.handle(
@@ -182,7 +182,7 @@ describe('Auth Routes Integration Tests', () => {
 
     // 2. Sign and verify (first use - should succeed)
     const signatureBuffer = keypair.sign(Buffer.from(nonce));
-    const signature = signatureBuffer.toString('base64');
+    const signature = Buffer.from(signatureBuffer).toString('base64');
 
     const firstRes = await app.handle(
       new Request('http://localhost/auth/session', {

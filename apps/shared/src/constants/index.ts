@@ -2,8 +2,8 @@
 // hard-coded here. These files are updated by the deploy pipeline (see
 // docs/contracts/deployment.md), not by the build, so application code can stay
 // untouched when contracts are (re)deployed.
-import testnetContracts from "../contracts.testnet.json";
-import mainnetContracts from "../contracts.mainnet.json";
+import testnetContracts from "../contracts.testnet.json" with { type: "json" };
+import mainnetContracts from "../contracts.mainnet.json" with { type: "json" };
 
 export const STELLAR_NETWORKS = {
   MAINNET: "public",

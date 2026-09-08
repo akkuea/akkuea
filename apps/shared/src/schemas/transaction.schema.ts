@@ -4,7 +4,7 @@ import {
   isoDateSchema,
   positiveAmountSchema,
   transactionHashSchema,
-} from "./common.schema";
+} from "./common.schema.js";
 
 /**
  * Transaction type enum

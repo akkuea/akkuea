@@ -4,7 +4,7 @@ import type {
   Transaction,
   LendingPool,
   RealEstateValuationPayload,
-} from "../types";
+} from "../types/index.js";
 import { StrKey } from "@stellar/stellar-sdk";
 
 export class ValidationService {

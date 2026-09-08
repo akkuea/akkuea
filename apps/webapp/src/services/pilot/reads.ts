@@ -10,7 +10,7 @@ import {
   type PilotCycleRecord,
   type PilotEvidenceRecord,
   type PilotEvidenceStatus,
-} from "@real-estate-defi/shared";
+} from "@akkuea/shared";
 import {
   assertPilotDeployed,
   pilotContractIds,

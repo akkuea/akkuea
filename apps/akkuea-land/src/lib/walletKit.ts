@@ -1,27 +1,27 @@
-import {
-  StellarWalletsKit,
-  WalletNetwork,
-  allowAllModules,
-} from "@creit.tech/stellar-wallets-kit";
+import { StellarWalletsKit, Networks } from "@creit.tech/stellar-wallets-kit";
+import { defaultModules } from "@creit.tech/stellar-wallets-kit/modules/utils";
 
-// Singleton instance
-let kitInstance: StellarWalletsKit | null = null;
+// StellarWalletsKit v2 exposes a static API (init once, then call the class
+// directly), so this module just tracks whether init() has run rather than
+// holding an instance.
+let initialized = false;
 
 export const initializeWalletKit = (
-  network: WalletNetwork = WalletNetwork.TESTNET,
-): StellarWalletsKit => {
-  if (!kitInstance) {
-    kitInstance = new StellarWalletsKit({
+  network: Networks = Networks.TESTNET,
+): typeof StellarWalletsKit => {
+  if (!initialized) {
+    StellarWalletsKit.init({
       network,
       selectedWalletId: undefined,
-      modules: allowAllModules(),
+      modules: defaultModules(),
     });
+    initialized = true;
   }
-  return kitInstance;
+  return StellarWalletsKit;
 };
 
-export const getWalletKit = (): StellarWalletsKit | null => {
-  return kitInstance;
+export const getWalletKit = (): typeof StellarWalletsKit | null => {
+  return initialized ? StellarWalletsKit : null;
 };
 
 /**
@@ -30,11 +30,7 @@ export const getWalletKit = (): StellarWalletsKit | null => {
  */
 export interface SelectableWalletKit {
   getAddress(): Promise<{ address: string }>;
-  openModal(params: {
-    onWalletSelected: (option: { id: string }) => void;
-    onClosed?: (err: Error) => void;
-  }): Promise<void>;
-  setWallet(id: string): void;
+  authModal(): Promise<{ address: string }>;
 }
 
 /**
@@ -52,17 +48,13 @@ export const ensureWalletSelected = async (
     // No wallet selected yet - fall through to the picker modal.
   }
 
-  const walletId = await new Promise<string | null>((resolve) => {
-    void kit.openModal({
-      onWalletSelected: (option) => resolve(option.id),
-      onClosed: () => resolve(null),
-    });
-  });
-  if (!walletId) return null;
-
-  kit.setWallet(walletId);
-  const { address } = await kit.getAddress();
-  return address;
+  try {
+    const { address } = await kit.authModal();
+    return address;
+  } catch {
+    // The user closed the picker without choosing a wallet.
+    return null;
+  }
 };
 
 /**
@@ -72,7 +64,7 @@ export const ensureWalletSelected = async (
  * closed the picker without choosing a wallet.
  */
 export const connectWalletKit = async (): Promise<{
-  kit: StellarWalletsKit;
+  kit: typeof StellarWalletsKit;
   address: string;
 } | null> => {
   const kit = initializeWalletKit();
@@ -81,5 +73,5 @@ export const connectWalletKit = async (): Promise<{
 };
 
 export const resetWalletKit = (): void => {
-  kitInstance = null;
+  initialized = false;
 };

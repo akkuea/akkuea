@@ -2114,6 +2114,27 @@ pub mod tests {
     }
 
     #[test]
+    fn execute_distribution_rejects_more_than_max_holders() {
+        // MAX_HOLDERS is 10; 11 holders must be rejected before any funds move.
+        let s = setup_with_balance_values(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        record_default(&s);
+
+        let res = s.payout.try_execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::TooManyHolders as u32
+            )))
+        );
+    }
+
+    #[test]
     fn budget_check_execute_distribution_for_ten_holders() {
         let s = setup_with_balance_values(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         s.usdc.mint(&s.payout_id, &1_000_000);

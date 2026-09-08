@@ -1161,7 +1161,15 @@ pub mod tests {
             &String::from_str(&env, "AKIN"),
             &7,
         );
-        token.mint_fixed_supply(&admin, &holders, &amounts);
+
+        // `mint_fixed_supply` itself rejects an empty holder set
+        // (`IncomeTokenError::EmptyHolderSet`), so skip it entirely for the
+        // zero-holders fuzz case. The token then keeps its default zero-supply /
+        // empty-holders state, which is exactly what `execute_distribution`'s own
+        // `EmptyHolderSet` guard expects.
+        if !holders.is_empty() {
+            token.mint_fixed_supply(&admin, &holders, &amounts);
+        }
 
         let usdc_admin = Address::generate(&env);
         let usdc_contract = env.register_stellar_asset_contract_v2(usdc_admin);

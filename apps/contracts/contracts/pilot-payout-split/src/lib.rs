@@ -31,7 +31,7 @@ pub const SWAP_DEADLINE_SECS: u64 = 3600;
 /// The instruction budget is heavily consumed by `require_auth` invoked implicitly
 /// during the `usdc.transfer` iteration and the explicit `contract_address.require_auth()`
 /// for EURC swap legs. We cap this to guarantee safe budget headroom.
-pub const MAX_HOLDERS: u32 = 15;
+pub const MAX_HOLDERS: u32 = 10;
 
 #[contractclient(name = "IncomeTokenClient")]
 pub trait IncomeToken {

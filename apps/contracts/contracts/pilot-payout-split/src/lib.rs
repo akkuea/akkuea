@@ -27,6 +27,12 @@ pub const RATE_DENOMINATOR: i128 = 10_000_000;
 /// router's deadline semantics (`DeadlineExpired` when ledger time passes it).
 pub const SWAP_DEADLINE_SECS: u64 = 3600;
 
+/// Maximum number of token holders supported by the distribution execution loop.
+/// The instruction budget is heavily consumed by `require_auth` invoked implicitly
+/// during the `usdc.transfer` iteration and the explicit `contract_address.require_auth()`
+/// for EURC swap legs. We cap this to guarantee safe budget headroom.
+pub const MAX_HOLDERS: u32 = 15;
+
 #[contractclient(name = "IncomeTokenClient")]
 pub trait IncomeToken {
     fn balance(env: Env, id: Address) -> i128;
@@ -532,6 +538,10 @@ impl PilotPayoutSplit {
 
         if holders.is_empty() || total_supply <= 0 {
             panic_with_error!(&env, PayoutError::EmptyHolderSet);
+        }
+
+        if holders.len() > MAX_HOLDERS {
+            panic_with_error!(&env, PayoutError::TooManyHolders);
         }
 
         let platform_fee = record

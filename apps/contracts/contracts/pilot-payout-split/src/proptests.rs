@@ -55,7 +55,7 @@ mod tests {
         #[test]
         fn fuzz_distribution_invariants(
             total_income in 1i128..1_000_000_000_000i128,
-            balances in prop::collection::vec(1i128..1_000_000_000i128, 0..20)
+            balances in prop::collection::vec(1i128..1_000_000_000i128, 0..=15)
         ) {
             let s = setup_with_balance_values(&balances);
 
@@ -80,7 +80,7 @@ mod tests {
                     &TEST_MIN_RATE,
                 );
 
-                assert!(res.is_err());
+                assert!(res.is_ok() && res.unwrap().is_err());
                 return Ok(());
             }
 
@@ -102,13 +102,17 @@ mod tests {
                 &TEST_MIN_RATE,
             );
 
-            // Fuzz holder-set size (including the 0- and 1-holder edges) and balance skew (including one holder holding nearly all supply, and one holding a dust amount).
-            // No fuzzed input produces a panic; every rejection path surfaces as the project's existing typed error
-            if summary_result.is_err() {
-                return Ok(());
-            }
-
-            let summary = summary_result.unwrap().unwrap();
+            let summary = match summary_result {
+                Ok(Ok(s)) => s,
+                Ok(Err(_)) => {
+                    // Contract typed error (e.g. arithmetic overflow on extreme values)
+                    return Ok(());
+                }
+                Err(e) => {
+                    // Host error like Budget Exceeded
+                    panic!("Unexpected host error during fuzzing: {:?}", e);
+                }
+            };
 
             // 1. The fee plus the sum of all pro-rata distributions never exceeds the total income for the cycle.
             let total_distributed = summary.distributed_total + summary.undistributed_failed_swaps;

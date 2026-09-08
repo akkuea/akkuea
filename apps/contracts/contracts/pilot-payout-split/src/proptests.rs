@@ -1,11 +1,7 @@
 #[cfg(test)]
 mod tests {
     extern crate std;
-    use crate::{
-        tests::{
-            cycle, evidence_hash, setup_with_balance_values, TEST_MIN_RATE,
-        },
-    };
+    use crate::tests::{cycle, evidence_hash, setup_with_balance_values, TEST_MIN_RATE};
     use proptest::prelude::*;
     use soroban_sdk::String;
 

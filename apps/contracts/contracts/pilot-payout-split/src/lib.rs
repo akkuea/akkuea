@@ -27,6 +27,12 @@ pub const RATE_DENOMINATOR: i128 = 10_000_000;
 /// router's deadline semantics (`DeadlineExpired` when ledger time passes it).
 pub const SWAP_DEADLINE_SECS: u64 = 3600;
 
+/// Maximum number of token holders supported by the distribution execution loop.
+/// The instruction budget is heavily consumed by `require_auth` invoked implicitly
+/// during the `usdc.transfer` iteration and the explicit `contract_address.require_auth()`
+/// for EURC swap legs. We cap this to guarantee safe budget headroom.
+pub const MAX_HOLDERS: u32 = 10;
+
 #[contractclient(name = "IncomeTokenClient")]
 pub trait IncomeToken {
     fn balance(env: Env, id: Address) -> i128;
@@ -478,6 +484,11 @@ impl PilotPayoutSplit {
     /// share stays in this contract, is reported through the returned summary,
     /// recorded on-chain via `get_swap_failures`, and emitted as a typed event;
     /// all other holders are paid normally.
+    ///
+    /// Rounding-dust policy: The 10% platform fee is calculated via integer division (truncating towards zero).
+    /// The remainder (total_income - platform_fee) is the holder_amount. The pro-rata distributions are also
+    /// calculated via integer division. Any remaining dust from the pro-rata split is kept in the contract and
+    /// reported as `dust` in the `DistributionSummary`.
     pub fn execute_distribution(
         env: Env,
         operator: Address,
@@ -527,6 +538,10 @@ impl PilotPayoutSplit {
 
         if holders.is_empty() || total_supply <= 0 {
             panic_with_error!(&env, PayoutError::EmptyHolderSet);
+        }
+
+        if holders.len() > MAX_HOLDERS {
+            panic_with_error!(&env, PayoutError::TooManyHolders);
         }
 
         let platform_fee = record
@@ -935,7 +950,7 @@ impl PilotPayoutSplit {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
     extern crate std;
     use pilot_income_token::{PilotIncomeToken, PilotIncomeTokenClient};
@@ -949,7 +964,7 @@ mod tests {
     };
 
     /// Minimum exchange rate used throughout tests: 0.95 EURC per USDC.
-    const TEST_MIN_RATE: i128 = 9_500_000;
+    pub(crate) const TEST_MIN_RATE: i128 = 9_500_000;
 
     #[contracterror]
     #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -1075,27 +1090,27 @@ mod tests {
         }
     }
 
-    struct Setup {
-        env: Env,
-        admin: Address,
-        operator: Address,
-        ally: Address,
-        fee_recipient: Address,
-        holders: Vec<Address>,
-        whitelist_admin: Address,
-        whitelist: PilotWhitelistClient<'static>,
-        token: PilotIncomeTokenClient<'static>,
-        payout: PilotPayoutSplitClient<'static>,
-        payout_id: Address,
-        usdc: StellarAssetClient<'static>,
-        usdc_id: Address,
-        eurc: StellarAssetClient<'static>,
-        eurc_id: Address,
-        router: MockSoroswapRouterClient<'static>,
-        router_id: Address,
+    pub(crate) struct Setup {
+        pub(crate) env: Env,
+        pub(crate) admin: Address,
+        pub(crate) operator: Address,
+        pub(crate) ally: Address,
+        pub(crate) fee_recipient: Address,
+        pub(crate) holders: Vec<Address>,
+        pub(crate) whitelist_admin: Address,
+        pub(crate) whitelist: PilotWhitelistClient<'static>,
+        pub(crate) token: PilotIncomeTokenClient<'static>,
+        pub(crate) payout: PilotPayoutSplitClient<'static>,
+        pub(crate) payout_id: Address,
+        pub(crate) usdc: StellarAssetClient<'static>,
+        pub(crate) usdc_id: Address,
+        pub(crate) eurc: StellarAssetClient<'static>,
+        pub(crate) eurc_id: Address,
+        pub(crate) router: MockSoroswapRouterClient<'static>,
+        pub(crate) router_id: Address,
     }
 
-    fn evidence_hash(env: &Env) -> Bytes {
+    pub(crate) fn evidence_hash(env: &Env) -> Bytes {
         Bytes::from_array(env, &[7u8; 32])
     }
 
@@ -1103,7 +1118,7 @@ mod tests {
         Bytes::from_array(env, &[7u8; 12])
     }
 
-    fn cycle(env: &Env, value: &str) -> String {
+    pub(crate) fn cycle(env: &Env, value: &str) -> String {
         String::from_str(env, value)
     }
 
@@ -1111,7 +1126,7 @@ mod tests {
         setup_with_balance_values(&[1, 2, 3, 4, 10])
     }
 
-    fn setup_with_balance_values(balance_values: &[i128]) -> Setup {
+    pub(crate) fn setup_with_balance_values(balance_values: &[i128]) -> Setup {
         let env = Env::default();
         env.mock_all_auths();
         // A zero ledger timestamp would make every recorded timestamp
@@ -1146,7 +1161,15 @@ mod tests {
             &String::from_str(&env, "AKIN"),
             &7,
         );
-        token.mint_fixed_supply(&admin, &holders, &amounts);
+
+        // `mint_fixed_supply` itself rejects an empty holder set
+        // (`IncomeTokenError::EmptyHolderSet`), so skip it entirely for the
+        // zero-holders fuzz case. The token then keeps its default zero-supply /
+        // empty-holders state, which is exactly what `execute_distribution`'s own
+        // `EmptyHolderSet` guard expects.
+        if !holders.is_empty() {
+            token.mint_fixed_supply(&admin, &holders, &amounts);
+        }
 
         let usdc_admin = Address::generate(&env);
         let usdc_contract = env.register_stellar_asset_contract_v2(usdc_admin);
@@ -1197,13 +1220,13 @@ mod tests {
         }
     }
 
-    fn fund_pool(s: &Setup, usdc_reserve: i128, eurc_reserve: i128) {
+    pub(crate) fn fund_pool(s: &Setup, usdc_reserve: i128, eurc_reserve: i128) {
         s.usdc.mint(&s.router_id, &usdc_reserve);
         s.eurc.mint(&s.router_id, &eurc_reserve);
         s.router.set_reserves(&usdc_reserve, &eurc_reserve);
     }
 
-    fn record_default(s: &Setup) {
+    pub(crate) fn record_default(s: &Setup) {
         s.payout.record_evidence(
             &s.operator,
             &s.ally,
@@ -2091,6 +2114,27 @@ mod tests {
     }
 
     #[test]
+    fn execute_distribution_rejects_more_than_max_holders() {
+        // MAX_HOLDERS is 10; 11 holders must be rejected before any funds move.
+        let s = setup_with_balance_values(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        record_default(&s);
+
+        let res = s.payout.try_execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::TooManyHolders as u32
+            )))
+        );
+    }
+
+    #[test]
     fn budget_check_execute_distribution_for_ten_holders() {
         let s = setup_with_balance_values(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
         s.usdc.mint(&s.payout_id, &1_000_000);
@@ -2509,3 +2553,6 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod proptests;

@@ -45,4 +45,6 @@ pub enum PayoutError {
     MissingReviewReason = 26,
     /// No evidence record exists for the cycle.
     EvidenceNotFound = 27,
+    /// Number of holders exceeds the maximum supported bound.
+    TooManyHolders = 28,
 }

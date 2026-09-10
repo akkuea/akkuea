@@ -6,11 +6,15 @@ on:
     paths:
       - 'apps/api/**'
       - '.github/workflows/api-ci.yml'
+      - 'package.json'
+      - 'bun.lock'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'apps/api/**'
       - '.github/workflows/api-ci.yml'
+      - 'package.json'
+      - 'bun.lock'
 
 env:
   NODE_VERSION: '24'

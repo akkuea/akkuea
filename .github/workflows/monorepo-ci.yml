@@ -8,6 +8,8 @@ on:
       - 'docs/**'
       - 'scripts/**'
       - '.github/**'
+      - 'package.json'
+      - 'bun.lock'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -15,6 +17,8 @@ on:
       - 'docs/**'
       - 'scripts/**'
       - '.github/**'
+      - 'package.json'
+      - 'bun.lock'
 
 env:
   NODE_VERSION: '24'

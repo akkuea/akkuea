@@ -38,7 +38,7 @@
     "concurrently": "^10.0.5",
     "jsdom": "^30.0.1",
     "prettier": "^3.9.6",
-    "typescript": "^7.0.2"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@creit.tech/stellar-wallets-kit": "^2.6.0",
@@ -49,7 +49,7 @@
     "@types/jest": "^30.0.0",
     "@typescript-eslint/eslint-plugin": "^8.70.0",
     "@typescript-eslint/parser": "^8.70.0",
-    "eslint": "^10.10.0",
+    "eslint": "^9.39.5",
     "jest": "^30.5.1",
     "react-hook-form": "^7.87.0",
     "@stellar/stellar-sdk": "^17.0.1"

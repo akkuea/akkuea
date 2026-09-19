@@ -5,7 +5,6 @@ import {
   useContext,
   useEffect,
   useState,
-  useRef,
   useCallback,
   type ReactNode,
 } from "react";
@@ -29,15 +28,15 @@ function getStoredTheme(): Theme {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  // Default matches `<html className="dark">` in the locale layout so SSR
+  // and the first client render agree. Stored preference is applied after
+  // mount. Never gate children on a mounted flag: React Strict Mode in
+  // `next dev` re-runs effects, and a ref-guarded timeout was leaving the
+  // tree as `null` forever, which blanked every e2e route.
   const [theme, setThemeState] = useState<Theme>("dark");
   const [mounted, setMounted] = useState(false);
-  const initializedRef = useRef(false);
 
   useEffect(() => {
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
-    // Read theme from localStorage after mount to avoid hydration mismatch
     const timer = setTimeout(() => {
       setThemeState(getStoredTheme());
       setMounted(true);
@@ -61,10 +60,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = useCallback((newTheme: Theme) => {
     setThemeState(newTheme);
   }, []);
-
-  if (!mounted) {
-    return null;
-  }
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>

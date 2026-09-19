@@ -22,6 +22,7 @@
   "dependencies": {
     "@akkuea/shared": "workspace:*",
     "@creit.tech/stellar-wallets-kit": "^2.6.0",
+    "@creit-tech/stellar-wallets-kit": "npm:@creit.tech/stellar-wallets-kit@2.6.0",
     "@hookform/resolvers": "^3.10.0",
     "@pollar/core": "^0.8.0",
     "@pollar/react": "^0.8.0",

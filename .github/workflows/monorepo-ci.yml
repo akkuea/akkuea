@@ -7,6 +7,8 @@ on:
       - 'apps/**'
       - 'docs/**'
       - 'scripts/**'
+      - 'package.json'
+      - 'bun.lock'
       - '.github/**'
   pull_request:
     branches: [ main, develop ]
@@ -14,6 +16,8 @@ on:
       - 'apps/**'
       - 'docs/**'
       - 'scripts/**'
+      - 'package.json'
+      - 'bun.lock'
       - '.github/**'
 
 env:

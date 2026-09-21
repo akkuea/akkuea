@@ -5,6 +5,8 @@ on:
     branches: [ main, develop ]
     paths:
       - 'apps/api/**'
+      - 'package.json'
+      - 'bun.lock'
       - '.github/workflows/api-ci.yml'
       - 'package.json'
       - 'bun.lock'
@@ -12,6 +14,8 @@ on:
     branches: [ main, develop ]
     paths:
       - 'apps/api/**'
+      - 'package.json'
+      - 'bun.lock'
       - '.github/workflows/api-ci.yml'
       - 'package.json'
       - 'bun.lock'

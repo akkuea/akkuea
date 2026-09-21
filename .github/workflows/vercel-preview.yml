@@ -11,6 +11,8 @@ on:
       - develop
     paths:
       - "apps/webapp/**"
+      - "package.json"
+      - "bun.lock"
       - ".github/workflows/vercel-preview.yml"
 
 concurrency:

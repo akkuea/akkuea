@@ -4,30 +4,55 @@ Thank you for your interest in contributing to Akkuea. This guide covers everyth
 
 Please read this document in its entirety before opening your first pull request. Following these standards protects the stability of the platform and makes the review process fast and efficient for everyone.
 
+> **If you are contributing for Drips points or GrantFox funding, read [Contributor Incentives: Drips and GrantFox](#contributor-incentives-drips-and-grantfox) before you start work.** It explains what Akkuea does and does not control in those processes.
+
 ---
 
 ## Table of Contents
 
 1. [Code of Conduct](#code-of-conduct)
-2. [How We Work: Fork-Based Workflow](#how-we-work-fork-based-workflow)
-3. [Setting Up Your Fork](#setting-up-your-fork)
-4. [Keeping Your Fork Up to Date](#keeping-your-fork-up-to-date)
-5. [Branching Strategy](#branching-strategy)
-6. [Working on an Issue](#working-on-an-issue)
-7. [Commit Standards](#commit-standards)
-8. [Code Quality Standards](#code-quality-standards)
-9. [Testing Requirements](#testing-requirements)
-10. [CI/CD: Workflows Must Pass](#cicd-workflows-must-pass)
-11. [Opening a Pull Request](#opening-a-pull-request)
-12. [Pull Request Checklist](#pull-request-checklist)
-13. [Review Process](#review-process)
-14. [Common Pitfalls](#common-pitfalls)
+2. [Contributor Incentives: Drips and GrantFox](#contributor-incentives-drips-and-grantfox)
+3. [How We Work: Fork-Based Workflow](#how-we-work-fork-based-workflow)
+4. [Setting Up Your Fork](#setting-up-your-fork)
+5. [Keeping Your Fork Up to Date](#keeping-your-fork-up-to-date)
+6. [Branching Strategy](#branching-strategy)
+7. [Working on an Issue](#working-on-an-issue)
+8. [Commit Standards](#commit-standards)
+9. [Code Quality Standards](#code-quality-standards)
+10. [Testing Requirements](#testing-requirements)
+11. [CI/CD: Workflows Must Pass](#cicd-workflows-must-pass)
+12. [Opening a Pull Request](#opening-a-pull-request)
+13. [Pull Request Checklist](#pull-request-checklist)
+14. [Review Process](#review-process)
+15. [Common Pitfalls](#common-pitfalls)
 
 ---
 
 ## Code of Conduct
 
 All contributors are expected to interact with respect and professionalism. Harassment, dismissive language, and personal attacks will not be tolerated. If you observe or experience unacceptable behavior, report it to the maintainers.
+
+---
+
+## Contributor Incentives: Drips and GrantFox
+
+Akkuea recognizes external contributions through [Drips](https://drips.network) points and, for select approved contributions, funding allocated through [GrantFox](https://grantfox.xyz). This section sets expectations for how those processes work and where responsibility sits, so there is no ambiguity for contributors relying on them. Read this before you start work if Drips points or GrantFox funding are a factor in your decision to contribute.
+
+### Open issues as early as possible
+
+We recommend opening an issue as soon as you identify a gap, bug, or improvement, rather than waiting until you have a finished pull request. An early issue gives maintainers time to weigh in on scope, gives other contributors visibility before duplicate work starts, and gives your contribution the best chance of being reviewed and recognized promptly.
+
+### Our commitment to review
+
+We are committed to reviewing every pull request opened against this repository. That review is done carefully, not quickly: we take the time needed to verify correctness, security, and consistency with the [product brief](docs/strategy/product-brief.md) and the standards in this document. A thorough review can take longer than a same-day turnaround. We review pull requests as promptly as we reasonably can, but we do not guarantee a fixed response time.
+
+### Drips points and GrantFox payment are outside our control
+
+- Drips is the system of record for contribution points, not Akkuea. Akkuea reviews and merges contributions, but does not control if or when points are reflected on Drips. If points do not appear after a merge, this is a Drips-side matter.
+- For contributions approved for funding, Akkuea allocates an amount through GrantFox as recognition of the work. Allocating an amount is not the same as payment: GrantFox is the platform responsible for confirming and disbursing that payment, and GrantFox makes that final determination, not Akkuea.
+- If a Drips allocation does not sync, or a GrantFox allocation is delayed or not paid, Akkuea will make a reasonable effort to help a contributor resolve it, but the outcome is not entirely in Akkuea's hands and is not Akkuea's responsibility.
+
+None of the above affects code review quality or merge criteria. Every pull request is reviewed and merged strictly on its technical merits, independent of its Drips or GrantFox status.
 
 ---
 

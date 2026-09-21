@@ -6,6 +6,8 @@ on:
     branches: [main, develop]
     paths:
       - "apps/webapp/**"
+      - "package.json"
+      - "bun.lock"
       - ".github/workflows/webapp-ci.yml"
       - "package.json"
       - "bun.lock"
@@ -13,6 +15,8 @@ on:
     branches: [main, develop]
     paths:
       - "apps/webapp/**"
+      - "package.json"
+      - "bun.lock"
       - ".github/workflows/webapp-ci.yml"
       - "package.json"
       - "bun.lock"

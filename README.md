@@ -291,7 +291,7 @@ akkuea/
 
 We welcome contributions. Akkuea uses a **fork-based workflow** - all changes must come through a fork and pull request. No direct pushes to `main` or `develop`.
 
-Read the full contribution guide before submitting your first pull request: **[CONTRIBUTING.md](CONTRIBUTING.md)**
+Read the full contribution guide before submitting your first pull request: **[CONTRIBUTING.md](CONTRIBUTING.md)**. If you are contributing for Drips points or GrantFox funding, read [Contributor Incentives: Drips and GrantFox](CONTRIBUTING.md#contributor-incentives-drips-and-grantfox) first.
 
 ---
 

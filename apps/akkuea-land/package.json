@@ -12,8 +12,8 @@
   },
   "dependencies": {
     "next": "16.3.5",
-    "react": "19.2.8",
-    "react-dom": "19.2.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "@stellar/stellar-sdk": "^17.0.1",
     "@akkuea/shared": "workspace:*",
     "clsx": "^2.1.1",

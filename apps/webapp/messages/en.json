@@ -278,7 +278,8 @@
       "reasonHint": "A rejection without a reason is refused by the contract, so the ally always learns what to correct.",
       "connectFirst": "Connect the operator wallet to act on this cycle.",
       "actionFailed": "The transaction was not accepted on-chain.",
-      "readyToDistribute": "Approved and ready to distribute."
+      "readyToDistribute": "Approved and ready to distribute.",
+      "flagDispute": "Flag dispute"
     },
     "cosign": {
       "prepareHint": "The payout contract requires the operator and the ally to authorize the same transaction. Prepare it here, then share it with the ally to co-sign.",

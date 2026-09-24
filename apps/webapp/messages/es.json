@@ -278,7 +278,8 @@
       "reasonHint": "El contrato rechaza una negativa sin motivo, así el aliado siempre sabe qué corregir.",
       "connectFirst": "Conecta la billetera del operador para actuar sobre este ciclo.",
       "actionFailed": "La transacción no fue aceptada on-chain.",
-      "readyToDistribute": "Aprobado y listo para distribuir."
+      "readyToDistribute": "Aprobado y listo para distribuir.",
+      "flagDispute": "Marcar disputa"
     },
     "cosign": {
       "prepareHint": "El contrato de pagos exige que el operador y el aliado autoricen la misma transacción. Preparala aquí y luego compartila con el aliado para que la co-firme.",

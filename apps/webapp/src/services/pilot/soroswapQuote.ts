@@ -101,7 +101,7 @@ export async function quoteAmountOut(args: {
 
   const amounts = scValToNative(simulation.result.retval) as bigint[];
   const amountOut = amounts[amounts.length - 1];
-  if (typeof amountOut !== "bigint" || amountOut <= 0n) {
+  if (typeof amountOut !== "bigint" || amountOut <= BigInt(0)) {
     throw new SoroswapQuoteError(
       "Soroswap router returned an empty or non-positive quote.",
     );
@@ -112,7 +112,7 @@ export async function quoteAmountOut(args: {
 /** Basis points denominator, matching the contract's own `RATE_DENOMINATOR`
  * (1e7) is a *separate* scale for the on-chain rate; this one is purely for
  * the slippage-tolerance percentage below. */
-const BPS_DENOMINATOR = 10_000n;
+const BPS_DENOMINATOR = BigInt(10_000);
 
 /** Contract's `RATE_DENOMINATOR`: `min_eurc_per_usdc` is a price scaled by
  * this factor (7-decimal fixed point, matching every other Stellar asset
@@ -120,7 +120,7 @@ const BPS_DENOMINATOR = 10_000n;
  * generated contract bindings do not export it as a value, only as a doc
  * comment; keep in sync with `apps/contracts/contracts/pilot-payout-split/src/lib.rs`'s
  * `RATE_DENOMINATOR`. */
-export const RATE_DENOMINATOR = 10_000_000n;
+export const RATE_DENOMINATOR = BigInt(10_000_000);
 
 /**
  * Derives `min_eurc_per_usdc` from a live router quote and a slippage
@@ -139,14 +139,14 @@ export function deriveMinEurcPerUsdc(args: {
   quotedAmountOut: bigint;
   slippageBps: number;
 }): bigint {
-  if (args.quotedAmountIn <= 0n) {
+  if (args.quotedAmountIn <= BigInt(0)) {
     throw new SoroswapQuoteError(
       "Cannot derive a price floor from a non-positive quoted input amount.",
     );
   }
   if (args.slippageBps < 0 || args.slippageBps >= Number(BPS_DENOMINATOR)) {
     throw new SoroswapQuoteError(
-      `slippageBps must be between 0 and ${BPS_DENOMINATOR - 1n}, got ${args.slippageBps}.`,
+      `slippageBps must be between 0 and ${BPS_DENOMINATOR - BigInt(1)}, got ${args.slippageBps}.`,
     );
   }
 
@@ -156,7 +156,7 @@ export function deriveMinEurcPerUsdc(args: {
   const toleranceFactor = BPS_DENOMINATOR - BigInt(args.slippageBps);
   const floor = (quotedRate * toleranceFactor) / BPS_DENOMINATOR;
 
-  if (floor <= 0n) {
+  if (floor <= BigInt(0)) {
     throw new SoroswapQuoteError(
       "Derived price floor is zero or negative; refusing to prepare a zero-floor distribution.",
     );

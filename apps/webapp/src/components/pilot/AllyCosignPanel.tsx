@@ -13,13 +13,26 @@ import {
 } from "@/services/pilot/cosign";
 import { shortenHash } from "./format";
 
-const RATE_DENOMINATOR = 10_000_000n;
+const RATE_DENOMINATOR = BigInt(10_000_000);
 
 function formatEurcFloor(minEurcPerUsdc: bigint, noEurcLabel: string): string {
-  if (minEurcPerUsdc === 0n) return noEurcLabel;
+  if (minEurcPerUsdc === BigInt(0)) return noEurcLabel;
   const whole = minEurcPerUsdc / RATE_DENOMINATOR;
   const frac = minEurcPerUsdc % RATE_DENOMINATOR;
   return `${whole}.${frac.toString().padStart(7, "0")} EURC / USDC`;
+}
+
+/** Wallet capabilities the panel needs, so the view can be exercised directly. */
+export interface AllyCosignWallet {
+  address: string | null;
+  isConnected: boolean;
+  connect: () => Promise<void> | void;
+  canSignAuthEntries: boolean;
+  signAuthEntry: (
+    authEntryXdr: string,
+    signerAddress: string,
+    networkPassphrase: string,
+  ) => Promise<string>;
 }
 
 /**
@@ -34,9 +47,27 @@ function formatEurcFloor(minEurcPerUsdc: bigint, noEurcLabel: string): string {
  * shared decode/summarize function.
  */
 export function AllyCosignPanel() {
-  const t = useTranslations("Pilot");
   const { address, isConnected, connect, signAuthEntry, canSignAuthEntries } =
     useWallet();
+
+  return (
+    <AllyCosignPanelView
+      wallet={{ address, isConnected, connect, signAuthEntry, canSignAuthEntries }}
+    />
+  );
+}
+
+/**
+ * The panel itself, with the wallet passed in.
+ *
+ * Separating this from the hook keeps the connected, unsupported-wallet, and
+ * disconnected states reachable in tests and stories without mocking the
+ * wallet module out from under the rest of the suite.
+ */
+export function AllyCosignPanelView({ wallet }: { wallet: AllyCosignWallet }) {
+  const t = useTranslations("Pilot");
+  const { address, isConnected, connect, signAuthEntry, canSignAuthEntries } =
+    wallet;
 
   const [pasted, setPasted] = useState("");
   const [summary, setSummary] = useState<AnyCosignSummary | null>(null);

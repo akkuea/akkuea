@@ -78,7 +78,11 @@ export function ExitCosignPanel({
       setStep({ name: "done", hash });
       onExited?.();
     } catch (finalizeError) {
-      setStep({ name: "prepared", payloadJson, summary: summarizeExit(payloadJson) });
+      setStep({
+        name: "prepared",
+        payloadJson,
+        summary: summarizeExit(payloadJson),
+      });
       setError(describeError(finalizeError, t("queue.actionFailed")));
     }
   }
@@ -108,7 +112,9 @@ export function ExitCosignPanel({
       <Card variant="bordered">
         <div className="mb-3 flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-red-400" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-white">{t("cosign.exitTitle")}</h2>
+          <h2 className="text-sm font-semibold text-white">
+            {t("cosign.exitTitle")}
+          </h2>
         </div>
         <p className="mb-4 text-xs text-neutral-400">{t("cosign.exitHint")}</p>
 
@@ -136,7 +142,9 @@ export function ExitCosignPanel({
           </Button>
         ) : (
           <div className="mt-3 space-y-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-3">
-            <p className="text-xs text-red-300">{t("cosign.exitConfirmNotice")}</p>
+            <p className="text-xs text-red-300">
+              {t("cosign.exitConfirmNotice")}
+            </p>
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -173,7 +181,9 @@ export function ExitCosignPanel({
   return (
     <Card variant="bordered">
       <div className="space-y-3">
-        <p className="text-xs font-medium text-white">{t("cosign.summaryTitle")}</p>
+        <p className="text-xs font-medium text-white">
+          {t("cosign.summaryTitle")}
+        </p>
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
           <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>
           <dd className="truncate text-neutral-200">{summary.operator}</dd>
@@ -200,7 +210,9 @@ export function ExitCosignPanel({
               })}
             </p>
             <div>
-              <p className="mb-1 text-xs text-neutral-500">{t("cosign.shareLabel")}</p>
+              <p className="mb-1 text-xs text-neutral-500">
+                {t("cosign.shareLabel")}
+              </p>
               <Textarea
                 readOnly
                 rows={3}
@@ -223,7 +235,9 @@ export function ExitCosignPanel({
               </Button>
             </div>
             <div>
-              <p className="mb-1 text-xs text-neutral-500">{t("cosign.pasteAllyResponseLabel")}</p>
+              <p className="mb-1 text-xs text-neutral-500">
+                {t("cosign.pasteAllyResponseLabel")}
+              </p>
               <Textarea
                 rows={3}
                 value={returnedPayload}

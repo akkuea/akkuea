@@ -38,7 +38,11 @@ interface DistributionCosignPanelProps {
 type Step =
   | { name: "idle" }
   | { name: "preparing" }
-  | { name: "prepared"; payloadJson: string; summary: ExecuteDistributionSummary }
+  | {
+      name: "prepared";
+      payloadJson: string;
+      summary: ExecuteDistributionSummary;
+    }
   | { name: "finalizing"; payloadJson: string }
   | { name: "done"; hash: string };
 
@@ -97,7 +101,11 @@ export function DistributionCosignPanel({
       setStep({ name: "done", hash });
       onDistributed();
     } catch (finalizeError) {
-      setStep({ name: "prepared", payloadJson, summary: summarizeExecuteDistribution(payloadJson) });
+      setStep({
+        name: "prepared",
+        payloadJson,
+        summary: summarizeExecuteDistribution(payloadJson),
+      });
       setError(describeError(finalizeError, t("queue.actionFailed")));
     }
   }
@@ -111,8 +119,12 @@ export function DistributionCosignPanel({
   if (step.name === "idle" || step.name === "preparing") {
     return (
       <div className="mt-4 rounded-lg border border-white/10 bg-white/5 px-3 py-3">
-        <p className="text-xs text-neutral-300">{t("queue.readyToDistribute")}</p>
-        <p className="mt-1 text-xs text-neutral-500">{t("cosign.prepareHint")}</p>
+        <p className="text-xs text-neutral-300">
+          {t("queue.readyToDistribute")}
+        </p>
+        <p className="mt-1 text-xs text-neutral-500">
+          {t("cosign.prepareHint")}
+        </p>
         <Button
           size="sm"
           className="mt-3"
@@ -141,12 +153,16 @@ export function DistributionCosignPanel({
   }
 
   const summary =
-    step.name === "prepared" ? step.summary : summarizeExecuteDistribution(step.payloadJson);
+    step.name === "prepared"
+      ? step.summary
+      : summarizeExecuteDistribution(step.payloadJson);
   const payloadJson = step.payloadJson;
 
   return (
     <div className="mt-4 space-y-3 rounded-lg border border-white/10 bg-white/5 px-3 py-3">
-      <p className="text-xs font-medium text-white">{t("cosign.summaryTitle")}</p>
+      <p className="text-xs font-medium text-white">
+        {t("cosign.summaryTitle")}
+      </p>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
         <dt className="text-neutral-500">{t("cosign.summaryCycle")}</dt>
         <dd className="text-neutral-200">{summary.cycleId}</dd>
@@ -155,7 +171,9 @@ export function DistributionCosignPanel({
         <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>
         <dd className="truncate text-neutral-200">{summary.ally}</dd>
         <dt className="text-neutral-500">{t("cosign.summaryTotal")}</dt>
-        <dd className="text-neutral-200">{formatUsdc(totalDistributableUsdc)}</dd>
+        <dd className="text-neutral-200">
+          {formatUsdc(totalDistributableUsdc)}
+        </dd>
         <dt className="text-neutral-500">{t("cosign.summaryEurcFloor")}</dt>
         <dd className="text-neutral-200">
           {formatEurcFloor(summary.minEurcPerUsdc, t("cosign.noEurcHolders"))}
@@ -178,7 +196,9 @@ export function DistributionCosignPanel({
             })}
           </p>
           <div>
-            <p className="mb-1 text-xs text-neutral-500">{t("cosign.shareLabel")}</p>
+            <p className="mb-1 text-xs text-neutral-500">
+              {t("cosign.shareLabel")}
+            </p>
             <Textarea
               readOnly
               rows={3}
@@ -201,7 +221,9 @@ export function DistributionCosignPanel({
             </Button>
           </div>
           <div>
-            <p className="mb-1 text-xs text-neutral-500">{t("cosign.pasteAllyResponseLabel")}</p>
+            <p className="mb-1 text-xs text-neutral-500">
+              {t("cosign.pasteAllyResponseLabel")}
+            </p>
             <Textarea
               rows={3}
               value={returnedPayload}

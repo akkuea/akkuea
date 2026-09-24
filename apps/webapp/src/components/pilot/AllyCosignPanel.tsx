@@ -13,10 +13,10 @@ import {
 } from "@/services/pilot/cosign";
 import { shortenHash } from "./format";
 
-const RATE_DENOMINATOR = 10_000_000n;
+const RATE_DENOMINATOR = BigInt(10_000_000);
 
 function formatEurcFloor(minEurcPerUsdc: bigint, noEurcLabel: string): string {
-  if (minEurcPerUsdc === 0n) return noEurcLabel;
+  if (minEurcPerUsdc === BigInt(0)) return noEurcLabel;
   const whole = minEurcPerUsdc / RATE_DENOMINATOR;
   const frac = minEurcPerUsdc % RATE_DENOMINATOR;
   return `${whole}.${frac.toString().padStart(7, "0")} EURC / USDC`;

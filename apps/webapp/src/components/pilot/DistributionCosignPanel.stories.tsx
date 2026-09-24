@@ -12,7 +12,7 @@ const meta: Meta<typeof DistributionCosignPanel> = {
     operatorAddress: OPERATOR,
     allyAddress: ALLY,
     cycleId: "2026-03",
-    totalDistributableUsdc: 125_000_0000000n,
+    totalDistributableUsdc: BigInt(125_000_0000000),
     signTransaction: async (xdr: string) => xdr,
     onDistributed: () => {},
   },

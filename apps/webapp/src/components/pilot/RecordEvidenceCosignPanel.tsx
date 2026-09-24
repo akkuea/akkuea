@@ -107,7 +107,7 @@ export function RecordEvidenceCosignPanel({
       setStep({ name: "prepared", payloadJson, summary });
     } catch (prepareError) {
       setStep({ name: "compose" });
-      setError(describeError(prepareError, t));
+      setError(describeError(prepareError, t("queue.actionFailed")));
     }
   }
 
@@ -128,7 +128,7 @@ export function RecordEvidenceCosignPanel({
         payloadJson,
         summary: summarizeRecordEvidence(payloadJson),
       });
-      setError(describeError(finalizeError, t));
+      setError(describeError(finalizeError, t("queue.actionFailed")));
     }
   }
 
@@ -334,7 +334,7 @@ export function RecordEvidenceCosignPanel({
   );
 }
 
-function describeError(error: unknown, t: (key: string) => string): string {
+function describeError(error: unknown, fallback: string): string {
   if (error instanceof CosignError) return error.message;
-  return error instanceof Error ? error.message : t("queue.actionFailed");
+  return error instanceof Error ? error.message : fallback;
 }

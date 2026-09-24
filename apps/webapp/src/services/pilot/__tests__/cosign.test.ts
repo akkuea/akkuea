@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import type { DistributionSummary } from "@akkuea/shared";
 
 /**
  * These tests mock `@akkuea/shared`'s generated contract clients at the
@@ -30,6 +31,7 @@ interface MockSpec {
 
 interface MockAssembledTx {
   built: unknown;
+  result?: unknown;
   options: { server?: unknown };
   toJson(): string;
   needsNonInvokerSigningBy(): string[];
@@ -45,11 +47,23 @@ interface MockAssembledTx {
   send(): Promise<{ sendTransactionResponse?: { hash?: string } }>;
 }
 
+/** The payout contract ID every test's invocations are addressed to by
+ * default, matching the mocked `CONTRACT_IDS.PILOT_PAYOUT_SPLIT` below so
+ * `decodeInvocationArgs`'s contract-address check passes without every test
+ * having to know about it. */
+const PAYOUT_CONTRACT_ID = "CPAYOUT";
+
 /** Builds a fake `tx.built.operations[0]`, the shape `decodeInvocationArgs`
  * reads: a `hostFunctionTypeInvokeContract` invocation whose args array is
  * already in "decoded" form, since the mock `spec.scValToNative` below is
- * the identity function. */
-function invocation(functionName: string, args: unknown[]) {
+ * the identity function. `contractAddress` defaults to the configured payout
+ * contract; tests that exercise the wrong-contract check pass a different
+ * one explicitly. */
+function invocation(
+  functionName: string,
+  args: unknown[],
+  contractAddress: string = PAYOUT_CONTRACT_ID,
+) {
   return {
     operations: [
       {
@@ -57,12 +71,33 @@ function invocation(functionName: string, args: unknown[]) {
         func: {
           type: "hostFunctionTypeInvokeContract",
           invokeContract: {
+            contractAddress,
             functionName: { toStringStrict: () => functionName },
             args,
           },
         },
       },
     ],
+  };
+}
+
+/** Default `DistributionSummary` `decodeExecuteDistributionSummary` reads
+ * off `tx.result`. Values are all zero/empty since most tests only care
+ * about the decoded invocation args, not this simulated result; tests that
+ * do care override it explicitly. */
+function distributionResult(overrides: Partial<DistributionSummary> = {}) {
+  return {
+    cycle_id: "2026-03",
+    distributed_total: BigInt(0),
+    dust: BigInt(0),
+    eurc_distributed_total: BigInt(0),
+    holder_amount: BigInt(0),
+    holder_count: 0,
+    platform_fee: BigInt(0),
+    swaps_failed: 0,
+    total_income: BigInt(0),
+    undistributed_failed_swaps: 0,
+    ...overrides,
   };
 }
 
@@ -97,6 +132,7 @@ function makeTx(overrides: Partial<MockAssembledTx> = {}): MockAssembledTx {
       "2026-03",
       BigInt(0),
     ]),
+    result: distributionResult(),
     options: {},
     toJson: () => "reconstructed-payload-json",
     needsNonInvokerSigningBy: () => ["GALLY"],
@@ -209,6 +245,24 @@ mock.module("@stellar/stellar-sdk/rpc", () => ({
   },
 }));
 
+/**
+ * `decodeInvocationArgs` decodes the invocation's contract address via
+ * `Address.fromScAddress(...).toString()`. The mock invocations above put a
+ * plain contract-ID string directly where a real `xdr.ScAddress` would go
+ * (matching `scValToNative`'s identity mock for the invocation's other
+ * args), so this override just round-trips that string instead of decoding
+ * real XDR. Every other export is passed through untouched: `config.ts`
+ * still needs the real `Networks` from this same module.
+ */
+const RealStellarSdk = await import("@stellar/stellar-sdk");
+mock.module("@stellar/stellar-sdk", () => ({
+  ...RealStellarSdk,
+  Address: {
+    ...RealStellarSdk.Address,
+    fromScAddress: (value: unknown) => ({ toString: () => String(value) }),
+  },
+}));
+
 const {
   CosignError,
   prepareExecuteDistribution,
@@ -310,6 +364,61 @@ describe("summarizeExecuteDistribution", () => {
     expect(summary.readyToFinalize).toBe(true);
   });
 
+  it("decodes the holder/fee totals from the transaction's own simulated result, not a caller-supplied value", () => {
+    mockPayout.fromJSON.execute_distribution = () =>
+      makeTx({
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-07",
+          BigInt(0),
+        ]),
+        result: distributionResult({
+          distributed_total: BigInt(1_000_0000000),
+          eurc_distributed_total: BigInt(200_0000000),
+          holder_amount: BigInt(950_0000000),
+          holder_count: 4,
+          platform_fee: BigInt(50_0000000),
+        }),
+      });
+    const summary = summarizeExecuteDistribution("some-payload");
+    expect(summary.distributedTotal).toBe(BigInt(1_000_0000000));
+    expect(summary.eurcDistributedTotal).toBe(BigInt(200_0000000));
+    expect(summary.holderAmount).toBe(BigInt(950_0000000));
+    expect(summary.holderCount).toBe(4);
+    expect(summary.platformFee).toBe(BigInt(50_0000000));
+  });
+
+  it("refuses to summarize a payload invoking a contract other than the configured payout contract", () => {
+    mockPayout.fromJSON.execute_distribution = () =>
+      makeTx({
+        built: invocation(
+          "execute_distribution",
+          [OPERATOR, ALLY, "2026-07", BigInt(0)],
+          "CIMPOSTOR",
+        ),
+      });
+    expect(() => summarizeExecuteDistribution("some-payload")).toThrow(
+      expect.objectContaining({ reason: "wrong_contract" }),
+    );
+  });
+
+  it("refuses to summarize a payload whose simulated result is missing", () => {
+    mockPayout.fromJSON.execute_distribution = () =>
+      makeTx({
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-07",
+          BigInt(0),
+        ]),
+        result: undefined,
+      });
+    expect(() => summarizeExecuteDistribution("some-payload")).toThrow(
+      expect.objectContaining({ reason: "not_ready_to_finalize" }),
+    );
+  });
+
   it("a different payload's mock invocation produces a different summary, proving there is no other data source", () => {
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
@@ -375,12 +484,78 @@ describe("coSignAsAlly", () => {
 
   it("signs and returns an updated payload for the correct ally", async () => {
     mockPayout.fromJSON.execute_distribution = () => preparedTx([ALLY]);
+    mockPayout.get_evidence = async () => ({
+      result: { status: { tag: "Approved" } },
+    });
     const { payloadJson } = await coSignAsAlly({
       payloadJson: "payload",
       allyAddress: ALLY,
       signAuthEntry: async () => "signed",
     });
     expect(payloadJson).toBe("reconstructed-payload-json");
+  });
+
+  it("refuses a payload invoking a contract other than the configured payout contract", async () => {
+    mockPayout.fromJSON.execute_distribution = () =>
+      makeTx({
+        built: invocation(
+          "execute_distribution",
+          [OPERATOR, ALLY, "2026-03", BigInt(0)],
+          "CIMPOSTOR",
+        ),
+        needsNonInvokerSigningBy: () => [ALLY],
+      });
+    await expect(
+      coSignAsAlly({
+        payloadJson: "payload",
+        allyAddress: ALLY,
+        signAuthEntry: async () => "signed",
+      }),
+    ).rejects.toMatchObject({ reason: "wrong_contract" });
+  });
+
+  it("refuses to sign once the cycle's evidence status has changed since the request was prepared", async () => {
+    mockPayout.fromJSON.execute_distribution = () => preparedTx([ALLY]);
+    mockPayout.get_evidence = async () => ({
+      result: { status: { tag: "Submitted" } },
+    });
+    await expect(
+      coSignAsAlly({
+        payloadJson: "payload",
+        allyAddress: ALLY,
+        signAuthEntry: async () => "signed",
+      }),
+    ).rejects.toMatchObject({ reason: "cycle_status_changed" });
+  });
+
+  it("translates an expired signing window into a CosignError", async () => {
+    const { AssembledTransaction } =
+      await import("@stellar/stellar-sdk/contract");
+    mockPayout.fromJSON.execute_distribution = () =>
+      makeTx({
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          BigInt(0),
+        ]),
+        needsNonInvokerSigningBy: () => [ALLY],
+        signAuthEntries: async () => {
+          throw new AssembledTransaction.Errors.ExpiredState(
+            "the request has expired",
+          );
+        },
+      });
+    mockPayout.get_evidence = async () => ({
+      result: { status: { tag: "Approved" } },
+    });
+    await expect(
+      coSignAsAlly({
+        payloadJson: "payload",
+        allyAddress: ALLY,
+        signAuthEntry: async () => "signed",
+      }),
+    ).rejects.toMatchObject({ reason: "expired" });
   });
 });
 
@@ -436,12 +611,68 @@ describe("finalizeAndSubmitExecuteDistribution", () => {
         ]),
         needsNonInvokerSigningBy: () => [],
       });
+    mockPayout.get_evidence = async () => ({
+      result: { status: { tag: "Approved" } },
+    });
     const { hash } = await finalizeAndSubmitExecuteDistribution({
       payloadJson: "payload",
       operatorAddress: OPERATOR,
       signTransaction: async (xdr: string) => xdr,
     });
     expect(hash).toBe("abcdef123456");
+  });
+
+  it("refuses to finalize once the cycle's evidence status has changed since the request was prepared", async () => {
+    mockPayout.fromJSON.execute_distribution = () =>
+      makeTx({
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          BigInt(0),
+        ]),
+        needsNonInvokerSigningBy: () => [],
+      });
+    mockPayout.get_evidence = async () => ({
+      result: { status: { tag: "Disputed" } },
+    });
+    await expect(
+      finalizeAndSubmitExecuteDistribution({
+        payloadJson: "payload",
+        operatorAddress: OPERATOR,
+        signTransaction: async (xdr: string) => xdr,
+      }),
+    ).rejects.toMatchObject({ reason: "cycle_status_changed" });
+  });
+
+  it("translates an expired request into a CosignError at finalize time", async () => {
+    const { AssembledTransaction } =
+      await import("@stellar/stellar-sdk/contract");
+    mockPayout.fromJSON.execute_distribution = () =>
+      makeTx({
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          BigInt(0),
+        ]),
+        needsNonInvokerSigningBy: () => [],
+        sign: async () => {
+          throw new AssembledTransaction.Errors.ExpiredState(
+            "the request has expired",
+          );
+        },
+      });
+    mockPayout.get_evidence = async () => ({
+      result: { status: { tag: "Approved" } },
+    });
+    await expect(
+      finalizeAndSubmitExecuteDistribution({
+        payloadJson: "payload",
+        operatorAddress: OPERATOR,
+        signTransaction: async (xdr: string) => xdr,
+      }),
+    ).rejects.toMatchObject({ reason: "expired" });
   });
 });
 

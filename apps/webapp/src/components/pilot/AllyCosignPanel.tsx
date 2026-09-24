@@ -11,7 +11,7 @@ import {
   CosignError,
   type AnyCosignSummary,
 } from "@/services/pilot/cosign";
-import { shortenHash } from "./format";
+import { formatUsdc, shortenHash } from "./format";
 
 const RATE_DENOMINATOR = BigInt(10_000_000);
 
@@ -167,6 +167,12 @@ export function AllyCosignPanelView({ wallet }: { wallet: AllyCosignWallet }) {
                 {t("cosign.summaryTitle")}
               </p>
               <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                <dt className="text-neutral-500">
+                  {t("cosign.summaryContract")}
+                </dt>
+                <dd className="truncate text-neutral-200">
+                  {shortenHash(summary.contractId)}
+                </dd>
                 {summary.kind === "execute_distribution" && (
                   <>
                     <dt className="text-neutral-500">
@@ -184,6 +190,22 @@ export function AllyCosignPanelView({ wallet }: { wallet: AllyCosignWallet }) {
                     </dt>
                     <dd className="truncate text-neutral-200">
                       {summary.ally}
+                    </dd>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryTotal")}
+                    </dt>
+                    <dd className="text-neutral-200">
+                      {formatUsdc(summary.holderAmount)}
+                    </dd>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryHolderCount")}
+                    </dt>
+                    <dd className="text-neutral-200">{summary.holderCount}</dd>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryPlatformFee")}
+                    </dt>
+                    <dd className="text-neutral-200">
+                      {formatUsdc(summary.platformFee)}
                     </dd>
                     <dt className="text-neutral-500">
                       {t("cosign.summaryEurcFloor")}

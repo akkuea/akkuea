@@ -265,13 +265,13 @@ export async function prepareExecuteDistribution(args: {
   await assertContractReady(payout);
 
   const holderPrefersEurc = await anyHolderPrefersEurc();
-  let minEurcPerUsdc = 0n;
+  let minEurcPerUsdc = BigInt(0);
   if (holderPrefersEurc) {
     minEurcPerUsdc = await quoteEurcFloor({
       totalDistributableUsdc: args.totalDistributableUsdc,
       slippageBps: args.slippageBps,
     });
-    if (minEurcPerUsdc <= 0n) {
+    if (minEurcPerUsdc <= BigInt(0)) {
       throw new CosignError(
         "Refusing to prepare a distribution with a zero EURC price floor while a holder has opted into EURC.",
         "zero_eurc_floor",

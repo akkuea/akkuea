@@ -1,7 +1,10 @@
 import "@/test/setup-dom";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
-import type { AuthEntrySigningProvider } from "@/services/wallet";
+import type {
+  AuthEntrySigningProvider,
+  SignableWalletProvider,
+} from "@/services/wallet";
 
 interface MockKit {
   authModal: () => Promise<{ address: string }>;
@@ -261,14 +264,15 @@ describe("useWallet - signAuthEntry / canSignAuthEntries", () => {
   });
 
   it("canSignAuthEntries is false for a provider that only signs transactions (e.g. Privy, Pollar)", () => {
-    walletRegistry.register({
+    const txOnlyProvider: SignableWalletProvider = {
       id: "test-tx-only-signer",
       name: "Test Transaction-Only Signer",
       isConnected: true,
       connect: async () => ({ address: "GADDRESS" }),
       disconnect: async () => {},
       signTransaction: async () => "signed-tx-xdr",
-    });
+    };
+    walletRegistry.register(txOnlyProvider);
     useAuthenticationStore.setState({ selectedWalletId: "test-tx-only-signer" });
 
     const { result } = renderHook(() => useWallet());

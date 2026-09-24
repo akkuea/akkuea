@@ -14,13 +14,13 @@ import {
 import type { SignXdr } from "@/services/pilot/writes";
 import { formatUsdc } from "./format";
 
-const RATE_DENOMINATOR = 10_000_000n;
+const RATE_DENOMINATOR = BigInt(10_000_000);
 
 /** Renders `min_eurc_per_usdc` (a rate scaled by `RATE_DENOMINATOR`) as a
  * human price, or a plain "not required" note when it is zero, matching the
  * contract's own "zero is valid only when nobody wants EURC" semantics. */
-function formatEurcFloor(minEurcPerUsdc: bigint, t: (key: string) => string): string {
-  if (minEurcPerUsdc === 0n) return t("cosign.noEurcHolders");
+function formatEurcFloor(minEurcPerUsdc: bigint, noEurcLabel: string): string {
+  if (minEurcPerUsdc === BigInt(0)) return noEurcLabel;
   const whole = minEurcPerUsdc / RATE_DENOMINATOR;
   const frac = minEurcPerUsdc % RATE_DENOMINATOR;
   return `${whole}.${frac.toString().padStart(7, "0")} EURC / USDC`;
@@ -81,7 +81,7 @@ export function DistributionCosignPanel({
       setStep({ name: "prepared", payloadJson, summary });
     } catch (prepareError) {
       setStep({ name: "idle" });
-      setError(describeError(prepareError, t));
+      setError(describeError(prepareError, t("queue.actionFailed")));
     }
   }
 
@@ -98,7 +98,7 @@ export function DistributionCosignPanel({
       onDistributed();
     } catch (finalizeError) {
       setStep({ name: "prepared", payloadJson, summary: summarizeExecuteDistribution(payloadJson) });
-      setError(describeError(finalizeError, t));
+      setError(describeError(finalizeError, t("queue.actionFailed")));
     }
   }
 
@@ -157,7 +157,7 @@ export function DistributionCosignPanel({
         <dt className="text-neutral-500">{t("cosign.summaryTotal")}</dt>
         <dd className="text-neutral-200">{formatUsdc(totalDistributableUsdc)}</dd>
         <dt className="text-neutral-500">{t("cosign.summaryEurcFloor")}</dt>
-        <dd className="text-neutral-200">{formatEurcFloor(summary.minEurcPerUsdc, t)}</dd>
+        <dd className="text-neutral-200">{formatEurcFloor(summary.minEurcPerUsdc, t("cosign.noEurcHolders"))}</dd>
       </dl>
 
       {summary.readyToFinalize ? (
@@ -229,9 +229,9 @@ export function DistributionCosignPanel({
   );
 }
 
-function describeError(error: unknown, t: (key: string) => string): string {
+function describeError(error: unknown, fallback: string): string {
   if (error instanceof CosignError) {
     return error.message;
   }
-  return error instanceof Error ? error.message : t("queue.actionFailed");
+  return error instanceof Error ? error.message : fallback;
 }

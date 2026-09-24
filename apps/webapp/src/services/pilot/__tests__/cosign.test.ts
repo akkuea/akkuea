@@ -95,7 +95,7 @@ function makeTx(overrides: Partial<MockAssembledTx> = {}): MockAssembledTx {
       "GOPERATOR",
       "GALLY",
       "2026-03",
-      0n,
+      BigInt(0),
     ]),
     options: {},
     toJson: () => "reconstructed-payload-json",
@@ -139,7 +139,7 @@ function makePayoutClient(
           "2026-03",
           new Uint8Array(32),
           "https://example.com/statement",
-          500_0000000n,
+          BigInt(500_0000000),
         ]),
       }),
     exit: async () =>
@@ -163,7 +163,7 @@ function makePayoutClient(
             "2026-03",
             new Uint8Array(32),
             "https://example.com/statement",
-            500_0000000n,
+            BigInt(500_0000000),
           ]),
         })),
     exit:
@@ -239,7 +239,7 @@ describe("prepareExecuteDistribution", () => {
         operator: OPERATOR,
         ally: ALLY,
         cycleId: "2026-03",
-        totalDistributableUsdc: 100n,
+        totalDistributableUsdc: BigInt(100),
       }),
     ).rejects.toMatchObject({ reason: "paused" });
   });
@@ -251,7 +251,7 @@ describe("prepareExecuteDistribution", () => {
         operator: OPERATOR,
         ally: ALLY,
         cycleId: "2026-03",
-        totalDistributableUsdc: 100n,
+        totalDistributableUsdc: BigInt(100),
       }),
     ).rejects.toMatchObject({ reason: "exited" });
   });
@@ -265,7 +265,7 @@ describe("prepareExecuteDistribution", () => {
         operator: OPERATOR,
         ally: ALLY,
         cycleId: "2026-03",
-        totalDistributableUsdc: 100n,
+        totalDistributableUsdc: BigInt(100),
       }),
     ).rejects.toMatchObject({ reason: "quote_failed" });
   });
@@ -275,7 +275,7 @@ describe("prepareExecuteDistribution", () => {
       operator: OPERATOR,
       ally: ALLY,
       cycleId: "2026-03",
-      totalDistributableUsdc: 100n,
+      totalDistributableUsdc: BigInt(100),
     });
     expect(payloadJson).toBe("reconstructed-payload-json");
     expect(expiresAtLedger).toBeGreaterThan(1_000_000);
@@ -290,7 +290,7 @@ describe("summarizeExecuteDistribution", () => {
           OPERATOR,
           ALLY,
           "2026-07",
-          12_345n,
+          BigInt(12_345),
         ]),
         needsNonInvokerSigningBy: () => [],
       });
@@ -298,20 +298,20 @@ describe("summarizeExecuteDistribution", () => {
     expect(summary.cycleId).toBe("2026-07");
     expect(summary.operator).toBe(OPERATOR);
     expect(summary.ally).toBe(ALLY);
-    expect(summary.minEurcPerUsdc).toBe(12_345n);
+    expect(summary.minEurcPerUsdc).toBe(BigInt(12_345));
     expect(summary.readyToFinalize).toBe(true);
   });
 
   it("a different payload's mock invocation produces a different summary, proving there is no other data source", () => {
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-01", 0n]),
+        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-01", BigInt(0)]),
       });
     const first = summarizeExecuteDistribution("payload-a");
 
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-02", 0n]),
+        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-02", BigInt(0)]),
       });
     const second = summarizeExecuteDistribution("payload-b");
 
@@ -323,7 +323,7 @@ describe("summarizeExecuteDistribution", () => {
 describe("coSignAsAlly", () => {
   function preparedTx(stillNeeds: string[]) {
     return makeTx({
-      built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", 0n]),
+      built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
       needsNonInvokerSigningBy: () => stillNeeds,
     });
   }
@@ -365,7 +365,7 @@ describe("finalizeAndSubmitExecuteDistribution", () => {
   it("refuses when the connected wallet is not the addressed operator", async () => {
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", 0n]),
+        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
         needsNonInvokerSigningBy: () => [],
       });
     await expect(
@@ -380,7 +380,7 @@ describe("finalizeAndSubmitExecuteDistribution", () => {
   it("refuses while the ally has not signed yet", async () => {
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", 0n]),
+        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
         needsNonInvokerSigningBy: () => [ALLY],
       });
     await expect(
@@ -395,7 +395,7 @@ describe("finalizeAndSubmitExecuteDistribution", () => {
   it("signs and submits once every signature is collected", async () => {
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", 0n]),
+        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
         needsNonInvokerSigningBy: () => [],
       });
     const { hash } = await finalizeAndSubmitExecuteDistribution({
@@ -416,7 +416,7 @@ describe("prepareRecordEvidence", () => {
         cycleId: "2026-03",
         evidenceHash: Buffer.alloc(32),
         evidenceLink: "https://example.com",
-        totalIncome: 0n,
+        totalIncome: BigInt(0),
       }),
     ).rejects.toMatchObject({ reason: "zero_amount" });
   });
@@ -429,7 +429,7 @@ describe("prepareRecordEvidence", () => {
         cycleId: "2026-03",
         evidenceHash: Buffer.alloc(16),
         evidenceLink: "https://example.com",
-        totalIncome: 100n,
+        totalIncome: BigInt(100),
       }),
     ).rejects.toMatchObject({ reason: "invalid_evidence_hash" });
   });
@@ -445,7 +445,7 @@ describe("prepareRecordEvidence", () => {
         cycleId: "2026-03",
         evidenceHash: Buffer.alloc(32),
         evidenceLink: "https://example.com",
-        totalIncome: 100n,
+        totalIncome: BigInt(100),
       }),
     ).rejects.toMatchObject({ reason: "already_recorded" });
   });
@@ -457,7 +457,7 @@ describe("prepareRecordEvidence", () => {
       cycleId: "2026-03",
       evidenceHash: Buffer.alloc(32),
       evidenceLink: "https://example.com",
-      totalIncome: 100n,
+      totalIncome: BigInt(100),
     });
     expect(payloadJson).toBe("reconstructed-payload-json");
   });
@@ -468,7 +468,7 @@ describe("summarizeRecordEvidence", () => {
     const summary = summarizeRecordEvidence("payload");
     expect(summary.evidenceHash).toBe("00".repeat(32));
     expect(summary.evidenceLink).toBe("https://example.com/statement");
-    expect(summary.totalIncome).toBe(500_0000000n);
+    expect(summary.totalIncome).toBe(BigInt(500_0000000));
   });
 });
 
@@ -508,11 +508,11 @@ describe("summarizeCosignPayload / coSignPayloadAsAlly", () => {
   it("detects an execute_distribution payload from the invocation's function name", () => {
     mockPayout.txFromJson = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", 0n]),
+        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
       });
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", 0n]),
+        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
       });
     const summary = summarizeCosignPayload("payload");
     expect(summary.kind).toBe("execute_distribution");
@@ -527,7 +527,7 @@ describe("summarizeCosignPayload / coSignPayloadAsAlly", () => {
           "2026-03",
           new Uint8Array(32),
           "https://example.com/statement",
-          500_0000000n,
+          BigInt(500_0000000),
         ]),
       });
     const summary = summarizeCosignPayload("payload");
@@ -552,7 +552,7 @@ describe("summarizeCosignPayload / coSignPayloadAsAlly", () => {
           "2026-03",
           new Uint8Array(32),
           "https://example.com/statement",
-          500_0000000n,
+          BigInt(500_0000000),
         ]),
         needsNonInvokerSigningBy: () => [ALLY],
       });
@@ -564,7 +564,7 @@ describe("summarizeCosignPayload / coSignPayloadAsAlly", () => {
           "2026-03",
           new Uint8Array(32),
           "https://example.com/statement",
-          500_0000000n,
+          BigInt(500_0000000),
         ]),
         needsNonInvokerSigningBy: () => [ALLY],
       });

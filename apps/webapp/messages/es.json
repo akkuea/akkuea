@@ -282,13 +282,16 @@
       "flagDispute": "Marcar disputa"
     },
     "cosign": {
-      "prepareHint": "El contrato de pagos exige que el operador y el aliado autoricen la misma transacción. Preparala aquí y luego compartila con el aliado para que la co-firme.",
+      "prepareHint": "El contrato de pagos exige que el operador y el aliado autoricen la misma transacción. Prepárala aquí y luego compártela con el aliado para que la co-firme.",
       "prepareButton": "Preparar distribución",
       "summaryTitle": "Revisar antes de firmar",
+      "summaryContract": "Contrato",
       "summaryCycle": "Ciclo",
       "summaryOperator": "Operador",
       "summaryAlly": "Aliado",
       "summaryTotal": "Total a titulares",
+      "summaryHolderCount": "Cantidad de titulares",
+      "summaryPlatformFee": "Comisión de la plataforma",
       "summaryEurcFloor": "Piso de precio EURC",
       "noEurcHolders": "No requerido (ningún titular eligió EURC)",
       "needsSignatureFrom": "Todavía necesita la firma de: {addresses}",

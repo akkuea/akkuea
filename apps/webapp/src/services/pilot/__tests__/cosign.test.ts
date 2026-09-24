@@ -152,7 +152,8 @@ function makePayoutClient(
   };
   const merged = { ...base, ...overrides };
   merged.fromJSON = {
-    execute_distribution: overrides.fromJSON?.execute_distribution ?? (() => makeTx()),
+    execute_distribution:
+      overrides.fromJSON?.execute_distribution ?? (() => makeTx()),
     record_evidence:
       overrides.fromJSON?.record_evidence ??
       (() =>
@@ -195,7 +196,10 @@ mock.module("@akkuea/shared", () => ({
     PILOT_WHITELIST: { TESTNET: "CWHITELIST", MAINNET: "CWHITELIST" },
   },
   API_ENDPOINTS: {
-    SOROBAN_RPC: { TESTNET: "https://testnet.example", MAINNET: "https://mainnet.example" },
+    SOROBAN_RPC: {
+      TESTNET: "https://testnet.example",
+      MAINNET: "https://mainnet.example",
+    },
   },
 }));
 
@@ -245,7 +249,9 @@ describe("prepareExecuteDistribution", () => {
   });
 
   it("refuses to prepare once the pilot has exited", async () => {
-    mockPayout.exit_status = async () => ({ result: { reason: "done", at: 1 } });
+    mockPayout.exit_status = async () => ({
+      result: { reason: "done", at: 1 },
+    });
     await expect(
       prepareExecuteDistribution({
         operator: OPERATOR,
@@ -258,7 +264,9 @@ describe("prepareExecuteDistribution", () => {
 
   it("refuses a zero EURC floor while a holder prefers EURC", async () => {
     mockIncomeHolders = ["GHOLDER"];
-    mockPayout.get_currency_preference = async () => ({ result: { tag: "Eurc" } });
+    mockPayout.get_currency_preference = async () => ({
+      result: { tag: "Eurc" },
+    });
     mockPayout.eurc_swap_path_status = async () => ({ result: null });
     await expect(
       prepareExecuteDistribution({
@@ -305,13 +313,23 @@ describe("summarizeExecuteDistribution", () => {
   it("a different payload's mock invocation produces a different summary, proving there is no other data source", () => {
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-01", BigInt(0)]),
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-01",
+          BigInt(0),
+        ]),
       });
     const first = summarizeExecuteDistribution("payload-a");
 
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-02", BigInt(0)]),
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-02",
+          BigInt(0),
+        ]),
       });
     const second = summarizeExecuteDistribution("payload-b");
 
@@ -323,7 +341,12 @@ describe("summarizeExecuteDistribution", () => {
 describe("coSignAsAlly", () => {
   function preparedTx(stillNeeds: string[]) {
     return makeTx({
-      built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
+      built: invocation("execute_distribution", [
+        OPERATOR,
+        ALLY,
+        "2026-03",
+        BigInt(0),
+      ]),
       needsNonInvokerSigningBy: () => stillNeeds,
     });
   }
@@ -365,7 +388,12 @@ describe("finalizeAndSubmitExecuteDistribution", () => {
   it("refuses when the connected wallet is not the addressed operator", async () => {
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          BigInt(0),
+        ]),
         needsNonInvokerSigningBy: () => [],
       });
     await expect(
@@ -380,7 +408,12 @@ describe("finalizeAndSubmitExecuteDistribution", () => {
   it("refuses while the ally has not signed yet", async () => {
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          BigInt(0),
+        ]),
         needsNonInvokerSigningBy: () => [ALLY],
       });
     await expect(
@@ -395,7 +428,12 @@ describe("finalizeAndSubmitExecuteDistribution", () => {
   it("signs and submits once every signature is collected", async () => {
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          BigInt(0),
+        ]),
         needsNonInvokerSigningBy: () => [],
       });
     const { hash } = await finalizeAndSubmitExecuteDistribution({
@@ -480,7 +518,9 @@ describe("prepareExit", () => {
   });
 
   it("refuses once the pilot has already exited", async () => {
-    mockPayout.exit_status = async () => ({ result: { reason: "done", at: 1 } });
+    mockPayout.exit_status = async () => ({
+      result: { reason: "done", at: 1 },
+    });
     await expect(
       prepareExit({ operator: OPERATOR, ally: ALLY, reason: "winding down" }),
     ).rejects.toMatchObject({ reason: "exited" });
@@ -508,11 +548,21 @@ describe("summarizeCosignPayload / coSignPayloadAsAlly", () => {
   it("detects an execute_distribution payload from the invocation's function name", () => {
     mockPayout.txFromJson = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          BigInt(0),
+        ]),
       });
     mockPayout.fromJSON.execute_distribution = () =>
       makeTx({
-        built: invocation("execute_distribution", [OPERATOR, ALLY, "2026-03", BigInt(0)]),
+        built: invocation("execute_distribution", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          BigInt(0),
+        ]),
       });
     const summary = summarizeCosignPayload("payload");
     expect(summary.kind).toBe("execute_distribution");

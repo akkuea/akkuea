@@ -52,7 +52,13 @@ export function AllyCosignPanel() {
 
   return (
     <AllyCosignPanelView
-      wallet={{ address, isConnected, connect, signAuthEntry, canSignAuthEntries }}
+      wallet={{
+        address,
+        isConnected,
+        connect,
+        signAuthEntry,
+        canSignAuthEntries,
+      }}
     />
   );
 }
@@ -121,7 +127,9 @@ export function AllyCosignPanelView({ wallet }: { wallet: AllyCosignWallet }) {
           {t("cosign.allyPanelTitle")}
         </h2>
       </div>
-      <p className="mb-3 text-xs text-neutral-400">{t("cosign.allyPanelHint")}</p>
+      <p className="mb-3 text-xs text-neutral-400">
+        {t("cosign.allyPanelHint")}
+      </p>
 
       {!isConnected ? (
         <Button size="sm" variant="secondary" onClick={() => void connect()}>
@@ -161,44 +169,85 @@ export function AllyCosignPanelView({ wallet }: { wallet: AllyCosignWallet }) {
               <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
                 {summary.kind === "execute_distribution" && (
                   <>
-                    <dt className="text-neutral-500">{t("cosign.summaryCycle")}</dt>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryCycle")}
+                    </dt>
                     <dd className="text-neutral-200">{summary.cycleId}</dd>
-                    <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>
-                    <dd className="truncate text-neutral-200">{summary.operator}</dd>
-                    <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>
-                    <dd className="truncate text-neutral-200">{summary.ally}</dd>
-                    <dt className="text-neutral-500">{t("cosign.summaryEurcFloor")}</dt>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryOperator")}
+                    </dt>
+                    <dd className="truncate text-neutral-200">
+                      {summary.operator}
+                    </dd>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryAlly")}
+                    </dt>
+                    <dd className="truncate text-neutral-200">
+                      {summary.ally}
+                    </dd>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryEurcFloor")}
+                    </dt>
                     <dd className="text-neutral-200">
-                      {formatEurcFloor(summary.minEurcPerUsdc, t("cosign.noEurcHolders"))}
+                      {formatEurcFloor(
+                        summary.minEurcPerUsdc,
+                        t("cosign.noEurcHolders"),
+                      )}
                     </dd>
                   </>
                 )}
                 {summary.kind === "record_evidence" && (
                   <>
-                    <dt className="text-neutral-500">{t("cosign.summaryCycle")}</dt>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryCycle")}
+                    </dt>
                     <dd className="text-neutral-200">{summary.cycleId}</dd>
-                    <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>
-                    <dd className="truncate text-neutral-200">{summary.operator}</dd>
-                    <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>
-                    <dd className="truncate text-neutral-200">{summary.ally}</dd>
-                    <dt className="text-neutral-500">{t("cosign.summaryEvidenceHash")}</dt>
-                    <dd className="text-neutral-200">{shortenHash(summary.evidenceHash)}</dd>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryOperator")}
+                    </dt>
+                    <dd className="truncate text-neutral-200">
+                      {summary.operator}
+                    </dd>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryAlly")}
+                    </dt>
+                    <dd className="truncate text-neutral-200">
+                      {summary.ally}
+                    </dd>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryEvidenceHash")}
+                    </dt>
+                    <dd className="text-neutral-200">
+                      {shortenHash(summary.evidenceHash)}
+                    </dd>
                   </>
                 )}
                 {summary.kind === "exit" && (
                   <>
-                    <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>
-                    <dd className="truncate text-neutral-200">{summary.operator}</dd>
-                    <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>
-                    <dd className="truncate text-neutral-200">{summary.ally}</dd>
-                    <dt className="text-neutral-500">{t("cosign.exitReasonLabel")}</dt>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryOperator")}
+                    </dt>
+                    <dd className="truncate text-neutral-200">
+                      {summary.operator}
+                    </dd>
+                    <dt className="text-neutral-500">
+                      {t("cosign.summaryAlly")}
+                    </dt>
+                    <dd className="truncate text-neutral-200">
+                      {summary.ally}
+                    </dd>
+                    <dt className="text-neutral-500">
+                      {t("cosign.exitReasonLabel")}
+                    </dt>
                     <dd className="text-neutral-200">{summary.reason}</dd>
                   </>
                 )}
               </dl>
 
               {summary.kind === "exit" && (
-                <p className="text-xs text-red-300">{t("cosign.exitConfirmNotice")}</p>
+                <p className="text-xs text-red-300">
+                  {t("cosign.exitConfirmNotice")}
+                </p>
               )}
 
               {!result && (

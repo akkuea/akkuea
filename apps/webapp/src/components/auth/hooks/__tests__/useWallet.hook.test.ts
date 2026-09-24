@@ -273,7 +273,9 @@ describe("useWallet - signAuthEntry / canSignAuthEntries", () => {
       signTransaction: async () => "signed-tx-xdr",
     };
     walletRegistry.register(txOnlyProvider);
-    useAuthenticationStore.setState({ selectedWalletId: "test-tx-only-signer" });
+    useAuthenticationStore.setState({
+      selectedWalletId: "test-tx-only-signer",
+    });
 
     const { result } = renderHook(() => useWallet());
     expect(result.current.canSignAuthEntries).toBe(false);

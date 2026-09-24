@@ -3,7 +3,10 @@
 import { ErrorBoundary, SectionErrorFallback } from "@/components/ui";
 import { usePayoutPaused, usePilotCycles } from "@/hooks/usePilotContract";
 import { useWallet } from "@/components/auth/hooks";
-import { pilotAllyAddress, PilotAllyNotConfiguredError } from "@/services/pilot/config";
+import {
+  pilotAllyAddress,
+  PilotAllyNotConfiguredError,
+} from "@/services/pilot/config";
 import { CycleStatusTimeline } from "./CycleStatusTimeline";
 import { EvidenceReviewQueue } from "./EvidenceReviewQueue";
 import { RecordEvidenceCosignPanel } from "./RecordEvidenceCosignPanel";
@@ -29,7 +32,8 @@ export function OperatorDashboard() {
   try {
     allyAddress = pilotAllyAddress();
   } catch (configError) {
-    if (!(configError instanceof PilotAllyNotConfiguredError)) throw configError;
+    if (!(configError instanceof PilotAllyNotConfiguredError))
+      throw configError;
   }
 
   return (

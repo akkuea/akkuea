@@ -1,4 +1,7 @@
-import { AssembledTransaction, type ClientOptions } from "@stellar/stellar-sdk/contract";
+import {
+  AssembledTransaction,
+  type ClientOptions,
+} from "@stellar/stellar-sdk/contract";
 import { Server as RpcServer } from "@stellar/stellar-sdk/rpc";
 import type { Operation, Transaction, xdr } from "@stellar/stellar-sdk";
 import {
@@ -53,7 +56,8 @@ export function defaultCosignExpiryLedgers(): number {
   const parsedHours = Number.parseFloat(
     process.env.NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS ?? "",
   );
-  const hours = Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : 24;
+  const hours =
+    Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : 24;
   return Math.round((hours * 3600) / LEDGER_CLOSE_SECONDS);
 }
 
@@ -259,10 +263,7 @@ async function assertNotExited(
 ): Promise<void> {
   const exitTx = await payout.exit_status();
   if (exitTx.result) {
-    throw new CosignError(
-      "This pilot has already exited.",
-      "exited",
-    );
+    throw new CosignError("This pilot has already exited.", "exited");
   }
 }
 
@@ -379,7 +380,9 @@ function decodeInvocationArgs(
   }
   const invokeArgs = operation.func.invokeContract;
   const spec = (
-    payoutClient() as unknown as { spec: import("@stellar/stellar-sdk/contract").Spec }
+    payoutClient() as unknown as {
+      spec: import("@stellar/stellar-sdk/contract").Spec;
+    }
   ).spec;
   const funcSpec = spec.getFunc(methodName);
   const decoded: Record<string, unknown> = {};
@@ -483,7 +486,9 @@ async function coSignAsAllyGeneric<TSummary extends CosignableSummary>(args: {
  * operator's own `require_auth`, since the operator is the transaction's
  * source account) and submits it to the network.
  */
-async function finalizeAndSubmitGeneric<TSummary extends CosignableSummary>(args: {
+async function finalizeAndSubmitGeneric<
+  TSummary extends CosignableSummary,
+>(args: {
   tx: AssembledTransaction<unknown>;
   operatorAddress: string;
   decode: (tx: AssembledTransaction<unknown>) => TSummary;
@@ -575,9 +580,9 @@ function decodeRecordEvidenceSummary(
     cycleId: String(decoded.cycle_id),
     operator: String(decoded.operator),
     ally: String(decoded.ally),
-    evidenceHash: Buffer.from(
-      decoded.evidence_hash as Uint8Array,
-    ).toString("hex"),
+    evidenceHash: Buffer.from(decoded.evidence_hash as Uint8Array).toString(
+      "hex",
+    ),
     evidenceLink: String(decoded.evidence_link),
     totalIncome: BigInt(decoded.total_income as bigint),
     stillNeedsSignatureFrom: tx.needsNonInvokerSigningBy(),
@@ -608,7 +613,10 @@ export async function prepareRecordEvidence(args: {
   await assertContractReady(payout);
 
   if (args.totalIncome <= BigInt(0)) {
-    throw new CosignError("Total income must be greater than zero.", "zero_amount");
+    throw new CosignError(
+      "Total income must be greater than zero.",
+      "zero_amount",
+    );
   }
   if (args.evidenceHash.length !== EVIDENCE_HASH_BYTES) {
     throw new CosignError(
@@ -617,7 +625,10 @@ export async function prepareRecordEvidence(args: {
     );
   }
   if (args.evidenceLink.trim().length === 0) {
-    throw new CosignError("Evidence link is required.", "missing_evidence_link");
+    throw new CosignError(
+      "Evidence link is required.",
+      "missing_evidence_link",
+    );
   }
 
   const existing = await payout.get_evidence({ cycle_id: args.cycleId });
@@ -816,7 +827,8 @@ function detectCosignPayloadKind(payloadJson: string): CosignPayloadKind {
       "not_ready_to_finalize",
     );
   }
-  const methodName = operation.func.invokeContract.functionName.toStringStrict();
+  const methodName =
+    operation.func.invokeContract.functionName.toStringStrict();
   if (
     methodName === "execute_distribution" ||
     methodName === "record_evidence" ||
@@ -868,15 +880,24 @@ export async function coSignPayloadAsAlly(args: {
   switch (kind) {
     case "execute_distribution": {
       const result = await coSignAsAlly(args);
-      return { payloadJson: result.payloadJson, summary: { kind, ...result.summary } };
+      return {
+        payloadJson: result.payloadJson,
+        summary: { kind, ...result.summary },
+      };
     }
     case "record_evidence": {
       const result = await coSignRecordEvidenceAsAlly(args);
-      return { payloadJson: result.payloadJson, summary: { kind, ...result.summary } };
+      return {
+        payloadJson: result.payloadJson,
+        summary: { kind, ...result.summary },
+      };
     }
     case "exit": {
       const result = await coSignExitAsAlly(args);
-      return { payloadJson: result.payloadJson, summary: { kind, ...result.summary } };
+      return {
+        payloadJson: result.payloadJson,
+        summary: { kind, ...result.summary },
+      };
     }
   }
 }

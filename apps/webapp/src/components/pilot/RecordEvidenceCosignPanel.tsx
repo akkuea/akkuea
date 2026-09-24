@@ -192,7 +192,10 @@ export function RecordEvidenceCosignPanel({
             )}
             {isHashing && (
               <p className="mt-2 flex items-center gap-1.5 text-xs text-neutral-400">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                <Loader2
+                  className="h-3.5 w-3.5 animate-spin"
+                  aria-hidden="true"
+                />
                 {t("submission.hashing")}
               </p>
             )}
@@ -252,7 +255,9 @@ export function RecordEvidenceCosignPanel({
   return (
     <Card variant="bordered">
       <div className="space-y-3">
-        <p className="text-xs font-medium text-white">{t("cosign.summaryTitle")}</p>
+        <p className="text-xs font-medium text-white">
+          {t("cosign.summaryTitle")}
+        </p>
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
           <dt className="text-neutral-500">{t("cosign.summaryCycle")}</dt>
           <dd className="text-neutral-200">{summary.cycleId}</dd>
@@ -260,8 +265,12 @@ export function RecordEvidenceCosignPanel({
           <dd className="truncate text-neutral-200">{summary.operator}</dd>
           <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>
           <dd className="truncate text-neutral-200">{summary.ally}</dd>
-          <dt className="text-neutral-500">{t("cosign.summaryEvidenceHash")}</dt>
-          <dd className="text-neutral-200">{shortenHash(summary.evidenceHash)}</dd>
+          <dt className="text-neutral-500">
+            {t("cosign.summaryEvidenceHash")}
+          </dt>
+          <dd className="text-neutral-200">
+            {shortenHash(summary.evidenceHash)}
+          </dd>
         </dl>
 
         {summary.readyToFinalize ? (
@@ -280,7 +289,9 @@ export function RecordEvidenceCosignPanel({
               })}
             </p>
             <div>
-              <p className="mb-1 text-xs text-neutral-500">{t("cosign.shareLabel")}</p>
+              <p className="mb-1 text-xs text-neutral-500">
+                {t("cosign.shareLabel")}
+              </p>
               <Textarea
                 readOnly
                 rows={3}
@@ -303,7 +314,9 @@ export function RecordEvidenceCosignPanel({
               </Button>
             </div>
             <div>
-              <p className="mb-1 text-xs text-neutral-500">{t("cosign.pasteAllyResponseLabel")}</p>
+              <p className="mb-1 text-xs text-neutral-500">
+                {t("cosign.pasteAllyResponseLabel")}
+              </p>
               <Textarea
                 rows={3}
                 value={returnedPayload}

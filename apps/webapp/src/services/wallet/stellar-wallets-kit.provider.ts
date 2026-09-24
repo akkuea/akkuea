@@ -90,9 +90,7 @@ export class StellarWalletsKitProvider implements AuthEntrySigningProvider {
 
   private requireInitializedKit(): typeof StellarWalletsKit {
     if (!this.initialized) {
-      throw new Error(
-        "Stellar wallet is not connected. Call connect() first.",
-      );
+      throw new Error("Stellar wallet is not connected. Call connect() first.");
     }
     return StellarWalletsKit;
   }

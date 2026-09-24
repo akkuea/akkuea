@@ -22,7 +22,9 @@ globalThis.MutationObserver = dom.window.MutationObserver as any;
 
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import React from "react";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, waitFor } from "@testing-library/react";
+import axe from "axe-core";
+import { renderWithIntl } from "@/test/renderWithIntl";
 
 mock.module("framer-motion", () => {
   const passthrough = new Proxy(
@@ -83,7 +85,9 @@ describe("ClaimLandStep", () => {
     const onNext = () => {};
     const onSkip = () => {};
 
-    const view = render(<ClaimLandStep onNext={onNext} onSkip={onSkip} />);
+    const view = renderWithIntl(
+      <ClaimLandStep onNext={onNext} onSkip={onSkip} />,
+    );
 
     fireEvent.click(view.getByRole("button", { name: /Claim 1,000 LAND/i }));
 
@@ -100,7 +104,9 @@ describe("ClaimLandStep", () => {
   });
 
   it("does not call the faucet builder with a hardcoded placeholder string", async () => {
-    const view = render(<ClaimLandStep onNext={() => {}} onSkip={() => {}} />);
+    const view = renderWithIntl(
+      <ClaimLandStep onNext={() => {}} onSkip={() => {}} />,
+    );
 
     fireEvent.click(view.getByRole("button", { name: /Claim 1,000 LAND/i }));
 
@@ -116,7 +122,9 @@ describe("ClaimLandStep", () => {
   it("shows the error state when the transaction fails", async () => {
     mockSignAndSubmitTx.mockRejectedValueOnce(new Error("User rejected"));
 
-    const view = render(<ClaimLandStep onNext={() => {}} onSkip={() => {}} />);
+    const view = renderWithIntl(
+      <ClaimLandStep onNext={() => {}} onSkip={() => {}} />,
+    );
 
     fireEvent.click(view.getByRole("button", { name: /Claim 1,000 LAND/i }));
 
@@ -131,11 +139,36 @@ describe("ClaimLandStep", () => {
       signAndSubmitTx: mockSignAndSubmitTx,
     });
 
-    const view = render(<ClaimLandStep onNext={() => {}} onSkip={() => {}} />);
+    const view = renderWithIntl(
+      <ClaimLandStep onNext={() => {}} onSkip={() => {}} />,
+    );
 
     fireEvent.click(view.getByRole("button", { name: /Claim 1,000 LAND/i }));
 
     expect(mockBuildFaucetClaimXdr).not.toHaveBeenCalled();
     expect(mockSignAndSubmitTx).not.toHaveBeenCalled();
+  });
+
+  it("renders in Spanish", () => {
+    const view = renderWithIntl(
+      <ClaimLandStep onNext={() => {}} onSkip={() => {}} />,
+      { locale: "es" },
+    );
+
+    expect(
+      view.getByRole("button", { name: /Reclamar 1,000 LAND/i }),
+    ).not.toBeNull();
+  });
+
+  it("has no axe violations", async () => {
+    const view = renderWithIntl(
+      <ClaimLandStep onNext={() => {}} onSkip={() => {}} />,
+    );
+
+    const results = await axe.run(view.container, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+    });
+
+    expect(results.violations).toEqual([]);
   });
 });

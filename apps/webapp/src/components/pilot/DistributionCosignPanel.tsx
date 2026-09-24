@@ -12,7 +12,7 @@ import {
   type ExecuteDistributionSummary,
 } from "@/services/pilot/cosign";
 import type { SignXdr } from "@/services/pilot/writes";
-import { formatUsdc } from "./format";
+import { formatUsdc, shortenHash } from "./format";
 
 const RATE_DENOMINATOR = BigInt(10_000_000);
 
@@ -164,6 +164,10 @@ export function DistributionCosignPanel({
         {t("cosign.summaryTitle")}
       </p>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+        <dt className="text-neutral-500">{t("cosign.summaryContract")}</dt>
+        <dd className="truncate text-neutral-200">
+          {shortenHash(summary.contractId)}
+        </dd>
         <dt className="text-neutral-500">{t("cosign.summaryCycle")}</dt>
         <dd className="text-neutral-200">{summary.cycleId}</dd>
         <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>
@@ -171,9 +175,11 @@ export function DistributionCosignPanel({
         <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>
         <dd className="truncate text-neutral-200">{summary.ally}</dd>
         <dt className="text-neutral-500">{t("cosign.summaryTotal")}</dt>
-        <dd className="text-neutral-200">
-          {formatUsdc(totalDistributableUsdc)}
-        </dd>
+        <dd className="text-neutral-200">{formatUsdc(summary.holderAmount)}</dd>
+        <dt className="text-neutral-500">{t("cosign.summaryHolderCount")}</dt>
+        <dd className="text-neutral-200">{summary.holderCount}</dd>
+        <dt className="text-neutral-500">{t("cosign.summaryPlatformFee")}</dt>
+        <dd className="text-neutral-200">{formatUsdc(summary.platformFee)}</dd>
         <dt className="text-neutral-500">{t("cosign.summaryEurcFloor")}</dt>
         <dd className="text-neutral-200">
           {formatEurcFloor(summary.minEurcPerUsdc, t("cosign.noEurcHolders"))}

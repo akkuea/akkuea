@@ -281,7 +281,7 @@
       "readyToDistribute": "Aprobado y listo para distribuir."
     },
     "cosign": {
-      "prepareHint": "El contrato de pagos exige que el operador y el aliado autoricen la misma transacción. Preparala aquí y luego compartila con el aliado para que la co-firme.",
+      "prepareHint": "El contrato de pagos exige que el operador y el aliado autoricen la misma transacción. Prepárala aquí y luego compártela con el aliado para que la co-firme.",
       "prepareButton": "Preparar distribución",
       "summaryTitle": "Revisar antes de firmar",
       "summaryCycle": "Ciclo",
@@ -320,7 +320,10 @@
       "exitConfirmNotice": "Esto es permanente y no se puede revertir. Tanto el operador como el aliado deben firmarlo.",
       "exitConfirmButton": "Sí, finalizar de forma permanente",
       "exitCancelButton": "Cancelar",
-      "exitDone": "Este piloto ha finalizado. Transacción {hash}..."
+      "exitDone": "Este piloto ha finalizado. Transacción {hash}...",
+      "summaryContract": "Contrato",
+      "summaryHolderCount": "Cantidad de titulares",
+      "summaryPlatformFee": "Comisión de la plataforma"
     },
     "holdings": {
       "title": "Tus tenencias",

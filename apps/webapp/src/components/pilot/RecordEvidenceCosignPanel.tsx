@@ -259,6 +259,10 @@ export function RecordEvidenceCosignPanel({
           {t("cosign.summaryTitle")}
         </p>
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+          <dt className="text-neutral-500">{t("cosign.summaryContract")}</dt>
+          <dd className="truncate text-neutral-200">
+            {shortenHash(summary.contractId)}
+          </dd>
           <dt className="text-neutral-500">{t("cosign.summaryCycle")}</dt>
           <dd className="text-neutral-200">{summary.cycleId}</dd>
           <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>

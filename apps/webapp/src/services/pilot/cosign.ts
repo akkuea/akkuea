@@ -3,11 +3,13 @@ import {
   type ClientOptions,
 } from "@stellar/stellar-sdk/contract";
 import { Server as RpcServer } from "@stellar/stellar-sdk/rpc";
+import { Address } from "@stellar/stellar-sdk";
 import type { Operation, Transaction, xdr } from "@stellar/stellar-sdk";
 import {
   buildContractClientOptions,
   PilotIncomeTokenClient,
   PilotPayoutSplitClient,
+  type DistributionSummary,
   type PilotIncomeTokenClientInterface,
   type PilotPayoutSplitClientInterface,
 } from "@akkuea/shared";
@@ -79,7 +81,8 @@ export class CosignError extends Error {
       | "zero_amount"
       | "invalid_evidence_hash"
       | "missing_evidence_link"
-      | "missing_reason",
+      | "missing_reason"
+      | "wrong_contract",
   ) {
     super(message);
     this.name = "CosignError";
@@ -226,12 +229,6 @@ export async function quoteEurcFloor(args: {
   }
 }
 
-/** Cycle-status precondition the caller already read before preparing; kept
- * separate from the contract's own gate so a stale UI (showing an "approved"
- * cycle that has since been rejected, disputed, or distributed elsewhere)
- * fails with a clear message immediately, rather than a raw contract panic. */
-export type CyclePrecondition = "approved" | "not_yet_distributed";
-
 async function assertContractReady(
   payout: PilotPayoutSplitClientInterface,
 ): Promise<void> {
@@ -265,6 +262,57 @@ async function assertNotExited(
   if (exitTx.result) {
     throw new CosignError("This pilot has already exited.", "exited");
   }
+}
+
+/**
+ * Re-checked before the ally signs and again before the operator finalizes,
+ * on top of the identical check `prepareExecuteDistribution` already runs:
+ * paused/exited state, and the cycle's evidence status, can each change in
+ * the window between preparing a payload and either party actually acting
+ * on it (a different operator session pausing the contract, the ally's own
+ * evidence getting disputed by an admin, and so on). A stale precondition
+ * caught here fails with a clear message instead of a contract panic after
+ * a signature has already been collected.
+ */
+async function assertExecuteDistributionStillValid(
+  payout: PilotPayoutSplitClientInterface,
+  cycleId: string,
+): Promise<void> {
+  await assertContractReady(payout);
+  const evidenceTx = await payout.get_evidence({ cycle_id: cycleId });
+  const evidence = evidenceTx.result;
+  if (!evidence || evidence.status.tag !== "Approved") {
+    throw new CosignError(
+      "This cycle's evidence status has changed since this request was prepared; it can no longer be distributed.",
+      "cycle_status_changed",
+    );
+  }
+}
+
+/** Re-checked before the ally signs and again before the operator finalizes.
+ * See `assertExecuteDistributionStillValid`'s doc comment for why this
+ * cannot just rely on the check `prepareRecordEvidence` already ran. */
+async function assertRecordEvidenceStillValid(
+  payout: PilotPayoutSplitClientInterface,
+  cycleId: string,
+): Promise<void> {
+  await assertContractReady(payout);
+  const existing = await payout.get_evidence({ cycle_id: cycleId });
+  if (existing.result) {
+    throw new CosignError(
+      "Evidence has already been recorded for this cycle since this request was prepared.",
+      "already_recorded",
+    );
+  }
+}
+
+/** Re-checked before the ally signs and again before the operator finalizes.
+ * `exit` is not gated by pause (see `assertNotExited`), so this only
+ * re-checks the already-exited case. */
+async function assertExitStillValid(
+  payout: PilotPayoutSplitClientInterface,
+): Promise<void> {
+  await assertNotExited(payout);
 }
 
 /**
@@ -321,10 +369,22 @@ export async function prepareExecuteDistribution(args: {
  * reconstructed transaction, never from a value passed in alongside the
  * payload. */
 export interface ExecuteDistributionSummary {
+  /** The contract this invocation actually targets, verified against the
+   * configured payout contract before this summary is ever produced. */
+  contractId: string;
   cycleId: string;
   operator: string;
   ally: string;
   minEurcPerUsdc: bigint;
+  /** Sum of pro-rata shares fully delivered, from the transaction's own
+   * simulated `DistributionSummary` result, not the amount the operator
+   * asked to prepare. */
+  distributedTotal: bigint;
+  /** EURC actually received across successful swap legs. */
+  eurcDistributedTotal: bigint;
+  holderAmount: bigint;
+  holderCount: number;
+  platformFee: bigint;
   /** Whether the specific wallet reviewing this still needs to sign. */
   stillNeedsSignatureFrom: string[];
   /** `true` once every non-invoker signature has been collected. */
@@ -351,16 +411,22 @@ export function summarizeExecuteDistribution(
 }
 
 /**
- * Decodes a built invocation's arguments straight from `tx.built`, the same
- * extraction `AssembledTransaction.fromJson` itself performs to validate the
- * envelope, keyed by `spec.getFunc(methodName).inputs`. Shared by every
- * dual-signed call's summary decoder below, since none of them have any
- * other source these values could come from.
+ * Decodes a built invocation's contract address and arguments straight from
+ * `tx.built`, the same extraction `AssembledTransaction.fromJson` itself
+ * performs to validate the envelope, keyed by `spec.getFunc(methodName).inputs`.
+ * Shared by every dual-signed call's summary decoder below, since none of
+ * them have any other source these values could come from.
+ *
+ * Verifies the invocation's `contractAddress` against the configured payout
+ * contract before returning anything: without this, a payload built against
+ * a different contract that happens to expose a same-named, same-shaped
+ * function would decode and summarize as if it were ours, and an ally could
+ * sign an authorization for a contract they never intended to trust.
  */
 function decodeInvocationArgs(
   tx: AssembledTransaction<unknown>,
   methodName: string,
-): Record<string, unknown> {
+): { contractId: string; args: Record<string, unknown> } {
   if (!tx.built) {
     throw new CosignError(
       "This payload has not been simulated and cannot be summarized.",
@@ -379,6 +445,16 @@ function decodeInvocationArgs(
     );
   }
   const invokeArgs = operation.func.invokeContract;
+  const contractId = Address.fromScAddress(
+    invokeArgs.contractAddress,
+  ).toString();
+  const expectedContractId = pilotContractIds().payoutSplit;
+  if (contractId !== expectedContractId) {
+    throw new CosignError(
+      `This payload invokes contract ${contractId}, not the configured payout contract (${expectedContractId}). Refusing to summarize or sign it.`,
+      "wrong_contract",
+    );
+  }
   const spec = (
     payoutClient() as unknown as {
       spec: import("@stellar/stellar-sdk/contract").Spec;
@@ -392,18 +468,41 @@ function decodeInvocationArgs(
       input.type,
     );
   });
-  return decoded;
+  return { contractId, args: decoded };
 }
 
 function decodeExecuteDistributionSummary(
   tx: AssembledTransaction<unknown>,
 ): ExecuteDistributionSummary {
-  const decoded = decodeInvocationArgs(tx, "execute_distribution");
+  const { contractId, args: decoded } = decodeInvocationArgs(
+    tx,
+    "execute_distribution",
+  );
+  let result: DistributionSummary | undefined;
+  try {
+    result = tx.result as DistributionSummary;
+  } catch {
+    // tx.result throws when simulationData was never set; fall through to
+    // the same not_ready_to_finalize error the missing-result case below
+    // reports, since both mean the same thing to the caller.
+  }
+  if (!result) {
+    throw new CosignError(
+      "This payload's simulated result is missing; it may not have been prepared correctly.",
+      "not_ready_to_finalize",
+    );
+  }
   return {
+    contractId,
     cycleId: String(decoded.cycle_id),
     operator: String(decoded.operator),
     ally: String(decoded.ally),
     minEurcPerUsdc: BigInt(decoded.min_eurc_per_usdc as bigint),
+    distributedTotal: BigInt(result.distributed_total),
+    eurcDistributedTotal: BigInt(result.eurc_distributed_total),
+    holderAmount: BigInt(result.holder_amount),
+    holderCount: Number(result.holder_count),
+    platformFee: BigInt(result.platform_fee),
     stillNeedsSignatureFrom: tx.needsNonInvokerSigningBy(),
     readyToFinalize: tx.needsNonInvokerSigningBy().length === 0,
   };
@@ -434,6 +533,14 @@ async function coSignAsAllyGeneric<TSummary extends CosignableSummary>(args: {
   ) => Promise<string>;
   expirationLedger?: number;
   decode: (tx: AssembledTransaction<unknown>) => TSummary;
+  /** Re-checks preconditions (paused, exited, cycle status) against current
+   * on-chain state, called just before the ally signs. Preparing a payload
+   * only checks these once; without re-checking here, a contract that was
+   * paused, exited, or had its cycle status change after prepare-time but
+   * before the ally gets around to signing would let the ally sign an
+   * authorization the contract is now guaranteed to reject, or worse, one
+   * that no longer means what the summary above claims it means. */
+  revalidate: (summary: TSummary) => Promise<void>;
 }): Promise<{ payloadJson: string; summary: TSummary }> {
   const { tx, decode } = args;
   const summary = decode(tx);
@@ -450,6 +557,7 @@ async function coSignAsAllyGeneric<TSummary extends CosignableSummary>(args: {
       "already_signed",
     );
   }
+  await args.revalidate(summary);
 
   const networkPassphrase = pilotNetworkPassphrase();
   try {
@@ -492,6 +600,12 @@ async function finalizeAndSubmitGeneric<
   tx: AssembledTransaction<unknown>;
   operatorAddress: string;
   decode: (tx: AssembledTransaction<unknown>) => TSummary;
+  /** Re-checks preconditions against current on-chain state, called just
+   * before the operator submits. See the identical parameter on
+   * `coSignAsAllyGeneric` for why this cannot be skipped: both signatures
+   * being collected does not mean the contract state they were collected
+   * against is still current. */
+  revalidate: (summary: TSummary) => Promise<void>;
 }): Promise<{ hash: string }> {
   const summary = args.decode(args.tx);
 
@@ -507,6 +621,7 @@ async function finalizeAndSubmitGeneric<
       "not_ready_to_finalize",
     );
   }
+  await args.revalidate(summary);
 
   try {
     await args.tx.sign();
@@ -537,6 +652,8 @@ export async function coSignAsAlly(args: {
     ...args,
     tx,
     decode: decodeExecuteDistributionSummary,
+    revalidate: (summary) =>
+      assertExecuteDistributionStillValid(payout, summary.cycleId),
   });
 }
 
@@ -555,12 +672,17 @@ export async function finalizeAndSubmitExecuteDistribution(args: {
     tx,
     operatorAddress: args.operatorAddress,
     decode: decodeExecuteDistributionSummary,
+    revalidate: (summary) =>
+      assertExecuteDistributionStillValid(payout, summary.cycleId),
   });
 }
 
 /** Everything the confirmation screen needs for a `record_evidence`
  * invocation, decoded from the invocation itself (see `decodeInvocationArgs`). */
 export interface RecordEvidenceSummary {
+  /** The contract this invocation actually targets, verified against the
+   * configured payout contract before this summary is ever produced. */
+  contractId: string;
   cycleId: string;
   operator: string;
   ally: string;
@@ -575,8 +697,12 @@ export interface RecordEvidenceSummary {
 function decodeRecordEvidenceSummary(
   tx: AssembledTransaction<unknown>,
 ): RecordEvidenceSummary {
-  const decoded = decodeInvocationArgs(tx, "record_evidence");
+  const { contractId, args: decoded } = decodeInvocationArgs(
+    tx,
+    "record_evidence",
+  );
   return {
+    contractId,
     cycleId: String(decoded.cycle_id),
     operator: String(decoded.operator),
     ally: String(decoded.ally),
@@ -682,6 +808,8 @@ export async function coSignRecordEvidenceAsAlly(args: {
     ...args,
     tx,
     decode: decodeRecordEvidenceSummary,
+    revalidate: (summary) =>
+      assertRecordEvidenceStillValid(payout, summary.cycleId),
   });
 }
 
@@ -697,12 +825,17 @@ export async function finalizeAndSubmitRecordEvidence(args: {
     tx,
     operatorAddress: args.operatorAddress,
     decode: decodeRecordEvidenceSummary,
+    revalidate: (summary) =>
+      assertRecordEvidenceStillValid(payout, summary.cycleId),
   });
 }
 
 /** Everything the confirmation screen needs for an `exit` invocation,
  * decoded from the invocation itself (see `decodeInvocationArgs`). */
 export interface ExitSummary {
+  /** The contract this invocation actually targets, verified against the
+   * configured payout contract before this summary is ever produced. */
+  contractId: string;
   operator: string;
   ally: string;
   reason: string;
@@ -711,8 +844,9 @@ export interface ExitSummary {
 }
 
 function decodeExitSummary(tx: AssembledTransaction<unknown>): ExitSummary {
-  const decoded = decodeInvocationArgs(tx, "exit");
+  const { contractId, args: decoded } = decodeInvocationArgs(tx, "exit");
   return {
+    contractId,
     operator: String(decoded.operator),
     ally: String(decoded.ally),
     reason: String(decoded.reason),
@@ -780,6 +914,7 @@ export async function coSignExitAsAlly(args: {
     ...args,
     tx,
     decode: decodeExitSummary,
+    revalidate: () => assertExitStillValid(payout),
   });
 }
 
@@ -795,6 +930,7 @@ export async function finalizeAndSubmitExit(args: {
     tx,
     operatorAddress: args.operatorAddress,
     decode: decodeExitSummary,
+    revalidate: () => assertExitStillValid(payout),
   });
 }
 

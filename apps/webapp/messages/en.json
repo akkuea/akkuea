@@ -320,7 +320,10 @@
       "exitConfirmNotice": "This is permanent and cannot be reversed. Both the operator and the ally must sign it.",
       "exitConfirmButton": "Yes, end it permanently",
       "exitCancelButton": "Cancel",
-      "exitDone": "This pilot has exited. Transaction {hash}..."
+      "exitDone": "This pilot has exited. Transaction {hash}...",
+      "summaryContract": "Contract",
+      "summaryHolderCount": "Holder count",
+      "summaryPlatformFee": "Platform fee"
     },
     "holdings": {
       "title": "Your holdings",

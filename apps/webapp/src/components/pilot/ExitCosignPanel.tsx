@@ -12,6 +12,7 @@ import {
   type ExitSummary,
 } from "@/services/pilot/cosign";
 import type { SignXdr } from "@/services/pilot/writes";
+import { shortenHash } from "./format";
 
 interface ExitCosignPanelProps {
   operatorAddress: string;
@@ -185,6 +186,10 @@ export function ExitCosignPanel({
           {t("cosign.summaryTitle")}
         </p>
         <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+          <dt className="text-neutral-500">{t("cosign.summaryContract")}</dt>
+          <dd className="truncate text-neutral-200">
+            {shortenHash(summary.contractId)}
+          </dd>
           <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>
           <dd className="truncate text-neutral-200">{summary.operator}</dd>
           <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>

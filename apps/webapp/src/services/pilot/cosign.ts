@@ -20,11 +20,12 @@ import {
   quoteAmountOut,
   SoroswapQuoteError,
 } from "./soroswapQuote";
+import { EVIDENCE_HASH_BYTES } from "./evidenceHash";
 import type { SignXdr } from "./writes";
 
 /**
- * Two-party co-signing for the pilot's dual-authorized contract calls
- * (`execute_distribution`, and eventually `record_evidence` and `exit`).
+ * Two-party co-signing for the pilot's dual-authorized contract calls:
+ * `execute_distribution`, `record_evidence`, and `exit`.
  *
  * See docs/strategy/decision-log.md, "Two-party signing payload transport",
  * for why this passes a plain JSON string between operator and ally rather
@@ -69,7 +70,12 @@ export class CosignError extends Error {
       | "expired"
       | "wrong_signer"
       | "already_signed"
-      | "not_ready_to_finalize",
+      | "not_ready_to_finalize"
+      | "already_recorded"
+      | "zero_amount"
+      | "invalid_evidence_hash"
+      | "missing_evidence_link"
+      | "missing_reason",
   ) {
     super(message);
     this.name = "CosignError";
@@ -85,7 +91,7 @@ export class CosignError extends Error {
  * client-construction pattern.
  */
 type PayoutClient = PilotPayoutSplitClientInterface &
-  Pick<PilotPayoutSplitClient, "fromJSON">;
+  Pick<PilotPayoutSplitClient, "fromJSON" | "txFromJson">;
 
 function payoutClient(
   publicKey?: string,
@@ -244,6 +250,23 @@ async function assertContractReady(
 }
 
 /**
+ * `exit` itself is not gated by `pause` (see the contract's own doc comment
+ * on `exit`): a paused pilot can still be permanently wound down. Only the
+ * already-exited case needs checking client-side.
+ */
+async function assertNotExited(
+  payout: PilotPayoutSplitClientInterface,
+): Promise<void> {
+  const exitTx = await payout.exit_status();
+  if (exitTx.result) {
+    throw new CosignError(
+      "This pilot has already exited.",
+      "exited",
+    );
+  }
+}
+
+/**
  * The operator's first step: builds, simulates, and returns an
  * `execute_distribution` invocation as a JSON payload the ally can review
  * and co-sign in a separate browser session.
@@ -326,9 +349,17 @@ export function summarizeExecuteDistribution(
   return decodeExecuteDistributionSummary(tx);
 }
 
-function decodeExecuteDistributionSummary(
+/**
+ * Decodes a built invocation's arguments straight from `tx.built`, the same
+ * extraction `AssembledTransaction.fromJson` itself performs to validate the
+ * envelope, keyed by `spec.getFunc(methodName).inputs`. Shared by every
+ * dual-signed call's summary decoder below, since none of them have any
+ * other source these values could come from.
+ */
+function decodeInvocationArgs(
   tx: AssembledTransaction<unknown>,
-): ExecuteDistributionSummary {
+  methodName: string,
+): Record<string, unknown> {
   if (!tx.built) {
     throw new CosignError(
       "This payload has not been simulated and cannot be summarized.",
@@ -350,7 +381,7 @@ function decodeExecuteDistributionSummary(
   const spec = (
     payoutClient() as unknown as { spec: import("@stellar/stellar-sdk/contract").Spec }
   ).spec;
-  const funcSpec = spec.getFunc("execute_distribution");
+  const funcSpec = spec.getFunc(methodName);
   const decoded: Record<string, unknown> = {};
   funcSpec.inputs.forEach((input: xdr.ScSpecFunctionInputV0, index: number) => {
     decoded[input.name.toString()] = spec.scValToNative(
@@ -358,7 +389,13 @@ function decodeExecuteDistributionSummary(
       input.type,
     );
   });
+  return decoded;
+}
 
+function decodeExecuteDistributionSummary(
+  tx: AssembledTransaction<unknown>,
+): ExecuteDistributionSummary {
+  const decoded = decodeInvocationArgs(tx, "execute_distribution");
   return {
     cycleId: String(decoded.cycle_id),
     operator: String(decoded.operator),
@@ -369,14 +406,23 @@ function decodeExecuteDistributionSummary(
   };
 }
 
+/** Shared shape every dual-signed call's summary has, enough for the
+ * cosign/finalize plumbing below to work without knowing the specific call. */
+interface CosignableSummary {
+  ally: string;
+  operator: string;
+  stillNeedsSignatureFrom: string[];
+  readyToFinalize: boolean;
+}
+
 /**
- * The ally's step: reconstructs the shared payload, verifies it is still
- * within its signing window and actually addressed to this ally, signs
- * their own authorization entry, and returns the updated payload to send
- * back to the operator.
+ * The ally's step, generic over which dual-signed call `tx` reconstructs:
+ * verifies the payload is still within its signing window and actually
+ * addressed to this ally, signs their own authorization entry, and returns
+ * the updated payload to send back to the operator.
  */
-export async function coSignAsAlly(args: {
-  payloadJson: string;
+async function coSignAsAllyGeneric<TSummary extends CosignableSummary>(args: {
+  tx: AssembledTransaction<unknown>;
   allyAddress: string;
   signAuthEntry: (
     authEntryXdr: string,
@@ -384,10 +430,10 @@ export async function coSignAsAlly(args: {
     networkPassphrase: string,
   ) => Promise<string>;
   expirationLedger?: number;
-}): Promise<{ payloadJson: string; summary: ExecuteDistributionSummary }> {
-  const payout = payoutClient();
-  const tx = payout.fromJSON.execute_distribution(args.payloadJson);
-  const summary = decodeExecuteDistributionSummary(tx);
+  decode: (tx: AssembledTransaction<unknown>) => TSummary;
+}): Promise<{ payloadJson: string; summary: TSummary }> {
+  const { tx, decode } = args;
+  const summary = decode(tx);
 
   if (summary.ally !== args.allyAddress) {
     throw new CosignError(
@@ -428,26 +474,21 @@ export async function coSignAsAlly(args: {
     throw translateAssembledTransactionError(error);
   }
 
-  return {
-    payloadJson: tx.toJson(),
-    summary: decodeExecuteDistributionSummary(tx),
-  };
+  return { payloadJson: tx.toJson(), summary: decode(tx) };
 }
 
 /**
- * The operator's final step: reconstructs the fully-co-signed payload,
- * signs the transaction envelope (which is what satisfies the operator's
- * own `require_auth`, since the operator is the transaction's source
- * account), and submits it to the network.
+ * The operator's final step, generic over which dual-signed call `tx`
+ * reconstructs: signs the transaction envelope (which is what satisfies the
+ * operator's own `require_auth`, since the operator is the transaction's
+ * source account) and submits it to the network.
  */
-export async function finalizeAndSubmitExecuteDistribution(args: {
-  payloadJson: string;
+async function finalizeAndSubmitGeneric<TSummary extends CosignableSummary>(args: {
+  tx: AssembledTransaction<unknown>;
   operatorAddress: string;
-  signTransaction: SignXdr;
+  decode: (tx: AssembledTransaction<unknown>) => TSummary;
 }): Promise<{ hash: string }> {
-  const payout = payoutClient(args.operatorAddress, args.signTransaction);
-  const tx = payout.fromJSON.execute_distribution(args.payloadJson);
-  const summary = decodeExecuteDistributionSummary(tx);
+  const summary = args.decode(args.tx);
 
   if (summary.operator !== args.operatorAddress) {
     throw new CosignError(
@@ -463,11 +504,380 @@ export async function finalizeAndSubmitExecuteDistribution(args: {
   }
 
   try {
-    await tx.sign();
-    const sent = await tx.send();
+    await args.tx.sign();
+    const sent = await args.tx.send();
     return { hash: sent.sendTransactionResponse?.hash ?? "" };
   } catch (error) {
     throw translateAssembledTransactionError(error);
+  }
+}
+
+/**
+ * The ally's step for `execute_distribution`: reconstructs the shared
+ * payload and delegates to the generic co-sign flow above.
+ */
+export async function coSignAsAlly(args: {
+  payloadJson: string;
+  allyAddress: string;
+  signAuthEntry: (
+    authEntryXdr: string,
+    signerAddress: string,
+    networkPassphrase: string,
+  ) => Promise<string>;
+  expirationLedger?: number;
+}): Promise<{ payloadJson: string; summary: ExecuteDistributionSummary }> {
+  const payout = payoutClient();
+  const tx = payout.fromJSON.execute_distribution(args.payloadJson);
+  return coSignAsAllyGeneric({
+    ...args,
+    tx,
+    decode: decodeExecuteDistributionSummary,
+  });
+}
+
+/**
+ * The operator's final step for `execute_distribution`: reconstructs the
+ * fully-co-signed payload and delegates to the generic finalize flow above.
+ */
+export async function finalizeAndSubmitExecuteDistribution(args: {
+  payloadJson: string;
+  operatorAddress: string;
+  signTransaction: SignXdr;
+}): Promise<{ hash: string }> {
+  const payout = payoutClient(args.operatorAddress, args.signTransaction);
+  const tx = payout.fromJSON.execute_distribution(args.payloadJson);
+  return finalizeAndSubmitGeneric({
+    tx,
+    operatorAddress: args.operatorAddress,
+    decode: decodeExecuteDistributionSummary,
+  });
+}
+
+/** Everything the confirmation screen needs for a `record_evidence`
+ * invocation, decoded from the invocation itself (see `decodeInvocationArgs`). */
+export interface RecordEvidenceSummary {
+  cycleId: string;
+  operator: string;
+  ally: string;
+  /** Lowercase hex of the 32-byte evidence digest. */
+  evidenceHash: string;
+  evidenceLink: string;
+  totalIncome: bigint;
+  stillNeedsSignatureFrom: string[];
+  readyToFinalize: boolean;
+}
+
+function decodeRecordEvidenceSummary(
+  tx: AssembledTransaction<unknown>,
+): RecordEvidenceSummary {
+  const decoded = decodeInvocationArgs(tx, "record_evidence");
+  return {
+    cycleId: String(decoded.cycle_id),
+    operator: String(decoded.operator),
+    ally: String(decoded.ally),
+    evidenceHash: Buffer.from(
+      decoded.evidence_hash as Uint8Array,
+    ).toString("hex"),
+    evidenceLink: String(decoded.evidence_link),
+    totalIncome: BigInt(decoded.total_income as bigint),
+    stillNeedsSignatureFrom: tx.needsNonInvokerSigningBy(),
+    readyToFinalize: tx.needsNonInvokerSigningBy().length === 0,
+  };
+}
+
+/**
+ * The operator's first step: builds, simulates, and returns a
+ * `record_evidence` invocation as a JSON payload the ally can review and
+ * co-sign.
+ *
+ * `record_evidence` is a separate, dual-signed shortcut around the
+ * single-signer `submit_evidence` / `review_evidence` human-review
+ * lifecycle (see the contract's own doc comment): both parties jointly
+ * commit an already-approved cycle in one transaction, rather than the
+ * ally submitting and the operator reviewing as two separate steps.
+ */
+export async function prepareRecordEvidence(args: {
+  operator: string;
+  ally: string;
+  cycleId: string;
+  evidenceHash: Buffer;
+  evidenceLink: string;
+  totalIncome: bigint;
+}): Promise<{ payloadJson: string; expiresAtLedger: number }> {
+  const payout = payoutClient(args.operator);
+  await assertContractReady(payout);
+
+  if (args.totalIncome <= 0n) {
+    throw new CosignError("Total income must be greater than zero.", "zero_amount");
+  }
+  if (args.evidenceHash.length !== EVIDENCE_HASH_BYTES) {
+    throw new CosignError(
+      `Evidence hash must be exactly ${EVIDENCE_HASH_BYTES} bytes.`,
+      "invalid_evidence_hash",
+    );
+  }
+  if (args.evidenceLink.trim().length === 0) {
+    throw new CosignError("Evidence link is required.", "missing_evidence_link");
+  }
+
+  const existing = await payout.get_evidence({ cycle_id: args.cycleId });
+  if (existing.result) {
+    throw new CosignError(
+      "Evidence has already been recorded for this cycle.",
+      "already_recorded",
+    );
+  }
+
+  const tx = await payout.record_evidence({
+    operator: args.operator,
+    ally: args.ally,
+    cycle_id: args.cycleId,
+    evidence_hash: args.evidenceHash,
+    evidence_link: args.evidenceLink,
+    total_income: args.totalIncome,
+  });
+
+  const latestLedger = await rpcServer().getLatestLedger();
+  const expiresAtLedger = latestLedger.sequence + defaultCosignExpiryLedgers();
+  return { payloadJson: tx.toJson(), expiresAtLedger };
+}
+
+/**
+ * Reconstructs a shared `record_evidence` payload and decodes it into a
+ * human-readable summary, for display before either party signs.
+ */
+export function summarizeRecordEvidence(
+  payloadJson: string,
+): RecordEvidenceSummary {
+  const payout = payoutClient();
+  const tx = payout.fromJSON.record_evidence(payloadJson);
+  return decodeRecordEvidenceSummary(tx);
+}
+
+/** The ally's step for `record_evidence`. */
+export async function coSignRecordEvidenceAsAlly(args: {
+  payloadJson: string;
+  allyAddress: string;
+  signAuthEntry: (
+    authEntryXdr: string,
+    signerAddress: string,
+    networkPassphrase: string,
+  ) => Promise<string>;
+  expirationLedger?: number;
+}): Promise<{ payloadJson: string; summary: RecordEvidenceSummary }> {
+  const payout = payoutClient();
+  const tx = payout.fromJSON.record_evidence(args.payloadJson);
+  return coSignAsAllyGeneric({
+    ...args,
+    tx,
+    decode: decodeRecordEvidenceSummary,
+  });
+}
+
+/** The operator's final step for `record_evidence`. */
+export async function finalizeAndSubmitRecordEvidence(args: {
+  payloadJson: string;
+  operatorAddress: string;
+  signTransaction: SignXdr;
+}): Promise<{ hash: string }> {
+  const payout = payoutClient(args.operatorAddress, args.signTransaction);
+  const tx = payout.fromJSON.record_evidence(args.payloadJson);
+  return finalizeAndSubmitGeneric({
+    tx,
+    operatorAddress: args.operatorAddress,
+    decode: decodeRecordEvidenceSummary,
+  });
+}
+
+/** Everything the confirmation screen needs for an `exit` invocation,
+ * decoded from the invocation itself (see `decodeInvocationArgs`). */
+export interface ExitSummary {
+  operator: string;
+  ally: string;
+  reason: string;
+  stillNeedsSignatureFrom: string[];
+  readyToFinalize: boolean;
+}
+
+function decodeExitSummary(tx: AssembledTransaction<unknown>): ExitSummary {
+  const decoded = decodeInvocationArgs(tx, "exit");
+  return {
+    operator: String(decoded.operator),
+    ally: String(decoded.ally),
+    reason: String(decoded.reason),
+    stillNeedsSignatureFrom: tx.needsNonInvokerSigningBy(),
+    readyToFinalize: tx.needsNonInvokerSigningBy().length === 0,
+  };
+}
+
+/**
+ * The operator's first step: builds, simulates, and returns an `exit`
+ * invocation as a JSON payload the ally can review and co-sign.
+ *
+ * Permanent and irreversible once finalized (see the contract's own doc
+ * comment on `exit`), so this is the one flow in this module where the UI
+ * should make the operator confirm the reason is final before preparing it,
+ * not just before finalizing it.
+ */
+export async function prepareExit(args: {
+  operator: string;
+  ally: string;
+  reason: string;
+}): Promise<{ payloadJson: string; expiresAtLedger: number }> {
+  const payout = payoutClient(args.operator);
+  await assertNotExited(payout);
+
+  if (args.reason.trim().length === 0) {
+    throw new CosignError("A reason is required to exit.", "missing_reason");
+  }
+
+  const tx = await payout.exit({
+    operator: args.operator,
+    ally: args.ally,
+    reason: args.reason,
+  });
+
+  const latestLedger = await rpcServer().getLatestLedger();
+  const expiresAtLedger = latestLedger.sequence + defaultCosignExpiryLedgers();
+  return { payloadJson: tx.toJson(), expiresAtLedger };
+}
+
+/**
+ * Reconstructs a shared `exit` payload and decodes it into a human-readable
+ * summary, for display before either party signs.
+ */
+export function summarizeExit(payloadJson: string): ExitSummary {
+  const payout = payoutClient();
+  const tx = payout.fromJSON.exit(payloadJson);
+  return decodeExitSummary(tx);
+}
+
+/** The ally's step for `exit`. */
+export async function coSignExitAsAlly(args: {
+  payloadJson: string;
+  allyAddress: string;
+  signAuthEntry: (
+    authEntryXdr: string,
+    signerAddress: string,
+    networkPassphrase: string,
+  ) => Promise<string>;
+  expirationLedger?: number;
+}): Promise<{ payloadJson: string; summary: ExitSummary }> {
+  const payout = payoutClient();
+  const tx = payout.fromJSON.exit(args.payloadJson);
+  return coSignAsAllyGeneric({
+    ...args,
+    tx,
+    decode: decodeExitSummary,
+  });
+}
+
+/** The operator's final step for `exit`. */
+export async function finalizeAndSubmitExit(args: {
+  payloadJson: string;
+  operatorAddress: string;
+  signTransaction: SignXdr;
+}): Promise<{ hash: string }> {
+  const payout = payoutClient(args.operatorAddress, args.signTransaction);
+  const tx = payout.fromJSON.exit(args.payloadJson);
+  return finalizeAndSubmitGeneric({
+    tx,
+    operatorAddress: args.operatorAddress,
+    decode: decodeExitSummary,
+  });
+}
+
+/**
+ * Which dual-signed call a shared payload reconstructs. Read straight off
+ * the built invocation's function name, the same way `decodeInvocationArgs`
+ * reads its arguments, so the ally's review screen can accept whichever of
+ * the three payload types the operator actually sent without needing to be
+ * told in advance which one it is.
+ */
+type CosignPayloadKind = "execute_distribution" | "record_evidence" | "exit";
+
+function detectCosignPayloadKind(payloadJson: string): CosignPayloadKind {
+  const payout = payoutClient();
+  const tx = payout.txFromJson(payloadJson);
+  if (!tx.built) {
+    throw new CosignError(
+      "This payload has not been simulated and cannot be reviewed.",
+      "not_ready_to_finalize",
+    );
+  }
+  const built = tx.built as Transaction;
+  const operation = built.operations[0] as Operation.InvokeHostFunction;
+  if (
+    operation.type !== "invokeHostFunction" ||
+    operation.func.type !== "hostFunctionTypeInvokeContract"
+  ) {
+    throw new CosignError(
+      "This payload does not contain a contract invocation.",
+      "not_ready_to_finalize",
+    );
+  }
+  const methodName = operation.func.invokeContract.functionName.toStringStrict();
+  if (
+    methodName === "execute_distribution" ||
+    methodName === "record_evidence" ||
+    methodName === "exit"
+  ) {
+    return methodName;
+  }
+  throw new CosignError(
+    `This payload invokes "${methodName}", which this dashboard does not review.`,
+    "not_ready_to_finalize",
+  );
+}
+
+/** A decoded summary of any of the three dual-signed calls, tagged by which
+ * one it is so a single paste-and-review UI can render the right fields and
+ * dispatch to the right co-sign/finalize function. */
+export type AnyCosignSummary =
+  | ({ kind: "execute_distribution" } & ExecuteDistributionSummary)
+  | ({ kind: "record_evidence" } & RecordEvidenceSummary)
+  | ({ kind: "exit" } & ExitSummary);
+
+/** Reconstructs any of the three dual-signed payloads and decodes it,
+ * detecting which one it is from the invocation itself. */
+export function summarizeCosignPayload(payloadJson: string): AnyCosignSummary {
+  const kind = detectCosignPayloadKind(payloadJson);
+  switch (kind) {
+    case "execute_distribution":
+      return { kind, ...summarizeExecuteDistribution(payloadJson) };
+    case "record_evidence":
+      return { kind, ...summarizeRecordEvidence(payloadJson) };
+    case "exit":
+      return { kind, ...summarizeExit(payloadJson) };
+  }
+}
+
+/** The ally's step for any of the three dual-signed payloads, detecting
+ * which one it is and dispatching to the matching co-sign function. */
+export async function coSignPayloadAsAlly(args: {
+  payloadJson: string;
+  allyAddress: string;
+  signAuthEntry: (
+    authEntryXdr: string,
+    signerAddress: string,
+    networkPassphrase: string,
+  ) => Promise<string>;
+  expirationLedger?: number;
+}): Promise<{ payloadJson: string; summary: AnyCosignSummary }> {
+  const kind = detectCosignPayloadKind(args.payloadJson);
+  switch (kind) {
+    case "execute_distribution": {
+      const result = await coSignAsAlly(args);
+      return { payloadJson: result.payloadJson, summary: { kind, ...result.summary } };
+    }
+    case "record_evidence": {
+      const result = await coSignRecordEvidenceAsAlly(args);
+      return { payloadJson: result.payloadJson, summary: { kind, ...result.summary } };
+    }
+    case "exit": {
+      const result = await coSignExitAsAlly(args);
+      return { payloadJson: result.payloadJson, summary: { kind, ...result.summary } };
+    }
   }
 }
 

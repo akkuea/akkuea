@@ -6,11 +6,12 @@ import { Copy, Check, ShieldCheck } from "lucide-react";
 import { Button, Card, Textarea } from "@/components/ui";
 import { useWallet } from "@/components/auth/hooks";
 import {
-  summarizeExecuteDistribution,
-  coSignAsAlly,
+  summarizeCosignPayload,
+  coSignPayloadAsAlly,
   CosignError,
-  type ExecuteDistributionSummary,
+  type AnyCosignSummary,
 } from "@/services/pilot/cosign";
+import { shortenHash } from "./format";
 
 const RATE_DENOMINATOR = 10_000_000n;
 
@@ -38,9 +39,7 @@ export function AllyCosignPanel() {
     useWallet();
 
   const [pasted, setPasted] = useState("");
-  const [summary, setSummary] = useState<ExecuteDistributionSummary | null>(
-    null,
-  );
+  const [summary, setSummary] = useState<AnyCosignSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -51,7 +50,7 @@ export function AllyCosignPanel() {
     setResult(null);
     setSummary(null);
     try {
-      setSummary(summarizeExecuteDistribution(pasted.trim()));
+      setSummary(summarizeCosignPayload(pasted.trim()));
     } catch (reviewError) {
       setError(describeError(reviewError));
     }
@@ -62,7 +61,7 @@ export function AllyCosignPanel() {
     setBusy(true);
     setError(null);
     try {
-      const { payloadJson, summary: updated } = await coSignAsAlly({
+      const { payloadJson, summary: updated } = await coSignPayloadAsAlly({
         payloadJson: pasted.trim(),
         allyAddress: address,
         signAuthEntry,
@@ -129,17 +128,47 @@ export function AllyCosignPanel() {
                 {t("cosign.summaryTitle")}
               </p>
               <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-                <dt className="text-neutral-500">{t("cosign.summaryCycle")}</dt>
-                <dd className="text-neutral-200">{summary.cycleId}</dd>
-                <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>
-                <dd className="truncate text-neutral-200">{summary.operator}</dd>
-                <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>
-                <dd className="truncate text-neutral-200">{summary.ally}</dd>
-                <dt className="text-neutral-500">{t("cosign.summaryEurcFloor")}</dt>
-                <dd className="text-neutral-200">
-                  {formatEurcFloor(summary.minEurcPerUsdc, t("cosign.noEurcHolders"))}
-                </dd>
+                {summary.kind === "execute_distribution" && (
+                  <>
+                    <dt className="text-neutral-500">{t("cosign.summaryCycle")}</dt>
+                    <dd className="text-neutral-200">{summary.cycleId}</dd>
+                    <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>
+                    <dd className="truncate text-neutral-200">{summary.operator}</dd>
+                    <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>
+                    <dd className="truncate text-neutral-200">{summary.ally}</dd>
+                    <dt className="text-neutral-500">{t("cosign.summaryEurcFloor")}</dt>
+                    <dd className="text-neutral-200">
+                      {formatEurcFloor(summary.minEurcPerUsdc, t("cosign.noEurcHolders"))}
+                    </dd>
+                  </>
+                )}
+                {summary.kind === "record_evidence" && (
+                  <>
+                    <dt className="text-neutral-500">{t("cosign.summaryCycle")}</dt>
+                    <dd className="text-neutral-200">{summary.cycleId}</dd>
+                    <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>
+                    <dd className="truncate text-neutral-200">{summary.operator}</dd>
+                    <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>
+                    <dd className="truncate text-neutral-200">{summary.ally}</dd>
+                    <dt className="text-neutral-500">{t("cosign.summaryEvidenceHash")}</dt>
+                    <dd className="text-neutral-200">{shortenHash(summary.evidenceHash)}</dd>
+                  </>
+                )}
+                {summary.kind === "exit" && (
+                  <>
+                    <dt className="text-neutral-500">{t("cosign.summaryOperator")}</dt>
+                    <dd className="truncate text-neutral-200">{summary.operator}</dd>
+                    <dt className="text-neutral-500">{t("cosign.summaryAlly")}</dt>
+                    <dd className="truncate text-neutral-200">{summary.ally}</dd>
+                    <dt className="text-neutral-500">{t("cosign.exitReasonLabel")}</dt>
+                    <dd className="text-neutral-200">{summary.reason}</dd>
+                  </>
+                )}
               </dl>
+
+              {summary.kind === "exit" && (
+                <p className="text-xs text-red-300">{t("cosign.exitConfirmNotice")}</p>
+              )}
 
               {!result && (
                 <Button

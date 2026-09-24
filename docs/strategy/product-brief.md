@@ -136,6 +136,8 @@ Engineering/output metrics (what the build itself must hit, independent of wheth
 
 ## Known Risks & Open Questions
 
+> For a precise description of what each actor can and cannot do, and which protections are contract-enforced vs human-mediated, see [`docs/architecture/pilot-threat-model.md`](../architecture/pilot-threat-model.md).
+
 1. **No pilot ally is under contract yet.** The entire model depends on landing one.
 2. **Legal instrument undefined.** What off-chain document makes the token an enforceable revenue-participation right - and whether an SPV is needed - is unresolved. Calling it a "revenue-participation claim" rather than equity does not by itself change securities-law exposure; a token sold to third parties with an expectation of return from a third party's efforts is a plausible Howey-test candidate regardless of label. Needs legal counsel before real investor capital moves.
 3. **Target jurisdiction resolved by sequencing, not fully closed.** This phase stays informal, Stellar-native, and does not depend on any jurisdiction formalization. Phase 2 targets Brazil under CVM Resolução 88 - see [`roadmap.md`](roadmap.md) for detail.

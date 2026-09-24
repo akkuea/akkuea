@@ -39,6 +39,7 @@ cp apps/api/.env.example apps/api/.env
 
 | Variable                        | Example Value                   | Required         | Description                                                                                                                                                 |
 | ------------------------------- | ------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `JWT_SECRET`                    | `generate-a-long-random-secret` | Yes              | Secret used to sign and verify all JWT session tokens. Must be at least 32 characters. Generate with: `openssl rand -hex 32`. **Never use a default or shared value.** |
 | `WEBHOOK_SECRET`                | `your_webhook_secret_here`      | Yes              | Secret used to sign and verify incoming webhook payloads. Must be a random string of at least 32 characters                                                 |
 | `OPERATIONS_BACKEND_CREDENTIAL` | `generate-a-long-random-secret` | Yes              | Shared secret between the API server and the Next.js operations dashboard proxy. Both sides must have the same value. Generate with: `openssl rand -hex 32` |
 | `OPERATIONS_ALLOWED_WALLETS`    | `GXXX...,GYYY...`               | Yes (production) | Comma-separated list of Stellar public keys permitted to call admin operations endpoints. Acts as a server-side allowlist                                   |
@@ -164,6 +165,7 @@ Before going live, verify:
 
 - [ ] `NODE_ENV=production`
 - [ ] `DATABASE_SSL=true`
+- [ ] `JWT_SECRET` is set to a fresh random value of at least 32 characters (not the example placeholder)
 - [ ] `STELLAR_HORIZON_URL` and `STELLAR_RPC_URL` point to mainnet endpoints
 - [ ] `STELLAR_NETWORK_PASSPHRASE` is the mainnet passphrase (verify character-by-character)
 - [ ] `STELLAR_ADMIN_SECRET` is loaded from a secrets manager, not hardcoded in the file

@@ -41,9 +41,8 @@ mock.module("@creit.tech/stellar-wallets-kit/modules/utils", () => ({
   defaultModules: () => [],
 }));
 
-const { StellarWalletsKitProvider } = await import(
-  "../stellar-wallets-kit.provider"
-);
+const { StellarWalletsKitProvider } =
+  await import("../stellar-wallets-kit.provider");
 
 const TEST_NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 

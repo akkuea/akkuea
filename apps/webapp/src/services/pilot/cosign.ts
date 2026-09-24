@@ -1,4 +1,7 @@
-import { AssembledTransaction, type ClientOptions } from "@stellar/stellar-sdk/contract";
+import {
+  AssembledTransaction,
+  type ClientOptions,
+} from "@stellar/stellar-sdk/contract";
 import { Server as RpcServer } from "@stellar/stellar-sdk/rpc";
 import type { Operation, Transaction, xdr } from "@stellar/stellar-sdk";
 import {
@@ -52,7 +55,8 @@ export function defaultCosignExpiryLedgers(): number {
   const parsedHours = Number.parseFloat(
     process.env.NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS ?? "",
   );
-  const hours = Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : 24;
+  const hours =
+    Number.isFinite(parsedHours) && parsedHours > 0 ? parsedHours : 24;
   return Math.round((hours * 3600) / LEDGER_CLOSE_SECONDS);
 }
 
@@ -348,7 +352,9 @@ function decodeExecuteDistributionSummary(
   }
   const invokeArgs = operation.func.invokeContract;
   const spec = (
-    payoutClient() as unknown as { spec: import("@stellar/stellar-sdk/contract").Spec }
+    payoutClient() as unknown as {
+      spec: import("@stellar/stellar-sdk/contract").Spec;
+    }
   ).spec;
   const funcSpec = spec.getFunc("execute_distribution");
   const decoded: Record<string, unknown> = {};

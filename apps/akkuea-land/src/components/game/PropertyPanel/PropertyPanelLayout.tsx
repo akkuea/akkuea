@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslations } from "next-intl";
 import { BuildingLevelBar } from "./shared";
 import { Coins, User, Check, Copy, MapPin, Sparkles } from "lucide-react";
 import { GameProperty, BuildingLevel } from "../../../types/game.types";
@@ -38,6 +39,8 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
   success,
   pendingAction,
 }) => {
+  const t = useTranslations("PropertyPanel");
+
   return (
     <>
       {/* Scrollable Container */}
@@ -60,7 +63,11 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
                   {property.name}
                 </h3>
                 <div className="flex items-center gap-1 text-[11px] text-land-fg-muted mt-1 font-medium">
-                  <MapPin size={12} className="text-land-fg-muted" />
+                  <MapPin
+                    size={12}
+                    className="text-land-fg-muted"
+                    aria-hidden="true"
+                  />
                   <span>
                     {property.location.city}, {property.location.country}
                   </span>
@@ -76,7 +83,7 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
             {/* Grid Location / Coords Bar */}
             <div className="flex justify-between items-center bg-land-bg/60 p-2.5 rounded-lg border border-land-border/60 text-xs mt-1">
               <span className="text-land-fg-muted font-medium">
-                Coordinates
+                {t("coordinatesLabel")}
               </span>
               <span className="font-mono text-land-accent font-semibold">
                 {coordinates}
@@ -86,23 +93,38 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
             {/* Owner Address Section with Copy Option */}
             <div className="flex justify-between items-center text-xs mt-1">
               <span className="text-land-fg-muted font-medium flex items-center gap-1.5">
-                <User size={13} className="text-land-fg-muted" />
-                Owner
+                <User
+                  size={13}
+                  className="text-land-fg-muted"
+                  aria-hidden="true"
+                />
+                {t("ownerLabel")}
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="font-mono text-land-fg font-medium bg-land-surface/80 px-2 py-0.5 rounded border border-land-border/60">
-                  {abbreviateAddress(property.owner)}
+                  {property.owner
+                    ? abbreviateAddress(property.owner)
+                    : t("noOwnerAddress")}
                 </span>
                 {property.owner && (
                   <button
                     onClick={copyToClipboard}
                     className="p-1 rounded bg-land-surface hover:bg-land-surface-raised text-land-fg-muted hover:text-land-fg border border-land-border/80 transition-colors"
-                    title="Copy Address"
+                    aria-label={
+                      copied ? t("addressCopiedLabel") : t("copyAddressLabel")
+                    }
+                    title={
+                      copied ? t("addressCopiedLabel") : t("copyAddressLabel")
+                    }
                   >
                     {copied ? (
-                      <Check size={11} className="text-land-success" />
+                      <Check
+                        size={11}
+                        className="text-land-success"
+                        aria-hidden="true"
+                      />
                     ) : (
-                      <Copy size={11} />
+                      <Copy size={11} aria-hidden="true" />
                     )}
                   </button>
                 )}
@@ -122,7 +144,7 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
             <span className="w-2 h-2 mt-1.5 rounded-full bg-land-danger shrink-0" />
             <div>
               <span className="font-bold text-land-danger block mb-0.5">
-                Transaction Error
+                {t("transactionErrorTitle")}
               </span>
               <span className="text-land-danger/90 leading-relaxed">
                 {error}
@@ -136,7 +158,7 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
             <span className="w-2 h-2 mt-1.5 rounded-full bg-land-success shrink-0" />
             <div>
               <span className="font-bold text-land-success block mb-0.5">
-                Success!
+                {t("successTitle")}
               </span>
               <span className="text-land-success/90 leading-relaxed">
                 {success}
@@ -151,7 +173,7 @@ export const PropertyPanelLayout: React.FC<PropertyPanelLayoutProps> = ({
             <div className="w-5 h-5 border-2 border-land-accent border-t-transparent rounded-full animate-spin" />
             <div className="space-y-1">
               <span className="font-bold text-land-fg block text-xs uppercase tracking-wider">
-                Processing Blockchain Tx
+                {t("processingTransaction")}
               </span>
               <p className="text-[11px] text-land-fg-muted font-medium px-4">
                 {pendingAction}

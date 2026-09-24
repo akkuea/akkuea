@@ -51,7 +51,11 @@
   border-color: color-mix(in srgb, var(--land-fg) 20%, transparent);
   box-shadow:
     0 0 16px rgba(0, 0, 0, 0.5),
-    0 0 8px var(--tile-glow-color, color-mix(in srgb, var(--land-fg) 10%, transparent));
+    0 0 8px
+      var(
+        --tile-glow-color,
+        color-mix(in srgb, var(--land-fg) 10%, transparent)
+      );
 }
 
 /* ─── Selection Ring ─────────────────────────────────────────────────────── */
@@ -146,7 +150,9 @@
   white-space: pre;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+  transition:
+    opacity 0.12s ease-out,
+    transform 0.12s ease-out;
   z-index: 100;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   min-width: 140px;
@@ -158,28 +164,36 @@
   transform: translateX(-50%) scale(1);
 }
 
+/* Tiles are grouped into `role="row"` wrappers (one per grid row) so every
+   `gridcell` has the ARIA-required `row` ancestor; the wrappers use
+   `display: contents` so they stay invisible to `.city-grid`'s own layout,
+   and `.city-tile` remains the direct CSS Grid item. That also means the
+   edge-detection selectors below key off a tile's position within its own
+   row wrapper (`:first-child` / `:last-child`) or which row wrapper it is
+   in (`:nth-last-child` on the row), rather than a flat `:nth-child` count. */
+
 /* Reposition tooltip for bottom rows so it doesn't overflow */
-.city-grid .city-tile:nth-child(n + 341)[data-tooltip]::after {
+.city-grid [role="row"]:nth-last-child(-n + 3) .city-tile[data-tooltip]::after {
   bottom: auto;
   top: calc(100% + 8px);
 }
 
 /* Reposition tooltip for left-edge tiles */
-.city-grid .city-tile:nth-child(20n + 1)[data-tooltip]::after {
+.city-grid .city-tile:first-child[data-tooltip]::after {
   left: 0;
   transform: translateX(0) scale(0.92);
 }
-.city-grid .city-tile:nth-child(20n + 1)[data-tooltip]:hover::after {
+.city-grid .city-tile:first-child[data-tooltip]:hover::after {
   transform: translateX(0) scale(1);
 }
 
 /* Reposition tooltip for right-edge tiles */
-.city-grid .city-tile:nth-child(20n)[data-tooltip]::after {
+.city-grid .city-tile:last-child[data-tooltip]::after {
   left: auto;
   right: 0;
   transform: translateX(0) scale(0.92);
 }
-.city-grid .city-tile:nth-child(20n)[data-tooltip]:hover::after {
+.city-grid .city-tile:last-child[data-tooltip]:hover::after {
   transform: translateX(0) scale(1);
 }
 
@@ -190,7 +204,8 @@
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--land-accent) 80%, transparent);
   }
   30% {
-    box-shadow: 0 0 24px 6px color-mix(in srgb, var(--land-accent) 50%, transparent);
+    box-shadow: 0 0 24px 6px
+      color-mix(in srgb, var(--land-accent) 50%, transparent);
   }
   100% {
     box-shadow: 0 0 0 0 transparent;

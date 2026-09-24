@@ -306,7 +306,10 @@
       "reviewButton": "Review",
       "coSignButton": "Co-sign",
       "returnPayloadLabel": "Send this back to the operator",
-      "walletCannotSignAuthEntries": "The connected wallet cannot sign authorization entries. Connect with a wallet that supports it, such as Freighter, to co-sign a distribution."
+      "walletCannotSignAuthEntries": "The connected wallet cannot sign authorization entries. Connect with a wallet that supports it, such as Freighter, to co-sign a distribution.",
+      "summaryContract": "Contract",
+      "summaryHolderCount": "Holder count",
+      "summaryPlatformFee": "Platform fee"
     },
     "holdings": {
       "title": "Your holdings",

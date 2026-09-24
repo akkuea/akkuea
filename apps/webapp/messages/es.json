@@ -281,7 +281,7 @@
       "readyToDistribute": "Aprobado y listo para distribuir."
     },
     "cosign": {
-      "prepareHint": "El contrato de pagos exige que el operador y el aliado autoricen la misma transacción. Preparala aquí y luego compartila con el aliado para que la co-firme.",
+      "prepareHint": "El contrato de pagos exige que el operador y el aliado autoricen la misma transacción. Prepárala aquí y luego compártela con el aliado para que la co-firme.",
       "prepareButton": "Preparar distribución",
       "summaryTitle": "Revisar antes de firmar",
       "summaryCycle": "Ciclo",
@@ -306,7 +306,10 @@
       "reviewButton": "Revisar",
       "coSignButton": "Co-firmar",
       "returnPayloadLabel": "Envía esto de vuelta al operador",
-      "walletCannotSignAuthEntries": "La billetera conectada no puede firmar entradas de autorización. Conecta una billetera que lo soporte, como Freighter, para co-firmar una distribución."
+      "walletCannotSignAuthEntries": "La billetera conectada no puede firmar entradas de autorización. Conecta una billetera que lo soporte, como Freighter, para co-firmar una distribución.",
+      "summaryContract": "Contrato",
+      "summaryHolderCount": "Cantidad de titulares",
+      "summaryPlatformFee": "Comisión de la plataforma"
     },
     "holdings": {
       "title": "Tus tenencias",

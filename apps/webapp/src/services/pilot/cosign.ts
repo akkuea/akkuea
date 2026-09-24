@@ -3,11 +3,13 @@ import {
   type ClientOptions,
 } from "@stellar/stellar-sdk/contract";
 import { Server as RpcServer } from "@stellar/stellar-sdk/rpc";
+import { Address } from "@stellar/stellar-sdk";
 import type { Operation, Transaction, xdr } from "@stellar/stellar-sdk";
 import {
   buildContractClientOptions,
   PilotIncomeTokenClient,
   PilotPayoutSplitClient,
+  type DistributionSummary,
   type PilotIncomeTokenClientInterface,
   type PilotPayoutSplitClientInterface,
 } from "@akkuea/shared";
@@ -73,7 +75,8 @@ export class CosignError extends Error {
       | "expired"
       | "wrong_signer"
       | "already_signed"
-      | "not_ready_to_finalize",
+      | "not_ready_to_finalize"
+      | "wrong_contract",
   ) {
     super(message);
     this.name = "CosignError";
@@ -220,12 +223,6 @@ export async function quoteEurcFloor(args: {
   }
 }
 
-/** Cycle-status precondition the caller already read before preparing; kept
- * separate from the contract's own gate so a stale UI (showing an "approved"
- * cycle that has since been rejected, disputed, or distributed elsewhere)
- * fails with a clear message immediately, rather than a raw contract panic. */
-export type CyclePrecondition = "approved" | "not_yet_distributed";
-
 async function assertContractReady(
   payout: PilotPayoutSplitClientInterface,
 ): Promise<void> {
@@ -243,6 +240,31 @@ async function assertContractReady(
     throw new CosignError(
       "This pilot has permanently exited and can no longer distribute funds.",
       "exited",
+    );
+  }
+}
+
+/**
+ * Re-checked before the ally signs and again before the operator finalizes,
+ * on top of the identical check `prepareExecuteDistribution` already runs:
+ * paused/exited state, and the cycle's evidence status, can each change in
+ * the window between preparing a payload and either party actually acting
+ * on it (a different operator session pausing the contract, the ally's own
+ * evidence getting disputed by an admin, and so on). A stale precondition
+ * caught here fails with a clear message instead of a contract panic after
+ * a signature has already been collected.
+ */
+async function assertExecuteDistributionStillValid(
+  payout: PilotPayoutSplitClientInterface,
+  cycleId: string,
+): Promise<void> {
+  await assertContractReady(payout);
+  const evidenceTx = await payout.get_evidence({ cycle_id: cycleId });
+  const evidence = evidenceTx.result;
+  if (!evidence || evidence.status.tag !== "Approved") {
+    throw new CosignError(
+      "This cycle's evidence status has changed since this request was prepared; it can no longer be distributed.",
+      "cycle_status_changed",
     );
   }
 }
@@ -301,10 +323,22 @@ export async function prepareExecuteDistribution(args: {
  * reconstructed transaction, never from a value passed in alongside the
  * payload. */
 export interface ExecuteDistributionSummary {
+  /** The contract this invocation actually targets, verified against the
+   * configured payout contract before this summary is ever produced. */
+  contractId: string;
   cycleId: string;
   operator: string;
   ally: string;
   minEurcPerUsdc: bigint;
+  /** Sum of pro-rata shares fully delivered, from the transaction's own
+   * simulated `DistributionSummary` result, not the amount the operator
+   * asked to prepare. */
+  distributedTotal: bigint;
+  /** EURC actually received across successful swap legs. */
+  eurcDistributedTotal: bigint;
+  holderAmount: bigint;
+  holderCount: number;
+  platformFee: bigint;
   /** Whether the specific wallet reviewing this still needs to sign. */
   stillNeedsSignatureFrom: string[];
   /** `true` once every non-invoker signature has been collected. */
@@ -351,6 +385,16 @@ function decodeExecuteDistributionSummary(
     );
   }
   const invokeArgs = operation.func.invokeContract;
+  const contractId = Address.fromScAddress(
+    invokeArgs.contractAddress,
+  ).toString();
+  const expectedContractId = pilotContractIds().payoutSplit;
+  if (contractId !== expectedContractId) {
+    throw new CosignError(
+      `This payload invokes contract ${contractId}, not the configured payout contract (${expectedContractId}). Refusing to summarize or sign it.`,
+      "wrong_contract",
+    );
+  }
   const spec = (
     payoutClient() as unknown as {
       spec: import("@stellar/stellar-sdk/contract").Spec;
@@ -365,11 +409,32 @@ function decodeExecuteDistributionSummary(
     );
   });
 
+  let result: DistributionSummary | undefined;
+  try {
+    result = tx.result as DistributionSummary;
+  } catch {
+    // tx.result throws when simulationData was never set; fall through to
+    // the same not_ready_to_finalize error the missing-result case below
+    // reports, since both mean the same thing to the caller.
+  }
+  if (!result) {
+    throw new CosignError(
+      "This payload's simulated result is missing; it may not have been prepared correctly.",
+      "not_ready_to_finalize",
+    );
+  }
+
   return {
+    contractId,
     cycleId: String(decoded.cycle_id),
     operator: String(decoded.operator),
     ally: String(decoded.ally),
     minEurcPerUsdc: BigInt(decoded.min_eurc_per_usdc as bigint),
+    distributedTotal: BigInt(result.distributed_total),
+    eurcDistributedTotal: BigInt(result.eurc_distributed_total),
+    holderAmount: BigInt(result.holder_amount),
+    holderCount: Number(result.holder_count),
+    platformFee: BigInt(result.platform_fee),
     stillNeedsSignatureFrom: tx.needsNonInvokerSigningBy(),
     readyToFinalize: tx.needsNonInvokerSigningBy().length === 0,
   };
@@ -407,6 +472,7 @@ export async function coSignAsAlly(args: {
       "already_signed",
     );
   }
+  await assertExecuteDistributionStillValid(payout, summary.cycleId);
 
   const networkPassphrase = pilotNetworkPassphrase();
   try {
@@ -467,6 +533,7 @@ export async function finalizeAndSubmitExecuteDistribution(args: {
       "not_ready_to_finalize",
     );
   }
+  await assertExecuteDistributionStillValid(payout, summary.cycleId);
 
   try {
     await tx.sign();

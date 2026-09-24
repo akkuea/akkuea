@@ -2,6 +2,7 @@
 
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { PageErrorFallback } from "./PageErrorFallback";
+import { captureError } from "@akkuea/shared";
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -39,7 +40,10 @@ export class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error("[ErrorBoundary]", error, info.componentStack);
+    captureError(error, {
+      componentStack: info.componentStack ?? undefined,
+      context: "webapp-error-boundary",
+    });
   }
 
   resetErrorBoundary = (): void => {

@@ -5,11 +5,15 @@
  * rule can be unit tested exhaustively against hand-built cycle histories.
  */
 
+export type EvidenceCheckStatus = "confirmed" | "missing" | "unknown";
+
 export interface CycleEvidenceStatus {
   /** The cycle identifier, e.g. `cycle-3`. */
   cycleId: string;
   /** Whether `record_evidence` was found on-chain for this cycle. */
   hasEvidence: boolean;
+  /** True when RPC was unavailable and the evidence could not be checked. */
+  isUnknown: boolean;
 }
 
 export interface CycleGapResult {
@@ -21,6 +25,10 @@ export interface CycleGapResult {
   missedCycleIds: string[];
   /** The most recent missed cycle ID, or null if there is no trailing gap. */
   lastMissedCycleId: string | null;
+  /** Cycle IDs where RPC was unavailable and evidence could not be checked. */
+  unknownCycleIds: string[];
+  /** Count of cycles where RPC was unavailable. */
+  unknownCount: number;
 }
 
 /**
@@ -29,10 +37,10 @@ export interface CycleGapResult {
  *
  * `cycles` must be ordered oldest-to-newest and should only contain cycles
  * whose reporting deadline has already passed (see `buildExpectedCycles`).
- * The gap is measured from the end of the list backward: evidence recorded
- * for the most recent cycle resets the gap to zero, even if an earlier gap
- * existed and was never notified on, because the ally is no longer
- * currently in breach.
+ *
+ * Unknown cycles (RPC unavailable) are never counted as missed. An unknown
+ * cycle acts as a wall: the gap detection stops at the first unknown cycle,
+ * because we cannot determine whether the ally has reported or not.
  */
 export function detectMissedCycles(
   cycles: CycleEvidenceStatus[],
@@ -43,9 +51,19 @@ export function detectMissedCycles(
   }
 
   const missedCycleIds: string[] = [];
+  const unknownCycleIds: string[] = [];
+
   for (let i = cycles.length - 1; i >= 0; i--) {
     const cycle = cycles[i];
-    if (!cycle || cycle.hasEvidence) break;
+    if (!cycle) break;
+
+    if (cycle.isUnknown) {
+      unknownCycleIds.unshift(cycle.cycleId);
+      break;
+    }
+
+    if (cycle.hasEvidence) break;
+
     missedCycleIds.unshift(cycle.cycleId);
   }
 
@@ -58,5 +76,7 @@ export function detectMissedCycles(
     consecutiveMissed,
     missedCycleIds,
     lastMissedCycleId: lastMissedCycleId ?? null,
+    unknownCycleIds,
+    unknownCount: unknownCycleIds.length,
   };
 }

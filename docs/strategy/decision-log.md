@@ -77,6 +77,22 @@ See [`integration-decisions.md`](integration-decisions.md) for the full verifica
 
 Project renamed from the working title "Pili" to **Akkuea** (spelled letter-by-letter: A-K-K-U-E-A, double K) partway through this strategy's development.
 
+## Error tracking (C8-006)
+
+**Adopted:** `@akkuea/shared` error tracking abstraction with Sentry-compatible interface.
+
+**Why this approach:**
+
+- The issue requires one error-tracking provider that can be self-hosted. Sentry offers a self-hosted option and a managed cloud service with a compatible open-source SDK surface.
+- The abstraction (`captureError`, `captureMessage`, `setErrorTrackingProvider`) is a no-op when unconfigured, satisfying the requirement that it must not fail when no provider is set.
+- PII and wallet-signing payloads are scrubbed before sending (keys like `secret`, `password`, `xdr`, `signed_tx` are redacted; long strings are truncated).
+
+**Implementation:**
+
+- `apps/shared/src/utils/errorTracking.ts` - provider interface and scrubbing logic
+- Integrated into: API `errorHandler.ts`, webapp `ErrorBoundary.tsx`, `usePolledRead` in `usePilotContract.ts`
+- All scrubbing is defensive - errors in the tracking layer never break application logic
+
 ## Documentation standard
 
 All downstream artifacts (architecture docs, API references, UX specs, pitch materials) are held to a professional bar: clearly structured, precisely defined, illustrated with proper diagrams rather than prose-only descriptions. A standing requirement, not a one-time pass - see `product-brief.md`.

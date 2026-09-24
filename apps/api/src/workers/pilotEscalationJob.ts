@@ -25,10 +25,7 @@ export interface PilotEscalationJobConfig {
   thresholdCycles?: number;
   /** When the ally's reporting agreement began. Required to run. */
   agreementStartAt?: Date;
-  /**
-   * How often to re-send the escalation notification while the same gap
-   * persists (it is never re-sent on every poll). Default: 7 days.
-   */
+  /** How often to re-send the escalation notification while the same gap persists. Default: 7 days. */
   renotifyIntervalMs?: number;
   /** User ID of the operator to notify. Required to run. */
   operatorUserId?: string;
@@ -44,6 +41,10 @@ export interface PilotEscalationJobConfig {
   notificationService?: NotificationService;
   /** Injected dedup repository (useful for testing). */
   escalationRepository?: PilotEscalationRepository;
+  /** Callback for unknown-state alerts. Called when RPC is unavailable for a cycle. */
+  onUnknown?: ((contractId: string, unknownCycleIds: string[]) => void) | null;
+  /** Ordered RPC fallback URLs. */
+  rpcUrls?: string[];
 }
 
 interface ResolvedConfig {
@@ -59,19 +60,21 @@ interface ResolvedConfig {
   evidenceReader: EvidenceReaderLike | null;
   notificationService: NotificationService;
   escalationRepository: PilotEscalationRepository;
+  onUnknown: ((contractId: string, unknownCycleIds: string[]) => void) | null;
+  rpcUrls: string[];
 }
 
-const DEFAULT_POLL_INTERVAL_MS = 6 * 60 * 60 * 1_000; // 6 hours
+const DEFAULT_POLL_INTERVAL_MS = 6 * 60 * 60 * 1_000;
 const DEFAULT_CADENCE_DAYS = 30;
 const DEFAULT_THRESHOLD_CYCLES = 2;
-const DEFAULT_RENOTIFY_INTERVAL_MS = 7 * 24 * 60 * 60 * 1_000; // 7 days
+const DEFAULT_RENOTIFY_INTERVAL_MS = 7 * 24 * 60 * 60 * 1_000;
 const DEFAULT_RPC_MAX_RETRIES = 3;
 const DEFAULT_RPC_RETRY_BASE_DELAY_MS = 2_000;
 
 export type PilotEscalationTickResult =
   | { status: 'skipped'; reason: string }
   | { status: 'rpc_error'; error: string }
-  | { status: 'ok'; breached: boolean; consecutiveMissed: number; notified: boolean };
+  | { status: 'ok'; breached: boolean; consecutiveMissed: number; notified: boolean; unknownCount: number };
 
 /**
  * PilotEscalationJob
@@ -79,20 +82,8 @@ export type PilotEscalationTickResult =
  * Periodically reads `pilot-payout-split`'s on-chain evidence history for
  * the pilot ally and proactively notifies an operator when two or more
  * consecutive expected reporting cycles have gone by without a recorded
- * `record_evidence` call, instead of leaving this as a passive dashboard
- * signal (see docs/strategy/product-brief.md).
- *
- * Structured after `kycExpiryJob.ts`: self-scheduling poll loop, no crash
- * on transient failure, disable via env.
- *
- * Dedup strategy: a small local table (`pilot_escalation_state`) tracks the
- * last breach an escalation was sent for. This is genuinely new operational
- * metadata (not a cache of on-chain data, which stays the source of truth
- * for the evidence itself), and it lets the job cheaply distinguish "same
- * gap, already notified" from "gap grew / new gap" without re-deriving
- * notification history from `NotificationService` on every tick.
- *
- * Disable via env: PILOT_ESCALATION_JOB_ENABLED=false
+ * `record_evidence` call. RPC failures are treated as "unknown" never as
+ * "ally did not report" (see docs/strategy/product-brief.md).
  */
 export class PilotEscalationJob {
   private readonly config: ResolvedConfig;
@@ -114,6 +105,8 @@ export class PilotEscalationJob {
       evidenceReader: config?.evidenceReader ?? null,
       notificationService: config?.notificationService ?? new NotificationService(),
       escalationRepository: config?.escalationRepository ?? pilotEscalationRepository,
+      onUnknown: config?.onUnknown ?? null,
+      rpcUrls: config?.rpcUrls ?? parseRpcUrls(),
     };
   }
 
@@ -147,12 +140,16 @@ export class PilotEscalationJob {
 
   private getEvidenceReader(): EvidenceReaderLike {
     if (this.config.evidenceReader) return this.config.evidenceReader;
-    return new PilotPayoutEvidenceReader({ contractId: this.config.contractId });
+    const rpcUrls = this.config.rpcUrls ?? parseRpcUrls();
+    return new PilotPayoutEvidenceReader({
+      contractId: this.config.contractId,
+      rpcUrls,
+      retryConfig: { maxRetries: this.config.rpcMaxRetries, retryBaseDelayMs: this.config.rpcRetryBaseDelayMs, maxRetryMs: 30_000, callTimeoutMs: 30_000 },
+    });
   }
 
   /**
-   * Execute one cycle of the job. Public so tests can call it directly with
-   * mocked evidence reader/services to simulate arbitrary cycle histories.
+   * Execute one cycle of the job.
    */
   async tick(): Promise<PilotEscalationTickResult> {
     if (this.processing) return { status: 'skipped', reason: 'already_processing' };
@@ -184,32 +181,37 @@ export class PilotEscalationJob {
       });
 
       if (expectedCycles.length === 0) {
-        return { status: 'ok', breached: false, consecutiveMissed: 0, notified: false };
+        return { status: 'ok', breached: false, consecutiveMissed: 0, notified: false, unknownCount: 0 };
       }
 
       const reader = this.getEvidenceReader();
       const cycleStatuses: CycleEvidenceStatus[] = [];
 
       for (const cycle of expectedCycles) {
-        const result = await this.readWithRetry(reader, cycle.cycleId);
-        cycleStatuses.push({ cycleId: cycle.cycleId, hasEvidence: result.present });
+        const status = await this.readCycleEvidence(reader, cycle.cycleId);
+        cycleStatuses.push(status);
       }
 
       const gap = detectMissedCycles(cycleStatuses, this.config.thresholdCycles);
 
+      // Alert on repeated unknowns (separate from breach escalation)
+      if (gap.unknownCycleIds.length > 0 && this.config.onUnknown) {
+        this.config.onUnknown(this.config.contractId, gap.unknownCycleIds);
+      }
+
       if (!gap.breached) {
-        // Clear any stale dedup state so a future gap is treated as new.
         await this.config.escalationRepository.clear(this.config.contractId);
         return {
           status: 'ok',
           breached: false,
           consecutiveMissed: gap.consecutiveMissed,
           notified: false,
+          unknownCount: gap.unknownCount,
         };
       }
 
       const notified = await this.maybeNotify(gap);
-      return { status: 'ok', breached: true, consecutiveMissed: gap.consecutiveMissed, notified };
+      return { status: 'ok', breached: true, consecutiveMissed: gap.consecutiveMissed, notified, unknownCount: gap.unknownCount };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error('Pilot escalation job tick failed', {
@@ -224,39 +226,24 @@ export class PilotEscalationJob {
   }
 
   /**
-   * Reads evidence presence for a single cycle, retrying transient RPC
-   * failures with exponential backoff (matching `notificationWorker.ts`'s
-   * retry/backoff convention). Rethrows once retries are exhausted so the
-   * tick aborts rather than risking a false "missed" read.
+   * Reads evidence for a single cycle. RPC failures produce an
+   * unknown status, never a missed status.
    */
-  private async readWithRetry(
+  private async readCycleEvidence(
     reader: EvidenceReaderLike,
     cycleId: string,
-  ): Promise<EvidenceLookupResult> {
-    let lastError: unknown;
-
-    for (let attempt = 1; attempt <= this.config.rpcMaxRetries; attempt++) {
-      try {
-        return await reader.hasEvidence(cycleId);
-      } catch (err) {
-        lastError = err;
-        logger.warn('Pilot escalation evidence RPC read failed, will retry', {
-          operation: 'PILOT_ESCALATION_RPC_RETRY',
-          cycleId,
-          attempt,
-          maxRetries: this.config.rpcMaxRetries,
-          error: err instanceof Error ? err.message : String(err),
-        });
-        if (attempt < this.config.rpcMaxRetries) {
-          const delay = this.config.rpcRetryBaseDelayMs * Math.pow(2, attempt - 1);
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        }
-      }
+  ): Promise<CycleEvidenceStatus> {
+    try {
+      const result = await reader.hasEvidence(cycleId);
+      return { cycleId, hasEvidence: result.present, isUnknown: false };
+    } catch (err) {
+      logger.warn('Pilot escalation evidence RPC read unavailable, treating as unknown', {
+        operation: 'PILOT_ESCALATION_RPC_UNKNOWN',
+        cycleId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return { cycleId, hasEvidence: false, isUnknown: true };
     }
-
-    throw lastError instanceof Error
-      ? lastError
-      : new Error(`Failed to read evidence for cycle "${cycleId}" after retries`);
   }
 
   private async maybeNotify(gap: {
@@ -264,6 +251,7 @@ export class PilotEscalationJob {
     consecutiveMissed: number;
     missedCycleIds: string[];
     lastMissedCycleId: string | null;
+    unknownCount: number;
   }): Promise<boolean> {
     const contractId = this.config.contractId;
     const existing = await this.config.escalationRepository.findByContractId(contractId);
@@ -325,20 +313,16 @@ function parseIsoDate(value: string | undefined): Date | undefined {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
+function parseRpcUrls(): string[] {
+  const configured = process.env.PILOT_RPC_URLS?.trim();
+  if (configured) {
+    return configured.split(",").map((u) => u.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 /**
- * Factory that respects the PILOT_ESCALATION_JOB_ENABLED env flag (default:
- * enabled). Cadence, threshold, agreement start, operator, and dedup
- * re-notification cadence are all configurable via environment variables
- * since they are properties of a specific ally's agreement that does not
- * exist yet:
- *
- *  - PILOT_ESCALATION_CADENCE_DAYS (default 30)
- *  - PILOT_ESCALATION_THRESHOLD_CYCLES (default 2)
- *  - PILOT_ESCALATION_AGREEMENT_START (ISO date, required to run)
- *  - PILOT_ESCALATION_OPERATOR_USER_ID (required to run)
- *  - PILOT_ESCALATION_POLL_INTERVAL_MS (default 6 hours)
- *  - PILOT_ESCALATION_RENOTIFY_INTERVAL_MS (default 7 days)
- *  - PILOT_PAYOUT_SPLIT_CONTRACT_ID (env override → shared deployment artifact)
+ * Factory that respects the PILOT_ESCALATION_JOB_ENABLED env flag.
  */
 export function createPilotEscalationJobFromEnv(): PilotEscalationJob | null {
   const enabled = (process.env.PILOT_ESCALATION_JOB_ENABLED ?? 'true').toLowerCase() !== 'false';
@@ -349,6 +333,23 @@ export function createPilotEscalationJobFromEnv(): PilotEscalationJob | null {
     return null;
   }
 
+  const rpcUrls = parseRpcUrls();
+  const onUnknownWebhook = process.env.PILOT_ESCALATION_ONUNKNOWN_WEBHOOK?.trim();
+
+  const onUnknown = onUnknownWebhook
+    ? async (contractId: string, unknownCycleIds: string[]) => {
+        try {
+          await fetch(onUnknownWebhook, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contractId, unknownCycleIds, type: 'rpc_unknown' }),
+          });
+        } catch {
+          logger.warn('Failed to send unknown-state webhook', { contractId, unknownCycleIds });
+        }
+      }
+    : null;
+
   return new PilotEscalationJob({
     pollIntervalMs: parsePositiveNumber(process.env.PILOT_ESCALATION_POLL_INTERVAL_MS),
     cadenceDays: parsePositiveNumber(process.env.PILOT_ESCALATION_CADENCE_DAYS),
@@ -356,5 +357,7 @@ export function createPilotEscalationJobFromEnv(): PilotEscalationJob | null {
     agreementStartAt: parseIsoDate(process.env.PILOT_ESCALATION_AGREEMENT_START),
     renotifyIntervalMs: parsePositiveNumber(process.env.PILOT_ESCALATION_RENOTIFY_INTERVAL_MS),
     operatorUserId: process.env.PILOT_ESCALATION_OPERATOR_USER_ID?.trim() || undefined,
+    rpcUrls,
+    onUnknown,
   });
 }

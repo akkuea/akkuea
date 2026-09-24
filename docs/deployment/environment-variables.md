@@ -75,6 +75,10 @@ The reporting cadence, breach threshold, and re-notification cadence are all con
 | `PILOT_ESCALATION_POLL_INTERVAL_MS`     | `21600000`                            | No (default: 6h)                       | How often the job runs, in milliseconds                                                                                                        |
 | `PILOT_ESCALATION_RENOTIFY_INTERVAL_MS` | `604800000`                           | No (default: 7d)                       | While the same breach persists unresolved, how often to re-send the notification rather than staying silent forever. Not re-sent on every poll |
 | `PILOT_PAYOUT_SPLIT_CONTRACT_ID`        | `CXXX...` (56 chars, starts with `C`) | No (falls back to deployment artifact) | Overrides the resolved `pilot-payout-split` contract ID for this network                                                                       |
+| `PILOT_RPC_URLS`                      | `https://soroban-testnet.stellar.org,https://rpc-mainnet.stellar.org` | No (default: network defaults) | Ordered list of Soroban RPC fallback URLs, comma-separated. Used by the escalation job and `PilotPayoutEvidenceReader` for RPC resilience. |
+| `PILOT_ESCALATION_ONUNKNOWN_WEBHOOK`  | `https://alerts.example.com/webhook` | No | Webhook URL called when RPC is unavailable for a cycle (unknown state). Alerts are sent separately from breach notifications. |
+| `ERROR_TRACKING_DSN`                  | `https://example@sentry.io/123` | No | Error tracking provider DSN (e.g. Sentry). When set, errors from the API handler, workers, and uncaught exceptions are reported. No-op when empty. |
+| `ERROR_TRACKING_ENVIRONMENT`          | `development` | No | Environment name included with error tracking events. Must be one of `development`, `staging`, or `production`. |
 
 ### Pilot Review Turnaround SLA
 
@@ -143,6 +147,7 @@ deployment. See `docs/deployment/deploy-pilot-contracts.md`.
 | `NEXT_PUBLIC_PILOT_START_CYCLE`              | `2026-01`                             | No       | First income cycle the dashboard reports on, as `YYYY-MM`. Cycles are enumerated from here to the current month. Defaults to `2026-01`              |
 | `NEXT_PUBLIC_PILOT_PAYMENT_DAY`              | `5`                                   | No       | Day of the month, in the month after the cycle, that the ally's income is due. A term of the ally's agreement, not a software constant. Default `5` |
 | `NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL`       | `https://example.org/property.splat`  | No       | Gaussian splat capture of the ally's property, shown in the investor view. Absent renders a documented empty state                                  |
+| `NEXT_PUBLIC_PILOT_RPC_URLS`       | `https://soroban-testnet.stellar.org,https://rpc-mainnet.stellar.org` | No | Ordered list of Soroban RPC fallback URLs for dashboard resilience. Comma-separated. |
 
 ---
 

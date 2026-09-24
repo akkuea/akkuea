@@ -47,6 +47,14 @@ independently for a consistent picture. No fund-recovery or unwind logic
 exists in either contract; that question remains open (Known Risk #5 in the
 product brief).
 
+Like `record_evidence` and `execute_distribution`, `exit` requires operator +
+ally auth. **In production, use the pilot webapp's co-signing flow** (operator
+UI in `ExitCosignPanel.tsx`), which requires an explicit confirmation step
+before it will even build the transaction, since this call is permanent and
+irreversible. The CLI equivalent is
+`stellar contract invoke --id $PILOT_PAYOUT_SPLIT ... -- exit --operator $OPERATOR_ADDRESS --ally $ALLY_ADDRESS --reason "..."`,
+kept only as a scripted-deployment and local-testing fallback.
+
 Each cycle's evidence carries an on-chain review status, which is what the
 pilot dashboard renders:
 
@@ -227,7 +235,7 @@ The mint is one-time only. If a mistake is made, redeploy for testnet or use the
 
 ## Step 5 - Record Evidence
 
-Both the operator and ally must authorize `record_evidence`. In production, construct and sign a Soroban transaction with both required signers.
+Both the operator and ally must authorize `record_evidence`. **In production, use the pilot webapp's co-signing flow** (`apps/webapp/src/services/pilot/cosign.ts`, operator UI in `RecordEvidenceCosignPanel.tsx`): the operator prepares the invocation, shares it with the ally, the ally reviews and signs their own auth entry from a separate wallet session, and the operator finalizes and submits. Neither party hand-assembles a transaction. The manual CLI invocation below remains as a fallback for scripted deployments and local testing, where both signing keys are already on the same machine.
 
 ```bash
 stellar contract invoke \
@@ -298,6 +306,8 @@ and shows as `Disputed` in the investor timeline.
 ## Step 6 - Fund And Execute Distribution
 
 Fund the payout-split contract with at least `total_income` USDC before execution.
+
+`execute_distribution` is also dual-signed by the operator and ally. **In production, use the pilot webapp's co-signing flow** (operator UI in `DistributionCosignPanel.tsx`), the same way as `record_evidence` in Step 5: both parties see a summary decoded from the actual invocation, including the live EURC price floor, before either signs. The CLI invocation below is the fallback path.
 
 Then execute:
 

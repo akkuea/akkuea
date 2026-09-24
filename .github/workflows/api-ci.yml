@@ -83,6 +83,7 @@ jobs:
       env:
         DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
         TEST_DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
+        JWT_SECRET: "ci-test-secret-that-is-at-least-32-characters-long"
       run: |
         cd apps/api
         # Run tests sequentially to avoid database race conditions in the shared service container
@@ -105,6 +106,33 @@ jobs:
 
     - name: Audit dependencies
       run: bash .github/scripts/dependency-audit.sh .
+
+    - name: Scan for hardcoded secrets
+      run: |
+        # Fail if any non-test source file contains the known dev fallback literal.
+        # Test fixtures may use it as a placeholder; production code must not.
+        if grep -r "super-secret-default-key-for-dev" \
+            --include="*.ts" \
+            --exclude-dir="__tests__" \
+            --exclude-dir="tests" \
+            apps/api/src/; then
+          echo "ERROR: hardcoded dev secret literal found in production source" >&2
+          exit 1
+        fi
+        echo "No hardcoded secret literals found in production source."
+
+    - name: Mainnet preflight dry-run (env checks only)
+      env:
+        STELLAR_NETWORK_PASSPHRASE: "Public Global Stellar Network ; September 2015"
+        STELLAR_HORIZON_URL: "https://horizon.stellar.org"
+        STELLAR_RPC_URL: "https://soroban.stellar.org"
+        DATABASE_SSL: "true"
+        NODE_ENV: "production"
+        JWT_SECRET: "ci-placeholder-that-is-at-least-32-characters-long"
+        OPERATIONS_BACKEND_CREDENTIAL: "ci-placeholder-ops-credential-value"
+        OPERATIONS_ALLOWED_WALLETS: "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBWN9YKTNFGNQ45UCXJ5CA"
+        STELLAR_ADMIN_SECRET: "SCZANGBA5IXFX5QOPEQV5M3Q6JCDIZQKQWVKJ7VG3PWJVS4RWCF6ZABC"
+      run: bash scripts/mainnet-preflight.sh --env-only
 
   code-quality:
     name: Code Quality

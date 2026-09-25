@@ -22,6 +22,8 @@ import { NotificationService } from './services/NotificationService';
 import { createNotificationWorkerFromEnv } from './workers/notificationWorker';
 import { createKycExpiryJobFromEnv } from './workers/kycExpiryJob';
 import { createPilotEscalationJobFromEnv } from './workers/pilotEscalationJob';
+import { createWhitelistRetentionJobFromEnv } from './workers/whitelistRetentionJob';
+import { StorageService } from './services/StorageService';
 import { validateApiEnv } from '@akkuea/shared';
 
 // Validate environment variables on startup (fails fast with actionable guide if missing)
@@ -135,6 +137,31 @@ kycExpiryJob?.start();
 const pilotEscalationJob = createPilotEscalationJobFromEnv();
 pilotEscalationJob?.start();
 
+// Start the whitelist retention job (opt-out via WHITELIST_RETENTION_JOB_ENABLED=false)
+const whitelistRetentionJob = createWhitelistRetentionJobFromEnv();
+whitelistRetentionJob?.start();
+
+// Initialize storage provider (local or S3-compatible)
+const storageProvider = process.env.STORAGE_PROVIDER ?? 'local';
+const storageConfig = {
+  provider: storageProvider as 'local' | 's3-compatible',
+  local: {
+    baseDir: process.env.STORAGE_LOCAL_DIR ?? process.env.KYC_UPLOAD_DIR,
+    encryptionKey: process.env.STORAGE_ENCRYPTION_KEY,
+  },
+  s3: {
+    bucket: process.env.STORAGE_S3_BUCKET,
+    region: process.env.STORAGE_S3_REGION,
+    endpoint: process.env.STORAGE_S3_ENDPOINT,
+    accessKeyId: process.env.STORAGE_S3_ACCESS_KEY_ID,
+    secretAccessKey: process.env.STORAGE_S3_SECRET_ACCESS_KEY,
+    encryptionKey: process.env.STORAGE_ENCRYPTION_KEY,
+  },
+};
+
+await StorageService.initialize(storageConfig);
+console.log(`📦 Storage provider initialized: ${storageProvider}`);
+
 const shutdown = async (signal: string) => {
   console.log(`\n${signal} received, closing connections...`);
   await Promise.all([
@@ -143,6 +170,7 @@ const shutdown = async (signal: string) => {
     notificationWorker?.stop() ?? Promise.resolve(),
     kycExpiryJob?.stop() ?? Promise.resolve(),
     pilotEscalationJob?.stop() ?? Promise.resolve(),
+    whitelistRetentionJob?.stop() ?? Promise.resolve(),
   ]);
 
   console.log('Connections closed. Exiting...');

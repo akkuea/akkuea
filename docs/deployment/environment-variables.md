@@ -45,9 +45,20 @@ cp apps/api/.env.example apps/api/.env
 
 ### KYC / Document Storage
 
-| Variable         | Example Value             | Required | Description                                                                                                                    |
-| ---------------- | ------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `KYC_UPLOAD_DIR` | `/var/akkuea/kyc-uploads` | Yes      | Absolute path on the server where KYC document files are stored. The API process must have read/write access to this directory |
+| Variable                 | Example Value             | Required | Description                                                                                                                    |
+| ------------------------ | ------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `KYC_UPLOAD_DIR`         | `/var/akkuea/kyc-uploads` | Yes      | Absolute path on the server where KYC document files are stored. The API process must have read/write access to this directory |
+| `STORAGE_PROVIDER`       | `local`                   | No (default: `local`) | Storage backend to use. `local` for filesystem, `s3-compatible` for S3/R2/MinIO.                                              |
+| `STORAGE_LOCAL_DIR`      | `/var/akkuea/kyc-uploads` | No       | Override for local provider base directory (defaults to `KYC_UPLOAD_DIR`).                                                    |
+| `STORAGE_S3_BUCKET`      | `akkuea-kyc-uploads`      | If S3    | S3-compatible bucket name. Required when `STORAGE_PROVIDER=s3-compatible`.                                                    |
+| `STORAGE_S3_REGION`      | `us-east-1`               | If S3    | S3 region. Required when `STORAGE_PROVIDER=s3-compatible`.                                                                    |
+| `STORAGE_S3_ENDPOINT`    | `https://s3.amazonaws.com`| If S3    | S3 endpoint URL. Set for MinIO/R2/custom endpoints.                                                                           |
+| `STORAGE_S3_ACCESS_KEY_ID` | `AKIA...`                | If S3    | S3 access key ID. Required when `STORAGE_PROVIDER=s3-compatible`.                                                             |
+| `STORAGE_S3_SECRET_ACCESS_KEY` | `secret-key`           | If S3    | S3 secret access key. Required when `STORAGE_PROVIDER=s3-compatible`.                                                         |
+| `STORAGE_ENCRYPTION_KEY` | `base64-encoded-32-byte`  | No       | Base64-encoded 32-byte key for envelope encryption at rest. Recommended for production.                                       |
+| `STORAGE_LOCAL_BASE_URL` | `http://localhost:3001`   | No       | Base URL for local provider signed URLs (used for document preview).                                                          |
+| `FIELD_ENCRYPTION_KEY`   | `base64-encoded-32-byte`  | No       | Base64-encoded 32-byte key for field-level encryption of PII (full_name, id_reference). Enables key rotation separate from storage encryption. Recommended for production. |
+| `WHITELIST_RETENTION_DAYS_REJECTED` | `90`           | No (default: 90) | Days after which rejected whitelist requests and their documents are purged/anonymized.                                      |
 
 ### KYC Expiry Job
 
@@ -85,6 +96,16 @@ Whitelist-review and evidence-review turnaround against the documented SLA (see 
 | `PILOT_WHITELIST_REVIEW_SLA_HOURS` | `48`          | No (default: `48`)    | Hours from whitelist request submission (`createdAt`) to operator review (`reviewedAt`)              |
 | `PILOT_EVIDENCE_REVIEW_SLA_HOURS`  | `48`          | No (default: `48`)    | Hours from a reporting cycle's due date to on-chain `record_evidence` (`recorded_at`)                |
 | `PILOT_REVIEW_METRICS_WINDOW_DAYS` | `30`          | No (default: `30`)    | Default lookback for `GET /pilot/whitelist/metrics` when `from` / `windowDays` are omitted           |
+
+### Whitelist Retention Job
+
+The retention job periodically purges documents and anonymizes PII for rejected whitelist requests after a configured retention period. Approved requests are never affected (kept for auditability). See `apps/api/src/workers/whitelistRetentionJob.ts`.
+
+| Variable                                 | Example Value | Required             | Description                                                                                                                                         |
+| ---------------------------------------- | ------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WHITELIST_RETENTION_JOB_ENABLED`        | `true`        | No (default: `true`) | Set to `false` to disable the retention background job entirely (e.g. in test environments)                                                        |
+| `WHITELIST_RETENTION_DAYS_REJECTED`      | `90`          | No (default: `90`)   | Days after which rejected whitelist requests and their documents are purged/anonymized.                                                             |
+| `WHITELIST_RETENTION_POLL_INTERVAL_MS`   | `86400000`    | No (default: 24h)    | How often the job runs, in milliseconds. Default is `86400000` (24 hours). Set lower in staging to test without waiting a full day.               |
 
 ### Stellar / Soroban - Network
 
@@ -170,4 +191,8 @@ Before going live, verify:
 - [ ] `OPERATIONS_BACKEND_CREDENTIAL` is a fresh random value (not the example placeholder)
 - [ ] `OPERATIONS_ALLOWED_WALLETS` contains only authorized production admin addresses
 - [ ] `KYC_UPLOAD_DIR` exists on the server and is not publicly accessible
+- [ ] If using S3: `STORAGE_S3_BUCKET`, `STORAGE_S3_REGION`, `STORAGE_S3_ACCESS_KEY_ID`, `STORAGE_S3_SECRET_ACCESS_KEY` are set and bucket is not publicly accessible
+- [ ] If using encryption: `STORAGE_ENCRYPTION_KEY` is a base64-encoded 32-byte key from a secure source
+- [ ] If using field-level encryption: `FIELD_ENCRYPTION_KEY` is a base64-encoded 32-byte key from a secure source (separate from storage key for rotation flexibility)
+- [ ] `WHITELIST_RETENTION_DAYS_REJECTED` is set to an appropriate value per data retention policy
 - [ ] `.env` file is in `.gitignore` (verify with `git check-ignore -v apps/api/.env`)

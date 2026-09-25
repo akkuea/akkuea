@@ -7,11 +7,19 @@ import {
 } from '../services/ReviewTurnaroundService';
 import type { MetricsWindowQuery } from '../services/reviewTurnaround';
 import { eq } from 'drizzle-orm';
+import { StorageService } from '../services/StorageService';
+import { encryptPlaintextField } from '../services/FieldEncryption';
+import { ApiError } from '../errors/ApiError';
 
 export class WhitelistController {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static async request(ctx: any) {
-    const { walletAddress, fullName, idType, idReference } = ctx.body;
+    const body = ctx.body;
+    const walletAddress = body.walletAddress;
+    const fullName = body.fullName;
+    const idType = body.idType;
+    const idReference = body.idReference;
+    const documentFile = body.document;
 
     // Check if a request already exists
     const existing = await db.query.pilotWhitelistRequests.findFirst({
@@ -32,6 +40,24 @@ export class WhitelistController {
         .where(eq(pilotWhitelistRequests.walletAddress, walletAddress));
     }
 
+    // Handle document upload if provided
+    let documentUrl: string | undefined;
+    let documentEncryptionKey: string | undefined;
+
+    if (documentFile) {
+      const buffer = Buffer.from(await documentFile.arrayBuffer());
+      const extension = documentFile.name.includes('.')
+        ? documentFile.name.slice(documentFile.name.lastIndexOf('.'))
+        : '.pdf';
+
+      const stored = await StorageService.store(buffer, walletAddress, extension);
+      documentUrl = stored.relativePath;
+    }
+
+    // Encrypt PII fields
+    const fullNameEncrypted = encryptPlaintextField(fullName);
+    const idReferenceEncrypted = encryptPlaintextField(idReference);
+
     const inserted = await db
       .insert(pilotWhitelistRequests)
       .values({
@@ -39,11 +65,35 @@ export class WhitelistController {
         fullName,
         idType,
         idReference,
+        fullNameEncrypted,
+        idReferenceEncrypted,
+        documentUrl,
+        documentEncryptionKey,
         status: 'pending',
       })
       .returning();
 
     return { success: true, data: inserted[0] };
+  }
+
+  static async getDocumentUrl(requestId: string): Promise<{ signedUrl: string; fileName: string }> {
+    const request = await db.query.pilotWhitelistRequests.findFirst({
+      where: eq(pilotWhitelistRequests.id, requestId),
+    });
+
+    if (!request) {
+      throw ApiError.notFound('Whitelist request not found');
+    }
+
+    if (!request.documentUrl) {
+      throw ApiError.notFound('No document attached to this request');
+    }
+
+    const signedUrl = await StorageService.getSignedReadUrl(request.documentUrl, 3600); // 1 hour
+
+    const fileName = request.documentUrl.split('/').pop() ?? 'document';
+
+    return { signedUrl, fileName };
   }
 
   static async pending() {
@@ -99,5 +149,42 @@ export class WhitelistController {
       status: existing.status,
       rejectionReason: existing.rejectionReason,
     };
+  }
+
+  // Operator-only: delete/anonymize request (data subject request or manual cleanup)
+  // Only allowed for rejected requests; approved requests are kept for auditability.
+  static async deleteRequest(requestId: string): Promise<{ success: boolean }> {
+    const request = await db.query.pilotWhitelistRequests.findFirst({
+      where: eq(pilotWhitelistRequests.id, requestId),
+    });
+
+    if (!request) {
+      throw ApiError.notFound('Whitelist request not found');
+    }
+
+    if (request.status === 'approved') {
+      throw ApiError.badRequest('Cannot delete approved whitelist request (audit trail required)');
+    }
+
+    // Delete document from storage if exists
+    if (request.documentUrl) {
+      await StorageService.deleteByRelativePath(request.documentUrl);
+    }
+
+    // Anonymize PII fields
+    await db
+      .update(pilotWhitelistRequests)
+      .set({
+        fullName: '[REDACTED]',
+        idReference: '[REDACTED]',
+        fullNameEncrypted: null,
+        idReferenceEncrypted: null,
+        documentUrl: null,
+        documentEncryptionKey: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(pilotWhitelistRequests.id, requestId));
+
+    return { success: true };
   }
 }

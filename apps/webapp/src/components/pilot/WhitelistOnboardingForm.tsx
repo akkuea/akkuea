@@ -8,6 +8,8 @@ import {
   UserCircle,
   Wallet,
   FileX2,
+  FileText,
+  Upload,
 } from "lucide-react";
 import { useWallet } from "@/components/auth/hooks";
 import { apiClient } from "@/services/api/client";
@@ -17,6 +19,11 @@ const STEPS = [
     id: "personal",
     title: "Personal Details",
     description: "Your name and ID type",
+  },
+  {
+    id: "document",
+    title: "ID Document",
+    description: "Upload government ID",
   },
   {
     id: "wallet",
@@ -42,7 +49,11 @@ export function WhitelistOnboardingForm() {
     fullName: "",
     idType: "passport",
     idReference: "",
+    documentFile: null as File | null,
+    documentPreview: null as string | null,
   });
+
+  const [documentError, setDocumentError] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkStatus() {
@@ -75,10 +86,10 @@ export function WhitelistOnboardingForm() {
     checkStatus();
   }, [isConnected, address]);
 
-  // Auto-advance to step 2 when wallet connects on step 1.
+  // Auto-advance to step 3 when wallet connects on step 2.
   // Uses inline state setter to avoid adding handleNext to the deps array.
   useEffect(() => {
-    if (isConnected && currentStep === 1) {
+    if (isConnected && currentStep === 2) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentStep((prev) => prev + 1);
     }
@@ -92,14 +103,59 @@ export function WhitelistOnboardingForm() {
     if (currentStep > 0) setCurrentStep((prev) => prev - 1);
   };
 
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setDocumentError(null);
+    if (!file) {
+      setFormData((prev) => ({ ...prev, documentFile: null, documentPreview: null }));
+      return;
+    }
+
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(file.type)) {
+      setDocumentError('Invalid file type. Only PDF, JPG, and PNG are allowed.');
+      setFormData((prev) => ({ ...prev, documentFile: null, documentPreview: null }));
+      return;
+    }
+
+    // Validate file size (10MB)
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setDocumentError(`File size exceeds 10MB limit. Received ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
+      setFormData((prev) => ({ ...prev, documentFile: null, documentPreview: null }));
+      return;
+    }
+
+    // Create preview for images
+    let preview: string | null = null;
+    if (file.type.startsWith('image/')) {
+      preview = URL.createObjectURL(file);
+    }
+
+    setFormData((prev) => ({ ...prev, documentFile: file, documentPreview: preview }));
+  };
+
   const handleSubmit = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      await apiClient.post("/pilot/whitelist/request", {
-        ...formData,
-        walletAddress: address,
-      });
+      // Validate document is provided
+      if (!formData.documentFile) {
+        setError('Please upload your government ID document');
+        setIsLoading(false);
+        return;
+      }
+
+      // Use FormData for multipart upload
+      const formDataToSend = new FormData();
+      formDataToSend.append('fullName', formData.fullName);
+      formDataToSend.append('idType', formData.idType);
+      formDataToSend.append('idReference', formData.idReference);
+      formDataToSend.append('walletAddress', address!);
+      formDataToSend.append('document', formData.documentFile);
+
+      await apiClient.postFormData("/pilot/whitelist/request", formDataToSend);
       setRequestStatus("pending");
     } catch (err: unknown) {
       setError(
@@ -266,27 +322,81 @@ export function WhitelistOnboardingForm() {
         )}
 
         {currentStep === 1 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 flex flex-col items-center justify-center py-8">
-            <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-              <Wallet className="w-8 h-8 text-zinc-400" />
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">
+                Government ID Document
+              </label>
+              <div className="border-2 border-dashed border-zinc-800 rounded-lg p-6 text-center">
+                <input
+                  type="file"
+                  id="document-upload"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={handleDocumentChange}
+                  className="sr-only"
+                  disabled={isLoading}
+                />
+                <label
+                  htmlFor="document-upload"
+                  className="cursor-pointer flex flex-col items-center gap-4"
+                >
+                  <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center">
+                    <Upload className="w-8 h-8 text-zinc-400" />
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">Upload ID Document</p>
+                    <p className="text-zinc-400 text-sm">
+                      PDF, JPG, or PNG. Maximum 10MB.
+                    </p>
+                  </div>
+                </label>
+              </div>
+              {formData.documentPreview && (
+                <div className="mt-4 p-4 bg-zinc-950 rounded-lg flex items-center gap-4">
+                  {formData.documentPreview.startsWith('blob:') ? (
+                    <img
+                      src={formData.documentPreview}
+                      alt="Document preview"
+                      className="w-20 h-20 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 bg-zinc-800 rounded flex items-center justify-center">
+                      <FileText className="w-8 h-8 text-zinc-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium truncate">
+                      {formData.documentFile?.name}
+                    </p>
+                    <p className="text-zinc-400 text-sm">
+                      {formData.documentFile
+                        ? `${(formData.documentFile.size / 1024).toFixed(1)} KB`
+                        : ''}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setFormData((prev) => ({
+                        ...prev,
+                        documentFile: null,
+                        documentPreview: null,
+                      }));
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              )}
+              {documentError && (
+                <p className="text-red-400 text-sm mt-2">{documentError}</p>
+              )}
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">
-              Connect Your Wallet
-            </h3>
-            <p className="text-zinc-400 text-sm text-center max-w-sm mb-6">
-              Please connect your Stellar wallet to associate it with your
-              whitelist application.
-            </p>
-            <Button
-              onClick={connect}
-              className="w-full sm:w-auto min-w-[200px]"
-            >
-              Connect Wallet
-            </Button>
           </div>
         )}
 
-        {currentStep === 2 && (
+        {currentStep === 3 && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 text-zinc-300 text-sm">
             <div className="p-4 bg-zinc-950 rounded-lg space-y-3">
               <div className="flex justify-between">
@@ -305,6 +415,12 @@ export function WhitelistOnboardingForm() {
                 <span className="text-zinc-500">ID Ref</span>
                 <span className="font-medium text-white">
                   {formData.idReference}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-zinc-500">Document</span>
+                <span className="font-medium text-white truncate max-w-[200px]">
+                  {formData.documentFile?.name ?? 'Not provided'}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -338,7 +454,8 @@ export function WhitelistOnboardingForm() {
             disabled={
               (currentStep === 0 &&
                 (!formData.fullName || !formData.idReference)) ||
-              (currentStep === 1 && !isConnected)
+              (currentStep === 1 && !formData.documentFile) ||
+              (currentStep === 2 && !isConnected)
             }
           >
             Continue

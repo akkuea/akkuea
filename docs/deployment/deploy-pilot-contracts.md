@@ -47,6 +47,19 @@ independently for a consistent picture. No fund-recovery or unwind logic
 exists in either contract; that question remains open (Known Risk #5 in the
 product brief).
 
+All three contracts carry an independent two-step admin transfer
+(`transfer_admin_start` / `transfer_admin_accept` / `transfer_admin_cancel`)
+and a reversible, admin-gated `pause` / `unpause` / `is_paused`. Neither is
+enumerated further here; see
+[`docs/operations/runbook-pilot-admin-rotation.md`](../operations/runbook-pilot-admin-rotation.md)
+and
+[`docs/operations/runbook-pilot-emergency-pause.md`](../operations/runbook-pilot-emergency-pause.md).
+The contracts are immutable (no upgrade entry point); recovering from a
+contract-level bug means migrating to a new deployment, covered in
+[`docs/operations/runbook-pilot-contract-migration.md`](../operations/runbook-pilot-contract-migration.md).
+The reasoning behind both decisions is recorded in
+[`docs/strategy/decision-log.md`](../strategy/decision-log.md).
+
 Each cycle's evidence carries an on-chain review status, which is what the
 pilot dashboard renders:
 
@@ -364,3 +377,14 @@ Also add the deployment table to `docs/contracts/deployment.md` with:
 | `InvalidStatusTransition`   | Review requested on a settled cycle      | Only `Submitted` or `UnderReview` cycles can be reviewed                    |
 | `MissingReviewReason`       | Rejection or dispute sent with no reason | Supply a reason: the contract will not record one without it                |
 | `EvidenceNotFound`          | No evidence exists for the cycle         | The ally must submit the cycle before it can be reviewed                    |
+| `NotPendingAdmin`           | `transfer_admin_accept` called by the wrong address, or no transfer is pending | See `docs/operations/runbook-pilot-admin-rotation.md` |
+| `ContractPaused` (on `pilot-whitelist` or `pilot-income-token`) | `approve`/`revoke`/`mint_fixed_supply`/`transfer`/`mark_wound_down` called while that contract is paused | See `docs/operations/runbook-pilot-emergency-pause.md` |
+
+---
+
+## See also
+
+- [`docs/operations/runbook-pilot-admin-rotation.md`](../operations/runbook-pilot-admin-rotation.md)
+- [`docs/operations/runbook-pilot-emergency-pause.md`](../operations/runbook-pilot-emergency-pause.md)
+- [`docs/operations/runbook-pilot-contract-migration.md`](../operations/runbook-pilot-contract-migration.md)
+- [`docs/strategy/decision-log.md`](../strategy/decision-log.md)

@@ -72,6 +72,26 @@ jobs:
         cd apps/api
         bun run build
 
+    - name: Wait for the target database to accept real connections
+      # The service container's `pg_isready` healthcheck reports the server
+      # ready as soon as it accepts any TCP connection, which can be before
+      # the `POSTGRES_DB`/`POSTGRES_USER` the entrypoint provisions are fully
+      # usable. Migrating or testing against that half-ready window has
+      # intermittently failed downstream (e.g. auth role errors, permission
+      # checks reading back inconsistent rows). Poll with the actual
+      # credentials and database name before proceeding.
+      run: |
+        for i in $(seq 1 30); do
+          if PGPASSWORD=test psql -h localhost -U test -d akkuea_test -c 'SELECT 1' > /dev/null 2>&1; then
+            echo "Database is ready"
+            exit 0
+          fi
+          echo "Waiting for the database to be ready ($i/30)..."
+          sleep 2
+        done
+        echo "Database did not become ready in time"
+        exit 1
+
     - name: Run database migrations
       env:
         DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test

@@ -50,16 +50,27 @@ export async function hashEvidenceFile(file: File): Promise<EvidenceDigest> {
     throw new EvidenceFileTooLargeError(file.size);
   }
 
+  return hashEvidenceBytes(await file.arrayBuffer());
+}
+
+/**
+ * Hashes raw bytes with SHA-256 via the Web Crypto API.
+ *
+ * Split out from `hashEvidenceFile` so evidence verification can hash a
+ * document it fetched over the network through exactly the same path a file the
+ * user downloaded by hand goes through, rather than a second implementation
+ * that could drift.
+ */
+export async function hashEvidenceBytes(
+  bytes: ArrayBuffer,
+): Promise<EvidenceDigest> {
   if (typeof globalThis.crypto?.subtle === "undefined") {
     throw new Error(
       "Secure hashing is unavailable. Open this page over HTTPS and try again.",
     );
   }
 
-  const digest = await globalThis.crypto.subtle.digest(
-    "SHA-256",
-    await file.arrayBuffer(),
-  );
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
 
   return { bytes: Buffer.from(new Uint8Array(digest)), hex: toHex(digest) };
 }

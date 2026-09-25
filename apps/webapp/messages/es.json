@@ -304,6 +304,68 @@
       "emptyTitle": "Aún no hay captura de la propiedad",
       "emptyDescription": "La propiedad del aliado todavía no se capturó en 3D. El historial de ciclos de arriba no se ve afectado.",
       "defaultName": "Propiedad del piloto"
+    },
+    "state": {
+      "exitTitle": "Este piloto ha terminado",
+      "exitReason": "Motivo registrado en la cadena: {reason}",
+      "exitAt": "Finalizó el {date}",
+      "pausedTitle": "Los pagos están en pausa",
+      "pausedDescription": "Un administrador pausó el contrato de pagos. El nuevo registro de evidencia, la revisión y la distribución están bloqueados hasta que se reanude. El historial de pagos y los fondos reclamables siguen disponibles."
+    },
+    "eurc": {
+      "title": "Moneda de liquidación",
+      "subtitle": "Elige la moneda en la que se paga tu parte de cada ciclo. La elección se guarda en la cadena y se aplica desde la próxima distribución.",
+      "current": {
+        "usdc": "Pagado en USDC",
+        "eurc": "Pagado en EURC"
+      },
+      "toggleLabel": "Recibir EURC",
+      "toggleDescription": "Convertir a EURC la parte en USDC de cada ciclo al momento del pago",
+      "riskNotice": "Las partes en EURC se intercambian en la cadena al momento del pago. Si el fondo de liquidez no alcanza la tasa mínima acordada por el operador y el aliado para ese ciclo, tu parte no se convierte: permanece en el contrato como USDC y puedes reclamarla aquí.",
+      "pausedNotice": "El contrato de pagos está en pausa. Los cambios de moneda están deshabilitados hasta que un administrador lo reanude.",
+      "save": "Guardar preferencia",
+      "saved": "Preferencia actualizada en la cadena.",
+      "connectTitle": "Conecta tu billetera para cambiar tu moneda de liquidación",
+      "connectDescription": "Solo la firma del propio tenedor puede cambiar la moneda en la que recibe sus pagos.",
+      "connect": "Conectar billetera",
+      "connectFirst": "Conecta tu billetera antes de cambiar tu preferencia.",
+      "actionFailed": "El cambio de preferencia no fue aceptado en la cadena."
+    },
+    "withheld": {
+      "title": "Saldo retenido",
+      "explanation": "USDC reservado en el contrato para ti tras una conversión a EURC fallida. Es tuyo y puedes reclamarlo en cualquier momento, incluso si el contrato está en pausa o el piloto ha terminado.",
+      "claim": "Reclamar en USDC",
+      "claimed": "Reclamado. Los USDC se enviaron a tu billetera.",
+      "connectTitle": "Conecta tu billetera para reclamar tus USDC retenidos",
+      "connectDescription": "Hay {amount} reservados en el contrato de pagos para ti.",
+      "connect": "Conectar billetera",
+      "connectFirst": "Conecta tu billetera antes de reclamar.",
+      "actionFailed": "El reclamo no fue aceptado en la cadena."
+    },
+    "history": {
+      "title": "Tu historial de pagos",
+      "emptyTitle": "Aún no hay pagos",
+      "emptyDescription": "Cuando se distribuya un ciclo, el importe y la moneda que realmente recibiste aparecerán aquí, leídos del contrato.",
+      "staleReading": "Mostrando la última lectura que sí funcionó.",
+      "withheldBadge": "Retenido",
+      "currency": {
+        "usdc": "USDC",
+        "eurc": "EURC"
+      },
+      "paidAs": "Pagado {amount} por este ciclo",
+      "withheldRow": "{amount} retenidos y aún reclamables en USDC",
+      "noPayout": "No tenías tokens en este ciclo, así que no hubo pago.",
+      "notDistributed": "Aún no distribuido.",
+      "verifyOnChain": "Verifica este ciclo en el explorador"
+    },
+    "verify": {
+      "action": "Verificar esta evidencia",
+      "match": "El documento coincide con el hash registrado en la cadena.",
+      "mismatch": "El documento no coincide con el hash registrado en la cadena.",
+      "unreachable": "No se pudo obtener el documento, así que no se verificó.",
+      "fileFallback": "Si ya tienes el documento, calcula aquí el hash de tu propia copia para compararlo tú mismo.",
+      "chooseFile": "Calcular el hash de un archivo descargado",
+      "failed": "No se pudo calcular el hash del documento."
     }
   }
 }

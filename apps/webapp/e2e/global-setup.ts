@@ -15,7 +15,13 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   const baseURL = config.projects[0]?.use.baseURL;
   if (!baseURL) return;
 
-  const routes = ["/en/pilot/onboarding", "/en/pilot/review/whitelist"];
+  const routes = [
+    "/en/pilot/onboarding",
+    "/en/pilot/review/whitelist",
+    "/en/pilot/ally",
+    "/en/pilot/review/evidence",
+    "/en/pilot/investor",
+  ];
   const deadline = Date.now() + 90_000;
 
   for (const route of routes) {

@@ -69,6 +69,22 @@ See [`integration-decisions.md`](integration-decisions.md) for the full verifica
 
 **Why the mirrored `pilot-income-token` marker is a separate admin-gated write rather than auto-propagated from `pilot-payout-split`'s `exit`:** the issue requires `exit` to be gated by exactly the same two-signer authorization as `execute_distribution` (operator + ally). Auto-propagating the marker would force one of two bad options: (a) require the income-token admin (a third key) to co-sign every exit, silently widening the documented two-signer gate, or (b) make the token trust the payout-split contract as a configured authority, adding a deployment-order coupling where a misconfigured authority strands exit entirely. Keeping the two writes independent means each contract's terminal state is set by the party that owns that contract's keys (operator + ally for the payout-split exit, the token admin for the wind-down marker), and both states remain independently readable with no cross-contract call at read time. The dashboard/operator tooling issues both calls when ending a pilot; a later cycle can add an orchestration contract if atomicity is ever required.
 
+## Retry-as-EURC versus claim-in-USDC for a failed swap leg (C8-002, investor settlement)
+
+**Adopted: no retry. A failed EURC leg reserves the holder's USDC on-chain and the holder releases it with `claim_withheld`, paid in USDC.**
+
+A retry-as-EURC option would let a holder ask the contract to re-attempt the conversion on a later ledger, once the pool may have recovered. It is rejected for three reasons. First, the price guard is a per-cycle bound jointly supplied by the operator and the ally, so a retry has no bound accountable to the same two signers: either the retry is unbounded (the unguarded conversion this project forbids) or it needs a second dual-signed configuration call per failed leg, which is more machinery than the pilot's holder set justifies. Second, the amount at risk is one holder's pro-rata share, and once the holder holds that USDC they can convert it themselves, so the contract is not the only route to EURC. Third, a release path that always pays in USDC is a strictly simpler invariant to test and audit: every withheld unit has one owner and exactly one release function, which is the non-negotiable this feature is built around.
+
+**Consequence:** `claim_withheld` is deliberately not gated by `pause`, `exit`, or the whitelist. Those gates stop new obligations; refusing to return money the contract already holds for its owner would turn an operational pause or a wind-down into a fund loss.
+
+## Durable settlement records on the existing evidence entry (C8-002)
+
+**Adopted: the per-cycle `DistributionSummary` and each holder's `HolderSettlement` are stored on the cycle's existing evidence entry, not under new ledger keys.**
+
+The natural design is a key per cycle and a key per holder. It was implemented first and failed the network's footprint limit: the existing ten-holder distribution already consumes exactly the 100 ledger entries a Soroban transaction may touch, so ten extra per-holder entries pushed a ten-holder cycle to 111 and the host rejected it (`ledger_entries: 111 > 100`). `execute_distribution` already reads and writes the cycle's evidence entry, so attaching the settlement record there adds no ledger keys and keeps the ten-holder cap intact. Per-holder withheld balances stay under their own key because they are cumulative across cycles and must be claimable in a single call, and they are only written on a failed leg, so a normal distribution adds no keys at all.
+
+**Consequence:** the `MAX_HOLDERS` ten-holder cap is unchanged, and the ten-holder budget test still passes at the mainnet resource limits.
+
 ## Jurisdiction
 
 **Resolved by sequencing, not by picking one option outright.** Brazil + an existing CVM-authorized platform is the target regulatory path, pursued explicitly as Phase 2 - not a Phase 1 prerequisite. Negotiating a distribution partnership with a regulated platform is itself a slow BD process that could strand the already-verified Stellar-native architecture if required before the pilot can launch. Full research findings (Brazil, Marshall Islands, El Salvador ruled out as heavy-touch, Mexico ruled out as unfavorable) are in [`roadmap.md`](roadmap.md).

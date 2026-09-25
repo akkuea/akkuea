@@ -1,36 +1,22 @@
 import { Buffer } from "buffer";
-import { Address } from "@stellar/stellar-sdk";
-import {
+import type {
   AssembledTransaction,
-  Client as ContractClient,
   ClientOptions as ContractClientOptions,
   MethodOptions,
-  Result,
+  Option,
+} from "@stellar/stellar-sdk/contract";
+import {
+  Client as ContractClient,
   Spec as ContractSpec,
 } from "@stellar/stellar-sdk/contract";
-import type {
-  u32,
-  i32,
-  u64,
-  i64,
-  u128,
-  i128,
-  u256,
-  i256,
-  Option,
-  Timepoint,
-  Duration,
-} from "@stellar/stellar-sdk/contract";
-export * from "@stellar/stellar-sdk";
-export * as contract from "@stellar/stellar-sdk/contract";
-export * as rpc from "@stellar/stellar-sdk/rpc";
 
-if (typeof window !== "undefined") {
-  //@ts-ignore Buffer exists
-  window.Buffer = window.Buffer || Buffer;
+// Timepoint and Duration are not exported by stellar-sdk/contract in v13.x
+export type Timepoint = bigint;
+export type Duration = bigint;
+
+if (typeof globalThis !== "undefined" && !globalThis.Buffer) {
+  (globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer;
 }
-
-
 
 
 export const WhitelistError = {
@@ -74,7 +60,7 @@ export interface AdminTransferCancelledEvent {
 
 export type DataKey = {tag: "Admin", values: void} | {tag: "Approved", values: readonly [string]} | {tag: "PendingAdmin", values: void} | {tag: "Paused", values: void};
 
-export interface Client {
+export interface PilotWhitelistClientInterface {
   /**
    * Construct and simulate a admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the configured whitelist admin.
@@ -163,9 +149,9 @@ export interface Client {
   transfer_admin_cancel: ({caller}: {caller: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
 
 }
-export class Client extends ContractClient {
-  static async deploy<T = Client>(
-    /** Options for initializing a Client as well as for calling a method, with extras specific to deploying. */
+export class PilotWhitelistClient extends ContractClient {
+  static override async deploy<T = PilotWhitelistClient>(
+    /** Options for initializing a PilotWhitelistClient as well as for calling a method, with extras specific to deploying. */
     options: MethodOptions &
       Omit<ContractClientOptions, "contractId"> & {
         /** The hash of the Wasm blob, which must already be installed on-chain. */
@@ -178,7 +164,7 @@ export class Client extends ContractClient {
   ): Promise<AssembledTransaction<T>> {
     return ContractClient.deploy(null, options)
   }
-  constructor(public readonly options: ContractClientOptions) {
+  constructor(public override readonly options: ContractClientOptions) {
     super(
       new ContractSpec([ "AAAAAAAAACZSZXR1cm4gdGhlIGNvbmZpZ3VyZWQgd2hpdGVsaXN0IGFkbWluLgAAAAAABWFkbWluAAAAAAAAAAAAAAEAAAAT",
         "AAAAAAAAALtQYXVzZSBgYXBwcm92ZWAgYW5kIGByZXZva2VgLiBSZWFkLW9ubHkgY2FsbHMga2VlcCB3b3JraW5nLgoKTWlycm9ycyBgcGlsb3QtcGF5b3V0LXNwbGl0YCdzIGBwYXVzZWAuIEJlZm9yZSB0aGlzIGNoYW5nZSwgYSB3cm9uZ2Z1bAphcHByb3ZhbCBvciByZXZvY2F0aW9uIGhhZCBubyBvbi1jaGFpbiBjaXJjdWl0IGJyZWFrZXIuAAAAAAVwYXVzZQAAAAAAAAEAAAAAAAAABWFkbWluAAAAAAAAEwAAAAA=",

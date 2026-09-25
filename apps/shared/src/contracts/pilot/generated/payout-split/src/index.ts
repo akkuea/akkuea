@@ -1,36 +1,25 @@
 import { Buffer } from "buffer";
-import { Address } from "@stellar/stellar-sdk";
-import {
+import type {
   AssembledTransaction,
-  Client as ContractClient,
   ClientOptions as ContractClientOptions,
   MethodOptions,
-  Result,
+  u32,
+  u64,
+  i128,
+  Option,
+} from "@stellar/stellar-sdk/contract";
+import {
+  Client as ContractClient,
   Spec as ContractSpec,
 } from "@stellar/stellar-sdk/contract";
-import type {
-  u32,
-  i32,
-  u64,
-  i64,
-  u128,
-  i128,
-  u256,
-  i256,
-  Option,
-  Timepoint,
-  Duration,
-} from "@stellar/stellar-sdk/contract";
-export * from "@stellar/stellar-sdk";
-export * as contract from "@stellar/stellar-sdk/contract";
-export * as rpc from "@stellar/stellar-sdk/rpc";
 
-if (typeof window !== "undefined") {
-  //@ts-ignore Buffer exists
-  window.Buffer = window.Buffer || Buffer;
+// Timepoint and Duration are not exported by stellar-sdk/contract in v13.x
+export type Timepoint = bigint;
+export type Duration = bigint;
+
+if (typeof globalThis !== "undefined" && !globalThis.Buffer) {
+  (globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer;
 }
-
-
 
 
 /**
@@ -333,7 +322,7 @@ export interface AdminTransferCancelledEvent {
 
 export type DataKey = {tag: "Admin", values: void} | {tag: "Operator", values: void} | {tag: "Ally", values: void} | {tag: "PlatformFeeRecipient", values: void} | {tag: "IncomeToken", values: void} | {tag: "Whitelist", values: void} | {tag: "UsdcToken", values: void} | {tag: "EurcToken", values: void} | {tag: "SwapRouter", values: void} | {tag: "Paused", values: void} | {tag: "Guard", values: void} | {tag: "Evidence", values: readonly [string]} | {tag: "CurrencyPreference", values: readonly [string]} | {tag: "SwapFailures", values: readonly [string]} | {tag: "Exit", values: void} | {tag: "PendingAdmin", values: void};
 
-export interface Client {
+export interface PilotPayoutSplitClientInterface {
   /**
    * Construct and simulate a exit transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Permanently terminate the ally/property relationship.
@@ -542,8 +531,8 @@ export interface Client {
   set_currency_preference: ({holder, currency}: {holder: string, currency: Currency}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
 
 }
-export class Client extends ContractClient {
-  static async deploy<T = Client>(
+export class PilotPayoutSplitClient extends ContractClient {
+  static override async deploy<T = PilotPayoutSplitClient>(
     /** Options for initializing a Client as well as for calling a method, with extras specific to deploying. */
     options: MethodOptions &
       Omit<ContractClientOptions, "contractId"> & {
@@ -557,7 +546,7 @@ export class Client extends ContractClient {
   ): Promise<AssembledTransaction<T>> {
     return ContractClient.deploy(null, options)
   }
-  constructor(public readonly options: ContractClientOptions) {
+  constructor(public override readonly options: ContractClientOptions) {
     super(
       new ContractSpec([ "AAAAAgAAAIhTZXR0bGVtZW50IGN1cnJlbmN5IGNob3NlbiBieSBhIHRva2VuIGhvbGRlci4gQWJzZW5jZSBvZiBhIHN0b3JlZApwcmVmZXJlbmNlIHJlc29sdmVzIHRvIGBVc2RjYCwgc28gcHJlLWV4aXN0aW5nIGhvbGRlcnMgYXJlIHVuYWZmZWN0ZWQuAAAAAAAAAAhDdXJyZW5jeQAAAAIAAAAAAAAAAAAAAARVc2RjAAAAAAAAAAAAAAAERXVyYw==",
         "AAAAAQAAARREdXJhYmxlIG9uLWNoYWluIHJlY29yZCBvZiBhIHBlcm1hbmVudCBhbGx5L3Byb3BlcnR5IGV4aXQuIFdyaXR0ZW4gZXhhY3RseQpvbmNlIGJ5IGBleGl0YCBhbmQgbmV2ZXIgcmVtb3ZlZDogaXQgaXMgdGhlIHRlcm1pbmFsIGNvdW50ZXJwYXJ0IHRvIHRoZQpyZXZlcnNpYmxlIGBwYXVzZWAgZmxhZywgbGV0dGluZyBhIGNsaWVudCBkaXN0aW5ndWlzaCAidGVtcG9yYXJpbHkgcGF1c2VkIgpmcm9tICJ0aGlzIHBpbG90IGlzIG92ZXIiIHdpdGhvdXQgYW55IG9mZi1jaGFpbiBzdGF0ZS4AAAAAAAAACkV4aXRSZWNvcmQAAAAAAAIAAAAqTGVkZ2VyIHRpbWVzdGFtcCBvZiB0aGUgYGV4aXRgIGludm9jYXRpb24uAAAAAAACYXQAAAAAAAYAAAEKRnJlZS10ZXh0IHJlYXNvbiBzdXBwbGllZCBieSB0aGUgdHdvIHNpZ25pbmcgcGFydGllcy4gRGVsaWJlcmF0ZWx5IGEKc3RyaW5nIHJhdGhlciB0aGFuIGFuIGVudW0gb3IgaGFzaC1wbHVzLW9mZi1jaGFpbi1saW5rIHNvIHRoZSBkYXNoYm9hcmQKY2FuIHJlbmRlciB3aHkgdGhlIGV4aXQgaGFwcGVuZWQgZGlyZWN0bHkgZnJvbSBvbi1jaGFpbiBzdGF0ZSAoc2VlCmRvY3Mvc3RyYXRlZ3kvZGVjaXNpb24tbG9nLm1kIGZvciB0aGUgcmVjb3JkZWQgcmF0aW9uYWxlKS4AAAAAAAZyZWFzb24AAAAAABA=",

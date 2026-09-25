@@ -20,4 +20,10 @@ pub enum IncomeTokenError {
     AlreadyWoundDown = 13,
     /// `mark_wound_down` was invoked without a non-empty reason string.
     MissingWoundDownReason = 14,
+    /// `transfer_admin_accept` was called by an address that does not match
+    /// the pending admin recorded by `transfer_admin_start`, or no transfer
+    /// is pending at all.
+    NotPendingAdmin = 15,
+    /// A state-changing call was rejected because the contract is paused.
+    ContractPaused = 16,
 }

@@ -1,4 +1,27 @@
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
+
+/**
+ * `mock.module()` replaces a module specifier for the whole `bun test`
+ * process, not just this file: `mock.restore()` in `afterEach` below only
+ * resets spy call state, it does not undo a `mock.module()` swap. Without
+ * restoring these two specifiers in `afterAll`, every test file that
+ * happens to run after this one in the same process (alphabetically,
+ * `stellar-wallets-kit.provider.test.ts` sorts before `useWallet.hook.test.ts`)
+ * would import this file's fake `@creit.tech/stellar-wallets-kit` instead of
+ * the real package, breaking any test that transitively depends on it for
+ * reasons that have nothing to do with what that test is actually checking.
+ */
+const RealStellarWalletsKit = await import("@creit.tech/stellar-wallets-kit");
+const RealStellarWalletsKitUtils =
+  await import("@creit.tech/stellar-wallets-kit/modules/utils");
 
 interface MockStaticKit {
   init: (opts: unknown) => void;
@@ -56,6 +79,14 @@ describe("StellarWalletsKitProvider", () => {
 
   afterEach(() => {
     mock.restore();
+  });
+
+  afterAll(() => {
+    mock.module("@creit.tech/stellar-wallets-kit", () => RealStellarWalletsKit);
+    mock.module(
+      "@creit.tech/stellar-wallets-kit/modules/utils",
+      () => RealStellarWalletsKitUtils,
+    );
   });
 
   it("is not connected before connect() succeeds", () => {

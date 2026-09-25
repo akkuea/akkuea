@@ -27,7 +27,15 @@ mock.module("@/lib/stellar", () => ({
   fetchBalance: fetchBalanceMock,
 }));
 
-const { useWallet } = await import("../useWallet.hook");
+// PropertyPage's and the marketplace page's tests each mock.module() the
+// "@/components/auth/hooks" barrel and never restore it. Once that specifier
+// has been mocked from more than one file in the same `bun test` process,
+// Bun's module resolution also starts returning that stub for a plain
+// "../useWallet.hook" import here, even though this file never touches the
+// barrel itself. A cache-busting query string forces a fresh module load
+// that isn't subject to that stale resolution.
+const freshWalletHookSpecifier: string = "../useWallet.hook.ts?fresh-import";
+const { useWallet } = await import(freshWalletHookSpecifier);
 const { useAuthenticationStore } =
   await import("../../store/data/slices/authentication.slice");
 const { walletRegistry } = await import("@/services/wallet");
@@ -294,15 +302,21 @@ describe("useWallet - signAuthEntry / canSignAuthEntries", () => {
   it("signAuthEntry() throws immediately, without a reconnection prompt, when the wallet cannot sign auth entries at all", async () => {
     const { result } = renderHook(() => useWallet());
 
-    await expect(
-      act(async () =>
-        result.current.signAuthEntry(
+    let caught: unknown;
+    await act(async () => {
+      try {
+        await result.current.signAuthEntry(
           "raw-auth-entry-xdr",
           "GOPERATOR",
           TEST_NETWORK_PASSPHRASE,
-        ),
-      ),
-    ).rejects.toThrow(
+        );
+      } catch (error) {
+        caught = error;
+      }
+    });
+
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).toBe(
       "Connected wallet does not support signing authorization entries",
     );
     expect(useAuthenticationStore.getState().isWalletDisconnected).toBe(false);
@@ -348,15 +362,23 @@ describe("useWallet - signAuthEntry / canSignAuthEntries", () => {
 
     const { result } = renderHook(() => useWallet());
 
-    await expect(
-      act(async () =>
-        result.current.signAuthEntry(
+    let caught: unknown;
+    await act(async () => {
+      try {
+        await result.current.signAuthEntry(
           "raw-auth-entry-xdr",
           "GOPERATOR",
           TEST_NETWORK_PASSPHRASE,
-        ),
-      ),
-    ).rejects.toThrow('wallet does not support "signAuthEntry"');
+        );
+      } catch (error) {
+        caught = error;
+      }
+    });
+
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).toBe(
+      'wallet does not support "signAuthEntry"',
+    );
     expect(useAuthenticationStore.getState().isWalletDisconnected).toBe(true);
   });
 });

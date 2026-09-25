@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Coins, ArrowUpRight, ShieldCheck } from "lucide-react";
 import { PropertyPanelLayout } from "./PropertyPanelLayout";
 import { GameProperty, BuildingLevel } from "../../../types/game.types";
@@ -26,6 +27,7 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
   coordinates,
   buildingLevel,
 }) => {
+  const t = useTranslations("PropertyPanel");
   const [listPrice, setListPrice] = useState("");
   const {
     improveProperty,
@@ -47,7 +49,7 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
     text: "text-land-success",
     glow: "shadow-land-success/10",
     badge: "bg-land-success/10 border-land-success text-land-success",
-    title: "Owned by You",
+    title: t("owned.title"),
   };
 
   const footer = (
@@ -60,18 +62,22 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
             disabled={!!pendingAction}
             className="w-full bg-gradient-to-r from-land-accent-fill to-tile-listed-fill hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-on-accent font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md flex items-center justify-center gap-2 border border-land-accent-fill/20"
           >
-            <ArrowUpRight size={16} />
-            Improve (Cost: {property.improveCost || 100} LAND)
+            <ArrowUpRight size={16} aria-hidden="true" />
+            {t("owned.improveButton", { cost: property.improveCost || 100 })}
           </button>
           <span className="text-[9px] text-land-fg-muted text-center block mt-1">
-            Upgrades building to Level {buildingLevel + 1}
+            {t("owned.upgradesTo", { level: buildingLevel + 1 })}
           </span>
         </div>
       ) : (
         <div className="text-center py-2.5 bg-land-surface/40 rounded-xl border border-land-border/80">
           <span className="text-[10px] text-land-fg-muted font-bold uppercase tracking-wider flex items-center justify-center gap-1">
-            <ShieldCheck size={12} className="text-land-accent" />
-            Max Development Reached
+            <ShieldCheck
+              size={12}
+              className="text-land-accent"
+              aria-hidden="true"
+            />
+            {t("owned.maxDevelopmentReached")}
           </span>
         </div>
       )}
@@ -79,7 +85,7 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
       {/* List for Sale form */}
       <div className="p-3.5 bg-land-surface/60 rounded-xl border border-land-border space-y-2.5">
         <span className="text-[10px] font-bold text-land-fg-muted uppercase tracking-wider block">
-          List for Sale
+          {t("owned.listForSaleLabel")}
         </span>
         <form
           onSubmit={(e) => {
@@ -94,7 +100,8 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
           <div className="relative flex-1">
             <input
               type="number"
-              placeholder="Price (LAND)"
+              aria-label={t("owned.pricePlaceholder")}
+              placeholder={t("owned.pricePlaceholder")}
               value={listPrice}
               onChange={(e) => setListPrice(e.target.value)}
               disabled={!!pendingAction}
@@ -104,6 +111,7 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
             <Coins
               size={12}
               className="absolute right-2.5 top-3 text-land-fg-subtle"
+              aria-hidden="true"
             />
           </div>
           <button
@@ -113,7 +121,7 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
             }
             className="bg-land-surface-raised hover:bg-land-border-hover disabled:opacity-40 disabled:hover:bg-land-surface-raised text-land-fg font-semibold text-xs px-3.5 rounded-lg border border-land-border-hover transition-colors"
           >
-            List
+            {t("owned.listButton")}
           </button>
         </form>
       </div>
@@ -138,10 +146,10 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
       <div className="bg-land-success/5 p-3.5 rounded-xl border border-land-success/20 mt-1 flex justify-between items-center">
         <div>
           <span className="text-[10px] text-land-success/80 font-bold uppercase tracking-wider block">
-            Accrued Rental Income
+            {t("owned.accruedRentalIncome")}
           </span>
           <span className="text-lg font-extrabold text-land-fg flex items-center gap-1.5 mt-0.5">
-            <Coins size={16} className="text-land-success" />
+            <Coins size={16} className="text-land-success" aria-hidden="true" />
             {property.earnedIncome ?? 0} LAND
           </span>
         </div>
@@ -150,7 +158,7 @@ export const OwnedPanel: React.FC<OwnedPanelProps> = ({
           disabled={!!pendingAction || (property.earnedIncome ?? 0) <= 0}
           className="text-xs font-bold bg-land-success-fill hover:bg-land-success-fill/90 disabled:opacity-40 disabled:hover:bg-land-success-fill text-land-on-accent px-3 py-1.5 rounded-lg border border-land-success-fill/30 transition-all duration-200 shadow-md shadow-land-success-fill/10 flex items-center gap-1"
         >
-          Claim
+          {t("owned.claimButton")}
         </button>
       </div>
     </PropertyPanelLayout>

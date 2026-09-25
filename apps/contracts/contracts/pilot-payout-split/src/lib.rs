@@ -134,6 +134,37 @@ pub struct EvidenceRecord {
     /// judging on-time against late needs this fact to outlive the RPC's event
     /// retention window.
     pub distributed_at: u64,
+    /// The cycle's payout summary, written when the distribution executes.
+    ///
+    /// All-zero (with this cycle's id) until then; `distributed` is the flag
+    /// that says whether it is real. Stored inline rather than as an
+    /// `Option<DistributionSummary>` because the contracttype XDR derive does
+    /// not support `Option<UDT>` struct fields, and carried on this record
+    /// rather than under a second key so a ten-holder distribution stays inside
+    /// the network's footprint limit while the facts still outlive the emitted
+    /// event.
+    pub distribution: DistributionSummary,
+    /// What each holder actually received for this cycle, or why their share
+    /// was withheld, written alongside the distribution. Empty until the cycle
+    /// distributes. Every amount here is what the contract transferred, never
+    /// a client-side recomputation that could drift from it.
+    pub settlements: Vec<HolderSettlement>,
+}
+
+/// The all-zero summary a cycle carries before its distribution runs.
+fn pending_summary(cycle_id: &String) -> DistributionSummary {
+    DistributionSummary {
+        cycle_id: cycle_id.clone(),
+        total_income: 0,
+        platform_fee: 0,
+        holder_amount: 0,
+        holder_count: 0,
+        distributed_total: 0,
+        dust: 0,
+        eurc_distributed_total: 0,
+        swaps_failed: 0,
+        undistributed_failed_swaps: 0,
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -161,6 +192,30 @@ pub struct DistributionSummary {
 pub struct HolderPayout {
     pub holder: Address,
     pub amount: i128,
+}
+
+/// Durable, per-cycle record of what one holder actually received.
+///
+/// Written during `execute_distribution` and never derived off-chain, so an
+/// investor's payout history survives the RPC event retention window and is
+/// always the amount the contract actually transferred, not a client-side
+/// recomputation that could drift from it.
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[contracttype]
+pub struct HolderSettlement {
+    pub holder: Address,
+    pub cycle_id: String,
+    /// Currency the holder was actually settled in. On a failed EURC swap leg
+    /// this records the intended currency (EURC) alongside `withheld = true`.
+    pub currency: Currency,
+    /// Amount delivered to the holder, denominated in `currency`. Zero when the
+    /// share was withheld and remains claimable in USDC.
+    pub amount: i128,
+    /// The holder's pro-rata USDC share for this cycle, before any conversion.
+    pub usdc_share: i128,
+    /// True when the EURC leg failed: `usdc_share` USDC is reserved in this
+    /// contract and releasable through `claim_withheld`.
+    pub withheld: bool,
 }
 
 /// Durable on-chain record of a permanent ally/property exit. Written exactly
@@ -318,6 +373,8 @@ impl PilotPayoutSplit {
             reviewed_at: now,
             review_reason: String::from_str(&env, ""),
             distributed_at: 0,
+            distribution: pending_summary(&cycle_id),
+            settlements: Vec::new(&env),
         };
         Storage::set_evidence(&env, &cycle_id, &record);
         events::emit_evidence_recorded(&env, operator, ally, cycle_id, total_income);
@@ -372,6 +429,8 @@ impl PilotPayoutSplit {
             reviewed_at: 0,
             review_reason: String::from_str(&env, ""),
             distributed_at: 0,
+            distribution: pending_summary(&cycle_id),
+            settlements: Vec::new(&env),
         };
         Storage::set_evidence(&env, &cycle_id, &record);
         events::emit_evidence_submitted(&env, ally, cycle_id, total_income, now);
@@ -556,7 +615,16 @@ impl PilotPayoutSplit {
 
         let contract_address = env.current_contract_address();
         let contract_balance = usdc.balance(&contract_address);
-        if contract_balance < record.total_income {
+        // Reserved funds belong to holders from earlier cycles and are never
+        // available to this one. Requiring the balance to cover this cycle's
+        // income *on top of* every outstanding reserve is what guarantees a
+        // withheld share can never be spent on someone else's payout.
+        let reserved_before = Storage::total_withheld(&env);
+        let required_balance = record
+            .total_income
+            .checked_add(reserved_before)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::ArithmeticOverflow));
+        if contract_balance < required_balance {
             panic_with_error!(&env, PayoutError::InsufficientPayoutBalance);
         }
 
@@ -609,9 +677,12 @@ impl PilotPayoutSplit {
             .checked_sub(computed_total)
             .unwrap_or_else(|| panic_with_error!(&env, PayoutError::ArithmeticOverflow));
 
-        record.distributed = true;
-        record.distributed_at = env.ledger().timestamp();
-        Storage::set_evidence(&env, &cycle_id, &record);
+        // Settlement outcomes are collected in memory and persisted once at the
+        // end, on the cycle's existing evidence entry. Reusing that key keeps a
+        // ten-holder distribution within the network footprint limit while
+        // still making each outcome durable past the event retention window.
+        let mut settlements: Vec<HolderSettlement> = Vec::new(&env);
+        let distributed_at = env.ledger().timestamp();
 
         usdc.transfer(&contract_address, &platform_fee_recipient, &platform_fee);
 
@@ -632,6 +703,14 @@ impl PilotPayoutSplit {
                             .unwrap_or_else(|| {
                                 panic_with_error!(&env, PayoutError::ArithmeticOverflow)
                             });
+                    settlements.push_back(HolderSettlement {
+                        holder: leg.holder.clone(),
+                        cycle_id: cycle_id.clone(),
+                        currency: Currency::Usdc,
+                        amount: leg.amount,
+                        usdc_share: leg.amount,
+                        withheld: false,
+                    });
                 }
                 Currency::Eurc => {
                     let min_eurc_out = leg
@@ -661,6 +740,14 @@ impl PilotPayoutSplit {
                                 .unwrap_or_else(|| {
                                     panic_with_error!(&env, PayoutError::ArithmeticOverflow)
                                 });
+                            settlements.push_back(HolderSettlement {
+                                holder: leg.holder.clone(),
+                                cycle_id: cycle_id.clone(),
+                                currency: Currency::Eurc,
+                                amount: amount_eurc_out,
+                                usdc_share: leg.amount,
+                                withheld: false,
+                            });
                             events::emit_swap_executed(
                                 &env,
                                 cycle_id.clone(),
@@ -690,6 +777,18 @@ impl PilotPayoutSplit {
                                     reason_code,
                                 },
                             );
+                            // Reserve this holder's USDC on-chain and record the
+                            // withheld outcome, so it is both claimable by its
+                            // owner and excluded from every future cycle.
+                            Storage::add_withheld(&env, &leg.holder, leg.amount);
+                            settlements.push_back(HolderSettlement {
+                                holder: leg.holder.clone(),
+                                cycle_id: cycle_id.clone(),
+                                currency: Currency::Eurc,
+                                amount: 0,
+                                usdc_share: leg.amount,
+                                withheld: true,
+                            });
                             events::emit_swap_failed(
                                 &env,
                                 cycle_id.clone(),
@@ -715,6 +814,23 @@ impl PilotPayoutSplit {
             swaps_failed,
             undistributed_failed_swaps,
         };
+        // Persist the cycle outcome durably, on the evidence entry that is
+        // already part of this transaction's footprint: the summary an investor
+        // reads for the fee and currency totals, and each holder's settlement.
+        // Emitting the event is not durable enough, and the reserve must be
+        // visible to the next cycle's balance guard immediately.
+        record.distributed = true;
+        record.distributed_at = distributed_at;
+        record.distribution = summary.clone();
+        record.settlements = settlements;
+        Storage::set_evidence(&env, &cycle_id, &record);
+
+        if undistributed_failed_swaps > 0 {
+            let reserved_after = reserved_before
+                .checked_add(undistributed_failed_swaps)
+                .unwrap_or_else(|| panic_with_error!(&env, PayoutError::ArithmeticOverflow));
+            Storage::set_total_withheld(&env, reserved_after);
+        }
         events::emit_distribution_executed(&env, summary.clone());
         summary
     }
@@ -811,6 +927,90 @@ impl PilotPayoutSplit {
     /// Return the swap legs rejected during a cycle's distribution.
     pub fn get_swap_failures(env: Env, cycle_id: String) -> Vec<SwapFailureRecord> {
         Storage::swap_failures(&env, &cycle_id)
+    }
+
+    /// Return a cycle's persisted distribution summary, if it has distributed.
+    ///
+    /// Read from the cycle's stored record rather than from the `dist` event,
+    /// so a client can still show fee, currency totals, and failed-leg totals
+    /// after the RPC's event retention window has passed.
+    pub fn get_distribution_summary(env: Env, cycle_id: String) -> Option<DistributionSummary> {
+        let record = Storage::evidence(&env, &cycle_id)?;
+        if record.distributed {
+            Some(record.distribution)
+        } else {
+            None
+        }
+    }
+
+    /// Return one holder's persisted settlement outcome for a cycle.
+    ///
+    /// This is the authoritative answer to "what did this investor actually
+    /// receive, and in which currency, for this cycle": the currency paid, the
+    /// delivered amount, and whether the share is still withheld. Read from
+    /// stored state, never recomputed from the holder's current balance, which
+    /// could have changed since the cycle ran.
+    pub fn get_holder_settlement(
+        env: Env,
+        cycle_id: String,
+        holder: Address,
+    ) -> Option<HolderSettlement> {
+        let record = Storage::evidence(&env, &cycle_id)?;
+        let settlements = record.settlements;
+        for i in 0..settlements.len() {
+            if let Some(settlement) = settlements.get(i) {
+                if settlement.holder == holder {
+                    return Some(settlement);
+                }
+            }
+        }
+        None
+    }
+
+    /// Return the USDC reserved in this contract for a holder whose EURC swap
+    /// leg failed and who has not yet claimed it. Zero means nothing is owed.
+    pub fn get_withheld_balance(env: Env, holder: Address) -> i128 {
+        Storage::withheld_balance(&env, &holder)
+    }
+
+    /// Return the total USDC reserved for every holder across all cycles.
+    ///
+    /// Exposed so an auditor can reconcile the contract's USDC balance against
+    /// the sum of outstanding holder claims without scanning every holder.
+    pub fn total_withheld_balance(env: Env) -> i128 {
+        Storage::total_withheld(&env)
+    }
+
+    /// Release USDC this contract withheld after a failed EURC swap leg.
+    ///
+    /// Self-serve and paid in USDC: the withheld amount is the holder's own
+    /// pro-rata share that never left this contract, so a failed swap leg can
+    /// never permanently strand it.
+    ///
+    /// Deliberately NOT gated by `pause`, `exit`, or the whitelist. Those gates
+    /// exist to stop new obligations being created; refusing to return money
+    /// this contract already holds for its owner would turn an operational
+    /// pause or a wind-down into a fund loss, which is exactly what the pilot
+    /// forbids. The reserved balance is zeroed before the transfer, so a repeat
+    /// or re-entrant call is rejected with `NothingToClaim` rather than paying
+    /// twice.
+    pub fn claim_withheld(env: Env, holder: Address) {
+        holder.require_auth();
+        let _guard = ExecutionGuard::acquire(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
+
+        let amount = Storage::take_withheld(&env, &holder);
+        if amount <= 0 {
+            panic_with_error!(&env, PayoutError::NothingToClaim);
+        }
+
+        let usdc_token_address = Storage::address(&env, &DataKey::UsdcToken)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        let total = Storage::total_withheld(&env);
+        Storage::set_total_withheld(&env, total.saturating_sub(amount));
+
+        let usdc = token::Client::new(&env, &usdc_token_address);
+        usdc.transfer(&env.current_contract_address(), &holder, &amount);
+        events::emit_withheld_claimed(&env, holder, amount);
     }
 
     /// Pause evidence recording, preference changes, and distribution execution.
@@ -2551,6 +2751,347 @@ pub mod tests {
                 PayoutError::InvalidStatusTransition as u32
             )))
         );
+    }
+
+    #[test]
+    fn distribution_summary_is_persisted_and_readable_after_the_fact() {
+        let s = setup();
+        record_default(&s);
+
+        // Before distribution there is nothing stored to read.
+        assert!(s
+            .payout
+            .get_distribution_summary(&cycle(&s.env, "2026-08"))
+            .is_none());
+
+        let summary = s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        // The stored summary is exactly what the call returned: an investor's
+        // payout history reads this, never a client-side recomputation.
+        let stored = s
+            .payout
+            .get_distribution_summary(&cycle(&s.env, "2026-08"))
+            .expect("distribution summary must persist on-chain");
+        assert_eq!(stored, summary);
+
+        // An unrecorded cycle reports nothing rather than a fabricated zero.
+        assert!(s
+            .payout
+            .get_distribution_summary(&cycle(&s.env, "2031-01"))
+            .is_none());
+    }
+
+    #[test]
+    fn holder_settlements_record_the_currency_and_amount_actually_paid() {
+        let s = setup();
+        fund_pool(&s, 100_000, 100_000);
+        let eurc_holder = s.holders.get(4).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+        record_default(&s);
+
+        s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        // USDC holder: paid in USDC, exact pro-rata share, nothing withheld.
+        let usdc_settlement = s
+            .payout
+            .get_holder_settlement(&cycle(&s.env, "2026-08"), &s.holders.get(0).unwrap())
+            .expect("USDC holder settlement must persist");
+        assert_eq!(usdc_settlement.currency, Currency::Usdc);
+        assert_eq!(usdc_settlement.amount, 450);
+        assert_eq!(usdc_settlement.usdc_share, 450);
+        assert!(!usdc_settlement.withheld);
+
+        // EURC holder: paid in EURC, and the delivered amount is the EURC the
+        // swap actually produced, not the USDC share that was swapped.
+        let eurc_settlement = s
+            .payout
+            .get_holder_settlement(&cycle(&s.env, "2026-08"), &eurc_holder)
+            .expect("EURC holder settlement must persist");
+        assert_eq!(eurc_settlement.currency, Currency::Eurc);
+        assert_eq!(eurc_settlement.amount, 4_293);
+        assert_eq!(eurc_settlement.usdc_share, 4_500);
+        assert!(!eurc_settlement.withheld);
+    }
+
+    #[test]
+    fn failed_swap_reserves_usdc_and_records_a_withheld_settlement() {
+        let s = setup();
+        fund_pool(&s, 100_000, 100_000);
+        let eurc_holder = s.holders.get(4).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+        record_default(&s);
+
+        let summary = s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &9_900_000i128,
+        );
+
+        assert_eq!(summary.swaps_failed, 1);
+        assert_eq!(summary.undistributed_failed_swaps, 4_500);
+
+        // The exact USDC share is now reserved for its owner, on-chain.
+        assert_eq!(s.payout.get_withheld_balance(&eurc_holder), 4_500);
+        assert_eq!(s.payout.total_withheld_balance(), 4_500);
+        assert_eq!(s.usdc.balance(&eurc_holder), 0);
+
+        let settlement = s
+            .payout
+            .get_holder_settlement(&cycle(&s.env, "2026-08"), &eurc_holder)
+            .expect("withheld settlement must persist");
+        assert!(settlement.withheld);
+        assert_eq!(settlement.amount, 0);
+        assert_eq!(settlement.usdc_share, 4_500);
+        assert_eq!(settlement.currency, Currency::Eurc);
+    }
+
+    #[test]
+    fn withheld_funds_are_excluded_from_the_fee_and_every_other_holder() {
+        let s = setup();
+        fund_pool(&s, 100_000, 100_000);
+        let eurc_holder = s.holders.get(4).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+        record_default(&s);
+
+        let summary = s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &9_900_000i128,
+        );
+
+        // The fee is 10% of income and does not absorb the withheld share.
+        assert_eq!(summary.platform_fee, 1_000);
+        assert_eq!(s.usdc.balance(&s.fee_recipient), 1_000);
+
+        // Every other holder receives exactly their own pro-rata share.
+        assert_eq!(s.usdc.balance(&s.holders.get(0).unwrap()), 450);
+        assert_eq!(s.usdc.balance(&s.holders.get(1).unwrap()), 900);
+        assert_eq!(s.usdc.balance(&s.holders.get(2).unwrap()), 1_350);
+        assert_eq!(s.usdc.balance(&s.holders.get(3).unwrap()), 1_800);
+
+        // Every unit of income is accounted for, and the withheld share is
+        // still physically in the contract, reserved for its owner.
+        assert_eq!(
+            summary.platform_fee
+                + summary.distributed_total
+                + summary.undistributed_failed_swaps
+                + summary.dust,
+            summary.total_income
+        );
+        assert_eq!(s.usdc.balance(&s.payout_id), 94_500);
+        assert_eq!(s.payout.get_withheld_balance(&eurc_holder), 4_500);
+    }
+
+    #[test]
+    fn claim_releases_the_reserved_usdc_exactly_once() {
+        let s = setup();
+        fund_pool(&s, 100_000, 100_000);
+        let eurc_holder = s.holders.get(4).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+        record_default(&s);
+        s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &9_900_000i128,
+        );
+
+        let holder_before = s.usdc.balance(&eurc_holder);
+        let contract_before = s.usdc.balance(&s.payout_id);
+        assert_eq!(holder_before, 0);
+        assert_eq!(contract_before, 94_500);
+
+        s.payout.claim_withheld(&eurc_holder);
+
+        // Exact balances before and after: the holder receives the whole
+        // reserved share and the contract retains nothing extra.
+        assert_eq!(s.usdc.balance(&eurc_holder), 4_500);
+        assert_eq!(s.usdc.balance(&s.payout_id), 90_000);
+        assert_eq!(s.payout.get_withheld_balance(&eurc_holder), 0);
+        assert_eq!(s.payout.total_withheld_balance(), 0);
+
+        // A second claim is rejected with a typed error, not a silent no-op.
+        let res = s.payout.try_claim_withheld(&eurc_holder);
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NothingToClaim as u32
+            )))
+        );
+        assert_eq!(s.usdc.balance(&eurc_holder), 4_500);
+    }
+
+    #[test]
+    fn claim_of_a_holder_with_no_reserve_is_rejected_typed() {
+        let s = setup();
+        let holder = s.holders.get(0).unwrap();
+
+        let res = s.payout.try_claim_withheld(&holder);
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NothingToClaim as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn nobody_can_claim_another_holders_withheld_funds() {
+        let s = setup();
+        fund_pool(&s, 100_000, 100_000);
+        let eurc_holder = s.holders.get(4).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+        record_default(&s);
+        s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &9_900_000i128,
+        );
+
+        let attacker = Address::generate(&s.env);
+        // Only the attacker's signature is supplied; the holder's own
+        // `require_auth` is missing, so the invocation must fail and the
+        // reserve must remain untouched.
+        s.env.mock_auths(&[MockAuth {
+            address: &attacker,
+            invoke: &MockAuthInvoke {
+                contract: &s.payout_id,
+                fn_name: "claim_withheld",
+                args: (eurc_holder.clone(),).into_val(&s.env),
+                sub_invokes: &[],
+            },
+        }]);
+
+        let res = s.payout.try_claim_withheld(&eurc_holder);
+        assert!(res.is_err());
+        assert_eq!(s.payout.get_withheld_balance(&eurc_holder), 4_500);
+        assert_eq!(s.usdc.balance(&eurc_holder), 0);
+    }
+
+    #[test]
+    fn claim_is_available_while_paused_so_funds_are_never_stranded() {
+        let s = setup();
+        fund_pool(&s, 100_000, 100_000);
+        let eurc_holder = s.holders.get(4).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+        record_default(&s);
+        s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &9_900_000i128,
+        );
+
+        // Pausing stops new obligations, it must not lock up money this
+        // contract already holds for its owner.
+        s.payout.pause(&s.admin);
+        assert!(s.payout.is_paused());
+
+        s.payout.claim_withheld(&eurc_holder);
+        assert_eq!(s.usdc.balance(&eurc_holder), 4_500);
+        assert_eq!(s.payout.get_withheld_balance(&eurc_holder), 0);
+    }
+
+    #[test]
+    fn distribution_never_spends_another_cycles_reserved_funds() {
+        // Two isolated holders: the first opts into EURC and fails, reserving
+        // its share; the second cycle's distribution must not treat that
+        // reserved USDC as available, even though it sits in the contract.
+        let s = setup_with_balance_values(&[5, 5]);
+        fund_pool(&s, 100_000, 100_000);
+        let eurc_holder = s.holders.get(0).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/2026-08"),
+            &10_000,
+        );
+        s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &9_900_000i128,
+        );
+        assert_eq!(s.payout.get_withheld_balance(&eurc_holder), 4_500);
+
+        // Return the holder to the USDC default so the second cycle exercises
+        // the balance guard without a swap leg in the way.
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Usdc);
+
+        // Burn the contract down to exactly the reserved amount plus the next
+        // cycle's income. That is sufficient for the honest case and must be
+        // accepted; anything less must be rejected.
+        let balance = s.usdc.balance(&s.payout_id);
+        s.usdc.burn(&s.payout_id, &(balance - 4_500 - 10_000));
+
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-09"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/2026-09"),
+            &10_000,
+        );
+        let summary = s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-09"),
+            &TEST_MIN_RATE,
+        );
+        // The second cycle pays its holders without touching the first
+        // cycle's reserve.
+        assert_eq!(summary.distributed_total, 9_000);
+        assert_eq!(s.payout.get_withheld_balance(&eurc_holder), 4_500);
+        assert_eq!(s.payout.total_withheld_balance(), 4_500);
+
+        // One unit short of the reserve plus income is refused.
+        s.usdc.burn(&s.payout_id, &1);
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-10"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/2026-10"),
+            &10_000,
+        );
+        let res = s.payout.try_execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-10"),
+            &TEST_MIN_RATE,
+        );
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::InsufficientPayoutBalance as u32
+            )))
+        );
+        assert_eq!(s.payout.get_withheld_balance(&eurc_holder), 4_500);
     }
 }
 

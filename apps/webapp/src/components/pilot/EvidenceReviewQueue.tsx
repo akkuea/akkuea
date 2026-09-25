@@ -22,6 +22,7 @@ import {
   type SignXdr,
 } from "@/services/pilot/writes";
 import { EvidenceStatusBadge } from "./EvidenceSubmissionForm";
+import { EvidenceVerification } from "./EvidenceVerification";
 import { formatCycleLabel, formatUsdc, shortenHash } from "./format";
 
 /** Statuses the operator still has something to do about. */
@@ -128,6 +129,12 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
               <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
               {t("queue.openStatement")}
             </a>
+          )}
+          {cycle.evidenceLink && cycle.evidenceHashHex && (
+            <EvidenceVerification
+              evidenceLink={cycle.evidenceLink}
+              evidenceHashHex={cycle.evidenceHashHex}
+            />
           )}
         </div>
       </div>

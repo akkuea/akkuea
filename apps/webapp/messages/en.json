@@ -304,6 +304,68 @@
       "emptyTitle": "No property capture yet",
       "emptyDescription": "The ally's property has not been captured in 3D. The cycle history above is unaffected.",
       "defaultName": "Pilot property"
+    },
+    "state": {
+      "exitTitle": "This pilot has ended",
+      "exitReason": "Reason recorded on-chain: {reason}",
+      "exitAt": "Exited on {date}",
+      "pausedTitle": "Payouts are paused",
+      "pausedDescription": "An admin paused the payout contract. New evidence, review, and distribution are blocked until it is resumed. Payout history and any claimable funds remain available."
+    },
+    "eurc": {
+      "title": "Settlement currency",
+      "subtitle": "Choose the currency your share of each cycle is paid in. The choice is stored on-chain and applies from the next distribution.",
+      "current": {
+        "usdc": "Paid in USDC",
+        "eurc": "Paid in EURC"
+      },
+      "toggleLabel": "Receive EURC",
+      "toggleDescription": "Convert each cycle's USDC share to EURC at payout time",
+      "riskNotice": "EURC shares are swapped on-chain at payout time. If the pool cannot meet the minimum rate the operator and ally agreed for that cycle, your share is not converted: it stays in the contract as USDC and you can claim it here.",
+      "pausedNotice": "The payout contract is paused. Currency changes are disabled until an admin resumes it.",
+      "save": "Save preference",
+      "saved": "Preference updated on-chain.",
+      "connectTitle": "Connect your wallet to change your settlement currency",
+      "connectDescription": "Only the holder's own signature can change which currency they are paid in.",
+      "connect": "Connect wallet",
+      "connectFirst": "Connect your wallet before changing your preference.",
+      "actionFailed": "The preference change was not accepted on-chain."
+    },
+    "withheld": {
+      "title": "Withheld balance",
+      "explanation": "USDC reserved in the contract for you after a failed EURC conversion. It is yours and can be claimed at any time, even while the contract is paused or the pilot has ended.",
+      "claim": "Claim in USDC",
+      "claimed": "Claimed. The USDC has been sent to your wallet.",
+      "connectTitle": "Connect your wallet to claim your withheld USDC",
+      "connectDescription": "{amount} is reserved in the payout contract for you.",
+      "connect": "Connect wallet",
+      "connectFirst": "Connect your wallet before claiming.",
+      "actionFailed": "The claim was not accepted on-chain."
+    },
+    "history": {
+      "title": "Your payout history",
+      "emptyTitle": "No payouts yet",
+      "emptyDescription": "Once a cycle is distributed, the amount and currency you were actually paid appear here, read from the contract.",
+      "staleReading": "Showing the last reading that succeeded.",
+      "withheldBadge": "Withheld",
+      "currency": {
+        "usdc": "USDC",
+        "eurc": "EURC"
+      },
+      "paidAs": "Paid {amount} for this cycle",
+      "withheldRow": "{amount} withheld and still claimable in USDC",
+      "noPayout": "You held no tokens for this cycle, so there was no payout.",
+      "notDistributed": "Not distributed yet.",
+      "verifyOnChain": "Verify this cycle on the explorer"
+    },
+    "verify": {
+      "action": "Verify this evidence",
+      "match": "The document matches the hash recorded on-chain.",
+      "mismatch": "The document does not match the hash recorded on-chain.",
+      "unreachable": "The document could not be retrieved, so it was not verified.",
+      "fileFallback": "If you already have the document, hash your own copy here to compare it yourself.",
+      "chooseFile": "Hash a downloaded file",
+      "failed": "The document could not be hashed."
     }
   }
 }

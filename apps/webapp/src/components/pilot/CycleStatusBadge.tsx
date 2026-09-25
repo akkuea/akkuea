@@ -1,6 +1,13 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Hourglass,
+  XCircle,
+} from "lucide-react";
 import type { PilotCycleStatus } from "@akkuea/shared";
 import { Badge } from "@/components/ui";
 
@@ -21,6 +28,17 @@ const STATUS_VARIANTS: Record<
   pending: "info",
 };
 
+const STATUS_ICONS: Record<
+  PilotCycleStatus,
+  React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>
+> = {
+  on_time: CheckCircle2,
+  late: Clock,
+  disputed: AlertTriangle,
+  not_received: XCircle,
+  pending: Hourglass,
+};
+
 interface CycleStatusBadgeProps {
   status: PilotCycleStatus;
   className?: string;
@@ -28,10 +46,14 @@ interface CycleStatusBadgeProps {
 
 export function CycleStatusBadge({ status, className }: CycleStatusBadgeProps) {
   const t = useTranslations("Pilot");
+  const Icon = STATUS_ICONS[status];
 
   return (
     <Badge variant={STATUS_VARIANTS[status]} className={className} dot>
-      {t(`cycleStatus.${status}`)}
+      <span className="inline-flex items-center gap-1.5">
+        {Icon && <Icon className="h-3.5 w-3.5" aria-hidden="true" />}
+        {t(`cycleStatus.${status}`)}
+      </span>
     </Badge>
   );
 }

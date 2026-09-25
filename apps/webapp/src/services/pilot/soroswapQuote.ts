@@ -34,7 +34,7 @@ import { pilotNetworkPassphrase, pilotRpcUrl } from "./config";
  * asked to sign anything; it only needs to be a syntactically valid Stellar
  * address for the simulated invocation's `source_account`. */
 const SIMULATION_SOURCE_ACCOUNT =
-  "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
+  "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
 
 export class SoroswapQuoteError extends Error {
   constructor(message: string) {

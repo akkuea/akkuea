@@ -8,3 +8,9 @@
 # to be called here" and fails the whole unit-test run.
 [test]
 root = "./src"
+
+# Keep local `bun run test` in step with CI: webapp-ci.yml and api-ci.yml pass
+# --isolate so every test file gets a fresh global/module registry. Without it,
+# mock.module registrations leak across files and cause order-dependent
+# failures. Bun has no bunfig key for this yet (oven-sh/bun#38215), so the test
+# scripts pass the flag explicitly. Do not drop it.

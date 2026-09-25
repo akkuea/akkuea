@@ -21,6 +21,9 @@ import {
   startReview,
   type SignXdr,
 } from "@/services/pilot/writes";
+import { holderAmountFor } from "@/services/pilot/reads";
+import { pilotAllyAddress } from "@/services/pilot/config";
+import { DistributionCosignPanel } from "./DistributionCosignPanel";
 import { EvidenceStatusBadge } from "./EvidenceSubmissionForm";
 import { formatCycleLabel, formatUsdc, shortenHash } from "./format";
 
@@ -54,6 +57,52 @@ interface QueueItemProps {
   isPaused: boolean;
   onDone: () => void;
   wallet: OperatorWallet;
+}
+
+interface DistributeSectionProps {
+  operatorAddress: string;
+  cycleId: string;
+  totalIncome: bigint;
+  signTransaction: SignXdr;
+  onDistributed: () => void;
+}
+
+/**
+ * Wraps `DistributionCosignPanel` with the ally address lookup, since the
+ * pilot contract has no `get_ally` read (see `pilotAllyAddress`'s own doc
+ * comment): a deployment that has not set
+ * `NEXT_PUBLIC_PILOT_ALLY_ADDRESS` gets a clear configuration message here
+ * instead of the panel silently having no ally to address the invocation to.
+ */
+function DistributeSection({
+  operatorAddress,
+  cycleId,
+  totalIncome,
+  signTransaction,
+  onDistributed,
+}: DistributeSectionProps) {
+  const t = useTranslations("Pilot");
+  let allyAddress: string;
+  try {
+    allyAddress = pilotAllyAddress();
+  } catch {
+    return (
+      <p role="alert" className="mt-4 text-xs text-red-400">
+        {t("cosign.allyNotConfigured")}
+      </p>
+    );
+  }
+
+  return (
+    <DistributionCosignPanel
+      operatorAddress={operatorAddress}
+      allyAddress={allyAddress}
+      cycleId={cycleId}
+      totalDistributableUsdc={holderAmountFor(totalIncome)}
+      signTransaction={signTransaction}
+      onDistributed={onDistributed}
+    />
+  );
 }
 
 function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
@@ -207,15 +256,14 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
         </div>
       )}
 
-      {canDistribute && (
-        <div className="mt-4 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-          <p className="text-xs text-neutral-300">
-            {t("queue.readyToDistribute")}
-          </p>
-          <p className="mt-1 text-xs text-neutral-500">
-            {t("queue.distributeCosignNotice")}
-          </p>
-        </div>
+      {canDistribute && address && cycle.totalIncome !== undefined && (
+        <DistributeSection
+          operatorAddress={address}
+          cycleId={cycle.cycleId}
+          totalIncome={cycle.totalIncome}
+          signTransaction={signTransaction}
+          onDistributed={onDone}
+        />
       )}
 
       {error && (

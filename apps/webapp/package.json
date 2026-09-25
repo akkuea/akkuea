@@ -64,6 +64,7 @@
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-xss": "^0.1.12",
     "fast-check": "^3.22.0",
+    "http-server": "^14.1.1",
     "jsdom": "^29.0.1",
     "msw": "^2.14.6",
     "storybook": "^8.6.0",

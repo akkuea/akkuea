@@ -236,3 +236,86 @@ jobs:
           name: playwright-report
           path: apps/webapp/playwright-report/
           retention-days: 14
+
+  visual-regression:
+    name: Visual Regression (Storybook)
+    runs-on: ubuntu-latest
+
+    # Pinned to ubuntu-latest so font rendering is deterministic across runs.
+    # If baselines drift after a runner image update, regenerate them locally
+    # on Linux (e.g. via Docker) and commit the updated snapshots.
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: latest
+
+      - name: Cache node modules
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build shared library (required for webapp)
+        run: |
+          cd apps/shared
+          bun run build
+
+      - name: Build Storybook
+        run: |
+          cd apps/webapp
+          bun run build-storybook
+        env:
+          SKIP_ENV_VALIDATION: "true"
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('apps/webapp/bun.lock', '**/bun.lock') }}
+
+      - name: Install Playwright's Chromium browser
+        run: |
+          cd apps/webapp
+          bunx playwright install --with-deps chromium
+
+      - name: Serve Storybook and run visual regression
+        run: |
+          cd apps/webapp
+          # Serve the static Storybook build on port 6006, then run the
+          # visual-regression project against it. http-server is part of
+          # the Storybook build toolchain (installed via devDependencies).
+          bunx http-server storybook-static --port 6006 --silent &
+          STORYBOOK_PID=$!
+          # Wait for Storybook to be ready.
+          npx wait-on http://localhost:6006 --timeout 60000
+          PLAYWRIGHT_STORYBOOK_URL=http://localhost:6006 \
+          PLAYWRIGHT_SKIP_WEBSERVER=1 \
+          bunx playwright test --project=visual-regression
+          kill $STORYBOOK_PID || true
+        env:
+          CI: "true"
+
+      - name: Upload visual regression report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: visual-regression-report
+          path: apps/webapp/playwright-report/
+          retention-days: 14
+
+      - name: Upload visual regression diffs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: visual-regression-diffs
+          path: apps/webapp/e2e/snapshots/
+          retention-days: 14

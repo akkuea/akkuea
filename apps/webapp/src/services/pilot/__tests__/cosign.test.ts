@@ -263,16 +263,38 @@ mock.module("@stellar/stellar-sdk", () => ({
   },
 }));
 
+/**
+ * `quoteEurcFloor` (in `cosign.ts`) delegates the actual live-quote call to
+ * `quoteAmountOut`. Mocking only that one export, spreading everything else
+ * from the real module, lets these tests control what the "live router
+ * quote" returns while still exercising the real `deriveMinEurcPerUsdc` /
+ * `defaultEurcSlippageBps` tolerance math, the same way `@stellar/stellar-sdk`
+ * is partially mocked above.
+ */
+const RealSoroswapQuote = await import("../soroswapQuote");
+let mockQuoteAmountOut: typeof RealSoroswapQuote.quoteAmountOut = async () =>
+  BigInt(920);
+mock.module("../soroswapQuote", () => ({
+  ...RealSoroswapQuote,
+  quoteAmountOut: (args: Parameters<typeof mockQuoteAmountOut>[0]) =>
+    mockQuoteAmountOut(args),
+}));
+
 const {
   CosignError,
   prepareExecuteDistribution,
   summarizeExecuteDistribution,
   coSignAsAlly,
   finalizeAndSubmitExecuteDistribution,
+  quoteEurcFloor,
   prepareRecordEvidence,
   summarizeRecordEvidence,
+  coSignRecordEvidenceAsAlly,
+  finalizeAndSubmitRecordEvidence,
   prepareExit,
   summarizeExit,
+  coSignExitAsAlly,
+  finalizeAndSubmitExit,
   summarizeCosignPayload,
   coSignPayloadAsAlly,
 } = await import("../cosign");
@@ -283,10 +305,86 @@ const ALLY = "GALLY";
 beforeEach(() => {
   mockPayout = makePayoutClient();
   mockIncomeHolders = [];
+  mockQuoteAmountOut = async () => BigInt(920);
 });
 
 afterEach(() => {
   mock.restore();
+});
+
+describe("quoteEurcFloor", () => {
+  it("derives the floor from a live router quote reduced by the configured slippage tolerance", async () => {
+    mockPayout.eurc_swap_path_status = async () => ({
+      result: {
+        swap_router: "CROUTER",
+        usdc_token: "CUSDC",
+        eurc_token: "CEURC",
+      },
+    });
+    mockQuoteAmountOut = async (args) => {
+      expect(args).toMatchObject({
+        routerAddress: "CROUTER",
+        tokenIn: "CUSDC",
+        tokenOut: "CEURC",
+        amountIn: BigInt(1_000),
+      });
+      return BigInt(920);
+    };
+
+    const floor = await quoteEurcFloor({
+      totalDistributableUsdc: BigInt(1_000),
+      slippageBps: 100,
+    });
+
+    // Live quote of 920 EURC-stroops out for 1,000 USDC-stroops in, at a
+    // 100 bps (1%) tolerance, matching `deriveMinEurcPerUsdc`'s own example.
+    expect(floor).toBe(BigInt(9_108_000));
+  });
+
+  it("falls back to the configured default slippage tolerance when none is given", async () => {
+    mockPayout.eurc_swap_path_status = async () => ({
+      result: {
+        swap_router: "CROUTER",
+        usdc_token: "CUSDC",
+        eurc_token: "CEURC",
+      },
+    });
+    mockQuoteAmountOut = async () => BigInt(920);
+
+    const floor = await quoteEurcFloor({
+      totalDistributableUsdc: BigInt(1_000),
+    });
+
+    // Default tolerance is 100 bps (1%) unless overridden by
+    // NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS; same result as the explicit case.
+    expect(floor).toBe(BigInt(9_108_000));
+  });
+
+  it("refuses when EURC settlement is not configured on this deployment", async () => {
+    mockPayout.eurc_swap_path_status = async () => ({ result: null });
+    await expect(
+      quoteEurcFloor({ totalDistributableUsdc: BigInt(1_000) }),
+    ).rejects.toMatchObject({ reason: "quote_failed" });
+  });
+
+  it("translates a failed live quote into a CosignError instead of throwing raw", async () => {
+    mockPayout.eurc_swap_path_status = async () => ({
+      result: {
+        swap_router: "CROUTER",
+        usdc_token: "CUSDC",
+        eurc_token: "CEURC",
+      },
+    });
+    mockQuoteAmountOut = async () => {
+      throw new RealSoroswapQuote.SoroswapQuoteError(
+        "Soroswap router quote failed: no route",
+      );
+    };
+
+    await expect(
+      quoteEurcFloor({ totalDistributableUsdc: BigInt(1_000) }),
+    ).rejects.toMatchObject({ reason: "quote_failed" });
+  });
 });
 
 describe("prepareExecuteDistribution", () => {
@@ -741,6 +839,121 @@ describe("summarizeRecordEvidence", () => {
   });
 });
 
+describe("coSignRecordEvidenceAsAlly", () => {
+  function preparedTx(stillNeeds: string[]) {
+    return makeTx({
+      built: invocation("record_evidence", [
+        OPERATOR,
+        ALLY,
+        "2026-03",
+        new Uint8Array(32),
+        "https://example.com/statement",
+        BigInt(500_0000000),
+      ]),
+      needsNonInvokerSigningBy: () => stillNeeds,
+    });
+  }
+
+  it("refuses to sign once evidence has already been recorded for this cycle since the request was prepared", async () => {
+    mockPayout.fromJSON.record_evidence = () => preparedTx([ALLY]);
+    mockPayout.get_evidence = async () => ({
+      result: { cycle_id: "2026-03" },
+    });
+    await expect(
+      coSignRecordEvidenceAsAlly({
+        payloadJson: "payload",
+        allyAddress: ALLY,
+        signAuthEntry: async () => "signed",
+      }),
+    ).rejects.toMatchObject({ reason: "already_recorded" });
+  });
+
+  it("translates an expired signing window into a CosignError", async () => {
+    const { AssembledTransaction } =
+      await import("@stellar/stellar-sdk/contract");
+    mockPayout.fromJSON.record_evidence = () =>
+      makeTx({
+        built: invocation("record_evidence", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          new Uint8Array(32),
+          "https://example.com/statement",
+          BigInt(500_0000000),
+        ]),
+        needsNonInvokerSigningBy: () => [ALLY],
+        signAuthEntries: async () => {
+          throw new AssembledTransaction.Errors.ExpiredState(
+            "the request has expired",
+          );
+        },
+      });
+    await expect(
+      coSignRecordEvidenceAsAlly({
+        payloadJson: "payload",
+        allyAddress: ALLY,
+        signAuthEntry: async () => "signed",
+      }),
+    ).rejects.toMatchObject({ reason: "expired" });
+  });
+});
+
+describe("finalizeAndSubmitRecordEvidence", () => {
+  it("refuses to finalize once evidence has already been recorded for this cycle since the request was prepared", async () => {
+    mockPayout.fromJSON.record_evidence = () =>
+      makeTx({
+        built: invocation("record_evidence", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          new Uint8Array(32),
+          "https://example.com/statement",
+          BigInt(500_0000000),
+        ]),
+        needsNonInvokerSigningBy: () => [],
+      });
+    mockPayout.get_evidence = async () => ({
+      result: { cycle_id: "2026-03" },
+    });
+    await expect(
+      finalizeAndSubmitRecordEvidence({
+        payloadJson: "payload",
+        operatorAddress: OPERATOR,
+        signTransaction: async (xdr: string) => xdr,
+      }),
+    ).rejects.toMatchObject({ reason: "already_recorded" });
+  });
+
+  it("translates an expired request into a CosignError at finalize time", async () => {
+    const { AssembledTransaction } =
+      await import("@stellar/stellar-sdk/contract");
+    mockPayout.fromJSON.record_evidence = () =>
+      makeTx({
+        built: invocation("record_evidence", [
+          OPERATOR,
+          ALLY,
+          "2026-03",
+          new Uint8Array(32),
+          "https://example.com/statement",
+          BigInt(500_0000000),
+        ]),
+        needsNonInvokerSigningBy: () => [],
+        sign: async () => {
+          throw new AssembledTransaction.Errors.ExpiredState(
+            "the request has expired",
+          );
+        },
+      });
+    await expect(
+      finalizeAndSubmitRecordEvidence({
+        payloadJson: "payload",
+        operatorAddress: OPERATOR,
+        signTransaction: async (xdr: string) => xdr,
+      }),
+    ).rejects.toMatchObject({ reason: "expired" });
+  });
+});
+
 describe("prepareExit", () => {
   it("refuses an empty reason", async () => {
     await expect(
@@ -772,6 +985,93 @@ describe("summarizeExit", () => {
   it("decodes the reason from the invocation", () => {
     const summary = summarizeExit("payload");
     expect(summary.reason).toBe("winding down");
+  });
+});
+
+describe("coSignExitAsAlly", () => {
+  function preparedTx(stillNeeds: string[]) {
+    return makeTx({
+      built: invocation("exit", [OPERATOR, ALLY, "winding down"]),
+      needsNonInvokerSigningBy: () => stillNeeds,
+    });
+  }
+
+  it("refuses to sign once the pilot has already exited since the request was prepared", async () => {
+    mockPayout.fromJSON.exit = () => preparedTx([ALLY]);
+    mockPayout.exit_status = async () => ({
+      result: { reason: "done", at: 1 },
+    });
+    await expect(
+      coSignExitAsAlly({
+        payloadJson: "payload",
+        allyAddress: ALLY,
+        signAuthEntry: async () => "signed",
+      }),
+    ).rejects.toMatchObject({ reason: "exited" });
+  });
+
+  it("translates an expired signing window into a CosignError", async () => {
+    const { AssembledTransaction } =
+      await import("@stellar/stellar-sdk/contract");
+    mockPayout.fromJSON.exit = () =>
+      makeTx({
+        built: invocation("exit", [OPERATOR, ALLY, "winding down"]),
+        needsNonInvokerSigningBy: () => [ALLY],
+        signAuthEntries: async () => {
+          throw new AssembledTransaction.Errors.ExpiredState(
+            "the request has expired",
+          );
+        },
+      });
+    await expect(
+      coSignExitAsAlly({
+        payloadJson: "payload",
+        allyAddress: ALLY,
+        signAuthEntry: async () => "signed",
+      }),
+    ).rejects.toMatchObject({ reason: "expired" });
+  });
+});
+
+describe("finalizeAndSubmitExit", () => {
+  it("refuses to finalize once the pilot has already exited since the request was prepared", async () => {
+    mockPayout.fromJSON.exit = () =>
+      makeTx({
+        built: invocation("exit", [OPERATOR, ALLY, "winding down"]),
+        needsNonInvokerSigningBy: () => [],
+      });
+    mockPayout.exit_status = async () => ({
+      result: { reason: "done", at: 1 },
+    });
+    await expect(
+      finalizeAndSubmitExit({
+        payloadJson: "payload",
+        operatorAddress: OPERATOR,
+        signTransaction: async (xdr: string) => xdr,
+      }),
+    ).rejects.toMatchObject({ reason: "exited" });
+  });
+
+  it("translates an expired request into a CosignError at finalize time", async () => {
+    const { AssembledTransaction } =
+      await import("@stellar/stellar-sdk/contract");
+    mockPayout.fromJSON.exit = () =>
+      makeTx({
+        built: invocation("exit", [OPERATOR, ALLY, "winding down"]),
+        needsNonInvokerSigningBy: () => [],
+        sign: async () => {
+          throw new AssembledTransaction.Errors.ExpiredState(
+            "the request has expired",
+          );
+        },
+      });
+    await expect(
+      finalizeAndSubmitExit({
+        payloadJson: "payload",
+        operatorAddress: OPERATOR,
+        signTransaction: async (xdr: string) => xdr,
+      }),
+    ).rejects.toMatchObject({ reason: "expired" });
   });
 });
 

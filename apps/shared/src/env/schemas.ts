@@ -143,6 +143,20 @@ export const apiEnvSchema = z.object({
     .optional()
     .or(z.literal("")),
   DEFI_RWA_CONTRACT_ID: stellarContractIdSchema.optional().or(z.literal("")),
+
+  STORAGE_PROVIDER: z.enum(['local', 's3-compatible']).default('local'),
+  STORAGE_LOCAL_DIR: z.string().optional(),
+  STORAGE_S3_BUCKET: z.string().optional(),
+  STORAGE_S3_REGION: z.string().optional(),
+  STORAGE_S3_ENDPOINT: z.string().optional(),
+  STORAGE_S3_ACCESS_KEY_ID: z.string().optional(),
+  STORAGE_S3_SECRET_ACCESS_KEY: z.string().optional(),
+  STORAGE_ENCRYPTION_KEY: z.string().optional(),
+  STORAGE_LOCAL_BASE_URL: z.string().optional(),
+  FIELD_ENCRYPTION_KEY: z.string().optional(),
+  WHITELIST_RETENTION_DAYS_REJECTED: z.string().optional(),
+  WHITELIST_RETENTION_JOB_ENABLED: booleanSchema,
+  WHITELIST_RETENTION_POLL_INTERVAL_MS: z.string().optional(),
 });
 
 export const webappEnvSchema = z.object({

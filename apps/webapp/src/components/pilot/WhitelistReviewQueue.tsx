@@ -15,6 +15,7 @@ import {
   type WhitelistRequest,
 } from "@/services/api/adminOperations";
 import { useWallet } from "@/components/auth/hooks/useWallet.hook";
+import { FileText, Eye, ExternalLink } from "lucide-react";
 
 export function WhitelistReviewQueue() {
   const [requests, setRequests] = useState<WhitelistRequest[]>([]);
@@ -27,6 +28,11 @@ export function WhitelistReviewQueue() {
   const [isReviewing, setIsReviewing] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
+
+  // Document preview state
+  const [documentUrl, setDocumentUrl] = useState<string | null>(null);
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false);
+  const [documentError, setDocumentError] = useState<string | null>(null);
 
   const { address: operatorWallet } = useWallet();
 
@@ -49,6 +55,28 @@ export function WhitelistReviewQueue() {
     }, 0);
     return () => clearTimeout(timer);
   }, [fetchRequests]);
+
+  const handleViewDocument = async () => {
+    if (!selectedRequest) return;
+
+    setIsLoadingDocument(true);
+    setDocumentError(null);
+    setDocumentUrl(null);
+
+    try {
+      const res = await whitelistOperationsApi.getDocumentUrl(
+        operatorWallet,
+        selectedRequest.id,
+      );
+      setDocumentUrl(res.data.signedUrl);
+    } catch (err: unknown) {
+      setDocumentError(
+        err instanceof Error ? err.message : "Failed to load document",
+      );
+    } finally {
+      setIsLoadingDocument(false);
+    }
+  };
 
   const handleReviewAction = async (action: "approve" | "reject") => {
     if (!selectedRequest) return;
@@ -73,6 +101,7 @@ export function WhitelistReviewQueue() {
       // Refresh list
       setSelectedRequest(null);
       setRejectionReason("");
+      setDocumentUrl(null);
       void fetchRequests();
     } catch (err: unknown) {
       setReviewError(
@@ -140,6 +169,16 @@ export function WhitelistReviewQueue() {
                   <div className="text-zinc-300">
                     {new Date(req.createdAt).toLocaleString()}
                   </div>
+
+                  {req.documentUrl && (
+                    <>
+                      <div className="text-zinc-500">Document:</div>
+                      <div className="text-zinc-300 flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        <span>Attached</span>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex gap-2 shrink-0">
@@ -163,6 +202,8 @@ export function WhitelistReviewQueue() {
               setSelectedRequest(null);
               setReviewError(null);
               setRejectionReason("");
+              setDocumentUrl(null);
+              setDocumentError(null);
             }
           }}
           title="Review Whitelist Request"
@@ -188,13 +229,98 @@ export function WhitelistReviewQueue() {
                   {selectedRequest.idType.replace("_", " ")}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex justify-between border-b border-zinc-800 pb-2">
                 <span className="text-zinc-500">ID Reference Number</span>
                 <span className="font-medium text-white">
                   {selectedRequest.idReference}
                 </span>
               </div>
+              {selectedRequest.documentUrl && (
+                <div className="flex justify-between">
+                  <span className="text-zinc-500">ID Document</span>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleViewDocument}
+                      disabled={isLoadingDocument}
+                      className="h-8 px-3"
+                    >
+                      {isLoadingDocument ? (
+                        <span className="flex items-center gap-1">
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                              fill="none"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                          Loading...
+                        </span>
+                      ) : (
+                        <>
+                          <Eye className="w-4 h-4" />
+                          View Document
+                        </>
+                      )}
+                    </Button>
+                    {documentUrl && (
+                      <a
+                        href={documentUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-emerald-400 hover:text-emerald-300"
+                        title="Open in new tab"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
+
+            {documentError && (
+              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                {documentError}
+              </div>
+            )}
+
+            {documentUrl && (
+              <div className="p-4 bg-zinc-950 rounded-lg border border-zinc-800">
+                <p className="text-zinc-400 text-sm mb-2">
+                  Document preview (URL expires in 1 hour):
+                </p>
+                <div className="space-y-2">
+                  {selectedRequest.documentUrl?.endsWith('.pdf') && (
+                    <iframe
+                      src={documentUrl}
+                      className="w-full h-96 rounded border border-zinc-800"
+                      title="ID Document Preview"
+                    />
+                  )}
+                  {selectedRequest.documentUrl?.match(/\.(jpg|jpeg|png)$/i) && (
+                    <img
+                      src={documentUrl}
+                      alt="ID Document"
+                      className="max-w-full max-h-96 rounded border border-zinc-800"
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-zinc-500 mt-2">
+                  This is a time-limited signed URL. Do not share or save this link.
+                </p>
+              </div>
+            )}
 
             {reviewError && (
               <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">

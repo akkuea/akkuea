@@ -13,6 +13,14 @@ const requestSchema = t.Object({
   idReference: t.String({ maxLength: 255 }),
 });
 
+const requestMultipartSchema = t.Object({
+  walletAddress: t.String({ maxLength: 56 }),
+  fullName: t.String({ maxLength: 255 }),
+  idType: t.Union([t.Literal('passport'), t.Literal('national_id'), t.Literal('drivers_license')]),
+  idReference: t.String({ maxLength: 255 }),
+  document: t.File(),
+});
+
 const metricsQuerySchema = z.object({
   from: z.string().datetime({ offset: true }).optional(),
   to: z.string().datetime({ offset: true }).optional(),
@@ -54,22 +62,100 @@ const whitelistMetricsRoute = new Elysia().use(validateQuery(metricsQuerySchema)
   },
 );
 
+// Operator-only document preview route (requires internal API key)
+const whitelistDocumentRoute = new Elysia().get(
+  '/document/:requestId',
+  async ({ params: { requestId }, headers, set }) => {
+    if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
+      set.status = 403;
+      return operationsDenied();
+    }
+    try {
+      return await WhitelistController.getDocumentUrl(requestId);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  },
+  {
+    params: t.Object({ requestId: t.String() }),
+    detail: {
+      summary: 'Get signed document URL for whitelist request (operator only)',
+      description:
+        'Returns a time-limited signed URL to view the uploaded ID document. Requires x-internal-api-key.',
+      tags: ['Pilot Whitelist'],
+      security: [{ internalApiKey: [] }],
+    },
+  },
+);
+
+// Operator-only pending requests route (requires internal API key)
+const whitelistPendingRoute = new Elysia().get(
+  '/pending',
+  async ({ headers, set }) => {
+    if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
+      set.status = 403;
+      return operationsDenied();
+    }
+    try {
+      return await WhitelistController.pending();
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  },
+  {
+    detail: {
+      summary: 'Get all pending whitelist requests (operator only)',
+      description:
+        'Returns all pending whitelist requests for operator review. Requires x-internal-api-key.',
+      tags: ['Pilot Whitelist'],
+      security: [{ internalApiKey: [] }],
+    },
+  },
+);
+
+// Operator-only delete/anonymize request (data subject request) - requires internal API key
+const whitelistDeleteRoute = new Elysia().delete(
+  '/:requestId',
+  async ({ params: { requestId }, headers, set }) => {
+    if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
+      set.status = 403;
+      return operationsDenied();
+    }
+    try {
+      return await WhitelistController.deleteRequest(requestId);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  },
+  {
+    params: t.Object({ requestId: t.String() }),
+    detail: {
+      summary: 'Delete/anonymize whitelist request (operator only, rejected only)',
+      description:
+        'Deletes the associated document and anonymizes PII fields. Only allowed for rejected requests. Approved requests cannot be deleted (audit trail required). Requires x-internal-api-key.',
+      tags: ['Pilot Whitelist'],
+      security: [{ internalApiKey: [] }],
+    },
+  },
+);
+
 export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
   .post('/request', (ctx) => WhitelistController.request(ctx), {
     beforeHandle: [rateLimit()],
-    body: requestSchema,
+    body: requestMultipartSchema,
     detail: {
-      summary: 'Submit whitelist request',
+      summary: 'Submit whitelist request with ID document',
       description:
-        'Public, unauthenticated KYC intake endpoint. Rate-limited to 10 requests per minute per IP (same default as other public endpoints in this API). This endpoint accepts PII (full name, ID type, ID reference), so abuse protection is critical.',
+        'Public, unauthenticated KYC intake endpoint. Rate-limited to 10 requests per minute per IP. Accepts multipart/form-data with document file (PDF, JPG, PNG, max 10MB). This endpoint accepts PII (full name, ID type, ID reference) and government ID document, so abuse protection is critical.',
       tags: ['Pilot Whitelist'],
     },
   })
-  // GET /status is intentionally not rate-limited: the response contains only
-  // coarse application state (pending/approved/rejected/none), no PII is
-  // returned, and the endpoint is read-only. Rate limiting is not required for
-  // the current pilot threat model. Revisit if response data expands or
-  // enumeration becomes operationally relevant.
   .get('/status/:walletAddress', (ctx) => WhitelistController.status(ctx), {
     params: t.Object({ walletAddress: t.String() }),
     detail: {
@@ -77,4 +163,7 @@ export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
       tags: ['Pilot Whitelist'],
     },
   })
+  .use(whitelistPendingRoute)
+  .use(whitelistDocumentRoute)
+  .use(whitelistDeleteRoute)
   .use(whitelistMetricsRoute);

@@ -126,6 +126,7 @@ export interface WhitelistRequest {
   rejectionReason?: string | null;
   createdAt: string;
   reviewedAt?: string | null;
+  documentUrl?: string | null;
 }
 
 export const whitelistOperationsApi = {
@@ -144,5 +145,12 @@ export const whitelistOperationsApi = {
       method: "POST",
       body: JSON.stringify(body),
     });
+  },
+
+  async getDocumentUrl(
+    operatorWallet: string | null,
+    requestId: string,
+  ): Promise<{ success: boolean; data: { signedUrl: string; fileName: string } }> {
+    return adminFetch(`pilot/whitelist/document/${requestId}`, operatorWallet);
   },
 };

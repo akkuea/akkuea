@@ -1,37 +1,30 @@
-import { mkdir, writeFile, readFile, access } from 'node:fs/promises';
-import { constants } from 'node:fs';
-import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { fileTypeFromBuffer } from 'file-type';
 import { ApiError } from '../errors/ApiError';
+import { storageFactory, StorageFactoryConfig } from './storage';
+import { StoredFile } from './storage/StorageProvider';
 
 const ALLOWED_EXTENSIONS = new Set(['.pdf', '.jpg', '.jpeg', '.png']);
 const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']);
-
-/**
- * Magic-byte signatures for allowed file types.
- * These are the first bytes of the file as they appear on disk,
- * independent of the filename extension or MIME type declared by the client.
- */
 const ALLOWED_MAGIC_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
 
-export type StoredFile = {
-  storedFileName: string;
-  relativePath: string;
-  extension: string;
-};
-
 /**
- * File storage abstraction for KYC documents.
- * Stores files on local filesystem with unique filenames.
- * Base directory is configurable via KYC_UPLOAD_DIR (default: ./uploads/kyc).
+ * File storage abstraction for KYC and whitelist documents.
+ * Delegates to a configured storage provider (local or S3-compatible).
+ * Encryption at rest is handled by the provider.
  */
 export class StorageService {
-  private readonly baseDir: string;
+  private static initialized = false;
 
-  constructor(baseDir?: string) {
-    this.baseDir =
-      baseDir ?? process.env.KYC_UPLOAD_DIR ?? path.join(process.cwd(), 'uploads', 'kyc');
+  static async initialize(config: StorageFactoryConfig): Promise<void> {
+    await storageFactory.initialize(config);
+    StorageService.initialized = true;
+  }
+
+  private static getProvider() {
+    if (!StorageService.initialized) {
+      throw new Error('StorageService not initialized. Call StorageService.initialize() at startup.');
+    }
+    return storageFactory.getProvider();
   }
 
   /**
@@ -39,32 +32,24 @@ export class StorageService {
    * inspection (REQ-006). Allowed: PDF, JPG, PNG only.
    *
    * When `buffer` is supplied the file's real type is detected from its leading
-   * bytes using the `file-type` package.  A file whose bytes do not match an
+   * bytes using the `file-type` package. A file whose bytes do not match an
    * allowed type is rejected even if its extension / MIME type look correct -
    * this prevents attackers from bypassing the check by renaming files.
-   *
-   * The method is async because `fileTypeFromBuffer` returns a Promise.
    */
   static async isAllowedFileType(
     filename: string,
     mimeType?: string,
     buffer?: Buffer,
   ): Promise<{ allowed: boolean; error?: string }> {
-    // 1. Extension check (fast, cheap)
-    const ext = path.extname(filename).toLowerCase();
+    const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase();
     if (!ALLOWED_EXTENSIONS.has(ext)) {
       return { allowed: false, error: 'Invalid file type. Only PDF, JPG, and PNG are allowed.' };
     }
 
-    // 2. Client-supplied MIME type check
     if (mimeType && !ALLOWED_MIME_TYPES.has(mimeType)) {
       return { allowed: false, error: 'Invalid file type. Only PDF, JPG, and PNG are allowed.' };
     }
 
-    // 3. Magic-byte inspection - definitive when content is available.
-    // When a buffer is supplied we never fall back to extension/MIME alone:
-    // undersized or unidentifiable content is rejected (spoofable checks only
-    // apply when no buffer is provided, e.g. pure unit-test extension cases).
     if (buffer !== undefined) {
       if (buffer.length === 0) {
         return {
@@ -109,10 +94,10 @@ export class StorageService {
   }
 
   /**
-   * Store a file with a unique name under baseDir/userId/.
+   * Store a file with a unique name under the provider's base path.
    * Returns the relative path (for DB fileUrl) and stored filename.
    */
-  async store(
+  static async store(
     buffer: Buffer,
     userId: string,
     extension: string,
@@ -123,65 +108,52 @@ export class StorageService {
       throw ApiError.badRequest('Invalid file type. Only PDF, JPG, and PNG are allowed.');
     }
 
-    const dir = path.join(this.baseDir, userId);
-    await mkdir(dir, { recursive: true });
-
-    const uniqueId = documentId ?? randomUUID();
-    const storedFileName = `${uniqueId}${ext}`;
-    const fullPath = path.join(dir, storedFileName);
-    const relativePath = path.join('kyc', userId, storedFileName);
-
-    await writeFile(fullPath, buffer, { flag: 'w' });
-
-    return {
-      storedFileName,
-      relativePath: relativePath.replace(/\\/g, '/'),
-      extension: ext,
-    };
+    const provider = StorageService.getProvider();
+    return provider.store(buffer, userId, ext, documentId);
   }
 
   /**
    * Read file by relative path (e.g. kyc/userId/uuid.pdf).
    * Used when serving document URLs.
    */
-  async readByRelativePath(relativePath: string): Promise<Buffer> {
-    const normalized = relativePath.replace(/^kyc[/\\]/, '');
-    const fullPath = path.join(this.baseDir, path.dirname(normalized), path.basename(normalized));
-
-    if (!path.resolve(fullPath).startsWith(path.resolve(this.baseDir))) {
-      throw ApiError.badRequest('Invalid document path');
-    }
-
-    try {
-      await access(fullPath, constants.F_OK);
-    } catch {
-      throw ApiError.notFound('Document file not found');
-    }
-    return readFile(fullPath);
+  static async readByRelativePath(relativePath: string): Promise<Buffer> {
+    const provider = StorageService.getProvider();
+    return provider.readByRelativePath(relativePath);
   }
 
   /**
    * Delete file by relative path (e.g. when replacing a document).
    */
-  async deleteByRelativePath(relativePath: string): Promise<void> {
-    const normalized = relativePath.replace(/^kyc[/\\]/, '');
-    const fullPath = path.join(this.baseDir, path.dirname(normalized), path.basename(normalized));
-
-    if (!path.resolve(fullPath).startsWith(path.resolve(this.baseDir))) {
-      return;
-    }
-
-    const { unlink } = await import('node:fs/promises');
-    try {
-      await unlink(fullPath);
-    } catch {
-      // Ignore if file already missing
-    }
+  static async deleteByRelativePath(relativePath: string): Promise<void> {
+    const provider = StorageService.getProvider();
+    return provider.deleteByRelativePath(relativePath);
   }
 
-  getBaseDir(): string {
-    return this.baseDir;
+  /**
+   * Get a signed URL for reading a document with expiration.
+   */
+  static async getSignedReadUrl(
+    relativePath: string,
+    expiresInSeconds?: number,
+  ): Promise<string> {
+    const provider = StorageService.getProvider();
+    return provider.getSignedReadUrl(relativePath, expiresInSeconds);
+  }
+
+  /**
+   * Check if the storage provider is healthy.
+   */
+  static async isHealthy(): Promise<boolean> {
+    if (!StorageService.initialized) return false;
+    return storageFactory.getProvider().isHealthy();
+  }
+
+  /**
+   * Get the current provider type ('local' or 's3-compatible').
+   */
+  static getProviderType(): 'local' | 's3-compatible' | null {
+    return storageFactory.getProviderType();
   }
 }
 
-export const storageService = new StorageService();
+export const storageService = StorageService;

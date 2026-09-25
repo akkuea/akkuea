@@ -24,10 +24,7 @@ const THEMES: Array<{ name: Theme; background: string }> = [
 ];
 
 /**
- * Storybook story IDs for all pilot components.
- *
- * The ID format is `<story-path>--<story-name>` (all lowercase with dashes).
- * These match the `title` / export names defined in each `.stories.tsx` file.
+ * Storybook story IDs for all pilot components matching index.json.
  */
 const PILOT_STORIES: Array<{ id: string; description: string }> = [
   // CycleStatusBadge
@@ -50,8 +47,8 @@ const PILOT_STORIES: Array<{ id: string; description: string }> = [
   },
   // CycleStatusTimeline
   {
-    id: "pilot-cyclestatustimeline--default",
-    description: "CycleStatusTimeline/Default",
+    id: "pilot-cyclestatustimeline--populated",
+    description: "CycleStatusTimeline/Populated",
   },
   {
     id: "pilot-cyclestatustimeline--loading",
@@ -62,69 +59,113 @@ const PILOT_STORIES: Array<{ id: string; description: string }> = [
     description: "CycleStatusTimeline/Error",
   },
   {
+    id: "pilot-cyclestatustimeline--empty",
+    description: "CycleStatusTimeline/Empty",
+  },
+  {
+    id: "pilot-cyclestatustimeline--stale-after-failed-poll",
+    description: "CycleStatusTimeline/StaleAfterFailedPoll",
+  },
+  {
     id: "pilot-cyclestatustimeline--escalated",
     description: "CycleStatusTimeline/Escalated",
   },
   // EvidenceReviewQueue
   {
-    id: "pilot-evidencereviewqueue--default",
-    description: "EvidenceReviewQueue/Default",
+    id: "pilot-evidencereviewqueue--populated",
+    description: "EvidenceReviewQueue/Populated",
+  },
+  {
+    id: "pilot-evidencereviewqueue--disconnected-wallet",
+    description: "EvidenceReviewQueue/DisconnectedWallet",
+  },
+  {
+    id: "pilot-evidencereviewqueue--loading",
+    description: "EvidenceReviewQueue/Loading",
+  },
+  {
+    id: "pilot-evidencereviewqueue--error",
+    description: "EvidenceReviewQueue/Error",
   },
   {
     id: "pilot-evidencereviewqueue--empty",
     description: "EvidenceReviewQueue/Empty",
   },
   {
-    id: "pilot-evidencereviewqueue--loading",
-    description: "EvidenceReviewQueue/Loading",
+    id: "pilot-evidencereviewqueue--contract-paused",
+    description: "EvidenceReviewQueue/ContractPaused",
   },
   // EvidenceSubmissionForm
   {
-    id: "pilot-evidencesubmissionform--connected",
-    description: "EvidenceSubmissionForm/Connected",
+    id: "pilot-evidencesubmissionform--ready",
+    description: "EvidenceSubmissionForm/Ready",
   },
   {
-    id: "pilot-evidencesubmissionform--disconnected",
-    description: "EvidenceSubmissionForm/Disconnected",
+    id: "pilot-evidencesubmissionform--disconnected-wallet",
+    description: "EvidenceSubmissionForm/DisconnectedWallet",
+  },
+  {
+    id: "pilot-evidencesubmissionform--awaiting-review",
+    description: "EvidenceSubmissionForm/AwaitingReview",
   },
   {
     id: "pilot-evidencesubmissionform--rejected",
     description: "EvidenceSubmissionForm/Rejected",
   },
   {
-    id: "pilot-evidencesubmissionform--paused",
-    description: "EvidenceSubmissionForm/Paused",
+    id: "pilot-evidencesubmissionform--approved",
+    description: "EvidenceSubmissionForm/Approved",
+  },
+  {
+    id: "pilot-evidencesubmissionform--contract-paused",
+    description: "EvidenceSubmissionForm/ContractPaused",
   },
   // InvestorHoldingsCard
   {
-    id: "pilot-investorholdingscard--default",
-    description: "InvestorHoldingsCard/Default",
-  },
-  {
-    id: "pilot-investorholdingscard--not-whitelisted",
-    description: "InvestorHoldingsCard/NotWhitelisted",
-  },
-  {
-    id: "pilot-investorholdingscard--no-holdings",
-    description: "InvestorHoldingsCard/NoHoldings",
+    id: "pilot-investorholdingscard--populated",
+    description: "InvestorHoldingsCard/Populated",
   },
   {
     id: "pilot-investorholdingscard--loading",
     description: "InvestorHoldingsCard/Loading",
   },
+  {
+    id: "pilot-investorholdingscard--error",
+    description: "InvestorHoldingsCard/Error",
+  },
+  {
+    id: "pilot-investorholdingscard--empty",
+    description: "InvestorHoldingsCard/Empty",
+  },
+  {
+    id: "pilot-investorholdingscard--disconnected-wallet",
+    description: "InvestorHoldingsCard/DisconnectedWallet",
+  },
+  {
+    id: "pilot-investorholdingscard--not-whitelisted",
+    description: "InvestorHoldingsCard/NotWhitelisted",
+  },
   // PropertyEvidencePanel
   {
-    id: "pilot-propertyevidencepanel--no-splat",
-    description: "PropertyEvidencePanel/NoSplat",
+    id: "pilot-propertyevidencepanel--no-capture-yet",
+    description: "PropertyEvidencePanel/NoCaptureYet",
+  },
+  {
+    id: "pilot-propertyevidencepanel--with-capture",
+    description: "PropertyEvidencePanel/WithCapture",
   },
   // WhitelistOnboardingForm
   {
-    id: "pilot-whitelistonboardingform--default",
-    description: "WhitelistOnboardingForm/Default",
+    id: "pilot-whitelistonboardingform--no-application",
+    description: "WhitelistOnboardingForm/NoApplication",
   },
   {
-    id: "pilot-whitelistonboardingform--pending",
-    description: "WhitelistOnboardingForm/Pending",
+    id: "pilot-whitelistonboardingform--status-loading",
+    description: "WhitelistOnboardingForm/StatusLoading",
+  },
+  {
+    id: "pilot-whitelistonboardingform--pending-review",
+    description: "WhitelistOnboardingForm/PendingReview",
   },
   {
     id: "pilot-whitelistonboardingform--approved",
@@ -134,18 +175,30 @@ const PILOT_STORIES: Array<{ id: string; description: string }> = [
     id: "pilot-whitelistonboardingform--rejected",
     description: "WhitelistOnboardingForm/Rejected",
   },
+  {
+    id: "pilot-whitelistonboardingform--form-step-1-personal-details",
+    description: "WhitelistOnboardingForm/FormStep1PersonalDetails",
+  },
+  {
+    id: "pilot-whitelistonboardingform--form-step-3-review",
+    description: "WhitelistOnboardingForm/FormStep3Review",
+  },
   // WhitelistReviewQueue
   {
-    id: "pilot-whitelistreviewqueue--default",
-    description: "WhitelistReviewQueue/Default",
+    id: "pilot-whitelistreviewqueue--with-requests",
+    description: "WhitelistReviewQueue/WithRequests",
   },
   {
-    id: "pilot-whitelistreviewqueue--empty",
-    description: "WhitelistReviewQueue/Empty",
+    id: "pilot-whitelistreviewqueue--empty-queue",
+    description: "WhitelistReviewQueue/EmptyQueue",
   },
   {
-    id: "pilot-whitelistreviewqueue--loading",
-    description: "WhitelistReviewQueue/Loading",
+    id: "pilot-whitelistreviewqueue--loading-state",
+    description: "WhitelistReviewQueue/LoadingState",
+  },
+  {
+    id: "pilot-whitelistreviewqueue--error-state",
+    description: "WhitelistReviewQueue/ErrorState",
   },
 ];
 
@@ -160,8 +213,6 @@ for (const { name: theme, background } of THEMES) {
   test.describe(`Visual regression - ${theme} theme`, () => {
     test.use({
       viewport: { width: 1280, height: 720 },
-      // Pin colorScheme to match theme context so system dark-mode detection
-      // does not introduce drift between CI machines.
       colorScheme: theme === "dark" ? "dark" : "light",
     });
 
@@ -170,21 +221,18 @@ for (const { name: theme, background } of THEMES) {
         const url = storyIframeUrl(story.id, background);
         await page.goto(url, { waitUntil: "networkidle" });
 
-        // Wait for Storybook story root to appear, indicating the story rendered.
+        // Wait for Storybook story root to appear.
         await page.waitForSelector("#storybook-root", {
           state: "visible",
           timeout: 15_000,
         });
 
-        // Small settle pause for any entrance animations to finish.
+        // Pause for entrance animations.
         await page.waitForTimeout(300);
 
-        // Clip to the story root to avoid capturing Storybook chrome.
         const storyRoot = page.locator("#storybook-root");
 
         await expect(storyRoot).toHaveScreenshot(`${story.id}-${theme}.png`, {
-          // Allow up to 1% pixel difference (font rendering can vary slightly
-          // between CI and local due to subpixel hinting).
           maxDiffPixelRatio: 0.01,
           animations: "disabled",
         });

@@ -19,8 +19,7 @@ const messages = enMessages as unknown as AbstractIntlMessages;
 function withIntl(children: ReactNode) {
   return createElement(
     NextIntlClientProvider,
-    { locale: "en", messages, timeZone: "UTC" },
-    children,
+    { locale: "en", messages, timeZone: "UTC", children },
   );
 }
 

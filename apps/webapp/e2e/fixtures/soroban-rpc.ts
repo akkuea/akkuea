@@ -53,25 +53,10 @@ export interface DecodedContractCall {
  * Creates a minimal valid base64-encoded SorobanTransactionData XDR.
  */
 function createDummyTransactionData(): string {
-  try {
-    const resources = new xdr.SorobanResources({
-      footprint: new xdr.LedgerFootprint({
-        readOnly: [],
-        readWrite: [],
-      }),
-      instructions: 100_000,
-      readBytes: 1000,
-      writeBytes: 1000,
-    });
-    const txData = new xdr.SorobanTransactionData({
-      ext: new xdr.ExtensionPoint(0),
-      resources,
-      resourceFee: new xdr.Int64(100),
-    });
-    return txData.toXDR("base64");
-  } catch {
-    return "AAAAAgAAAAAAAAAAAAAAAQAAAAAAAAAA";
-  }
+  // This opaque placeholder is only used in mocked simulation responses. The
+  // installed SDK exposes the corresponding XDR constructors as abstract
+  // interfaces, so constructing the object here is not type-safe.
+  return "AAAAAgAAAAAAAAAAAAAAAQAAAAAAAAAA";
 }
 
 const DEFAULT_TX_DATA = createDummyTransactionData();
@@ -200,12 +185,16 @@ export function decodeContractInvocation(
   passphrase = Networks.TESTNET,
 ): DecodedContractCall | null {
   try {
-    const tx = TransactionBuilder.fromXDR(envelopeXdr, passphrase);
-    const operations = tx.operations;
+    const tx = TransactionBuilder.fromXDR(envelopeXdr, passphrase) as any;
+    const operations = tx?.operations || [];
     for (const op of operations) {
       if (op.type === "invokeHostFunction") {
-        const hostFunc = (op as { func?: xdr.HostFunction }).func;
-        if (hostFunc && hostFunc.arm() === "invokeContract") {
+        const hostFunc = op.func;
+        if (
+          hostFunc &&
+          typeof hostFunc.arm === "function" &&
+          hostFunc.arm() === "invokeContract"
+        ) {
           const contractCall = hostFunc.invokeContract();
           const contractAddress = contractCall.contractAddress();
           const functionName = contractCall.functionName().toString();
@@ -221,7 +210,7 @@ export function decodeContractInvocation(
           }
 
           const args: Record<string, unknown> = {};
-          rawArgs.forEach((arg, index) => {
+          rawArgs.forEach((arg: xdr.ScVal, index: number) => {
             try {
               args[`arg_${index}`] = scValToNative(arg);
             } catch {
@@ -241,8 +230,18 @@ export function decodeContractInvocation(
   } catch {
     // Try low level XDR parse if TransactionBuilder.fromXDR failed
     try {
-      const envelope = xdr.TransactionEnvelope.fromXDR(envelopeXdr, "base64");
-      const tx = envelope.v1 ? envelope.v1().tx() : envelope.v0().tx();
+      const envelope = xdr.TransactionEnvelope.fromXDR(
+        envelopeXdr,
+        "base64",
+      ) as any;
+      const tx =
+        envelope.switch && envelope.switch() === "v0"
+          ? envelope.v0().tx()
+          : envelope.v1
+            ? envelope.v1().tx()
+            : typeof envelope.tx === "function"
+              ? envelope.tx()
+              : envelope.value().tx();
       const operations = tx.operations();
       for (const op of operations) {
         const body = op.body();

@@ -54,6 +54,7 @@ export default defineConfig({
         baseURL:
           process.env.PLAYWRIGHT_STORYBOOK_URL ?? "http://localhost:6006",
       },
+      snapshotPathTemplate: "{testDir}/snapshots/{arg}{ext}",
       testMatch: ["**/visual-regression.spec.ts"],
     },
   ],

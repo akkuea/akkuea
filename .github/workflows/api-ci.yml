@@ -99,6 +99,21 @@ jobs:
         cd apps/api
         bun run db:migrate
 
+    - name: Diagnostic - run the E2E tokenization suite in isolation
+      # Temporary: this suite fails only in the full run, not locally against
+      # a real database in any environment tried so far. Running it alone,
+      # on this exact runner, checks whether it is cross-file pollution
+      # (passes here) or something else (fails here too). Never fails the
+      # build; output is inspected from the job log.
+      env:
+        DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
+        TEST_DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
+      run: |
+        cd apps/api
+        echo "=== Isolated E2E suite run ==="
+        bun test src/__tests__/e2e.fullflow.test.ts || echo "=== Isolated run FAILED (exit $?) ==="
+        echo "=== End isolated run ==="
+
     - name: Run tests
       env:
         DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test

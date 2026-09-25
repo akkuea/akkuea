@@ -73,6 +73,21 @@ jobs:
         env:
           SKIP_ENV_VALIDATION: "true"
 
+      - name: Diagnostic - run useWallet hook tests in isolation
+        # Temporary: this suite fails only in the full run, never locally
+        # (Windows, real Linux via Docker, resource-constrained Linux, exact
+        # bun version, exact command, cold cache) in any environment tried so
+        # far. Running it alone, on this exact runner, checks whether it is
+        # cross-file pollution (passes here) or something else (fails here
+        # too). Never fails the build; output is inspected from the job log.
+        run: |
+          cd apps/webapp
+          echo "=== Isolated useWallet hook test run ==="
+          bun test src/components/auth/hooks/__tests__/useWallet.hook.test.ts || echo "=== Isolated run FAILED (exit $?) ==="
+          echo "=== End isolated run ==="
+        env:
+          SKIP_ENV_VALIDATION: "true"
+
       - name: Run unit tests
         run: |
           cd apps/webapp

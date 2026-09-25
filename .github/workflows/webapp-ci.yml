@@ -291,12 +291,11 @@ jobs:
         run: |
           cd apps/webapp
           # Serve the static Storybook build on port 6006, then run the
-          # visual-regression project against it. http-server is part of
-          # the Storybook build toolchain (installed via devDependencies).
-          bunx http-server storybook-static --port 6006 --silent &
+          # visual-regression project against it.
+          npx --yes http-server storybook-static --port 6006 --silent &
           STORYBOOK_PID=$!
           # Wait for Storybook to be ready.
-          npx wait-on http://localhost:6006 --timeout 60000
+          npx --yes wait-on http://localhost:6006 --timeout 60000
           PLAYWRIGHT_STORYBOOK_URL=http://localhost:6006 \
           PLAYWRIGHT_SKIP_WEBSERVER=1 \
           bunx playwright test --project=visual-regression

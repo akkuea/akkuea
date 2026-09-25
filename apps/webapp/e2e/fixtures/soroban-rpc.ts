@@ -103,7 +103,10 @@ export function encodeScVal(value: unknown): xdr.ScVal {
   }
   if (typeof value === "object") {
     // Check if it's already an ScVal
-    if ("arm" in (value as object) && typeof (value as { toXDR?: unknown }).toXDR === "function") {
+    if (
+      "arm" in (value as object) &&
+      typeof (value as { toXDR?: unknown }).toXDR === "function"
+    ) {
       return value as xdr.ScVal;
     }
     const entries: xdr.ScMapEntry[] = Object.entries(value).map(([k, v]) => {
@@ -131,9 +134,7 @@ export function encodeEvidenceRecordScVal(
     ? Buffer.from(record.evidenceHashHex.replace(/^0x/, ""), "hex")
     : Buffer.alloc(32);
 
-  const statusEnumVal = xdr.ScVal.scvVec([
-    xdr.ScVal.scvSymbol(record.status),
-  ]);
+  const statusEnumVal = xdr.ScVal.scvVec([xdr.ScVal.scvSymbol(record.status)]);
 
   const mapEntries: xdr.ScMapEntry[] = [
     new xdr.ScMapEntry({
@@ -158,11 +159,17 @@ export function encodeEvidenceRecordScVal(
     }),
     new xdr.ScMapEntry({
       key: xdr.ScVal.scvSymbol("recorded_at"),
-      val: nativeToScVal(BigInt(record.recordedAt ?? Math.floor(Date.now() / 1000)), { type: "u64" }),
+      val: nativeToScVal(
+        BigInt(record.recordedAt ?? Math.floor(Date.now() / 1000)),
+        { type: "u64" },
+      ),
     }),
     new xdr.ScMapEntry({
       key: xdr.ScVal.scvSymbol("submitted_at"),
-      val: nativeToScVal(BigInt(record.submittedAt ?? Math.floor(Date.now() / 1000)), { type: "u64" }),
+      val: nativeToScVal(
+        BigInt(record.submittedAt ?? Math.floor(Date.now() / 1000)),
+        { type: "u64" },
+      ),
     }),
     new xdr.ScMapEntry({
       key: xdr.ScVal.scvSymbol("reviewed_at"),
@@ -390,7 +397,8 @@ export class PilotRpcScenario {
           status: "Rejected",
           totalIncome,
           evidenceLink: "https://statement.example.com/rejected.pdf",
-          evidenceHashHex: "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+          evidenceHashHex:
+            "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
           submittedAt: Math.floor(Date.now() / 1000) - 86400 * 3,
           recordedAt: Math.floor(Date.now() / 1000) - 86400 * 3,
           reviewedAt: Math.floor(Date.now() / 1000) - 86400,
@@ -408,7 +416,8 @@ export class PilotRpcScenario {
           status: "Disputed",
           totalIncome,
           evidenceLink: "https://statement.example.com/disputed.pdf",
-          evidenceHashHex: "1111111111111111111111111111111111111111111111111111111111111111",
+          evidenceHashHex:
+            "1111111111111111111111111111111111111111111111111111111111111111",
           submittedAt: Math.floor(Date.now() / 1000) - 86400 * 5,
           recordedAt: Math.floor(Date.now() / 1000) - 86400 * 5,
           reviewedAt: Math.floor(Date.now() / 1000) - 86400 * 2,
@@ -426,7 +435,8 @@ export class PilotRpcScenario {
           status: "Approved",
           totalIncome,
           evidenceLink: `https://statement.example.com/${cycleId}.pdf`,
-          evidenceHashHex: "2222222222222222222222222222222222222222222222222222222222222222",
+          evidenceHashHex:
+            "2222222222222222222222222222222222222222222222222222222222222222",
           submittedAt: distributedAt - 86400 * 2,
           recordedAt: distributedAt - 86400 * 2,
           reviewedAt: distributedAt - 86400,
@@ -444,7 +454,8 @@ export class PilotRpcScenario {
           status: "Approved",
           totalIncome,
           evidenceLink: `https://statement.example.com/${cycleId}.pdf`,
-          evidenceHashHex: "3333333333333333333333333333333333333333333333333333333333333333",
+          evidenceHashHex:
+            "3333333333333333333333333333333333333333333333333333333333333333",
           submittedAt: distributedAt - 86400 * 2,
           recordedAt: distributedAt - 86400 * 2,
           reviewedAt: distributedAt - 86400,
@@ -534,7 +545,10 @@ export class PilotRpcScenario {
         this.setCycle({
           cycleId,
           status: "Submitted",
-          totalIncome: typeof totalIncome === "bigint" ? totalIncome : BigInt(totalIncome ?? 0),
+          totalIncome:
+            typeof totalIncome === "bigint"
+              ? totalIncome
+              : BigInt(totalIncome ?? 0),
           evidenceLink: link,
           evidenceHashHex: Buffer.from(hashBuf).toString("hex"),
           submittedAt: Math.floor(Date.now() / 1000),
@@ -622,10 +636,7 @@ export const scenarios = {
       .none();
   },
   paused: (): PilotRpcScenario => {
-    return new PilotRpcScenario()
-      .setPaused(true)
-      .cycle("2026-03")
-      .submitted();
+    return new PilotRpcScenario().setPaused(true).cycle("2026-03").submitted();
   },
   empty: (): PilotRpcScenario => {
     return new PilotRpcScenario();
@@ -652,7 +663,11 @@ export async function mockPilotRpc(
         return;
       }
 
-      let body: { id?: string | number; method?: string; params?: Record<string, unknown> };
+      let body: {
+        id?: string | number;
+        method?: string;
+        params?: Record<string, unknown>;
+      };
       try {
         body = request.postDataJSON();
       } catch {

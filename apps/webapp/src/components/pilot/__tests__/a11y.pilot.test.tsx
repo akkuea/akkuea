@@ -1,11 +1,13 @@
+/* eslint-disable @next/next/no-img-element, @typescript-eslint/no-unused-vars */
 import "@/test/setup-dom";
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, describe, expect, it, mock } from "bun:test";
 import { cleanup, render } from "@testing-library/react";
-import { createElement, forwardRef } from "react";
-import type {
-  ButtonHTMLAttributes,
-  HTMLAttributes,
-  ReactNode,
+import {
+  createElement,
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type HTMLAttributes,
+  type ReactNode,
 } from "react";
 import axe from "axe-core";
 import { NextIntlClientProvider } from "next-intl";
@@ -64,10 +66,9 @@ const passthroughButton = forwardRef<
 });
 
 // Mock framer-motion for jsdom compatibility.
-import { mock } from "bun:test";
-
 mock.module("framer-motion", () => ({
-  AnimatePresence: ({ children }: { children: ReactNode }) => createElement("div", {}, children),
+  AnimatePresence: ({ children }: { children: ReactNode }) =>
+    createElement("div", {}, children),
   motion: new Proxy(
     { div: passthroughDiv, button: passthroughButton },
     {
@@ -90,9 +91,7 @@ async function assertNoAxeViolations(container: HTMLElement) {
   const violations = results.violations.filter(
     (v) => v.impact === "critical" || v.impact === "serious",
   );
-  expect(
-    violations.map((v) => `${v.id}: ${v.description}`),
-  ).toHaveLength(0);
+  expect(violations.map((v) => `${v.id}: ${v.description}`)).toHaveLength(0);
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +100,13 @@ async function assertNoAxeViolations(container: HTMLElement) {
 describe("CycleStatusBadge accessibility", () => {
   it("has no critical axe violations for all status values", async () => {
     const { CycleStatusBadge } = await import("../CycleStatusBadge");
-    const statuses = ["on_time", "late", "disputed", "not_received", "pending"] as const;
+    const statuses = [
+      "on_time",
+      "late",
+      "disputed",
+      "not_received",
+      "pending",
+    ] as const;
     for (const status of statuses) {
       const { container } = render(
         withIntl(createElement(CycleStatusBadge, { status })),
@@ -118,7 +123,8 @@ describe("CycleStatusBadge accessibility", () => {
 describe("CycleStatusTimeline accessibility", () => {
   it("has no critical axe violations in loaded state", async () => {
     const { CycleStatusTimeline } = await import("../CycleStatusTimeline");
-    const { timelineFor, populatedCycles, SAMPLE_NOW } = await import("../fixtures");
+    const { timelineFor, populatedCycles, SAMPLE_NOW } =
+      await import("../fixtures");
     const { container } = render(
       withIntl(
         createElement(CycleStatusTimeline, {
@@ -231,7 +237,8 @@ describe("EvidenceReviewQueue accessibility", () => {
 // ---------------------------------------------------------------------------
 describe("EvidenceSubmissionForm accessibility", () => {
   it("has no critical axe violations in connected state", async () => {
-    const { EvidenceSubmissionFormView } = await import("../EvidenceSubmissionForm");
+    const { EvidenceSubmissionFormView } =
+      await import("../EvidenceSubmissionForm");
     const wallet = {
       address: "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBDQCQZVQQ6BRVV12BKHA",
       isConnected: true,
@@ -250,7 +257,8 @@ describe("EvidenceSubmissionForm accessibility", () => {
   });
 
   it("has no critical axe violations when disconnected", async () => {
-    const { EvidenceSubmissionFormView } = await import("../EvidenceSubmissionForm");
+    const { EvidenceSubmissionFormView } =
+      await import("../EvidenceSubmissionForm");
     const wallet = {
       address: null,
       isConnected: false,
@@ -269,7 +277,8 @@ describe("EvidenceSubmissionForm accessibility", () => {
   });
 
   it("has no critical axe violations when paused", async () => {
-    const { EvidenceSubmissionFormView } = await import("../EvidenceSubmissionForm");
+    const { EvidenceSubmissionFormView } =
+      await import("../EvidenceSubmissionForm");
     const wallet = {
       address: "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBDQCQZVQQ6BRVV12BKHA",
       isConnected: true,

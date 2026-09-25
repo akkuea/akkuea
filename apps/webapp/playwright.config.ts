@@ -51,7 +51,8 @@ export default defineConfig({
       name: "visual-regression",
       use: {
         ...devices["Desktop Chrome"],
-        baseURL: process.env.PLAYWRIGHT_STORYBOOK_URL ?? "http://localhost:6006",
+        baseURL:
+          process.env.PLAYWRIGHT_STORYBOOK_URL ?? "http://localhost:6006",
       },
       testMatch: ["**/visual-regression.spec.ts"],
     },

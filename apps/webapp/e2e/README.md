@@ -6,9 +6,9 @@ This directory contains the Playwright browser end-to-end test suite for the web
 
 There are two test projects:
 
-| Project | Command | What it tests |
-| ------- | ------- | ------------- |
-| `chromium` | `bun run test:e2e` | Evidence lifecycle and whitelist flows against a mocked Next.js dev server |
+| Project             | Command                                            | What it tests                                                                 |
+| ------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `chromium`          | `bun run test:e2e`                                 | Evidence lifecycle and whitelist flows against a mocked Next.js dev server    |
 | `visual-regression` | `bunx playwright test --project=visual-regression` | Screenshot comparison of all pilot Storybook stories in light and dark themes |
 
 ## Running the Suite Locally
@@ -97,10 +97,16 @@ makes the evidence-lifecycle specs fast and deterministic.
 
 ```ts
 const scenario = new PilotRpcScenario()
-  .cycle("2026-01").distributedOnTime(BigInt(11_750_0000000))
-  .cycle("2026-02").distributedLate(BigInt(11_750_0000000))
-  .cycle("2026-03").submitted(BigInt(12_400_0000000))
-  .setHoldings({ balance: BigInt(250_0000000), totalSupply: BigInt(1_000_0000000) });
+  .cycle("2026-01")
+  .distributedOnTime(BigInt(11_750_0000000))
+  .cycle("2026-02")
+  .distributedLate(BigInt(11_750_0000000))
+  .cycle("2026-03")
+  .submitted(BigInt(12_400_0000000))
+  .setHoldings({
+    balance: BigInt(250_0000000),
+    totalSupply: BigInt(1_000_0000000),
+  });
 
 await mockPilotRpc(page, scenario);
 await page.goto("/en/pilot/investor");

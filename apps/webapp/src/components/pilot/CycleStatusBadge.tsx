@@ -30,7 +30,10 @@ const STATUS_VARIANTS: Record<
 
 const STATUS_ICONS: Record<
   PilotCycleStatus,
-  React.ComponentType<{ className?: string; "aria-hidden"?: boolean | "true" | "false" }>
+  React.ComponentType<{
+    className?: string;
+    "aria-hidden"?: boolean | "true" | "false";
+  }>
 > = {
   on_time: CheckCircle2,
   late: Clock,

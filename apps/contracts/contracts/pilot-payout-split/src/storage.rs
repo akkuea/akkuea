@@ -20,6 +20,7 @@ pub enum DataKey {
     CurrencyPreference(Address),
     SwapFailures(String),
     Exit,
+    PendingAdmin,
 }
 
 pub struct Storage;
@@ -97,5 +98,21 @@ impl Storage {
 
     pub fn set_exit_record(env: &Env, record: &ExitRecord) {
         env.storage().instance().set(&DataKey::Exit, record);
+    }
+
+    /// The address named by the current admin as the next admin, if a
+    /// transfer is in progress. Cleared on accept or cancel.
+    pub fn pending_admin(env: &Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::PendingAdmin)
+    }
+
+    pub fn set_pending_admin(env: &Env, pending: &Address) {
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingAdmin, pending);
+    }
+
+    pub fn clear_pending_admin(env: &Env) {
+        env.storage().instance().remove(&DataKey::PendingAdmin);
     }
 }

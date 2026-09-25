@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslations } from "next-intl";
 import { ArrowRight } from "lucide-react";
 
 /**
@@ -21,17 +22,19 @@ export function PilotCta({
 }: {
   variant?: "banner" | "compact";
 }) {
+  const t = useTranslations("PilotCta");
+
   if (variant === "compact") {
     return (
       <p className="text-xs text-land-fg-muted">
-        This is a simulation.{" "}
+        {t("compactPrefix")}{" "}
         <a
           href={PILOT_URL}
           target="_blank"
           rel="noopener noreferrer"
           className="text-land-accent underline underline-offset-2 hover:text-land-accent/80 transition-colors inline-flex items-center gap-1"
         >
-          See the Akkuea Pilot
+          {t("linkText")}
           <ArrowRight size={11} aria-hidden="true" />
         </a>
       </p>
@@ -41,7 +44,7 @@ export function PilotCta({
   return (
     <div className="rounded-xl border border-land-accent/30 bg-land-accent-dim px-4 py-3 text-center space-y-1">
       <p className="text-xs text-land-fg-muted leading-relaxed">
-        This is a simulation. Ready to see real yield from real property?
+        {t("bannerText")}
       </p>
       <a
         href={PILOT_URL}
@@ -49,7 +52,7 @@ export function PilotCta({
         rel="noopener noreferrer"
         className="text-xs font-semibold text-land-accent underline underline-offset-2 hover:text-land-accent/80 transition-colors inline-flex items-center gap-1"
       >
-        See the Akkuea Pilot
+        {t("linkText")}
         <ArrowRight size={12} aria-hidden="true" />
       </a>
     </div>

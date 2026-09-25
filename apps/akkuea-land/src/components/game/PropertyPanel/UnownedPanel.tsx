@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslations } from "next-intl";
 import { Coins } from "lucide-react";
 import { PropertyPanelLayout } from "./PropertyPanelLayout";
 import { GameProperty, BuildingLevel } from "../../../types/game.types";
@@ -26,6 +27,7 @@ export const UnownedPanel: React.FC<UnownedPanelProps> = ({
   coordinates,
   buildingLevel,
 }) => {
+  const t = useTranslations("PropertyPanel");
   const { buyFromTreasury, pendingAction, error, success } = usePropertyActions(
     property,
     onPropertyUpdate,
@@ -39,17 +41,17 @@ export const UnownedPanel: React.FC<UnownedPanelProps> = ({
     text: "text-land-gold",
     glow: "shadow-land-gold/10",
     badge: "bg-land-gold/10 border-land-gold text-land-gold",
-    title: "Treasury Property",
+    title: t("unowned.title"),
   };
 
   const footer = (
     <div className="space-y-3">
       <div className="flex justify-between items-center bg-land-surface/50 p-3 rounded-xl border border-land-border">
         <span className="text-xs text-land-fg-muted font-medium">
-          Treasury Cost
+          {t("unowned.treasuryCost")}
         </span>
         <span className="text-sm font-extrabold text-land-fg flex items-center gap-1">
-          <Coins size={14} className="text-land-gold" />
+          <Coins size={14} className="text-land-gold" aria-hidden="true" />
           {property.pricePerShare} LAND
         </span>
       </div>
@@ -58,7 +60,7 @@ export const UnownedPanel: React.FC<UnownedPanelProps> = ({
         disabled={!!pendingAction}
         className="w-full bg-gradient-to-r from-land-gold-fill to-land-warning-fill hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-on-accent font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md shadow-land-gold-fill/5 flex items-center justify-center gap-2 border border-land-gold-fill/20"
       >
-        Buy from Treasury
+        {t("unowned.buyFromTreasury")}
       </button>
     </div>
   );

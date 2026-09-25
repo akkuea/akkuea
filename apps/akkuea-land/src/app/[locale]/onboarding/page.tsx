@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/routing";
 import { useGameWallet } from "@/hooks/useGameWallet";
 import { onboarding } from "@/lib/onboarding";
 import { WelcomeStep } from "@/components/game/onboarding/WelcomeStep";
@@ -14,6 +15,7 @@ type Step = "welcome" | "claim-land" | "claim-property";
 const STEPS: Step[] = ["welcome", "claim-land", "claim-property"];
 
 export default function OnboardingPage() {
+  const t = useTranslations("Onboarding");
   const [step, setStep] = useState<Step>("welcome");
   const { address } = useGameWallet();
   const router = useRouter();
@@ -40,7 +42,7 @@ export default function OnboardingPage() {
             onClick={skipAll}
             className="text-xs text-land-fg-muted hover:text-land-fg transition duration-150 font-bold uppercase tracking-wider"
           >
-            Skip setup
+            {t("skipSetup")}
           </button>
         </div>
 
@@ -70,7 +72,17 @@ export default function OnboardingPage() {
   );
 }
 
+const STEP_NAME_KEY: Record<
+  Step,
+  "stepWelcome" | "stepClaimLand" | "stepClaimProperty"
+> = {
+  welcome: "stepWelcome",
+  "claim-land": "stepClaimLand",
+  "claim-property": "stepClaimProperty",
+};
+
 function StepDots({ current, steps }: { current: Step; steps: Step[] }) {
+  const t = useTranslations("Onboarding");
   const idx = steps.indexOf(current);
   return (
     <div className="flex gap-2">
@@ -81,7 +93,10 @@ function StepDots({ current, steps }: { current: Step; steps: Step[] }) {
             "h-1.5 rounded-full transition-all duration-300",
             i <= idx ? "w-6 bg-land-accent" : "w-1.5 bg-land-border",
           ].join(" ")}
-          title={`Step ${i + 1}: ${stepName}`}
+          title={t("stepIndicator", {
+            number: i + 1,
+            name: t(STEP_NAME_KEY[stepName]),
+          })}
         />
       ))}
     </div>

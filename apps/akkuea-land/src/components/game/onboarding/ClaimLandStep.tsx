@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useGameWallet } from "@/hooks/useGameWallet";
 import { buildFaucetClaimXdr } from "@/lib/soroban-tx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,13 +15,6 @@ import {
 
 type Status = "idle" | "pending" | "done" | "error";
 
-const STATUS_MESSAGE: Record<Status, string> = {
-  idle: "Claim 1,000 LAND",
-  pending: "Preparing your wallet on Stellar...",
-  done: "1,000 LAND Received!",
-  error: "Claim failed. Try again.",
-};
-
 export function ClaimLandStep({
   onNext,
   onSkip,
@@ -28,8 +22,16 @@ export function ClaimLandStep({
   onNext: () => void;
   onSkip: () => void;
 }) {
+  const t = useTranslations("Onboarding.claimLand");
   const { address, signAndSubmitTx } = useGameWallet();
   const [status, setStatus] = useState<Status>("idle");
+
+  const STATUS_MESSAGE: Record<Status, string> = {
+    idle: t("statusIdle"),
+    pending: t("statusPending"),
+    done: t("statusDone"),
+    error: t("statusError"),
+  };
 
   const handleClaim = async () => {
     if (!address) {
@@ -79,11 +81,10 @@ export function ClaimLandStep({
       </div>
 
       <h2 className="mb-3 text-2xl font-extrabold tracking-tight text-land-fg">
-        Get your starter LAND
+        {t("title")}
       </h2>
       <p className="mb-8 text-sm text-land-fg-muted max-w-sm mx-auto leading-relaxed">
-        LAND is the premium utility token of Akkuea Land. Reclaim 1,000 LAND
-        from our testnet faucet for free to fund your very first property claim.
+        {t("description")}
       </p>
 
       <div className="relative min-h-[160px] flex flex-col justify-start">
@@ -106,7 +107,7 @@ export function ClaimLandStep({
                   </span>
                 </div>
                 <p className="text-xs text-land-success/80">
-                  Transaction successfully recorded on-chain
+                  {t("transactionRecorded")}
                 </p>
 
                 {/* Micro sparkle floaters */}
@@ -143,8 +144,8 @@ export function ClaimLandStep({
                 onClick={onNext}
                 className="w-full rounded-xl bg-land-success-fill py-3.5 text-sm font-bold text-land-on-accent hover:bg-land-success-fill/90 transition-all duration-200 shadow-lg shadow-land-success-fill/20 flex items-center justify-center gap-2"
               >
-                Continue to Claim Property
-                <ArrowRight size={16} />
+                {t("continueButton")}
+                <ArrowRight size={16} aria-hidden="true" />
               </motion.button>
             </motion.div>
           ) : (
@@ -173,7 +174,11 @@ export function ClaimLandStep({
                 }`}
               >
                 {status === "pending" && (
-                  <RefreshCw size={14} className="animate-spin" />
+                  <RefreshCw
+                    size={14}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
                 )}
                 {STATUS_MESSAGE[status]}
               </motion.button>
@@ -184,17 +189,14 @@ export function ClaimLandStep({
                   animate={{ opacity: 1 }}
                   className="text-xs text-land-accent/80 animate-pulse"
                 >
-                  Confirming with sponsored transaction fee...
+                  {t("confirmingFee")}
                 </motion.p>
               )}
 
               {status === "error" && (
                 <div className="flex items-center justify-center gap-1.5 text-xs text-land-danger">
-                  <AlertCircle size={14} />
-                  <span>
-                    Transaction failed. Please make sure you have internet
-                    access.
-                  </span>
+                  <AlertCircle size={14} aria-hidden="true" />
+                  <span>{t("transactionFailed")}</span>
                 </div>
               )}
 
@@ -203,7 +205,7 @@ export function ClaimLandStep({
                   onClick={onSkip}
                   className="w-full text-xs text-land-fg-muted hover:text-land-fg transition duration-150 uppercase tracking-wider font-semibold"
                 >
-                  Skip this step
+                  {t("skipStep")}
                 </button>
               )}
             </motion.div>

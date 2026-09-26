@@ -240,5 +240,69 @@ describe('NotificationWorker', () => {
       resolveFetch!(new Response(null, { status: 200 }));
       await Promise.all([firstTick, secondTick]);
     });
+
+    it('stop() waits for an active tick to finish before returning', async () => {
+      let resolveFetch: ((value: Response) => void) | null = null;
+      let tickFinished = false;
+
+      const service = makeService({
+        getPendingNotifications: mock(() => Promise.resolve([sampleNotification()])),
+      });
+      const fetchImpl = mock(
+        () =>
+          new Promise<Response>((resolve) => {
+            resolveFetch = resolve;
+          }),
+      );
+
+      const worker = new NotificationWorker(service as unknown as NotificationService, {
+        pollIntervalMs: 10_000,
+        webhookUrl: 'https://example.com/hook',
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+      });
+
+      worker.start();
+      // Let the first tick start.
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const stopPromise = worker.stop().then(() => {
+        tickFinished = true;
+      });
+
+      // stop() should not resolve while the fetch is still in flight.
+      expect(tickFinished).toBe(false);
+
+      resolveFetch!(new Response(null, { status: 200 }));
+      await stopPromise;
+
+      expect(tickFinished).toBe(true);
+      expect(service.markAsDelivered).toHaveBeenCalledWith('n-1');
+    });
+
+    it('stop() resolves after shutdownTimeoutMs if the active tick hangs', async () => {
+      const service = makeService({
+        getPendingNotifications: mock(() => Promise.resolve([sampleNotification()])),
+      });
+      // fetch never resolves - simulates a hung job
+      const fetchImpl = mock(() => new Promise<Response>(() => {}));
+
+      const worker = new NotificationWorker(service as unknown as NotificationService, {
+        pollIntervalMs: 10_000,
+        webhookUrl: 'https://example.com/hook',
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+        shutdownTimeoutMs: 50,
+      });
+
+      worker.start();
+      await Promise.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      const start = Date.now();
+      await worker.stop();
+      expect(Date.now() - start).toBeGreaterThanOrEqual(50);
+    });
   });
 });

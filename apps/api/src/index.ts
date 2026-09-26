@@ -137,13 +137,15 @@ pilotEscalationJob?.start();
 
 const shutdown = async (signal: string) => {
   console.log(`\n${signal} received, closing connections...`);
+
+  // Drain active jobs before closing DB/network resources.
   await Promise.all([
-    closeDatabaseConnection(),
-    cacheService.disconnect(),
     notificationWorker?.stop() ?? Promise.resolve(),
     kycExpiryJob?.stop() ?? Promise.resolve(),
     pilotEscalationJob?.stop() ?? Promise.resolve(),
   ]);
+
+  await Promise.all([closeDatabaseConnection(), cacheService.disconnect()]);
 
   console.log('Connections closed. Exiting...');
   process.exit(0);

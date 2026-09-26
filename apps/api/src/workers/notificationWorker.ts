@@ -10,6 +10,7 @@ export interface NotificationWorkerConfig {
   fetchImpl?: typeof fetch;
   retryBaseDelayMs?: number;
   maxRetryDelayMs?: number;
+  shutdownTimeoutMs?: number;
 }
 
 interface ResolvedConfig {
@@ -20,19 +21,22 @@ interface ResolvedConfig {
   fetchImpl: typeof fetch;
   retryBaseDelayMs: number;
   maxRetryDelayMs: number;
+  shutdownTimeoutMs: number;
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const DEFAULT_RETRY_BASE_DELAY_MS = 60_000;
 const DEFAULT_MAX_RETRY_DELAY_MS = 60 * 60 * 1_000;
+const DEFAULT_SHUTDOWN_TIMEOUT_MS = 30_000;
 
 export class NotificationWorker {
   private readonly service: NotificationService;
   private readonly config: ResolvedConfig;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
-  private processing = false;
+  // Resolves when the active tick finishes; null when idle.
+  private activeTick: Promise<void> | null = null;
 
   constructor(service: NotificationService, config?: NotificationWorkerConfig) {
     this.service = service;
@@ -56,6 +60,7 @@ export class NotificationWorker {
       maxRetryDelayMs:
         config?.maxRetryDelayMs ??
         (Number.isFinite(envMax) && envMax > 0 ? envMax : DEFAULT_MAX_RETRY_DELAY_MS),
+      shutdownTimeoutMs: config?.shutdownTimeoutMs ?? DEFAULT_SHUTDOWN_TIMEOUT_MS,
     };
   }
 
@@ -72,13 +77,27 @@ export class NotificationWorker {
 
   async stop(): Promise<void> {
     this.running = false;
+
+    // Stop accepting new jobs.
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    while (this.processing) {
-      await new Promise((resolve) => setTimeout(resolve, 10));
+
+    // Wait for the active tick to finish, but don't wait forever.
+    if (this.activeTick) {
+      const drain = this.activeTick;
+      const timeout = new Promise<void>((resolve) =>
+        setTimeout(() => {
+          logger.warn('Notification worker drain timed out, proceeding with shutdown', {
+            operation: 'NOTIFICATION_WORKER_DRAIN_TIMEOUT',
+          });
+          resolve();
+        }, this.config.shutdownTimeoutMs),
+      );
+      await Promise.race([drain, timeout]);
     }
+
     logger.info('Notification worker stopped', { operation: 'NOTIFICATION_WORKER_STOP' });
   }
 
@@ -87,8 +106,14 @@ export class NotificationWorker {
   }
 
   async tick(): Promise<void> {
-    if (this.processing) return;
-    this.processing = true;
+    // Don't start a new tick while one is already running.
+    if (this.activeTick) return;
+
+    let resolve!: () => void;
+    this.activeTick = new Promise<void>((r) => {
+      resolve = r;
+    });
+
     try {
       const [pending, readyForRetry] = await Promise.all([
         this.service.getPendingNotifications(),
@@ -103,6 +128,8 @@ export class NotificationWorker {
       });
 
       for (const notification of queue) {
+        // Stop processing new items if shutdown was requested mid-tick.
+        if (!this.running && queue.indexOf(notification) > 0) break;
         await this.dispatch(notification);
       }
     } catch (error) {
@@ -111,7 +138,8 @@ export class NotificationWorker {
         error: error instanceof Error ? error.message : String(error),
       });
     } finally {
-      this.processing = false;
+      this.activeTick = null;
+      resolve();
       this.scheduleNext();
     }
   }

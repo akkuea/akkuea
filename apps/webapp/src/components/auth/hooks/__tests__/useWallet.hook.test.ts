@@ -1,6 +1,10 @@
 import "@/test/setup-dom";
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
+import type {
+  AuthEntrySigningProvider,
+  SignableWalletProvider,
+} from "@/services/wallet";
 
 interface MockKit {
   authModal: () => Promise<{ address: string }>;
@@ -23,9 +27,18 @@ mock.module("@/lib/stellar", () => ({
   fetchBalance: fetchBalanceMock,
 }));
 
-const { useWallet } = await import("../useWallet.hook");
+// PropertyPage's and the marketplace page's tests each mock.module() the
+// "@/components/auth/hooks" barrel and never restore it. Once that specifier
+// has been mocked from more than one file in the same `bun test` process,
+// Bun's module resolution also starts returning that stub for a plain
+// "../useWallet.hook" import here, even though this file never touches the
+// barrel itself. A cache-busting query string forces a fresh module load
+// that isn't subject to that stale resolution.
+const freshWalletHookSpecifier: string = "../useWallet.hook.ts?fresh-import";
+const { useWallet } = await import(freshWalletHookSpecifier);
 const { useAuthenticationStore } =
   await import("../../store/data/slices/authentication.slice");
+const { walletRegistry } = await import("@/services/wallet");
 
 const TEST_NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 
@@ -223,5 +236,149 @@ describe("useAuthenticationStore - reconnection state", () => {
     const state = useAuthenticationStore.getState();
     expect(state.isWalletDisconnected).toBe(false);
     expect(state.pendingAction).toBeNull();
+  });
+});
+
+/** A minimal provider that can sign both transactions and auth entries. */
+function makeAuthEntrySigningProvider(
+  overrides: Partial<AuthEntrySigningProvider> = {},
+): AuthEntrySigningProvider {
+  return {
+    id: "test-auth-entry-signer",
+    name: "Test Auth Entry Signer",
+    isConnected: true,
+    connect: async () => ({ address: "GADDRESS" }),
+    disconnect: async () => {},
+    signTransaction: async () => "signed-tx-xdr",
+    signAuthEntry: async () => "signed-auth-entry-xdr",
+    ...overrides,
+  };
+}
+
+describe("useWallet - signAuthEntry / canSignAuthEntries", () => {
+  beforeEach(() => {
+    resetStore();
+    mockKit = null;
+    fetchBalanceMock.mockClear();
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("canSignAuthEntries is false when no wallet is selected", () => {
+    const { result } = renderHook(() => useWallet());
+    expect(result.current.canSignAuthEntries).toBe(false);
+  });
+
+  it("canSignAuthEntries is false for a provider that only signs transactions (e.g. Privy, Pollar)", () => {
+    const txOnlyProvider: SignableWalletProvider = {
+      id: "test-tx-only-signer",
+      name: "Test Transaction-Only Signer",
+      isConnected: true,
+      connect: async () => ({ address: "GADDRESS" }),
+      disconnect: async () => {},
+      signTransaction: async () => "signed-tx-xdr",
+    };
+    walletRegistry.register(txOnlyProvider);
+    useAuthenticationStore.setState({
+      selectedWalletId: "test-tx-only-signer",
+    });
+
+    const { result } = renderHook(() => useWallet());
+    expect(result.current.canSignAuthEntries).toBe(false);
+  });
+
+  it("canSignAuthEntries is true for a provider that can sign auth entries", () => {
+    walletRegistry.register(makeAuthEntrySigningProvider());
+    useAuthenticationStore.setState({
+      selectedWalletId: "test-auth-entry-signer",
+    });
+
+    const { result } = renderHook(() => useWallet());
+    expect(result.current.canSignAuthEntries).toBe(true);
+  });
+
+  it("signAuthEntry() throws immediately, without a reconnection prompt, when the wallet cannot sign auth entries at all", async () => {
+    const { result } = renderHook(() => useWallet());
+
+    let caught: unknown;
+    await act(async () => {
+      try {
+        await result.current.signAuthEntry(
+          "raw-auth-entry-xdr",
+          "GOPERATOR",
+          TEST_NETWORK_PASSPHRASE,
+        );
+      } catch (error) {
+        caught = error;
+      }
+    });
+
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).toBe(
+      "Connected wallet does not support signing authorization entries",
+    );
+    expect(useAuthenticationStore.getState().isWalletDisconnected).toBe(false);
+  });
+
+  it("signAuthEntry() returns the signed auth entry from a capable provider", async () => {
+    walletRegistry.register(
+      makeAuthEntrySigningProvider({
+        signAuthEntry: async (authEntryXdr, signerAddress, network) =>
+          `signed:${authEntryXdr}:${signerAddress}:${network}`,
+      }),
+    );
+    useAuthenticationStore.setState({
+      selectedWalletId: "test-auth-entry-signer",
+    });
+
+    const { result } = renderHook(() => useWallet());
+    let signed = "";
+    await act(async () => {
+      signed = await result.current.signAuthEntry(
+        "raw-auth-entry-xdr",
+        "GOPERATOR",
+        TEST_NETWORK_PASSPHRASE,
+      );
+    });
+
+    expect(signed).toBe(
+      `signed:raw-auth-entry-xdr:GOPERATOR:${TEST_NETWORK_PASSPHRASE}`,
+    );
+  });
+
+  it("signAuthEntry() triggers the reconnection prompt when a capable provider's call rejects", async () => {
+    walletRegistry.register(
+      makeAuthEntrySigningProvider({
+        signAuthEntry: async () => {
+          throw new Error('wallet does not support "signAuthEntry"');
+        },
+      }),
+    );
+    useAuthenticationStore.setState({
+      selectedWalletId: "test-auth-entry-signer",
+    });
+
+    const { result } = renderHook(() => useWallet());
+
+    let caught: unknown;
+    await act(async () => {
+      try {
+        await result.current.signAuthEntry(
+          "raw-auth-entry-xdr",
+          "GOPERATOR",
+          TEST_NETWORK_PASSPHRASE,
+        );
+      } catch (error) {
+        caught = error;
+      }
+    });
+
+    expect(caught).toBeInstanceOf(Error);
+    expect((caught as Error).message).toBe(
+      'wallet does not support "signAuthEntry"',
+    );
+    expect(useAuthenticationStore.getState().isWalletDisconnected).toBe(true);
   });
 });

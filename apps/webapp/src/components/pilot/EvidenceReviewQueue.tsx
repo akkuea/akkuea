@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ClipboardCheck, ExternalLink, Hash, Wallet } from "lucide-react";
+import { ClipboardCheck, ExternalLink, Flag, Hash, Wallet } from "lucide-react";
 import type { PilotEvidenceStatus } from "@akkuea/shared";
 import {
   Button,
@@ -17,10 +17,14 @@ import type { ConnectionStatus } from "@/hooks/useLiveUpdates";
 import { useWallet } from "@/components/auth/hooks";
 import type { PilotEvidenceDetail } from "@/services/pilot/reads";
 import {
+  flagDispute,
   reviewEvidence,
   startReview,
   type SignXdr,
 } from "@/services/pilot/writes";
+import { holderAmountFor } from "@/services/pilot/reads";
+import { pilotAllyAddress } from "@/services/pilot/config";
+import { DistributionCosignPanel } from "./DistributionCosignPanel";
 import { EvidenceStatusBadge } from "./EvidenceSubmissionForm";
 import { formatCycleLabel, formatUsdc, shortenHash } from "./format";
 
@@ -56,13 +60,59 @@ interface QueueItemProps {
   wallet: OperatorWallet;
 }
 
+interface DistributeSectionProps {
+  operatorAddress: string;
+  cycleId: string;
+  totalIncome: bigint;
+  signTransaction: SignXdr;
+  onDistributed: () => void;
+}
+
+/**
+ * Wraps `DistributionCosignPanel` with the ally address lookup, since the
+ * pilot contract has no `get_ally` read (see `pilotAllyAddress`'s own doc
+ * comment): a deployment that has not set
+ * `NEXT_PUBLIC_PILOT_ALLY_ADDRESS` gets a clear configuration message here
+ * instead of the panel silently having no ally to address the invocation to.
+ */
+function DistributeSection({
+  operatorAddress,
+  cycleId,
+  totalIncome,
+  signTransaction,
+  onDistributed,
+}: DistributeSectionProps) {
+  const t = useTranslations("Pilot");
+  let allyAddress: string;
+  try {
+    allyAddress = pilotAllyAddress();
+  } catch {
+    return (
+      <p role="alert" className="mt-4 text-xs text-red-400">
+        {t("cosign.allyNotConfigured")}
+      </p>
+    );
+  }
+
+  return (
+    <DistributionCosignPanel
+      operatorAddress={operatorAddress}
+      allyAddress={allyAddress}
+      cycleId={cycleId}
+      totalDistributableUsdc={holderAmountFor(totalIncome)}
+      signTransaction={signTransaction}
+      onDistributed={onDistributed}
+    />
+  );
+}
+
 function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
   const t = useTranslations("Pilot");
   const { address, signTransaction } = wallet;
   const [reason, setReason] = useState("");
-  const [pending, setPending] = useState<"open" | "approve" | "reject" | null>(
-    null,
-  );
+  const [pending, setPending] = useState<
+    "open" | "approve" | "reject" | "dispute" | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
 
   const status = cycle.evidence?.status;
@@ -70,7 +120,7 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
   const canDistribute = status === "approved" && !cycle.distribution;
 
   async function run(
-    action: "open" | "approve" | "reject",
+    action: "open" | "approve" | "reject" | "dispute",
     operation: () => Promise<unknown>,
   ) {
     if (!address) {
@@ -202,19 +252,76 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
             >
               {t("queue.reject")}
             </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              leftIcon={<Flag className="h-3.5 w-3.5" aria-hidden="true" />}
+              disabled={blocked || reason.trim().length === 0}
+              isLoading={pending === "dispute"}
+              onClick={() =>
+                void run("dispute", () =>
+                  flagDispute(
+                    {
+                      caller: address as string,
+                      cycleId: cycle.cycleId,
+                      reason: reason.trim(),
+                    },
+                    signTransaction,
+                  ),
+                )
+              }
+            >
+              {t("queue.flagDispute")}
+            </Button>
           </div>
           <p className="text-xs text-neutral-500">{t("queue.reasonHint")}</p>
         </div>
       )}
 
+      {canDistribute && address && cycle.totalIncome !== undefined && (
+        <DistributeSection
+          operatorAddress={address}
+          cycleId={cycle.cycleId}
+          totalIncome={cycle.totalIncome}
+          signTransaction={signTransaction}
+          onDistributed={onDone}
+        />
+      )}
+
+      {/* The contract's own `flag_dispute` guard is just "not yet
+          distributed": an approved-but-undistributed cycle can still be
+          disputed if something is found wrong before execution, not only a
+          cycle still awaiting its first review decision. */}
       {canDistribute && (
-        <div className="mt-4 rounded-lg border border-white/10 bg-white/5 px-3 py-2">
-          <p className="text-xs text-neutral-300">
-            {t("queue.readyToDistribute")}
-          </p>
-          <p className="mt-1 text-xs text-neutral-500">
-            {t("queue.distributeCosignNotice")}
-          </p>
+        <div className="mt-3 space-y-2">
+          <Input
+            label={t("queue.reasonLabel")}
+            placeholder={t("queue.reasonPlaceholder")}
+            value={reason}
+            disabled={blocked}
+            onChange={(event) => setReason(event.target.value)}
+          />
+          <Button
+            variant="danger"
+            size="sm"
+            leftIcon={<Flag className="h-3.5 w-3.5" aria-hidden="true" />}
+            disabled={blocked || reason.trim().length === 0}
+            isLoading={pending === "dispute"}
+            onClick={() =>
+              void run("dispute", () =>
+                flagDispute(
+                  {
+                    caller: address as string,
+                    cycleId: cycle.cycleId,
+                    reason: reason.trim(),
+                  },
+                  signTransaction,
+                ),
+              )
+            }
+          >
+            {t("queue.flagDispute")}
+          </Button>
         </div>
       )}
 

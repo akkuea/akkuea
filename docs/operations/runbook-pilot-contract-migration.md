@@ -4,18 +4,15 @@
 **Audience:** Platform admin (Akkuea), with the operator and ally available
 **Applies to:** `pilot-whitelist`, `pilot-income-token`, `pilot-payout-split`
 
-> **Status: written, not yet rehearsed.** This procedure was authored to the
-> same command-by-command precision as
-> `docs/deployment/deploy-pilot-contracts.md`, against the actual contract
-> interface as of this change (verified directly against
-> `pilot-whitelist/src/lib.rs`, `pilot-income-token/src/lib.rs`, and
-> `pilot-payout-split/src/lib.rs`, not from memory). **It has not been
-> executed on testnet.** The environment this was written in has no funded
-> Stellar testnet operator or admin key and no way to submit real
-> transactions. Before this procedure can be relied on during a real
-> incident, a funded key holder must run it once on testnet end to end and
-> record the resulting transaction hashes (see "Rehearsal record" at the
-> bottom). Do not treat this document as verified until that has happened.
+> **Status: rehearsed end to end on testnet, 2026-09-26.** A throwaway old
+> deployment was seeded to model a live pilot (three approved holders, a
+> fixed mint, one distributed cycle, one in-flight cycle), then every step
+> below was executed against it with a fresh deployer, and the resulting
+> transaction hashes were recorded in the "Rehearsal record" table at the
+> bottom. The rehearsal surfaced two command-level corrections that are now
+> folded into the steps: Step 4b's CLI argument quoting, and Step 5's
+> `mark_wound_down` pause gate, which requires unpausing the old
+> `pilot-income-token` before marking it and re-pausing afterwards.
 
 ---
 
@@ -59,14 +56,14 @@ updated to point at.
 
 ## What this procedure does and does not carry over
 
-| State                                         | Carried over                         | How |
-| ---------------------------------------------- | ------------------------------------- | ---- |
-| Whitelist approvals                            | Yes                                    | Re-`approve` every still-approved address on the new `pilot-whitelist` |
-| Token holder balances                          | Yes, exactly                          | One `mint_fixed_supply` call on the new `pilot-income-token`, using the old contract's final `holders()` and per-holder `balance()` |
-| Wound-down / exit terminal state                | Recorded on the **old** contracts only | The old contracts keep their own terminal record; the new contracts start fresh and unexited |
-| Historical evidence records (per cycle)         | Not replayed on-chain                  | Remain permanently readable on the old `pilot-payout-split`; the new deployment is linked to it in `docs/contracts/deployment.md` |
-| Currency preferences per holder                 | Not replayed automatically             | Holders must re-set their preference on the new contract via `set_currency_preference` (self-serve, cheap) |
-| In-flight (unreviewed or unexecuted) cycles      | Handled manually, case by case         | Resolve or cancel before migrating; do not carry partial review state across |
+| State                                       | Carried over                           | How                                                                                                                                 |
+| ------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Whitelist approvals                         | Yes                                    | Re-`approve` every still-approved address on the new `pilot-whitelist`                                                              |
+| Token holder balances                       | Yes, exactly                           | One `mint_fixed_supply` call on the new `pilot-income-token`, using the old contract's final `holders()` and per-holder `balance()` |
+| Wound-down / exit terminal state            | Recorded on the **old** contracts only | The old contracts keep their own terminal record; the new contracts start fresh and unexited                                        |
+| Historical evidence records (per cycle)     | Not replayed on-chain                  | Remain permanently readable on the old `pilot-payout-split`; the new deployment is linked to it in `docs/contracts/deployment.md`   |
+| Currency preferences per holder             | Not replayed automatically             | Holders must re-set their preference on the new contract via `set_currency_preference` (self-serve, cheap)                          |
+| In-flight (unreviewed or unexecuted) cycles | Handled manually, case by case         | Resolve or cancel before migrating; do not carry partial review state across                                                        |
 
 Whitelist approvals are not enumerable on-chain (`pilot-whitelist` stores
 only a boolean per address, not a list). Reconstruct the current approved
@@ -262,8 +259,12 @@ stellar contract invoke \
   -- mint_fixed_supply \
   --admin $ADMIN_ADDRESS \
   --holders '["<holder1>","<holder2>", ...]' \
-  --amounts '[<amount1>,<amount2>, ...]'
+  --amounts '["<amount1>","<amount2>", ...]'
 ```
+
+The stellar CLI requires i128 vector elements to be passed as quoted
+strings inside the JSON array; unquoted numbers fail argument parsing with
+`Expected type vector of i128`.
 
 Use the exact holder list and amounts recorded in Step 2b, in the same
 order. Verify:
@@ -298,7 +299,18 @@ Mark both old contracts' terminal state, pointing forward to the new
 deployment so anyone reading the old contract's history sees where the
 pilot continued.
 
+`mark_wound_down` is pause-gated, and Step 1 left every old contract
+paused, so the old `pilot-income-token` must be unpaused first, marked,
+and then re-paused:
+
 ```bash
+stellar contract invoke \
+  --id $OLD_INCOME_TOKEN \
+  --source-account $ADMIN_ADDRESS \
+  --network $NETWORK \
+  -- unpause \
+  --admin $ADMIN_ADDRESS
+
 stellar contract invoke \
   --id $OLD_INCOME_TOKEN \
   --source-account $ADMIN_ADDRESS \
@@ -306,13 +318,22 @@ stellar contract invoke \
   -- mark_wound_down \
   --admin $ADMIN_ADDRESS \
   --reason "Migrated to $NEW_INCOME_TOKEN on $(date -u +%Y-%m-%d)"
+
+stellar contract invoke \
+  --id $OLD_INCOME_TOKEN \
+  --source-account $ADMIN_ADDRESS \
+  --network $NETWORK \
+  -- pause \
+  --admin $ADMIN_ADDRESS
 ```
 
 `pilot-payout-split`'s `exit` requires both operator and ally signatures (it
 is not admin-gated); coordinate with both before running it, or leave the
 old `pilot-payout-split` paused indefinitely if a two-signer exit cannot be
 arranged immediately. A paused, un-exited old contract is safe: `pause`
-already blocks every state-changing call on it.
+blocks evidence recording, preference changes, and distribution execution.
+`exit` itself is deliberately not pause-gated (a terminal marker must stay
+recordable on a frozen contract), which the rehearsal confirmed.
 
 ```bash
 stellar contract invoke \
@@ -366,19 +387,19 @@ auto-resolved from the shared config file.
 Fill this in the first time this procedure is actually run on testnet, and
 update it on every subsequent rehearsal.
 
-| Field                              | Value |
-| ------------------------------------ | ------- |
-| Date                                  | _not yet run_ |
-| Network                               | |
-| Old contract IDs                      | |
-| New contract IDs                      | |
-| Pause transaction hashes (Step 1)     | |
-| Whitelist re-approval transaction hashes (Step 4a) | |
-| `mint_fixed_supply` transaction hash (Step 4b) | |
-| `mark_wound_down` transaction hash (Step 5) | |
-| `exit` transaction hash (Step 5)      | |
-| Total elapsed time                    | |
-| Issues found and fixed in this runbook | |
+| Field                                              | Value                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Date                                               | 2026-09-26                                                                                                                                                                                                                                                                                                                                                                 |
+| Network                                            | testnet                                                                                                                                                                                                                                                                                                                                                                    |
+| Old contract IDs                                   | `pilot-whitelist` `CAO6RSVQMC7UIXJZTGFOKB74OVIXE6YF3G526XGFVWO6L3BFOC26Y5X6`, `pilot-income-token` `CDB35QVWWKQPGYRZZNPNHWDSP3WZIWV7IYTRGNQO3AOBAIEJ2MOYHAFC`, `pilot-payout-split` `CBLQAQ5YIPUVYN4NB6HEEWIU47QHTFQKNWKP36XFEKVWFRXMGI4HYTRH`                                                                                                                             |
+| New contract IDs                                   | `pilot-whitelist` `CC7MUBUIU7RKEBMLKMS4RLS6FDX2DQKBCJ67ZQVHQTJPDWIFWT43NSI7`, `pilot-income-token` `CCLPIH3UYLJFG2MLFIUMJSGKZOYGNYODPXRSRVTTRVUCS4BL3DPWHYZ5`, `pilot-payout-split` `CASLHM4IOQVD3DSICWUJNWVRBGMVGRUFQI6RILGMLATVEO3WGSJTSV7L`                                                                                                                             |
+| Pause transaction hashes (Step 1)                  | whitelist `1d133754164f4344bebf680250f90f3b64fc9b839f8b9ca9e0d8dceb6fe355df`, income-token `16da56c0d96db700ae69f3b665c1f123d9c4786fbd88188a5c0096ae5dcd7bbb`, payout-split `3e00a7693be388f69fcf6098b67c88fb5b56151ac885c514f04c18d8fce315d2`                                                                                                                             |
+| Whitelist re-approval transaction hashes (Step 4a) | holder one `f4c02f4be97764dc2065cf00f7fcebfa557b02ae6aa71a044dac8c2ec68b6d9f`, holder two `a1fcda5385fc0f043ed049506c70a155b21370578f44e07d00850a84ff7b9fc9`, holder three `77e03bace560406992ffc2fb50a7935d2d89e59e21e6e37f84c6fb8f25bcb56c`                                                                                                                              |
+| `mint_fixed_supply` transaction hash (Step 4b)     | `d3b35496a660cbf9dc2efdfff39d6b5328802187e5d343e6594443458cc69d87`                                                                                                                                                                                                                                                                                                         |
+| `mark_wound_down` transaction hash (Step 5)        | `d50166c35b26cf7c674d0aa164321dd6aadc5891d86a03a847b5440dfe04bb30` (preceded by unpause `e19b399806b2a8a4ac47f8355d3f44d2c17ba2c1ee33bc514a3ddeabee184ea3` and followed by re-pause `c0181deb664b7d7348c618043320ac4838e48db021d3afbbc2fb0b38169fe707`)                                                                                                                    |
+| `exit` transaction hash (Step 5)                   | `19eb0b1f71714f44c6624abce8f46c162461e09a447a04d9229509587c36007f`                                                                                                                                                                                                                                                                                                         |
+| Total elapsed time                                 | roughly 50 minutes of wall-clock time, including the seeded old deployment and every verification read                                                                                                                                                                                                                                                                     |
+| Issues found and fixed in this runbook             | `mark_wound_down` is pause-gated, so Step 5 now unpauses the old income token first and re-pauses after marking (first attempt failed with `ContractPaused`); the stellar CLI requires i128 vector elements as quoted strings in Step 4b (unquoted numbers fail parsing); `exit` confirmed not pause-gated, so the pause-then-exit order in Steps 1 and 5 works as written |
 
 ---
 

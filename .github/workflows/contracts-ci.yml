@@ -233,3 +233,5 @@ jobs:
           cd apps/contracts
           echo "Running Soroban invocation budget checks for defi-rwa..."
           cargo test --package rwa-defi-contract budget_check -- --nocapture
+          echo "Running Soroban invocation budget checks for pilot-payout-split..."
+          cargo test --package pilot-payout-split budget_check_execute_distribution_for_ten_holders -- --nocapture

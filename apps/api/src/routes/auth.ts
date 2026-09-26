@@ -19,7 +19,13 @@ const sessionSchema = z.object({
   signature: z.string().min(1),
 });
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error(
+    'JWT_SECRET is not set or is too short (minimum 32 characters). ' +
+      'Generate one with: openssl rand -hex 32',
+  );
+}
 
 export const authRoutes = new Elysia({ prefix: '/auth' })
   .use(jwt({ name: 'jwt', secret: JWT_SECRET }))

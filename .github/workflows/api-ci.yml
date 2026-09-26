@@ -103,6 +103,7 @@ jobs:
       env:
         DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
         TEST_DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
+        JWT_SECRET: "ci-test-secret-that-is-at-least-32-characters-long"
       run: |
         cd apps/api
         # --isolate: confirmed by diagnostic runs that the E2E tokenization
@@ -132,6 +133,50 @@ jobs:
 
     - name: Audit dependencies
       run: bash .github/scripts/dependency-audit.sh .
+
+    - name: Install gitleaks
+      run: |
+        # Install gitleaks for secret scanning - pinned version for reproducibility
+        curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.27.2/gitleaks_8.27.2_linux_x64.tar.gz \
+          | tar -xz -C /usr/local/bin gitleaks
+        gitleaks version
+
+    - name: Scan for hardcoded secrets (gitleaks)
+      run: |
+        gitleaks detect \
+          --source . \
+          --config .gitleaks.toml \
+          --no-banner \
+          --redact
+
+    - name: Verify secret scanner catches planted fixture
+      # Prove the scanner works: scan the fixture file WITHOUT the allowlist.
+      # gitleaks must exit non-zero (secret found). If it exits 0 the scanner
+      # is misconfigured and we fail the job explicitly.
+      run: |
+        gitleaks detect \
+          --source .github/security/secret-scan-fixture.txt \
+          --no-git \
+          --no-banner \
+          --config /dev/null \
+        && { echo "ERROR: scanner did not detect the planted fixture secret"; exit 1; } \
+        || echo "OK: scanner correctly detected the planted fixture pattern"
+
+    - name: Mainnet preflight unit tests
+      run: bash scripts/test-mainnet-preflight.sh
+
+    - name: Mainnet preflight dry-run (env checks only)
+      env:
+        STELLAR_NETWORK_PASSPHRASE: "Public Global Stellar Network ; September 2015"
+        STELLAR_HORIZON_URL: "https://horizon.stellar.org"
+        STELLAR_RPC_URL: "https://soroban.stellar.org"
+        DATABASE_SSL: "true"
+        NODE_ENV: "production"
+        JWT_SECRET: "ci-placeholder-that-is-at-least-32-characters-long"
+        OPERATIONS_BACKEND_CREDENTIAL: "ci-placeholder-ops-credential-value"
+        OPERATIONS_ALLOWED_WALLETS: "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBWN9YKTNFGNQ45UCXJ5CA"
+        STELLAR_ADMIN_SECRET: "SCZANGBA5IXFX5QOPEQV5M3Q6JCDIZQKQWVKJ7VG3PWJVS4RWCF6ZABC"
+      run: bash scripts/mainnet-preflight.sh --env-only
 
   code-quality:
     name: Code Quality

@@ -347,6 +347,14 @@ Also add the deployment table to `docs/contracts/deployment.md` with:
 
 ---
 
+## See also
+
+- `docs/deployment/post-deploy-pilot-checklist.md` - Day-0 gate to run immediately after this guide
+- `docs/architecture/pilot-threat-model.md` - trust model and risk surface for the pilot contracts
+- `docs/contracts/deployment.md` - deployment artifact registry (update after each deploy)
+
+---
+
 ## Troubleshooting
 
 | Error                       | Cause                                    | Fix                                                                         |

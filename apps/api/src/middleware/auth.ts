@@ -2,7 +2,13 @@ import { Elysia } from 'elysia';
 import { jwt } from '@elysiajs/jwt';
 import { ApiError } from '../errors/ApiError';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error(
+    'JWT_SECRET is not set or is too short (minimum 32 characters). ' +
+      'Generate one with: openssl rand -hex 32',
+  );
+}
 
 /**
  * The shape of context properties derived by authPlugin.

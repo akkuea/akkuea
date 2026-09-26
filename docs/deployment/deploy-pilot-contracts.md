@@ -47,6 +47,19 @@ independently for a consistent picture. No fund-recovery or unwind logic
 exists in either contract; that question remains open (Known Risk #5 in the
 product brief).
 
+All three contracts carry an independent two-step admin transfer
+(`transfer_admin_start` / `transfer_admin_accept` / `transfer_admin_cancel`)
+and a reversible, admin-gated `pause` / `unpause` / `is_paused`. Neither is
+enumerated further here; see
+[`docs/operations/runbook-pilot-admin-rotation.md`](../operations/runbook-pilot-admin-rotation.md)
+and
+[`docs/operations/runbook-pilot-emergency-pause.md`](../operations/runbook-pilot-emergency-pause.md).
+The contracts are immutable (no upgrade entry point); recovering from a
+contract-level bug means migrating to a new deployment, covered in
+[`docs/operations/runbook-pilot-contract-migration.md`](../operations/runbook-pilot-contract-migration.md).
+The reasoning behind both decisions is recorded in
+[`docs/strategy/decision-log.md`](../strategy/decision-log.md).
+
 Each cycle's evidence carries an on-chain review status, which is what the
 pilot dashboard renders:
 
@@ -97,6 +110,12 @@ You also need:
 - Ally public address. It must be distinct from the operator address.
 - Platform fee recipient public address.
 - USDC SAC contract ID for the target network.
+- EURC asset contract ID for the target network, offered as the settlement
+  alternative.
+- Verified Soroswap AMM router contract ID used to convert USDC shares at
+  payout time. The USDC, EURC, and router contract IDs must be pairwise
+  distinct; `initialize` rejects any two that match with
+  `RouterNotConfigured`.
 
 Never commit secret keys or `.env` files.
 
@@ -130,7 +149,9 @@ Use the helper script from the repository root:
   $OPERATOR_ADDRESS \
   $ALLY_ADDRESS \
   $PLATFORM_FEE_RECIPIENT \
-  $USDC_TOKEN_CONTRACT_ID
+  $USDC_TOKEN_CONTRACT_ID \
+  $EURC_TOKEN_CONTRACT_ID \
+  $SWAP_ROUTER_CONTRACT_ID
 ```
 
 The script:
@@ -139,7 +160,7 @@ The script:
 2. Deploys all three WASMs.
 3. Initializes `pilot-whitelist` with the deployer as admin.
 4. Initializes `pilot-income-token` with the whitelist contract ID.
-5. Initializes `pilot-payout-split` with admin, operator, ally, fee recipient, income token, whitelist, and USDC contract IDs.
+5. Initializes `pilot-payout-split` with admin, operator, ally, fee recipient, income token, whitelist, USDC, EURC, and swap router contract IDs.
 
 ---
 
@@ -190,7 +211,7 @@ stellar contract invoke \
 Expected:
 
 - `is_paused` returns `false`.
-- `eurc_swap_path_status` returns `stubbed-fast-follow`.
+- `eurc_swap_path_status` returns the configured `swap_router`, `usdc_token`, and `eurc_token` contract IDs.
 
 ---
 
@@ -349,18 +370,30 @@ Also add the deployment table to `docs/contracts/deployment.md` with:
 
 ## Troubleshooting
 
-| Error                       | Cause                                    | Fix                                                                         |
-| --------------------------- | ---------------------------------------- | --------------------------------------------------------------------------- |
-| `InvalidEvidenceHash`       | Evidence hash is not exactly 32 bytes    | Hash the retained evidence file with a 32-byte digest and submit that value |
-| `ZeroAmount`                | `total_income` is zero or negative       | Submit a positive USDC amount                                               |
-| `CycleAlreadyRecorded`      | Evidence already exists for the cycle    | Use a new cycle ID or redeploy in testnet                                   |
-| `CycleAlreadyDistributed`   | Distribution was already executed        | Do not retry the same cycle                                                 |
-| `RecipientNotApproved`      | A token holder is no longer whitelisted  | Resolve the whitelist status before payout                                  |
-| `InsufficientPayoutBalance` | Payout contract lacks USDC               | Fund the payout contract with at least `total_income`                       |
-| `ContractPaused`            | Admin paused the payout contract         | Investigate and unpause only after the incident is resolved                 |
-| `SignerCollision`           | Operator and ally are the same address   | Re-initialize a fresh deployment with distinct signer addresses             |
-| `Authorization failed`      | Operator and ally did not both sign      | Rebuild the transaction with both required Soroban auth entries             |
-| `EvidenceNotApproved`       | Cycle is not in the `Approved` status    | Review the cycle first, or resolve the rejection or dispute behind it       |
-| `InvalidStatusTransition`   | Review requested on a settled cycle      | Only `Submitted` or `UnderReview` cycles can be reviewed                    |
-| `MissingReviewReason`       | Rejection or dispute sent with no reason | Supply a reason: the contract will not record one without it                |
-| `EvidenceNotFound`          | No evidence exists for the cycle         | The ally must submit the cycle before it can be reviewed                    |
+| Error                                                           | Cause                                                                                                    | Fix                                                                                |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `InvalidEvidenceHash`                                           | Evidence hash is not exactly 32 bytes                                                                    | Hash the retained evidence file with a 32-byte digest and submit that value        |
+| `ZeroAmount`                                                    | `total_income` is zero or negative                                                                       | Submit a positive USDC amount                                                      |
+| `CycleAlreadyRecorded`                                          | Evidence already exists for the cycle                                                                    | Use a new cycle ID or redeploy in testnet                                          |
+| `CycleAlreadyDistributed`                                       | Distribution was already executed                                                                        | Do not retry the same cycle                                                        |
+| `RecipientNotApproved`                                          | A token holder is no longer whitelisted                                                                  | Resolve the whitelist status before payout                                         |
+| `InsufficientPayoutBalance`                                     | Payout contract lacks USDC                                                                               | Fund the payout contract with at least `total_income`                              |
+| `ContractPaused`                                                | Admin paused the payout contract                                                                         | Investigate and unpause only after the incident is resolved                        |
+| `SignerCollision`                                               | Operator and ally are the same address                                                                   | Re-initialize a fresh deployment with distinct signer addresses                    |
+| `RouterNotConfigured`                                           | USDC, EURC, and swap router contract IDs are not pairwise distinct                                       | Pass three distinct contract IDs for `usdc_token`, `eurc_token`, and `swap_router` |
+| `Authorization failed`                                          | Operator and ally did not both sign                                                                      | Rebuild the transaction with both required Soroban auth entries                    |
+| `EvidenceNotApproved`                                           | Cycle is not in the `Approved` status                                                                    | Review the cycle first, or resolve the rejection or dispute behind it              |
+| `InvalidStatusTransition`                                       | Review requested on a settled cycle                                                                      | Only `Submitted` or `UnderReview` cycles can be reviewed                           |
+| `MissingReviewReason`                                           | Rejection or dispute sent with no reason                                                                 | Supply a reason: the contract will not record one without it                       |
+| `EvidenceNotFound`                                              | No evidence exists for the cycle                                                                         | The ally must submit the cycle before it can be reviewed                           |
+| `NotPendingAdmin`                                               | `transfer_admin_accept` called by the wrong address, or no transfer is pending                           | See `docs/operations/runbook-pilot-admin-rotation.md`                              |
+| `ContractPaused` (on `pilot-whitelist` or `pilot-income-token`) | `approve`/`revoke`/`mint_fixed_supply`/`transfer`/`mark_wound_down` called while that contract is paused | See `docs/operations/runbook-pilot-emergency-pause.md`                             |
+
+---
+
+## See also
+
+- [`docs/operations/runbook-pilot-admin-rotation.md`](../operations/runbook-pilot-admin-rotation.md)
+- [`docs/operations/runbook-pilot-emergency-pause.md`](../operations/runbook-pilot-emergency-pause.md)
+- [`docs/operations/runbook-pilot-contract-migration.md`](../operations/runbook-pilot-contract-migration.md)
+- [`docs/strategy/decision-log.md`](../strategy/decision-log.md)

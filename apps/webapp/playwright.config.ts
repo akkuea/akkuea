@@ -1,19 +1,20 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * Playwright configuration for the pilot whitelist onboarding/review e2e suite.
+ * Playwright configuration for the webapp e2e suite.
  *
- * This suite is deliberately isolated from `bun test` (unit tests): it lives in
- * `e2e/`, runs against a real Next.js dev server, and mocks every whitelist API
- * call at the browser network layer via `page.route()` (see `e2e/mocks`). No
- * backend process or testnet transaction is required to run it.
+ * Two test projects run here:
+ *   chromium           - Evidence lifecycle and whitelist specs against a mocked Next.js
+ *                        dev server. Every Soroban RPC and API call is intercepted and
+ *                        fulfilled at the browser network layer via `page.route()`.
+ *   visual-regression  - `toHaveScreenshot` over the static Storybook build, in both
+ *                        light and dark themes. Baselines live in `e2e/snapshots/` and
+ *                        are committed so unintended drift fails CI. Run standalone with:
+ *                          bunx playwright test --project=visual-regression
  *
- * Seam for pointing this suite at a real environment later: set
- * `PLAYWRIGHT_BASE_URL` to a running deployment and `PLAYWRIGHT_SKIP_WEBSERVER=1`
- * so Playwright reuses it instead of booting a local dev server. The specs
- * would then need their `page.route()` mocks removed or made conditional; that
- * change is intentionally left for whoever takes on that later, real-environment
- * pass, this suite's job is the fast, deterministic mocked path.
+ * Seam for pointing the chromium suite at a real environment: set
+ * `PLAYWRIGHT_BASE_URL` to a running deployment and `PLAYWRIGHT_SKIP_WEBSERVER=1`.
+ * The specs would then need their `page.route()` mocks removed or made conditional.
  */
 
 const PORT = process.env.PLAYWRIGHT_PORT ?? "3100";
@@ -21,7 +22,7 @@ const BASE_URL = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
-  // Warms both pilot routes once before any spec runs; see the file for why.
+  // Warms all pilot routes once before any spec runs; see the file for why.
   globalSetup: require.resolve("./e2e/global-setup"),
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -43,6 +44,18 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
+      // Exclude visual-regression specs; they point at Storybook, not the app.
+      testIgnore: ["**/visual-regression.spec.ts"],
+    },
+    {
+      name: "visual-regression",
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL:
+          process.env.PLAYWRIGHT_STORYBOOK_URL ?? "http://localhost:6006",
+      },
+      snapshotPathTemplate: "{testDir}/snapshots/{arg}{ext}",
+      testMatch: ["**/visual-regression.spec.ts"],
     },
   ],
 
@@ -58,7 +71,10 @@ export default defineConfig({
         command: "bun run dev:e2e",
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        // The first webpack compilation of the pilot routes can take several
+        // minutes on a cold CI runner. Keep the server alive long enough for
+        // global setup to warm those routes before tests begin.
+        timeout: 300_000,
         env: {
           PORT,
           // Real values are irrelevant: every request the app makes to these

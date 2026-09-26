@@ -12,11 +12,18 @@ import type { FullConfig } from "@playwright/test";
  * keeps every actual test fast and deterministic regardless of run order.
  */
 export default async function globalSetup(config: FullConfig): Promise<void> {
+  if (process.env.PLAYWRIGHT_SKIP_WEBSERVER) return;
   const baseURL = config.projects[0]?.use.baseURL;
   if (!baseURL) return;
 
-  const routes = ["/en/pilot/onboarding", "/en/pilot/review/whitelist"];
-  const deadline = Date.now() + 90_000;
+  const routes = [
+    "/en/pilot/onboarding",
+    "/en/pilot/review/whitelist",
+    "/en/pilot/ally",
+    "/en/pilot/review/evidence",
+    "/en/pilot/investor",
+  ];
+  const deadline = Date.now() + 300_000;
 
   for (const route of routes) {
     for (;;) {

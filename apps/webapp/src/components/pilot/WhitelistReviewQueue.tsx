@@ -203,10 +203,14 @@ export function WhitelistReviewQueue() {
             )}
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-300">
+              <label
+                htmlFor="review-rejection-reason"
+                className="text-sm font-medium text-zinc-300"
+              >
                 Rejection Reason (Optional)
               </label>
               <Input
+                id="review-rejection-reason"
                 placeholder="Required if rejecting..."
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}

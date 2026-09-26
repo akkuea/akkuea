@@ -73,6 +73,148 @@ See [`integration-decisions.md`](integration-decisions.md) for the full verifica
 
 **Resolved by sequencing, not by picking one option outright.** Brazil + an existing CVM-authorized platform is the target regulatory path, pursued explicitly as Phase 2 - not a Phase 1 prerequisite. Negotiating a distribution partnership with a regulated platform is itself a slow BD process that could strand the already-verified Stellar-native architecture if required before the pilot can launch. Full research findings (Brazil, Marshall Islands, El Salvador ruled out as heavy-touch, Mexico ruled out as unfavorable) are in [`roadmap.md`](roadmap.md).
 
+## Pilot contract admin safety and recoverability (C8-003)
+
+Addresses two open risks recorded elsewhere in this folder: Known Risk #7 in
+`product-brief.md` (single admin key, no second-party check) and Known Risk
+#5 (exit mechanism, fund recovery, undefined).
+
+### Two-step admin transfer, gated by the admin alone
+
+**Adopted:** `transfer_admin_start` / `transfer_admin_accept` /
+`transfer_admin_cancel` added to `pilot-income-token`, `pilot-whitelist`, and
+`pilot-payout-split`, carrying over the pattern already built for `defi-rwa`
+(`access/admin.rs`, documented in `docs/operations/runbook-role-management.md`).
+The current admin starts a transfer, the named new admin accepts it with
+their own signature, and the current admin can cancel any time before
+acceptance. The old admin loses every privilege the instant `transfer_admin_accept`
+succeeds, because `require_admin` on all three contracts compares against a
+single stored admin address that the accept call overwrites.
+
+**Adopted: admin transfer on `pilot-payout-split` is gated by the admin
+alone, not by the operator+ally two-signer model.** The issue asked us to
+decide this explicitly, since `record_evidence`, `execute_distribution`, and
+`exit` already require both signers.
+
+Reasoning: the admin role is Akkuea's own platform key, used for `pause`,
+`mint_fixed_supply` correction transfers, and now admin succession. It is a
+different role from `operator` (Akkuea's pilot operations signer) and `ally`
+(the real estate agency), which jointly gate the business-level actions that
+move or approve money. Requiring the ally's co-signature on an admin-key
+rotation would give a counterparty, who has no custody of the admin key and
+no operational stake in Akkuea's internal key management, veto power over
+Akkuea's ability to recover from a lost or compromised admin key. That is the
+exact failure mode this feature exists to close: if the admin key is
+compromised at the same moment the ally is unreachable, uncooperative, or
+itself compromised, a two-signer admin-transfer requirement would strand the
+contract instead of recovering it. Keeping admin transfer to a single-role,
+two-step flow (current admin starts and can cancel, only the named new admin
+can accept) already prevents the two failure modes the issue is worried
+about: an attacker with one key cannot transfer admin without also
+controlling the new-admin key to accept, and a mistake by the current admin
+is reversible via `transfer_admin_cancel` until accepted. Widening the gate
+to the ally would trade a recoverability fix for a new outage mode without
+closing any additional attack the two-step design does not already close.
+
+The same reasoning applies to `pilot-income-token` and `pilot-whitelist`,
+which have no operator/ally concept at all: their only two parties are the
+admin and the investors they administer, so a single-role transfer is the
+only structure available.
+
+### Pause parity across all three pilot contracts
+
+**Adopted:** `pause` / `unpause` / `is_paused` added to `pilot-income-token`
+and `pilot-whitelist`, matching the reversible, admin-gated pattern already
+shipped on `pilot-payout-split`. `mint_fixed_supply`, `transfer`, and
+`mark_wound_down` reject with `IncomeTokenError::ContractPaused` while
+paused; `approve` and `revoke` reject with `WhitelistError::ContractPaused`.
+Every read-only function on both contracts (`balance`, `name`, `symbol`,
+`decimals`, `total_supply`, `holders`, `admin`, `wound_down_status`,
+`is_approved`) keeps working while paused, so an investor dashboard stays
+readable during an incident.
+
+`mark_wound_down` is deliberately included in the paused set, even though it
+is a terminal, one-way action: pausing exists to stop every state-changing
+effect while an incident is under review, and ending the pilot is a decision
+the admin can still make immediately after an explicit `unpause`. `pause`,
+`unpause`, and the admin-transfer functions are deliberately **not** blocked
+by pause on any of the three contracts, matching `defi-rwa`'s
+`AdminControl`/`PauseControl` split and `pilot-payout-split`'s existing
+`pause`/`unpause`: the whole point of these functions is to remain usable
+for recovery while the contract is paused.
+
+This is the pilot's own simple, immediately-reversible pause, not `defi-rwa`'s
+24-hour-timelocked `emergency_pause`. The pilot has no equivalent timelock;
+see `docs/operations/runbook-pilot-emergency-pause.md`.
+
+### Upgrade decision: deliberate immutability, not a WASM-upgrade entry point
+
+**Adopted: the three pilot contracts remain immutable.** No upgrade entry
+point was added. Instead, a documented, once-rehearsed migration-and-recovery
+procedure is recorded in `docs/operations/runbook-pilot-contract-migration.md`.
+
+**What was considered:** a WASM-upgrade entry point gated by a two-signer
+rule (for example, admin plus operator, or admin plus a second held key),
+calling `env.deployer().update_current_contract_wasm(new_wasm_hash)`, with
+tests proving a single signer cannot upgrade.
+
+**Why immutability instead, for this first pass:**
+
+1. **Proportionality.** This issue's other four items (admin succession on
+   three contracts, pause parity on two, client regeneration, and pilot
+   runbooks) are already a large, security-sensitive change. A correct
+   upgradeable-contract mechanism is not a small addition on top: it needs
+   its own signer-quorum storage, its own tests proving a single signer
+   cannot invoke it, and its own audit attention, on contracts that will hold
+   real investor funds once the pilot goes live. Adding it now would roughly
+   double the audit surface of this change for a benefit (fixing a future bug
+   in place) that immutability's migration path also achieves, just with an
+   explicit, deliberate step instead of a silent one.
+2. **Threat model fit.** An upgradeable entry point turns "the admin key is
+   compromised" (already the risk this issue is closing with two-step
+   transfer) into "the admin key is compromised and the attacker can replace
+   the entire contract's logic," which is a strictly worse outcome than
+   today's already-bad single-key risk. A two-signer upgrade gate mitigates
+   this, but only if the second key is genuinely independent and
+   consistently available, which does not exist yet for a single-ally pilot
+   with a two-person operator/ally structure that is itself new. Immutability
+   removes this escalation path entirely: a compromised admin key can pause,
+   mint-correct, or attempt (and fail, per `SignerCollision` and the
+   whitelist gate) to move funds, but it can never change what the contract's
+   code does.
+3. **No existing precedent to build on safely.** Neither `defi-rwa` nor any
+   other contract in this repository implements a WASM upgrade path today
+   (verified by reading `defi-rwa/src/lib.rs` and its `access/` module in
+   full: no `update_current_contract_wasm` call anywhere in the codebase).
+   Building the pilot's first upgrade mechanism from scratch, under this
+   issue's time budget, on the contracts closest to real money, is exactly
+   the situation this project's own principle of verifying before building
+   and not inventing novel security-critical mechanisms under time pressure
+   argues against.
+4. **Small, known state.** The pilot caps distribution at `MAX_HOLDERS = 10`
+   and is scoped to a single ally and a single property for this phase (see
+   `product-brief.md`). A full state migration (redeploy, re-approve the
+   whitelist, re-mint the exact same holder balances via `mint_fixed_supply`,
+   re-initialize `pilot-payout-split` pointed at the new contracts) is a
+   bounded, auditable, one-afternoon operation at this scale. That
+   calculation changes if the pilot later scales to many allies or a much
+   larger holder set, at which point this decision should be revisited.
+
+**What immutability requires in exchange, and what has and has not been
+done:** an unrehearsed migration procedure is worse than no procedure at
+all, because the first time anyone runs it would be during a real incident.
+`docs/operations/runbook-pilot-contract-migration.md` was written to the
+same command-by-command precision as the deployment guide, using only
+functions that exist on the three contracts today (verified against
+`pilot-whitelist/src/lib.rs`, `pilot-income-token/src/lib.rs`, and
+`pilot-payout-split/src/lib.rs` directly, not from memory). **It has not yet
+been executed on testnet.** This PR does not include transaction hashes from
+a live rehearsal, because the environment this change was built in has no
+funded Stellar testnet operator or admin key and no path to acquire one. The
+runbook is marked accordingly and needs a funded key holder to actually run
+it and record the resulting transaction hashes before it can be considered
+verified rather than merely written.
+
 ## Naming
 
 Project renamed from the working title "Pili" to **Akkuea** (spelled letter-by-letter: A-K-K-U-E-A, double K) partway through this strategy's development.

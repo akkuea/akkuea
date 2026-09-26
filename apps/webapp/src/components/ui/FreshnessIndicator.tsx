@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Wifi, WifiOff, RefreshCw } from "lucide-react";
+import { Wifi, WifiOff, RefreshCw, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ConnectionStatus } from "@/hooks/useLiveUpdates";
 import { getTimeSinceUpdate } from "@/hooks/useLiveUpdates";
@@ -44,7 +44,6 @@ export function FreshnessIndicator({
   className,
   showLabel = true,
 }: FreshnessIndicatorProps) {
-  // Use a tick counter to force periodic recalculation of timeSince
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -54,9 +53,7 @@ export function FreshnessIndicator({
     return () => clearInterval(interval);
   }, []);
 
-  // Derive timeSince from lastUpdatedAt and tick (tick forces recalculation)
   const timeSince = useMemo(() => {
-    // Reference tick to ensure periodic recalculation
     void tick;
     return getTimeSinceUpdate(lastUpdatedAt);
   }, [lastUpdatedAt, tick]);
@@ -69,6 +66,8 @@ export function FreshnessIndicator({
         ? RefreshCw
         : Wifi;
 
+  const isStale = connectionStatus === "disconnected" && lastUpdatedAt !== null;
+
   return (
     <div
       className={cn(
@@ -78,8 +77,14 @@ export function FreshnessIndicator({
       )}
       role="status"
       aria-live="polite"
-      aria-label={`Data status: ${config.label}. Last updated: ${timeSince}`}
+      aria-label={`Data status: ${isStale ? "stale, " : ""}${config.label}. Last updated: ${timeSince}`}
     >
+      {isStale && (
+        <AlertTriangle
+          className="h-3 w-3 text-amber-400"
+          aria-hidden="true"
+        />
+      )}
       <StatusIcon
         className={cn(
           "h-3 w-3",
@@ -93,11 +98,15 @@ export function FreshnessIndicator({
         <span className={cn("text-[10px] font-medium", config.color)}>
           {isPolling && connectionStatus === "connected"
             ? "Polling"
-            : config.label}
+            : isStale
+              ? `Stale (${config.label})`
+              : config.label}
         </span>
       )}
 
-      <span className="text-[10px] text-neutral-500">{timeSince}</span>
+      <span className="text-[10px] text-neutral-500">
+        {isStale ? `stale ${timeSince} ago` : timeSince}
+      </span>
 
       {onRefresh && connectionStatus !== "connecting" && (
         <button

@@ -6,10 +6,20 @@ export * from "./errors/index.js";
 export * from "./testing/index.js";
 export {
   buildContractClientOptions,
+  buildContractClientOptionsWithRetry,
   createNodeContractSigner,
   resolveSorobanRpcUrl,
+  resolveSorobanRpcEndpoints,
   type SorobanClientConfig,
+  type RpcRetryConfig,
 } from "./contracts/clientConfig.js";
+export {
+  callWithRetry,
+  simulateTransactionWithRetry,
+  resolveRpcEndpoints,
+  RpcAllEndpointsFailedError,
+  isRpcAllEndpointsFailedError,
+} from "./contracts/rpc.js";
 export { RealEstateTokenContractClient } from "./contracts/realEstateToken.js";
 export { DefiLendingContractClient } from "./contracts/defiLending.js";
 export {

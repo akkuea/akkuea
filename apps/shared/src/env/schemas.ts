@@ -143,6 +143,14 @@ export const apiEnvSchema = z.object({
     .optional()
     .or(z.literal("")),
   DEFI_RWA_CONTRACT_ID: stellarContractIdSchema.optional().or(z.literal("")),
+  /** Ordered list of Soroban RPC fallback URLs, comma-separated. */
+  PILOT_RPC_URLS: z.string().optional(),
+  /** Webhook URL for unknown-state escalation alerts. */
+  PILOT_ESCALATION_ONUNKNOWN_WEBHOOK: urlSchema.optional().or(z.literal("")),
+  /** Error tracking provider DSN (e.g. Sentry). No-op when empty. */
+  ERROR_TRACKING_DSN: urlSchema.optional().or(z.literal("")),
+  /** Error tracking environment name. */
+  ERROR_TRACKING_ENVIRONMENT: z.enum(["development", "staging", "production"]).optional(),
 });
 
 export const webappEnvSchema = z.object({
@@ -159,6 +167,8 @@ export const webappEnvSchema = z.object({
   NEXT_PUBLIC_PRIVY_APP_ID: z.string().optional(),
   PRIVY_APP_SECRET: z.string().optional(),
   NEXT_PUBLIC_POLLAR_KEY: z.string().optional(),
+  /** Ordered list of Soroban RPC fallback URLs, comma-separated. */
+  NEXT_PUBLIC_PILOT_RPC_URLS: z.string().optional(),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

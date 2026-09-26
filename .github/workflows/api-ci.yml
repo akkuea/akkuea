@@ -107,19 +107,36 @@ jobs:
     - name: Audit dependencies
       run: bash .github/scripts/dependency-audit.sh .
 
-    - name: Scan for hardcoded secrets
+    - name: Install gitleaks
       run: |
-        # Fail if any non-test source file contains the known dev fallback literal.
-        # Test fixtures may use it as a placeholder; production code must not.
-        if grep -r "super-secret-default-key-for-dev" \
-            --include="*.ts" \
-            --exclude-dir="__tests__" \
-            --exclude-dir="tests" \
-            apps/api/src/; then
-          echo "ERROR: hardcoded dev secret literal found in production source" >&2
-          exit 1
-        fi
-        echo "No hardcoded secret literals found in production source."
+        # Install gitleaks for secret scanning - pinned version for reproducibility
+        curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.27.2/gitleaks_8.27.2_linux_x64.tar.gz \
+          | tar -xz -C /usr/local/bin gitleaks
+        gitleaks version
+
+    - name: Scan for hardcoded secrets (gitleaks)
+      run: |
+        gitleaks detect \
+          --source . \
+          --config .gitleaks.toml \
+          --no-banner \
+          --redact
+
+    - name: Verify secret scanner catches planted fixture
+      # Prove the scanner works: scan the fixture file WITHOUT the allowlist.
+      # gitleaks must exit non-zero (secret found). If it exits 0 the scanner
+      # is misconfigured and we fail the job explicitly.
+      run: |
+        gitleaks detect \
+          --source .github/security/secret-scan-fixture.txt \
+          --no-git \
+          --no-banner \
+          --config /dev/null \
+        && { echo "ERROR: scanner did not detect the planted fixture secret"; exit 1; } \
+        || echo "OK: scanner correctly detected the planted fixture pattern"
+
+    - name: Mainnet preflight unit tests
+      run: bash scripts/test-mainnet-preflight.sh
 
     - name: Mainnet preflight dry-run (env checks only)
       env:

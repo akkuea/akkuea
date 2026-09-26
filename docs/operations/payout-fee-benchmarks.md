@@ -61,7 +61,7 @@ curl "https://horizon-testnet.stellar.org/transactions/$TX_HASH" \
 
 | Date | Network | Holders | Mix | fee_charged (stroops) | XLM equivalent | Transaction hash |
 |------|---------|---------|-----|----------------------|----------------|-----------------|
-| TBD  | testnet | 10      | 5 USDC + 5 EURC | — | — | — |
+| TBD  | testnet | 10      | 5 USDC + 5 EURC | (not yet measured) | (not yet measured) | (not yet measured) |
 
 Fill this table before mainnet go-live. It is a required acceptance criterion
 per `docs/strategy/product-brief.md` (Engineering/output metrics).

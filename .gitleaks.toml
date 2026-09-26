@@ -1,0 +1,27 @@
+# Gitleaks configuration for the Akkuea monorepo.
+# Docs: https://github.com/gitleaks/gitleaks
+
+[extend]
+# Use the upstream default rule set as a base
+useDefault = true
+
+[[rules]]
+id = "akkuea-jwt-dev-fallback"
+description = "Akkuea dev JWT fallback literal — this string must never appear in production source"
+regex = '''super-secret-default-key-for-dev'''
+tags = ["jwt", "hardcoded-secret"]
+
+  [[rules.paths]]
+  # Allow it in test fixtures — production code must not contain it
+  regex = '''apps/api/src/__tests__/'''
+
+[allowlist]
+description = "Known safe occurrences that gitleaks would otherwise flag"
+paths = [
+  # Test fixtures use the fallback as a test JWT secret
+  '''apps/api/src/__tests__/''',
+  # Gitleaks config itself references the pattern for documentation
+  '''.gitleaks.toml''',
+  # The planted fixture used to prove the scanner works
+  '''.github/security/secret-scan-fixture.txt''',
+]

@@ -21,8 +21,6 @@ if (typeof globalThis !== "undefined" && !globalThis.Buffer) {
   (globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer;
 }
 
-
-
 /**
  * Durable on-chain record of a permanent pilot wind-down. Written exactly
  * once by `mark_wound_down` and never removed, mirroring the payout-split
@@ -31,49 +29,48 @@ if (typeof globalThis !== "undefined" && !globalThis.Buffer) {
  */
 export interface WoundDownRecord {
   /**
- * Ledger timestamp of the `mark_wound_down` invocation.
- */
-at: u64;
+   * Ledger timestamp of the `mark_wound_down` invocation.
+   */
+  at: u64;
   /**
- * Free-text reason supplied by the admin (see
- * docs/strategy/decision-log.md for the recorded representation decision).
- */
-reason: string;
+   * Free-text reason supplied by the admin (see
+   * docs/strategy/decision-log.md for the recorded representation decision).
+   */
+  reason: string;
 }
 
 export const IncomeTokenError = {
-  1: {message:"AlreadyInitialized"},
-  2: {message:"NotInitialized"},
-  3: {message:"Unauthorized"},
-  4: {message:"AlreadyMinted"},
-  5: {message:"EmptyHolderSet"},
-  6: {message:"HolderAmountLengthMismatch"},
-  7: {message:"InvalidAmount"},
-  8: {message:"HolderNotApproved"},
-  9: {message:"BalanceOverflow"},
-  10: {message:"SupplyOverflow"},
-  11: {message:"InsufficientBalance"},
-  12: {message:"InternalInvariant"},
+  1: { message: "AlreadyInitialized" },
+  2: { message: "NotInitialized" },
+  3: { message: "Unauthorized" },
+  4: { message: "AlreadyMinted" },
+  5: { message: "EmptyHolderSet" },
+  6: { message: "HolderAmountLengthMismatch" },
+  7: { message: "InvalidAmount" },
+  8: { message: "HolderNotApproved" },
+  9: { message: "BalanceOverflow" },
+  10: { message: "SupplyOverflow" },
+  11: { message: "InsufficientBalance" },
+  12: { message: "InternalInvariant" },
   /**
    * The pilot has already been marked wound down; the marker is one-way.
    */
-  13: {message:"AlreadyWoundDown"},
+  13: { message: "AlreadyWoundDown" },
   /**
    * `mark_wound_down` was invoked without a non-empty reason string.
    */
-  14: {message:"MissingWoundDownReason"},
+  14: { message: "MissingWoundDownReason" },
   /**
    * `transfer_admin_accept` was called by an address that does not match
    * the pending admin recorded by `transfer_admin_start`, or no transfer
    * is pending at all.
    */
-  15: {message:"NotPendingAdmin"},
+  15: { message: "NotPendingAdmin" },
   /**
    * A state-changing call was rejected because the contract is paused.
    */
-  16: {message:"ContractPaused"}
-}
-
+  16: { message: "ContractPaused" },
+};
 
 export interface MintedEvent {
   admin: string;
@@ -81,19 +78,16 @@ export interface MintedEvent {
   total_supply: i128;
 }
 
-
 export interface TransferEvent {
   amount: i128;
   from: string;
   to: string;
 }
 
-
 export interface TokenInitializedEvent {
   admin: string;
   whitelist: string;
 }
-
 
 /**
  * Emitted once when the pilot is permanently marked wound down.
@@ -104,118 +98,167 @@ export interface WoundDownRecordedEvent {
   reason: string;
 }
 
-
 export interface AdminTransferStartedEvent {
   current_admin: string;
   new_admin: string;
 }
-
 
 export interface AdminTransferAcceptedEvent {
   new_admin: string;
   old_admin: string;
 }
 
-
 export interface AdminTransferCancelledEvent {
   admin: string;
 }
 
-export type DataKey = {tag: "Admin", values: void} | {tag: "Whitelist", values: void} | {tag: "Name", values: void} | {tag: "Symbol", values: void} | {tag: "Decimals", values: void} | {tag: "TotalSupply", values: void} | {tag: "Balance", values: readonly [string]} | {tag: "Holders", values: void} | {tag: "Minted", values: void} | {tag: "WoundDown", values: void} | {tag: "PendingAdmin", values: void} | {tag: "Paused", values: void};
+export type DataKey =
+  | { tag: "Admin"; values: void }
+  | { tag: "Whitelist"; values: void }
+  | { tag: "Name"; values: void }
+  | { tag: "Symbol"; values: void }
+  | { tag: "Decimals"; values: void }
+  | { tag: "TotalSupply"; values: void }
+  | { tag: "Balance"; values: readonly [string] }
+  | { tag: "Holders"; values: void }
+  | { tag: "Minted"; values: void }
+  | { tag: "WoundDown"; values: void }
+  | { tag: "PendingAdmin"; values: void }
+  | { tag: "Paused"; values: void };
 
 export interface PilotIncomeTokenClientInterface {
   /**
    * Construct and simulate a name transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return token name.
    */
-  name: (options?: MethodOptions) => Promise<AssembledTransaction<string>>
+  name: (options?: MethodOptions) => Promise<AssembledTransaction<string>>;
 
   /**
    * Construct and simulate a admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the configured token admin.
    */
-  admin: (options?: MethodOptions) => Promise<AssembledTransaction<string>>
+  admin: (options?: MethodOptions) => Promise<AssembledTransaction<string>>;
 
   /**
    * Construct and simulate a pause transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Pause `mint_fixed_supply`, `transfer`, and `mark_wound_down`.
    * Read-only calls (`balance`, `holders`, `total_supply`, and the rest)
    * keep working.
-   * 
+   *
    * Mirrors `pilot-payout-split`'s `pause`. Before this change, a
    * wrongful mint or correction transfer had no on-chain circuit breaker.
    */
-  pause: ({admin}: {admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  pause: (
+    { admin }: { admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a symbol transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return token symbol.
    */
-  symbol: (options?: MethodOptions) => Promise<AssembledTransaction<string>>
+  symbol: (options?: MethodOptions) => Promise<AssembledTransaction<string>>;
 
   /**
    * Construct and simulate a balance transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the balance of an address.
    */
-  balance: ({id}: {id: string}, options?: MethodOptions) => Promise<AssembledTransaction<i128>>
+  balance: (
+    { id }: { id: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<i128>>;
 
   /**
    * Construct and simulate a holders transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the fixed holder set used by payout distribution.
    */
-  holders: (options?: MethodOptions) => Promise<AssembledTransaction<Array<string>>>
+  holders: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Array<string>>>;
 
   /**
    * Construct and simulate a unpause transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Resume `mint_fixed_supply`, `transfer`, and `mark_wound_down`.
    */
-  unpause: ({admin}: {admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  unpause: (
+    { admin }: { admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a decimals transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return token decimal precision.
    */
-  decimals: (options?: MethodOptions) => Promise<AssembledTransaction<u32>>
+  decimals: (options?: MethodOptions) => Promise<AssembledTransaction<u32>>;
 
   /**
    * Construct and simulate a transfer transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Admin-only correction transfer. Holders cannot transfer the token.
    */
-  transfer: ({caller, from, to, amount}: {caller: string, from: string, to: string, amount: i128}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  transfer: (
+    {
+      caller,
+      from,
+      to,
+      amount,
+    }: { caller: string; from: string; to: string; amount: i128 },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a is_paused transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return whether the contract is paused.
    */
-  is_paused: (options?: MethodOptions) => Promise<AssembledTransaction<boolean>>
+  is_paused: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<boolean>>;
 
   /**
    * Construct and simulate a initialize transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Initialize token metadata and the whitelist contract used for mint gating.
    */
-  initialize: ({admin, whitelist, name, symbol, decimals}: {admin: string, whitelist: string, name: string, symbol: string, decimals: u32}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  initialize: (
+    {
+      admin,
+      whitelist,
+      name,
+      symbol,
+      decimals,
+    }: {
+      admin: string;
+      whitelist: string;
+      name: string;
+      symbol: string;
+      decimals: u32;
+    },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a total_supply transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return total minted supply.
    */
-  total_supply: (options?: MethodOptions) => Promise<AssembledTransaction<i128>>
+  total_supply: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<i128>>;
 
   /**
    * Construct and simulate a pending_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the pending admin, if a transfer is in progress.
    */
-  pending_admin: (options?: MethodOptions) => Promise<AssembledTransaction<Option<string>>>
+  pending_admin: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<string>>>;
 
   /**
    * Construct and simulate a mark_wound_down transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Permanently mark the pilot as wound down.
-   * 
+   *
    * One-way and irreversible: once set, the marker can never be cleared and
    * no un-wind-down function exists. Admin-gated, matching every other
    * state-changing function on this contract, so the same platform key that
    * mints and corrects balances owns the terminal state too.
-   * 
+   *
    * This is an independent write from `exit` on the payout-split contract:
    * each contract stores and exposes its own terminal marker, so a client
    * reading either contract alone gets a complete answer without a
@@ -224,25 +267,37 @@ export interface PilotIncomeTokenClientInterface {
    * remains an open product/legal question, Known Risk #5 in the product
    * brief).
    */
-  mark_wound_down: ({admin, reason}: {admin: string, reason: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  mark_wound_down: (
+    { admin, reason }: { admin: string; reason: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a mint_fixed_supply transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Mint the fixed pilot supply once to approved holders.
    */
-  mint_fixed_supply: ({admin, holders, amounts}: {admin: string, holders: Array<string>, amounts: Array<i128>}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  mint_fixed_supply: (
+    {
+      admin,
+      holders,
+      amounts,
+    }: { admin: string; holders: Array<string>; amounts: Array<i128> },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a wound_down_status transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the terminal wound-down record, or `None` while the pilot is
    * active. Read-only and self-contained: no cross-contract call is needed.
    */
-  wound_down_status: (options?: MethodOptions) => Promise<AssembledTransaction<Option<WoundDownRecord>>>
+  wound_down_status: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<WoundDownRecord>>>;
 
   /**
    * Construct and simulate a transfer_admin_start transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Begin transferring admin to a new address.
-   * 
+   *
    * Two-step, following the same pattern as `defi-rwa`'s
    * `AdminControl::transfer_admin_start` (see
    * docs/operations/runbook-role-management.md). The current admin keeps
@@ -250,7 +305,10 @@ export interface PilotIncomeTokenClientInterface {
    * mistyped or unreachable new admin can never lock the contract out.
    * Not blocked by `pause`: admin recovery must keep working while paused.
    */
-  transfer_admin_start: ({caller, new_admin}: {caller: string, new_admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  transfer_admin_start: (
+    { caller, new_admin }: { caller: string; new_admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a transfer_admin_accept transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -259,15 +317,20 @@ export interface PilotIncomeTokenClientInterface {
    * instant this call succeeds, since `require_admin` compares against the
    * single stored admin address.
    */
-  transfer_admin_accept: ({new_admin}: {new_admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  transfer_admin_accept: (
+    { new_admin }: { new_admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a transfer_admin_cancel transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Cancel a pending admin transfer before it is accepted. Only the
    * current admin can cancel.
    */
-  transfer_admin_cancel: ({caller}: {caller: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
-
+  transfer_admin_cancel: (
+    { caller }: { caller: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 }
 export class PilotIncomeTokenClient extends ContractClient {
   static override async deploy<T = PilotIncomeTokenClient>(
@@ -280,13 +343,14 @@ export class PilotIncomeTokenClient extends ContractClient {
         salt?: Buffer | Uint8Array;
         /** The format used to decode `wasmHash`, if it's provided as a string. */
         format?: "hex" | "base64";
-      }
+      },
   ): Promise<AssembledTransaction<T>> {
-    return ContractClient.deploy(null, options)
+    return ContractClient.deploy(null, options);
   }
   constructor(public override readonly options: ContractClientOptions) {
     super(
-      new ContractSpec([ "AAAAAAAAABJSZXR1cm4gdG9rZW4gbmFtZS4AAAAAAARuYW1lAAAAAAAAAAEAAAAQ",
+      new ContractSpec([
+        "AAAAAAAAABJSZXR1cm4gdG9rZW4gbmFtZS4AAAAAAARuYW1lAAAAAAAAAAEAAAAQ",
         "AAAAAAAAACJSZXR1cm4gdGhlIGNvbmZpZ3VyZWQgdG9rZW4gYWRtaW4uAAAAAAAFYWRtaW4AAAAAAAAAAAAAAQAAABM=",
         "AAAAAAAAARVQYXVzZSBgbWludF9maXhlZF9zdXBwbHlgLCBgdHJhbnNmZXJgLCBhbmQgYG1hcmtfd291bmRfZG93bmAuClJlYWQtb25seSBjYWxscyAoYGJhbGFuY2VgLCBgaG9sZGVyc2AsIGB0b3RhbF9zdXBwbHlgLCBhbmQgdGhlIHJlc3QpCmtlZXAgd29ya2luZy4KCk1pcnJvcnMgYHBpbG90LXBheW91dC1zcGxpdGAncyBgcGF1c2VgLiBCZWZvcmUgdGhpcyBjaGFuZ2UsIGEKd3JvbmdmdWwgbWludCBvciBjb3JyZWN0aW9uIHRyYW5zZmVyIGhhZCBubyBvbi1jaGFpbiBjaXJjdWl0IGJyZWFrZXIuAAAAAAAABXBhdXNlAAAAAAAAAQAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAA==",
         "AAAAAQAAAR1EdXJhYmxlIG9uLWNoYWluIHJlY29yZCBvZiBhIHBlcm1hbmVudCBwaWxvdCB3aW5kLWRvd24uIFdyaXR0ZW4gZXhhY3RseQpvbmNlIGJ5IGBtYXJrX3dvdW5kX2Rvd25gIGFuZCBuZXZlciByZW1vdmVkLCBtaXJyb3JpbmcgdGhlIHBheW91dC1zcGxpdApjb250cmFjdCdzIGBFeGl0UmVjb3JkYCBzbyBhIGNsaWVudCByZWFkaW5nIGVpdGhlciBjb250cmFjdCBpbmRlcGVuZGVudGx5CnNlZXMgYSBjb25zaXN0ZW50IHRlcm1pbmFsIHBpY3R1cmUgd2l0aG91dCBhbnkgY3Jvc3MtY29udHJhY3QgY2FsbC4AAAAAAAAAAAAAD1dvdW5kRG93blJlY29yZAAAAAACAAAANUxlZGdlciB0aW1lc3RhbXAgb2YgdGhlIGBtYXJrX3dvdW5kX2Rvd25gIGludm9jYXRpb24uAAAAAAAAAmF0AAAAAAAGAAAAdEZyZWUtdGV4dCByZWFzb24gc3VwcGxpZWQgYnkgdGhlIGFkbWluIChzZWUKZG9jcy9zdHJhdGVneS9kZWNpc2lvbi1sb2cubWQgZm9yIHRoZSByZWNvcmRlZCByZXByZXNlbnRhdGlvbiBkZWNpc2lvbikuAAAABnJlYXNvbgAAAAAAEA==",
@@ -314,29 +378,30 @@ export class PilotIncomeTokenClient extends ContractClient {
         "AAAAAQAAAAAAAAAAAAAAGUFkbWluVHJhbnNmZXJTdGFydGVkRXZlbnQAAAAAAAACAAAAAAAAAA1jdXJyZW50X2FkbWluAAAAAAAAEwAAAAAAAAAJbmV3X2FkbWluAAAAAAAAEw==",
         "AAAAAQAAAAAAAAAAAAAAGkFkbWluVHJhbnNmZXJBY2NlcHRlZEV2ZW50AAAAAAACAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAAAAAAlvbGRfYWRtaW4AAAAAAAAT",
         "AAAAAQAAAAAAAAAAAAAAG0FkbWluVHJhbnNmZXJDYW5jZWxsZWRFdmVudAAAAAABAAAAAAAAAAVhZG1pbgAAAAAAABM=",
-        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAADAAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAAJV2hpdGVsaXN0AAAAAAAAAAAAAAAAAAAETmFtZQAAAAAAAAAAAAAABlN5bWJvbAAAAAAAAAAAAAAAAAAIRGVjaW1hbHMAAAAAAAAAAAAAAAtUb3RhbFN1cHBseQAAAAABAAAAAAAAAAdCYWxhbmNlAAAAAAEAAAATAAAAAAAAAAAAAAAHSG9sZGVycwAAAAAAAAAAAAAAAAZNaW50ZWQAAAAAAAAAAAAAAAAACVdvdW5kRG93bgAAAAAAAAAAAAAAAAAADFBlbmRpbmdBZG1pbgAAAAAAAAAAAAAABlBhdXNlZAAA" ]),
-      options
-    )
+        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAADAAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAAJV2hpdGVsaXN0AAAAAAAAAAAAAAAAAAAETmFtZQAAAAAAAAAAAAAABlN5bWJvbAAAAAAAAAAAAAAAAAAIRGVjaW1hbHMAAAAAAAAAAAAAAAtUb3RhbFN1cHBseQAAAAABAAAAAAAAAAdCYWxhbmNlAAAAAAEAAAATAAAAAAAAAAAAAAAHSG9sZGVycwAAAAAAAAAAAAAAAAZNaW50ZWQAAAAAAAAAAAAAAAAACVdvdW5kRG93bgAAAAAAAAAAAAAAAAAADFBlbmRpbmdBZG1pbgAAAAAAAAAAAAAABlBhdXNlZAAA",
+      ]),
+      options,
+    );
   }
   public readonly fromJSON = {
     name: this.txFromJSON<string>,
-        admin: this.txFromJSON<string>,
-        pause: this.txFromJSON<null>,
-        symbol: this.txFromJSON<string>,
-        balance: this.txFromJSON<i128>,
-        holders: this.txFromJSON<Array<string>>,
-        unpause: this.txFromJSON<null>,
-        decimals: this.txFromJSON<u32>,
-        transfer: this.txFromJSON<null>,
-        is_paused: this.txFromJSON<boolean>,
-        initialize: this.txFromJSON<null>,
-        total_supply: this.txFromJSON<i128>,
-        pending_admin: this.txFromJSON<Option<string>>,
-        mark_wound_down: this.txFromJSON<null>,
-        mint_fixed_supply: this.txFromJSON<null>,
-        wound_down_status: this.txFromJSON<Option<WoundDownRecord>>,
-        transfer_admin_start: this.txFromJSON<null>,
-        transfer_admin_accept: this.txFromJSON<null>,
-        transfer_admin_cancel: this.txFromJSON<null>
-  }
+    admin: this.txFromJSON<string>,
+    pause: this.txFromJSON<null>,
+    symbol: this.txFromJSON<string>,
+    balance: this.txFromJSON<i128>,
+    holders: this.txFromJSON<Array<string>>,
+    unpause: this.txFromJSON<null>,
+    decimals: this.txFromJSON<u32>,
+    transfer: this.txFromJSON<null>,
+    is_paused: this.txFromJSON<boolean>,
+    initialize: this.txFromJSON<null>,
+    total_supply: this.txFromJSON<i128>,
+    pending_admin: this.txFromJSON<Option<string>>,
+    mark_wound_down: this.txFromJSON<null>,
+    mint_fixed_supply: this.txFromJSON<null>,
+    wound_down_status: this.txFromJSON<Option<WoundDownRecord>>,
+    transfer_admin_start: this.txFromJSON<null>,
+    transfer_admin_accept: this.txFromJSON<null>,
+    transfer_admin_cancel: this.txFromJSON<null>,
+  };
 }

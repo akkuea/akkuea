@@ -21,13 +21,12 @@ if (typeof globalThis !== "undefined" && !globalThis.Buffer) {
   (globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer;
 }
 
-
 /**
  * Settlement currency chosen by a token holder. Absence of a stored
  * preference resolves to `Usdc`, so pre-existing holders are unaffected.
  */
-export type Currency = {tag: "Usdc", values: void} | {tag: "Eurc", values: void};
-
+export type Currency =
+  { tag: "Usdc"; values: void } | { tag: "Eurc"; values: void };
 
 /**
  * Durable on-chain record of a permanent ally/property exit. Written exactly
@@ -37,67 +36,69 @@ export type Currency = {tag: "Usdc", values: void} | {tag: "Eurc", values: void}
  */
 export interface ExitRecord {
   /**
- * Ledger timestamp of the `exit` invocation.
- */
-at: u64;
+   * Ledger timestamp of the `exit` invocation.
+   */
+  at: u64;
   /**
- * Free-text reason supplied by the two signing parties. Deliberately a
- * string rather than an enum or hash-plus-off-chain-link so the dashboard
- * can render why the exit happened directly from on-chain state (see
- * docs/strategy/decision-log.md for the recorded rationale).
- */
-reason: string;
+   * Free-text reason supplied by the two signing parties. Deliberately a
+   * string rather than an enum or hash-plus-off-chain-link so the dashboard
+   * can render why the exit happened directly from on-chain state (see
+   * docs/strategy/decision-log.md for the recorded rationale).
+   */
+  reason: string;
 }
-
 
 export interface HolderPayout {
   amount: i128;
   holder: string;
 }
 
-
 export interface EvidenceRecord {
   cycle_id: string;
   distributed: boolean;
   /**
- * Ledger timestamp the payout executed. Zero until it does.
- * 
- * Stored on the record rather than left to events, because an investor
- * judging on-time against late needs this fact to outlive the RPC's event
- * retention window.
- */
-distributed_at: u64;
+   * Ledger timestamp the payout executed. Zero until it does.
+   *
+   * Stored on the record rather than left to events, because an investor
+   * judging on-time against late needs this fact to outlive the RPC's event
+   * retention window.
+   */
+  distributed_at: u64;
   evidence_hash: Buffer;
   evidence_link: string;
   recorded_at: u64;
   /**
- * Operator's stated reason on rejection or dispute. Empty otherwise.
- */
-review_reason: string;
+   * Operator's stated reason on rejection or dispute. Empty otherwise.
+   */
+  review_reason: string;
   /**
- * Ledger timestamp the operator reviewed it. Zero while unreviewed.
- */
-reviewed_at: u64;
+   * Ledger timestamp the operator reviewed it. Zero while unreviewed.
+   */
+  reviewed_at: u64;
   /**
- * Where this cycle sits in the human review lifecycle.
- */
-status: EvidenceStatus;
+   * Where this cycle sits in the human review lifecycle.
+   */
+  status: EvidenceStatus;
   /**
- * Ledger timestamp the ally submitted the evidence.
- */
-submitted_at: u64;
+   * Ledger timestamp the ally submitted the evidence.
+   */
+  submitted_at: u64;
   total_income: i128;
 }
 
 /**
  * Human review lifecycle of a cycle's income evidence.
- * 
+ *
  * The pilot's credibility argument rests on an investor being able to see that
  * a real person reviewed the ally's evidence, so every transition here is an
  * on-chain fact with its own event, not a client-side label.
  */
-export type EvidenceStatus = {tag: "Submitted", values: void} | {tag: "UnderReview", values: void} | {tag: "Approved", values: void} | {tag: "Rejected", values: void} | {tag: "Disputed", values: void};
-
+export type EvidenceStatus =
+  | { tag: "Submitted"; values: void }
+  | { tag: "UnderReview"; values: void }
+  | { tag: "Approved"; values: void }
+  | { tag: "Rejected"; values: void }
+  | { tag: "Disputed"; values: void };
 
 /**
  * On-chain record of one rejected swap leg. Persisted per cycle so a rejected
@@ -108,11 +109,10 @@ export interface SwapFailureRecord {
   amount_usdc: i128;
   holder: string;
   /**
- * `PayoutError` discriminant describing why the leg was rejected.
- */
-reason_code: u32;
+   * `PayoutError` discriminant describing why the leg was rejected.
+   */
+  reason_code: u32;
 }
-
 
 /**
  * Live EURC settlement configuration reported to the dashboard. Replaces the
@@ -124,118 +124,115 @@ export interface EurcSwapPathStatus {
   usdc_token: string;
 }
 
-
 export interface DistributionSummary {
   cycle_id: string;
   /**
- * Sum of pro-rata shares fully delivered, whether paid in USDC directly
- * or swapped into EURC. Rejected swap legs are not counted here.
- */
-distributed_total: i128;
+   * Sum of pro-rata shares fully delivered, whether paid in USDC directly
+   * or swapped into EURC. Rejected swap legs are not counted here.
+   */
+  distributed_total: i128;
   dust: i128;
   /**
- * EURC actually received across successful swap legs.
- */
-eurc_distributed_total: i128;
+   * EURC actually received across successful swap legs.
+   */
+  eurc_distributed_total: i128;
   holder_amount: i128;
   holder_count: u32;
   platform_fee: i128;
   /**
- * Number of holders whose EURC swap leg was rejected this cycle.
- */
-swaps_failed: u32;
+   * Number of holders whose EURC swap leg was rejected this cycle.
+   */
+  swaps_failed: u32;
   total_income: i128;
   /**
- * USDC withheld in this contract for holders whose swap legs failed.
- */
-undistributed_failed_swaps: i128;
+   * USDC withheld in this contract for holders whose swap legs failed.
+   */
+  undistributed_failed_swaps: i128;
 }
 
 export const PayoutError = {
-  1: {message:"AlreadyInitialized"},
-  2: {message:"NotInitialized"},
-  3: {message:"Unauthorized"},
-  4: {message:"ContractPaused"},
-  5: {message:"InvalidEvidenceHash"},
-  6: {message:"MissingEvidenceLink"},
-  7: {message:"ZeroAmount"},
-  8: {message:"CycleAlreadyRecorded"},
-  9: {message:"CycleNotRecorded"},
-  10: {message:"CycleAlreadyDistributed"},
-  11: {message:"EmptyHolderSet"},
-  12: {message:"RecipientNotApproved"},
-  13: {message:"ArithmeticOverflow"},
-  14: {message:"InsufficientPayoutBalance"},
-  15: {message:"Reentrancy"},
-  16: {message:"InternalInvariant"},
-  17: {message:"SignerCollision"},
+  1: { message: "AlreadyInitialized" },
+  2: { message: "NotInitialized" },
+  3: { message: "Unauthorized" },
+  4: { message: "ContractPaused" },
+  5: { message: "InvalidEvidenceHash" },
+  6: { message: "MissingEvidenceLink" },
+  7: { message: "ZeroAmount" },
+  8: { message: "CycleAlreadyRecorded" },
+  9: { message: "CycleNotRecorded" },
+  10: { message: "CycleAlreadyDistributed" },
+  11: { message: "EmptyHolderSet" },
+  12: { message: "RecipientNotApproved" },
+  13: { message: "ArithmeticOverflow" },
+  14: { message: "InsufficientPayoutBalance" },
+  15: { message: "Reentrancy" },
+  16: { message: "InternalInvariant" },
+  17: { message: "SignerCollision" },
   /**
    * A per-holder swap leg failed at the external venue (illiquidity, venue error).
    * The leg is rejected for that holder only; other holders are unaffected.
    */
-  18: {message:"SwapFailed"},
+  18: { message: "SwapFailed" },
   /**
    * The swap delivered less than the signed minimum-received bound.
    */
-  19: {message:"SlippageExceeded"},
+  19: { message: "SlippageExceeded" },
   /**
    * EURC/swap-router configuration is missing or inconsistent.
    */
-  20: {message:"RouterNotConfigured"},
+  20: { message: "RouterNotConfigured" },
   /**
    * A cycle with EURC-preference holders was executed without a positive
    * minimum exchange rate bound.
    */
-  21: {message:"InvalidMinRate"},
+  21: { message: "InvalidMinRate" },
   /**
    * The ally/property relationship has been permanently terminated via
    * `exit`; evidence recording and distribution execution are rejected
    * forever after. Distinct from `ContractPaused`, which is reversible.
    */
-  22: {message:"ContractExited"},
+  22: { message: "ContractExited" },
   /**
    * `exit` was invoked without a non-empty reason string.
    */
-  23: {message:"MissingExitReason"},
+  23: { message: "MissingExitReason" },
   /**
    * Distribution was requested for a cycle whose evidence is not approved.
    */
-  24: {message:"EvidenceNotApproved"},
+  24: { message: "EvidenceNotApproved" },
   /**
    * A review was requested on a cycle that is not awaiting one.
    */
-  25: {message:"InvalidStatusTransition"},
+  25: { message: "InvalidStatusTransition" },
   /**
    * A rejection or dispute was submitted without a reason string.
    */
-  26: {message:"MissingReviewReason"},
+  26: { message: "MissingReviewReason" },
   /**
    * No evidence record exists for the cycle.
    */
-  27: {message:"EvidenceNotFound"},
+  27: { message: "EvidenceNotFound" },
   /**
    * Number of holders exceeds the maximum supported bound.
    */
-  28: {message:"TooManyHolders"},
+  28: { message: "TooManyHolders" },
   /**
    * `transfer_admin_accept` was called by an address that does not match
    * the pending admin recorded by `transfer_admin_start`, or no transfer
    * is pending at all.
    */
-  29: {message:"NotPendingAdmin"}
-}
-
+  29: { message: "NotPendingAdmin" },
+};
 
 export interface SwapFailedEvent {
   amount_usdc_retained: i128;
   cycle_id: string;
   holder: string;
   /**
- * `PayoutError` discriminant describing why the leg was rejected.
- */
-reason_code: u32;
+   * `PayoutError` discriminant describing why the leg was rejected.
+   */
+  reason_code: u32;
 }
-
 
 /**
  * Emitted once when the ally/property relationship is permanently terminated.
@@ -249,14 +246,12 @@ export interface ExitRecordedEvent {
   reason: string;
 }
 
-
 export interface SwapExecutedEvent {
   amount_eurc_out: i128;
   amount_usdc_in: i128;
   cycle_id: string;
   holder: string;
 }
-
 
 export interface EvidenceDisputedEvent {
   caller: string;
@@ -265,14 +260,12 @@ export interface EvidenceDisputedEvent {
   reason: string;
 }
 
-
 export interface EvidenceRecordedEvent {
   ally: string;
   cycle_id: string;
   operator: string;
   total_income: i128;
 }
-
 
 export interface EvidenceReviewedEvent {
   approved: boolean;
@@ -282,7 +275,6 @@ export interface EvidenceReviewedEvent {
   reviewed_at: u64;
 }
 
-
 export interface EvidenceSubmittedEvent {
   ally: string;
   cycle_id: string;
@@ -290,167 +282,281 @@ export interface EvidenceSubmittedEvent {
   total_income: i128;
 }
 
-
 export interface PayoutInitializedEvent {
   admin: string;
   ally: string;
   operator: string;
 }
 
-
 export interface AdminTransferStartedEvent {
   current_admin: string;
   new_admin: string;
 }
-
 
 export interface AdminTransferAcceptedEvent {
   new_admin: string;
   old_admin: string;
 }
 
-
 export interface CurrencyPreferenceSetEvent {
   currency: Currency;
   holder: string;
 }
 
-
 export interface AdminTransferCancelledEvent {
   admin: string;
 }
 
-export type DataKey = {tag: "Admin", values: void} | {tag: "Operator", values: void} | {tag: "Ally", values: void} | {tag: "PlatformFeeRecipient", values: void} | {tag: "IncomeToken", values: void} | {tag: "Whitelist", values: void} | {tag: "UsdcToken", values: void} | {tag: "EurcToken", values: void} | {tag: "SwapRouter", values: void} | {tag: "Paused", values: void} | {tag: "Guard", values: void} | {tag: "Evidence", values: readonly [string]} | {tag: "CurrencyPreference", values: readonly [string]} | {tag: "SwapFailures", values: readonly [string]} | {tag: "Exit", values: void} | {tag: "PendingAdmin", values: void};
+export type DataKey =
+  | { tag: "Admin"; values: void }
+  | { tag: "Operator"; values: void }
+  | { tag: "Ally"; values: void }
+  | { tag: "PlatformFeeRecipient"; values: void }
+  | { tag: "IncomeToken"; values: void }
+  | { tag: "Whitelist"; values: void }
+  | { tag: "UsdcToken"; values: void }
+  | { tag: "EurcToken"; values: void }
+  | { tag: "SwapRouter"; values: void }
+  | { tag: "Paused"; values: void }
+  | { tag: "Guard"; values: void }
+  | { tag: "Evidence"; values: readonly [string] }
+  | { tag: "CurrencyPreference"; values: readonly [string] }
+  | { tag: "SwapFailures"; values: readonly [string] }
+  | { tag: "Exit"; values: void }
+  | { tag: "PendingAdmin"; values: void };
 
 export interface PilotPayoutSplitClientInterface {
   /**
    * Construct and simulate a exit transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Permanently terminate the ally/property relationship.
-   * 
+   *
    * One-way and irreversible: once called, `record_evidence` and
    * `execute_distribution` reject every subsequent invocation with
    * `PayoutError::ContractExited`, and no un-exit or reversal function
    * exists. This is deliberately a separate gate from `pause`/`unpause`:
    * pause is reversible and operational, exit is terminal and factual, so a
    * client can always tell "temporarily paused" from "this pilot is over."
-   * 
+   *
    * Gated by the same two-signer authorization as
    * `execute_distribution`: both `operator` and `ally` must authorize the
    * same invocation, since ending the relationship is at least as
    * consequential as approving a distribution. The `reason` is stored and
    * exposed on-chain via `exit_status` so a client can render why and when
    * the exit happened without any off-chain state.
-   * 
+   *
    * This function records the fact of exit only. It does not attempt any
    * fund-recovery, refund, pro-rata unwind, or legal wind-down logic: what
    * happens to already-collected or future funds is an open pr
    */
-  exit: ({operator, ally, reason}: {operator: string, ally: string, reason: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  exit: (
+    {
+      operator,
+      ally,
+      reason,
+    }: { operator: string; ally: string; reason: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a pause transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Pause evidence recording, preference changes, and distribution execution.
    */
-  pause: ({admin}: {admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  pause: (
+    { admin }: { admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a unpause transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Resume evidence recording, preference changes, and distribution execution.
    */
-  unpause: ({admin}: {admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  unpause: (
+    { admin }: { admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a is_paused transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return whether the contract is paused.
    */
-  is_paused: (options?: MethodOptions) => Promise<AssembledTransaction<boolean>>
+  is_paused: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<boolean>>;
 
   /**
    * Construct and simulate a initialize transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Initialize payout configuration, including the two required evidence approvers.
-   * 
+   *
    * `eurc_token` is the EURC asset contract offered as settlement alternative
    * and `swap_router` the verified Soroswap AMM router used to convert USDC
    * shares at payout time. Both are stored, never hardcoded.
    */
-  initialize: ({admin, operator, ally, platform_fee_recipient, income_token, whitelist, usdc_token, eurc_token, swap_router}: {admin: string, operator: string, ally: string, platform_fee_recipient: string, income_token: string, whitelist: string, usdc_token: string, eurc_token: string, swap_router: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  initialize: (
+    {
+      admin,
+      operator,
+      ally,
+      platform_fee_recipient,
+      income_token,
+      whitelist,
+      usdc_token,
+      eurc_token,
+      swap_router,
+    }: {
+      admin: string;
+      operator: string;
+      ally: string;
+      platform_fee_recipient: string;
+      income_token: string;
+      whitelist: string;
+      usdc_token: string;
+      eurc_token: string;
+      swap_router: string;
+    },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a exit_status transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the terminal exit record, or `None` while the pilot is active.
-   * 
+   *
    * Read-only and self-contained: a client needs no cross-contract call and
    * no off-chain state to distinguish "not exited" (None) from a permanent
    * exit (the recorded reason and timestamp).
    */
-  exit_status: (options?: MethodOptions) => Promise<AssembledTransaction<Option<ExitRecord>>>
+  exit_status: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<ExitRecord>>>;
 
   /**
    * Construct and simulate a flag_dispute transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Flag a cycle as disputed. Callable by the admin or the operator.
-   * 
+   *
    * A disputed cycle cannot be distributed until it is resubmitted and
    * reviewed again, and it counts against the ally in the investor timeline.
    */
-  flag_dispute: ({caller, cycle_id, reason}: {caller: string, cycle_id: string, reason: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  flag_dispute: (
+    {
+      caller,
+      cycle_id,
+      reason,
+    }: { caller: string; cycle_id: string; reason: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a get_evidence transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return an evidence record for a cycle, if present.
    */
-  get_evidence: ({cycle_id}: {cycle_id: string}, options?: MethodOptions) => Promise<AssembledTransaction<Option<EvidenceRecord>>>
+  get_evidence: (
+    { cycle_id }: { cycle_id: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<EvidenceRecord>>>;
 
   /**
    * Construct and simulate a start_review transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Move a submitted cycle into `UnderReview`.
-   * 
+   *
    * This exists so an ally can see that their submission was actually picked
    * up, instead of staring at an unchanged `Submitted` badge for days.
    */
-  start_review: ({operator, cycle_id}: {operator: string, cycle_id: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  start_review: (
+    { operator, cycle_id }: { operator: string; cycle_id: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a pending_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the pending admin, if a transfer is in progress.
    */
-  pending_admin: (options?: MethodOptions) => Promise<AssembledTransaction<Option<string>>>
+  pending_admin: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<string>>>;
 
   /**
    * Construct and simulate a record_evidence transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Record a monthly income evidence reference and approve the distribution amount.
-   * 
+   *
    * Both `operator` and `ally` must sign the same invocation through native Soroban auth.
    */
-  record_evidence: ({operator, ally, cycle_id, evidence_hash, evidence_link, total_income}: {operator: string, ally: string, cycle_id: string, evidence_hash: Buffer, evidence_link: string, total_income: i128}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  record_evidence: (
+    {
+      operator,
+      ally,
+      cycle_id,
+      evidence_hash,
+      evidence_link,
+      total_income,
+    }: {
+      operator: string;
+      ally: string;
+      cycle_id: string;
+      evidence_hash: Buffer;
+      evidence_link: string;
+      total_income: i128;
+    },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a review_evidence transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Approve or reject a cycle's evidence, with a reason on rejection.
    */
-  review_evidence: ({operator, cycle_id, approved, reason}: {operator: string, cycle_id: string, approved: boolean, reason: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  review_evidence: (
+    {
+      operator,
+      cycle_id,
+      approved,
+      reason,
+    }: {
+      operator: string;
+      cycle_id: string;
+      approved: boolean;
+      reason: string;
+    },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a submit_evidence transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Submit a cycle's income evidence for review.
-   * 
+   *
    * Only the ally signs. The cycle enters `Submitted` and waits for the
    * operator, which is what makes the review queue an on-chain fact rather
    * than an off-chain bookkeeping table. A cycle previously rejected may be
    * submitted again; an approved or distributed cycle may not.
    */
-  submit_evidence: ({ally, cycle_id, evidence_hash, evidence_link, total_income}: {ally: string, cycle_id: string, evidence_hash: Buffer, evidence_link: string, total_income: i128}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  submit_evidence: (
+    {
+      ally,
+      cycle_id,
+      evidence_hash,
+      evidence_link,
+      total_income,
+    }: {
+      ally: string;
+      cycle_id: string;
+      evidence_hash: Buffer;
+      evidence_link: string;
+      total_income: i128;
+    },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a get_swap_failures transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the swap legs rejected during a cycle's distribution.
    */
-  get_swap_failures: ({cycle_id}: {cycle_id: string}, options?: MethodOptions) => Promise<AssembledTransaction<Array<SwapFailureRecord>>>
+  get_swap_failures: (
+    { cycle_id }: { cycle_id: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Array<SwapFailureRecord>>>;
 
   /**
    * Construct and simulate a execute_distribution transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Execute the approved payout for a cycle, honoring each holder's
    * settlement-currency preference.
-   * 
+   *
    * Both signers must authorize the execution because they also carry the
    * price-guard responsibility: `min_eurc_per_usdc` is the minimum exchange
    * rate (scaled by `RATE_DENOMINATOR`) at which EURC-preference shares may
@@ -463,23 +569,36 @@ export interface PilotPayoutSplitClientInterface {
    * by the venue-enforced `amount_out_min`. The router rejects the leg before
    * moving any tokens when the pool cannot satisfy the bound, and this
    * contract re-verifies the delivered amount defensively afterwards.
-   * 
+   *
    * Failure isolation: a rejected swap leg (illiquidity, slippage breach,
-   * venue 
+   * venue
    */
-  execute_distribution: ({operator, ally, cycle_id, min_eurc_per_usdc}: {operator: string, ally: string, cycle_id: string, min_eurc_per_usdc: i128}, options?: MethodOptions) => Promise<AssembledTransaction<DistributionSummary>>
+  execute_distribution: (
+    {
+      operator,
+      ally,
+      cycle_id,
+      min_eurc_per_usdc,
+    }: {
+      operator: string;
+      ally: string;
+      cycle_id: string;
+      min_eurc_per_usdc: i128;
+    },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<DistributionSummary>>;
 
   /**
    * Construct and simulate a transfer_admin_start transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Begin transferring admin to a new address.
-   * 
+   *
    * Two-step, following the same pattern as `defi-rwa`'s
    * `AdminControl::transfer_admin_start` (see
    * docs/operations/runbook-role-management.md). The current admin keeps
    * full control until `new_admin` calls `transfer_admin_accept`, so a
    * mistyped or unreachable new admin can never lock the contract out.
    * Not blocked by `pause`: admin recovery must keep working while paused.
-   * 
+   *
    * Deliberately gated by the admin alone, not by the operator+ally
    * two-signer model used for `record_evidence`, `execute_distribution`,
    * and `exit`. Reasoning recorded in docs/strategy/decision-log.md: the
@@ -489,7 +608,10 @@ export interface PilotPayoutSplitClientInterface {
    * from a lost or compromised admin key, which is exactly the failure
    * mode this feature exists to close.
    */
-  transfer_admin_start: ({caller, new_admin}: {caller: string, new_admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  transfer_admin_start: (
+    { caller, new_admin }: { caller: string; new_admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a eurc_swap_path_status transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -497,7 +619,9 @@ export interface PilotPayoutSplitClientInterface {
    * initialization; after initialization the dashboard reads the actual
    * router and asset addresses instead of a hardcoded marker string.
    */
-  eurc_swap_path_status: (options?: MethodOptions) => Promise<AssembledTransaction<Option<EurcSwapPathStatus>>>
+  eurc_swap_path_status: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<EurcSwapPathStatus>>>;
 
   /**
    * Construct and simulate a transfer_admin_accept transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -506,30 +630,41 @@ export interface PilotPayoutSplitClientInterface {
    * instant this call succeeds, since `require_admin` compares against the
    * single stored admin address.
    */
-  transfer_admin_accept: ({new_admin}: {new_admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  transfer_admin_accept: (
+    { new_admin }: { new_admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a transfer_admin_cancel transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Cancel a pending admin transfer before it is accepted. Only the
    * current admin can cancel.
    */
-  transfer_admin_cancel: ({caller}: {caller: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  transfer_admin_cancel: (
+    { caller }: { caller: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a get_currency_preference transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return a holder's settlement-currency preference; defaults to USDC.
    */
-  get_currency_preference: ({holder}: {holder: string}, options?: MethodOptions) => Promise<AssembledTransaction<Currency>>
+  get_currency_preference: (
+    { holder }: { holder: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Currency>>;
 
   /**
    * Construct and simulate a set_currency_preference transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Set or update the caller's own settlement-currency preference.
-   * 
+   *
    * Self-serve: gated by `require_auth` to the holder's own address, and
    * restricted to addresses approved on the pilot whitelist.
    */
-  set_currency_preference: ({holder, currency}: {holder: string, currency: Currency}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
-
+  set_currency_preference: (
+    { holder, currency }: { holder: string; currency: Currency },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 }
 export class PilotPayoutSplitClient extends ContractClient {
   static override async deploy<T = PilotPayoutSplitClient>(
@@ -542,13 +677,14 @@ export class PilotPayoutSplitClient extends ContractClient {
         salt?: Buffer | Uint8Array;
         /** The format used to decode `wasmHash`, if it's provided as a string. */
         format?: "hex" | "base64";
-      }
+      },
   ): Promise<AssembledTransaction<T>> {
-    return ContractClient.deploy(null, options)
+    return ContractClient.deploy(null, options);
   }
   constructor(public override readonly options: ContractClientOptions) {
     super(
-      new ContractSpec([ "AAAAAgAAAIhTZXR0bGVtZW50IGN1cnJlbmN5IGNob3NlbiBieSBhIHRva2VuIGhvbGRlci4gQWJzZW5jZSBvZiBhIHN0b3JlZApwcmVmZXJlbmNlIHJlc29sdmVzIHRvIGBVc2RjYCwgc28gcHJlLWV4aXN0aW5nIGhvbGRlcnMgYXJlIHVuYWZmZWN0ZWQuAAAAAAAAAAhDdXJyZW5jeQAAAAIAAAAAAAAAAAAAAARVc2RjAAAAAAAAAAAAAAAERXVyYw==",
+      new ContractSpec([
+        "AAAAAgAAAIhTZXR0bGVtZW50IGN1cnJlbmN5IGNob3NlbiBieSBhIHRva2VuIGhvbGRlci4gQWJzZW5jZSBvZiBhIHN0b3JlZApwcmVmZXJlbmNlIHJlc29sdmVzIHRvIGBVc2RjYCwgc28gcHJlLWV4aXN0aW5nIGhvbGRlcnMgYXJlIHVuYWZmZWN0ZWQuAAAAAAAAAAhDdXJyZW5jeQAAAAIAAAAAAAAAAAAAAARVc2RjAAAAAAAAAAAAAAAERXVyYw==",
         "AAAAAQAAARREdXJhYmxlIG9uLWNoYWluIHJlY29yZCBvZiBhIHBlcm1hbmVudCBhbGx5L3Byb3BlcnR5IGV4aXQuIFdyaXR0ZW4gZXhhY3RseQpvbmNlIGJ5IGBleGl0YCBhbmQgbmV2ZXIgcmVtb3ZlZDogaXQgaXMgdGhlIHRlcm1pbmFsIGNvdW50ZXJwYXJ0IHRvIHRoZQpyZXZlcnNpYmxlIGBwYXVzZWAgZmxhZywgbGV0dGluZyBhIGNsaWVudCBkaXN0aW5ndWlzaCAidGVtcG9yYXJpbHkgcGF1c2VkIgpmcm9tICJ0aGlzIHBpbG90IGlzIG92ZXIiIHdpdGhvdXQgYW55IG9mZi1jaGFpbiBzdGF0ZS4AAAAAAAAACkV4aXRSZWNvcmQAAAAAAAIAAAAqTGVkZ2VyIHRpbWVzdGFtcCBvZiB0aGUgYGV4aXRgIGludm9jYXRpb24uAAAAAAACYXQAAAAAAAYAAAEKRnJlZS10ZXh0IHJlYXNvbiBzdXBwbGllZCBieSB0aGUgdHdvIHNpZ25pbmcgcGFydGllcy4gRGVsaWJlcmF0ZWx5IGEKc3RyaW5nIHJhdGhlciB0aGFuIGFuIGVudW0gb3IgaGFzaC1wbHVzLW9mZi1jaGFpbi1saW5rIHNvIHRoZSBkYXNoYm9hcmQKY2FuIHJlbmRlciB3aHkgdGhlIGV4aXQgaGFwcGVuZWQgZGlyZWN0bHkgZnJvbSBvbi1jaGFpbiBzdGF0ZSAoc2VlCmRvY3Mvc3RyYXRlZ3kvZGVjaXNpb24tbG9nLm1kIGZvciB0aGUgcmVjb3JkZWQgcmF0aW9uYWxlKS4AAAAAAAZyZWFzb24AAAAAABA=",
         "AAAAAQAAAAAAAAAAAAAADEhvbGRlclBheW91dAAAAAIAAAAAAAAABmFtb3VudAAAAAAACwAAAAAAAAAGaG9sZGVyAAAAAAAT",
         "AAAAAAAABABQZXJtYW5lbnRseSB0ZXJtaW5hdGUgdGhlIGFsbHkvcHJvcGVydHkgcmVsYXRpb25zaGlwLgoKT25lLXdheSBhbmQgaXJyZXZlcnNpYmxlOiBvbmNlIGNhbGxlZCwgYHJlY29yZF9ldmlkZW5jZWAgYW5kCmBleGVjdXRlX2Rpc3RyaWJ1dGlvbmAgcmVqZWN0IGV2ZXJ5IHN1YnNlcXVlbnQgaW52b2NhdGlvbiB3aXRoCmBQYXlvdXRFcnJvcjo6Q29udHJhY3RFeGl0ZWRgLCBhbmQgbm8gdW4tZXhpdCBvciByZXZlcnNhbCBmdW5jdGlvbgpleGlzdHMuIFRoaXMgaXMgZGVsaWJlcmF0ZWx5IGEgc2VwYXJhdGUgZ2F0ZSBmcm9tIGBwYXVzZWAvYHVucGF1c2VgOgpwYXVzZSBpcyByZXZlcnNpYmxlIGFuZCBvcGVyYXRpb25hbCwgZXhpdCBpcyB0ZXJtaW5hbCBhbmQgZmFjdHVhbCwgc28gYQpjbGllbnQgY2FuIGFsd2F5cyB0ZWxsICJ0ZW1wb3JhcmlseSBwYXVzZWQiIGZyb20gInRoaXMgcGlsb3QgaXMgb3Zlci4iCgpHYXRlZCBieSB0aGUgc2FtZSB0d28tc2lnbmVyIGF1dGhvcml6YXRpb24gYXMKYGV4ZWN1dGVfZGlzdHJpYnV0aW9uYDogYm90aCBgb3BlcmF0b3JgIGFuZCBgYWxseWAgbXVzdCBhdXRob3JpemUgdGhlCnNhbWUgaW52b2NhdGlvbiwgc2luY2UgZW5kaW5nIHRoZSByZWxhdGlvbnNoaXAgaXMgYXQgbGVhc3QgYXMKY29uc2VxdWVudGlhbCBhcyBhcHByb3ZpbmcgYSBkaXN0cmlidXRpb24uIFRoZSBgcmVhc29uYCBpcyBzdG9yZWQgYW5kCmV4cG9zZWQgb24tY2hhaW4gdmlhIGBleGl0X3N0YXR1c2Agc28gYSBjbGllbnQgY2FuIHJlbmRlciB3aHkgYW5kIHdoZW4KdGhlIGV4aXQgaGFwcGVuZWQgd2l0aG91dCBhbnkgb2ZmLWNoYWluIHN0YXRlLgoKVGhpcyBmdW5jdGlvbiByZWNvcmRzIHRoZSBmYWN0IG9mIGV4aXQgb25seS4gSXQgZG9lcyBub3QgYXR0ZW1wdCBhbnkKZnVuZC1yZWNvdmVyeSwgcmVmdW5kLCBwcm8tcmF0YSB1bndpbmQsIG9yIGxlZ2FsIHdpbmQtZG93biBsb2dpYzogd2hhdApoYXBwZW5zIHRvIGFscmVhZHktY29sbGVjdGVkIG9yIGZ1dHVyZSBmdW5kcyBpcyBhbiBvcGVuIHByAAAABGV4aXQAAAADAAAAAAAAAAhvcGVyYXRvcgAAABMAAAAAAAAABGFsbHkAAAATAAAAAAAAAAZyZWFzb24AAAAAABAAAAAA",
@@ -590,31 +726,32 @@ export class PilotPayoutSplitClient extends ContractClient {
         "AAAAAQAAAAAAAAAAAAAAGkFkbWluVHJhbnNmZXJBY2NlcHRlZEV2ZW50AAAAAAACAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAAAAAAlvbGRfYWRtaW4AAAAAAAAT",
         "AAAAAQAAAAAAAAAAAAAAGkN1cnJlbmN5UHJlZmVyZW5jZVNldEV2ZW50AAAAAAACAAAAAAAAAAhjdXJyZW5jeQAAB9AAAAAIQ3VycmVuY3kAAAAAAAAABmhvbGRlcgAAAAAAEw==",
         "AAAAAQAAAAAAAAAAAAAAG0FkbWluVHJhbnNmZXJDYW5jZWxsZWRFdmVudAAAAAABAAAAAAAAAAVhZG1pbgAAAAAAABM=",
-        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAAEAAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAAIT3BlcmF0b3IAAAAAAAAAAAAAAARBbGx5AAAAAAAAAAAAAAAUUGxhdGZvcm1GZWVSZWNpcGllbnQAAAAAAAAAAAAAAAtJbmNvbWVUb2tlbgAAAAAAAAAAAAAAAAlXaGl0ZWxpc3QAAAAAAAAAAAAAAAAAAAlVc2RjVG9rZW4AAAAAAAAAAAAAAAAAAAlFdXJjVG9rZW4AAAAAAAAAAAAAAAAAAApTd2FwUm91dGVyAAAAAAAAAAAAAAAAAAZQYXVzZWQAAAAAAAAAAAAAAAAABUd1YXJkAAAAAAAAAQAAAAAAAAAIRXZpZGVuY2UAAAABAAAAEAAAAAEAAAAAAAAAEkN1cnJlbmN5UHJlZmVyZW5jZQAAAAAAAQAAABMAAAABAAAAAAAAAAxTd2FwRmFpbHVyZXMAAAABAAAAEAAAAAAAAAAAAAAABEV4aXQAAAAAAAAAAAAAAAxQZW5kaW5nQWRtaW4=" ]),
-      options
-    )
+        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAAEAAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAAIT3BlcmF0b3IAAAAAAAAAAAAAAARBbGx5AAAAAAAAAAAAAAAUUGxhdGZvcm1GZWVSZWNpcGllbnQAAAAAAAAAAAAAAAtJbmNvbWVUb2tlbgAAAAAAAAAAAAAAAAlXaGl0ZWxpc3QAAAAAAAAAAAAAAAAAAAlVc2RjVG9rZW4AAAAAAAAAAAAAAAAAAAlFdXJjVG9rZW4AAAAAAAAAAAAAAAAAAApTd2FwUm91dGVyAAAAAAAAAAAAAAAAAAZQYXVzZWQAAAAAAAAAAAAAAAAABUd1YXJkAAAAAAAAAQAAAAAAAAAIRXZpZGVuY2UAAAABAAAAEAAAAAEAAAAAAAAAEkN1cnJlbmN5UHJlZmVyZW5jZQAAAAAAAQAAABMAAAABAAAAAAAAAAxTd2FwRmFpbHVyZXMAAAABAAAAEAAAAAAAAAAAAAAABEV4aXQAAAAAAAAAAAAAAAxQZW5kaW5nQWRtaW4=",
+      ]),
+      options,
+    );
   }
   public readonly fromJSON = {
     exit: this.txFromJSON<null>,
-        pause: this.txFromJSON<null>,
-        unpause: this.txFromJSON<null>,
-        is_paused: this.txFromJSON<boolean>,
-        initialize: this.txFromJSON<null>,
-        exit_status: this.txFromJSON<Option<ExitRecord>>,
-        flag_dispute: this.txFromJSON<null>,
-        get_evidence: this.txFromJSON<Option<EvidenceRecord>>,
-        start_review: this.txFromJSON<null>,
-        pending_admin: this.txFromJSON<Option<string>>,
-        record_evidence: this.txFromJSON<null>,
-        review_evidence: this.txFromJSON<null>,
-        submit_evidence: this.txFromJSON<null>,
-        get_swap_failures: this.txFromJSON<Array<SwapFailureRecord>>,
-        execute_distribution: this.txFromJSON<DistributionSummary>,
-        transfer_admin_start: this.txFromJSON<null>,
-        eurc_swap_path_status: this.txFromJSON<Option<EurcSwapPathStatus>>,
-        transfer_admin_accept: this.txFromJSON<null>,
-        transfer_admin_cancel: this.txFromJSON<null>,
-        get_currency_preference: this.txFromJSON<Currency>,
-        set_currency_preference: this.txFromJSON<null>
-  }
+    pause: this.txFromJSON<null>,
+    unpause: this.txFromJSON<null>,
+    is_paused: this.txFromJSON<boolean>,
+    initialize: this.txFromJSON<null>,
+    exit_status: this.txFromJSON<Option<ExitRecord>>,
+    flag_dispute: this.txFromJSON<null>,
+    get_evidence: this.txFromJSON<Option<EvidenceRecord>>,
+    start_review: this.txFromJSON<null>,
+    pending_admin: this.txFromJSON<Option<string>>,
+    record_evidence: this.txFromJSON<null>,
+    review_evidence: this.txFromJSON<null>,
+    submit_evidence: this.txFromJSON<null>,
+    get_swap_failures: this.txFromJSON<Array<SwapFailureRecord>>,
+    execute_distribution: this.txFromJSON<DistributionSummary>,
+    transfer_admin_start: this.txFromJSON<null>,
+    eurc_swap_path_status: this.txFromJSON<Option<EurcSwapPathStatus>>,
+    transfer_admin_accept: this.txFromJSON<null>,
+    transfer_admin_cancel: this.txFromJSON<null>,
+    get_currency_preference: this.txFromJSON<Currency>,
+    set_currency_preference: this.txFromJSON<null>,
+  };
 }

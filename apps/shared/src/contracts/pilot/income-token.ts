@@ -226,7 +226,9 @@ export interface PilotIncomeTokenClientInterface {
   /**
    * Return whether the contract is paused.
    */
-  is_paused: (options?: MethodOptions) => Promise<AssembledTransaction<boolean>>;
+  is_paused: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<boolean>>;
 
   /**
    * Initialize token metadata and the whitelist contract used for mint gating.

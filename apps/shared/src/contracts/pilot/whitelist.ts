@@ -131,7 +131,9 @@ export interface PilotWhitelistClientInterface {
   /**
    * Return whether the contract is paused.
    */
-  is_paused: (options?: MethodOptions) => Promise<AssembledTransaction<boolean>>;
+  is_paused: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<boolean>>;
 
   /**
    * Initialize the whitelist with the admin address that can approve and revoke investors.

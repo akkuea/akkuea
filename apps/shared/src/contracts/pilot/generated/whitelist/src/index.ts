@@ -18,111 +18,132 @@ if (typeof globalThis !== "undefined" && !globalThis.Buffer) {
   (globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer;
 }
 
-
 export const WhitelistError = {
-  1: {message:"AlreadyInitialized"},
-  2: {message:"NotInitialized"},
-  3: {message:"Unauthorized"},
+  1: { message: "AlreadyInitialized" },
+  2: { message: "NotInitialized" },
+  3: { message: "Unauthorized" },
   /**
    * `transfer_admin_accept` was called by an address that does not match
    * the pending admin recorded by `transfer_admin_start`, or no transfer
    * is pending at all.
    */
-  4: {message:"NotPendingAdmin"},
+  4: { message: "NotPendingAdmin" },
   /**
    * A state-changing call was rejected because the contract is paused.
    */
-  5: {message:"ContractPaused"}
-}
-
+  5: { message: "ContractPaused" },
+};
 
 export interface WhitelistMutationEvent {
   address: string;
   admin: string;
 }
 
-
 export interface AdminTransferStartedEvent {
   current_admin: string;
   new_admin: string;
 }
-
 
 export interface AdminTransferAcceptedEvent {
   new_admin: string;
   old_admin: string;
 }
 
-
 export interface AdminTransferCancelledEvent {
   admin: string;
 }
 
-export type DataKey = {tag: "Admin", values: void} | {tag: "Approved", values: readonly [string]} | {tag: "PendingAdmin", values: void} | {tag: "Paused", values: void};
+export type DataKey =
+  | { tag: "Admin"; values: void }
+  | { tag: "Approved"; values: readonly [string] }
+  | { tag: "PendingAdmin"; values: void }
+  | { tag: "Paused"; values: void };
 
 export interface PilotWhitelistClientInterface {
   /**
    * Construct and simulate a admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the configured whitelist admin.
    */
-  admin: (options?: MethodOptions) => Promise<AssembledTransaction<string>>
+  admin: (options?: MethodOptions) => Promise<AssembledTransaction<string>>;
 
   /**
    * Construct and simulate a pause transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Pause `approve` and `revoke`. Read-only calls keep working.
-   * 
+   *
    * Mirrors `pilot-payout-split`'s `pause`. Before this change, a wrongful
    * approval or revocation had no on-chain circuit breaker.
    */
-  pause: ({admin}: {admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  pause: (
+    { admin }: { admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a revoke transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Revoke an investor address from pilot participation.
    */
-  revoke: ({admin, address}: {admin: string, address: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  revoke: (
+    { admin, address }: { admin: string; address: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a approve transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Approve an investor address for pilot participation.
    */
-  approve: ({admin, address}: {admin: string, address: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  approve: (
+    { admin, address }: { admin: string; address: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a unpause transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Resume `approve` and `revoke`.
    */
-  unpause: ({admin}: {admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  unpause: (
+    { admin }: { admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a is_paused transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return whether the contract is paused.
    */
-  is_paused: (options?: MethodOptions) => Promise<AssembledTransaction<boolean>>
+  is_paused: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<boolean>>;
 
   /**
    * Construct and simulate a initialize transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Initialize the whitelist with the admin address that can approve and revoke investors.
    */
-  initialize: ({admin}: {admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  initialize: (
+    { admin }: { admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a is_approved transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return whether an address is approved for pilot participation.
    * Read-only: keeps working while the contract is paused.
    */
-  is_approved: ({address}: {address: string}, options?: MethodOptions) => Promise<AssembledTransaction<boolean>>
+  is_approved: (
+    { address }: { address: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<boolean>>;
 
   /**
    * Construct and simulate a pending_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the pending admin, if a transfer is in progress.
    */
-  pending_admin: (options?: MethodOptions) => Promise<AssembledTransaction<Option<string>>>
+  pending_admin: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<string>>>;
 
   /**
    * Construct and simulate a transfer_admin_start transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Begin transferring admin to a new address.
-   * 
+   *
    * Two-step, following the same pattern as `defi-rwa`'s
    * `AdminControl::transfer_admin_start` (see
    * docs/operations/runbook-role-management.md). The current admin keeps
@@ -130,7 +151,10 @@ export interface PilotWhitelistClientInterface {
    * mistyped or unreachable new admin can never lock the contract out.
    * Not blocked by `pause`: admin recovery must keep working while paused.
    */
-  transfer_admin_start: ({caller, new_admin}: {caller: string, new_admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  transfer_admin_start: (
+    { caller, new_admin }: { caller: string; new_admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a transfer_admin_accept transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -139,15 +163,20 @@ export interface PilotWhitelistClientInterface {
    * instant this call succeeds, since `require_admin` compares against the
    * single stored admin address.
    */
-  transfer_admin_accept: ({new_admin}: {new_admin: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
+  transfer_admin_accept: (
+    { new_admin }: { new_admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a transfer_admin_cancel transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Cancel a pending admin transfer before it is accepted. Only the
    * current admin can cancel.
    */
-  transfer_admin_cancel: ({caller}: {caller: string}, options?: MethodOptions) => Promise<AssembledTransaction<null>>
-
+  transfer_admin_cancel: (
+    { caller }: { caller: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 }
 export class PilotWhitelistClient extends ContractClient {
   static override async deploy<T = PilotWhitelistClient>(
@@ -160,13 +189,14 @@ export class PilotWhitelistClient extends ContractClient {
         salt?: Buffer | Uint8Array;
         /** The format used to decode `wasmHash`, if it's provided as a string. */
         format?: "hex" | "base64";
-      }
+      },
   ): Promise<AssembledTransaction<T>> {
-    return ContractClient.deploy(null, options)
+    return ContractClient.deploy(null, options);
   }
   constructor(public override readonly options: ContractClientOptions) {
     super(
-      new ContractSpec([ "AAAAAAAAACZSZXR1cm4gdGhlIGNvbmZpZ3VyZWQgd2hpdGVsaXN0IGFkbWluLgAAAAAABWFkbWluAAAAAAAAAAAAAAEAAAAT",
+      new ContractSpec([
+        "AAAAAAAAACZSZXR1cm4gdGhlIGNvbmZpZ3VyZWQgd2hpdGVsaXN0IGFkbWluLgAAAAAABWFkbWluAAAAAAAAAAAAAAEAAAAT",
         "AAAAAAAAALtQYXVzZSBgYXBwcm92ZWAgYW5kIGByZXZva2VgLiBSZWFkLW9ubHkgY2FsbHMga2VlcCB3b3JraW5nLgoKTWlycm9ycyBgcGlsb3QtcGF5b3V0LXNwbGl0YCdzIGBwYXVzZWAuIEJlZm9yZSB0aGlzIGNoYW5nZSwgYSB3cm9uZ2Z1bAphcHByb3ZhbCBvciByZXZvY2F0aW9uIGhhZCBubyBvbi1jaGFpbiBjaXJjdWl0IGJyZWFrZXIuAAAAAAVwYXVzZQAAAAAAAAEAAAAAAAAABWFkbWluAAAAAAAAEwAAAAA=",
         "AAAAAAAAADRSZXZva2UgYW4gaW52ZXN0b3IgYWRkcmVzcyBmcm9tIHBpbG90IHBhcnRpY2lwYXRpb24uAAAABnJldm9rZQAAAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAdhZGRyZXNzAAAAABMAAAAA",
         "AAAAAAAAADRBcHByb3ZlIGFuIGludmVzdG9yIGFkZHJlc3MgZm9yIHBpbG90IHBhcnRpY2lwYXRpb24uAAAAB2FwcHJvdmUAAAAAAgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAdhZGRyZXNzAAAAABMAAAAA",
@@ -183,22 +213,23 @@ export class PilotWhitelistClient extends ContractClient {
         "AAAAAQAAAAAAAAAAAAAAGUFkbWluVHJhbnNmZXJTdGFydGVkRXZlbnQAAAAAAAACAAAAAAAAAA1jdXJyZW50X2FkbWluAAAAAAAAEwAAAAAAAAAJbmV3X2FkbWluAAAAAAAAEw==",
         "AAAAAQAAAAAAAAAAAAAAGkFkbWluVHJhbnNmZXJBY2NlcHRlZEV2ZW50AAAAAAACAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAAAAAAlvbGRfYWRtaW4AAAAAAAAT",
         "AAAAAQAAAAAAAAAAAAAAG0FkbWluVHJhbnNmZXJDYW5jZWxsZWRFdmVudAAAAAABAAAAAAAAAAVhZG1pbgAAAAAAABM=",
-        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAABAAAAAAAAAAAAAAABUFkbWluAAAAAAAAAQAAAAAAAAAIQXBwcm92ZWQAAAABAAAAEwAAAAAAAAAAAAAADFBlbmRpbmdBZG1pbgAAAAAAAAAAAAAABlBhdXNlZAAA" ]),
-      options
-    )
+        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAABAAAAAAAAAAAAAAABUFkbWluAAAAAAAAAQAAAAAAAAAIQXBwcm92ZWQAAAABAAAAEwAAAAAAAAAAAAAADFBlbmRpbmdBZG1pbgAAAAAAAAAAAAAABlBhdXNlZAAA",
+      ]),
+      options,
+    );
   }
   public readonly fromJSON = {
     admin: this.txFromJSON<string>,
-        pause: this.txFromJSON<null>,
-        revoke: this.txFromJSON<null>,
-        approve: this.txFromJSON<null>,
-        unpause: this.txFromJSON<null>,
-        is_paused: this.txFromJSON<boolean>,
-        initialize: this.txFromJSON<null>,
-        is_approved: this.txFromJSON<boolean>,
-        pending_admin: this.txFromJSON<Option<string>>,
-        transfer_admin_start: this.txFromJSON<null>,
-        transfer_admin_accept: this.txFromJSON<null>,
-        transfer_admin_cancel: this.txFromJSON<null>
-  }
+    pause: this.txFromJSON<null>,
+    revoke: this.txFromJSON<null>,
+    approve: this.txFromJSON<null>,
+    unpause: this.txFromJSON<null>,
+    is_paused: this.txFromJSON<boolean>,
+    initialize: this.txFromJSON<null>,
+    is_approved: this.txFromJSON<boolean>,
+    pending_admin: this.txFromJSON<Option<string>>,
+    transfer_admin_start: this.txFromJSON<null>,
+    transfer_admin_accept: this.txFromJSON<null>,
+    transfer_admin_cancel: this.txFromJSON<null>,
+  };
 }

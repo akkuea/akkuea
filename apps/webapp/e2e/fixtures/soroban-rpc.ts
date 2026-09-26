@@ -6,10 +6,7 @@ import {
   xdr,
   Networks,
 } from "@stellar/stellar-sdk";
-import type {
-  PilotEvidenceRecord,
-  PilotEvidenceStatusTag,
-} from "@akkuea/shared";
+import type { PilotEvidenceStatusTag } from "@akkuea/shared";
 
 /**
  * Realistic XDR and JSON-RPC mocking for Soroban RPC at the browser network layer.
@@ -48,6 +45,87 @@ export interface DecodedContractCall {
   rawArgs: xdr.ScVal[];
   args: Record<string, unknown>;
 }
+
+type ContractCallLike = {
+  contractAddress:
+    | (() => {
+        arm?(): string;
+        type?: string;
+        contractId?(): Buffer;
+        value?: Uint8Array;
+      })
+    | {
+        arm?(): string;
+        type?: string;
+        contractId?(): Buffer;
+        value?: Uint8Array;
+      };
+  functionName: (() => { toString(): string }) | { toString(): string };
+  args: (() => xdr.ScVal[]) | xdr.ScVal[];
+};
+
+type HostFunctionLike = {
+  arm?(): string;
+  invokeContract?(): ContractCallLike;
+  type?: string;
+  value?: ContractCallLike;
+};
+
+type TransactionLike = {
+  operations: Array<{
+    type: string;
+    func?: HostFunctionLike;
+  }>;
+};
+
+function contractCallFromHost(host: HostFunctionLike): ContractCallLike | null {
+  if (host.arm?.() === "invokeContract" && host.invokeContract) {
+    return host.invokeContract();
+  }
+  if (host.type === "hostFunctionTypeInvokeContract" && host.value) {
+    return host.value;
+  }
+  return null;
+}
+
+function normalizeContractCall(call: ContractCallLike): {
+  address: {
+    arm?(): string;
+    type?: string;
+    contractId?(): Buffer;
+    value?: Uint8Array;
+  };
+  functionName: string;
+  args: xdr.ScVal[];
+} {
+  const address =
+    typeof call.contractAddress === "function"
+      ? call.contractAddress()
+      : call.contractAddress;
+  const functionName =
+    typeof call.functionName === "function"
+      ? call.functionName().toString()
+      : call.functionName.toString();
+  const args = typeof call.args === "function" ? call.args() : call.args;
+  return { address, functionName, args };
+}
+
+type LowLevelTransactionLike = {
+  operations(): Array<{
+    body(): {
+      arm(): string;
+      invokeHostFunctionOp(): { hostFunction(): HostFunctionLike };
+    };
+  }>;
+};
+
+type EnvelopeLike = {
+  switch?(): string;
+  v0?(): { tx(): LowLevelTransactionLike };
+  v1?(): { tx(): LowLevelTransactionLike };
+  tx?(): LowLevelTransactionLike;
+  value?(): { tx(): LowLevelTransactionLike };
+};
 
 /**
  * Creates a minimal valid base64-encoded SorobanTransactionData XDR.
@@ -185,25 +263,29 @@ export function decodeContractInvocation(
   passphrase = Networks.TESTNET,
 ): DecodedContractCall | null {
   try {
-    const tx = TransactionBuilder.fromXDR(envelopeXdr, passphrase) as any;
-    const operations = tx?.operations || [];
+    const tx = TransactionBuilder.fromXDR(
+      envelopeXdr,
+      passphrase,
+    ) as unknown as TransactionLike;
+    const operations = tx.operations;
     for (const op of operations) {
       if (op.type === "invokeHostFunction") {
         const hostFunc = op.func;
-        if (
-          hostFunc &&
-          typeof hostFunc.arm === "function" &&
-          hostFunc.arm() === "invokeContract"
-        ) {
-          const contractCall = hostFunc.invokeContract();
-          const contractAddress = contractCall.contractAddress();
-          const functionName = contractCall.functionName().toString();
-          const rawArgs = contractCall.args();
+        if (hostFunc) {
+          const rawContractCall = contractCallFromHost(hostFunc);
+          if (!rawContractCall) continue;
+          const contractCall = normalizeContractCall(rawContractCall);
+          const contractAddress = contractCall.address;
+          const functionName = contractCall.functionName;
+          const rawArgs = contractCall.args;
 
           let contractId = "";
           try {
-            if (contractAddress.arm() === "contractId") {
-              contractId = contractAddress.contractId().toString("hex");
+            if (contractAddress.arm?.() === "contractId") {
+              contractId = contractAddress.contractId?.().toString("hex") ?? "";
+            } else if (contractAddress.type === "scAddressTypeContract") {
+              const value = contractAddress.value;
+              contractId = value ? Buffer.from(value).toString("hex") : "";
             }
           } catch {
             contractId = "unknown";
@@ -218,12 +300,7 @@ export function decodeContractInvocation(
             }
           });
 
-          return {
-            contractId,
-            functionName,
-            rawArgs,
-            args,
-          };
+          return { contractId, functionName, rawArgs, args };
         }
       }
     }
@@ -233,24 +310,24 @@ export function decodeContractInvocation(
       const envelope = xdr.TransactionEnvelope.fromXDR(
         envelopeXdr,
         "base64",
-      ) as any;
+      ) as unknown as EnvelopeLike;
       const tx =
-        envelope.switch && envelope.switch() === "v0"
-          ? envelope.v0().tx()
-          : envelope.v1
-            ? envelope.v1().tx()
-            : typeof envelope.tx === "function"
-              ? envelope.tx()
-              : envelope.value().tx();
+        envelope.switch?.() === "v0"
+          ? envelope.v0?.()?.tx()
+          : (envelope.v1?.()?.tx() ??
+            envelope.tx?.() ??
+            envelope.value?.()?.tx());
+      if (!tx) return null;
       const operations = tx.operations();
       for (const op of operations) {
         const body = op.body();
         if (body.arm() === "invokeHostFunctionOp") {
           const hostFunc = body.invokeHostFunctionOp().hostFunction();
-          if (hostFunc.arm() === "invokeContract") {
-            const contractCall = hostFunc.invokeContract();
-            const functionName = contractCall.functionName().toString();
-            const rawArgs = contractCall.args();
+          const rawContractCall = contractCallFromHost(hostFunc);
+          if (rawContractCall) {
+            const contractCall = normalizeContractCall(rawContractCall);
+            const functionName = contractCall.functionName;
+            const rawArgs = contractCall.args;
             return {
               contractId: "mock-contract",
               functionName,
@@ -658,6 +735,21 @@ export async function mockPilotRpc(
     async (route: Route) => {
       const request = route.request();
       if (request.method() !== "POST") {
+        if (
+          request.method() === "GET" &&
+          request.url().includes("/accounts/")
+        ) {
+          await route.fulfill({
+            status: 200,
+            contentType: "application/json",
+            body: JSON.stringify({
+              id: request.url().split("/accounts/")[1]?.split("?")[0] ?? "",
+              sequence: "1",
+              balances: [{ asset_type: "native", balance: "1000" }],
+            }),
+          });
+          return;
+        }
         await route.continue();
         return;
       }
@@ -752,6 +844,26 @@ export async function mockPilotRpc(
         return;
       }
 
+      if (method === "getAccount") {
+        const address = String(body.params?.address ?? "");
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id,
+            result: {
+              id: address,
+              sequenceNumber: "1",
+              balances: [],
+              signers: [],
+              flags: [],
+              pagingToken: "1",
+            },
+          }),
+        });
+        return;
+      }
       if (method === "getLatestLedger") {
         await route.fulfill({
           status: 200,

@@ -23,7 +23,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     "/en/pilot/review/evidence",
     "/en/pilot/investor",
   ];
-  const deadline = Date.now() + 90_000;
+  const deadline = Date.now() + 300_000;
 
   for (const route of routes) {
     for (;;) {

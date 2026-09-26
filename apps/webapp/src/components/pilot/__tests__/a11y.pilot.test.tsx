@@ -1,4 +1,4 @@
-/* eslint-disable @next/next/no-img-element, @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import "@/test/setup-dom";
 import { afterEach, describe, expect, it, mock } from "bun:test";
 import { cleanup, render } from "@testing-library/react";
@@ -19,7 +19,10 @@ const messages = enMessages as unknown as AbstractIntlMessages;
 function withIntl(children: ReactNode) {
   return createElement(
     NextIntlClientProvider,
-    { locale: "en", messages, timeZone: "UTC", children },
+    { locale: "en", messages, timeZone: "UTC" } as unknown as Parameters<
+      typeof NextIntlClientProvider
+    >[0],
+    children,
   );
 }
 

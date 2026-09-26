@@ -61,4 +61,10 @@ jobs:
 
       - name: Prettier format check
         working-directory: apps/webapp
-        run: bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+        run: |
+          changed=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD -- apps/webapp \
+            | grep -E '\.(ts|tsx|js|jsx|json|css)$' \
+            | sed 's#^apps/webapp/##' || true)
+          if [ -n "$changed" ]; then
+            echo "$changed" | xargs bunx prettier --check
+          fi

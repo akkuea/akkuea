@@ -71,7 +71,10 @@ export default defineConfig({
         command: "bun run dev:e2e",
         url: BASE_URL,
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        // The first webpack compilation of the pilot routes can take several
+        // minutes on a cold CI runner. Keep the server alive long enough for
+        // global setup to warm those routes before tests begin.
+        timeout: 300_000,
         env: {
           PORT,
           // Real values are irrelevant: every request the app makes to these

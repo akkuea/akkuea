@@ -3,7 +3,7 @@ import { mockConnectedWallet, MOCK_OPERATOR_WALLET } from "./fixtures/wallet";
 import { mockPilotRpc, PilotRpcScenario } from "./fixtures/soroban-rpc";
 
 const MOCK_ALLY_WALLET =
-  "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBDQCQZVQQ6BRVV12BKHA";
+  "GCCVPYFOHY7ZB7557JKENAX62LUAPLMGIWNZJAFV2MITK6T32V37KEJU";
 
 test.describe("Evidence Lifecycle - Ally Workflow", () => {
   test("ally submits evidence with client-side hashing and enters submitted state", async ({
@@ -16,7 +16,9 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await page.goto("/en/pilot/ally");
 
     // Verify page loads with connected ally form
-    await expect(page.getByText("Monthly Income Evidence")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: /^Evidence for .+ \d{4}$/ }),
+    ).toBeVisible();
 
     // Select a file to trigger client-side hashing
     const fileInput = page.locator('input[type="file"]');
@@ -45,7 +47,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
 
     // Submitted state confirmation
     await expect(
-      page.getByText("Submitted for review, awaiting operator confirmation."),
+      page.getByText("Submitted. The operator can now review this cycle."),
     ).toBeVisible();
   });
 
@@ -62,7 +64,8 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
       submittedAt: Math.floor(Date.now() / 1000) - 86400,
       recordedAt: Math.floor(Date.now() / 1000) - 86400,
       reviewedAt: Math.floor(Date.now() / 1000),
-      reviewReason: "The statement covers three weeks, not the full month.",
+      reviewReason:
+        "Rejected: The statement covers three weeks, not the full month.",
       distributed: false,
       distributedAt: 0,
     });
@@ -74,7 +77,9 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
 
     // Operator reason is prominently displayed
     await expect(
-      page.getByText("The statement covers three weeks, not the full month."),
+      page.getByText(
+        "Rejected: The statement covers three weeks, not the full month.",
+      ),
     ).toBeVisible();
 
     // Form remains open and inputs are enabled for resubmission
@@ -99,7 +104,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await submitButton.click();
 
     await expect(
-      page.getByText("Submitted for review, awaiting operator confirmation."),
+      page.getByText("Submitted. The operator can now review this cycle."),
     ).toBeVisible();
   });
 
@@ -113,7 +118,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
 
     await expect(
       page.getByText(
-        "The payout contract is paused. New submissions cannot be processed.",
+        "The payout contract is paused. Submissions are disabled until an admin resumes it.",
       ),
     ).toBeVisible();
 
@@ -145,7 +150,9 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await page.goto("/en/pilot/ally");
 
     await expect(
-      page.getByText("Evidence for this cycle is already recorded on-chain."),
+      page.getByText(
+        "This cycle is already recorded on-chain. A new submission is only possible after a rejection.",
+      ),
     ).toBeVisible();
     await expect(page.locator('input[type="file"]')).toBeDisabled();
   });

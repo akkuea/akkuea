@@ -9,7 +9,7 @@
 #   ./scripts/mainnet-preflight.sh                  # full check (requires stellar CLI + network)
 #   ./scripts/mainnet-preflight.sh --env-only       # environment check only (CI dry-run mode)
 #
-# Required environment variables for the on-chain check:
+# Required env vars for the on-chain check:
 #   PILOT_WHITELIST_ID       deployed whitelist contract ID
 #   PILOT_INCOME_TOKEN_ID    deployed income token contract ID
 #   PILOT_PAYOUT_SPLIT_ID    deployed payout-split contract ID
@@ -17,6 +17,9 @@
 #   MANIFEST_OPERATOR        expected operator public key
 #   MANIFEST_ALLY            expected ally public key
 #   MANIFEST_FEE_RECIPIENT   expected fee recipient public key
+#   MANIFEST_USDC_TOKEN      expected USDC token contract ID
+#   MANIFEST_EURC_TOKEN      expected EURC token contract ID
+#   MANIFEST_SWAP_ROUTER     expected Soroswap router contract ID
 #   MANIFEST_WASM_WHITELIST  sha256 of the audited pilot_whitelist.wasm
 #   MANIFEST_WASM_TOKEN      sha256 of the audited pilot_income_token.wasm
 #   MANIFEST_WASM_PAYOUT     sha256 of the audited pilot_payout_split.wasm
@@ -38,17 +41,6 @@ ERRORS=()
 
 fail() {
   ERRORS+=("FAIL: $1")
-}
-
-check_env() {
-  local var="$1"
-  local val="${!var:-}"
-  if [[ -z "$val" ]]; then
-    fail "$var is not set"
-    echo "false"
-  else
-    echo "$val"
-  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -124,7 +116,7 @@ else
   echo "  OK  OPERATIONS_BACKEND_CREDENTIAL is set"
 fi
 
-# OPERATIONS_ALLOWED_WALLETS must be set and look like real Stellar keys
+# OPERATIONS_ALLOWED_WALLETS must be set and not contain placeholder keys
 ops_wallets="${OPERATIONS_ALLOWED_WALLETS:-}"
 if [[ -z "$ops_wallets" ]]; then
   fail "OPERATIONS_ALLOWED_WALLETS is not set - no production admin addresses configured"
@@ -134,7 +126,7 @@ else
   echo "  OK  OPERATIONS_ALLOWED_WALLETS is set"
 fi
 
-# STELLAR_ADMIN_SECRET must start with S and be 56 chars (basic sanity; not a full key validation)
+# STELLAR_ADMIN_SECRET must start with S and be 56 chars
 admin_secret="${STELLAR_ADMIN_SECRET:-}"
 if [[ -z "$admin_secret" ]]; then
   fail "STELLAR_ADMIN_SECRET is not set"
@@ -166,6 +158,9 @@ else
     manifest_operator="${MANIFEST_OPERATOR:-}"
     manifest_ally="${MANIFEST_ALLY:-}"
     manifest_fee="${MANIFEST_FEE_RECIPIENT:-}"
+    manifest_usdc="${MANIFEST_USDC_TOKEN:-}"
+    manifest_eurc="${MANIFEST_EURC_TOKEN:-}"
+    manifest_router="${MANIFEST_SWAP_ROUTER:-}"
     manifest_wasm_whitelist="${MANIFEST_WASM_WHITELIST:-}"
     manifest_wasm_token="${MANIFEST_WASM_TOKEN:-}"
     manifest_wasm_payout="${MANIFEST_WASM_PAYOUT:-}"
@@ -238,6 +233,43 @@ else
         fail "payout contract is_paused = true - unpause before going live"
       elif [[ "$result" != "__invoke_error__" ]]; then
         echo "  OK  payout is_paused = false"
+      fi
+    fi
+
+    # Wiring check: eurc_swap_path_status() returns the router, USDC, and EURC
+    # token addresses stored inside the payout contract at initialization.
+    # This confirms the contract was wired to the intended token contracts and
+    # router, not a test or placeholder deployment.
+    if [[ -n "$payout_id" ]]; then
+      wiring="$(invoke "$payout_id" eurc_swap_path_status)"
+      if [[ "$wiring" == "__invoke_error__" ]]; then
+        fail "payout.eurc_swap_path_status() call failed"
+      else
+        echo "  INFO payout wiring: $wiring"
+
+        if [[ -n "$manifest_usdc" ]]; then
+          if [[ "$wiring" != *"$manifest_usdc"* ]]; then
+            fail "payout USDC token mismatch. Expected $manifest_usdc in wiring output: $wiring"
+          else
+            echo "  OK  payout usdc_token = $manifest_usdc"
+          fi
+        fi
+
+        if [[ -n "$manifest_eurc" ]]; then
+          if [[ "$wiring" != *"$manifest_eurc"* ]]; then
+            fail "payout EURC token mismatch. Expected $manifest_eurc in wiring output: $wiring"
+          else
+            echo "  OK  payout eurc_token = $manifest_eurc"
+          fi
+        fi
+
+        if [[ -n "$manifest_router" ]]; then
+          if [[ "$wiring" != *"$manifest_router"* ]]; then
+            fail "payout swap_router mismatch. Expected $manifest_router in wiring output: $wiring"
+          else
+            echo "  OK  payout swap_router = $manifest_router"
+          fi
+        fi
       fi
     fi
 

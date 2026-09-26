@@ -12,7 +12,6 @@ import { userRepository } from '../repositories/UserRepository';
 import { errorHandler } from '../middleware/errorHandler';
 import { challengeStore } from '../controllers/AuthController';
 
-
 describe('Auth Routes Integration Tests', () => {
   const app = new Elysia()
     .use(errorHandler)

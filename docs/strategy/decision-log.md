@@ -53,6 +53,7 @@ See [`integration-decisions.md`](integration-decisions.md) for the full verifica
 5. **Integration pattern:** The payout contract pulls `path[0]` (USDC) from its own address and receives `path[1]` (EURC) back, matching the router's `to` address semantics. This is the same pull-from-caller pattern used by every Soroswap SDK consumer.
 
 **Why Soroswap over alternatives:**
+
 - Soroswap is the most widely deployed and audited Soroban AMM on Stellar. The router is already used by the Soroswap aggregator, which routes across Soroswap, Phoenix, Aquarius, and Stellar DEX.
 - Building a bespoke swap mechanism is explicitly ruled out by this project's own principle of verifying before integrating and never building from scratch what already exists and is audited.
 - The contract interface is simple (single-hop exact-input swap) and maps cleanly to the payout contract's settlement needs.

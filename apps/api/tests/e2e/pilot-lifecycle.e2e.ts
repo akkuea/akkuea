@@ -170,9 +170,14 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
     expect(txStatus.status).toBe(rpc.Api.GetTransactionStatus.SUCCESS);
 
     // 2. Execute Distribution
+    // The contract requires both the operator and the ally to authorize the
+    // same invocation, and carries the EURC price floor argument.
     const execOp = contract.call(
       'execute_distribution',
+      nativeToScVal(operatorKeypair.publicKey(), { type: 'address' }),
+      nativeToScVal(allyKeypair.publicKey(), { type: 'address' }),
       nativeToScVal(cycleId, { type: 'string' }),
+      nativeToScVal(1n, { type: 'i128' }),
     );
 
     const execAccount = await server.getAccount(operatorKeypair.publicKey());
@@ -184,7 +189,7 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
     const execTx = execTxBuilder.build();
 
     const preparedExecTx = await server.prepareTransaction(execTx);
-    preparedExecTx.sign(operatorKeypair); // Only operator needs to sign execution
+    preparedExecTx.sign(operatorKeypair, allyKeypair); // Dual-signer flow
 
     const execSendRes = await server.sendTransaction(preparedExecTx);
     expect(execSendRes.status).toBe('PENDING');

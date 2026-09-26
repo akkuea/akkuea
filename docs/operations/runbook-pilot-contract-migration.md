@@ -217,7 +217,9 @@ contract IDs, in the same mandatory order (`pilot-whitelist`, then
   $OPERATOR_ADDRESS \
   $ALLY_ADDRESS \
   $PLATFORM_FEE_RECIPIENT \
-  $USDC_TOKEN_CONTRACT_ID
+  $USDC_TOKEN_CONTRACT_ID \
+  $EURC_TOKEN_CONTRACT_ID \
+  $SWAP_ROUTER_CONTRACT_ID
 
 export NEW_WHITELIST="<new PILOT_WHITELIST contract ID>"
 export NEW_INCOME_TOKEN="<new PILOT_INCOME_TOKEN contract ID>"

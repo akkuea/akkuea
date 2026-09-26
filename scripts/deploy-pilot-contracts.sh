@@ -4,7 +4,7 @@
 # pilot-whitelist, pilot-income-token, and pilot-payout-split.
 #
 # Usage:
-#   ./scripts/deploy-pilot-contracts.sh [network] [identity] [operator] [ally] [fee_recipient] [usdc_token]
+#   ./scripts/deploy-pilot-contracts.sh [network] [identity] [operator] [ally] [fee_recipient] [usdc_token] [eurc_token] [swap_router]
 #
 #   network        Stellar network to deploy to (default: testnet)
 #   identity       stellar CLI identity used as deployer/admin. For testnet it
@@ -13,6 +13,11 @@
 #   ally           Allied agency signer address required for evidence approval (required)
 #   fee_recipient  Platform fee recipient address (default: deployer address)
 #   usdc_token     USDC SAC contract ID for the target network (required)
+#   eurc_token     EURC asset contract contract ID offered as settlement
+#                  alternative (required, must differ from usdc_token)
+#   swap_router    Verified Soroswap AMM router contract ID used to convert
+#                  USDC shares at payout time (required, must differ from
+#                  both token contract IDs)
 #
 # See docs/deployment/deploy-pilot-contracts.md for the full walkthrough.
 
@@ -40,6 +45,8 @@ OPERATOR="${3:-}"
 ALLY="${4:-}"
 FEE_RECIPIENT="${5:-$DEPLOYER}"
 USDC_TOKEN="${6:-}"
+EURC_TOKEN="${7:-}"
+SWAP_ROUTER="${8:-}"
 
 if [ -z "$OPERATOR" ]; then
     echo "Operator address is required as argument 3." >&2
@@ -61,12 +68,29 @@ if [ -z "$USDC_TOKEN" ]; then
     exit 1
 fi
 
+if [ -z "$EURC_TOKEN" ]; then
+    echo "EURC token contract ID is required as argument 7." >&2
+    exit 1
+fi
+
+if [ -z "$SWAP_ROUTER" ]; then
+    echo "Swap router contract ID is required as argument 8." >&2
+    exit 1
+fi
+
+if [ "$USDC_TOKEN" = "$EURC_TOKEN" ] || [ "$SWAP_ROUTER" = "$USDC_TOKEN" ] || [ "$SWAP_ROUTER" = "$EURC_TOKEN" ]; then
+    echo "USDC token, EURC token, and swap router contract IDs must be distinct." >&2
+    exit 1
+fi
+
 echo "Network:       $NETWORK"
 echo "Admin:         $DEPLOYER (identity: $IDENTITY)"
 echo "Operator:      $OPERATOR"
 echo "Ally:          $ALLY"
 echo "Fee recipient: $FEE_RECIPIENT"
 echo "USDC token:    $USDC_TOKEN"
+echo "EURC token:    $EURC_TOKEN"
+echo "Swap router:   $SWAP_ROUTER"
 
 echo "Building contracts..."
 (cd "$CONTRACTS_DIR" && stellar contract build)
@@ -126,7 +150,9 @@ invoke "$PAYOUT_SPLIT_ID" initialize \
     --platform_fee_recipient "$FEE_RECIPIENT" \
     --income_token "$INCOME_TOKEN_ID" \
     --whitelist "$WHITELIST_ID" \
-    --usdc_token "$USDC_TOKEN"
+    --usdc_token "$USDC_TOKEN" \
+    --eurc_token "$EURC_TOKEN" \
+    --swap_router "$SWAP_ROUTER"
 
 cat <<EOF
 
@@ -136,6 +162,8 @@ Pilot contract deployment complete.
   PILOT_INCOME_TOKEN:  $INCOME_TOKEN_ID
   PILOT_PAYOUT_SPLIT:  $PAYOUT_SPLIT_ID
   USDC_TOKEN:          $USDC_TOKEN
+  EURC_TOKEN:          $EURC_TOKEN
+  SWAP_ROUTER:         $SWAP_ROUTER
   admin:               $DEPLOYER
   operator:            $OPERATOR
   ally:                $ALLY

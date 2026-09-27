@@ -139,7 +139,7 @@ function createDummyTransactionData(): string {
       diskReadBytes: 0,
       writeBytes: 0,
     }),
-    resourceFee: 0n,
+    resourceFee: BigInt(0),
   });
   return transactionData.toXDR("base64");
 }

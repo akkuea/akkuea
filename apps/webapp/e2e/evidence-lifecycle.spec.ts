@@ -5,6 +5,12 @@ import { mockPilotRpc, PilotRpcScenario } from "./fixtures/soroban-rpc";
 const MOCK_ALLY_WALLET =
   "GCCVPYFOHY7ZB7557JKENAX62LUAPLMGIWNZJAFV2MITK6T32V37KEJU";
 
+const CURRENT_CYCLE = (() => {
+  const date = new Date();
+  date.setUTCMonth(date.getUTCMonth() - 1);
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+})();
+
 test.describe("Evidence Lifecycle - Ally Workflow", () => {
   test("ally submits evidence with client-side hashing and enters submitted state", async ({
     page,

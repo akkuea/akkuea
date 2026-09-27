@@ -66,15 +66,7 @@ jobs:
       - name: Format checking with Prettier
         run: |
           cd apps/webapp
-          # The webapp contains legacy files that predate the repository's
-          # current Prettier version. Check the files changed by this PR so
-          # formatting remains enforced without failing on that baseline.
-          changed=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" HEAD -- apps/webapp \
-            | grep -E '\.(ts|tsx|js|jsx|json|css)$' \
-            | sed 's#^apps/webapp/##' || true)
-          if [ -n "$changed" ]; then
-            echo "$changed" | xargs bunx prettier --check
-          fi
+          bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
 
       - name: Build application
         run: |
@@ -300,10 +292,10 @@ jobs:
           cd apps/webapp
           # Serve the static Storybook build on port 6006, then run the
           # visual-regression project against it.
-          npx --yes http-server storybook-static --port 6006 --silent &
+          npx --yes http-server@14.1.1 storybook-static --port 6006 --silent &
           STORYBOOK_PID=$!
           # Wait for Storybook to be ready.
-          npx --yes wait-on http://localhost:6006 --timeout 60000
+          npx --yes wait-on@8.0.3 http://localhost:6006 --timeout 60000
           PLAYWRIGHT_STORYBOOK_URL=http://localhost:6006 \
           PLAYWRIGHT_SKIP_WEBSERVER=1 \
           bunx playwright test --project=visual-regression

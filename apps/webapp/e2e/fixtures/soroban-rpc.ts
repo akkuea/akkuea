@@ -131,10 +131,17 @@ type EnvelopeLike = {
  * Creates a minimal valid base64-encoded SorobanTransactionData XDR.
  */
 function createDummyTransactionData(): string {
-  // This opaque placeholder is only used in mocked simulation responses. The
-  // installed SDK exposes the corresponding XDR constructors as abstract
-  // interfaces, so constructing the object here is not type-safe.
-  return "AAAAAgAAAAAAAAAAAAAAAQAAAAAAAAAA";
+  const transactionData = new xdr.SorobanTransactionData({
+    ext: xdr.SorobanTransactionDataExt.v0(),
+    resources: new xdr.SorobanResources({
+      footprint: new xdr.LedgerFootprint({ readOnly: [], readWrite: [] }),
+      instructions: 0,
+      diskReadBytes: 0,
+      writeBytes: 0,
+    }),
+    resourceFee: 0n,
+  });
+  return transactionData.toXDR("base64");
 }
 
 const DEFAULT_TX_DATA = createDummyTransactionData();

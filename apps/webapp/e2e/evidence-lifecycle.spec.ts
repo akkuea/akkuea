@@ -55,7 +55,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     page,
   }) => {
     const scenario = new PilotRpcScenario().setCycle({
-      cycleId: "2026-03",
+      cycleId: CURRENT_CYCLE,
       status: "Rejected",
       totalIncome: BigInt(12_400_0000000),
       evidenceLink: "https://example.com/statement.pdf",
@@ -130,7 +130,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
 
   test("approved cycle shows locked state to ally", async ({ page }) => {
     const scenario = new PilotRpcScenario().setCycle({
-      cycleId: "2026-03",
+      cycleId: CURRENT_CYCLE,
       status: "Approved",
       totalIncome: BigInt(12_400_0000000),
       evidenceLink: "https://example.com/statement.pdf",
@@ -163,7 +163,7 @@ test.describe("Evidence Lifecycle - Operator Review Queue", () => {
     page,
   }) => {
     const scenario = new PilotRpcScenario()
-      .cycle("2026-03")
+      .cycle(CURRENT_CYCLE)
       .submitted(
         BigInt(12_400_0000000),
         "https://example.com/march-report.pdf",
@@ -193,7 +193,7 @@ test.describe("Evidence Lifecycle - Operator Review Queue", () => {
 
   test("operator rejects a cycle with a required reason", async ({ page }) => {
     const scenario = new PilotRpcScenario()
-      .cycle("2026-03")
+      .cycle(CURRENT_CYCLE)
       .submitted(
         BigInt(12_400_0000000),
         "https://example.com/march-report.pdf",
@@ -224,7 +224,7 @@ test.describe("Evidence Lifecycle - Operator Review Queue", () => {
   test("paused contract disables operator review actions", async ({ page }) => {
     const scenario = new PilotRpcScenario()
       .setPaused(true)
-      .cycle("2026-03")
+      .cycle(CURRENT_CYCLE)
       .submitted(BigInt(12_400_0000000));
 
     await mockConnectedWallet(page, MOCK_OPERATOR_WALLET);
@@ -252,7 +252,7 @@ test.describe("Evidence Lifecycle - Investor Route", () => {
       .distributedOnTime(BigInt(11_750_0000000), 1770249600)
       .cycle("2026-02")
       .distributedLate(BigInt(11_750_0000000), 1773014400)
-      .cycle("2026-03")
+      .cycle(CURRENT_CYCLE)
       .disputed("Bank statement total mismatch with property report")
       .setHoldings({
         balance: BigInt(250_0000000),
@@ -294,7 +294,7 @@ test.describe("Evidence Lifecycle - Investor Route", () => {
       .distributedOnTime(BigInt(11_750_0000000), 1770249600)
       .cycle("2026-02")
       .none()
-      .cycle("2026-03")
+      .cycle(CURRENT_CYCLE)
       .none();
 
     await mockConnectedWallet(

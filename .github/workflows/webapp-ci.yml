@@ -233,7 +233,7 @@ jobs:
       - name: Run Playwright e2e suite
         run: |
           cd apps/webapp
-          bun run test:e2e
+          bunx playwright test --project=chromium
         env:
           CI: "true"
 
@@ -326,3 +326,4 @@ jobs:
           name: visual-regression-diffs
           path: apps/webapp/e2e/snapshots/
           retention-days: 14
+

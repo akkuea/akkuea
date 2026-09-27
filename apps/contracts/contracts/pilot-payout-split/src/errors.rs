@@ -47,9 +47,13 @@ pub enum PayoutError {
     EvidenceNotFound = 27,
     /// Number of holders exceeds the maximum supported bound.
     TooManyHolders = 28,
+    /// `transfer_admin_accept` was called by an address that does not match
+    /// the pending admin recorded by `transfer_admin_start`, or no transfer
+    /// is pending at all.
+    NotPendingAdmin = 29,
     /// `claim_withheld` was invoked with no USDC currently reserved for the
     /// caller. Either the holder never had a failed swap leg, or the withheld
     /// balance was already claimed: this contract never releases the same
     /// reservable unit twice.
-    NothingToClaim = 29,
+    NothingToClaim = 30,
 }

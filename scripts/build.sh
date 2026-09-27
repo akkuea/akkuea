@@ -1,31 +1,22 @@
 #!/bin/bash
 
-# Build script for Soroban contracts using Stellar CLI
+# Build script for Soroban contracts using the stellar CLI.
 
 set -e
 
 echo "Building Soroban contracts..."
 
-# Check if Rust WASM target is installed
-if ! rustup target list --installed | grep -q wasm32-unknown-unknown; then
-    echo "Installing WASM target..."
-    rustup target add wasm32-unknown-unknown
+if ! command -v stellar >/dev/null 2>&1; then
+    echo "stellar CLI not found. Install it first: cargo install --locked stellar-cli" >&2
+    exit 1
 fi
 
-# Build contracts
-cd apps/contracts
+echo "Building every contract in the workspace (defi-rwa, game contracts, pilot contracts)..."
+(cd apps/contracts && stellar contract build)
 
-echo "Building Real Estate Token contract..."
-cargo build --bin real_estate_token --target wasm32-unknown-unknown --release
+WASM_DIR="apps/contracts/target/wasm32v1-none/release"
 
-echo "Building DeFi Lending contract..."
-cargo build --bin defi_lending --target wasm32-unknown-unknown --release
-
-# Verify builds
-echo "Verifying built files..."
-ls -la target/wasm32-unknown-unknown/release/real_estate_token
-ls -la target/wasm32-unknown-unknown/release/defi_lending
+echo "Verifying built WASM files..."
+ls -la "$WASM_DIR"/*.wasm
 
 echo "Contracts built successfully!"
-
-cd ../..

@@ -736,6 +736,7 @@ export async function mockPilotRpc(
   await page.route(
     (url) =>
       url.hostname.includes("stellar.org") ||
+      url.pathname.includes("/accounts/") ||
       url.pathname.includes("/rpc") ||
       url.pathname.includes("soroban") ||
       url.port === "3101",

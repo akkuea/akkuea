@@ -1,3 +1,4 @@
+import { captureErrorSafely } from '@akkuea/shared';
 import { getPilotPayoutSplitContractId } from '../config/contracts';
 import {
   PilotPayoutEvidenceReader,
@@ -214,6 +215,10 @@ export class PilotEscalationJob {
       return { status: 'ok', breached: true, consecutiveMissed: gap.consecutiveMissed, notified, unknownCount: gap.unknownCount };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      captureErrorSafely(err, {
+        context: 'pilot-escalation-tick',
+        operation: 'PILOT_ESCALATION_JOB_TICK_ERROR',
+      });
       logger.error('Pilot escalation job tick failed', {
         operation: 'PILOT_ESCALATION_JOB_TICK_ERROR',
         error: message,

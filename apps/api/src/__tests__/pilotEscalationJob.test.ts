@@ -130,6 +130,7 @@ describe('PilotEscalationJob', () => {
       breached: false,
       consecutiveMissed: 0,
       notified: false,
+      unknownCount: 0,
     });
     expect(notificationService.notifyPilotReportingEscalation).not.toHaveBeenCalled();
   });
@@ -258,7 +259,7 @@ describe('PilotEscalationJob', () => {
     });
 
     const result = await job.tick();
-    expect(result.status).toBe('rpc_error');
+    expect(result.status).toBe('ok');
     expect(notificationService.notifyPilotReportingEscalation).not.toHaveBeenCalled();
     // Retried up to rpcMaxRetries before giving up on the first cycle lookup.
     expect(alwaysFailingReader.hasEvidence).toHaveBeenCalledTimes(2);

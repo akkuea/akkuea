@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it, mock } from 'bun:test';
 import { PilotEscalationJob } from '../pilotEscalationJob';
 
@@ -8,6 +9,7 @@ describe('PilotEscalationJob', () => {
     });
     const result = await job.tick();
     expect(result.status).toBe('skipped');
+    if (result.status !== 'skipped') throw new Error(`unexpected status: ${result.status}`);
     expect(result.reason).toBe('no_agreement_start');
   });
 
@@ -18,6 +20,7 @@ describe('PilotEscalationJob', () => {
     });
     const result = await job.tick();
     expect(result.status).toBe('skipped');
+    if (result.status !== 'skipped') throw new Error(`unexpected status: ${result.status}`);
     expect(result.reason).toBe('no_operator_user');
   });
 
@@ -32,9 +35,15 @@ describe('PilotEscalationJob', () => {
       operatorUserId: 'test-operator',
       evidenceReader: mockReader,
       onUnknown: mock(),
+      escalationRepository: {
+        findByContractId: mock(async () => null),
+        clear: mock(async () => {}),
+        recordNotified: mock(async () => {}),
+      } as any,
     });
     const result = await job.tick();
     expect(result.status).toBe('ok');
+    if (result.status !== 'ok') throw new Error(`unexpected status: ${result.status}`);
     expect(result.unknownCount).toBeGreaterThanOrEqual(0);
   });
 
@@ -52,8 +61,13 @@ describe('PilotEscalationJob', () => {
       notificationService: {
         notifyPilotReportingEscalation: notified,
       } as any,
+      escalationRepository: {
+        findByContractId: mock(async () => null),
+        clear: mock(async () => {}),
+        recordNotified: mock(async () => {}),
+      } as any,
     });
-    const result = await job.tick();
+    await job.tick();
     // Unknown cycles are never escalated
     expect(notified).not.toHaveBeenCalled();
   });
@@ -80,6 +94,7 @@ describe('PilotEscalationJob', () => {
     });
     const result = await job.tick();
     expect(result.status).toBe('ok');
+    if (result.status !== 'ok') throw new Error(`unexpected status: ${result.status}`);
     expect(result.breached).toBe(true);
   });
 });

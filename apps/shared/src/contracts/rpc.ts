@@ -1,4 +1,4 @@
-import { SorobanRpc } from "@stellar/stellar-sdk";
+import { rpc as SorobanRpc } from "@stellar/stellar-sdk";
 import { API_ENDPOINTS } from "../constants/index.js";
 
 export interface RpcEndpoint {
@@ -34,8 +34,8 @@ function isRetryableError(error: unknown): boolean {
 }
 
 function isDeterministicContractError(error: unknown): boolean {
-  if (error instanceof SorobanRpc.Api.SimulationError) {
-    const simError = error as SorobanRpc.Api.SimulationError;
+  if (typeof error === "object" && error !== null) {
+    const simError = error as { error?: unknown };
     if (simError.error && typeof simError.error === "string") {
       const errStr = simError.error.toLowerCase();
       return (
@@ -124,6 +124,7 @@ export async function callWithRetry<T>(
 
   for (let endpointIndex = 0; endpointIndex < endpoints.length; endpointIndex++) {
     const endpoint = endpoints[endpointIndex];
+    if (!endpoint) continue;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       if (Date.now() > retryDeadline) {
@@ -171,17 +172,23 @@ export async function callWithRetry<T>(
  */
 export async function simulateTransactionWithRetry(
   transaction: Parameters<SorobanRpc.Server["simulateTransaction"]>[0],
-  config: RpcRetryConfig & { endpoints?: string[] },
+  config: RpcRetryConfig & { endpoints?: string[]; networkPassphrase?: string },
 ): Promise<SorobanRpc.Api.SimulateTransactionResponse> {
-  const endpoints = config.endpoints ?? [];
+  const endpoints = resolveSorobanRpcEndpoints(
+    config.networkPassphrase ?? "Test SDF Network ; September 2015",
+    undefined,
+    config.endpoints,
+  );
   const retryConfig: RpcRetryConfig = { ...config };
   delete (retryConfig as { endpoints?: string[] }).endpoints;
+  delete (retryConfig as { networkPassphrase?: string }).networkPassphrase;
 
-  return callWithRetry(
+  const result = await callWithRetry(
     async (url: string) => {
       const s = new SorobanRpc.Server(url);
       return s.simulateTransaction(transaction);
     },
     { endpoints, ...retryConfig },
   );
+  return result.data;
 }

@@ -50,6 +50,14 @@ export function pilotRpcUrls(): string[] {
   return [];
 }
 
+/** Ordered, de-duplicated RPC endpoints: explicit override, configured list, then network default. */
+export function pilotRpcEndpoints(): string[] {
+  const override = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL?.trim();
+  return Array.from(
+    new Set([...(override ? [override] : []), ...pilotRpcUrls(), pilotRpcUrl()]),
+  );
+}
+
 export interface PilotContractIds {
   payoutSplit: string;
   incomeToken: string;

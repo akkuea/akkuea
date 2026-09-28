@@ -32,7 +32,7 @@ function scrubPii(data: Record<string, unknown>): Record<string, unknown> {
   ]);
 
   for (const [key, value] of Object.entries(data)) {
-    if (sensitiveKeys.has(key.toLowerCase())) {
+    if ([...sensitiveKeys].some((k) => k.toLowerCase() === key.toLowerCase())) {
       scrubbed[key] = '[REDACTED]';
     } else if (typeof value === 'string' && value.length > 200) {
       scrubbed[key] = value.slice(0, 200) + '...[truncated]';

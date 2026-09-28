@@ -67,16 +67,15 @@ export class PilotPayoutEvidenceReader {
   async hasEvidence(cycleId: string): Promise<EvidenceLookupResult> {
     const tx = this.buildTransaction(cycleId);
 
-    let simulation: ReturnType<InstanceType<typeof SorobanRpc.Server>['simulateTransaction']>;
+    let simulation: Awaited<ReturnType<InstanceType<typeof SorobanRpc.Server>['simulateTransaction']>>;
     try {
-      const result = await simulateTransactionWithRetry(
-        tx,
-        {
-          endpoints: this.rpcUrls.length > 0 ? this.rpcUrls : undefined,
-          ...this.retryConfig,
-        },
-      );
-      simulation = result;
+      simulation =
+        this.rpcUrls.length === 0
+          ? await this.server.simulateTransaction(tx)
+          : await simulateTransactionWithRetry(tx, {
+              endpoints: this.rpcUrls,
+              ...this.retryConfig,
+            });
     } catch (err) {
       if (err instanceof RpcAllEndpointsFailedError) {
         throw new Error(

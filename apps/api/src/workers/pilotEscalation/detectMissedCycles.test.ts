@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { detectMissedCycles } from '../detectMissedCycles';
+import { detectMissedCycles } from './detectMissedCycles';
 
 describe('detectMissedCycles', () => {
   it('returns no breach when all cycles have evidence', () => {

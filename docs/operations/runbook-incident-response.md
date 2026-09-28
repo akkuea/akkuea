@@ -149,5 +149,5 @@ The restore procedure must be rehearsed against a scratch database at least quar
 1. Create a scratch database: `createdb akkuea_scratch`
 2. Restore the most recent backup: `./scripts/restore-db.sh /var/backups/akkuea/akkuea-db-YYYYMMDD.sql`
 3. Run migrations: `bun run db:migrate`
-4. Verify key data: check `pilot_escalation_state`, `notifications`, `whitelist_requests`, `audit_log` tables.
+4. Verify key data: check `pilot_escalation_state`, `notifications`, `pilot_whitelist_requests`, `audit_log` tables.
 5. Document results.

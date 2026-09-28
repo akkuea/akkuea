@@ -3,6 +3,7 @@ import {
   PilotIncomeTokenClient,
   PilotPayoutSplitClient,
   PilotWhitelistClient,
+  callWithRetry,
   readEvidence,
   type PilotIncomeTokenClientInterface,
   type PilotPayoutSplitClientInterface,
@@ -16,6 +17,7 @@ import {
   pilotContractIds,
   pilotNetworkPassphrase,
   pilotPaymentDay,
+  pilotRpcEndpoints,
   pilotRpcUrl,
   pilotStartCycle,
 } from "./config";
@@ -34,12 +36,12 @@ import { enumerateCycles, expectedAtFor } from "./cycles";
 export const PLATFORM_FEE_PERCENT = BigInt(10);
 const PERCENT_DENOMINATOR = BigInt(100);
 
-function clients() {
+function clients(rpcUrl: string = pilotRpcUrl()) {
   const ids = pilotContractIds();
   assertPilotDeployed(ids);
   const shared = {
     networkPassphrase: pilotNetworkPassphrase(),
-    rpcUrl: pilotRpcUrl(),
+    rpcUrl,
   };
   // The generated clients build their call surface from the contract spec at
   // runtime; the matching interface is what describes it to TypeScript.
@@ -54,6 +56,18 @@ function clients() {
       buildContractClientOptions({ ...shared, contractId: ids.whitelist }),
     ) as unknown as PilotWhitelistClientInterface,
   };
+}
+
+type PilotClients = ReturnType<typeof clients>;
+
+/** Runs a read against each configured RPC endpoint in order, with bounded retry. */
+async function withRpcFallback<T>(
+  read: (c: PilotClients) => Promise<T>,
+): Promise<T> {
+  const { data } = await callWithRetry((url: string) => read(clients(url)), {
+    endpoints: pilotRpcEndpoints(),
+  });
+  return data;
 }
 
 function toStatus(record: PilotEvidenceRecord): PilotEvidenceStatus {
@@ -147,13 +161,14 @@ function toDetail(
 export async function fetchPilotCycles(
   now: Date = new Date(),
 ): Promise<PilotEvidenceDetail[]> {
-  const { payout } = clients();
   const paymentDay = pilotPaymentDay();
   const cycleIds = enumerateCycles(pilotStartCycle(), now);
 
   const records = await Promise.all(
     cycleIds.map(async (cycleId) => {
-      const record = await readEvidence(payout, cycleId);
+      const record = await withRpcFallback(({ payout }) =>
+        readEvidence(payout, cycleId),
+      );
       return toDetail(cycleId, expectedAtFor(cycleId, paymentDay), record);
     }),
   );
@@ -164,15 +179,14 @@ export async function fetchPilotCycles(
 export async function fetchPilotCycle(
   cycleId: string,
 ): Promise<PilotEvidenceDetail> {
-  const { payout } = clients();
-  const record = await readEvidence(payout, cycleId);
+  const record = await withRpcFallback(({ payout }) =>
+    readEvidence(payout, cycleId),
+  );
   return toDetail(cycleId, expectedAtFor(cycleId, pilotPaymentDay()), record);
 }
 
 export async function fetchPayoutPaused(): Promise<boolean> {
-  const { payout } = clients();
-  const tx = await payout.is_paused();
-  return tx.result;
+  return withRpcFallback(async ({ payout }) => (await payout.is_paused()).result);
 }
 
 export interface PilotHoldings {
@@ -188,16 +202,16 @@ export interface PilotHoldings {
 export async function fetchPilotHoldings(
   address: string,
 ): Promise<PilotHoldings> {
-  const { incomeToken, whitelist } = clients();
-
   const [balance, totalSupply, decimals, symbol, whitelisted] =
-    await Promise.all([
+    await withRpcFallback(({ incomeToken, whitelist }) =>
+    Promise.all([
       incomeToken.balance({ id: address }).then((tx) => tx.result),
       incomeToken.total_supply().then((tx) => tx.result),
       incomeToken.decimals().then((tx) => tx.result),
       incomeToken.symbol().then((tx) => tx.result),
       whitelist.is_approved({ address }).then((tx) => tx.result),
-    ]);
+    ]),
+  );
 
   return { balance, totalSupply, decimals, symbol, whitelisted };
 }

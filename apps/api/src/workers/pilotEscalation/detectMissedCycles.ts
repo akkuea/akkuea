@@ -51,14 +51,12 @@ export function detectMissedCycles(
   }
 
   const missedCycleIds: string[] = [];
-  const unknownCycleIds: string[] = [];
 
   for (let i = cycles.length - 1; i >= 0; i--) {
     const cycle = cycles[i];
     if (!cycle) break;
 
     if (cycle.isUnknown) {
-      unknownCycleIds.unshift(cycle.cycleId);
       break;
     }
 
@@ -67,6 +65,7 @@ export function detectMissedCycles(
     missedCycleIds.unshift(cycle.cycleId);
   }
 
+  const unknownCycleIds = cycles.filter((c) => c.isUnknown).map((c) => c.cycleId);
   const consecutiveMissed = missedCycleIds.length;
   const lastMissedCycleId =
     consecutiveMissed > 0 ? missedCycleIds[missedCycleIds.length - 1] : null;

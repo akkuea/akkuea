@@ -1,5 +1,7 @@
 "use client";
 
+import { captureErrorSafely } from "@akkuea/shared";
+
 import { useEffect } from "react";
 import { Navbar, Footer } from "@/components/layout";
 import { PageErrorFallback } from "@/components/ui";
@@ -13,6 +15,7 @@ export default function MarketplaceError({
 }) {
   useEffect(() => {
     console.error("[MarketplaceError]", error);
+    captureErrorSafely(error, { context: "webapp-route-error", digest: error.digest });
   }, [error]);
 
   return (

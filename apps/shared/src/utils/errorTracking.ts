@@ -50,11 +50,18 @@ function scrubPii(data: Record<string, unknown>): Record<string, unknown> {
   const truncateKeys = new Set(["xdr"]);
 
   for (const [key, value] of Object.entries(data)) {
-    if ([...sensitiveKeys].some((k) => key.toLowerCase().includes(k.toLowerCase()))) {
+    if (
+      [...sensitiveKeys].some((k) =>
+        key.toLowerCase().includes(k.toLowerCase()),
+      )
+    ) {
       scrubbed[key] = "[REDACTED]";
     } else if (
       typeof value === "string" &&
-      ([...truncateKeys].some((k) => key.toLowerCase().includes(k.toLowerCase())) || value.length > 200)
+      ([...truncateKeys].some((k) =>
+        key.toLowerCase().includes(k.toLowerCase()),
+      ) ||
+        value.length > 200)
     ) {
       scrubbed[key] = value.slice(0, 200) + "...[truncated]";
     } else if (

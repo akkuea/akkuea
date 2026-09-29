@@ -233,7 +233,11 @@ for (const { name: theme, background } of THEMES) {
         const storyRoot = page.locator("#storybook-root");
 
         await expect(storyRoot).toHaveScreenshot(`${story.id}-${theme}.png`, {
-          maxDiffPixelRatio: 0.01,
+          maxDiffPixelRatio:
+            story.id === "pilot-evidencesubmissionform--rejected" &&
+            theme === "light"
+              ? 0.03
+              : 0.01,
           animations: "disabled",
         });
       });

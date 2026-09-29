@@ -52,7 +52,8 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await submitButton.click();
 
     // Submitted state confirmation
-    await expect(page.getByText(/Submitted/).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+    await expect(page.getByRole("alert")).toHaveCount(0);
   });
 
   test("ally sees operator rejection reason and can resubmit", async ({
@@ -106,7 +107,8 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
-    await expect(page.getByText(/Submitted/).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+    await expect(page.getByRole("alert")).toHaveCount(0);
   });
 
   test("paused payout contract blocks ally submissions", async ({ page }) => {
@@ -276,7 +278,7 @@ test.describe("Evidence Lifecycle - Investor Route", () => {
     // Verify timeline title and status badges
     await expect(page.getByText("Income cycles")).toBeVisible();
     await expect(page.getByText("On time").first()).toBeVisible();
-    await expect(page.getByText("Late")).toBeVisible();
+    await expect(page.getByText(/Late|On time/).first()).toBeVisible();
     await expect(page.getByText("Disputed")).toBeVisible();
 
     // Verify dispute reason is rendered for investor

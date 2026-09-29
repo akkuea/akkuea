@@ -2,6 +2,7 @@ import type { Page, Route } from "@playwright/test";
 import {
   nativeToScVal,
   scValToNative,
+  Keypair,
   TransactionBuilder,
   xdr,
   Networks,
@@ -145,6 +146,22 @@ function createDummyTransactionData(): string {
 }
 
 const DEFAULT_TX_DATA = createDummyTransactionData();
+
+function mockAccountEntryXdr(address: string): string {
+  const account = new xdr.AccountEntry({
+    accountId: Keypair.fromPublicKey(address).xdrPublicKey(),
+    balance: BigInt(100_0000000),
+    seqNum: BigInt(1),
+    numSubEntries: 0,
+    inflationDest: null,
+    flags: 0,
+    homeDomain: "",
+    thresholds: Buffer.from([0, 0, 0, 0]),
+    signers: [],
+    ext: xdr.AccountEntryExt.v0(),
+  });
+  return xdr.LedgerEntryData.account(account).toXDR("base64");
+}
 
 /**
  * Converts a JS value into an ScVal for Soroban RPC simulation returns.
@@ -735,7 +752,7 @@ export async function mockPilotRpc(
 ): Promise<PilotRpcScenario> {
   await page.route(
     (url) =>
-      url.hostname.includes("stellar.org") ||
+      url.hostname.includes("stellar") ||
       url.pathname.includes("/accounts/") ||
       url.pathname.includes("/rpc") ||
       url.pathname.includes("soroban") ||
@@ -867,6 +884,35 @@ export async function mockPilotRpc(
               signers: [],
               flags: [],
               pagingToken: "1",
+            },
+          }),
+        });
+        return;
+      }
+
+      if (method === "getLedgerEntries") {
+        const keys = Array.isArray(body.params?.keys)
+          ? (body.params.keys as string[])
+          : [];
+        const address =
+          "GCCVPYFOHY7ZB7557JKENAX62LUAPLMGIWNZJAFV2MITK6T32V37KEJU";
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id,
+            result: {
+              latestLedger: 12345,
+              entries: address
+                ? [
+                    {
+                      key: keys[0],
+                      xdr: mockAccountEntryXdr(address),
+                      lastModifiedLedgerSeq: 1,
+                    },
+                  ]
+                : [],
             },
           }),
         });

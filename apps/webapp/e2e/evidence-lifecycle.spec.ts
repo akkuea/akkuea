@@ -70,8 +70,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
       submittedAt: Math.floor(Date.now() / 1000) - 86400,
       recordedAt: Math.floor(Date.now() / 1000) - 86400,
       reviewedAt: Math.floor(Date.now() / 1000),
-      reviewReason:
-        "Rejected: The statement covers three weeks, not the full month.",
+      reviewReason: "The statement covers three weeks, not the full month.",
       distributed: false,
       distributedAt: 0,
     });
@@ -182,9 +181,11 @@ test.describe("Evidence Lifecycle - Operator Review Queue", () => {
     await page.goto("/en/pilot/review/evidence");
 
     // Verify queue displays reported income and link
-    await expect(page.getByText("Evidence Review Queue")).toBeVisible();
+    await expect(page.getByText("Review queue")).toBeVisible();
     await expect(page.getByText("Reported 12,400.00 USDC")).toBeVisible();
-    await expect(page.getByText("Open Statement")).toBeVisible();
+    await expect(
+      page.getByText("Open the statement to check it against the hash"),
+    ).toBeVisible();
 
     // Start review
     const startReviewBtn = page.getByRole("button", { name: "Start Review" });
@@ -240,7 +241,7 @@ test.describe("Evidence Lifecycle - Operator Review Queue", () => {
 
     await expect(
       page.getByText(
-        "The payout contract is paused. Review actions are unavailable.",
+        "The payout contract is paused. Review actions are disabled until an admin resumes it.",
       ),
     ).toBeVisible();
 
@@ -270,7 +271,7 @@ test.describe("Evidence Lifecycle - Investor Route", () => {
 
     await mockConnectedWallet(
       page,
-      "GDB6EXAMPLEWALLETADDRESS1234567890123456789012345678901234",
+      "GCCVPYFOHY7ZB7557JKENAX62LUAPLMGIWNZJAFV2MITK6T32V37KEJU",
     );
     await mockPilotRpc(page, scenario);
 
@@ -305,7 +306,7 @@ test.describe("Evidence Lifecycle - Investor Route", () => {
 
     await mockConnectedWallet(
       page,
-      "GDB6EXAMPLEWALLETADDRESS1234567890123456789012345678901234",
+      "GCCVPYFOHY7ZB7557JKENAX62LUAPLMGIWNZJAFV2MITK6T32V37KEJU",
     );
     await mockPilotRpc(page, scenario);
 

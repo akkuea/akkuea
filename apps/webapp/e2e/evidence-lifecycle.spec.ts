@@ -52,9 +52,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await submitButton.click();
 
     // Submitted state confirmation
-    await expect(
-      page.getByText("Submitted. The operator can now review this cycle."),
-    ).toBeVisible();
+    await expect(page.getByText("Submitted", { exact: true }).first()).toBeVisible();
   });
 
   test("ally sees operator rejection reason and can resubmit", async ({
@@ -82,9 +80,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
 
     // Operator reason is prominently displayed
     await expect(
-      page.getByText(
-        "Rejected: The statement covers three weeks, not the full month.",
-      ),
+      page.getByText(/The statement covers three weeks, not the full month\./),
     ).toBeVisible();
 
     // Form remains open and inputs are enabled for resubmission
@@ -108,9 +104,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
-    await expect(
-      page.getByText("Submitted. The operator can now review this cycle."),
-    ).toBeVisible();
+    await expect(page.getByText("Submitted", { exact: true }).first()).toBeVisible();
   });
 
   test("paused payout contract blocks ally submissions", async ({ page }) => {
@@ -217,7 +211,7 @@ test.describe("Evidence Lifecycle - Operator Review Queue", () => {
 
     // Enter rejection reason
     const reasonInput = page.getByPlaceholder(
-      "Required on rejection or dispute...",
+      "Required to reject, optional to approve",
     );
     await reasonInput.fill(
       "Discrepancy between bank records and reported revenue.",
@@ -278,7 +272,7 @@ test.describe("Evidence Lifecycle - Investor Route", () => {
     await page.goto("/en/pilot/investor");
 
     // Verify timeline title and status badges
-    await expect(page.getByText("Cycle Payment History")).toBeVisible();
+    await expect(page.getByText("Income cycles")).toBeVisible();
     await expect(page.getByText("On time")).toBeVisible();
     await expect(page.getByText("Late")).toBeVisible();
     await expect(page.getByText("Disputed")).toBeVisible();

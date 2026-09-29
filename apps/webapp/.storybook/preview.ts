@@ -1,5 +1,5 @@
 import type { Preview } from "@storybook/react";
-import { createElement } from "react";
+import { createElement, Fragment } from "react";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import "../src/app/globals.css";
 import enMessages from "../messages/en.json";
@@ -14,9 +14,36 @@ const preview: Preview = {
   decorators: [
     (Story) =>
       createElement(
-        NextIntlClientProvider,
-        { locale: "en", messages, timeZone: "UTC" },
-        createElement(Story),
+        Fragment,
+        null,
+        createElement(
+          "style",
+          null,
+          `
+            @font-face {
+              font-family: "Akkuea Storybook Sans";
+              src: url("/fonts/nunito-sans-regular.woff2") format("woff2");
+              font-weight: 400;
+              font-style: normal;
+              font-display: block;
+            }
+            @font-face {
+              font-family: "Akkuea Storybook Sans";
+              src: url("/fonts/nunito-sans-bold.woff2") format("woff2");
+              font-weight: 700;
+              font-style: normal;
+              font-display: block;
+            }
+            html, body, #storybook-root {
+              font-family: "Akkuea Storybook Sans", sans-serif !important;
+            }
+          `,
+        ),
+        createElement(
+          NextIntlClientProvider,
+          { locale: "en", messages, timeZone: "UTC" },
+          createElement(Story),
+        ),
       ),
   ],
   parameters: {

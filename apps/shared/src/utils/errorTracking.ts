@@ -8,14 +8,20 @@ export interface ErrorTrackingEvent {
 
 export interface ErrorTrackingProvider {
   captureError(error: Error, context?: Record<string, unknown>): void;
-  captureMessage(message: string, level?: ErrorTrackingEvent["level"], context?: Record<string, unknown>): void;
+  captureMessage(
+    message: string,
+    level?: ErrorTrackingEvent["level"],
+    context?: Record<string, unknown>,
+  ): void;
   setUser(userId: string | undefined): void;
   flush?(): void | Promise<void>;
 }
 
 let provider: ErrorTrackingProvider | null = null;
 
-export function setErrorTrackingProvider(p: ErrorTrackingProvider | null): void {
+export function setErrorTrackingProvider(
+  p: ErrorTrackingProvider | null,
+): void {
   provider = p;
 }
 
@@ -26,17 +32,36 @@ export function getErrorTrackingProvider(): ErrorTrackingProvider | null {
 function scrubPii(data: Record<string, unknown>): Record<string, unknown> {
   const scrubbed: Record<string, unknown> = {};
   const sensitiveKeys = new Set([
-    'secret', 'password', 'passphrase', 'admin_secret', 'adminSecret',
-    'private_key', 'privateKey', 'sk_', 'x-api-key', 'authorization',
-    'wallet_secret', 'signing_payload', 'xdr', 'signed_tx',
+    "secret",
+    "password",
+    "passphrase",
+    "admin_secret",
+    "adminSecret",
+    "private_key",
+    "privateKey",
+    "sk_",
+    "x-api-key",
+    "authorization",
+    "wallet_secret",
+    "signing_payload",
+    "signed_tx",
   ]);
 
+  const truncateKeys = new Set(["xdr"]);
+
   for (const [key, value] of Object.entries(data)) {
-    if ([...sensitiveKeys].some((k) => k.toLowerCase() === key.toLowerCase())) {
-      scrubbed[key] = '[REDACTED]';
-    } else if (typeof value === 'string' && value.length > 200) {
-      scrubbed[key] = value.slice(0, 200) + '...[truncated]';
-    } else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+    if ([...sensitiveKeys].some((k) => key.toLowerCase().includes(k.toLowerCase()))) {
+      scrubbed[key] = "[REDACTED]";
+    } else if (
+      typeof value === "string" &&
+      ([...truncateKeys].some((k) => key.toLowerCase().includes(k.toLowerCase())) || value.length > 200)
+    ) {
+      scrubbed[key] = value.slice(0, 200) + "...[truncated]";
+    } else if (
+      typeof value === "object" &&
+      value !== null &&
+      !Array.isArray(value)
+    ) {
       scrubbed[key] = scrubPii(value as Record<string, unknown>);
     } else {
       scrubbed[key] = value;
@@ -46,7 +71,10 @@ function scrubPii(data: Record<string, unknown>): Record<string, unknown> {
   return scrubbed;
 }
 
-export function captureError(error: Error, context?: Record<string, unknown>): void {
+export function captureError(
+  error: Error,
+  context?: Record<string, unknown>,
+): void {
   if (!provider) return;
   try {
     const scrubbedContext = context ? scrubPii(context) : undefined;
@@ -70,7 +98,10 @@ export function captureMessage(
   }
 }
 
-export function captureErrorSafely(error: unknown, context?: Record<string, unknown>): void {
+export function captureErrorSafely(
+  error: unknown,
+  context?: Record<string, unknown>,
+): void {
   if (error instanceof Error) {
     captureError(error, context);
   } else if (error !== null && error !== undefined) {

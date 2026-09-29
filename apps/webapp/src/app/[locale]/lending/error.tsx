@@ -15,7 +15,10 @@ export default function LendingError({
 }) {
   useEffect(() => {
     console.error("[LendingError]", error);
-    captureErrorSafely(error, { context: "webapp-route-error", digest: error.digest });
+    captureErrorSafely(error, {
+      context: "webapp-route-error",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

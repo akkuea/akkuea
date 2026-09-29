@@ -20,7 +20,10 @@ export default function RootError({
 }) {
   useEffect(() => {
     console.error("[RootError]", error);
-    captureErrorSafely(error, { context: "webapp-route-error", digest: error.digest });
+    captureErrorSafely(error, {
+      context: "webapp-route-error",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

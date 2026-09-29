@@ -8,11 +8,11 @@
 
 ## Incident categories
 
-| Category | Examples | Severity |
-| --- | --- | --- |
-| RPC outage | Soroban RPC endpoints returning errors or timing out | High |
-| API outage | Elysia server returning 5xx or becoming unresponsive | Critical |
-| Database loss | Postgres data corruption, failed backup restore | Critical |
+| Category                 | Examples                                             | Severity |
+| ------------------------ | ---------------------------------------------------- | -------- |
+| RPC outage               | Soroban RPC endpoints returning errors or timing out | High     |
+| API outage               | Elysia server returning 5xx or becoming unresponsive | Critical |
+| Database loss            | Postgres data corruption, failed backup restore      | Critical |
 | Suspected key compromise | Admin key leaked, unauthorized transactions observed | Critical |
 
 ---
@@ -118,13 +118,13 @@ If the database is lost or corrupted:
 
 ## Cross-reference: existing runbooks
 
-| Incident type | Runbook |
-| --- | --- |
-| Contract exploit / pause needed | `runbook-emergency-pause.md` |
-| Oracle price feed failure | `runbook-oracle-failure.md` |
-| Role management | `runbook-role-management.md` |
-| RPC outage (this document) | `runbook-incident-response.md` |
-| Database loss (this document) | `runbook-incident-response.md` |
+| Incident type                   | Runbook                        |
+| ------------------------------- | ------------------------------ |
+| Contract exploit / pause needed | `runbook-emergency-pause.md`   |
+| Oracle price feed failure       | `runbook-oracle-failure.md`    |
+| Role management                 | `runbook-role-management.md`   |
+| RPC outage (this document)      | `runbook-incident-response.md` |
+| Database loss (this document)   | `runbook-incident-response.md` |
 
 ---
 
@@ -136,11 +136,11 @@ See the team's on-call schedule and incident channel configuration in the intern
 
 ## Maintenance: backup schedule
 
-| Backup type | Frequency | Retention | Location |
-| --- | --- | --- | --- |
-| Full database | Daily at 02:00 UTC | 30 days | `/var/backups/akkuea/` |
-| Database migrations | On every deploy | Indefinite | Version control |
-| Contract state snapshots | Weekly | 90 days | `/var/backups/akkuea/contract-snapshots/` |
+| Backup type              | Frequency          | Retention  | Location                                  |
+| ------------------------ | ------------------ | ---------- | ----------------------------------------- |
+| Full database            | Daily at 02:00 UTC | 30 days    | `/var/backups/akkuea/`                    |
+| Database migrations      | On every deploy    | Indefinite | Version control                           |
+| Contract state snapshots | Weekly             | 90 days    | `/var/backups/akkuea/contract-snapshots/` |
 
 ### Restore rehearsal
 

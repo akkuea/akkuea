@@ -54,6 +54,7 @@ bun run smoke:pilot
 ```
 
 **Required Environment Variables (DO NOT COMMIT REAL SECRETS):**
+
 - `API_BASE_URL`: Base URL of the API under test (e.g. `http://localhost:3001`).
 - `OPERATIONS_BACKEND_CREDENTIAL`: The shared secret to access `/internal/operations/*` API routes.
 - `PILOT_E2E_OPERATOR_SECRET`: The funded testnet key for the operator role.

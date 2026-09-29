@@ -15,7 +15,10 @@ export default function KYCError({
 }) {
   useEffect(() => {
     console.error("[KYCError]", error);
-    captureErrorSafely(error, { context: "webapp-route-error", digest: error.digest });
+    captureErrorSafely(error, {
+      context: "webapp-route-error",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

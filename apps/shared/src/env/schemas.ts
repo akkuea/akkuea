@@ -150,7 +150,9 @@ export const apiEnvSchema = z.object({
   /** Error tracking provider DSN (e.g. Sentry). No-op when empty. */
   ERROR_TRACKING_DSN: urlSchema.optional().or(z.literal("")),
   /** Error tracking environment name. */
-  ERROR_TRACKING_ENVIRONMENT: z.enum(["development", "staging", "production"]).optional(),
+  ERROR_TRACKING_ENVIRONMENT: z
+    .enum(["development", "staging", "production"])
+    .optional(),
 });
 
 export const webappEnvSchema = z.object({

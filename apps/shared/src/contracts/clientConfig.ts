@@ -101,7 +101,11 @@ export interface RpcRetryConfig {
  */
 export function buildContractClientOptionsWithRetry(
   config: SorobanClientConfig,
-): { clientOptions: ClientOptions; rpcUrls: string[]; retryConfig: RpcRetryConfig } {
+): {
+  clientOptions: ClientOptions;
+  rpcUrls: string[];
+  retryConfig: RpcRetryConfig;
+} {
   const networkPassphrase = config.networkPassphrase ?? Networks.TESTNET;
   const rpcUrls = resolveSorobanRpcEndpoints(
     networkPassphrase,
@@ -113,7 +117,8 @@ export function buildContractClientOptionsWithRetry(
     clientOptions: {
       contractId: config.contractId,
       networkPassphrase,
-      rpcUrl: rpcUrls[0] ?? resolveSorobanRpcUrl(networkPassphrase, config.rpcUrl),
+      rpcUrl:
+        rpcUrls[0] ?? resolveSorobanRpcUrl(networkPassphrase, config.rpcUrl),
       publicKey: config.publicKey,
       signTransaction: config.signTransaction,
       allowHttp: config.allowHttp,

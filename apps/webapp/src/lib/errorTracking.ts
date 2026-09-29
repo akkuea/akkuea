@@ -13,7 +13,8 @@ export function initWebErrorTracking(): void {
   Sentry.init({
     dsn,
     environment:
-      process.env.NEXT_PUBLIC_ERROR_TRACKING_ENVIRONMENT ?? process.env.NODE_ENV,
+      process.env.NEXT_PUBLIC_ERROR_TRACKING_ENVIRONMENT ??
+      process.env.NODE_ENV,
   });
 
   setErrorTrackingProvider({

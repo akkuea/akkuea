@@ -5,7 +5,7 @@
  * rule can be unit tested exhaustively against hand-built cycle histories.
  */
 
-export type EvidenceCheckStatus = "confirmed" | "missing" | "unknown";
+export type EvidenceCheckStatus = 'confirmed' | 'missing' | 'unknown';
 
 export interface CycleEvidenceStatus {
   /** The cycle identifier, e.g. `cycle-3`. */

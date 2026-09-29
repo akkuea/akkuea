@@ -15,7 +15,10 @@ export default function MarketplaceError({
 }) {
   useEffect(() => {
     console.error("[MarketplaceError]", error);
-    captureErrorSafely(error, { context: "webapp-route-error", digest: error.digest });
+    captureErrorSafely(error, {
+      context: "webapp-route-error",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

@@ -11,8 +11,7 @@ export function initErrorTracking(): void {
 
   Sentry.init({
     dsn,
-    environment:
-      process.env.ERROR_TRACKING_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development',
+    environment: process.env.ERROR_TRACKING_ENVIRONMENT ?? process.env.NODE_ENV ?? 'development',
   });
 
   setErrorTrackingProvider({

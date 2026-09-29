@@ -5,7 +5,11 @@ import {
 } from '../workers/pilotEscalation/detectMissedCycles';
 
 function cycles(pattern: boolean[]): CycleEvidenceStatus[] {
-  return pattern.map((hasEvidence, i) => ({ cycleId: `cycle-${i + 1}`, hasEvidence, isUnknown: false }));
+  return pattern.map((hasEvidence, i) => ({
+    cycleId: `cycle-${i + 1}`,
+    hasEvidence,
+    isUnknown: false,
+  }));
 }
 
 describe('detectMissedCycles', () => {

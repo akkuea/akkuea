@@ -15,7 +15,10 @@ export default function TokenizeError({
 }) {
   useEffect(() => {
     console.error("[TokenizeError]", error);
-    captureErrorSafely(error, { context: "webapp-route-error", digest: error.digest });
+    captureErrorSafely(error, {
+      context: "webapp-route-error",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

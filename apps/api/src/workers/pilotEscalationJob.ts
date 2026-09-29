@@ -75,7 +75,13 @@ const DEFAULT_RPC_RETRY_BASE_DELAY_MS = 2_000;
 export type PilotEscalationTickResult =
   | { status: 'skipped'; reason: string }
   | { status: 'rpc_error'; error: string }
-  | { status: 'ok'; breached: boolean; consecutiveMissed: number; notified: boolean; unknownCount: number };
+  | {
+      status: 'ok';
+      breached: boolean;
+      consecutiveMissed: number;
+      notified: boolean;
+      unknownCount: number;
+    };
 
 /**
  * PilotEscalationJob
@@ -145,7 +151,12 @@ export class PilotEscalationJob {
     return new PilotPayoutEvidenceReader({
       contractId: this.config.contractId,
       rpcUrls,
-      retryConfig: { maxRetries: this.config.rpcMaxRetries, retryBaseDelayMs: this.config.rpcRetryBaseDelayMs, maxRetryMs: 30_000, callTimeoutMs: 30_000 },
+      retryConfig: {
+        maxRetries: this.config.rpcMaxRetries,
+        retryBaseDelayMs: this.config.rpcRetryBaseDelayMs,
+        maxRetryMs: 30_000,
+        callTimeoutMs: 30_000,
+      },
     });
   }
 
@@ -182,7 +193,13 @@ export class PilotEscalationJob {
       });
 
       if (expectedCycles.length === 0) {
-        return { status: 'ok', breached: false, consecutiveMissed: 0, notified: false, unknownCount: 0 };
+        return {
+          status: 'ok',
+          breached: false,
+          consecutiveMissed: 0,
+          notified: false,
+          unknownCount: 0,
+        };
       }
 
       const reader = this.getEvidenceReader();
@@ -212,7 +229,13 @@ export class PilotEscalationJob {
       }
 
       const notified = await this.maybeNotify(gap);
-      return { status: 'ok', breached: true, consecutiveMissed: gap.consecutiveMissed, notified, unknownCount: gap.unknownCount };
+      return {
+        status: 'ok',
+        breached: true,
+        consecutiveMissed: gap.consecutiveMissed,
+        notified,
+        unknownCount: gap.unknownCount,
+      };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       captureErrorSafely(err, {
@@ -321,7 +344,10 @@ function parseIsoDate(value: string | undefined): Date | undefined {
 function parseRpcUrls(): string[] {
   const configured = process.env.PILOT_RPC_URLS?.trim();
   if (configured) {
-    return configured.split(",").map((u) => u.trim()).filter(Boolean);
+    return configured
+      .split(',')
+      .map((u) => u.trim())
+      .filter(Boolean);
   }
   return [];
 }

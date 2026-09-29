@@ -186,7 +186,9 @@ export async function fetchPilotCycle(
 }
 
 export async function fetchPayoutPaused(): Promise<boolean> {
-  return withRpcFallback(async ({ payout }) => (await payout.is_paused()).result);
+  return withRpcFallback(
+    async ({ payout }) => (await payout.is_paused()).result,
+  );
 }
 
 export interface PilotHoldings {
@@ -204,14 +206,14 @@ export async function fetchPilotHoldings(
 ): Promise<PilotHoldings> {
   const [balance, totalSupply, decimals, symbol, whitelisted] =
     await withRpcFallback(({ incomeToken, whitelist }) =>
-    Promise.all([
-      incomeToken.balance({ id: address }).then((tx) => tx.result),
-      incomeToken.total_supply().then((tx) => tx.result),
-      incomeToken.decimals().then((tx) => tx.result),
-      incomeToken.symbol().then((tx) => tx.result),
-      whitelist.is_approved({ address }).then((tx) => tx.result),
-    ]),
-  );
+      Promise.all([
+        incomeToken.balance({ id: address }).then((tx) => tx.result),
+        incomeToken.total_supply().then((tx) => tx.result),
+        incomeToken.decimals().then((tx) => tx.result),
+        incomeToken.symbol().then((tx) => tx.result),
+        whitelist.is_approved({ address }).then((tx) => tx.result),
+      ]),
+    );
 
   return { balance, totalSupply, decimals, symbol, whitelisted };
 }

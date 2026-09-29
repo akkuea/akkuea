@@ -54,11 +54,12 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function resolveRpcEndpoints(
-  networkPassphrase: string,
-): RpcEndpoint[] {
-  const isPublic = networkPassphrase === "Public Global Stellar Network ; September 2015";
-  const baseUrl = isPublic ? API_ENDPOINTS.SOROBAN_RPC.MAINNET : API_ENDPOINTS.SOROBAN_RPC.TESTNET;
+export function resolveRpcEndpoints(networkPassphrase: string): RpcEndpoint[] {
+  const isPublic =
+    networkPassphrase === "Public Global Stellar Network ; September 2015";
+  const baseUrl = isPublic
+    ? API_ENDPOINTS.SOROBAN_RPC.MAINNET
+    : API_ENDPOINTS.SOROBAN_RPC.TESTNET;
 
   if (isPublic) {
     return [
@@ -122,7 +123,11 @@ export async function callWithRetry<T>(
   const errors: Error[] = [];
   const retryDeadline = Date.now() + maxRetryMs;
 
-  for (let endpointIndex = 0; endpointIndex < endpoints.length; endpointIndex++) {
+  for (
+    let endpointIndex = 0;
+    endpointIndex < endpoints.length;
+    endpointIndex++
+  ) {
     const endpoint = endpoints[endpointIndex];
     if (!endpoint) continue;
 
@@ -133,7 +138,13 @@ export async function callWithRetry<T>(
 
       const timeoutMs = callTimeoutMs;
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error(`Call timeout on ${endpoint} after ${timeoutMs}ms`)), timeoutMs);
+        setTimeout(
+          () =>
+            reject(
+              new Error(`Call timeout on ${endpoint} after ${timeoutMs}ms`),
+            ),
+          timeoutMs,
+        );
       });
 
       try {
@@ -145,7 +156,10 @@ export async function callWithRetry<T>(
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
 
-        if (err.message.includes("Call timeout") || err.name === "TimeoutError") {
+        if (
+          err.message.includes("Call timeout") ||
+          err.name === "TimeoutError"
+        ) {
           errors.push(err);
         } else if (isDeterministicContractError(error)) {
           throw error;
@@ -163,7 +177,8 @@ export async function callWithRetry<T>(
     }
   }
 
-  const last = errors[errors.length - 1] ?? new Error("All RPC endpoints failed");
+  const last =
+    errors[errors.length - 1] ?? new Error("All RPC endpoints failed");
   throw new RpcAllEndpointsFailedError(last.message, errors);
 }
 

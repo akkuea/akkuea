@@ -54,7 +54,12 @@ export class PilotPayoutEvidenceReader {
     this.contractId = config.contractId;
     this.networkPassphrase =
       config.networkPassphrase ?? process.env.STELLAR_NETWORK_PASSPHRASE ?? Networks.TESTNET;
-    this.retryConfig = config.retryConfig ?? { maxRetries: 3, retryBaseDelayMs: 2_000, maxRetryMs: 30_000, callTimeoutMs: 30_000 };
+    this.retryConfig = config.retryConfig ?? {
+      maxRetries: 3,
+      retryBaseDelayMs: 2_000,
+      maxRetryMs: 30_000,
+      callTimeoutMs: 30_000,
+    };
     this.rpcUrls = config.rpcUrls ?? [];
     this.server =
       config.server ??
@@ -67,7 +72,9 @@ export class PilotPayoutEvidenceReader {
   async hasEvidence(cycleId: string): Promise<EvidenceLookupResult> {
     const tx = this.buildTransaction(cycleId);
 
-    let simulation: Awaited<ReturnType<InstanceType<typeof SorobanRpc.Server>['simulateTransaction']>>;
+    let simulation: Awaited<
+      ReturnType<InstanceType<typeof SorobanRpc.Server>['simulateTransaction']>
+    >;
     try {
       simulation =
         this.rpcUrls.length === 0
@@ -78,10 +85,9 @@ export class PilotPayoutEvidenceReader {
             });
     } catch (err) {
       if (err instanceof RpcAllEndpointsFailedError) {
-        throw new Error(
-          `RPC unavailable for cycle "${cycleId}": could not verify evidence`,
-          { cause: err },
-        );
+        throw new Error(`RPC unavailable for cycle "${cycleId}": could not verify evidence`, {
+          cause: err,
+        });
       }
       throw err;
     }

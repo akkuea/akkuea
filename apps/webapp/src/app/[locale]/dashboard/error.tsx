@@ -15,7 +15,10 @@ export default function DashboardError({
 }) {
   useEffect(() => {
     console.error("[DashboardError]", error);
-    captureErrorSafely(error, { context: "webapp-route-error", digest: error.digest });
+    captureErrorSafely(error, {
+      context: "webapp-route-error",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

@@ -34,7 +34,10 @@ export function pilotRpcUrl(): string {
   }
   const fallbackUrls = process.env.NEXT_PUBLIC_PILOT_RPC_URLS?.trim();
   if (fallbackUrls) {
-    const urls = fallbackUrls.split(",").map((u) => u.trim()).filter(Boolean);
+    const urls = fallbackUrls
+      .split(",")
+      .map((u) => u.trim())
+      .filter(Boolean);
     if (urls.length > 0) return urls[0];
   }
   return resolvePilotNetwork() === "MAINNET"
@@ -45,7 +48,10 @@ export function pilotRpcUrl(): string {
 export function pilotRpcUrls(): string[] {
   const configured = process.env.NEXT_PUBLIC_PILOT_RPC_URLS?.trim();
   if (configured) {
-    return configured.split(",").map((u) => u.trim()).filter(Boolean);
+    return configured
+      .split(",")
+      .map((u) => u.trim())
+      .filter(Boolean);
   }
   return [];
 }
@@ -54,7 +60,11 @@ export function pilotRpcUrls(): string[] {
 export function pilotRpcEndpoints(): string[] {
   const override = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL?.trim();
   return Array.from(
-    new Set([...(override ? [override] : []), ...pilotRpcUrls(), pilotRpcUrl()]),
+    new Set([
+      ...(override ? [override] : []),
+      ...pilotRpcUrls(),
+      pilotRpcUrl(),
+    ]),
   );
 }
 

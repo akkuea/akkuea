@@ -80,10 +80,7 @@ export function FreshnessIndicator({
       aria-label={`Data status: ${isStale ? "stale, " : ""}${config.label}. Last updated: ${timeSince}`}
     >
       {isStale && (
-        <AlertTriangle
-          className="h-3 w-3 text-amber-400"
-          aria-hidden="true"
-        />
+        <AlertTriangle className="h-3 w-3 text-amber-400" aria-hidden="true" />
       )}
       <StatusIcon
         className={cn(

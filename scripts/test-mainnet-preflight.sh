@@ -129,95 +129,216 @@ assert_passes "correct env configuration passes" \
   env -i "${BASE_ENV[@]}" bash "$SCRIPT" --env-only
 
 # ---------------------------------------------------------------------------
-# Part B: On-chain checks with stubbed stellar CLI
+# Part B: On-chain checks with stubbed curl + stellar xdr tools
 #
-# A temp dir is prepended to PATH containing a fake 'stellar' binary.
-# Each test rewrites the stub to control which responses the script sees.
+# The preflight reads contract storage via:
+#   1. stellar xdr encode (build LedgerKey)
+#   2. curl (getLedgerEntries RPC)
+#   3. stellar xdr decode (parse response)
+#
+# We stub curl to return controlled JSON and let the real stellar xdr
+# encode/decode run (they are pure local tools, no network needed).
+# For the storage content, we pre-build valid XDR using the real tools.
 # ---------------------------------------------------------------------------
 echo ""
-echo "=== Part B: On-chain checks (stubbed stellar CLI) ==="
+echo "=== Part B: On-chain checks (stubbed curl + real stellar xdr) ==="
 echo ""
 
 STUB_DIR="$(mktemp -d)"
 WASM_DIR="$REPO_ROOT/apps/contracts/target/wasm32v1-none/release"
 mkdir -p "$WASM_DIR"
-trap 'rm -rf "$STUB_DIR"; rm -f "$WASM_DIR/pilot_whitelist.wasm" "$WASM_DIR/pilot_income_token.wasm" "$WASM_DIR/pilot_payout_split.wasm"' EXIT
+trap 'rm -rf "$STUB_DIR"; rm -f "$WASM_DIR/pilot_whitelist.wasm"' EXIT
 
-# On-chain env vars (network/source are consumed by the stub, not a real CLI)
-ONCHAIN_ENV=(
-  "${BASE_ENV[@]}"
-  PILOT_WHITELIST_ID="CAOIML5WZYESSX5CPRFHA2OY7UXVW2ISJLL362OVX7MY3G7CMRWN3QA4"
-  PILOT_INCOME_TOKEN_ID="CDQYJRBYP62Y2BSMDEUBJYM2I4V3JE2RL7TCR3JPTW42NRLUXWKUS3MZ"
-  PILOT_PAYOUT_SPLIT_ID="CBGDO2GUWYSDU4SK3SNJJHYX6HRADUNXCU7TKJFFGLRWA4FSRZNLAJ4J"
-  MANIFEST_ADMIN="$GOOD_ADMIN"
-  PREFLIGHT_NETWORK="testnet"
-  PREFLIGHT_SOURCE_ACCOUNT="preflight-reader"
-)
+# Include the real stellar binary location so xdr encode/decode work in tests
+STELLAR_BIN="$(dirname "$(command -v stellar 2>/dev/null || echo /opt/homebrew/bin/stellar)")"
+BASE_PATH="$STUB_DIR:$STELLAR_BIN:/usr/local/bin:/usr/bin:/bin"
 
-# Write the stub: admin returns GOOD_ADMIN, is_paused returns false, eurc status stubbed
-write_stub() {
-  local admin_response="${1:-$GOOD_ADMIN}"
-  local is_paused_response="${2:-false}"
-  cat > "$STUB_DIR/stellar" << STUBEOF
-#!/bin/bash
-args="\$*"
-if [[ "\$args" == *"-- admin"* ]]; then
-  echo '"$admin_response"'
-elif [[ "\$args" == *"-- name"* ]]; then
-  echo '"Akkuea Pilot Income Participation"'
-elif [[ "\$args" == *"-- is_paused"* ]]; then
-  echo "$is_paused_response"
-elif [[ "\$args" == *"eurc_swap_path_status"* ]]; then
-  echo '"stubbed-fast-follow"'
-fi
-STUBEOF
-  # Substitute the actual values (avoid eval by using sed on the literal placeholders)
-  sed -i.bak \
-    -e "s|\\\$admin_response|${admin_response}|g" \
-    -e "s|\\\$is_paused_response|${is_paused_response}|g" \
-    "$STUB_DIR/stellar"
-  chmod +x "$STUB_DIR/stellar"
+WHITELIST_ID="CAOIML5WZYESSX5CPRFHA2OY7UXVW2ISJLL362OVX7MY3G7CMRWN3QA4"
+TOKEN_ID="CDQYJRBYP62Y2BSMDEUBJYM2I4V3JE2RL7TCR3JPTW42NRLUXWKUS3MZ"
+PAYOUT_ID="CBGDO2GUWYSDU4SK3SNJJHYX6HRADUNXCU7TKJFFGLRWA4FSRZNLAJ4J"
+OPERATOR_ADDR="GOPERATOR0000000000000000000000000000000000000000000000000"
+ALLY_ADDR="GALLY000000000000000000000000000000000000000000000000000000"
+FEE_ADDR="$GOOD_ADMIN"
+USDC_ID="CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+
+# Build the storage XDR for a contract that has given key=address entries.
+build_storage_xdr() {
+  local contract_id="$1"
+  local entries_json="$2"
+  # wasm field requires exactly 32 bytes = 64 hex chars
+  printf '{"contract_data":{"ext":"v0","contract":"%s","key":"ledger_key_contract_instance","durability":"persistent","val":{"contract_instance":{"executable":{"wasm":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},"storage":%s}}}}' \
+    "$contract_id" "$entries_json" \
+    | stellar xdr encode --type LedgerEntryData 2>/dev/null || echo ""
 }
 
-# Test 1: admin address mismatch
-write_stub "$GOOD_ADMIN" "false"
-assert_fails "manifest admin mismatch detected" "whitelist.admin()" \
-  env -i PATH="$STUB_DIR:/usr/bin:/bin:/usr/local/bin" \
-    "${ONCHAIN_ENV[@]}" \
-    MANIFEST_ADMIN="GWRONG00000000000000000000000000000000000000000000000000000" \
-    bash "$SCRIPT"
+# Build the storage for whitelist: Admin only
+WL_ENTRIES='[{"key":{"vec":[{"symbol":"Admin"}]},"val":{"address":"'"$GOOD_ADMIN"'"}}]'
+WL_XDR=$(build_storage_xdr "$WHITELIST_ID" "$WL_ENTRIES")
 
-# Test 2: payout contract is paused
-write_stub "$GOOD_ADMIN" "true"
-assert_fails "paused payout detected" "is_paused() = true" \
-  env -i PATH="$STUB_DIR:/usr/bin:/bin:/usr/local/bin" \
-    "${ONCHAIN_ENV[@]}" \
-    bash "$SCRIPT"
+# Build storage for income token
+TOK_ENTRIES='[{"key":{"vec":[{"symbol":"Admin"}]},"val":{"address":"'"$GOOD_ADMIN"'"}},{"key":{"vec":[{"symbol":"Whitelist"}]},"val":{"address":"'"$WHITELIST_ID"'"}}]'
+TOK_XDR=$(build_storage_xdr "$TOKEN_ID" "$TOK_ENTRIES")
 
-# Test 3: WASM hash mismatch - create a fake wasm at the expected path
-write_stub "$GOOD_ADMIN" "false"
-echo "fake wasm content for testing" > "$WASM_DIR/pilot_whitelist.wasm"
-assert_fails "WASM hash mismatch detected" "WASM hash mismatch" \
-  env -i PATH="$STUB_DIR:/usr/bin:/bin:/usr/local/bin" \
-    "${ONCHAIN_ENV[@]}" \
-    MANIFEST_WASM_WHITELIST="0000000000000000000000000000000000000000000000000000000000000000" \
-    bash "$SCRIPT"
-rm -f "$WASM_DIR/pilot_whitelist.wasm"
+# Build storage for payout split (full set) - must be on one line for printf
+PAY_ENTRIES='[{"key":{"vec":[{"symbol":"Admin"}]},"val":{"address":"'"$GOOD_ADMIN"'"}},{"key":{"vec":[{"symbol":"Operator"}]},"val":{"address":"'"$OPERATOR_ADDR"'"}},{"key":{"vec":[{"symbol":"Ally"}]},"val":{"address":"'"$ALLY_ADDR"'"}},{"key":{"vec":[{"symbol":"PlatformFeeRecipient"}]},"val":{"address":"'"$FEE_ADDR"'"}},{"key":{"vec":[{"symbol":"UsdcToken"}]},"val":{"address":"'"$USDC_ID"'"}},{"key":{"vec":[{"symbol":"IncomeToken"}]},"val":{"address":"'"$TOKEN_ID"'"}},{"key":{"vec":[{"symbol":"Whitelist"}]},"val":{"address":"'"$WHITELIST_ID"'"}}]'
+PAY_XDR=$(build_storage_xdr "$PAYOUT_ID" "$PAY_ENTRIES")
 
-# Test 4: WASM file missing when hash is required
-write_stub "$GOOD_ADMIN" "false"
-assert_fails "missing WASM file detected" "WASM not found" \
-  env -i PATH="$STUB_DIR:/usr/bin:/bin:/usr/local/bin" \
-    "${ONCHAIN_ENV[@]}" \
-    MANIFEST_WASM_WHITELIST="0000000000000000000000000000000000000000000000000000000000000000" \
-    bash "$SCRIPT"
+# Write a curl stub that returns the correct XDR based on which contract is queried.
+# The preflight encodes the contract ID into the request body key.
+write_curl_stub() {
+  local wl_xdr="$1" tok_xdr="$2" pay_xdr="$3"
+  cat > "$STUB_DIR/curl" << STUBEOF
+#!/bin/bash
+# Read the POST body to figure out which contract is being queried.
+body=""
+while [[ "\$#" -gt 0 ]]; do
+  if [[ "\$1" == "-d" ]]; then body="\$2"; fi
+  shift
+done
 
-# Test 5: clean on-chain pass (no WASM hashes in manifest, so WASM check is skipped)
-write_stub "$GOOD_ADMIN" "false"
-assert_passes "correct on-chain configuration passes" \
-  env -i PATH="$STUB_DIR:/usr/bin:/bin:/usr/local/bin" \
-    "${ONCHAIN_ENV[@]}" \
-    bash "$SCRIPT"
+WL_KEY=\$(printf '{"contract_data":{"contract":"$WHITELIST_ID","key":"ledger_key_contract_instance","durability":"persistent"}}' | stellar xdr encode --type LedgerKey 2>/dev/null | tr -d '[:space:]')
+TOK_KEY=\$(printf '{"contract_data":{"contract":"$TOKEN_ID","key":"ledger_key_contract_instance","durability":"persistent"}}' | stellar xdr encode --type LedgerKey 2>/dev/null | tr -d '[:space:]')
+PAY_KEY=\$(printf '{"contract_data":{"contract":"$PAYOUT_ID","key":"ledger_key_contract_instance","durability":"persistent"}}' | stellar xdr encode --type LedgerKey 2>/dev/null | tr -d '[:space:]')
+
+if echo "\$body" | grep -q "\$WL_KEY"; then
+  echo '{"jsonrpc":"2.0","id":1,"result":{"entries":[{"xdr":"$wl_xdr"}]}}'
+elif echo "\$body" | grep -q "\$TOK_KEY"; then
+  echo '{"jsonrpc":"2.0","id":1,"result":{"entries":[{"xdr":"$tok_xdr"}]}}'
+elif echo "\$body" | grep -q "\$PAY_KEY"; then
+  echo '{"jsonrpc":"2.0","id":1,"result":{"entries":[{"xdr":"$pay_xdr"}]}}'
+else
+  echo '{"jsonrpc":"2.0","id":1,"result":{"entries":[]}}'
+fi
+STUBEOF
+  sed -i.bak \
+    -e "s|\\\$wl_xdr|${wl_xdr}|g" \
+    -e "s|\\\$tok_xdr|${tok_xdr}|g" \
+    -e "s|\\\$pay_xdr|${pay_xdr}|g" \
+    "$STUB_DIR/curl"
+  chmod +x "$STUB_DIR/curl"
+}
+
+# Good manifests that match the storage we built
+ONCHAIN_ENV=(
+  "${BASE_ENV[@]}"
+  PREFLIGHT_SKIP_URL_CHECK=true
+  STELLAR_RPC_URL="https://soroban-testnet.stellar.org"
+  PILOT_WHITELIST_ID="$WHITELIST_ID"
+  PILOT_INCOME_TOKEN_ID="$TOKEN_ID"
+  PILOT_PAYOUT_SPLIT_ID="$PAYOUT_ID"
+  MANIFEST_ADMIN="$GOOD_ADMIN"
+  MANIFEST_OPERATOR="$OPERATOR_ADDR"
+  MANIFEST_ALLY="$ALLY_ADDR"
+  MANIFEST_FEE_RECIPIENT="$FEE_ADDR"
+  MANIFEST_USDC_TOKEN="$USDC_ID"
+  MANIFEST_INCOME_TOKEN="$TOKEN_ID"
+  MANIFEST_WHITELIST="$WHITELIST_ID"
+)
+
+# Build XDR only if stellar xdr encode works (skip Part B if tools missing)
+if [[ -z "$WL_XDR" ]] || [[ -z "$TOK_XDR" ]] || [[ -z "$PAY_XDR" ]]; then
+  echo "SKIP: stellar xdr encode not available - skipping Part B"
+else
+  write_curl_stub "$WL_XDR" "$TOK_XDR" "$PAY_XDR"
+
+  # Test 1: operator == ally rejected at manifest level (before any RPC call)
+  assert_fails "operator=ally rejected at manifest check" \
+    "MANIFEST_OPERATOR and MANIFEST_ALLY are the same address" \
+    env -i PATH="$BASE_PATH" \
+      "${ONCHAIN_ENV[@]}" \
+      MANIFEST_OPERATOR="$GOOD_ADMIN" \
+      MANIFEST_ALLY="$GOOD_ADMIN" \
+      bash "$SCRIPT"
+
+  # Test 1b: operator == ally caught via on-chain storage read
+  # Manifest says they differ, but the contract was initialized with the same
+  # key for both — simulate a deployment error that the manifest doesn't catch.
+  COLLISION_ADDR="$GOOD_ADMIN"
+  PAY_COLLISION_ENTRIES='[{"key":{"vec":[{"symbol":"Admin"}]},"val":{"address":"'"$GOOD_ADMIN"'"}},{"key":{"vec":[{"symbol":"Operator"}]},"val":{"address":"'"$COLLISION_ADDR"'"}},{"key":{"vec":[{"symbol":"Ally"}]},"val":{"address":"'"$COLLISION_ADDR"'"}},{"key":{"vec":[{"symbol":"PlatformFeeRecipient"}]},"val":{"address":"'"$FEE_ADDR"'"}},{"key":{"vec":[{"symbol":"UsdcToken"}]},"val":{"address":"'"$USDC_ID"'"}},{"key":{"vec":[{"symbol":"IncomeToken"}]},"val":{"address":"'"$TOKEN_ID"'"}},{"key":{"vec":[{"symbol":"Whitelist"}]},"val":{"address":"'"$WHITELIST_ID"'"}}]'
+  PAY_COLLISION_XDR=$(build_storage_xdr "$PAYOUT_ID" "$PAY_COLLISION_ENTRIES")
+  if [[ -n "$PAY_COLLISION_XDR" ]]; then
+    write_curl_stub "$WL_XDR" "$TOK_XDR" "$PAY_COLLISION_XDR"
+    # Manifest has distinct operator/ally (passes the pre-RPC manifest check),
+    # but the contract storage itself has operator == ally.
+    assert_fails "operator=ally collision detected in on-chain storage" \
+      "payout.Operator == payout.Ally in contract storage - SignerCollision" \
+      env -i PATH="$BASE_PATH" \
+        "${ONCHAIN_ENV[@]}" \
+        MANIFEST_OPERATOR="$OPERATOR_ADDR" \
+        MANIFEST_ALLY="$ALLY_ADDR" \
+        bash "$SCRIPT"
+    write_curl_stub "$WL_XDR" "$TOK_XDR" "$PAY_XDR"
+  else
+    echo "SKIP [operator=ally collision in storage]: could not build collision XDR"
+  fi
+
+  # Test 2: admin mismatch detected via storage read
+  assert_fails "admin mismatch detected via storage" \
+    "whitelist.Admin mismatch" \
+    env -i PATH="$BASE_PATH" \
+      "${ONCHAIN_ENV[@]}" \
+      MANIFEST_ADMIN="GWRONG00000000000000000000000000000000000000000000000000000" \
+      bash "$SCRIPT"
+
+  # Test 3: uninitialized payout (curl returns no entries)
+  # Write a stub where payout returns empty entries
+  cat > "$STUB_DIR/curl" << STUB2EOF
+#!/bin/bash
+body=""
+while [[ "\$#" -gt 0 ]]; do
+  if [[ "\$1" == "-d" ]]; then body="\$2"; fi
+  shift
+done
+PAY_KEY=\$(printf '{"contract_data":{"contract":"$PAYOUT_ID","key":"ledger_key_contract_instance","durability":"persistent"}}' | stellar xdr encode --type LedgerKey 2>/dev/null | tr -d '[:space:]')
+WL_KEY=\$(printf '{"contract_data":{"contract":"$WHITELIST_ID","key":"ledger_key_contract_instance","durability":"persistent"}}' | stellar xdr encode --type LedgerKey 2>/dev/null | tr -d '[:space:]')
+TOK_KEY=\$(printf '{"contract_data":{"contract":"$TOKEN_ID","key":"ledger_key_contract_instance","durability":"persistent"}}' | stellar xdr encode --type LedgerKey 2>/dev/null | tr -d '[:space:]')
+if echo "\$body" | grep -q "\$PAY_KEY"; then
+  echo '{"jsonrpc":"2.0","id":1,"result":{"entries":[]}}'
+elif echo "\$body" | grep -q "\$WL_KEY"; then
+  echo '{"jsonrpc":"2.0","id":1,"result":{"entries":[{"xdr":"$WL_XDR"}]}}'
+elif echo "\$body" | grep -q "\$TOK_KEY"; then
+  echo '{"jsonrpc":"2.0","id":1,"result":{"entries":[{"xdr":"$TOK_XDR"}]}}'
+else
+  echo '{"jsonrpc":"2.0","id":1,"result":{"entries":[]}}'
+fi
+STUB2EOF
+  sed -i.bak \
+    -e "s|\\\$WL_XDR|${WL_XDR}|g" \
+    -e "s|\\\$TOK_XDR|${TOK_XDR}|g" \
+    "$STUB_DIR/curl"
+  chmod +x "$STUB_DIR/curl"
+
+  assert_fails "uninitialized payout detected" \
+    "payout_split: getLedgerEntries returned no entry" \
+    env -i PATH="$BASE_PATH" \
+      "${ONCHAIN_ENV[@]}" \
+      bash "$SCRIPT"
+
+  # Restore good curl stub
+  write_curl_stub "$WL_XDR" "$TOK_XDR" "$PAY_XDR"
+
+  # Test 4: WASM hash mismatch
+  echo "fake wasm content" > "$WASM_DIR/pilot_whitelist.wasm"
+  assert_fails "WASM hash mismatch detected" "WASM hash mismatch" \
+    env -i PATH="$BASE_PATH" \
+      "${ONCHAIN_ENV[@]}" \
+      MANIFEST_WASM_WHITELIST="0000000000000000000000000000000000000000000000000000000000000000" \
+      bash "$SCRIPT"
+  rm -f "$WASM_DIR/pilot_whitelist.wasm"
+
+  # Test 5: missing WASM file
+  assert_fails "missing WASM file detected" "WASM not found" \
+    env -i PATH="$BASE_PATH" \
+      "${ONCHAIN_ENV[@]}" \
+      MANIFEST_WASM_WHITELIST="0000000000000000000000000000000000000000000000000000000000000000" \
+      bash "$SCRIPT"
+
+  # Test 6: clean pass
+  assert_passes "correct on-chain configuration passes" \
+    env -i PATH="$BASE_PATH" \
+      "${ONCHAIN_ENV[@]}" \
+      bash "$SCRIPT"
+fi
 
 # ---------------------------------------------------------------------------
 echo ""

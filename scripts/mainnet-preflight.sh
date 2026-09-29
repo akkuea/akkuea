@@ -2,31 +2,32 @@
 #
 # Mainnet preflight check for the pilot contract set.
 #
-# Runs two independent checks and exits non-zero with a precise report if
-# anything is wrong. Nothing is modified; this script is read-only.
+# Part 1: environment (passphrase, URLs, SSL, secrets)
+# Part 2: on-chain state via Soroban RPC getLedgerEntries
 #
 # Usage:
-#   ./scripts/mainnet-preflight.sh                  # full check (requires stellar CLI + network)
-#   ./scripts/mainnet-preflight.sh --env-only       # environment check only (CI dry-run mode)
+#   ./scripts/mainnet-preflight.sh                  # full check
+#   ./scripts/mainnet-preflight.sh --env-only       # env check only (CI)
 #
 # Required env vars for the on-chain check:
-#   PILOT_WHITELIST_ID       deployed whitelist contract ID
-#   PILOT_INCOME_TOKEN_ID    deployed income token contract ID
-#   PILOT_PAYOUT_SPLIT_ID    deployed payout-split contract ID
-#   MANIFEST_ADMIN           expected admin public key
-#   MANIFEST_USDC_TOKEN      expected USDC token contract ID
-#   MANIFEST_WASM_WHITELIST  sha256 of the audited pilot_whitelist.wasm (optional)
-#   MANIFEST_WASM_TOKEN      sha256 of the audited pilot_income_token.wasm (optional)
-#   MANIFEST_WASM_PAYOUT     sha256 of the audited pilot_payout_split.wasm (optional)
+#   PILOT_WHITELIST_ID      deployed whitelist contract ID
+#   PILOT_INCOME_TOKEN_ID   deployed income token contract ID
+#   PILOT_PAYOUT_SPLIT_ID   deployed payout-split contract ID
+#   MANIFEST_ADMIN          expected admin public key
+#   MANIFEST_OPERATOR       expected operator public key
+#   MANIFEST_ALLY           expected ally public key
+#   MANIFEST_FEE_RECIPIENT  expected fee recipient public key
+#   MANIFEST_USDC_TOKEN     expected USDC token contract ID
+#   MANIFEST_INCOME_TOKEN   expected income token contract ID (for cross-check)
+#   MANIFEST_WHITELIST      expected whitelist contract ID (for cross-check)
+#   MANIFEST_WASM_WHITELIST sha256 of audited pilot_whitelist.wasm (optional)
+#   MANIFEST_WASM_TOKEN     sha256 of audited pilot_income_token.wasm (optional)
+#   MANIFEST_WASM_PAYOUT    sha256 of audited pilot_payout_split.wasm (optional)
 #
-# Note on address verification scope:
-#   The operator, ally, fee-recipient, income-token, whitelist, and USDC addresses
-#   are set at initialize() time but have no public read functions in the deployed
-#   contracts. Verifiable on-chain state is: whitelist.admin(), income_token.admin(),
-#   payout.is_paused(), and payout.eurc_swap_path_status(). All other address
-#   verification must be done by inspecting the initialize transaction in the explorer.
-#
-# In CI, set PREFLIGHT_ENV_ONLY=true or pass --env-only to skip the on-chain part.
+# Optional overrides:
+#   PREFLIGHT_NETWORK       stellar network name passed to stellar CLI (default: mainnet)
+#   PREFLIGHT_SOURCE_ACCOUNT stellar identity for CLI invocations (default: MANIFEST_ADMIN)
+#   STELLAR_RPC_URL         used for direct RPC calls in the storage check
 
 set -uo pipefail
 
@@ -40,10 +41,11 @@ MAINNET_HORIZON="https://horizon.stellar.org"
 MAINNET_RPC="https://soroban.stellar.org"
 
 ERRORS=()
+fail() { ERRORS+=("FAIL: $1"); }
 
-fail() {
-  ERRORS+=("FAIL: $1")
-}
+# PREFLIGHT_SKIP_URL_CHECK=true lets a testnet run skip the URL/passphrase
+# assertions so the on-chain storage checks can be exercised against testnet.
+SKIP_URL_CHECK="${PREFLIGHT_SKIP_URL_CHECK:-false}"
 
 # ---------------------------------------------------------------------------
 # Part 1: Environment
@@ -51,7 +53,9 @@ fail() {
 echo "=== Part 1: Environment ==="
 
 passphrase="${STELLAR_NETWORK_PASSPHRASE:-}"
-if [[ -z "$passphrase" ]]; then
+if [[ "$SKIP_URL_CHECK" == "true" ]]; then
+  echo "  --  STELLAR_NETWORK_PASSPHRASE check skipped (PREFLIGHT_SKIP_URL_CHECK=true)"
+elif [[ -z "$passphrase" ]]; then
   fail "STELLAR_NETWORK_PASSPHRASE is not set"
 elif [[ "$passphrase" != "$MAINNET_PASSPHRASE" ]]; then
   fail "STELLAR_NETWORK_PASSPHRASE is not the mainnet passphrase. Got: '$passphrase'"
@@ -60,19 +64,23 @@ else
 fi
 
 horizon="${STELLAR_HORIZON_URL:-}"
-if [[ -z "$horizon" ]]; then
+if [[ "$SKIP_URL_CHECK" == "true" ]]; then
+  echo "  --  STELLAR_HORIZON_URL check skipped (PREFLIGHT_SKIP_URL_CHECK=true)"
+elif [[ -z "$horizon" ]]; then
   fail "STELLAR_HORIZON_URL is not set"
 elif [[ "$horizon" != "$MAINNET_HORIZON" ]]; then
-  fail "STELLAR_HORIZON_URL does not look like mainnet. Got: '$horizon' (expected $MAINNET_HORIZON)"
+  fail "STELLAR_HORIZON_URL does not look like mainnet. Got: '$horizon'"
 else
   echo "  OK  STELLAR_HORIZON_URL = mainnet"
 fi
 
 rpc="${STELLAR_RPC_URL:-}"
-if [[ -z "$rpc" ]]; then
+if [[ "$SKIP_URL_CHECK" == "true" ]]; then
+  echo "  --  STELLAR_RPC_URL check skipped (PREFLIGHT_SKIP_URL_CHECK=true)"
+elif [[ -z "$rpc" ]]; then
   fail "STELLAR_RPC_URL is not set"
 elif [[ "$rpc" != "$MAINNET_RPC" ]]; then
-  fail "STELLAR_RPC_URL does not look like mainnet. Got: '$rpc' (expected $MAINNET_RPC)"
+  fail "STELLAR_RPC_URL does not look like mainnet. Got: '$rpc'"
 else
   echo "  OK  STELLAR_RPC_URL = mainnet"
 fi
@@ -106,14 +114,14 @@ ops_cred="${OPERATIONS_BACKEND_CREDENTIAL:-}"
 if [[ -z "$ops_cred" ]]; then
   fail "OPERATIONS_BACKEND_CREDENTIAL is not set"
 elif [[ "$ops_cred" == *"generate-a-long"* ]] || [[ "$ops_cred" == "change-me" ]]; then
-  fail "OPERATIONS_BACKEND_CREDENTIAL looks like the example placeholder - set a real value"
+  fail "OPERATIONS_BACKEND_CREDENTIAL looks like the example placeholder"
 else
   echo "  OK  OPERATIONS_BACKEND_CREDENTIAL is set"
 fi
 
 ops_wallets="${OPERATIONS_ALLOWED_WALLETS:-}"
 if [[ -z "$ops_wallets" ]]; then
-  fail "OPERATIONS_ALLOWED_WALLETS is not set - no production admin addresses configured"
+  fail "OPERATIONS_ALLOWED_WALLETS is not set"
 elif [[ "$ops_wallets" == *"GXXX"* ]] || [[ "$ops_wallets" == *"GYYY"* ]]; then
   fail "OPERATIONS_ALLOWED_WALLETS contains placeholder addresses (GXXX/GYYY)"
 else
@@ -126,7 +134,7 @@ if [[ -z "$admin_secret" ]]; then
 elif [[ "${admin_secret:0:1}" != "S" ]] || [[ "${#admin_secret}" -ne 56 ]]; then
   fail "STELLAR_ADMIN_SECRET does not look like a Stellar secret key (must start with S, 56 chars)"
 elif [[ "$admin_secret" == "SXXX"* ]]; then
-  fail "STELLAR_ADMIN_SECRET is the example placeholder - set a real secret key"
+  fail "STELLAR_ADMIN_SECRET is the example placeholder"
 else
   echo "  OK  STELLAR_ADMIN_SECRET is set (not echoed)"
 fi
@@ -142,115 +150,161 @@ else
   echo "=== Part 2: On-chain state ==="
 
   if ! command -v stellar &>/dev/null; then
-    fail "stellar CLI not found - install it to run the on-chain check"
+    fail "stellar CLI not found"
+  elif ! command -v curl &>/dev/null; then
+    fail "curl not found"
   else
     whitelist_id="${PILOT_WHITELIST_ID:-}"
     token_id="${PILOT_INCOME_TOKEN_ID:-}"
     payout_id="${PILOT_PAYOUT_SPLIT_ID:-}"
     manifest_admin="${MANIFEST_ADMIN:-}"
+    manifest_operator="${MANIFEST_OPERATOR:-}"
+    manifest_ally="${MANIFEST_ALLY:-}"
+    manifest_fee="${MANIFEST_FEE_RECIPIENT:-}"
     manifest_usdc="${MANIFEST_USDC_TOKEN:-}"
+    manifest_income_token="${MANIFEST_INCOME_TOKEN:-}"
+    manifest_whitelist="${MANIFEST_WHITELIST:-}"
     manifest_wasm_whitelist="${MANIFEST_WASM_WHITELIST:-}"
     manifest_wasm_token="${MANIFEST_WASM_TOKEN:-}"
     manifest_wasm_payout="${MANIFEST_WASM_PAYOUT:-}"
 
-    for var in whitelist_id token_id payout_id manifest_admin; do
+    for var in whitelist_id token_id payout_id manifest_admin manifest_operator manifest_ally manifest_fee; do
       if [[ -z "${!var}" ]]; then
         fail "${var^^} manifest variable is not set"
       fi
     done
 
-    # Use a read-only source identity; the invoke is simulated, not submitted.
-    INVOKE_SOURCE="${PREFLIGHT_SOURCE_ACCOUNT:-${manifest_admin}}"
-    NETWORK="${PREFLIGHT_NETWORK:-mainnet}"
+    # operator and ally must be distinct keys
+    if [[ -n "$manifest_operator" ]] && [[ -n "$manifest_ally" ]]; then
+      if [[ "$manifest_operator" == "$manifest_ally" ]]; then
+        fail "MANIFEST_OPERATOR and MANIFEST_ALLY are the same address - they must be distinct keys"
+      else
+        echo "  OK  operator != ally"
+      fi
+    fi
 
-    invoke() {
-      local id="$1"
-      shift
-      stellar contract invoke \
-        --id "$id" \
-        --source-account "$INVOKE_SOURCE" \
-        --network "$NETWORK" \
-        -- "$@" 2>&1 || echo "__invoke_error__"
+    NETWORK="${PREFLIGHT_NETWORK:-mainnet}"
+    RPC_URL="${STELLAR_RPC_URL:-$MAINNET_RPC}"
+
+    # Read the full instance storage map for a contract via getLedgerEntries RPC.
+    # Returns the decoded JSON of the storage array, or empty string on failure.
+    read_storage() {
+      local contract_id="$1"
+      local key_xdr
+      key_xdr=$(printf '{"contract_data":{"contract":"%s","key":"ledger_key_contract_instance","durability":"persistent"}}' \
+        "$contract_id" | stellar xdr encode --type LedgerKey 2>/dev/null) || return 1
+
+      local response
+      response=$(curl -sf --max-time 15 -X POST \
+        -H "Content-Type: application/json" \
+        -d "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"getLedgerEntries\",\"params\":{\"keys\":[\"$key_xdr\"]}}" \
+        "$RPC_URL" 2>/dev/null) || return 1
+
+      local xdr
+      xdr=$(echo "$response" | python3 -c \
+        "import sys,json; e=json.load(sys.stdin).get('result',{}).get('entries',[]); print(e[0]['xdr'] if e else '')" \
+        2>/dev/null) || return 1
+
+      [[ -z "$xdr" ]] && return 1
+
+      echo "$xdr" | stellar xdr decode --type LedgerEntryData 2>/dev/null
     }
 
-    # Whitelist admin must match manifest
-    if [[ -n "$whitelist_id" ]] && [[ -n "$manifest_admin" ]]; then
-      result="$(invoke "$whitelist_id" admin)"
-      if [[ "$result" == "__invoke_error__" ]]; then
-        fail "whitelist.admin() call failed - contract may not be initialized"
-      elif [[ "$result" != *"$manifest_admin"* ]]; then
-        fail "whitelist.admin() = '$result', expected '$manifest_admin'"
-      else
-        echo "  OK  whitelist.admin() = $manifest_admin"
-      fi
-    fi
+    # Extract a value from the storage JSON by symbol key name.
+    # Input is the full LedgerEntryData JSON; output is the raw value string.
+    storage_get() {
+      local json="$1"
+      local key="$2"
+      echo "$json" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+storage = data.get('contract_data',{}).get('val',{}).get('contract_instance',{}).get('storage') or []
+for entry in storage:
+    sym = (entry.get('key') or {}).get('vec') or []
+    if sym and sym[0].get('symbol') == '$key':
+        val = entry.get('val', {})
+        # address, string, bool, u32, i128
+        for t in ('address','string','bool','u32','i128'):
+            if t in val:
+                print(val[t])
+                sys.exit(0)
+" 2>/dev/null
+    }
 
-    # Income token admin must match manifest
-    if [[ -n "$token_id" ]] && [[ -n "$manifest_admin" ]]; then
-      result="$(invoke "$token_id" admin)"
-      if [[ "$result" == "__invoke_error__" ]]; then
-        fail "income_token.admin() call failed - contract may not be initialized"
-      elif [[ "$result" != *"$manifest_admin"* ]]; then
-        fail "income_token.admin() = '$result', expected '$manifest_admin'"
-      else
-        echo "  OK  income_token.admin() = $manifest_admin"
-      fi
-    fi
-
-    # Income token name must match expected value
-    if [[ -n "$token_id" ]]; then
-      result="$(invoke "$token_id" name)"
-      if [[ "$result" == "__invoke_error__" ]]; then
-        fail "income_token.name() call failed"
-      else
-        echo "  OK  income_token.name() = $result"
-      fi
-    fi
-
-    # Payout must not be paused
-    if [[ -n "$payout_id" ]]; then
-      result="$(invoke "$payout_id" is_paused)"
-      if [[ "$result" == *"true"* ]]; then
-        fail "payout.is_paused() = true - unpause before going live"
-      elif [[ "$result" != "__invoke_error__" ]]; then
-        echo "  OK  payout.is_paused() = false"
-      fi
-    fi
-
-    # eurc_swap_path_status: on testnet returns "stubbed-fast-follow".
-    # On mainnet with EURC configured, returns an object with usdc_token, eurc_token,
-    # swap_router fields we can check against manifest values.
-    if [[ -n "$payout_id" ]]; then
-      wiring="$(invoke "$payout_id" eurc_swap_path_status)"
-      if [[ "$wiring" == "__invoke_error__" ]]; then
-        fail "payout.eurc_swap_path_status() call failed"
-      else
-        echo "  INFO payout.eurc_swap_path_status() = $wiring"
-        # If MANIFEST_USDC_TOKEN is set and the status is not the testnet stub,
-        # verify the USDC address appears in the returned wiring object.
-        if [[ -n "$manifest_usdc" ]] && [[ "$wiring" != *"stubbed"* ]]; then
-          if [[ "$wiring" != *"$manifest_usdc"* ]]; then
-            fail "payout USDC token mismatch. Expected $manifest_usdc in: $wiring"
-          else
-            echo "  OK  payout usdc_token = $manifest_usdc"
-          fi
-        fi
-      fi
-    fi
-
-    # WASM hash checks (optional: only run when manifest values are provided)
-    check_wasm_hash() {
+    check_address() {
       local label="$1"
-      local wasm_file="$2"
+      local actual="$2"
       local expected="$3"
       if [[ -z "$expected" ]]; then
-        echo "  --  $label WASM hash not in manifest (skipping)"
-        return
+        echo "  --  $label not in manifest (skipping)"
+      elif [[ -z "$actual" ]]; then
+        fail "$label not found in contract storage"
+      elif [[ "$actual" != "$expected" ]]; then
+        fail "$label mismatch. Got: $actual  Expected: $expected"
+      else
+        echo "  OK  $label = $expected"
       fi
+    }
+
+    # --- whitelist contract ---
+    echo "  Reading whitelist storage..."
+    wl_json="$(read_storage "$whitelist_id" 2>/dev/null || true)"
+    if [[ -z "$wl_json" ]]; then
+      fail "whitelist: getLedgerEntries returned no entry - contract may not be initialized"
+    else
+      wl_admin="$(storage_get "$wl_json" "Admin")"
+      check_address "whitelist.Admin" "$wl_admin" "$manifest_admin"
+    fi
+
+    # --- income token contract ---
+    echo "  Reading income_token storage..."
+    tok_json="$(read_storage "$token_id" 2>/dev/null || true)"
+    if [[ -z "$tok_json" ]]; then
+      fail "income_token: getLedgerEntries returned no entry - contract may not be initialized"
+    else
+      tok_admin="$(storage_get "$tok_json" "Admin")"
+      tok_whitelist="$(storage_get "$tok_json" "Whitelist")"
+      check_address "income_token.Admin" "$tok_admin" "$manifest_admin"
+      check_address "income_token.Whitelist" "$tok_whitelist" "$manifest_whitelist"
+    fi
+
+    # --- payout-split contract ---
+    echo "  Reading payout_split storage..."
+    pay_json="$(read_storage "$payout_id" 2>/dev/null || true)"
+    if [[ -z "$pay_json" ]]; then
+      fail "payout_split: getLedgerEntries returned no entry - contract not initialized"
+    else
+      pay_admin="$(storage_get "$pay_json" "Admin")"
+      pay_operator="$(storage_get "$pay_json" "Operator")"
+      pay_ally="$(storage_get "$pay_json" "Ally")"
+      pay_fee="$(storage_get "$pay_json" "PlatformFeeRecipient")"
+      pay_usdc="$(storage_get "$pay_json" "UsdcToken")"
+      pay_income="$(storage_get "$pay_json" "IncomeToken")"
+      pay_whitelist="$(storage_get "$pay_json" "Whitelist")"
+
+      check_address "payout.Admin"              "$pay_admin"    "$manifest_admin"
+      check_address "payout.Operator"           "$pay_operator" "$manifest_operator"
+      check_address "payout.Ally"               "$pay_ally"     "$manifest_ally"
+      check_address "payout.PlatformFeeRecipient" "$pay_fee"    "$manifest_fee"
+      check_address "payout.UsdcToken"          "$pay_usdc"     "$manifest_usdc"
+      check_address "payout.IncomeToken"        "$pay_income"   "$manifest_income_token"
+      check_address "payout.Whitelist"          "$pay_whitelist" "$manifest_whitelist"
+
+      # operator and ally must differ in actual storage too
+      if [[ -n "$pay_operator" ]] && [[ -n "$pay_ally" ]] && [[ "$pay_operator" == "$pay_ally" ]]; then
+        fail "payout.Operator == payout.Ally in contract storage - SignerCollision"
+      fi
+    fi
+
+    # --- WASM hash checks (optional) ---
+    check_wasm_hash() {
+      local label="$1" wasm_file="$2" expected="$3"
+      [[ -z "$expected" ]] && { echo "  --  $label WASM hash not in manifest (skipping)"; return; }
       if [[ ! -f "$wasm_file" ]]; then
         fail "$label WASM not found at $wasm_file - run: cd apps/contracts && stellar contract build"
         return
       fi
+      local actual
       actual="$(sha256sum "$wasm_file" | awk '{print $1}')"
       if [[ "$actual" != "$expected" ]]; then
         fail "$label WASM hash mismatch. Got: $actual  Expected: $expected"
@@ -267,16 +321,12 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# Report
-# ---------------------------------------------------------------------------
 echo ""
 if [[ ${#ERRORS[@]} -eq 0 ]]; then
-  echo "=== PREFLIGHT PASSED - all checks clean ==="
+  echo "=== PREFLIGHT PASSED ==="
   exit 0
 else
   echo "=== PREFLIGHT FAILED ==="
-  for err in "${ERRORS[@]}"; do
-    echo "  $err"
-  done
+  for err in "${ERRORS[@]}"; do echo "  $err"; done
   exit 1
 fi

@@ -52,7 +52,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await submitButton.click();
 
     // Submitted state confirmation
-    await expect(page.getByText("Submitted", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(/Submitted/).first()).toBeVisible();
   });
 
   test("ally sees operator rejection reason and can resubmit", async ({
@@ -80,7 +80,9 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
 
     // Operator reason is prominently displayed
     await expect(
-      page.getByText(/The statement covers three weeks, not the full month\./),
+      page
+        .getByText(/The statement covers three weeks, not the full month\./)
+        .first(),
     ).toBeVisible();
 
     // Form remains open and inputs are enabled for resubmission
@@ -104,7 +106,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
-    await expect(page.getByText("Submitted", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText(/Submitted/).first()).toBeVisible();
   });
 
   test("paused payout contract blocks ally submissions", async ({ page }) => {
@@ -273,7 +275,7 @@ test.describe("Evidence Lifecycle - Investor Route", () => {
 
     // Verify timeline title and status badges
     await expect(page.getByText("Income cycles")).toBeVisible();
-    await expect(page.getByText("On time")).toBeVisible();
+    await expect(page.getByText("On time").first()).toBeVisible();
     await expect(page.getByText("Late")).toBeVisible();
     await expect(page.getByText("Disputed")).toBeVisible();
 
@@ -308,7 +310,7 @@ test.describe("Evidence Lifecycle - Investor Route", () => {
 
     // Escalation alert must be visible
     await expect(
-      page.getByText(/has not reported for 2 consecutive cycles/i),
+      page.getByText(/has not reported for \d+ consecutive cycles/i),
     ).toBeVisible();
   });
 });

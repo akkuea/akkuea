@@ -23,14 +23,14 @@ const preview: Preview = {
             @font-face {
               font-family: "Akkuea Storybook Sans";
               src: url("/fonts/nunito-sans-regular.woff2") format("woff2");
-              font-weight: 400;
+              font-weight: 400 500;
               font-style: normal;
               font-display: block;
             }
             @font-face {
               font-family: "Akkuea Storybook Sans";
               src: url("/fonts/nunito-sans-bold.woff2") format("woff2");
-              font-weight: 700;
+              font-weight: 600 700;
               font-style: normal;
               font-display: block;
             }

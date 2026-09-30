@@ -1,7 +1,7 @@
 # Known high/critical dependency findings allowlisted for CI.
 # Format: GHSA-ID  # package - reason / follow-up
 # New advisories not listed here MUST fail the audit step.
-# Reviewed: 2026-08-17 against develop lockfile after dependency upgrade. Follow-up: dependency upgrade track.
+# Reviewed: 2026-09-30 against develop lockfile after dependency upgrade. Follow-up: dependency upgrade track.
 
 GHSA-267c-6grr-h53f  # next (high) - Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - transitive; track upgrade
 GHSA-26hh-7cqf-hhc6  # next (high) - Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - Incomplete Fix Follow-Up - transitive; track upgrade
@@ -38,6 +38,10 @@ GHSA-r28c-9q8g-f849  # postcss (high) - PostCSS: Path Traversal in Previous Sour
 GHSA-rgw5-rvv9-x895  # brace-expansion (high) - brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation - transitive; track upgrade
 GHSA-vmh5-mc38-953g  # undici (high) - undici vulnerable to TLS certificate validation bypass via dropped requestTls in SOCKS5 ProxyAgent - transitive; track upgrade
 GHSA-vxpw-j846-p89q  # undici (high) - undici WebSocket client vulnerable to denial of service via fragment count bypass - transitive; track upgrade
+GHSA-w293-vg96-wgc3  # undici (high) - undici vulnerable to TLS certificate validation bypass via dropped connect options in BalancedPool - transitive; track upgrade
 GHSA-w3rx-r6r6-pgpr  # image-size (high) - image-size: ICNS parser allows denial of service through an infinite loop - transitive; track upgrade
 GHSA-wcpc-wj8m-hjx6  # protobufjs (high) - protobufjs: Denial of service through unbounded Any expansion during JSON conversion - transitive; track upgrade
 GHSA-xq3m-2v4x-88gg  # protobufjs (critical) - Arbitrary code execution in protobufjs - transitive; track upgrade
+GHSA-6j4f-fj2g-mc7p  # brace-expansion (high) - brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion - transitive; track upgrade
+GHSA-qhr7-859c-m2p7  # brace-expansion (high) - brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion - transitive; track upgrade
+GHSA-rfgv-xxqx-mfg5  # undici (high) - undici vulnerable to Denial of Service via unrequested WebSocket subprotocol - transitive; track upgrade

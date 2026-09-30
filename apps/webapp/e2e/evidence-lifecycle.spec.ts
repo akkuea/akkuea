@@ -46,13 +46,13 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
 
     // Submit for review
     const submitButton = page.getByRole("button", {
-      name: "Submit for Review",
+      name: "Submit for review",
     });
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
     // Submitted state confirmation
-    await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+    await expect(page.getByText("Submitted. The operator can now review this cycle.")).toBeVisible();
     await expect(page.getByRole("alert")).toHaveCount(0);
   });
 
@@ -102,12 +102,12 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await page.getByPlaceholder("0.00").fill("12500.00");
 
     const submitButton = page.getByRole("button", {
-      name: "Submit for Review",
+      name: "Submit for review",
     });
     await expect(submitButton).toBeEnabled();
     await submitButton.click();
 
-    await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+    await expect(page.getByText("Submitted. The operator can now review this cycle.")).toBeVisible();
     await expect(page.getByRole("alert")).toHaveCount(0);
   });
 
@@ -186,7 +186,7 @@ test.describe("Evidence Lifecycle - Operator Review Queue", () => {
     ).toBeVisible();
 
     // Start review
-    const startReviewBtn = page.getByRole("button", { name: "Start Review" });
+    const startReviewBtn = page.getByRole("button", { name: "Start review" });
     await expect(startReviewBtn).toBeVisible();
     await startReviewBtn.click();
 
@@ -288,7 +288,7 @@ test.describe("Evidence Lifecycle - Investor Route", () => {
 
     // Verify investor holdings card calculations
     await expect(page.getByText("25.00%")).toBeVisible();
-    await expect(page.getByText("Whitelisted")).toBeVisible();
+    await expect(page.getByText("Approved on the pilot whitelist")).toBeVisible();
   });
 
   test("investor timeline renders two-cycle escalation warning when ally misses 2 cycles", async ({

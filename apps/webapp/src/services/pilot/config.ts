@@ -106,3 +106,36 @@ export function pilotPaymentDay(): number {
 export function pilotPropertySplatUrl(): string | null {
   return process.env.NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL?.trim() || null;
 }
+
+/** Thrown when an action needs the pilot's configured ally address and none
+ * is set. */
+export class PilotAllyNotConfiguredError extends Error {
+  constructor() {
+    super(
+      "NEXT_PUBLIC_PILOT_ALLY_ADDRESS is not set. The pilot's ally address " +
+        "is a term of the ally's agreement, not something the contract " +
+        "exposes as a read (pilot-payout-split has no get_ally method), " +
+        "so it must be configured here.",
+    );
+    this.name = "PilotAllyNotConfiguredError";
+  }
+}
+
+/**
+ * The pilot's ally address, a term of the operator/ally agreement rather
+ * than a property of the software: the pilot is, by design, a single ally
+ * relationship (see docs/strategy/product-brief.md), and
+ * `pilot-payout-split` stores its `Ally` address at initialization with no
+ * corresponding public getter. Needed wherever a two-signer invocation
+ * (`execute_distribution`, `record_evidence`, `exit`) is prepared, since the
+ * contract requires both signers' addresses as explicit arguments.
+ *
+ * @throws {@link PilotAllyNotConfiguredError} if unset.
+ */
+export function pilotAllyAddress(): string {
+  const configured = process.env.NEXT_PUBLIC_PILOT_ALLY_ADDRESS?.trim();
+  if (!configured) {
+    throw new PilotAllyNotConfiguredError();
+  }
+  return configured;
+}

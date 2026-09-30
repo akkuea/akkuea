@@ -1,7 +1,5 @@
+export type { StorageProvider, StoredFile, StorageProviderConfig } from './StorageProvider';
 export {
-  StorageProvider,
-  StoredFile,
-  StorageProviderConfig,
   validateFileType,
   isAllowedFileSize,
   MAX_FILE_SIZE_BYTES,
@@ -12,4 +10,5 @@ export {
 
 export { LocalStorageProvider } from './LocalStorageProvider';
 export { S3CompatibleStorageProvider } from './S3CompatibleStorageProvider';
-export { storageFactory, StorageFactoryConfig, StorageProviderType } from './StorageFactory';
+export { storageFactory } from './StorageFactory';
+export type { StorageFactoryConfig, StorageProviderType } from './StorageFactory';

@@ -1,76 +1,75 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- mocks Drizzle internals with loosely-typed stand-ins */
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { db } from '../db';
-import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
-import { eq } from 'drizzle-orm';
 import { WhitelistController } from '../controllers/WhitelistController';
 import { StorageService } from '../services/StorageService';
-import { encryptPlaintextField, decryptFieldOrPlaintext } from '../services/FieldEncryption';
-import { ApiError } from '../errors/ApiError';
+
+const TEST_FIELD_ENCRYPTION_KEY = 'dGVzdC1rZXktbWF0ZXJpYWwtdGhhdC1pcy0zMi1ieXRlcy1sb25nLg=='; // 32 bytes base64
 
 describe('WhitelistController', () => {
   let mockDbStore: any[] = [];
 
-  function extractWalletAddress(obj: any): string | undefined {
-    if (obj == null || typeof obj !== 'object') return undefined;
-    if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
-      for (const chunk of obj.queryChunks) {
-        if (chunk?.constructor?.name === 'Param' && typeof chunk.value === 'string') {
-          return chunk.value;
-        }
+  /**
+   * Collects every Param value from a Drizzle condition AST. Controller
+   * queries are single `eq(column, value)` conditions, so the first Param is
+   * the bound value (a request id or a wallet address depending on caller).
+   */
+  function collectParamValues(node: any, out: unknown[] = []): unknown[] {
+    if (node == null || typeof node !== 'object') return out;
+    for (const chunk of node.queryChunks ?? []) {
+      if (chunk?.constructor?.name === 'Param') {
+        out.push(chunk.value);
+      } else {
+        collectParamValues(chunk, out);
       }
     }
-    if ('value' in obj && typeof obj.value === 'string') return obj.value;
-    return undefined;
+    return out;
   }
+
+  let originalStore: unknown;
+  let originalSignedUrl: unknown;
+  let originalDelete: unknown;
 
   beforeEach(() => {
     mockDbStore = [];
 
-    mock.module('../services/StorageService', () => {
-      return {
-        StorageService: {
-          store: mock(async (buffer: Buffer, userId: string, ext: string, docId?: string) => {
-            return {
-              storedFileName: `${docId || 'test-id'}${ext}`,
-              relativePath: `kyc/${userId}/${docId || 'test-id'}${ext}`,
-              extension: ext,
-            };
-          }),
-          getSignedReadUrl: mock(async (path: string) => `http://localhost:3001/storage/${path}?token=test`),
-          deleteByRelativePath: mock(async () => {}),
-        },
-      };
-    });
+    // Real FieldEncryption is used (key supplied via env below); StorageService
+    // statics are stubbed in place on the class object. NOTE: mock.module() is
+    // deliberately avoided here: bun test applies it to the whole process, so
+    // a module-level mock would leak into every other test file loaded after
+    // this one (see the DLQ route 403 regressions this caused).
+    process.env.FIELD_ENCRYPTION_KEY = TEST_FIELD_ENCRYPTION_KEY;
+    originalStore = StorageService.store;
+    originalSignedUrl = StorageService.getSignedReadUrl;
+    originalDelete = StorageService.deleteByRelativePath;
 
-    mock.module('../services/FieldEncryption', () => {
-      return {
-        encryptPlaintextField: mock((plaintext: string) => JSON.stringify({
-          ciphertext: 'encrypted',
-          encryptedDek: 'dek',
-          iv: 'iv',
-          authTag: 'tag',
-          version: 1,
-        })),
-        decryptFieldOrPlaintext: mock((val: string) => val),
-      };
-    });
+    StorageService.store = mock(
+      async (buffer: Buffer, userId: string, ext: string, docId?: string) => {
+        return {
+          storedFileName: `${docId || 'test-id'}${ext}`,
+          relativePath: `kyc/${userId}/${docId || 'test-id'}${ext}`,
+          extension: ext,
+        };
+      },
+    ) as typeof StorageService.store;
+    StorageService.getSignedReadUrl = mock(
+      async (path: string) => `http://localhost:3001/storage/${path}?token=test`,
+    ) as typeof StorageService.getSignedReadUrl;
+    StorageService.deleteByRelativePath = mock(
+      async () => {},
+    ) as typeof StorageService.deleteByRelativePath;
 
     (db as any).query = {
       pilotWhitelistRequests: {
         findFirst: mock(async ({ where }: any) => {
-          const walletAddr = extractWalletAddress(where);
-          if (walletAddr) {
-            return mockDbStore.find((r) => r.walletAddress === walletAddr);
-          }
-          // For ID-based lookup
-          if (where && where.chunks) {
-            for (const chunk of where.chunks) {
-              if (chunk.value && chunk.value.startsWith('req_')) {
-                return mockDbStore.find((r) => r.id === chunk.value);
-              }
-            }
-          }
-          return undefined;
+          const [paramValue] = collectParamValues(where);
+          if (paramValue === undefined) return undefined;
+          // Callers either look up by request id (getDocumentUrl,
+          // deleteRequest) or by wallet address (request, status).
+          return (
+            mockDbStore.find((r) => r.id === paramValue) ??
+            mockDbStore.find((r) => r.walletAddress === paramValue)
+          );
         }),
         findMany: mock(async () => mockDbStore),
       },
@@ -93,9 +92,13 @@ describe('WhitelistController', () => {
 
     (db as any).update = mock(() => ({
       set: (val: any) => ({
-        where: async () => {
-          if (mockDbStore.length > 0) {
-            Object.assign(mockDbStore[0], val);
+        where: async (whereExpr: any) => {
+          const [paramValue] = collectParamValues(whereExpr);
+          const target =
+            mockDbStore.find((r) => r.id === paramValue) ??
+            mockDbStore.find((r) => r.walletAddress === paramValue);
+          if (target) {
+            Object.assign(target, val);
           }
         },
       }),
@@ -103,15 +106,22 @@ describe('WhitelistController', () => {
 
     (db as any).delete = mock(() => ({
       where: async (whereExpr: any) => {
-        const walletAddr = extractWalletAddress(whereExpr);
-        if (walletAddr) {
-          mockDbStore = mockDbStore.filter((r) => r.walletAddress !== walletAddr);
+        const [paramValue] = collectParamValues(whereExpr);
+        if (paramValue !== undefined) {
+          mockDbStore = mockDbStore.filter((r) => r.walletAddress !== paramValue);
         }
       },
     }));
   });
 
   afterEach(() => {
+    // Restore stubbed statics first so no later file sees a mock, then drop
+    // the db Proxy overrides (they persist across files in one bun process).
+    StorageService.store = originalStore as typeof StorageService.store;
+    StorageService.getSignedReadUrl = originalSignedUrl as typeof StorageService.getSignedReadUrl;
+    StorageService.deleteByRelativePath =
+      originalDelete as typeof StorageService.deleteByRelativePath;
+    delete process.env.FIELD_ENCRYPTION_KEY;
     mock.restore();
     for (const prop of ['query', 'insert', 'update', 'delete']) {
       delete (db as any)[prop];
@@ -213,7 +223,7 @@ describe('WhitelistController', () => {
       expect(result.data.fullName).toBe('New Name');
       expect(result.data.status).toBe('pending');
 
-      const requests = mockDbStore.filter(r => r.walletAddress === ctx.body.walletAddress);
+      const requests = mockDbStore.filter((r) => r.walletAddress === ctx.body.walletAddress);
       expect(requests.length).toBe(1);
       expect(requests[0].id).not.toBe('old_rejected');
     });
@@ -241,7 +251,9 @@ describe('WhitelistController', () => {
         status: 'pending',
       });
 
-      await expect(WhitelistController.getDocumentUrl('req_no_doc')).rejects.toThrow('No document attached');
+      await expect(WhitelistController.getDocumentUrl('req_no_doc')).rejects.toThrow(
+        'No document attached',
+      );
     });
 
     it('throws not found for non-existent request', async () => {
@@ -265,7 +277,7 @@ describe('WhitelistController', () => {
       const result = await WhitelistController.deleteRequest('req_to_delete');
       expect(result.success).toBe(true);
 
-      const updated = mockDbStore.find(r => r.id === 'req_to_delete');
+      const updated = mockDbStore.find((r) => r.id === 'req_to_delete');
       expect(updated.fullName).toBe('[REDACTED]');
       expect(updated.idReference).toBe('[REDACTED]');
       expect(updated.fullNameEncrypted).toBeNull();
@@ -280,7 +292,9 @@ describe('WhitelistController', () => {
         status: 'approved',
       });
 
-      await expect(WhitelistController.deleteRequest('req_approved')).rejects.toThrow('Cannot delete approved');
+      await expect(WhitelistController.deleteRequest('req_approved')).rejects.toThrow(
+        'Cannot delete approved',
+      );
     });
 
     it('throws not found for non-existent request', async () => {

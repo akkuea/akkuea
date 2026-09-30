@@ -119,12 +119,12 @@ Configured via `STORAGE_PROVIDER`:
 |----------|----------|---------|-------|
 | `STORAGE_PROVIDER` | No | `local` | `local` or `s3-compatible` |
 | `STORAGE_LOCAL_DIR` | If local | `KYC_UPLOAD_DIR` | Absolute path |
-| `STORAGE_S3_BUCKET` | If S3 | — | Bucket must not be public |
-| `STORAGE_S3_REGION` | If S3 | — | e.g., `us-east-1` |
-| `STORAGE_S3_ENDPOINT` | If S3 custom | — | e.g., MinIO URL |
-| `STORAGE_S3_ACCESS_KEY_ID` | If S3 | — | |
-| `STORAGE_S3_SECRET_ACCESS_KEY` | If S3 | — | |
-| `STORAGE_ENCRYPTION_KEY` | **Yes (prod)** | — | Base64-encoded 32 bytes; `openssl rand -base64 32` |
+| `STORAGE_S3_BUCKET` | If S3 | - | Bucket must not be public |
+| `STORAGE_S3_REGION` | If S3 | - | e.g., `us-east-1` |
+| `STORAGE_S3_ENDPOINT` | If S3 custom | - | e.g., MinIO URL |
+| `STORAGE_S3_ACCESS_KEY_ID` | If S3 | - | |
+| `STORAGE_S3_SECRET_ACCESS_KEY` | If S3 | - | |
+| `STORAGE_ENCRYPTION_KEY` | **Yes (prod)** | - | Base64-encoded 32 bytes; `openssl rand -base64 32` |
 | `FIELD_ENCRYPTION_KEY` | **Yes (prod)** | Falls back to `STORAGE_ENCRYPTION_KEY` | Separate key for PII rotation flexibility |
 | `WHITELIST_RETENTION_DAYS_REJECTED` | No | `90` | Days |
 | `WHITELIST_RETENTION_JOB_ENABLED` | No | `true` | Set `false` to disable |

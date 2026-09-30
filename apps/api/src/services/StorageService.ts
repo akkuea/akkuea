@@ -1,7 +1,8 @@
 import { fileTypeFromBuffer } from 'file-type';
 import { ApiError } from '../errors/ApiError';
-import { storageFactory, StorageFactoryConfig } from './storage';
-import { StoredFile } from './storage/StorageProvider';
+import { storageFactory } from './storage';
+import type { StorageFactoryConfig } from './storage';
+import type { StoredFile } from './storage/StorageProvider';
 
 const ALLOWED_EXTENSIONS = new Set(['.pdf', '.jpg', '.jpeg', '.png']);
 const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']);
@@ -22,7 +23,9 @@ export class StorageService {
 
   private static getProvider() {
     if (!StorageService.initialized) {
-      throw new Error('StorageService not initialized. Call StorageService.initialize() at startup.');
+      throw new Error(
+        'StorageService not initialized. Call StorageService.initialize() at startup.',
+      );
     }
     return storageFactory.getProvider();
   }
@@ -132,10 +135,7 @@ export class StorageService {
   /**
    * Get a signed URL for reading a document with expiration.
    */
-  static async getSignedReadUrl(
-    relativePath: string,
-    expiresInSeconds?: number,
-  ): Promise<string> {
+  static async getSignedReadUrl(relativePath: string, expiresInSeconds?: number): Promise<string> {
     const provider = StorageService.getProvider();
     return provider.getSignedReadUrl(relativePath, expiresInSeconds);
   }

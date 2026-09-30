@@ -1,24 +1,29 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- mocks Drizzle internals with loosely-typed stand-ins */
 import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 import { db } from '../db';
-import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
-import { eq, and, lt } from 'drizzle-orm';
 import { WhitelistRetentionJob } from '../workers/whitelistRetentionJob';
 import { StorageService } from '../services/StorageService';
 
 describe('WhitelistRetentionJob', () => {
   let mockDbStore: any[] = [];
+  let originalDelete: unknown;
 
-  function extractWalletAddress(obj: any): string | undefined {
-    if (obj == null || typeof obj !== 'object') return undefined;
-    if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
-      for (const chunk of obj.queryChunks) {
-        if (chunk?.constructor?.name === 'Param' && typeof chunk.value === 'string') {
-          return chunk.value;
-        }
+  /**
+   * Collects every Param value from a Drizzle condition AST. The job's query
+   * is `and(eq(status, 'rejected'), lt(updatedAt, <cutoff>))`, whose first
+   * Param is the status and second is the cutoff date; anything else in the
+   * chunks is column or SQL-string structure.
+   */
+  function collectParamValues(node: any, out: unknown[] = []): unknown[] {
+    if (node == null || typeof node !== 'object') return out;
+    for (const chunk of node.queryChunks ?? []) {
+      if (chunk?.constructor?.name === 'Param') {
+        out.push(chunk.value);
+      } else {
+        collectParamValues(chunk, out);
       }
     }
-    if ('value' in obj && typeof obj.value === 'string') return obj.value;
-    return undefined;
+    return out;
   }
 
   beforeEach(() => {
@@ -73,25 +78,27 @@ describe('WhitelistRetentionJob', () => {
       },
     ];
 
-    mock.module('../services/StorageService', () => {
-      return {
-        StorageService: {
-          deleteByRelativePath: mock(async (path: string) => {
-            // Verify the path is correct
-            expect(path).toBeDefined();
-          }),
-        },
-      };
-    });
+    // Stub StorageService.deleteByRelativePath on the class object rather
+    // than via mock.module(): bun test applies mock.module() to the whole
+    // process, which would leak into every test file loaded after this one.
+    originalDelete = StorageService.deleteByRelativePath;
+    StorageService.deleteByRelativePath = mock(async (path: string) => {
+      // Verify the path is correct
+      expect(path).toBeDefined();
+    }) as typeof StorageService.deleteByRelativePath;
 
     (db as any).query = {
       pilotWhitelistRequests: {
         findMany: mock(async ({ where }: any) => {
-          // Simulate the query: rejected AND updatedAt < cutoff
-          return mockDbStore.filter(r => 
-            r.status === 'rejected' && 
-            r.updatedAt < new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
-          );
+          // Simulate the query: status = 'rejected' (first Param) AND
+          // updatedAt < cutoff (second Param). The cutoff is what the job
+          // derives from its configured retention period, so the mock must
+          // compare against it rather than a hardcoded 90 days.
+          const [status, cutoff] = collectParamValues(where);
+          if (status !== 'rejected' || !(cutoff instanceof Date)) {
+            return [];
+          }
+          return mockDbStore.filter((r) => r.status === 'rejected' && r.updatedAt < cutoff);
         }),
       },
     };
@@ -99,10 +106,11 @@ describe('WhitelistRetentionJob', () => {
     (db as any).update = mock(() => ({
       set: (val: any) => ({
         where: async (whereExpr: any) => {
-          // Find the request by ID in where clause
-          const reqId = whereExpr?.chunks?.[0]?.value;
-          if (reqId) {
-            const idx = mockDbStore.findIndex(r => r.id === reqId);
+          // eq(pilotWhitelistRequests.id, request.id) puts the bound value in
+          // a Param chunk inside the condition's queryChunks tree.
+          const [reqId] = collectParamValues(whereExpr);
+          if (reqId !== undefined) {
+            const idx = mockDbStore.findIndex((r) => r.id === reqId);
             if (idx >= 0) {
               Object.assign(mockDbStore[idx], val);
             }
@@ -113,6 +121,8 @@ describe('WhitelistRetentionJob', () => {
   });
 
   afterEach(() => {
+    StorageService.deleteByRelativePath =
+      originalDelete as typeof StorageService.deleteByRelativePath;
     mock.restore();
     for (const prop of ['query', 'update', 'delete']) {
       delete (db as any)[prop];
@@ -131,7 +141,7 @@ describe('WhitelistRetentionJob', () => {
     expect(result.errors).toBe(0);
 
     // Check that only the old rejected request was anonymized
-    const oldRejected = mockDbStore.find(r => r.id === 'req_old_rejected');
+    const oldRejected = mockDbStore.find((r) => r.id === 'req_old_rejected');
     expect(oldRejected.fullName).toBe('[REDACTED]');
     expect(oldRejected.idReference).toBe('[REDACTED]');
     expect(oldRejected.fullNameEncrypted).toBeNull();
@@ -139,15 +149,15 @@ describe('WhitelistRetentionJob', () => {
     expect(oldRejected.documentUrl).toBeNull();
 
     // Recent rejected should NOT be processed
-    const recentRejected = mockDbStore.find(r => r.id === 'req_recent_rejected');
+    const recentRejected = mockDbStore.find((r) => r.id === 'req_recent_rejected');
     expect(recentRejected.fullName).toBe('Recent Rejected');
 
     // Approved should NOT be processed
-    const approved = mockDbStore.find(r => r.id === 'req_approved');
+    const approved = mockDbStore.find((r) => r.id === 'req_approved');
     expect(approved.fullName).toBe('Approved User');
 
     // Pending should NOT be processed
-    const pending = mockDbStore.find(r => r.id === 'req_pending');
+    const pending = mockDbStore.find((r) => r.id === 'req_pending');
     expect(pending.fullName).toBe('Pending User');
   });
 
@@ -163,7 +173,7 @@ describe('WhitelistRetentionJob', () => {
     expect(result.errors).toBe(0);
 
     // Data should be unchanged in dry run
-    const oldRejected = mockDbStore.find(r => r.id === 'req_old_rejected');
+    const oldRejected = mockDbStore.find((r) => r.id === 'req_old_rejected');
     expect(oldRejected.fullName).toBe('Old Rejected');
     expect(oldRejected.documentUrl).toBeDefined();
   });
@@ -179,7 +189,7 @@ describe('WhitelistRetentionJob', () => {
     // Verify StorageService.deleteByRelativePath was called with correct path
     const { StorageService } = await import('../services/StorageService');
     expect(StorageService.deleteByRelativePath).toHaveBeenCalledWith(
-      'kyc/GOLD123456789012345678901234567890123456789012345678901234/doc1.pdf'
+      'kyc/GOLD123456789012345678901234567890123456789012345678901234/doc1.pdf',
     );
   });
 
@@ -208,7 +218,7 @@ describe('WhitelistRetentionJob', () => {
 
     expect(result.processed).toBe(2); // old_rejected + 60_days
 
-    const sixtyDays = mockDbStore.find(r => r.id === 'req_60_days');
+    const sixtyDays = mockDbStore.find((r) => r.id === 'req_60_days');
     expect(sixtyDays.fullName).toBe('[REDACTED]');
   });
 

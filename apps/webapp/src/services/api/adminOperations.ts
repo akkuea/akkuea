@@ -150,7 +150,10 @@ export const whitelistOperationsApi = {
   async getDocumentUrl(
     operatorWallet: string | null,
     requestId: string,
-  ): Promise<{ success: boolean; data: { signedUrl: string; fileName: string } }> {
+  ): Promise<{
+    success: boolean;
+    data: { signedUrl: string; fileName: string };
+  }> {
     return adminFetch(`pilot/whitelist/document/${requestId}`, operatorWallet);
   },
 };

@@ -1,14 +1,16 @@
 import { mkdir, writeFile, readFile, access, unlink } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
+import { randomBytes, createCipheriv, createDecipheriv } from 'node:crypto';
 import { fileTypeFromBuffer } from 'file-type';
 import { ApiError } from '../../errors/ApiError';
 import {
-  StorageProvider,
-  StoredFile,
-  StorageProviderConfig,
+  type StorageProvider,
+  type StoredFile,
+  type StorageProviderConfig,
   validateFileType,
   isAllowedFileSize,
+  isAllowedExtension,
   generateStoredFileName,
   buildRelativePath,
   getFileExtension,
@@ -52,9 +54,8 @@ export class LocalStorageProvider implements StorageProvider {
   private encrypt(buffer: Buffer): Buffer {
     if (!this.encryptionKey) return buffer;
 
-    const crypto = await import('node:crypto');
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-gcm', this.encryptionKey, iv);
+    const iv = randomBytes(16);
+    const cipher = createCipheriv('aes-256-gcm', this.encryptionKey, iv);
     const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
     const authTag = cipher.getAuthTag();
     return Buffer.concat([iv, authTag, encrypted]);
@@ -63,14 +64,13 @@ export class LocalStorageProvider implements StorageProvider {
   private decrypt(buffer: Buffer): Buffer {
     if (!this.encryptionKey) return buffer;
 
-    const crypto = await import('node:crypto');
     if (buffer.length < 16 + 16) {
       throw new Error('Invalid encrypted buffer: too short');
     }
     const iv = buffer.subarray(0, 16);
     const authTag = buffer.subarray(16, 32);
     const encrypted = buffer.subarray(32);
-    const decipher = crypto.createDecipheriv('aes-256-gcm', this.encryptionKey, iv);
+    const decipher = createDecipheriv('aes-256-gcm', this.encryptionKey, iv);
     decipher.setAuthTag(authTag);
     return Buffer.concat([decipher.update(encrypted), decipher.final()]);
   }
@@ -93,12 +93,7 @@ export class LocalStorageProvider implements StorageProvider {
       throw ApiError.badRequest(sizeCheck.error!);
     }
 
-    const typeCheck = await validateFileType(
-      `file${ext}`,
-      undefined,
-      buffer,
-      fileTypeFromBuffer,
-    );
+    const typeCheck = await validateFileType(`file${ext}`, undefined, buffer, fileTypeFromBuffer);
     if (!typeCheck.allowed) {
       throw ApiError.badRequest(typeCheck.error!);
     }
@@ -157,10 +152,7 @@ export class LocalStorageProvider implements StorageProvider {
     }
   }
 
-  async getSignedReadUrl(
-    relativePath: string,
-    expiresInSeconds = 3600,
-  ): Promise<string> {
+  async getSignedReadUrl(relativePath: string, expiresInSeconds = 3600): Promise<string> {
     this.ensureInitialized();
 
     const normalized = relativePath.replace(/^kyc[/\\]/, '');
@@ -177,7 +169,9 @@ export class LocalStorageProvider implements StorageProvider {
     }
 
     const baseUrl = process.env.STORAGE_LOCAL_BASE_URL ?? 'http://localhost:3001';
-    const token = Buffer.from(`${relativePath}:${Date.now() + expiresInSeconds * 1000}`).toString('base64url');
+    const token = Buffer.from(`${relativePath}:${Date.now() + expiresInSeconds * 1000}`).toString(
+      'base64url',
+    );
     return `${baseUrl}/storage/local/${relativePath}?token=${token}`;
   }
 

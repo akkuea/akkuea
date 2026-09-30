@@ -219,7 +219,7 @@ export function createApiClient(config: ApiClientConfig) {
 
     const url = `${baseUrl}${path}`;
     const headers = buildHeaders(customHeaders);
-    headers.delete('Content-Type');
+    headers.delete("Content-Type");
 
     const options: RequestInit = {
       method,

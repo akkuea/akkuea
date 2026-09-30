@@ -248,7 +248,10 @@ export function WhitelistReviewQueue() {
                     >
                       {isLoadingDocument ? (
                         <span className="flex items-center gap-1">
-                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                          <svg
+                            className="animate-spin h-4 w-4"
+                            viewBox="0 0 24 24"
+                          >
                             <circle
                               className="opacity-25"
                               cx="12"
@@ -301,7 +304,7 @@ export function WhitelistReviewQueue() {
                   Document preview (URL expires in 1 hour):
                 </p>
                 <div className="space-y-2">
-                  {selectedRequest.documentUrl?.endsWith('.pdf') && (
+                  {selectedRequest.documentUrl?.endsWith(".pdf") && (
                     <iframe
                       src={documentUrl}
                       className="w-full h-96 rounded border border-zinc-800"
@@ -309,6 +312,7 @@ export function WhitelistReviewQueue() {
                     />
                   )}
                   {selectedRequest.documentUrl?.match(/\.(jpg|jpeg|png)$/i) && (
+                    // eslint-disable-next-line @next/next/no-img-element -- src is a dynamic, expiring signed URL served by the API, not a static asset
                     <img
                       src={documentUrl}
                       alt="ID Document"
@@ -317,7 +321,8 @@ export function WhitelistReviewQueue() {
                   )}
                 </div>
                 <p className="text-xs text-zinc-500 mt-2">
-                  This is a time-limited signed URL. Do not share or save this link.
+                  This is a time-limited signed URL. Do not share or save this
+                  link.
                 </p>
               </div>
             )}

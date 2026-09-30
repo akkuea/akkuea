@@ -1,5 +1,4 @@
-import { ApiError } from '../../errors/ApiError';
-import { StorageProvider, StorageProviderConfig } from './StorageProvider';
+import type { StorageProvider, StorageProviderConfig } from './StorageProvider';
 import { LocalStorageProvider } from './LocalStorageProvider';
 import { S3CompatibleStorageProvider } from './S3CompatibleStorageProvider';
 

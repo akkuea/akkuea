@@ -1,3 +1,4 @@
+import { createCipheriv, randomBytes, scryptSync } from 'node:crypto';
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
 import {
   encryptField,
@@ -108,23 +109,18 @@ describe('FieldEncryption', () => {
   describe('rotateFieldKey', () => {
     it('re-wraps DEK with new KEK without changing plaintext', () => {
       const plaintext = 'Rotation Test';
-      const encrypted = encryptField(plaintext);
 
       // Simulate rotation by creating encrypted with old key
       // We'll manually create an encrypted field with old key
-      const oldKek = require('node:crypto').scryptSync(
-        OLD_KEY,
-        Buffer.from('akkuea-field-encryption-salt', 'utf8'),
-        32,
-      );
-      const dek = require('node:crypto').randomBytes(32);
-      const iv = require('node:crypto').randomBytes(12);
-      const cipher = require('node:crypto').createCipheriv('aes-256-gcm', dek, iv, { authTagLength: 16 });
+      const oldKek = scryptSync(OLD_KEY, Buffer.from('akkuea-field-encryption-salt', 'utf8'), 32);
+      const dek = randomBytes(32);
+      const iv = randomBytes(12);
+      const cipher = createCipheriv('aes-256-gcm', dek, iv, { authTagLength: 16 });
       const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
       const authTag = cipher.getAuthTag();
 
-      const dekIv = require('node:crypto').randomBytes(12);
-      const dekCipher = require('node:crypto').createCipheriv('aes-256-gcm', oldKek, dekIv, { authTagLength: 16 });
+      const dekIv = randomBytes(12);
+      const dekCipher = createCipheriv('aes-256-gcm', oldKek, dekIv, { authTagLength: 16 });
       const encryptedDek = Buffer.concat([dekCipher.update(dek), dekCipher.final()]);
       const dekAuthTag = dekCipher.getAuthTag();
 
@@ -154,7 +150,9 @@ describe('FieldEncryption', () => {
 
     it('returns false for plain object', () => {
       expect(isEncryptedField({ ciphertext: 'a' })).toBe(false);
-      expect(isEncryptedField({ ciphertext: 'a', encryptedDek: 'b', iv: 'c', authTag: 'd' })).toBe(false);
+      expect(isEncryptedField({ ciphertext: 'a', encryptedDek: 'b', iv: 'c', authTag: 'd' })).toBe(
+        false,
+      );
       expect(isEncryptedField('not an object')).toBe(false);
       expect(isEncryptedField(null)).toBe(false);
     });

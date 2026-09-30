@@ -202,7 +202,6 @@ export function createWhitelistRetentionJobFromEnv(): WhitelistRetentionJob | nu
   return new WhitelistRetentionJob({
     pollIntervalMs:
       Number.isFinite(pollIntervalMs) && pollIntervalMs > 0 ? pollIntervalMs : undefined,
-    retentionDays:
-      Number.isFinite(retentionDays) && retentionDays > 0 ? retentionDays : undefined,
+    retentionDays: Number.isFinite(retentionDays) && retentionDays > 0 ? retentionDays : undefined,
   });
 }

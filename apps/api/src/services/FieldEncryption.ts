@@ -122,8 +122,16 @@ export function rotateFieldKey(
   oldKeyMaterial: string,
   newKeyMaterial: string,
 ): EncryptedField {
-  const oldKek = scryptSync(oldKeyMaterial, Buffer.from('akkuea-field-encryption-salt', 'utf8'), KEY_LENGTH);
-  const newKek = scryptSync(newKeyMaterial, Buffer.from('akkuea-field-encryption-salt', 'utf8'), KEY_LENGTH);
+  const oldKek = scryptSync(
+    oldKeyMaterial,
+    Buffer.from('akkuea-field-encryption-salt', 'utf8'),
+    KEY_LENGTH,
+  );
+  const newKek = scryptSync(
+    newKeyMaterial,
+    Buffer.from('akkuea-field-encryption-salt', 'utf8'),
+    KEY_LENGTH,
+  );
 
   // Unwrap DEK with old KEK
   const encryptedDekBuffer = Buffer.from(encrypted.encryptedDek, 'base64');
@@ -131,13 +139,17 @@ export function rotateFieldKey(
   const dekAuthTag = encryptedDekBuffer.subarray(IV_LENGTH, IV_LENGTH + AUTH_TAG_LENGTH);
   const wrappedDek = encryptedDekBuffer.subarray(IV_LENGTH + AUTH_TAG_LENGTH);
 
-  const oldDekDecipher = createDecipheriv(ALGORITHM, oldKek, dekIv, { authTagLength: AUTH_TAG_LENGTH });
+  const oldDekDecipher = createDecipheriv(ALGORITHM, oldKek, dekIv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
   oldDekDecipher.setAuthTag(dekAuthTag);
   const dek = Buffer.concat([oldDekDecipher.update(wrappedDek), oldDekDecipher.final()]);
 
   // Re-wrap DEK with new KEK
   const newDekIv = randomBytes(IV_LENGTH);
-  const newDekCipher = createCipheriv(ALGORITHM, newKek, newDekIv, { authTagLength: AUTH_TAG_LENGTH });
+  const newDekCipher = createCipheriv(ALGORITHM, newKek, newDekIv, {
+    authTagLength: AUTH_TAG_LENGTH,
+  });
   const newEncryptedDek = Buffer.concat([newDekCipher.update(dek), newDekCipher.final()]);
   const newDekAuthTag = newDekCipher.getAuthTag();
 
@@ -160,7 +172,10 @@ export function encryptPlaintextField(plaintext: string): string {
  * Migration helper: decrypt field for reading (handles both encrypted and legacy plaintext).
  */
 export function decryptFieldOrPlaintext(value: string | null | undefined): string | null {
-  if (!value) return null;
+  // Only true null/undefined are treated as absent. An empty string is a
+  // legacy plaintext value and must pass through unchanged (see the
+  // FieldEncryption test suite).
+  if (value === null || value === undefined) return null;
 
   try {
     const parsed = JSON.parse(value);

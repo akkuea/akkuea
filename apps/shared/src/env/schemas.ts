@@ -144,7 +144,7 @@ export const apiEnvSchema = z.object({
     .or(z.literal("")),
   DEFI_RWA_CONTRACT_ID: stellarContractIdSchema.optional().or(z.literal("")),
 
-  STORAGE_PROVIDER: z.enum(['local', 's3-compatible']).default('local'),
+  STORAGE_PROVIDER: z.enum(["local", "s3-compatible"]).default("local"),
   STORAGE_LOCAL_DIR: z.string().optional(),
   STORAGE_S3_BUCKET: z.string().optional(),
   STORAGE_S3_REGION: z.string().optional(),

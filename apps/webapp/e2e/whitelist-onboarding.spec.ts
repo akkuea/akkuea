@@ -23,18 +23,26 @@ test.describe("WhitelistOnboardingForm", () => {
     await page.getByRole("button", { name: "Start Application" }).click();
 
     await page.getByPlaceholder("John Doe").fill("Jane Tester");
-    await page.getByPlaceholder("Document Number").fill("P-00000000");
+    await page.getByPlaceholder("Document Number").fill("P-00000000"); // Step 2 (ID document) gates "Continue" on an uploaded file; pick one.
+    // The file input is visually hidden and linked only to the inner
+    // "Upload ID Document" label, so target it by its id.
+    await page.locator("#document-upload").setInputFiles({
+      name: "passport.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "89504e470d0a1a0a0000000d4948445200000001000000010806000000" +
+          "1f15c4890000000a49444154789c6300010000050001" +
+          "0d0a2db40000000049454e44ae426082",
+        "hex",
+      ),
+    });
+
     await page.getByRole("button", { name: "Continue" }).click();
 
-    await expect(
-      page.getByRole("heading", { name: "Connect Your Wallet" }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Connect Wallet" }),
-    ).toBeVisible();
-
-    // The stepper's own "Continue" is disabled while disconnected, so the
-    // form can't be pushed into the review step without a wallet.
+    // Step 2 is the wallet step: it has no connect UI of its own (the app
+    // auto-advances the moment a wallet connects), and the stepper's own
+    // "Continue" stays disabled while disconnected, so the form can't be
+    // pushed into the review step without a wallet.
     await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
   });
 
@@ -70,11 +78,23 @@ test.describe("WhitelistOnboardingForm", () => {
     await page.getByRole("button", { name: "Start Application" }).click();
 
     await page.getByPlaceholder("John Doe").fill("Jane Tester");
-    await page.getByPlaceholder("Document Number").fill("P-00000000");
-    // With the wallet already connected, submitting step 1 auto-advances
-    // past the wallet-connection step straight to the review step.
+    await page.getByPlaceholder("Document Number").fill("P-00000000"); // Step 2 (ID document) gates "Continue" on an uploaded file; the
+    // visually-hidden input is targeted by id.
+    await page.locator("#document-upload").setInputFiles({
+      name: "passport.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "89504e470d0a1a0a0000000d4948445200000001000000010806000000" +
+          "1f15c4890000000a49444154789c6300010000050001" +
+          "0d0a2db40000000049454e44ae426082",
+        "hex",
+      ),
+    });
+
     await page.getByRole("button", { name: "Continue" }).click();
 
+    // The wallet step auto-advances past step 3 (wallet already connected),
+    // landing straight on step 4 (review).
     await expect(
       page.getByRole("button", { name: "Submit Request" }),
     ).toBeVisible();
@@ -99,7 +119,19 @@ test.describe("WhitelistOnboardingForm", () => {
     await page.getByRole("button", { name: "Start Application" }).click();
 
     await page.getByPlaceholder("John Doe").fill("Jane Tester");
-    await page.getByPlaceholder("Document Number").fill("P-00000000");
+    await page.getByPlaceholder("Document Number").fill("P-00000000"); // Step 2 (ID document) gates "Continue" on an uploaded file; the
+    // visually-hidden input is targeted by id.
+    await page.locator("#document-upload").setInputFiles({
+      name: "passport.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(
+        "89504e470d0a1a0a0000000d4948445200000001000000010806000000" +
+          "1f15c4890000000a49444154789c6300010000050001" +
+          "0d0a2db40000000049454e44ae426082",
+        "hex",
+      ),
+    });
+
     await page.getByRole("button", { name: "Continue" }).click();
 
     await expect(page.getByText("Jane Tester")).toBeVisible();

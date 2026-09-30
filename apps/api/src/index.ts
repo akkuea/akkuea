@@ -160,7 +160,7 @@ const storageConfig = {
 };
 
 await StorageService.initialize(storageConfig);
-console.log(`📦 Storage provider initialized: ${storageProvider}`);
+console.log(`Storage provider initialized: ${storageProvider}`);
 
 const shutdown = async (signal: string) => {
   console.log(`\n${signal} received, closing connections...`);

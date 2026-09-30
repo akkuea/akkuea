@@ -58,7 +58,7 @@ export class WhitelistController {
     const fullNameEncrypted = encryptPlaintextField(fullName);
     const idReferenceEncrypted = encryptPlaintextField(idReference);
 
-    const inserted = await db
+    const [record] = await db
       .insert(pilotWhitelistRequests)
       .values({
         walletAddress,
@@ -73,7 +73,11 @@ export class WhitelistController {
       })
       .returning();
 
-    return { success: true, data: inserted[0] };
+    if (!record) {
+      throw new Error('Failed to create whitelist request');
+    }
+
+    return { success: true, data: record };
   }
 
   static async getDocumentUrl(requestId: string): Promise<{ signedUrl: string; fileName: string }> {

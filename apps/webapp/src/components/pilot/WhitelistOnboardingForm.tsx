@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   ShieldAlert,
   UserCircle,
-  Wallet,
   FileX2,
   FileText,
   Upload,
@@ -34,7 +33,7 @@ const STEPS = [
 ];
 
 export function WhitelistOnboardingForm() {
-  const { address, isConnected, connect } = useWallet();
+  const { address, isConnected } = useWallet();
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -107,33 +106,58 @@ export function WhitelistOnboardingForm() {
     const file = e.target.files?.[0];
     setDocumentError(null);
     if (!file) {
-      setFormData((prev) => ({ ...prev, documentFile: null, documentPreview: null }));
+      setFormData((prev) => ({
+        ...prev,
+        documentFile: null,
+        documentPreview: null,
+      }));
       return;
     }
 
     // Validate file type
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+    ];
     if (!allowedTypes.includes(file.type)) {
-      setDocumentError('Invalid file type. Only PDF, JPG, and PNG are allowed.');
-      setFormData((prev) => ({ ...prev, documentFile: null, documentPreview: null }));
+      setDocumentError(
+        "Invalid file type. Only PDF, JPG, and PNG are allowed.",
+      );
+      setFormData((prev) => ({
+        ...prev,
+        documentFile: null,
+        documentPreview: null,
+      }));
       return;
     }
 
     // Validate file size (10MB)
     const MAX_SIZE = 10 * 1024 * 1024;
     if (file.size > MAX_SIZE) {
-      setDocumentError(`File size exceeds 10MB limit. Received ${(file.size / (1024 * 1024)).toFixed(2)}MB.`);
-      setFormData((prev) => ({ ...prev, documentFile: null, documentPreview: null }));
+      setDocumentError(
+        `File size exceeds 10MB limit. Received ${(file.size / (1024 * 1024)).toFixed(2)}MB.`,
+      );
+      setFormData((prev) => ({
+        ...prev,
+        documentFile: null,
+        documentPreview: null,
+      }));
       return;
     }
 
     // Create preview for images
     let preview: string | null = null;
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith("image/")) {
       preview = URL.createObjectURL(file);
     }
 
-    setFormData((prev) => ({ ...prev, documentFile: file, documentPreview: preview }));
+    setFormData((prev) => ({
+      ...prev,
+      documentFile: file,
+      documentPreview: preview,
+    }));
   };
 
   const handleSubmit = async () => {
@@ -142,18 +166,18 @@ export function WhitelistOnboardingForm() {
     try {
       // Validate document is provided
       if (!formData.documentFile) {
-        setError('Please upload your government ID document');
+        setError("Please upload your government ID document");
         setIsLoading(false);
         return;
       }
 
       // Use FormData for multipart upload
       const formDataToSend = new FormData();
-      formDataToSend.append('fullName', formData.fullName);
-      formDataToSend.append('idType', formData.idType);
-      formDataToSend.append('idReference', formData.idReference);
-      formDataToSend.append('walletAddress', address!);
-      formDataToSend.append('document', formData.documentFile);
+      formDataToSend.append("fullName", formData.fullName);
+      formDataToSend.append("idType", formData.idType);
+      formDataToSend.append("idReference", formData.idReference);
+      formDataToSend.append("walletAddress", address!);
+      formDataToSend.append("document", formData.documentFile);
 
       await apiClient.postFormData("/pilot/whitelist/request", formDataToSend);
       setRequestStatus("pending");
@@ -353,7 +377,8 @@ export function WhitelistOnboardingForm() {
               </div>
               {formData.documentPreview && (
                 <div className="mt-4 p-4 bg-zinc-950 rounded-lg flex items-center gap-4">
-                  {formData.documentPreview.startsWith('blob:') ? (
+                  {formData.documentPreview.startsWith("blob:") ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- preview of a locally selected file; a blob: URL has no static dimensions for next/image
                     <img
                       src={formData.documentPreview}
                       alt="Document preview"
@@ -371,7 +396,7 @@ export function WhitelistOnboardingForm() {
                     <p className="text-zinc-400 text-sm">
                       {formData.documentFile
                         ? `${(formData.documentFile.size / 1024).toFixed(1)} KB`
-                        : ''}
+                        : ""}
                     </p>
                   </div>
                   <Button
@@ -420,7 +445,7 @@ export function WhitelistOnboardingForm() {
               <div className="flex justify-between">
                 <span className="text-zinc-500">Document</span>
                 <span className="font-medium text-white truncate max-w-[200px]">
-                  {formData.documentFile?.name ?? 'Not provided'}
+                  {formData.documentFile?.name ?? "Not provided"}
                 </span>
               </div>
               <div className="flex justify-between">

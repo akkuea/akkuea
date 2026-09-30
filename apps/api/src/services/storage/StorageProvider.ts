@@ -32,31 +32,17 @@ export interface StorageProvider {
 
   deleteByRelativePath(relativePath: string): Promise<void>;
 
-  getSignedReadUrl(
-    relativePath: string,
-    expiresInSeconds?: number,
-  ): Promise<string>;
+  getSignedReadUrl(relativePath: string, expiresInSeconds?: number): Promise<string>;
 
   isHealthy(): Promise<boolean>;
 }
 
 const ALLOWED_EXTENSIONS = new Set(['.pdf', '.jpg', '.jpeg', '.png']);
-const ALLOWED_MIME_TYPES = new Set([
-  'application/pdf',
-  'image/jpeg',
-  'image/jpg',
-  'image/png',
-]);
-const ALLOWED_MAGIC_MIME_TYPES = new Set([
-  'application/pdf',
-  'image/jpeg',
-  'image/png',
-]);
+const ALLOWED_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']);
+const ALLOWED_MAGIC_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
 
 export function getFileExtension(filename: string): string {
-  return filename.includes('.')
-    ? filename.slice(filename.lastIndexOf('.'))
-    : '.pdf';
+  return filename.includes('.') ? filename.slice(filename.lastIndexOf('.')) : '.pdf';
 }
 
 export function isAllowedExtension(ext: string): boolean {
@@ -119,19 +105,12 @@ export function isAllowedFileSize(sizeInBytes: number): { allowed: boolean; erro
   return { allowed: true };
 }
 
-export function generateStoredFileName(
-  extension: string,
-  documentId?: string,
-): string {
+export function generateStoredFileName(extension: string, documentId?: string): string {
   const ext = extension.startsWith('.') ? extension : `.${extension}`;
   const uniqueId = documentId ?? randomUUID();
   return `${uniqueId}${ext}`;
 }
 
-export function buildRelativePath(
-  prefix: string,
-  userId: string,
-  storedFileName: string,
-): string {
+export function buildRelativePath(prefix: string, userId: string, storedFileName: string): string {
   return `${prefix}/${userId}/${storedFileName}`;
 }

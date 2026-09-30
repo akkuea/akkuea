@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { mkdir, rm, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { LocalStorageProvider } from '../services/storage/LocalStorageProvider';
 import { StorageService } from '../services/StorageService';
-import { fileTypeFromBuffer } from 'file-type';
 
 const TEST_BASE_DIR = join(process.cwd(), 'test-storage-temp');
 const ENCRYPTION_KEY = randomBytes(32).toString('base64');
@@ -67,21 +66,22 @@ describe('LocalStorageProvider', () => {
 
   it('rejects invalid file type (EXE)', async () => {
     const exeMagic = Buffer.from([0x4d, 0x5a, 0x90, 0x00]);
-    await expect(provider.store(exeMagic, 'user123', '.pdf'))
-      .rejects.toThrow('Invalid file type');
+    await expect(provider.store(exeMagic, 'user123', '.pdf')).rejects.toThrow('Invalid file type');
   });
 
   it('rejects file over 10MB', async () => {
     const bigBuffer = Buffer.alloc(11 * 1024 * 1024, 0x25); // 11MB of % chars
-    await expect(provider.store(bigBuffer, 'user123', '.pdf'))
-      .rejects.toThrow('File size exceeds 10MB limit');
+    await expect(provider.store(bigBuffer, 'user123', '.pdf')).rejects.toThrow(
+      'File size exceeds 10MB limit',
+    );
   });
 
   it('deletes file by relative path', async () => {
     const stored = await provider.store(PDF_MAGIC, 'user123', '.pdf', 'doc1');
     await provider.deleteByRelativePath(stored.relativePath);
-    await expect(provider.readByRelativePath(stored.relativePath))
-      .rejects.toThrow('Document file not found');
+    await expect(provider.readByRelativePath(stored.relativePath)).rejects.toThrow(
+      'Document file not found',
+    );
   });
 
   it('returns signed read URL', async () => {
@@ -97,10 +97,11 @@ describe('LocalStorageProvider', () => {
   });
 
   it('rejects path traversal attempts', async () => {
-    const stored = await provider.store(PDF_MAGIC, 'user123', '.pdf');
+    await provider.store(PDF_MAGIC, 'user123', '.pdf');
     // Try to read with path traversal
-    await expect(provider.readByRelativePath('../../../etc/passwd'))
-      .rejects.toThrow('Invalid document path');
+    await expect(provider.readByRelativePath('../../../etc/passwd')).rejects.toThrow(
+      'Invalid document path',
+    );
   });
 });
 

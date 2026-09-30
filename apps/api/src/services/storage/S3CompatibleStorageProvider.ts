@@ -1,13 +1,20 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { fileTypeFromBuffer } from 'file-type';
 import { ApiError } from '../../errors/ApiError';
 import {
-  StorageProvider,
-  StoredFile,
-  StorageProviderConfig,
+  type StorageProvider,
+  type StoredFile,
+  type StorageProviderConfig,
   validateFileType,
   isAllowedFileSize,
+  isAllowedExtension,
   generateStoredFileName,
   buildRelativePath,
   getFileExtension,
@@ -77,9 +84,8 @@ export class S3CompatibleStorageProvider implements StorageProvider {
   private encrypt(buffer: Buffer): Buffer {
     if (!this.encryptionKey) return buffer;
 
-    const crypto = require('node:crypto');
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv('aes-256-gcm', this.encryptionKey, iv);
+    const iv = randomBytes(16);
+    const cipher = createCipheriv('aes-256-gcm', this.encryptionKey, iv);
     const encrypted = Buffer.concat([cipher.update(buffer), cipher.final()]);
     const authTag = cipher.getAuthTag();
     return Buffer.concat([iv, authTag, encrypted]);
@@ -88,14 +94,13 @@ export class S3CompatibleStorageProvider implements StorageProvider {
   private decrypt(buffer: Buffer): Buffer {
     if (!this.encryptionKey) return buffer;
 
-    const crypto = require('node:crypto');
     if (buffer.length < 16 + 16) {
       throw new Error('Invalid encrypted buffer: too short');
     }
     const iv = buffer.subarray(0, 16);
     const authTag = buffer.subarray(16, 32);
     const encrypted = buffer.subarray(32);
-    const decipher = crypto.createDecipheriv('aes-256-gcm', this.encryptionKey, iv);
+    const decipher = createDecipheriv('aes-256-gcm', this.encryptionKey, iv);
     decipher.setAuthTag(authTag);
     return Buffer.concat([decipher.update(encrypted), decipher.final()]);
   }
@@ -118,12 +123,7 @@ export class S3CompatibleStorageProvider implements StorageProvider {
       throw ApiError.badRequest(sizeCheck.error!);
     }
 
-    const typeCheck = await validateFileType(
-      `file${ext}`,
-      undefined,
-      buffer,
-      fileTypeFromBuffer,
-    );
+    const typeCheck = await validateFileType(`file${ext}`, undefined, buffer, fileTypeFromBuffer);
     if (!typeCheck.allowed) {
       throw ApiError.badRequest(typeCheck.error!);
     }
@@ -134,19 +134,18 @@ export class S3CompatibleStorageProvider implements StorageProvider {
 
     const encryptedBuffer = this.encrypt(buffer);
 
-    const contentType = ext === '.pdf'
-      ? 'application/pdf'
-      : ext === '.png'
-        ? 'image/png'
-        : 'image/jpeg';
+    const contentType =
+      ext === '.pdf' ? 'application/pdf' : ext === '.png' ? 'image/png' : 'image/jpeg';
 
-    await this.client!.send(new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: key,
-      Body: encryptedBuffer,
-      ContentType: contentType,
-      ServerSideEncryption: this.encryptionKey ? undefined : 'AES256',
-    }));
+    await this.client!.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: encryptedBuffer,
+        ContentType: contentType,
+        ServerSideEncryption: this.encryptionKey ? undefined : 'AES256',
+      }),
+    );
 
     return {
       storedFileName,
@@ -162,10 +161,12 @@ export class S3CompatibleStorageProvider implements StorageProvider {
     const key = normalized;
 
     try {
-      const response = await this.client!.send(new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      }));
+      const response = await this.client!.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+        }),
+      );
 
       const chunks: Uint8Array[] = [];
       for await (const chunk of response.Body as AsyncIterable<Uint8Array>) {
@@ -189,29 +190,30 @@ export class S3CompatibleStorageProvider implements StorageProvider {
     const key = normalized;
 
     try {
-      await this.client!.send(new DeleteObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      }));
+      await this.client!.send(
+        new DeleteObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+        }),
+      );
     } catch {
       // Ignore if file already missing
     }
   }
 
-  async getSignedReadUrl(
-    relativePath: string,
-    expiresInSeconds = 3600,
-  ): Promise<string> {
+  async getSignedReadUrl(relativePath: string, expiresInSeconds = 3600): Promise<string> {
     this.ensureInitialized();
 
     const normalized = relativePath.replace(/^kyc[/\\]/, '');
     const key = normalized;
 
     try {
-      await this.client!.send(new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: key,
-      }));
+      await this.client!.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+        }),
+      );
     } catch (err) {
       const error = err as Error & { name?: string; $metadata?: { httpStatusCode?: number } };
       if (error.name === 'NoSuchKey' || error.$metadata?.httpStatusCode === 404) {
@@ -230,10 +232,12 @@ export class S3CompatibleStorageProvider implements StorageProvider {
 
   async isHealthy(): Promise<boolean> {
     try {
-      await this.client!.send(new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: 'health-check',
-      }));
+      await this.client!.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: 'health-check',
+        }),
+      );
       return true;
     } catch (err) {
       const error = err as Error & { name?: string; $metadata?: { httpStatusCode?: number } };

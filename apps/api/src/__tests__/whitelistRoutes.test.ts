@@ -1,115 +1,152 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- mocks Drizzle internals with loosely-typed stand-ins */
 import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test';
 import { Elysia } from 'elysia';
 import { whitelistRoutes } from '../routes/whitelist';
-import { WhitelistController } from '../controllers/WhitelistController';
-import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
 import { db } from '../db';
-import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
-import { eq } from 'drizzle-orm';
+import { StorageService } from '../services/StorageService';
 
 const testApp = new Elysia().use(whitelistRoutes);
 
+const TEST_FIELD_ENCRYPTION_KEY = 'dGVzdC1rZXktbWF0ZXJpYWwtdGhhdC1pcy0zMi1ieXRlcy1sb25nLg=='; // 32 bytes base64
+
+/**
+ * Collects every Param value from a Drizzle condition AST. Controller queries
+ * are single `eq(column, value)` conditions, so the first Param is the bound
+ * value (a request id or a wallet address depending on caller).
+ */
+function collectParamValues(node: any, out: unknown[] = []): unknown[] {
+  if (node == null || typeof node !== 'object') return out;
+  for (const chunk of node.queryChunks ?? []) {
+    if (chunk?.constructor?.name === 'Param') {
+      out.push(chunk.value);
+    } else {
+      collectParamValues(chunk, out);
+    }
+  }
+  return out;
+}
+
 describe('Whitelist Routes', () => {
   let mockDbStore: any[] = [];
-
-  function extractWalletAddress(obj: any): string | undefined {
-    if (obj == null || typeof obj !== 'object') return undefined;
-    if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
-      for (const chunk of obj.queryChunks) {
-        if (chunk?.constructor?.name === 'Param' && typeof chunk.value === 'string') {
-          return chunk.value;
-        }
-      }
-    }
-    if ('value' in obj && typeof obj.value === 'string') return obj.value;
-    return undefined;
-  }
+  let originalStore: unknown;
+  let originalSignedUrl: unknown;
+  let originalDelete: unknown;
 
   beforeEach(() => {
     mockDbStore = [];
 
-    mock.module('../controllers/WhitelistController', () => {
-      return {
-        WhitelistController: {
-          request: mock(async (ctx: any) => {
-            const body = ctx.body;
-            const walletAddress = body.walletAddress;
-            const existing = mockDbStore.find(r => r.walletAddress === walletAddress);
-            if (existing && existing.status === 'pending') {
-              throw new Error('A whitelist request is already pending for this address');
-            }
-            if (existing && existing.status === 'approved') {
-              throw new Error('This address is already whitelisted');
-            }
+    // Real controller + real FieldEncryption (key supplied via env);
+    // StorageService statics are stubbed on the class object. NOTE:
+    // mock.module() is deliberately avoided here: bun test applies it to the
+    // whole process, so a module-level mock would leak into every other test
+    // file loaded after this one (see the DLQ route 403 regressions this
+    // caused before this file was rewritten).
+    process.env.FIELD_ENCRYPTION_KEY = TEST_FIELD_ENCRYPTION_KEY;
+    process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
+    originalStore = StorageService.store;
+    originalSignedUrl = StorageService.getSignedReadUrl;
+    originalDelete = StorageService.deleteByRelativePath;
 
-            const inserted = {
-              id: `req_${Date.now()}`,
-              walletAddress,
-              fullName: body.fullName,
-              idType: body.idType,
-              idReference: body.idReference,
-              documentUrl: body.document ? `kyc/${walletAddress}/doc.pdf` : undefined,
-              fullNameEncrypted: 'encrypted',
-              idReferenceEncrypted: 'encrypted',
-              status: 'pending',
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            };
-            mockDbStore.push(inserted);
-            return { success: true, data: inserted };
-          }),
-          status: mock(async (ctx: any) => {
-            const { walletAddress } = ctx.params;
-            const existing = mockDbStore.find(r => r.walletAddress === walletAddress);
-            if (!existing) {
-              return { success: true, status: 'none' };
-            }
-            return { success: true, status: existing.status, rejectionReason: existing.rejectionReason };
-          }),
-          pending: mock(async () => {
-            return { success: true, data: mockDbStore.filter(r => r.status === 'pending') };
-          }),
-          getDocumentUrl: mock(async (requestId: string) => {
-            const request = mockDbStore.find(r => r.id === requestId);
-            if (!request) throw new Error('Whitelist request not found');
-            if (!request.documentUrl) throw new Error('No document attached to this request');
-            return { signedUrl: `http://localhost:3001/storage/${request.documentUrl}?token=test`, fileName: 'doc.pdf' };
-          }),
-          deleteRequest: mock(async (requestId: string) => {
-            const request = mockDbStore.find(r => r.id === requestId);
-            if (!request) throw new Error('Whitelist request not found');
-            if (request.status === 'approved') throw new Error('Cannot delete approved whitelist request');
-            return { success: true };
-          }),
-          metrics: mock(async () => ({ success: true, data: {} })),
-          review: mock(async (ctx: any) => ({ success: true })),
-        },
-      };
-    });
+    StorageService.store = mock(
+      async (buffer: Buffer, userId: string, ext: string, docId?: string) => {
+        return {
+          storedFileName: `${docId || 'test-id'}${ext}`,
+          relativePath: `kyc/${userId}/${docId || 'test-id'}${ext}`,
+          extension: ext,
+        };
+      },
+    ) as typeof StorageService.store;
+    StorageService.getSignedReadUrl = mock(
+      async (path: string) => `http://localhost:3001/storage/${path}?token=test`,
+    ) as typeof StorageService.getSignedReadUrl;
+    StorageService.deleteByRelativePath = mock(
+      async () => {},
+    ) as typeof StorageService.deleteByRelativePath;
 
-    mock.module('../utils/internalOperationsAuth', () => {
-      return {
-        isInternalOperationsAuthorized: mock((headers: Record<string, string | undefined>) => {
-          return headers['x-internal-api-key'] === 'test-secret' || headers['x-operator-wallet'] === 'GOPERATOR123';
+    (db as any).query = {
+      pilotWhitelistRequests: {
+        findFirst: mock(async ({ where }: any) => {
+          const [paramValue] = collectParamValues(where);
+          if (paramValue === undefined) return undefined;
+          // Callers either look up by request id (getDocumentUrl,
+          // deleteRequest) or by wallet address (request, status).
+          return (
+            mockDbStore.find((r) => r.id === paramValue) ??
+            mockDbStore.find((r) => r.walletAddress === paramValue)
+          );
         }),
-      };
-    });
+        findMany: mock(async () => mockDbStore),
+      },
+    };
+
+    (db as any).insert = mock(() => ({
+      values: (val: any) => ({
+        returning: async () => {
+          const inserted = {
+            id: `req_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+            ...val,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+          mockDbStore.push(inserted);
+          return [inserted];
+        },
+      }),
+    }));
+
+    (db as any).update = mock(() => ({
+      set: (val: any) => ({
+        where: async (whereExpr: any) => {
+          const [paramValue] = collectParamValues(whereExpr);
+          const target =
+            mockDbStore.find((r) => r.id === paramValue) ??
+            mockDbStore.find((r) => r.walletAddress === paramValue);
+          if (target) {
+            Object.assign(target, val);
+          }
+        },
+      }),
+    }));
+
+    (db as any).delete = mock(() => ({
+      where: async (whereExpr: any) => {
+        const [paramValue] = collectParamValues(whereExpr);
+        if (paramValue !== undefined) {
+          mockDbStore = mockDbStore.filter((r) => r.walletAddress !== paramValue);
+        }
+      },
+    }));
   });
 
   afterEach(() => {
+    // Restore stubbed statics first so no later file sees a mock, then drop
+    // the db Proxy overrides (they persist across files in one bun process).
+    StorageService.store = originalStore as typeof StorageService.store;
+    StorageService.getSignedReadUrl = originalSignedUrl as typeof StorageService.getSignedReadUrl;
+    StorageService.deleteByRelativePath =
+      originalDelete as typeof StorageService.deleteByRelativePath;
+    delete process.env.FIELD_ENCRYPTION_KEY;
     mock.restore();
+    for (const prop of ['query', 'insert', 'update', 'delete']) {
+      delete (db as any)[prop];
+    }
   });
 
   describe('POST /pilot/whitelist/request', () => {
     it('accepts multipart form data with document', async () => {
+      // 56 chars: the schema caps walletAddress at Stellar key length.
+      const walletAddress = 'GTESTWALLET123456789012345678901234567890123456789GAAAA';
       const formData = new FormData();
-      formData.append('walletAddress', 'GTESTWALLET123456789012345678901234567890123456789012345678901234');
+      formData.append('walletAddress', walletAddress);
       formData.append('fullName', 'John Doe');
       formData.append('idType', 'passport');
       formData.append('idReference', 'A1234567');
       // Create a valid PDF buffer
       const pdfBuffer = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]);
-      formData.append('document', new File([pdfBuffer], 'passport.pdf', { type: 'application/pdf' }));
+      formData.append(
+        'document',
+        new File([pdfBuffer], 'passport.pdf', { type: 'application/pdf' }),
+      );
 
       const response = await testApp.handle(
         new Request('http://localhost/pilot/whitelist/request', {
@@ -120,15 +157,21 @@ describe('Whitelist Routes', () => {
       );
 
       expect(response.status).toBe(200);
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success: boolean;
+        data: { walletAddress: string; documentUrl?: string };
+      };
       expect(result.success).toBe(true);
-      expect(result.data.walletAddress).toBe(formData.get('walletAddress'));
+      expect(result.data.walletAddress).toBe(walletAddress);
       expect(result.data.documentUrl).toBeDefined();
     });
 
     it('rejects request without document', async () => {
       const formData = new FormData();
-      formData.append('walletAddress', 'GNODOC123456789012345678901234567890123456789012345678901234');
+      formData.append(
+        'walletAddress',
+        'GNODOC12345678901234567890123456789012345678901234567GAAAA',
+      );
       formData.append('fullName', 'Jane Doe');
       formData.append('idType', 'national_id');
       formData.append('idReference', 'B7654321');
@@ -142,27 +185,41 @@ describe('Whitelist Routes', () => {
         }),
       );
 
-      // The controller will handle the missing document
-      // For now, it should still work (document is optional in the schema)
-      expect([200, 400]).toContain(response.status);
+      // The multipart schema requires the document file, so Elysia rejects
+      // the request with 422 before the controller runs.
+      expect(response.status).toBe(422);
     });
 
     it('rate limits requests', async () => {
-      const formData = new FormData();
-      formData.append('walletAddress', 'GRATELIMIT1234567890123456789012345678901234567890123456789012');
-      formData.append('fullName', 'Rate Limited');
-      formData.append('idType', 'passport');
-      formData.append('idReference', 'RL123456');
-      const pdfBuffer = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
-      formData.append('document', new File([pdfBuffer], 'passport.pdf', { type: 'application/pdf' }));
+      const buildFormData = () => {
+        const formData = new FormData();
+        formData.append(
+          'walletAddress',
+          'GRATELIMIT1234567890123456789012345678901234567890123GAA',
+        );
+        formData.append('fullName', 'Rate Limited');
+        formData.append('idType', 'passport');
+        formData.append('idReference', 'RL123456');
+        const pdfBuffer = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
+        formData.append(
+          'document',
+          new File([pdfBuffer], 'passport.pdf', { type: 'application/pdf' }),
+        );
+        return formData;
+      };
+
+      // A dedicated source IP keeps this scenario's consumption out of the
+      // limiter's shared in-memory bucket (the middleware keys on
+      // x-forwarded-for, and the suite-wide store persists across files).
+      const headers = { 'x-forwarded-for': '203.0.113.10' };
 
       let lastStatus = 0;
       for (let i = 0; i < 15; i++) {
         const response = await testApp.handle(
           new Request('http://localhost/pilot/whitelist/request', {
             method: 'POST',
-            headers: { 'x-test-bypass-ratelimit': 'true' },
-            body: formData,
+            headers,
+            body: buildFormData(),
           }),
         );
         lastStatus = response.status;
@@ -181,22 +238,32 @@ describe('Whitelist Routes', () => {
       });
 
       const response = await testApp.handle(
-        new Request('http://localhost/pilot/whitelist/status/GSTATUS123456789012345678901234567890123456789012345678901234'),
+        new Request(
+          'http://localhost/pilot/whitelist/status/GSTATUS123456789012345678901234567890123456789012345678901234',
+        ),
       );
 
       expect(response.status).toBe(200);
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success: boolean;
+        status: string;
+      };
       expect(result.success).toBe(true);
       expect(result.status).toBe('pending');
     });
 
     it('returns none for non-existent request', async () => {
       const response = await testApp.handle(
-        new Request('http://localhost/pilot/whitelist/status/GNONEXISTENT1234567890123456789012345678901234567890123456789012'),
+        new Request(
+          'http://localhost/pilot/whitelist/status/GNONEXISTENT1234567890123456789012345678901234567890123456789012',
+        ),
       );
 
       expect(response.status).toBe(200);
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success: boolean;
+        status: string;
+      };
       expect(result.success).toBe(true);
       expect(result.status).toBe('none');
     });
@@ -228,7 +295,10 @@ describe('Whitelist Routes', () => {
       );
 
       expect(response.status).toBe(200);
-      const result = await response.json();
+      const result = (await response.json()) as {
+        success: boolean;
+        data: unknown[];
+      };
       expect(result.success).toBe(true);
       expect(result.data.length).toBe(1);
     });
@@ -258,7 +328,10 @@ describe('Whitelist Routes', () => {
       );
 
       expect(response.status).toBe(200);
-      const result = await response.json();
+      const result = (await response.json()) as {
+        signedUrl: string;
+        fileName: string;
+      };
       expect(result.signedUrl).toBeDefined();
       expect(result.fileName).toBe('doc.pdf');
     });
@@ -288,7 +361,7 @@ describe('Whitelist Routes', () => {
       );
 
       expect(response.status).toBe(200);
-      const result = await response.json();
+      const result = (await response.json()) as { success: boolean };
       expect(result.success).toBe(true);
     });
 

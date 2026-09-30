@@ -2,6 +2,7 @@
 import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
 import { db } from '../db';
 import { whitelistService } from '../services/WhitelistService';
+import { StorageService } from '../services/StorageService';
 import Elysia from 'elysia';
 import { whitelistRoutes } from './whitelist';
 
@@ -11,45 +12,93 @@ const testApp = new Elysia().use(whitelistRoutes).use(internalOperationsRoutes);
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
 
+const TEST_FIELD_ENCRYPTION_KEY = 'dGVzdC1rZXktbWF0ZXJpYWwtdGhhdC1pcy0zMi1ieXRlcy1sb25nLg=='; // 32 bytes base64
+
 describe('Whitelist API Routes', () => {
   const mockWallet = 'GDK7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZ';
   let mockDbStore: any[] = [];
+  let originalStore: unknown;
+  let originalSignedUrl: unknown;
+  let originalDelete: unknown;
+  let originalApprove: unknown;
+  let originalReject: unknown;
 
-  function extractWalletAddress(obj: any): string | undefined {
-    if (obj == null || typeof obj !== 'object') return undefined;
-    if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
-      for (const chunk of obj.queryChunks) {
-        if (chunk?.constructor?.name === 'Param' && typeof chunk.value === 'string') {
-          return chunk.value;
-        }
+  /**
+   * Collects every Param value from a Drizzle condition AST. Controller
+   * queries are single `eq(column, value)` conditions, so the first Param is
+   * the bound value (a request id or a wallet address depending on caller).
+   */
+  function collectParamValues(node: any, out: unknown[] = []): unknown[] {
+    if (node == null || typeof node !== 'object') return out;
+    for (const chunk of node.queryChunks ?? []) {
+      if (chunk?.constructor?.name === 'Param') {
+        out.push(chunk.value);
+      } else {
+        collectParamValues(chunk, out);
       }
     }
-    if ('value' in obj && typeof obj.value === 'string') return obj.value;
-    return undefined;
+    return out;
+  }
+
+  /** Builds a multipart body, the format POST /request requires. */
+  function buildMultipartBody(overrides: Record<string, string> = {}): FormData {
+    const formData = new FormData();
+    formData.append('walletAddress', mockWallet);
+    formData.append('fullName', 'Test User');
+    formData.append('idType', 'passport');
+    formData.append('idReference', 'A1234567');
+    for (const [key, value] of Object.entries(overrides)) {
+      formData.set(key, value);
+    }
+    const pdfBuffer = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]);
+    formData.append('document', new File([pdfBuffer], 'passport.pdf', { type: 'application/pdf' }));
+    return formData;
   }
 
   beforeEach(() => {
     mockDbStore = [];
 
-    // Mock whitelist service (re-apply after each mock.restore)
-    mock.module('../services/WhitelistService', () => {
-      return {
-        whitelistService: {
-          approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
-          rejectRequest: mock(() => Promise.resolve()),
-        },
-      };
-    });
+    // Stub WhitelistService (review flow) and StorageService statics on their
+    // exported objects rather than via mock.module(): bun test applies
+    // mock.module() to the whole process, which would leak into every other
+    // test file loaded after this one.
+    originalStore = StorageService.store;
+    originalSignedUrl = StorageService.getSignedReadUrl;
+    originalDelete = StorageService.deleteByRelativePath;
+
+    process.env.FIELD_ENCRYPTION_KEY = TEST_FIELD_ENCRYPTION_KEY;
+
+    originalApprove = whitelistService.approveRequest;
+    originalReject = whitelistService.rejectRequest;
+    whitelistService.approveRequest = mock(() => Promise.resolve('mock_tx_hash')) as any;
+    whitelistService.rejectRequest = mock(() => Promise.resolve()) as any;
+
+    StorageService.store = mock(
+      async (buffer: Buffer, userId: string, ext: string, docId?: string) => {
+        return {
+          storedFileName: `${docId || 'test-id'}${ext}`,
+          relativePath: `kyc/${userId}/${docId || 'test-id'}${ext}`,
+          extension: ext,
+        };
+      },
+    ) as typeof StorageService.store;
+    StorageService.getSignedReadUrl = mock(
+      async (path: string) => `http://localhost:3001/storage/${path}?token=test`,
+    ) as typeof StorageService.getSignedReadUrl;
+    StorageService.deleteByRelativePath = mock(
+      async () => {},
+    ) as typeof StorageService.deleteByRelativePath;
 
     // Mock db queries
     (db as any).query = {
       pilotWhitelistRequests: {
         findFirst: mock(async ({ where }: any) => {
-          const walletAddr = extractWalletAddress(where);
-          if (walletAddr) {
-            return mockDbStore.find((r) => r.walletAddress === walletAddr);
-          }
-          return undefined;
+          const [paramValue] = collectParamValues(where);
+          if (paramValue === undefined) return undefined;
+          return (
+            mockDbStore.find((r) => r.id === paramValue) ??
+            mockDbStore.find((r) => r.walletAddress === paramValue)
+          );
         }),
         findMany: mock(async () => mockDbStore),
       },
@@ -70,9 +119,13 @@ describe('Whitelist API Routes', () => {
 
     (db as any).update = mock(() => ({
       set: (val: any) => ({
-        where: async () => {
-          if (mockDbStore.length > 0) {
-            Object.assign(mockDbStore[0], val);
+        where: async (whereExpr: any) => {
+          const [paramValue] = collectParamValues(whereExpr);
+          const target =
+            mockDbStore.find((r) => r.id === paramValue) ??
+            mockDbStore.find((r) => r.walletAddress === paramValue);
+          if (target) {
+            Object.assign(target, val);
           }
         },
       }),
@@ -80,15 +133,24 @@ describe('Whitelist API Routes', () => {
 
     (db as any).delete = mock(() => ({
       where: async (whereExpr: any) => {
-        const walletAddr = extractWalletAddress(whereExpr);
-        if (walletAddr) {
-          mockDbStore = mockDbStore.filter((r) => r.walletAddress !== walletAddr);
+        const [paramValue] = collectParamValues(whereExpr);
+        if (paramValue !== undefined) {
+          mockDbStore = mockDbStore.filter((r) => r.walletAddress !== paramValue);
         }
       },
     }));
   });
 
   afterEach(() => {
+    // Restore stubbed statics first so no later file sees a mock, then drop
+    // the db Proxy overrides (they persist across files in one bun process).
+    whitelistService.approveRequest = originalApprove as any;
+    whitelistService.rejectRequest = originalReject as any;
+    StorageService.store = originalStore as typeof StorageService.store;
+    StorageService.getSignedReadUrl = originalSignedUrl as typeof StorageService.getSignedReadUrl;
+    StorageService.deleteByRelativePath =
+      originalDelete as typeof StorageService.deleteByRelativePath;
+    delete process.env.FIELD_ENCRYPTION_KEY;
     mock.restore();
     // Direct property assignment on the db Proxy mutates _dbTarget, which
     // persists across test files in the same bun process. mock.restore()
@@ -104,16 +166,8 @@ describe('Whitelist API Routes', () => {
     const response = await testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-bypass-ratelimit': 'true',
-        },
-        body: JSON.stringify({
-          walletAddress: mockWallet,
-          fullName: 'Test User',
-          idType: 'passport',
-          idReference: 'A1234567',
-        }),
+        headers: { 'x-test-bypass-ratelimit': 'true' },
+        body: buildMultipartBody(),
       }),
     );
 
@@ -135,12 +189,8 @@ describe('Whitelist API Routes', () => {
     const response = await testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-bypass-ratelimit': 'true',
-        },
-        body: JSON.stringify({
-          walletAddress: mockWallet,
+        headers: { 'x-test-bypass-ratelimit': 'true' },
+        body: buildMultipartBody({
           fullName: 'Test User 2',
           idType: 'national_id',
           idReference: 'B7654321',
@@ -182,7 +232,6 @@ describe('Whitelist API Routes', () => {
 
     const status = response.status;
     const result = (await response.json()) as any;
-    console.log('REVIEW RESPONSE:', status, result);
     expect(status).toBe(200);
     expect(result.success).toBe(true);
     expect(result.txHash).toBe('mock_tx_hash');
@@ -205,11 +254,8 @@ describe('Whitelist API Routes', () => {
     const response = await testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-bypass-ratelimit': 'true',
-        },
-        body: JSON.stringify({
+        headers: { 'x-test-bypass-ratelimit': 'true' },
+        body: buildMultipartBody({
           walletAddress: resubmitWallet,
           fullName: 'New Submission',
           idType: 'national_id',
@@ -240,16 +286,8 @@ describe('Whitelist API Routes', () => {
     const response = await testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-bypass-ratelimit': 'true',
-        },
-        body: JSON.stringify({
-          walletAddress: mockWallet,
-          fullName: 'Test User',
-          idType: 'passport',
-          idReference: 'A1234567',
-        }),
+        headers: { 'x-test-bypass-ratelimit': 'true' },
+        body: buildMultipartBody(),
       }),
     );
 
@@ -266,16 +304,8 @@ describe('Whitelist API Routes', () => {
     const response = await testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-test-bypass-ratelimit': 'true',
-        },
-        body: JSON.stringify({
-          walletAddress: mockWallet,
-          fullName: 'Test User',
-          idType: 'passport',
-          idReference: 'A1234567',
-        }),
+        headers: { 'x-test-bypass-ratelimit': 'true' },
+        body: buildMultipartBody(),
       }),
     );
 

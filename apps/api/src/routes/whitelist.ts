@@ -6,13 +6,6 @@ import { validateQuery } from '../middleware/validation';
 import { rateLimit } from '../middleware';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
 
-const requestSchema = t.Object({
-  walletAddress: t.String({ maxLength: 56 }),
-  fullName: t.String({ maxLength: 255 }),
-  idType: t.Union([t.Literal('passport'), t.Literal('national_id'), t.Literal('drivers_license')]),
-  idReference: t.String({ maxLength: 255 }),
-});
-
 const requestMultipartSchema = t.Object({
   walletAddress: t.String({ maxLength: 56 }),
   fullName: t.String({ maxLength: 255 }),

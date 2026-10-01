@@ -12,6 +12,20 @@ import {
 import { PrivyWrapper } from "@/components/auth/PrivyWrapper";
 import { WalletReconnectionPrompt } from "@/components/auth/WalletReconnectionPrompt";
 
+// The E2E browser has no wallet extension to sign transactions. Register a
+// deterministic signer only in the Playwright dev server so RPC route mocks
+// can exercise the real submit flow through sendTransaction.
+if (process.env.NEXT_PUBLIC_E2E_TEST === "true") {
+  walletRegistry.register({
+    id: "e2e-test",
+    name: "E2E test wallet",
+    isConnected: true,
+    connect: async () => ({ address: "" }),
+    disconnect: async () => {},
+    signTransaction: async (xdr: string) => xdr,
+  });
+}
+
 walletRegistry.register(new StellarWalletsKitProvider());
 
 if (process.env.NEXT_PUBLIC_PRIVY_APP_ID) {

@@ -85,6 +85,7 @@ export default defineConfig({
           OPERATIONS_BACKEND_CREDENTIAL: "e2e-test-credential",
           OPERATIONS_ALLOWED_WALLETS: "*",
           NEXT_PUBLIC_USE_MOCK: "false",
+          NEXT_PUBLIC_E2E_TEST: "true",
           SKIP_ENV_VALIDATION: "true",
         },
       },

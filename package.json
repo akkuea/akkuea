@@ -66,6 +66,7 @@
     "minimatch": ">=10.2.1",
     "eslint-visitor-keys": "^5.0.1",
     "browserslist": "^4.28.8",
+    "brace-expansion": "^5.0.12",
     "next": "^16.3.3",
     "js-yaml": "^4.3.2",
     "sharp": "^0.35.4",

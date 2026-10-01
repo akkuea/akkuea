@@ -834,6 +834,66 @@ impl PilotPayoutSplit {
         Storage::is_paused(&env)
     }
 
+    /// Begin transferring admin to a new address.
+    ///
+    /// Two-step, following the same pattern as `defi-rwa`'s
+    /// `AdminControl::transfer_admin_start` (see
+    /// docs/operations/runbook-role-management.md). The current admin keeps
+    /// full control until `new_admin` calls `transfer_admin_accept`, so a
+    /// mistyped or unreachable new admin can never lock the contract out.
+    /// Not blocked by `pause`: admin recovery must keep working while paused.
+    ///
+    /// Deliberately gated by the admin alone, not by the operator+ally
+    /// two-signer model used for `record_evidence`, `execute_distribution`,
+    /// and `exit`. Reasoning recorded in docs/strategy/decision-log.md: the
+    /// admin key is Akkuea's own platform key, distinct from the operator and
+    /// ally business roles, and requiring the ally's co-signature would let
+    /// an unresponsive or adversarial ally block Akkuea's ability to recover
+    /// from a lost or compromised admin key, which is exactly the failure
+    /// mode this feature exists to close.
+    pub fn transfer_admin_start(env: Env, caller: Address, new_admin: Address) {
+        caller.require_auth();
+        Self::require_admin(&env, &caller);
+
+        Storage::set_pending_admin(&env, &new_admin);
+        events::emit_admin_transfer_started(&env, caller, new_admin);
+    }
+
+    /// Accept a pending admin transfer. Must be signed by the address named
+    /// in `transfer_admin_start`. The old admin loses every privilege the
+    /// instant this call succeeds, since `require_admin` compares against the
+    /// single stored admin address.
+    pub fn transfer_admin_accept(env: Env, new_admin: Address) {
+        new_admin.require_auth();
+
+        let pending = Storage::pending_admin(&env);
+        if pending != Some(new_admin.clone()) {
+            panic_with_error!(&env, PayoutError::NotPendingAdmin);
+        }
+
+        let old_admin = Storage::address(&env, &DataKey::Admin)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+
+        Storage::set_address(&env, &DataKey::Admin, &new_admin);
+        Storage::clear_pending_admin(&env);
+        events::emit_admin_transfer_accepted(&env, old_admin, new_admin);
+    }
+
+    /// Cancel a pending admin transfer before it is accepted. Only the
+    /// current admin can cancel.
+    pub fn transfer_admin_cancel(env: Env, caller: Address) {
+        caller.require_auth();
+        Self::require_admin(&env, &caller);
+
+        Storage::clear_pending_admin(&env);
+        events::emit_admin_transfer_cancelled(&env, caller);
+    }
+
+    /// Return the pending admin, if a transfer is in progress.
+    pub fn pending_admin(env: Env) -> Option<Address> {
+        Storage::pending_admin(&env)
+    }
+
     /// Permanently terminate the ally/property relationship.
     ///
     /// One-way and irreversible: once called, `record_evidence` and
@@ -2549,6 +2609,137 @@ pub mod tests {
             res,
             Err(Ok(Error::from_contract_error(
                 PayoutError::InvalidStatusTransition as u32
+            )))
+        );
+    }
+
+    // --- Two-step admin transfer ---
+
+    #[test]
+    fn admin_transfer_happy_path() {
+        let s = setup();
+        let new_admin = Address::generate(&s.env);
+
+        s.payout.transfer_admin_start(&s.admin, &new_admin);
+        assert_eq!(s.payout.pending_admin(), Some(new_admin.clone()));
+
+        // Old admin still has full control before accept.
+        s.payout.pause(&s.admin);
+        s.payout.unpause(&s.admin);
+
+        s.payout.transfer_admin_accept(&new_admin);
+
+        assert_eq!(s.payout.pending_admin(), None);
+        // New admin now has full control.
+        s.payout.pause(&new_admin);
+        assert!(s.payout.is_paused());
+    }
+
+    #[test]
+    fn admin_transfer_cancel_before_accept() {
+        let s = setup();
+        let new_admin = Address::generate(&s.env);
+
+        s.payout.transfer_admin_start(&s.admin, &new_admin);
+        s.payout.transfer_admin_cancel(&s.admin);
+
+        assert_eq!(s.payout.pending_admin(), None);
+
+        let res = s.payout.try_transfer_admin_accept(&new_admin);
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingAdmin as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn admin_transfer_accept_by_wrong_address_fails() {
+        let s = setup();
+        let new_admin = Address::generate(&s.env);
+
+        s.payout.transfer_admin_start(&s.admin, &new_admin);
+
+        let res = s.payout.try_transfer_admin_accept(&s.operator);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingAdmin as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn admin_transfer_start_by_non_admin_fails() {
+        let s = setup();
+        let new_admin = Address::generate(&s.env);
+
+        let res = s.payout.try_transfer_admin_start(&s.operator, &new_admin);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        assert_eq!(s.payout.pending_admin(), None);
+    }
+
+    #[test]
+    fn old_admin_loses_all_privileges_after_accept() {
+        let s = setup();
+        let new_admin = Address::generate(&s.env);
+
+        s.payout.transfer_admin_start(&s.admin, &new_admin);
+        s.payout.transfer_admin_accept(&new_admin);
+
+        let res = s.payout.try_pause(&s.admin);
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+
+        // The new admin can act.
+        s.payout.pause(&new_admin);
+        assert!(s.payout.is_paused());
+    }
+
+    #[test]
+    fn admin_transfer_still_works_while_paused() {
+        let s = setup();
+        let new_admin = Address::generate(&s.env);
+
+        s.payout.pause(&s.admin);
+        s.payout.transfer_admin_start(&s.admin, &new_admin);
+        s.payout.transfer_admin_accept(&new_admin);
+
+        assert_eq!(s.payout.pending_admin(), None);
+        s.payout.unpause(&new_admin);
+        assert!(!s.payout.is_paused());
+    }
+
+    #[test]
+    fn operator_or_ally_cannot_start_admin_transfer() {
+        let s = setup();
+        let new_admin = Address::generate(&s.env);
+
+        let operator_res = s.payout.try_transfer_admin_start(&s.operator, &new_admin);
+        assert_eq!(
+            operator_res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+
+        let ally_res = s.payout.try_transfer_admin_start(&s.ally, &new_admin);
+        assert_eq!(
+            ally_res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
             )))
         );
     }

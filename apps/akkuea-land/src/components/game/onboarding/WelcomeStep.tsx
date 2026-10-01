@@ -1,9 +1,12 @@
 "use client";
 
 import React from "react";
+import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 
 export function WelcomeStep({ onNext }: { onNext: () => void }) {
+  const t = useTranslations("Onboarding.welcome");
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -31,17 +34,15 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
       </div>
 
       <h1 className="mb-4 text-3xl font-extrabold tracking-tight bg-gradient-to-r from-land-fg to-land-accent bg-clip-text text-transparent">
-        Welcome to Akkuea Land
+        {t("title")}
       </h1>
 
       <div className="space-y-4 mb-8 max-w-sm mx-auto">
         <p className="text-sm text-land-fg-muted leading-relaxed">
-          Explore and buy virtual properties in a dynamic, live city grid. Earn
-          steady rental income in real-time as the city thrives.
+          {t("description1")}
         </p>
         <p className="text-sm text-land-fg-muted leading-relaxed">
-          Your Stellar wallet has been set up securely through Pollar. You
-          don&apos;t need any prior blockchain experience or fees to play.
+          {t("description2")}
         </p>
       </div>
 
@@ -51,7 +52,7 @@ export function WelcomeStep({ onNext }: { onNext: () => void }) {
         onClick={onNext}
         className="rounded-xl bg-land-accent-fill px-10 py-3.5 text-sm font-bold text-land-on-accent hover:bg-land-accent-fill/90 transition-all duration-200 shadow-lg shadow-land-accent-fill/20 hover:shadow-land-accent-fill/35"
       >
-        Get Started
+        {t("getStarted")}
       </motion.button>
     </motion.div>
   );

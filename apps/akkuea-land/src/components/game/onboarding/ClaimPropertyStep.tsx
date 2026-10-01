@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useGameWallet } from "@/hooks/useGameWallet";
 import { buildBuyFromTreasuryXdr, TREASURY_ADDRESS } from "@/lib/soroban-tx";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +28,7 @@ export function ClaimPropertyStep({
   onComplete: () => void;
   onSkip: () => void;
 }) {
+  const t = useTranslations("Onboarding.claimProperty");
   const { address, signAndSubmitTx } = useGameWallet();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [status, setStatus] = useState<"idle" | "pending" | "celebrating">(
@@ -65,12 +67,11 @@ export function ClaimPropertyStep({
     >
       <div className="text-center">
         <h2 className="mb-2 text-2xl font-extrabold tracking-tight text-land-fg flex items-center justify-center gap-2">
-          <MapPin className="text-land-accent h-6 w-6" />
-          Claim your first property
+          <MapPin className="text-land-accent h-6 w-6" aria-hidden="true" />
+          {t("title")}
         </h2>
         <p className="text-sm text-land-fg-muted max-w-sm mx-auto leading-relaxed">
-          Tap on any highlighted treasury tile on the grid below. It is yours
-          completely free as a starting bonus!
+          {t("description")}
         </p>
       </div>
 
@@ -114,11 +115,11 @@ export function ClaimPropertyStep({
         <div className="mt-3 flex justify-between text-[10px] text-land-fg-muted px-1">
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded bg-land-surface-raised border border-land-border-hover/50" />
-            <span>Treasury (Free)</span>
+            <span>{t("treasuryFree")}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 rounded bg-land-surface/40 opacity-20 border border-land-border" />
-            <span>Unavailable</span>
+            <span>{t("unavailable")}</span>
           </div>
         </div>
       </div>
@@ -142,11 +143,9 @@ export function ClaimPropertyStep({
           }`}
         >
           {status === "pending" && (
-            <RefreshCw size={14} className="animate-spin" />
+            <RefreshCw size={14} className="animate-spin" aria-hidden="true" />
           )}
-          {status === "pending"
-            ? "Acquiring property..."
-            : "Claim Free Property"}
+          {status === "pending" ? t("acquiring") : t("claimButton")}
         </motion.button>
 
         {status !== "pending" && (
@@ -154,7 +153,7 @@ export function ClaimPropertyStep({
             onClick={onSkip}
             className="w-full text-xs text-land-fg-muted hover:text-land-fg transition duration-150 uppercase tracking-wider font-semibold text-center"
           >
-            Skip this step
+            {t("skipStep")}
           </button>
         )}
 
@@ -165,6 +164,8 @@ export function ClaimPropertyStep({
 }
 
 function CelebrationScreen() {
+  const t = useTranslations("Onboarding.claimProperty");
+
   return (
     <div className="text-center relative min-h-[300px] flex flex-col items-center justify-center overflow-hidden">
       {/* Premium Full-screen Confetti Burst Simulation */}
@@ -207,16 +208,18 @@ function CelebrationScreen() {
         className="space-y-4 z-10"
       >
         <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-land-success/10 text-land-success border border-land-success/20 shadow-2xl">
-          <CheckCircle className="h-10 w-10 text-land-success" />
+          <CheckCircle
+            className="h-10 w-10 text-land-success"
+            aria-hidden="true"
+          />
         </div>
 
         <div>
           <h2 className="text-3xl font-black tracking-tight text-land-fg bg-gradient-to-r from-land-success to-land-accent bg-clip-text text-transparent">
-            Welcome, Landowner!
+            {t("celebrationTitle")}
           </h2>
           <p className="mt-2 text-sm text-land-fg-muted leading-relaxed max-w-xs mx-auto">
-            You successfully claimed your first property on Stellar! We are
-            loading the real-time city map for you now...
+            {t("celebrationDescription")}
           </p>
         </div>
       </motion.div>

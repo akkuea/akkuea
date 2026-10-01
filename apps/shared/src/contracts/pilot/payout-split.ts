@@ -4,9 +4,13 @@
  * (stellar contract bindings typescript) against apps/contracts/contracts/
  * pilot-payout-split.
  *
- * Regenerated for the evidence review lifecycle and the dual-signed
- * execute_distribution. Rebuild the contract and regenerate whenever the
- * interface changes; do not edit by hand.
+ * Regenerated for two-step admin transfer (transfer_admin_start /
+ * transfer_admin_accept / transfer_admin_cancel / pending_admin), issue
+ * #1127 (C8-003). Generated from the locally built release WASM
+ * (`stellar contract bindings typescript --wasm ...`), not from a live
+ * testnet contract: no new deployment has happened yet, so there is no
+ * fresh contract ID to regenerate against. Rebuild the contract and
+ * regenerate whenever the interface changes; do not edit by hand.
  *
  * Post-processing applied (C4-015 quality standard):
  *  1. Inlined from the nested generated package into apps/shared/src directly
@@ -230,6 +234,16 @@ export const PayoutError = {
    * No evidence record exists for the cycle.
    */
   27: { message: "EvidenceNotFound" },
+  /**
+   * Number of holders exceeds the maximum supported bound.
+   */
+  28: { message: "TooManyHolders" },
+  /**
+   * `transfer_admin_accept` was called by an address that does not match
+   * the pending admin recorded by `transfer_admin_start`, or no transfer
+   * is pending at all.
+   */
+  29: { message: "NotPendingAdmin" },
 };
 
 export interface SwapFailedEvent {
@@ -301,6 +315,20 @@ export interface CurrencyPreferenceSetEvent {
   holder: string;
 }
 
+export interface AdminTransferStartedEvent {
+  current_admin: string;
+  new_admin: string;
+}
+
+export interface AdminTransferAcceptedEvent {
+  new_admin: string;
+  old_admin: string;
+}
+
+export interface AdminTransferCancelledEvent {
+  admin: string;
+}
+
 export type DataKey =
   | { tag: "Admin"; values: void }
   | { tag: "Operator"; values: void }
@@ -316,7 +344,8 @@ export type DataKey =
   | { tag: "Evidence"; values: readonly [string] }
   | { tag: "CurrencyPreference"; values: readonly [string] }
   | { tag: "SwapFailures"; values: readonly [string] }
-  | { tag: "Exit"; values: void };
+  | { tag: "Exit"; values: void }
+  | { tag: "PendingAdmin"; values: void };
 
 export interface PilotPayoutSplitClientInterface {
   /**
@@ -584,6 +613,61 @@ export interface PilotPayoutSplitClientInterface {
   ) => Promise<AssembledTransaction<Option<EurcSwapPathStatus>>>;
 
   /**
+   * Construct and simulate a pending_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Return the pending admin, if a transfer is in progress.
+   */
+  pending_admin: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<string>>>;
+
+  /**
+   * Construct and simulate a transfer_admin_start transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Begin transferring admin to a new address.
+   *
+   * Two-step, following the same pattern as `defi-rwa`'s
+   * `AdminControl::transfer_admin_start` (see
+   * docs/operations/runbook-role-management.md). The current admin keeps
+   * full control until `new_admin` calls `transfer_admin_accept`, so a
+   * mistyped or unreachable new admin can never lock the contract out.
+   * Not blocked by `pause`: admin recovery must keep working while paused.
+   *
+   * Deliberately gated by the admin alone, not by the operator+ally
+   * two-signer model used for `record_evidence`, `execute_distribution`,
+   * and `exit`. Reasoning recorded in docs/strategy/decision-log.md: the
+   * admin key is Akkuea's own platform key, distinct from the operator and
+   * ally business roles, and requiring the ally's co-signature would let
+   * an unresponsive or adversarial ally block Akkuea's ability to recover
+   * from a lost or compromised admin key, which is exactly the failure
+   * mode this feature exists to close.
+   */
+  transfer_admin_start: (
+    { caller, new_admin }: { caller: string; new_admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
+
+  /**
+   * Construct and simulate a transfer_admin_accept transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Accept a pending admin transfer. Must be signed by the address named
+   * in `transfer_admin_start`. The old admin loses every privilege the
+   * instant this call succeeds, since `require_admin` compares against the
+   * single stored admin address.
+   */
+  transfer_admin_accept: (
+    { new_admin }: { new_admin: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
+
+  /**
+   * Construct and simulate a transfer_admin_cancel transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Cancel a pending admin transfer before it is accepted. Only the
+   * current admin can cancel.
+   */
+  transfer_admin_cancel: (
+    { caller }: { caller: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
+
+  /**
    * Construct and simulate a get_currency_preference transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return a holder's settlement-currency preference; defaults to USDC.
    */
@@ -656,8 +740,26 @@ export class PilotPayoutSplitClient extends ContractClient {
         "AAAAAQAAAAAAAAAAAAAAFUV2aWRlbmNlUmV2aWV3ZWRFdmVudAAAAAAAAAUAAAAAAAAACGFwcHJvdmVkAAAAAQAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAAAAAAAhvcGVyYXRvcgAAABMAAAAAAAAABnJlYXNvbgAAAAAAEAAAAAAAAAALcmV2aWV3ZWRfYXQAAAAABg==",
         "AAAAAQAAAAAAAAAAAAAAFkV2aWRlbmNlU3VibWl0dGVkRXZlbnQAAAAAAAQAAAAAAAAABGFsbHkAAAATAAAAAAAAAAhjeWNsZV9pZAAAABAAAAAAAAAADHN1Ym1pdHRlZF9hdAAAAAYAAAAAAAAADHRvdGFsX2luY29tZQAAAAs=",
         "AAAAAQAAAAAAAAAAAAAAFlBheW91dEluaXRpYWxpemVkRXZlbnQAAAAAAAMAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAEYWxseQAAABMAAAAAAAAACG9wZXJhdG9yAAAAEw==",
+        "AAAAAAAAA59CZWdpbiB0cmFuc2ZlcnJpbmcgYWRtaW4gdG8gYSBuZXcgYWRkcmVzcy4KClR3by1zdGVwLCBmb2xsb3dpbmcgdGhlIHNhbWUgcGF0dGVybiBhcyBgZGVmaS1yd2FgJ3MKYEFkbWluQ29udHJvbDo6dHJhbnNmZXJfYWRtaW5fc3RhcnRgIChzZWUKZG9jcy9vcGVyYXRpb25zL3J1bmJvb2stcm9sZS1tYW5hZ2VtZW50Lm1kKS4gVGhlIGN1cnJlbnQgYWRtaW4ga2VlcHMKZnVsbCBjb250cm9sIHVudGlsIGBuZXdfYWRtaW5gIGNhbGxzIGB0cmFuc2Zlcl9hZG1pbl9hY2NlcHRgLCBzbyBhCm1pc3R5cGVkIG9yIHVucmVhY2hhYmxlIG5ldyBhZG1pbiBjYW4gbmV2ZXIgbG9jayB0aGUgY29udHJhY3Qgb3V0LgpOb3QgYmxvY2tlZCBieSBgcGF1c2VgOiBhZG1pbiByZWNvdmVyeSBtdXN0IGtlZXAgd29ya2luZyB3aGlsZSBwYXVzZWQuCgpEZWxpYmVyYXRlbHkgZ2F0ZWQgYnkgdGhlIGFkbWluIGFsb25lLCBub3QgYnkgdGhlIG9wZXJhdG9yK2FsbHkKdHdvLXNpZ25lciBtb2RlbCB1c2VkIGZvciBgcmVjb3JkX2V2aWRlbmNlYCwgYGV4ZWN1dGVfZGlzdHJpYnV0aW9uYCwKYW5kIGBleGl0YC4gUmVhc29uaW5nIHJlY29yZGVkIGluIGRvY3Mvc3RyYXRlZ3kvZGVjaXNpb24tbG9nLm1kOiB0aGUKYWRtaW4ga2V5IGlzIEFra3VlYSdzIG93biBwbGF0Zm9ybSBrZXksIGRpc3RpbmN0IGZyb20gdGhlIG9wZXJhdG9yIGFuZAphbGx5IGJ1c2luZXNzIHJvbGVzLCBhbmQgcmVxdWlyaW5nIHRoZSBhbGx5J3MgY28tc2lnbmF0dXJlIHdvdWxkIGxldAphbiB1bnJlc3BvbnNpdmUgb3IgYWR2ZXJzYXJpYWwgYWxseSBibG9jayBBa2t1ZWEncyBhYmlsaXR5IHRvIHJlY292ZXIKZnJvbSBhIGxvc3Qgb3IgY29tcHJvbWlzZWQgYWRtaW4ga2V5LCB3aGljaCBpcyBleGFjdGx5IHRoZSBmYWlsdXJlCm1vZGUgdGhpcyBmZWF0dXJlIGV4aXN0cyB0byBjbG9zZS4AAAAAFHRyYW5zZmVyX2FkbWluX3N0YXJ0AAAAAgAAAAAAAAAGY2FsbGVyAAAAAAATAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAA==",
+        "AAAAAAAAAMlSZXBvcnQgdGhlIGxpdmUgRVVSQyBzZXR0bGVtZW50IGNvbmZpZ3VyYXRpb24uIFJldHVybnMgYE5vbmVgIGJlZm9yZQppbml0aWFsaXphdGlvbjsgYWZ0ZXIgaW5pdGlhbGl6YXRpb24gdGhlIGRhc2hib2FyZCByZWFkcyB0aGUgYWN0dWFsCnJvdXRlciBhbmQgYXNzZXQgYWRkcmVzc2VzIGluc3RlYWQgb2YgYSBoYXJkY29kZWQgbWFya2VyIHN0cmluZy4AAAAAAAAVZXVyY19zd2FwX3BhdGhfc3RhdHVzAAAAAAAAAAAAAAEAAAPoAAAH0AAAABJFdXJjU3dhcFBhdGhTdGF0dXMAAA==",
+        "AAAAAAAAAOtBY2NlcHQgYSBwZW5kaW5nIGFkbWluIHRyYW5zZmVyLiBNdXN0IGJlIHNpZ25lZCBieSB0aGUgYWRkcmVzcyBuYW1lZAppbiBgdHJhbnNmZXJfYWRtaW5fc3RhcnRgLiBUaGUgb2xkIGFkbWluIGxvc2VzIGV2ZXJ5IHByaXZpbGVnZSB0aGUKaW5zdGFudCB0aGlzIGNhbGwgc3VjY2VlZHMsIHNpbmNlIGByZXF1aXJlX2FkbWluYCBjb21wYXJlcyBhZ2FpbnN0IHRoZQpzaW5nbGUgc3RvcmVkIGFkbWluIGFkZHJlc3MuAAAAABV0cmFuc2Zlcl9hZG1pbl9hY2NlcHQAAAAAAAABAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAA==",
+        "AAAAAAAAAFlDYW5jZWwgYSBwZW5kaW5nIGFkbWluIHRyYW5zZmVyIGJlZm9yZSBpdCBpcyBhY2NlcHRlZC4gT25seSB0aGUKY3VycmVudCBhZG1pbiBjYW4gY2FuY2VsLgAAAAAAABV0cmFuc2Zlcl9hZG1pbl9jYW5jZWwAAAAAAAABAAAAAAAAAAZjYWxsZXIAAAAAABMAAAAA",
+        "AAAAAAAAAENSZXR1cm4gYSBob2xkZXIncyBzZXR0bGVtZW50LWN1cnJlbmN5IHByZWZlcmVuY2U7IGRlZmF1bHRzIHRvIFVTREMuAAAAABdnZXRfY3VycmVuY3lfcHJlZmVyZW5jZQAAAAABAAAAAAAAAAZob2xkZXIAAAAAABMAAAABAAAH0AAAAAhDdXJyZW5jeQ==",
+        "AAAAAAAAAL1TZXQgb3IgdXBkYXRlIHRoZSBjYWxsZXIncyBvd24gc2V0dGxlbWVudC1jdXJyZW5jeSBwcmVmZXJlbmNlLgoKU2VsZi1zZXJ2ZTogZ2F0ZWQgYnkgYHJlcXVpcmVfYXV0aGAgdG8gdGhlIGhvbGRlcidzIG93biBhZGRyZXNzLCBhbmQKcmVzdHJpY3RlZCB0byBhZGRyZXNzZXMgYXBwcm92ZWQgb24gdGhlIHBpbG90IHdoaXRlbGlzdC4AAAAAAAAXc2V0X2N1cnJlbmN5X3ByZWZlcmVuY2UAAAAAAgAAAAAAAAAGaG9sZGVyAAAAAAATAAAAAAAAAAhjdXJyZW5jeQAAB9AAAAAIQ3VycmVuY3kAAAAA",
+        "AAAABAAAAAAAAAAAAAAAC1BheW91dEVycm9yAAAAAB0AAAAAAAAAEkFscmVhZHlJbml0aWFsaXplZAAAAAAAAQAAAAAAAAAOTm90SW5pdGlhbGl6ZWQAAAAAAAIAAAAAAAAADFVuYXV0aG9yaXplZAAAAAMAAAAAAAAADkNvbnRyYWN0UGF1c2VkAAAAAAAEAAAAAAAAABNJbnZhbGlkRXZpZGVuY2VIYXNoAAAAAAUAAAAAAAAAE01pc3NpbmdFdmlkZW5jZUxpbmsAAAAABgAAAAAAAAAKWmVyb0Ftb3VudAAAAAAABwAAAAAAAAAUQ3ljbGVBbHJlYWR5UmVjb3JkZWQAAAAIAAAAAAAAABBDeWNsZU5vdFJlY29yZGVkAAAACQAAAAAAAAAXQ3ljbGVBbHJlYWR5RGlzdHJpYnV0ZWQAAAAACgAAAAAAAAAORW1wdHlIb2xkZXJTZXQAAAAAAAsAAAAAAAAAFFJlY2lwaWVudE5vdEFwcHJvdmVkAAAADAAAAAAAAAASQXJpdGhtZXRpY092ZXJmbG93AAAAAAANAAAAAAAAABlJbnN1ZmZpY2llbnRQYXlvdXRCYWxhbmNlAAAAAAAADgAAAAAAAAAKUmVlbnRyYW5jeQAAAAAADwAAAAAAAAARSW50ZXJuYWxJbnZhcmlhbnQAAAAAAAAQAAAAAAAAAA9TaWduZXJDb2xsaXNpb24AAAAAEQAAAJZBIHBlci1ob2xkZXIgc3dhcCBsZWcgZmFpbGVkIGF0IHRoZSBleHRlcm5hbCB2ZW51ZSAoaWxsaXF1aWRpdHksIHZlbnVlIGVycm9yKS4KVGhlIGxlZyBpcyByZWplY3RlZCBmb3IgdGhhdCBob2xkZXIgb25seTsgb3RoZXIgaG9sZGVycyBhcmUgdW5hZmZlY3RlZC4AAAAAAApTd2FwRmFpbGVkAAAAAAASAAAAP1RoZSBzd2FwIGRlbGl2ZXJlZCBsZXNzIHRoYW4gdGhlIHNpZ25lZCBtaW5pbXVtLXJlY2VpdmVkIGJvdW5kLgAAAAAQU2xpcHBhZ2VFeGNlZWRlZAAAABMAAAA6RVVSQy9zd2FwLXJvdXRlciBjb25maWd1cmF0aW9uIGlzIG1pc3Npbmcgb3IgaW5jb25zaXN0ZW50LgAAAAAAE1JvdXRlck5vdENvbmZpZ3VyZWQAAAAAFAAAAGFBIGN5Y2xlIHdpdGggRVVSQy1wcmVmZXJlbmNlIGhvbGRlcnMgd2FzIGV4ZWN1dGVkIHdpdGhvdXQgYSBwb3NpdGl2ZQptaW5pbXVtIGV4Y2hhbmdlIHJhdGUgYm91bmQuAAAAAAAADkludmFsaWRNaW5SYXRlAAAAAAAVAAAAyVRoZSBhbGx5L3Byb3BlcnR5IHJlbGF0aW9uc2hpcCBoYXMgYmVlbiBwZXJtYW5lbnRseSB0ZXJtaW5hdGVkIHZpYQpgZXhpdGA7IGV2aWRlbmNlIHJlY29yZGluZyBhbmQgZGlzdHJpYnV0aW9uIGV4ZWN1dGlvbiBhcmUgcmVqZWN0ZWQKZm9yZXZlciBhZnRlci4gRGlzdGluY3QgZnJvbSBgQ29udHJhY3RQYXVzZWRgLCB3aGljaCBpcyByZXZlcnNpYmxlLgAAAAAAAA5Db250cmFjdEV4aXRlZAAAAAAAFgAAADVgZXhpdGAgd2FzIGludm9rZWQgd2l0aG91dCBhIG5vbi1lbXB0eSByZWFzb24gc3RyaW5nLgAAAAAAABFNaXNzaW5nRXhpdFJlYXNvbgAAAAAAABcAAABGRGlzdHJpYnV0aW9uIHdhcyByZXF1ZXN0ZWQgZm9yIGEgY3ljbGUgd2hvc2UgZXZpZGVuY2UgaXMgbm90IGFwcHJvdmVkLgAAAAAAE0V2aWRlbmNlTm90QXBwcm92ZWQAAAAAGAAAADtBIHJldmlldyB3YXMgcmVxdWVzdGVkIG9uIGEgY3ljbGUgdGhhdCBpcyBub3QgYXdhaXRpbmcgb25lLgAAAAAXSW52YWxpZFN0YXR1c1RyYW5zaXRpb24AAAAAGQAAAD1BIHJlamVjdGlvbiBvciBkaXNwdXRlIHdhcyBzdWJtaXR0ZWQgd2l0aG91dCBhIHJlYXNvbiBzdHJpbmcuAAAAAAAAE01pc3NpbmdSZXZpZXdSZWFzb24AAAAAGgAAAChObyBldmlkZW5jZSByZWNvcmQgZXhpc3RzIGZvciB0aGUgY3ljbGUuAAAAEEV2aWRlbmNlTm90Rm91bmQAAAAbAAAANk51bWJlciBvZiBob2xkZXJzIGV4Y2VlZHMgdGhlIG1heGltdW0gc3VwcG9ydGVkIGJvdW5kLgAAAAAADlRvb01hbnlIb2xkZXJzAAAAAAAcAAAAnGB0cmFuc2Zlcl9hZG1pbl9hY2NlcHRgIHdhcyBjYWxsZWQgYnkgYW4gYWRkcmVzcyB0aGF0IGRvZXMgbm90IG1hdGNoCnRoZSBwZW5kaW5nIGFkbWluIHJlY29yZGVkIGJ5IGB0cmFuc2Zlcl9hZG1pbl9zdGFydGAsIG9yIG5vIHRyYW5zZmVyCmlzIHBlbmRpbmcgYXQgYWxsLgAAAA9Ob3RQZW5kaW5nQWRtaW4AAAAAHQ==",
+        "AAAAAQAAAAAAAAAAAAAAD1N3YXBGYWlsZWRFdmVudAAAAAAEAAAAAAAAABRhbW91bnRfdXNkY19yZXRhaW5lZAAAAAsAAAAAAAAACGN5Y2xlX2lkAAAAEAAAAAAAAAAGaG9sZGVyAAAAAAATAAAAP2BQYXlvdXRFcnJvcmAgZGlzY3JpbWluYW50IGRlc2NyaWJpbmcgd2h5IHRoZSBsZWcgd2FzIHJlamVjdGVkLgAAAAALcmVhc29uX2NvZGUAAAAABA==",
+        "AAAAAQAAAJ5FbWl0dGVkIG9uY2Ugd2hlbiB0aGUgYWxseS9wcm9wZXJ0eSByZWxhdGlvbnNoaXAgaXMgcGVybWFuZW50bHkgdGVybWluYXRlZC4KQ2xpZW50cyBjYW4gd2F0Y2ggdGhpcyB0byByZW5kZXIgdGhlIHRlcm1pbmFsIHN0YXRlIHdpdGhvdXQgcG9sbGluZwpgZXhpdF9zdGF0dXNgLgAAAAAAAAAAABFFeGl0UmVjb3JkZWRFdmVudAAAAAAAAAQAAAAAAAAABGFsbHkAAAATAAAAAAAAAAJhdAAAAAAABgAAAAAAAAAIb3BlcmF0b3IAAAATAAAAAAAAAAZyZWFzb24AAAAAABA=",
+        "AAAAAQAAAAAAAAAAAAAAEVN3YXBFeGVjdXRlZEV2ZW50AAAAAAAABAAAAAAAAAAPYW1vdW50X2V1cmNfb3V0AAAAAAsAAAAAAAAADmFtb3VudF91c2RjX2luAAAAAAALAAAAAAAAAAhjeWNsZV9pZAAAABAAAAAAAAAABmhvbGRlcgAAAAAAEw==",
+        "AAAAAQAAAAAAAAAAAAAAFUV2aWRlbmNlRGlzcHV0ZWRFdmVudAAAAAAAAAQAAAAAAAAABmNhbGxlcgAAAAAAEwAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAAAAAAAtkaXNwdXRlZF9hdAAAAAAGAAAAAAAAAAZyZWFzb24AAAAAABA=",
+        "AAAAAQAAAAAAAAAAAAAAFUV2aWRlbmNlUmVjb3JkZWRFdmVudAAAAAAAAAQAAAAAAAAABGFsbHkAAAATAAAAAAAAAAhjeWNsZV9pZAAAABAAAAAAAAAACG9wZXJhdG9yAAAAEwAAAAAAAAAMdG90YWxfaW5jb21lAAAACw==",
+        "AAAAAQAAAAAAAAAAAAAAFUV2aWRlbmNlUmV2aWV3ZWRFdmVudAAAAAAAAAUAAAAAAAAACGFwcHJvdmVkAAAAAQAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAAAAAAAhvcGVyYXRvcgAAABMAAAAAAAAABnJlYXNvbgAAAAAAEAAAAAAAAAALcmV2aWV3ZWRfYXQAAAAABg==",
+        "AAAAAQAAAAAAAAAAAAAAFkV2aWRlbmNlU3VibWl0dGVkRXZlbnQAAAAAAAQAAAAAAAAABGFsbHkAAAATAAAAAAAAAAhjeWNsZV9pZAAAABAAAAAAAAAADHN1Ym1pdHRlZF9hdAAAAAYAAAAAAAAADHRvdGFsX2luY29tZQAAAAs=",
+        "AAAAAQAAAAAAAAAAAAAAFlBheW91dEluaXRpYWxpemVkRXZlbnQAAAAAAAMAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAEYWxseQAAABMAAAAAAAAACG9wZXJhdG9yAAAAEw==",
+        "AAAAAQAAAAAAAAAAAAAAGUFkbWluVHJhbnNmZXJTdGFydGVkRXZlbnQAAAAAAAACAAAAAAAAAA1jdXJyZW50X2FkbWluAAAAAAAAEwAAAAAAAAAJbmV3X2FkbWluAAAAAAAAEw==",
+        "AAAAAQAAAAAAAAAAAAAAGkFkbWluVHJhbnNmZXJBY2NlcHRlZEV2ZW50AAAAAAACAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAAAAAAlvbGRfYWRtaW4AAAAAAAAT",
         "AAAAAQAAAAAAAAAAAAAAGkN1cnJlbmN5UHJlZmVyZW5jZVNldEV2ZW50AAAAAAACAAAAAAAAAAhjdXJyZW5jeQAAB9AAAAAIQ3VycmVuY3kAAAAAAAAABmhvbGRlcgAAAAAAEw==",
-        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAADwAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAAIT3BlcmF0b3IAAAAAAAAAAAAAAARBbGx5AAAAAAAAAAAAAAAUUGxhdGZvcm1GZWVSZWNpcGllbnQAAAAAAAAAAAAAAAtJbmNvbWVUb2tlbgAAAAAAAAAAAAAAAAlXaGl0ZWxpc3QAAAAAAAAAAAAAAAAAAAlVc2RjVG9rZW4AAAAAAAAAAAAAAAAAAAlFdXJjVG9rZW4AAAAAAAAAAAAAAAAAAApTd2FwUm91dGVyAAAAAAAAAAAAAAAAAAZQYXVzZWQAAAAAAAAAAAAAAAAABUd1YXJkAAAAAAAAAQAAAAAAAAAIRXZpZGVuY2UAAAABAAAAEAAAAAEAAAAAAAAAEkN1cnJlbmN5UHJlZmVyZW5jZQAAAAAAAQAAABMAAAABAAAAAAAAAAxTd2FwRmFpbHVyZXMAAAABAAAAEAAAAAAAAAAAAAAABEV4aXQ=",
+        "AAAAAQAAAAAAAAAAAAAAG0FkbWluVHJhbnNmZXJDYW5jZWxsZWRFdmVudAAAAAABAAAAAAAAAAVhZG1pbgAAAAAAABM=",
+        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAAEAAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAAIT3BlcmF0b3IAAAAAAAAAAAAAAARBbGx5AAAAAAAAAAAAAAAUUGxhdGZvcm1GZWVSZWNpcGllbnQAAAAAAAAAAAAAAAtJbmNvbWVUb2tlbgAAAAAAAAAAAAAAAAlXaGl0ZWxpc3QAAAAAAAAAAAAAAAAAAAlVc2RjVG9rZW4AAAAAAAAAAAAAAAAAAAlFdXJjVG9rZW4AAAAAAAAAAAAAAAAAAApTd2FwUm91dGVyAAAAAAAAAAAAAAAAAAZQYXVzZWQAAAAAAAAAAAAAAAAABUd1YXJkAAAAAAAAAQAAAAAAAAAIRXZpZGVuY2UAAAABAAAAEAAAAAEAAAAAAAAAEkN1cnJlbmN5UHJlZmVyZW5jZQAAAAAAAQAAABMAAAABAAAAAAAAAAxTd2FwRmFpbHVyZXMAAAABAAAAEAAAAAAAAAAAAAAABEV4aXQAAAAAAAAAAAAAAAxQZW5kaW5nQWRtaW4=",
       ]),
       options,
     );
@@ -672,12 +774,16 @@ export class PilotPayoutSplitClient extends ContractClient {
     flag_dispute: this.txFromJSON<null>,
     get_evidence: this.txFromJSON<Option<EvidenceRecord>>,
     start_review: this.txFromJSON<null>,
+    pending_admin: this.txFromJSON<Option<string>>,
     record_evidence: this.txFromJSON<null>,
     review_evidence: this.txFromJSON<null>,
     submit_evidence: this.txFromJSON<null>,
     get_swap_failures: this.txFromJSON<Array<SwapFailureRecord>>,
     execute_distribution: this.txFromJSON<DistributionSummary>,
+    transfer_admin_start: this.txFromJSON<null>,
     eurc_swap_path_status: this.txFromJSON<Option<EurcSwapPathStatus>>,
+    transfer_admin_accept: this.txFromJSON<null>,
+    transfer_admin_cancel: this.txFromJSON<null>,
     get_currency_preference: this.txFromJSON<Currency>,
     set_currency_preference: this.txFromJSON<null>,
   };

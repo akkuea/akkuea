@@ -23,7 +23,9 @@ globalThis.MutationObserver = dom.window.MutationObserver as any;
 
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import React from "react";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, waitFor } from "@testing-library/react";
+import axe from "axe-core";
+import { renderWithIntl } from "@/test/renderWithIntl";
 
 mock.module("framer-motion", () => {
   const passthrough = new Proxy(
@@ -86,7 +88,7 @@ beforeEach(() => {
 
 /** Selects the first tile marked claimable ("(i * 7 + 3) % 2 === 0"). */
 function selectFirstClaimableTile(
-  view: ReturnType<typeof render>,
+  view: ReturnType<typeof renderWithIntl>,
 ): HTMLElement {
   const buttons = view.container.querySelectorAll("button[type='button']");
   const enabled = Array.from(buttons).find(
@@ -98,7 +100,7 @@ function selectFirstClaimableTile(
 
 describe("ClaimPropertyStep", () => {
   it("builds a real treasury-transfer XDR for the selected tile and signs it", async () => {
-    const view = render(
+    const view = renderWithIntl(
       <ClaimPropertyStep onComplete={() => {}} onSkip={() => {}} />,
     );
 
@@ -119,7 +121,7 @@ describe("ClaimPropertyStep", () => {
   });
 
   it("does not sign a hardcoded placeholder string", async () => {
-    const view = render(
+    const view = renderWithIntl(
       <ClaimPropertyStep onComplete={() => {}} onSkip={() => {}} />,
     );
 
@@ -141,7 +143,7 @@ describe("ClaimPropertyStep", () => {
       signAndSubmitTx: mockSignAndSubmitTx,
     });
 
-    const view = render(
+    const view = renderWithIntl(
       <ClaimPropertyStep onComplete={() => {}} onSkip={() => {}} />,
     );
 
@@ -150,5 +152,28 @@ describe("ClaimPropertyStep", () => {
 
     expect(mockBuildBuyFromTreasuryXdr).not.toHaveBeenCalled();
     expect(mockSignAndSubmitTx).not.toHaveBeenCalled();
+  });
+
+  it("renders in Spanish", () => {
+    const view = renderWithIntl(
+      <ClaimPropertyStep onComplete={() => {}} onSkip={() => {}} />,
+      { locale: "es" },
+    );
+
+    expect(
+      view.getByRole("button", { name: /Reclamar Propiedad Gratis/i }),
+    ).not.toBeNull();
+  });
+
+  it("has no axe violations", async () => {
+    const view = renderWithIntl(
+      <ClaimPropertyStep onComplete={() => {}} onSkip={() => {}} />,
+    );
+
+    const results = await axe.run(view.container, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+    });
+
+    expect(results.violations).toEqual([]);
   });
 });

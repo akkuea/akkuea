@@ -14,7 +14,9 @@ globalThis.MutationObserver = dom.window.MutationObserver as any;
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import React from "react";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent } from "@testing-library/react";
+import axe from "axe-core";
+import { renderWithIntl } from "@/test/renderWithIntl";
 
 mock.module("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => (
@@ -36,7 +38,7 @@ describe("CityMap keyboard accessibility", () => {
   });
 
   it("allows tiles to be navigated and activated entirely with the keyboard", () => {
-    const view = render(<CityMap />);
+    const view = renderWithIntl(<CityMap />);
     const grid = view.getByRole("grid", {
       name: "Akkuea City property grid",
     });
@@ -73,7 +75,7 @@ describe("CityMap keyboard accessibility", () => {
   });
 
   it("supports tab focus and space activation on a tile", () => {
-    const view = render(<CityMap />);
+    const view = renderWithIntl(<CityMap />);
     const grid = view.getByRole("grid", {
       name: "Akkuea City property grid",
     });
@@ -86,5 +88,29 @@ describe("CityMap keyboard accessibility", () => {
 
     expect(firstTile.getAttribute("aria-selected")).toBe("true");
     expect(view.getByLabelText("Selected property panel")).not.toBeNull();
+  });
+
+  it("renders in Spanish with translated headings and legend", () => {
+    const view = renderWithIntl(<CityMap />, { locale: "es" });
+
+    expect(view.getByText("Mapa de la Ciudad")).not.toBeNull();
+    expect(
+      view.getByRole("grid", {
+        name: "Cuadrícula de propiedades de la Ciudad Akkuea",
+      }),
+    ).not.toBeNull();
+    expect(
+      view.getByText("V=Vacante · R=Residencial · C=Comercial · S=Rascacielos"),
+    ).not.toBeNull();
+  });
+
+  it("has no axe violations", async () => {
+    const view = renderWithIntl(<CityMap />);
+
+    const results = await axe.run(view.container, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+    });
+
+    expect(results.violations).toEqual([]);
   });
 });

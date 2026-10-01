@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { PropertyPanel } from "../components/game/PropertyPanel";
-import { GameProperty, BuildingLevel } from "../types/game.types";
+import { useTranslations } from "next-intl";
+import { PropertyPanel } from "../../components/game/PropertyPanel";
+import { GameProperty, BuildingLevel } from "../../types/game.types";
 import {
   Wallet,
   Sparkles,
@@ -13,7 +14,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { TREASURY_ADDRESS } from "@/lib/soroban-tx";
-import { useGameWallet } from "../hooks/useGameWallet";
+import { useGameWallet } from "../../hooks/useGameWallet";
 
 // Distinct mock addresses to demonstrate the three ownership states on the sandbox:
 //   1. Treasury/unowned  → TREASURY_ADDRESS  (amber tile)
@@ -108,6 +109,8 @@ const mockPropertiesList: GameProperty[] = [
 ];
 
 export default function SandboxPage() {
+  const t = useTranslations("Home");
+  const tCommon = useTranslations("Common");
   const [properties, setProperties] =
     useState<GameProperty[]>(mockPropertiesList);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(
@@ -138,12 +141,14 @@ export default function SandboxPage() {
 
   const getTileBadge = (p: GameProperty) => {
     if (!isConnected)
-      return <span className="text-land-fg-muted">Not Connected</span>;
+      return (
+        <span className="text-land-fg-muted">{t("notConnectedTile")}</span>
+      );
     if (p.owner === address)
-      return <span className="text-land-success">Owned by You</span>;
+      return <span className="text-land-success">{t("ownedByYou")}</span>;
     if (p.owner === TREASURY_ADDRESS)
-      return <span className="text-land-gold">Treasury</span>;
-    return <span className="text-tile-listed">Listed (Other)</span>;
+      return <span className="text-land-gold">{t("treasury")}</span>;
+    return <span className="text-tile-listed">{t("listedOther")}</span>;
   };
 
   return (
@@ -153,17 +158,14 @@ export default function SandboxPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="bg-land-accent/20 border border-land-accent/30 text-land-accent text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1.5">
-              <Sparkles size={12} />
-              Metaverse Sandbox
+              <Sparkles size={12} aria-hidden="true" />
+              {t("badge")}
             </span>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-land-fg to-land-accent bg-clip-text text-transparent mt-2">
-            Akkuea Land Grid Panel
+            {t("title")}
           </h1>
-          <p className="text-land-fg-muted text-sm mt-1">
-            Test and interact with property panels across all four dynamic
-            blockchain ownership states.
-          </p>
+          <p className="text-land-fg-muted text-sm mt-1">{t("subtitle")}</p>
         </div>
 
         {/* Live Wallet Emulator */}
@@ -174,13 +176,13 @@ export default function SandboxPage() {
                 className={`w-2.5 h-2.5 rounded-full ${isConnected ? "bg-land-success" : "bg-land-danger"}`}
               />
               <span className="text-xs text-land-fg-muted font-bold uppercase tracking-wider">
-                Stellar Connection Emulator
+                {t("connectionEmulatorLabel")}
               </span>
             </div>
             <p className="text-xs font-mono text-land-fg-muted">
               {isConnected && address
                 ? `${address.slice(0, 8)}...${address.slice(-8)}`
-                : "Disconnected"}
+                : tCommon("disconnected")}
             </p>
           </div>
           <button
@@ -191,8 +193,8 @@ export default function SandboxPage() {
                 : "bg-land-accent-fill hover:bg-land-accent-fill/90 text-land-on-accent border-land-accent-fill/30 shadow-lg shadow-land-accent-fill/10"
             }`}
           >
-            <Wallet size={14} />
-            {isConnected ? "Disconnect" : "Connect"}
+            <Wallet size={14} aria-hidden="true" />
+            {isConnected ? t("disconnect") : t("connect")}
           </button>
         </div>
       </div>
@@ -203,8 +205,8 @@ export default function SandboxPage() {
         <div className="lg:col-span-2 space-y-5">
           <div className="bg-land-surface/40 p-5 rounded-3xl border border-land-border backdrop-blur-md">
             <h3 className="text-sm font-bold text-land-fg-muted uppercase tracking-wider mb-4 flex items-center gap-2">
-              <Grid size={16} className="text-land-accent" />
-              Simulated World Map
+              <Grid size={16} className="text-land-accent" aria-hidden="true" />
+              {t("simulatedWorldMap")}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -221,7 +223,7 @@ export default function SandboxPage() {
                     <div>
                       <div className="flex justify-between items-start">
                         <span className="text-[10px] font-bold uppercase tracking-wider bg-land-bg/80 px-2 py-0.5 rounded border border-land-border/60">
-                          Level {p.buildingLevel}
+                          {t("level", { level: p.buildingLevel })}
                         </span>
                         <span className="text-[10px] font-semibold">
                           {getTileBadge(p)}
@@ -237,7 +239,7 @@ export default function SandboxPage() {
 
                     <div className="flex justify-between items-center bg-land-bg/40 p-2 rounded-lg border border-land-border/60 mt-auto">
                       <span className="text-[10px] text-land-fg-muted">
-                        Value
+                        {t("value")}
                       </span>
                       <span className="text-xs font-mono font-bold text-land-accent">
                         {p.pricePerShare} LAND
@@ -254,34 +256,40 @@ export default function SandboxPage() {
             <HelpCircle
               className="text-land-accent shrink-0 mt-0.5"
               size={20}
+              aria-hidden="true"
             />
             <div className="space-y-1">
               <h4 className="text-xs font-bold text-land-accent uppercase tracking-wider">
-                How to test the states:
+                {t("howToTestTitle")}
               </h4>
               <ul className="text-xs text-land-fg-muted space-y-2 mt-2 list-disc list-inside">
                 <li>
-                  <strong className="text-land-fg">Unowned State</strong>: Click
-                  the Amber tile. Connect wallet to purchase from the treasury.
-                </li>
-                <li>
-                  <strong className="text-land-fg">Owned State</strong>: Click
-                  the Green tile. Upgrading building level or creating a sale
-                  listing triggers the signature simulator.
-                </li>
-                <li>
-                  <strong className="text-land-fg">Listed State</strong>: Click
-                  the Purple tile. If wallet is connected, purchase is
-                  available.
+                  <strong className="text-land-fg">
+                    {t("unownedStateTitle")}
+                  </strong>
+                  : {t("unownedStateDescription")}
                 </li>
                 <li>
                   <strong className="text-land-fg">
-                    Signature Guard State
+                    {t("ownedStateTitle")}
                   </strong>
-                  : Click{" "}
-                  <strong className="text-land-fg">Disconnect Wallet</strong> at
-                  the top. Notice that all transaction buttons are strictly
-                  hidden behind the wallet connect guard!
+                  : {t("ownedStateDescription")}
+                </li>
+                <li>
+                  <strong className="text-land-fg">
+                    {t("listedStateTitle")}
+                  </strong>
+                  : {t("listedStateDescription")}
+                </li>
+                <li>
+                  <strong className="text-land-fg">
+                    {t("signatureGuardTitle")}
+                  </strong>
+                  : {t("signatureGuardClickPrefix")}{" "}
+                  <strong className="text-land-fg">
+                    {t("signatureGuardDisconnect")}
+                  </strong>{" "}
+                  {t("signatureGuardDescription")}
                 </li>
               </ul>
             </div>
@@ -290,13 +298,16 @@ export default function SandboxPage() {
 
         {/* Right Info Space */}
         <div className="lg:col-span-1 bg-land-surface/20 p-8 rounded-3xl border border-land-border/60 text-center min-h-[300px] flex flex-col items-center justify-center gap-3">
-          <Layers className="text-land-fg-subtle animate-pulse" size={42} />
+          <Layers
+            className="text-land-fg-subtle animate-pulse"
+            size={42}
+            aria-hidden="true"
+          />
           <h4 className="font-bold text-land-fg-muted text-sm">
-            No Property Selected
+            {t("noPropertySelectedTitle")}
           </h4>
           <p className="text-xs text-land-fg-muted max-w-[200px] mx-auto leading-relaxed">
-            Click on any land tile in the grid to slide in the real-time
-            interaction property panel.
+            {t("noPropertySelectedDescription")}
           </p>
         </div>
       </div>

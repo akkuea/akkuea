@@ -15,7 +15,9 @@ globalThis.MutationObserver = dom.window.MutationObserver as any;
 
 import { describe, it, expect, mock, vi, beforeEach } from "bun:test";
 import React from "react";
-import { cleanup, render, fireEvent, getByText } from "@testing-library/react";
+import { cleanup, fireEvent, getByText } from "@testing-library/react";
+import axe from "axe-core";
+import { renderWithIntl } from "@/test/renderWithIntl";
 
 // Mock framer-motion to bypass layout/sheet animations for synchronous UI assertions
 mock.module("framer-motion", () => {
@@ -44,7 +46,7 @@ describe("WelcomeStep", () => {
   it("renders welcome title and description correctly", () => {
     const onNext = mock(() => {});
 
-    const view = render(<WelcomeStep onNext={onNext} />);
+    const view = renderWithIntl(<WelcomeStep onNext={onNext} />);
 
     expect(view.getByText(/Welcome to Akkuea Land/i)).not.toBeNull();
     expect(
@@ -62,7 +64,7 @@ describe("WelcomeStep", () => {
   it("renders the 5x5 sample city grid illustration (25 tiles)", () => {
     const onNext = mock(() => {});
 
-    const view = render(<WelcomeStep onNext={onNext} />);
+    const view = renderWithIntl(<WelcomeStep onNext={onNext} />);
 
     // The grid renders 25 tiles (5x5 = 25)
     const gridContainer = view.container.querySelector(
@@ -75,7 +77,7 @@ describe("WelcomeStep", () => {
   it("renders 'Get Started' button and calls onNext when clicked", () => {
     const onNext = mock(() => {});
 
-    const view = render(<WelcomeStep onNext={onNext} />);
+    const view = renderWithIntl(<WelcomeStep onNext={onNext} />);
 
     const getStartedButton = view.getByRole("button", {
       name: /Get Started/i,
@@ -89,8 +91,27 @@ describe("WelcomeStep", () => {
   it("does not call onNext before button click", () => {
     const onNext = mock(() => {});
 
-    render(<WelcomeStep onNext={onNext} />);
+    renderWithIntl(<WelcomeStep onNext={onNext} />);
 
     expect(onNext).not.toHaveBeenCalled();
+  });
+
+  it("renders in Spanish", () => {
+    const view = renderWithIntl(<WelcomeStep onNext={mock(() => {})} />, {
+      locale: "es",
+    });
+
+    expect(view.getByText(/Bienvenido a Akkuea Land/i)).not.toBeNull();
+    expect(view.getByRole("button", { name: /Comenzar/i })).not.toBeNull();
+  });
+
+  it("has no axe violations", async () => {
+    const view = renderWithIntl(<WelcomeStep onNext={mock(() => {})} />);
+
+    const results = await axe.run(view.container, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+    });
+
+    expect(results.violations).toEqual([]);
   });
 });

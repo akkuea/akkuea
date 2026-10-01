@@ -7,7 +7,8 @@ import React, {
   useMemo,
   useRef,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/routing";
 import {
   Coins,
   TrendingUp,
@@ -38,6 +39,7 @@ import { claimAllRentals } from "@/lib/claim-rental";
 import { TIMEOUTS } from "@/lib/constants";
 import { PilotCta } from "@/components/game/PilotCta";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
+import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,11 +72,14 @@ const LEVEL_MULTIPLIER: Record<BuildingLevel, number> = {
   3: SKYSCRAPER_MULTIPLIER,
 };
 
-const LEVEL_LABEL: Record<BuildingLevel, string> = {
-  0: "Empty",
-  1: "House",
-  2: "Apartment",
-  3: "Skyscraper",
+const LEVEL_LABEL_KEY: Record<
+  BuildingLevel,
+  "levelEmpty" | "levelHouse" | "levelApartment" | "levelSkyscraper"
+> = {
+  0: "levelEmpty",
+  1: "levelHouse",
+  2: "levelApartment",
+  3: "levelSkyscraper",
 };
 
 const LEVEL_COLOR: Record<BuildingLevel, string> = {
@@ -84,11 +89,14 @@ const LEVEL_COLOR: Record<BuildingLevel, string> = {
   3: "from-land-gold/15 to-land-gold/5 border-land-gold/40",
 };
 
-const EVENT_LABELS: Record<EventType, string> = {
-  buy: "Purchased",
-  improve: "Improved",
-  list: "Listed for Sale",
-  claim: "Claimed Income",
+const EVENT_LABEL_KEY: Record<
+  EventType,
+  "eventPurchased" | "eventImproved" | "eventListed" | "eventClaimed"
+> = {
+  buy: "eventPurchased",
+  improve: "eventImproved",
+  list: "eventListed",
+  claim: "eventClaimed",
 };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -330,6 +338,9 @@ function eventAmountSign(type: EventType): string {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const t = useTranslations("Dashboard");
+  const tCommon = useTranslations("Common");
+  const locale = useLocale();
   const router = useRouter();
 
   const [isConnected] = useState(true);
@@ -538,74 +549,101 @@ export default function DashboardPage() {
       <header className="border-b border-land-border bg-land-bg/95 backdrop-blur sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Sparkles size={17} className="text-land-accent" />
+            <Sparkles
+              size={17}
+              className="text-land-accent"
+              aria-hidden="true"
+            />
             <span className="font-extrabold tracking-tight text-land-fg">
-              Akkuea Land
+              {t("brand")}
             </span>
-            <span className="text-land-fg-subtle mx-1">/</span>
-            <span className="text-land-fg-muted text-sm">Dashboard</span>
+            <span className="text-land-fg-subtle mx-1" aria-hidden="true">
+              /
+            </span>
+            <span className="text-land-fg-muted text-sm">
+              {t("sectionLabel")}
+            </span>
           </div>
           <div className="flex items-center gap-2.5">
+            <LocaleSwitcher />
             <ThemeToggle />
             <div
               className={`w-2 h-2 rounded-full ${isConnected ? "bg-land-success" : "bg-land-danger"}`}
+              aria-hidden="true"
             />
             <span className="text-xs font-mono text-land-fg-muted hidden sm:block">
               {isConnected
                 ? `${VIEWER_ADDRESS.slice(0, 6)}...${VIEWER_ADDRESS.slice(-6)}`
-                : "Disconnected"}
+                : tCommon("disconnected")}
             </span>
-            <a
+            <Link
               href="/"
+              aria-label={t("cityMapLink")}
               className="ml-1 text-xs text-land-fg-muted hover:text-land-fg flex items-center gap-1 transition-colors"
             >
-              <Home size={13} />
-              <span className="hidden sm:inline">City Map</span>
-            </a>
+              <Home size={13} aria-hidden="true" />
+              <span className="hidden sm:inline">{t("cityMapLink")}</span>
+            </Link>
           </div>
         </div>
       </header>
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 space-y-10">
         {/* ── Section 1: Portfolio Summary ── */}
-        <section aria-label="Portfolio summary">
+        <section aria-label={t("portfolioOverview")}>
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-land-fg-muted mb-4">
-            Portfolio Overview
+            {t("portfolioOverview")}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* LAND Balance */}
             <div className="bg-land-surface/60 border border-land-border rounded-2xl p-5 flex flex-col gap-2">
               <div className="flex items-center gap-2 text-land-fg-muted text-[11px] font-bold uppercase tracking-wider">
-                <Wallet size={13} className="text-land-accent" />
-                LAND Balance
+                <Wallet
+                  size={13}
+                  className="text-land-accent"
+                  aria-hidden="true"
+                />
+                {t("landBalanceLabel")}
               </div>
               <div className="text-3xl font-extrabold text-land-fg tabular-nums">
                 {landBalance.toLocaleString()}
               </div>
-              <div className="text-xs text-land-fg-muted">LAND tokens</div>
+              <div className="text-xs text-land-fg-muted">
+                {t("landTokens")}
+              </div>
             </div>
 
             {/* Accrued Income */}
             <div className="bg-land-surface/60 border border-land-border rounded-2xl p-5 flex flex-col gap-2">
               <div className="flex items-center gap-2 text-land-fg-muted text-[11px] font-bold uppercase tracking-wider">
-                <TrendingUp size={13} className="text-land-success" />
-                Accrued Income
+                <TrendingUp
+                  size={13}
+                  className="text-land-success"
+                  aria-hidden="true"
+                />
+                {t("accruedIncomeLabel")}
               </div>
               <div className="text-3xl font-extrabold text-land-success tabular-nums">
                 {totalAccruedIncome.toLocaleString()}
               </div>
               <div className="text-xs text-land-fg-muted">
-                across {propertiesWithIncome.length} properties · ledger{" "}
-                {currentLedger.toLocaleString()}
+                {t("acrossProperties", {
+                  count: propertiesWithIncome.length,
+                  ledger: currentLedger.toLocaleString(),
+                })}
               </div>
             </div>
 
             {/* Claim All */}
             <div className="bg-land-surface/60 border border-land-border rounded-2xl p-5 flex flex-col gap-3 justify-between">
               <div className="flex items-center gap-2 text-land-fg-muted text-[11px] font-bold uppercase tracking-wider">
-                <Coins size={13} className="text-land-gold" />
-                Quick Claim
+                <Coins
+                  size={13}
+                  className="text-land-gold"
+                  aria-hidden="true"
+                />
+                {t("quickClaim")}
               </div>
 
               {/* Progress indicator while claiming */}
@@ -614,8 +652,12 @@ export default function DashboardPage() {
                   <RefreshCw
                     size={12}
                     className="animate-spin text-land-accent shrink-0"
+                    aria-hidden="true"
                   />
-                  Claiming {claimProgress.current + 1} of {claimProgress.total}…
+                  {t("claimingProgress", {
+                    current: claimProgress.current + 1,
+                    total: claimProgress.total,
+                  })}
                 </div>
               )}
 
@@ -624,20 +666,29 @@ export default function DashboardPage() {
                 <div className="space-y-1">
                   {claimProgress.failures.length === 0 ? (
                     <div className="flex items-center gap-1.5 text-xs text-land-success">
-                      <CheckCircle2 size={13} />
-                      All {claimProgress.total} claims succeeded
+                      <CheckCircle2 size={13} aria-hidden="true" />
+                      {t("allClaimsSucceeded", { total: claimProgress.total })}
                     </div>
                   ) : (
                     <>
                       <div className="flex items-center gap-1.5 text-xs text-land-success">
-                        <CheckCircle2 size={13} />
-                        {claimProgress.total -
-                          claimProgress.failures.length}{" "}
-                        claimed
+                        <CheckCircle2 size={13} aria-hidden="true" />
+                        {t("claimedCount", {
+                          count:
+                            claimProgress.total - claimProgress.failures.length,
+                        })}
                       </div>
                       <div className="flex items-start gap-1.5 text-xs text-land-danger">
-                        <XCircle size={13} className="mt-0.5 shrink-0" />
-                        <span>Failed: {claimProgress.failures.join(", ")}</span>
+                        <XCircle
+                          size={13}
+                          className="mt-0.5 shrink-0"
+                          aria-hidden="true"
+                        />
+                        <span>
+                          {t("failedPrefix", {
+                            reasons: claimProgress.failures.join(", "),
+                          })}
+                        </span>
                       </div>
                     </>
                   )}
@@ -649,39 +700,44 @@ export default function DashboardPage() {
                 disabled={claimableProperties.length === 0 || isClaimRunning}
                 className="w-full bg-gradient-to-r from-land-success-fill to-land-accent-fill hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-on-accent font-bold py-2.5 px-4 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-2 border border-land-success-fill/20"
               >
-                <Coins size={15} />
+                <Coins size={15} aria-hidden="true" />
                 {claimableProperties.length > 0
-                  ? `Claim All (${claimableProperties.length})`
-                  : "Nothing to Claim"}
+                  ? t("claimAll", { count: claimableProperties.length })
+                  : t("nothingToClaim")}
               </button>
             </div>
           </div>
         </section>
 
         {/* ── Section 2: Property Grid ── */}
-        <section aria-label="Owned properties">
+        <section aria-label={t("yourProperties")}>
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-land-fg-muted mb-4">
-            Your Properties
+            {t("yourProperties")}
           </h2>
 
           {propertiesWithIncome.length === 0 ? (
             // Empty state
             <div className="bg-land-surface/40 border border-land-border rounded-2xl p-12 flex flex-col items-center gap-4 text-center">
-              <MapPin size={42} className="text-land-fg-subtle" />
+              <MapPin
+                size={42}
+                className="text-land-fg-subtle"
+                aria-hidden="true"
+              />
               <div>
-                <h3 className="font-bold text-land-fg">No Properties Yet</h3>
+                <h3 className="font-bold text-land-fg">
+                  {t("noPropertiesTitle")}
+                </h3>
                 <p className="text-sm text-land-fg-muted mt-1.5 max-w-xs leading-relaxed">
-                  You don&apos;t own any land tiles yet. Head to the city map to
-                  claim your starter property from the treasury!
+                  {t("noPropertiesDescription")}
                 </p>
               </div>
-              <a
+              <Link
                 href="/"
                 className="mt-1 bg-land-accent-fill hover:bg-land-accent-fill/90 text-land-on-accent font-bold py-2.5 px-6 rounded-xl text-sm transition-colors flex items-center gap-2"
               >
-                <MapPin size={14} />
-                Open City Map
-              </a>
+                <MapPin size={14} aria-hidden="true" />
+                {t("openCityMap")}
+              </Link>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -696,9 +752,12 @@ export default function DashboardPage() {
                   <button
                     key={prop.id}
                     onClick={() =>
-                      router.push(`/?property=${encodeURIComponent(prop.id)}`)
+                      router.push({
+                        pathname: "/",
+                        query: { property: prop.id },
+                      })
                     }
-                    aria-label={`View ${prop.name} on city map`}
+                    aria-label={t("viewOnMapAriaLabel", { name: prop.name })}
                     className={`text-left p-4 rounded-2xl border bg-gradient-to-br transition-all duration-300 hover:scale-[1.02] active:scale-[0.99] flex flex-col gap-3 relative overflow-hidden group ${LEVEL_COLOR[prop.buildingLevel]} ${
                       hasIncome
                         ? "shadow-lg shadow-land-success/10 ring-1 ring-land-success/20"
@@ -713,7 +772,7 @@ export default function DashboardPage() {
                     {/* Level badge + income badge */}
                     <div className="flex justify-between items-start relative z-10">
                       <span className="text-[10px] font-bold uppercase tracking-wider bg-land-bg/70 px-2 py-0.5 rounded border border-land-border/60">
-                        {LEVEL_LABEL[prop.buildingLevel]}
+                        {t(LEVEL_LABEL_KEY[prop.buildingLevel])}
                       </span>
                       {hasIncome && (
                         <span className="text-[10px] font-bold text-land-success bg-land-success/10 border border-land-success/20 px-1.5 py-0.5 rounded">
@@ -728,14 +787,14 @@ export default function DashboardPage() {
                         {prop.name}
                       </h4>
                       <div className="flex items-center gap-1 text-[11px] text-land-fg-muted mt-1">
-                        <MapPin size={10} />
+                        <MapPin size={10} aria-hidden="true" />
                         <span className="font-mono truncate">{coordLabel}</span>
                       </div>
                     </div>
 
                     {/* Accrued income footer */}
                     <div className="mt-auto flex justify-between items-center text-[11px] bg-land-bg/50 p-2 rounded-lg border border-land-border/60 relative z-10">
-                      <span className="text-land-fg-muted">Accrued</span>
+                      <span className="text-land-fg-muted">{t("accrued")}</span>
                       <span
                         className={`font-mono font-bold ${
                           hasIncome ? "text-land-success" : "text-land-fg-muted"
@@ -746,8 +805,8 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="flex items-center gap-1 text-[10px] text-land-fg-muted group-hover:text-land-fg transition-colors relative z-10">
-                      <ChevronRight size={10} />
-                      View on map
+                      <ChevronRight size={10} aria-hidden="true" />
+                      {t("viewOnMap")}
                     </div>
                   </button>
                 );
@@ -757,16 +816,16 @@ export default function DashboardPage() {
         </section>
 
         {/* ── Section 3: Transaction History ── */}
-        <section aria-label="Transaction history">
+        <section aria-label={t("transactionHistory")}>
           <h2 className="text-[11px] font-bold uppercase tracking-widest text-land-fg-muted mb-4 flex items-center gap-2">
-            <History size={13} />
-            Transaction History
+            <History size={13} aria-hidden="true" />
+            {t("transactionHistory")}
           </h2>
 
           <div className="bg-land-surface/40 border border-land-border rounded-2xl overflow-hidden">
             {paginatedEvents.length === 0 ? (
               <div className="p-10 text-center text-land-fg-muted text-sm">
-                No transactions yet.
+                {t("noTransactions")}
               </div>
             ) : (
               <div className="divide-y divide-land-border/60">
@@ -780,6 +839,7 @@ export default function DashboardPage() {
                       {/* Icon badge */}
                       <div
                         className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 ${badgeClass}`}
+                        aria-hidden="true"
                       >
                         <EventTypeIcon type={event.eventType} />
                       </div>
@@ -788,18 +848,24 @@ export default function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold text-land-fg">
-                            {EVENT_LABELS[event.eventType]}
+                            {t(EVENT_LABEL_KEY[event.eventType])}
                           </span>
                           <span className="text-xs text-land-fg-muted font-mono bg-land-surface-raised/60 px-1.5 py-0.5 rounded">
                             [{event.coordinates[0]}, {event.coordinates[1]}]
                           </span>
                         </div>
                         <div className="text-xs text-land-fg-muted mt-0.5">
-                          Ledger #{event.ledger.toLocaleString()} ·{" "}
-                          {new Date(event.timestamp).toLocaleDateString(
-                            undefined,
-                            { month: "short", day: "numeric", year: "numeric" },
-                          )}
+                          {t("ledgerDateLabel", {
+                            ledger: event.ledger.toLocaleString(),
+                            date: new Date(event.timestamp).toLocaleDateString(
+                              locale,
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
+                            ),
+                          })}
                         </div>
                       </div>
 
@@ -825,7 +891,7 @@ export default function DashboardPage() {
                   onClick={() => setEventPage((p) => p + 1)}
                   className="w-full text-xs font-bold text-land-fg-muted hover:text-land-fg py-2 rounded-xl hover:bg-land-surface-raised/60 transition-colors"
                 >
-                  Load more
+                  {t("loadMore")}
                 </button>
               </div>
             )}

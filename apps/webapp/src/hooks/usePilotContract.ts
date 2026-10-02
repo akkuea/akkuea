@@ -1,14 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { buildCycleTimeline, type PilotCycleTimeline } from "@akkuea/shared";
+import {
+  buildCycleTimeline,
+  type PilotCycleTimeline,
+  type PilotExitRecord,
+} from "@akkuea/shared";
 import type { ConnectionStatus } from "@/hooks/useLiveUpdates";
 import {
   fetchPilotCycles,
   fetchPilotHoldings,
+  fetchPilotSettlement,
+  fetchPilotState,
   fetchPayoutPaused,
   type PilotEvidenceDetail,
   type PilotHoldings,
+  type PilotSettlementSnapshot,
 } from "@/services/pilot/reads";
 
 /**
@@ -222,6 +229,75 @@ export function usePayoutPaused() {
     isPaused: state.data ?? false,
     isLoading: state.isLoading,
     error: state.error,
+    refetch: state.refetch,
+  };
+}
+
+export interface UsePilotSettlementReturn {
+  /** The connected investor's settlement snapshot, once it has loaded. */
+  settlement: PilotSettlementSnapshot | null;
+  isLoading: boolean;
+  error: string | null;
+  lastUpdatedAt: Date | null;
+  connectionStatus: ConnectionStatus;
+  refetch: () => void;
+  /** True when no wallet is connected, so the caller can show that state. */
+  isDisconnected: boolean;
+}
+
+/**
+ * The connected investor's settlement state: currency preference, claimable
+ * withheld USDC, terminal status, and the per-cycle outcome history.
+ *
+ * Every field is read from contract storage, so the payout history is the same
+ * whether or not the RPC still retains the cycle's events.
+ */
+export function usePilotSettlement(
+  address: string | null | undefined,
+): UsePilotSettlementReturn {
+  const read = useCallback(
+    () => fetchPilotSettlement(address as string),
+    [address],
+  );
+  const state = usePolledRead(read, { enabled: Boolean(address) });
+
+  return {
+    settlement: state.data,
+    isLoading: state.isLoading,
+    error: state.error,
+    lastUpdatedAt: state.lastUpdatedAt,
+    connectionStatus: state.connectionStatus,
+    refetch: state.refetch,
+    isDisconnected: !address,
+  };
+}
+
+export interface UsePilotStateReturn {
+  /** The terminal exit record, or undefined while the pilot is active. */
+  exitRecord: PilotExitRecord | undefined;
+  isPaused: boolean;
+  isLoading: boolean;
+  error: string | null;
+  lastUpdatedAt: Date | null;
+  connectionStatus: ConnectionStatus;
+  refetch: () => void;
+}
+
+/**
+ * Public pilot state for the explanatory banners: whether the pilot has
+ * permanently exited, and whether the payout contract is paused.
+ */
+export function usePilotState(): UsePilotStateReturn {
+  const read = useCallback(() => fetchPilotState(), []);
+  const state = usePolledRead(read);
+
+  return {
+    exitRecord: state.data?.exitRecord,
+    isPaused: state.data?.isPaused ?? false,
+    isLoading: state.isLoading,
+    error: state.error,
+    lastUpdatedAt: state.lastUpdatedAt,
+    connectionStatus: state.connectionStatus,
     refetch: state.refetch,
   };
 }

@@ -106,3 +106,26 @@ export function pilotPaymentDay(): number {
 export function pilotPropertySplatUrl(): string | null {
   return process.env.NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL?.trim() || null;
 }
+
+/**
+ * Base URL of the public network explorer for the configured network.
+ *
+ * Payout history links here so an investor can inspect the contract's stored
+ * state on a source Akkuea does not control, rather than trusting the
+ * dashboard's rendering of it.
+ */
+export function pilotExplorerBaseUrl(): string {
+  return resolvePilotNetwork() === "MAINNET"
+    ? "https://stellar.expert/explorer/public"
+    : "https://stellar.expert/explorer/testnet";
+}
+
+/** Explorer page for the payout-split contract itself. */
+export function pilotPayoutExplorerUrl(): string {
+  return `${pilotExplorerBaseUrl()}/contract/${pilotContractIds().payoutSplit}`;
+}
+
+/** Explorer account page for a holder or operator address. */
+export function pilotAccountExplorerUrl(address: string): string {
+  return `${pilotExplorerBaseUrl()}/account/${address}`;
+}

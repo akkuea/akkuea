@@ -66,7 +66,7 @@
     "minimatch": ">=10.2.1",
     "eslint-visitor-keys": "^5.0.1",
     "browserslist": "^4.28.8",
-    "next": "^16.3.3",
+    "next": "^16.3.6",
     "sharp": "^0.35.4",
     "typescript": "~5.9.3",
     "@creit-tech/stellar-wallets-kit": "npm:@creit.tech/stellar-wallets-kit@2.6.0",

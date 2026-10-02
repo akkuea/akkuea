@@ -4,6 +4,7 @@
 # Reviewed: 2026-08-17 against develop lockfile after dependency upgrade. Follow-up: dependency upgrade track.
 # Reviewed: 2026-09-29 against the PR #1141 lockfile. Follow-up: dependency upgrade track.
 # Reviewed: 2026-10-01 against the PR #1141 lockfile (brace-expansion override) after a new axios / next advisory batch landed post-review. Follow-up: dependency upgrade track.
+# Reviewed: 2026-10-02 against the PR #1126 lockfile: the 2026-10-01 axios / next batch was dropped from this list by upgrading axios to ^1.20.0 and next to ^16.3.6, since patched releases exist.
 
 GHSA-267c-6grr-h53f  # next (high) - Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - transitive; track upgrade
 GHSA-26hh-7cqf-hhc6  # next (high) - Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - Incomplete Fix Follow-Up - transitive; track upgrade
@@ -11,11 +12,9 @@ GHSA-28wg-ghj8-5hjv  # nanoid (high) - nanoid: non-secure generators can loop in
 GHSA-2v37-7h3g-55p8  # nanoid (high) - nanoid: custom generators can loop indefinitely when size is zero - transitive; track upgrade
 GHSA-36qx-fr4f-26g5  # next (high) - Next.js has a Middleware / Proxy bypass in Pages Router applications using i18n - transitive; track upgrade
 GHSA-3jxr-9vmj-r5cp  # brace-expansion (high) - brace-expansion: DoS via exponential-time expansion of consecutive non-expanding {} groups - transitive; track upgrade
-GHSA-3pq3-5fj3-cg6v  # axios (high) - Axios: HTTP/2 adapter bypasses configured DNS lookup and proxy controls - transitive; track upgrade
 GHSA-492v-c6pp-mqqv  # next (high) - Next.js has a Middleware / Proxy bypass through dynamic route parameter injection - transitive; track upgrade
 GHSA-4cwx-7wf7-3272  # undici (high) - undici vulnerable to cross-user information disclosure and parse-time crash via degenerate private cache directives - transitive; track upgrade
 GHSA-52cp-r559-cp3m  # js-yaml (high) - js-yaml: YAML merge-key chains can force quadratic CPU consumption - transitive; track upgrade
-GHSA-542g-h47m-68v8  # axios (high) - Axios: Denial of Service via unhandled error event in HTTP/2 ClientHttp2Session initialization - transitive; track upgrade
 GHSA-5p2g-fcmc-qvqq  # image-size (high) - image-size: JXL and HEIF parsers allow denial of service through infinite loops - transitive; track upgrade
 GHSA-5p4m-2wfm-xmqj  # js-yaml (high) - JS-YAML: Quadratic CPU consumption in !!omap resolution (3.x and 4.x) - CVE-2026-59870 fix not backported - transitive; track upgrade
 GHSA-66ff-xgx4-vchm  # protobufjs (high) - protobuf.js: Code injection through bytes field defaults in generated toObject code - transitive; track upgrade
@@ -26,7 +25,6 @@ GHSA-75px-5xx7-5xc7  # protobufjs (high) - protobuf.js: Code generation gadget a
 GHSA-89xv-2m56-2m9x  # next (high) - Next.js: Server-Side Request Forgery in Server Actions on custom servers - transitive; track upgrade
 GHSA-8h8q-6873-q5fj  # next (high) - Next.js Vulnerable to Denial of Service with Server Components - transitive; track upgrade
 GHSA-96hv-2xvq-fx4p  # ws (high) - ws: Memory exhaustion DoS from tiny fragments and data chunks - transitive; track upgrade
-GHSA-c29m-xwm3-cm6r  # axios (high) - Axios: ReDoS in fromDataURI data URL parser freezes the Node event loop - transitive; track upgrade
 GHSA-c4j6-fc7j-m34r  # next (high) - Next.js vulnerable to server-side request forgery in applications using WebSocket upgrades - transitive; track upgrade
 GHSA-f88m-g3jw-g9cj  # sharp (high) - sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591 - transitive; track upgrade
 GHSA-g84c-rxfj-3j2c  # webpack-dev-middleware (high) - webpack-dev-middleware vulnerable to Path Traversal via non-slash-terminated publicPath - transitive via storybook in webapp; track upgrade
@@ -34,23 +32,18 @@ GHSA-gcfj-64vw-6mp9  # axios (high) - Axios Node HTTP adapter can use an inherit
 GHSA-hm92-r4w5-c3mj  # undici (high) - undici vulnerable to cross-origin request routing via SOCKS5 proxy pool reuse - transitive; track upgrade
 GHSA-hmw2-7cc7-3qxx  # form-data (high) - form-data: CRLF injection in form-data via unescaped multipart field names and filenames - transitive; track upgrade
 GHSA-jvwf-75h9-cwgg  # protobufjs (high) - protobuf.js: Process-wide denial of service through unsafe option paths - transitive; track upgrade
-GHSA-m8m8-qj5v-23w3  # axios (high) - Axios: Node HTTP adapter prototype-pollution gadget allows request socket hijack via inherited createConnection - transitive; track upgrade
 GHSA-m99w-x7hq-7vfj  # next (high) - Next.js: Denial of Service in App Router using Server Actions - transitive; track upgrade
 GHSA-mg66-mrh9-m8jx  # next (high) - Next.js vulnerable to Denial of Service via connection exhaustion in applications using Cache Components - transitive; track upgrade
-GHSA-mghh-pgcx-3jjj  # axios (high) - Axios: ReDoS (quadratic) in shouldBypassProxy host normalization reachable via untrusted redirect Location - transitive; track upgrade
 GHSA-mh99-v99m-4gvg  # brace-expansion (high) - brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash - transitive; track upgrade
 GHSA-mwp4-54f8-5fhr  # ip-address (high) - ip-address: Address4 decodes leading-zero octets as decimal while resolvers decode them as octal, allowing SSRF and trust-boundary bypass - transitive; track upgrade
 GHSA-p9j2-gv94-2wf4  # next (high) - Next.js: Server-Side Request Forgery in rewrites via attacker-controlled destination hostname - transitive; track upgrade
 GHSA-q4gf-8mx6-v5v3  # next (high) - Next.js has a Denial of Service with Server Components - transitive; track upgrade
 GHSA-r28c-9q8g-f849  # postcss (high) - PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure - transitive; track upgrade
-GHSA-r4gj-5m52-g5wh  # axios (high) - Axios: maxRedirects 0 is not enforced by the fetch adapter allowing redirect-based SSRF - transitive; track upgrade
 GHSA-rfgv-xxqx-mfg5  # undici (high) - undici vulnerable to Denial of Service via unrequested WebSocket subprotocol - transitive via jsdom in webapp tests; track upgrade
 GHSA-rgw5-rvv9-x895  # brace-expansion (high) - brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation - transitive; track upgrade
-GHSA-vcvr-r3jv-pc5j  # next (critical) - Next.js: Remote Code Execution in next/og ImageResponse - transitive; track upgrade
 GHSA-vmh5-mc38-953g  # undici (high) - undici vulnerable to TLS certificate validation bypass via dropped requestTls in SOCKS5 ProxyAgent - transitive; track upgrade
 GHSA-vxpw-j846-p89q  # undici (high) - undici WebSocket client vulnerable to denial of service via fragment count bypass - transitive; track upgrade
 GHSA-w293-vg96-wgc3  # undici (high) - undici vulnerable to TLS certificate validation bypass via dropped connect options in BalancedPool - transitive via jsdom in webapp tests; track upgrade
 GHSA-w3rx-r6r6-pgpr  # image-size (high) - image-size: ICNS parser allows denial of service through an infinite loop - transitive; track upgrade
 GHSA-wcpc-wj8m-hjx6  # protobufjs (high) - protobufjs: Denial of service through unbounded Any expansion during JSON conversion - transitive; track upgrade
-GHSA-x97p-jq2g-jp4f  # axios (high) - Axios: Prototype Pollution gadget in axios toFormData options - transitive; track upgrade
 GHSA-xq3m-2v4x-88gg  # protobufjs (critical) - Arbitrary code execution in protobufjs - transitive; track upgrade

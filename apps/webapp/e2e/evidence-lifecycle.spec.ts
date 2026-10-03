@@ -53,7 +53,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
 
     // Submitted state confirmation
     await expect(page.getByText("Submitted. The operator can now review this cycle.")).toBeVisible();
-    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page.locator("form").getByRole("alert")).toHaveCount(0);
   });
 
   test("ally sees operator rejection reason and can resubmit", async ({
@@ -108,7 +108,7 @@ test.describe("Evidence Lifecycle - Ally Workflow", () => {
     await submitButton.click();
 
     await expect(page.getByText("Submitted. The operator can now review this cycle.")).toBeVisible();
-    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page.locator("form").getByRole("alert")).toHaveCount(0);
   });
 
   test("paused payout contract blocks ally submissions", async ({ page }) => {

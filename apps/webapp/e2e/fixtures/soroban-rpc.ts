@@ -147,6 +147,63 @@ function createDummyTransactionData(): string {
 
 const DEFAULT_TX_DATA = createDummyTransactionData();
 
+function createDummyWriteTransactionData(): string {
+  // The SDK uses the simulated write footprint to decide whether a call needs
+  // signing. An empty footprint makes signAndSend() reject the mock as a read.
+  const placeholderAccount = xdr.PublicKey.publicKeyTypeEd25519(
+    Buffer.alloc(32),
+  );
+  const writeKey = xdr.LedgerKey.account(
+    new xdr.LedgerKeyAccount({ accountId: placeholderAccount }),
+  );
+  const transactionData = new xdr.SorobanTransactionData({
+    ext: xdr.SorobanTransactionDataExt.v0(),
+    resources: new xdr.SorobanResources({
+      footprint: new xdr.LedgerFootprint({ readOnly: [], readWrite: [writeKey] }),
+      instructions: 0,
+      diskReadBytes: 0,
+      writeBytes: 0,
+    }),
+    resourceFee: BigInt(0),
+  });
+  return transactionData.toXDR("base64");
+}
+
+const DEFAULT_WRITE_TX_DATA = createDummyWriteTransactionData();
+const READ_ONLY_CONTRACT_METHODS = new Set([
+  "is_paused",
+  "get_evidence",
+  "balance",
+  "total_supply",
+  "decimals",
+  "symbol",
+  "is_approved",
+]);
+
+// The SDK's signAndSend() parses every SUCCESS getTransaction response as a
+// full Soroban transaction result. Keep these valid XDR fixtures so mocked
+// writes resolve through the same success path as a real RPC response.
+const SUCCESS_RESULT_XDR = new xdr.TransactionResult({
+  feeCharged: BigInt(0),
+  result: xdr.TransactionResultResult.txSuccess([]),
+  ext: xdr.TransactionResultExt.v0(),
+}).toXDR("base64");
+
+const SUCCESS_RESULT_META_XDR = xdr.TransactionMeta.v3(
+  new xdr.TransactionMetaV3({
+    ext: xdr.ExtensionPoint.v0(),
+    txChangesBefore: [],
+    operations: [],
+    txChangesAfter: [],
+    sorobanMeta: new xdr.SorobanTransactionMeta({
+      ext: xdr.SorobanTransactionMetaExt.v0(),
+      events: [],
+      returnValue: xdr.ScVal.scvVoid(),
+      diagnosticEvents: [],
+    }),
+  }),
+).toXDR("base64");
+
 function mockAccountEntryXdr(address: string): string {
   const account = new xdr.AccountEntry({
     accountId: Keypair.fromPublicKey(address).xdrPublicKey(),
@@ -382,6 +439,7 @@ export class PilotRpcScenario {
     whitelisted: true,
   };
   private submittedTransactions: Array<{ method: string; args: unknown }> = [];
+  private submittedEnvelopeXdrByHash = new Map<string, string>();
 
   constructor() {
     this.cycles = new Map();
@@ -420,6 +478,10 @@ export class PilotRpcScenario {
 
   getSubmittedTransactions() {
     return this.submittedTransactions;
+  }
+
+  getSubmittedEnvelopeXdr(hash: string): string | undefined {
+    return this.submittedEnvelopeXdrByHash.get(hash);
   }
 
   /**
@@ -624,6 +686,7 @@ export class PilotRpcScenario {
    */
   handleSendTransaction(envelopeXdr: string): string {
     const txHash = `mock_tx_${Date.now().toString(16)}_${Math.random().toString(16).slice(2, 8)}`;
+    this.submittedEnvelopeXdrByHash.set(txHash, envelopeXdr);
     const call = decodeContractInvocation(envelopeXdr);
     if (!call) {
       return txHash;
@@ -809,7 +872,11 @@ export async function mockPilotRpc(
             result: {
               latestLedger: 12345,
               minResourceFee: "100",
-              transactionData: DEFAULT_TX_DATA,
+              transactionData: READ_ONLY_CONTRACT_METHODS.has(
+                call?.functionName ?? "",
+              )
+                ? DEFAULT_TX_DATA
+                : DEFAULT_WRITE_TX_DATA,
               events: [],
               results: [
                 {
@@ -851,6 +918,7 @@ export async function mockPilotRpc(
       }
 
       if (method === "getTransaction") {
+        const hash = String(body.params?.hash ?? "");
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -861,8 +929,17 @@ export async function mockPilotRpc(
               status: "SUCCESS",
               latestLedger: 12345,
               latestLedgerCloseTime: Math.floor(Date.now() / 1000),
-              resultXdr: xdr.ScVal.scvVoid().toXDR("base64"),
-              resultMetaXdr: "AAAAAA==",
+              ledger: 12345,
+              createdAt: new Date().toISOString(),
+              applicationOrder: 1,
+              feeBump: false,
+              envelopeXdr: scenario.getSubmittedEnvelopeXdr(hash) ?? "",
+              resultXdr: SUCCESS_RESULT_XDR,
+              resultMetaXdr: SUCCESS_RESULT_META_XDR,
+              events: {
+                contractEventsXdr: [],
+                transactionEventsXdr: [],
+              },
             },
           }),
         });

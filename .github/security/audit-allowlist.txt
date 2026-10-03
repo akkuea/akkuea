@@ -1,7 +1,10 @@
 # Known high/critical dependency findings allowlisted for CI.
 # Format: GHSA-ID  # package - reason / follow-up
 # New advisories not listed here MUST fail the audit step.
-# Reviewed: 2026-09-30 against develop lockfile after dependency upgrade. Follow-up: dependency upgrade track.
+# Reviewed: 2026-08-17 against develop lockfile after dependency upgrade. Follow-up: dependency upgrade track.
+# Reviewed: 2026-09-29 against the PR #1141 lockfile. Follow-up: dependency upgrade track.
+# Reviewed: 2026-10-01 against the PR #1141 lockfile (brace-expansion override) after a new axios / next advisory batch landed post-review. Follow-up: dependency upgrade track.
+# Reviewed: 2026-10-02 against the PR #1126 lockfile: the 2026-10-01 axios / next batch was dropped from this list by upgrading axios to ^1.20.0 and next to ^16.3.6, since patched releases exist.
 
 GHSA-267c-6grr-h53f  # next (high) - Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - transitive; track upgrade
 GHSA-26hh-7cqf-hhc6  # next (high) - Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - Incomplete Fix Follow-Up - transitive; track upgrade
@@ -24,6 +27,7 @@ GHSA-8h8q-6873-q5fj  # next (high) - Next.js Vulnerable to Denial of Service wit
 GHSA-96hv-2xvq-fx4p  # ws (high) - ws: Memory exhaustion DoS from tiny fragments and data chunks - transitive; track upgrade
 GHSA-c4j6-fc7j-m34r  # next (high) - Next.js vulnerable to server-side request forgery in applications using WebSocket upgrades - transitive; track upgrade
 GHSA-f88m-g3jw-g9cj  # sharp (high) - sharp inherited vulnerabilities in libvips: CVE-2026-33327, CVE-2026-33328, CVE-2026-35590, CVE-2026-35591 - transitive; track upgrade
+GHSA-g84c-rxfj-3j2c  # webpack-dev-middleware (high) - webpack-dev-middleware vulnerable to Path Traversal via non-slash-terminated publicPath - transitive via storybook in webapp; track upgrade
 GHSA-gcfj-64vw-6mp9  # axios (high) - Axios Node HTTP adapter can use an inherited proxy after interceptor config cloning - transitive; track upgrade
 GHSA-hm92-r4w5-c3mj  # undici (high) - undici vulnerable to cross-origin request routing via SOCKS5 proxy pool reuse - transitive; track upgrade
 GHSA-hmw2-7cc7-3qxx  # form-data (high) - form-data: CRLF injection in form-data via unescaped multipart field names and filenames - transitive; track upgrade
@@ -35,10 +39,11 @@ GHSA-mwp4-54f8-5fhr  # ip-address (high) - ip-address: Address4 decodes leading-
 GHSA-p9j2-gv94-2wf4  # next (high) - Next.js: Server-Side Request Forgery in rewrites via attacker-controlled destination hostname - transitive; track upgrade
 GHSA-q4gf-8mx6-v5v3  # next (high) - Next.js has a Denial of Service with Server Components - transitive; track upgrade
 GHSA-r28c-9q8g-f849  # postcss (high) - PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure - transitive; track upgrade
+GHSA-rfgv-xxqx-mfg5  # undici (high) - undici vulnerable to Denial of Service via unrequested WebSocket subprotocol - transitive via jsdom in webapp tests; track upgrade
 GHSA-rgw5-rvv9-x895  # brace-expansion (high) - brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation - transitive; track upgrade
 GHSA-vmh5-mc38-953g  # undici (high) - undici vulnerable to TLS certificate validation bypass via dropped requestTls in SOCKS5 ProxyAgent - transitive; track upgrade
 GHSA-vxpw-j846-p89q  # undici (high) - undici WebSocket client vulnerable to denial of service via fragment count bypass - transitive; track upgrade
-GHSA-w293-vg96-wgc3  # undici (high) - undici vulnerable to TLS certificate validation bypass via dropped connect options in BalancedPool - transitive; track upgrade
+GHSA-w293-vg96-wgc3  # undici (high) - undici vulnerable to TLS certificate validation bypass via dropped connect options in BalancedPool - transitive via jsdom in webapp tests; track upgrade
 GHSA-w3rx-r6r6-pgpr  # image-size (high) - image-size: ICNS parser allows denial of service through an infinite loop - transitive; track upgrade
 GHSA-wcpc-wj8m-hjx6  # protobufjs (high) - protobufjs: Denial of service through unbounded Any expansion during JSON conversion - transitive; track upgrade
 GHSA-xq3m-2v4x-88gg  # protobufjs (critical) - Arbitrary code execution in protobufjs - transitive; track upgrade

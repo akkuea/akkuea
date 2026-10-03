@@ -51,4 +51,9 @@ pub enum PayoutError {
     /// the pending admin recorded by `transfer_admin_start`, or no transfer
     /// is pending at all.
     NotPendingAdmin = 29,
+    /// `claim_withheld` was invoked with no USDC currently reserved for the
+    /// caller. Either the holder never had a failed swap leg, or the withheld
+    /// balance was already claimed: this contract never releases the same
+    /// reservable unit twice.
+    NothingToClaim = 30,
 }

@@ -2,6 +2,7 @@ import {
   buildContractClientOptions,
   PilotPayoutSplitClient,
   type PilotPayoutSplitClientInterface,
+  type PilotSettlementCurrency,
 } from "@akkuea/shared";
 import {
   assertPilotDeployed,
@@ -172,4 +173,41 @@ export async function executeDistribution(
       min_eurc_per_usdc: args.minEurcPerUsdc ?? DEFAULT_MIN_EURC_PER_USDC,
     }),
   );
+}
+
+/**
+ * Sets the connected holder's own settlement-currency preference.
+ *
+ * The contract gates this on the holder's own signature and on whitelist
+ * approval, so only the connected wallet can change what it is paid in.
+ */
+export async function setCurrencyPreference(
+  args: { holder: string; currency: PilotSettlementCurrency },
+  signXdr: SignXdr,
+): Promise<PilotTxResult> {
+  const client = payoutClient(args.holder, signXdr);
+  return send(
+    await client.set_currency_preference({
+      holder: args.holder,
+      currency:
+        args.currency === "eurc"
+          ? { tag: "Eurc", values: undefined }
+          : { tag: "Usdc", values: undefined },
+    }),
+  );
+}
+
+/**
+ * Claims USDC the contract withheld after a failed EURC swap leg.
+ *
+ * Self-serve and available even while the contract is paused or exited, because
+ * the funds already belong to the holder. The contract rejects a claim with
+ * nothing reserved using the typed `NothingToClaim` error.
+ */
+export async function claimWithheld(
+  holder: string,
+  signXdr: SignXdr,
+): Promise<PilotTxResult> {
+  const client = payoutClient(holder, signXdr);
+  return send(await client.claim_withheld({ holder }));
 }

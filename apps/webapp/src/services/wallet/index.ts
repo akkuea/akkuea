@@ -1,5 +1,9 @@
-export type { WalletProvider, SignableWalletProvider } from "./types";
-export { isSignableWalletProvider } from "./types";
+export type {
+  WalletProvider,
+  SignableWalletProvider,
+  AuthEntrySigningProvider,
+} from "./types";
+export { isSignableWalletProvider, canSignAuthEntries } from "./types";
 export { StellarWalletsKitProvider } from "./stellar-wallets-kit.provider";
 export {
   SmartAccountKitProvider,

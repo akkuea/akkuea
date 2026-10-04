@@ -1,3 +1,4 @@
+
 import {
   rpc as SorobanRpc,
   Contract,
@@ -8,7 +9,10 @@ import {
   scValToNative,
   Networks,
 } from '@stellar/stellar-sdk';
-import { simulateTransactionWithRetry, RpcAllEndpointsFailedError } from '@akkuea/shared';
+import {
+  simulateTransactionWithRetry,
+  RpcAllEndpointsFailedError,
+} from '@akkuea/shared';
 import type { RpcRetryConfig } from '@akkuea/shared';
 
 export interface EvidenceLookupResult {
@@ -37,35 +41,63 @@ interface DecodedEvidenceRecord {
 /**
  * Read-only Soroban RPC client for `pilot-payout-split`'s evidence history.
  *
- * Uses bounded exponential-backoff retry across multiple RPC endpoints
- * for transient errors (timeouts, 429, 5xx). Deterministic contract
- * errors are never retried. RPC failures throw, so callers can
- * distinguish "could not check" from "no evidence recorded".
+ * Uses bounded exponential-backoff retry for transient RPC failures
+ * (timeouts, 429, 5xx) and supports failover across multiple RPC
+ * endpoints.
+ *
+ * Deterministic contract/simulation errors are not retried.
+ *
+ * RPC failures throw, so callers can distinguish:
+ *
+ *   { present: false }
+ *     -> evidence was successfully checked and does not exist.
+ *
+ *   thrown error
+ *     -> evidence could not be verified because RPC was unavailable
+ *        or the contract simulation failed.
  */
 export class PilotPayoutEvidenceReader {
   private readonly contractId: string;
   private readonly networkPassphrase: string;
-  private readonly server: InstanceType<typeof SorobanRpc.Server>;
+  private readonly server?: InstanceType<typeof SorobanRpc.Server>;
   private readonly simulationSourceAccount: string;
   private readonly retryConfig: RpcRetryConfig;
   private readonly rpcUrls: string[];
 
   constructor(config: PilotPayoutEvidenceReaderConfig) {
     this.contractId = config.contractId;
+
     this.networkPassphrase =
-      config.networkPassphrase ?? process.env.STELLAR_NETWORK_PASSPHRASE ?? Networks.TESTNET;
+      config.networkPassphrase ??
+      process.env.STELLAR_NETWORK_PASSPHRASE ??
+      Networks.TESTNET;
+
     this.retryConfig = config.retryConfig ?? {
       maxRetries: 3,
       retryBaseDelayMs: 2_000,
       maxRetryMs: 30_000,
       callTimeoutMs: 30_000,
     };
-    this.rpcUrls = config.rpcUrls ?? [];
+
+    /*
+     * If explicit endpoints are supplied, use the shared retry/failover
+     * helper. Otherwise fall back to the injected Server or STELLAR_RPC_URL.
+     *
+     * Keeping an injected server available makes unit tests deterministic
+     * without requiring real RPC endpoints.
+     */
+    this.rpcUrls =
+      config.rpcUrls ??
+      (config.rpcUrl ?? process.env.STELLAR_RPC_URL
+        ? [config.rpcUrl ?? process.env.STELLAR_RPC_URL!]
+        : []);
+
     this.server =
       config.server ??
-      new SorobanRpc.Server(
-        config.rpcUrl ?? process.env.STELLAR_RPC_URL ?? 'https://soroban-testnet.stellar.org',
-      );
+      (this.rpcUrls.length === 0
+        ? new SorobanRpc.Server('https://soroban-testnet.stellar.org')
+        : undefined);
+
     this.simulationSourceAccount = Keypair.random().publicKey();
   }
 
@@ -73,25 +105,48 @@ export class PilotPayoutEvidenceReader {
     const tx = this.buildTransaction(cycleId);
 
     let simulation: Awaited<
-      ReturnType<InstanceType<typeof SorobanRpc.Server>['simulateTransaction']>
+      ReturnType<
+        InstanceType<typeof SorobanRpc.Server>['simulateTransaction']
+      >
     >;
+
     try {
-      simulation =
-        this.rpcUrls.length === 0
-          ? await this.server.simulateTransaction(tx)
-          : await simulateTransactionWithRetry(tx, {
-              endpoints: this.rpcUrls,
-              ...this.retryConfig,
-            });
+      if (this.rpcUrls.length > 0) {
+        /*
+         * All configured RPC endpoints go through the shared bounded
+         * retry/failover mechanism.
+         */
+        simulation = await simulateTransactionWithRetry(tx, {
+          endpoints: this.rpcUrls,
+          ...this.retryConfig,
+        });
+      } else if (this.server) {
+        /*
+         * Preserve support for an explicitly injected Server, primarily
+         * for tests and callers that manage their own RPC connection.
+         */
+        simulation = await this.server.simulateTransaction(tx);
+      } else {
+        throw new Error('No Soroban RPC server or endpoint configured');
+      }
     } catch (err) {
       if (err instanceof RpcAllEndpointsFailedError) {
-        throw new Error(`RPC unavailable for cycle "${cycleId}": could not verify evidence`, {
-          cause: err,
-        });
+        throw new Error(
+          `RPC unavailable for cycle "${cycleId}": could not verify evidence`,
+          {
+            cause: err,
+          },
+        );
       }
+
       throw err;
     }
 
+    /*
+     * A simulation error means the RPC request reached the network, but
+     * the contract invocation itself failed. This must not be interpreted
+     * as "evidence is absent".
+     */
     if (SorobanRpc.Api.isSimulationError(simulation)) {
       throw new Error(
         `pilot-payout-split.get_evidence simulation failed for cycle "${cycleId}": ${simulation.error}`,
@@ -99,18 +154,30 @@ export class PilotPayoutEvidenceReader {
     }
 
     const retval = simulation.result?.retval;
+
+    /*
+     * No return value means the contract did not provide an evidence
+     * record. This is a successful lookup, so returning `present: false`
+     * is correct.
+     */
     if (!retval) {
       return { present: false };
     }
 
-    const decoded = scValToNative(retval) as DecodedEvidenceRecord | null | undefined;
+    const decoded = scValToNative(
+      retval,
+    ) as DecodedEvidenceRecord | null | undefined;
+
     if (decoded === null || decoded === undefined) {
       return { present: false };
     }
 
     return {
       present: true,
-      recordedAt: decoded.recorded_at !== undefined ? Number(decoded.recorded_at) : undefined,
+      recordedAt:
+        decoded.recorded_at !== undefined
+          ? Number(decoded.recorded_at)
+          : undefined,
     };
   }
 
@@ -122,8 +189,16 @@ export class PilotPayoutEvidenceReader {
       fee: '100',
       networkPassphrase: this.networkPassphrase,
     })
-      .addOperation(contract.call('get_evidence', nativeToScVal(cycleId, { type: 'string' })))
+      .addOperation(
+        contract.call(
+          'get_evidence',
+          nativeToScVal(cycleId, { type: 'string' }),
+        ),
+      )
       .setTimeout(30)
       .build();
   }
 }
+
+
+ 

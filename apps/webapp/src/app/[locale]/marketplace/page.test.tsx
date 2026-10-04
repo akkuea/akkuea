@@ -225,7 +225,9 @@ describe("MarketplacePage", () => {
     await view.findByText(property.name);
     fireEvent.click(view.getByRole("button", { name: /Invest Now/i }));
 
-    expect(view.queryByText(/Invest in Property/i)).not.toBeNull();
+    await waitFor(() => {
+      expect(view.queryByText(/Invest in Property/i)).not.toBeNull();
+    });
   });
 
   it("renders an error state with retry when the API request fails", async () => {

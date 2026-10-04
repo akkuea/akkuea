@@ -1,0 +1,263 @@
+{
+  "Metadata": {
+    "title": "Akkuea Land | City Builder on Stellar",
+    "description": "Build, own, and trade virtual land parcels backed by real-world assets on the Stellar blockchain."
+  },
+  "Common": {
+    "skipToContent": "Skip to content",
+    "notConnected": "Not connected",
+    "disconnected": "Disconnected"
+  },
+  "Nav": {
+    "appName": "AKKUEA LAND",
+    "map": "Map",
+    "marketplace": "Marketplace",
+    "dashboard": "Dashboard"
+  },
+  "ThemeToggle": {
+    "switchToDark": "Switch to dark theme",
+    "switchToLight": "Switch to light theme"
+  },
+  "LocaleSwitcher": {
+    "toggleLanguage": "Toggle language"
+  },
+  "Loading": {
+    "label": "Loading"
+  },
+  "Building": {
+    "vacant": "Vacant",
+    "residential": "Residential",
+    "commercial": "Commercial",
+    "skyscraper": "Skyscraper",
+    "labelVacant": "V",
+    "labelResidential": "R",
+    "labelCommercial": "C",
+    "labelSkyscraper": "S"
+  },
+  "PilotCta": {
+    "compactPrefix": "This is a simulation.",
+    "bannerText": "This is a simulation. Ready to see real yield from real property?",
+    "linkText": "See the Akkuea Pilot"
+  },
+  "Home": {
+    "badge": "Metaverse Sandbox",
+    "title": "Akkuea Land Grid Panel",
+    "subtitle": "Test and interact with property panels across all four dynamic blockchain ownership states.",
+    "connectionEmulatorLabel": "Stellar Connection Emulator",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "notConnectedTile": "Not Connected",
+    "ownedByYou": "Owned by You",
+    "treasury": "Treasury",
+    "listedOther": "Listed (Other)",
+    "level": "Level {level}",
+    "value": "Value",
+    "simulatedWorldMap": "Simulated World Map",
+    "howToTestTitle": "How to test the states:",
+    "unownedStateTitle": "Unowned State",
+    "unownedStateDescription": "Click the Amber tile. Connect wallet to purchase from the treasury.",
+    "ownedStateTitle": "Owned State",
+    "ownedStateDescription": "Click the Green tile. Upgrading building level or creating a sale listing triggers the signature simulator.",
+    "listedStateTitle": "Listed State",
+    "listedStateDescription": "Click the Purple tile. If wallet is connected, purchase is available.",
+    "signatureGuardTitle": "Signature Guard State",
+    "signatureGuardClickPrefix": "Click",
+    "signatureGuardDisconnect": "Disconnect Wallet",
+    "signatureGuardDescription": "at the top. Notice that all transaction buttons are strictly hidden behind the wallet connect guard!",
+    "noPropertySelectedTitle": "No Property Selected",
+    "noPropertySelectedDescription": "Click on any land tile in the grid to slide in the real-time interaction property panel."
+  },
+  "Onboarding": {
+    "skipSetup": "Skip setup",
+    "stepIndicator": "Step {number}: {name}",
+    "stepWelcome": "Welcome",
+    "stepClaimLand": "Claim Land",
+    "stepClaimProperty": "Claim Property",
+    "welcome": {
+      "title": "Welcome to Akkuea Land",
+      "description1": "Explore and buy virtual properties in a dynamic, live city grid. Earn steady rental income in real-time as the city thrives.",
+      "description2": "Your Stellar wallet has been set up securely through Pollar. You don't need any prior blockchain experience or fees to play.",
+      "getStarted": "Get Started"
+    },
+    "claimLand": {
+      "title": "Get your starter LAND",
+      "description": "LAND is the premium utility token of Akkuea Land. Reclaim 1,000 LAND from our testnet faucet for free to fund your very first property claim.",
+      "statusIdle": "Claim 1,000 LAND",
+      "statusPending": "Preparing your wallet on Stellar...",
+      "statusDone": "1,000 LAND Received!",
+      "statusError": "Claim failed. Try again.",
+      "transactionRecorded": "Transaction successfully recorded on-chain",
+      "continueButton": "Continue to Claim Property",
+      "confirmingFee": "Confirming with sponsored transaction fee...",
+      "transactionFailed": "Transaction failed. Please make sure you have internet access.",
+      "skipStep": "Skip this step"
+    },
+    "claimProperty": {
+      "title": "Claim your first property",
+      "description": "Tap on any highlighted treasury tile on the grid below. It is yours completely free as a starting bonus!",
+      "treasuryFree": "Treasury (Free)",
+      "unavailable": "Unavailable",
+      "acquiring": "Acquiring property...",
+      "claimButton": "Claim Free Property",
+      "skipStep": "Skip this step",
+      "celebrationTitle": "Welcome, Landowner!",
+      "celebrationDescription": "You successfully claimed your first property on Stellar! We are loading the real-time city map for you now..."
+    }
+  },
+  "Map": {
+    "pageTitle": "City Map | Akkuea Land",
+    "pageDescription": "Explore the 20x20 Akkuea City grid. Discover, select, and trade virtual land parcels.",
+    "heading": "City Map",
+    "gridAriaLabel": "Akkuea City property grid",
+    "statOwned": "Owned",
+    "statListed": "Listed",
+    "statTreasury": "Treasury",
+    "legendTreasury": "Treasury",
+    "legendUnowned": "Unowned",
+    "legendPlayerOwned": "Player-owned",
+    "legendForSale": "For Sale",
+    "legendKey": "V=Vacant · R=Residential · C=Commercial · S=Skyscraper",
+    "tooltipCoords": "Coords: ({row}, {col})",
+    "tooltipOwner": "Owner: {owner}",
+    "tooltipLevel": "Level: {level}",
+    "tooltipPrice": "Price: {price} LAND",
+    "tileUnowned": "Unowned",
+    "tileTreasury": "Treasury",
+    "tileOwnedBy": "Owned by {owner}",
+    "tileListedSuffix": ", listed for {price} LAND per share",
+    "tileNotListedSuffix": ", not listed for sale",
+    "tileAriaLabel": "{name}, row {row}, column {col}, {status}, {level}{saleStatus}"
+  },
+  "Marketplace": {
+    "pageTitle": "Marketplace | Akkuea Land",
+    "heading": "Marketplace",
+    "description": "Listed land parcels and active auctions will appear here."
+  },
+  "Login": {
+    "pageTitle": "Login | Akkuea Land",
+    "heading": "Akkuea Land",
+    "subtitle": "Connect your Stellar wallet to play",
+    "connectWallet": "Connect Wallet",
+    "poweredBy": "Powered by Pollar · Stellar Network"
+  },
+  "Dashboard": {
+    "brand": "Akkuea Land",
+    "sectionLabel": "Dashboard",
+    "cityMapLink": "City Map",
+    "portfolioOverview": "Portfolio Overview",
+    "landBalanceLabel": "LAND Balance",
+    "landTokens": "LAND tokens",
+    "accruedIncomeLabel": "Accrued Income",
+    "acrossProperties": "across {count} properties · ledger {ledger}",
+    "quickClaim": "Quick Claim",
+    "claimingProgress": "Claiming {current} of {total}…",
+    "allClaimsSucceeded": "All {total} claims succeeded",
+    "claimedCount": "{count} claimed",
+    "failedPrefix": "Failed: {reasons}",
+    "claimAll": "Claim All ({count})",
+    "nothingToClaim": "Nothing to Claim",
+    "yourProperties": "Your Properties",
+    "noPropertiesTitle": "No Properties Yet",
+    "noPropertiesDescription": "You don't own any land tiles yet. Head to the city map to claim your starter property from the treasury!",
+    "openCityMap": "Open City Map",
+    "viewOnMapAriaLabel": "View {name} on city map",
+    "viewOnMap": "View on map",
+    "accrued": "Accrued",
+    "levelEmpty": "Empty",
+    "levelHouse": "House",
+    "levelApartment": "Apartment",
+    "levelSkyscraper": "Skyscraper",
+    "transactionHistory": "Transaction History",
+    "noTransactions": "No transactions yet.",
+    "loadMore": "Load more",
+    "ledgerDateLabel": "Ledger #{ledger} · {date}",
+    "eventPurchased": "Purchased",
+    "eventImproved": "Improved",
+    "eventListed": "Listed for Sale",
+    "eventClaimed": "Claimed Income"
+  },
+  "PropertyPanel": {
+    "dialogLabel": "Property details",
+    "closeLabel": "Close property panel",
+    "landDetailsTitle": "Land Details",
+    "coordinatesLabel": "Coordinates",
+    "ownerLabel": "Owner",
+    "noOwnerAddress": "N/A",
+    "copyAddressLabel": "Copy address",
+    "addressCopiedLabel": "Address copied",
+    "developmentPhase": "Development Phase",
+    "transactionErrorTitle": "Transaction Error",
+    "successTitle": "Success!",
+    "processingTransaction": "Processing Blockchain Tx",
+    "empty": {
+      "title": "No Property Selected",
+      "description": "Click on a land tile to view its details and ownership status."
+    },
+    "notConnected": {
+      "title": "Unowned Tile",
+      "walletRequiredTitle": "Stellar Wallet Required",
+      "walletRequiredDescription": "Connect your Stellar wallet to purchase tiles, make improvements, or claim rental incomes.",
+      "connectWallet": "Connect Wallet"
+    },
+    "unowned": {
+      "title": "Treasury Property",
+      "treasuryCost": "Treasury Cost",
+      "buyFromTreasury": "Buy from Treasury"
+    },
+    "owned": {
+      "title": "Owned by You",
+      "improveButton": "Improve (Cost: {cost} LAND)",
+      "upgradesTo": "Upgrades building to Level {level}",
+      "maxDevelopmentReached": "Max Development Reached",
+      "listForSaleLabel": "List for Sale",
+      "pricePlaceholder": "Price (LAND)",
+      "listButton": "List",
+      "accruedRentalIncome": "Accrued Rental Income",
+      "claimButton": "Claim"
+    },
+    "listed": {
+      "title": "Listed for Sale",
+      "askingPrice": "Asking Price",
+      "buyLandTile": "Buy Land Tile"
+    },
+    "otherPlayer": {
+      "title": "Other Player Property",
+      "notForSaleTitle": "Property Not for Sale",
+      "notForSaleDescription": "This property is currently owned by another player and is not listed in the marketplace."
+    }
+  },
+  "Errors": {
+    "page": {
+      "title": "Something went wrong",
+      "description": "We encountered an unexpected error. Please try again or navigate to another page.",
+      "retry": "Try again",
+      "goHome": "Go to Home"
+    },
+    "section": {
+      "defaultMessage": "This section couldn't load",
+      "description": "An unexpected error occurred in this section.",
+      "retry": "Retry"
+    },
+    "map": {
+      "title": "The city map couldn't load",
+      "description": "We couldn't load the city grid. Please try again."
+    },
+    "dashboard": {
+      "title": "Your dashboard couldn't load",
+      "description": "We couldn't load your portfolio. Please try again."
+    },
+    "marketplace": {
+      "title": "The marketplace couldn't load",
+      "description": "We couldn't load the marketplace. Please try again."
+    },
+    "login": {
+      "title": "Login couldn't load",
+      "description": "We couldn't load the login page. Please try again."
+    },
+    "notFound": {
+      "title": "Page not found",
+      "description": "The page you are looking for doesn't exist or may have been moved.",
+      "backHome": "Back to Home"
+    }
+  }
+}

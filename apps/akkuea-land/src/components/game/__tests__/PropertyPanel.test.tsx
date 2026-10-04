@@ -14,21 +14,44 @@ globalThis.MutationObserver = dom.window.MutationObserver as any;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
-import React from "react";
-import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
+import React, { forwardRef } from "react";
+import { cleanup, fireEvent, waitFor } from "@testing-library/react";
+import axe from "axe-core";
+import { renderWithIntl } from "@/test/renderWithIntl";
 import { GameProperty, BuildingLevel } from "../../../types/game.types";
 
-// Mock framer-motion to bypass layout/sheet animations for synchronous UI assertions
+// Mock framer-motion to bypass layout/sheet animations for synchronous UI
+// assertions. Uses forwardRef, like the real motion components, so the panel's
+// own ref (used for focus management) attaches to a real DOM node here too.
 mock.module("framer-motion", () => {
+  const motionDiv = forwardRef<HTMLDivElement, any>(function MotionDiv(
+    { children, ...props },
+    ref,
+  ) {
+    return (
+      <div ref={ref} {...props}>
+        {children}
+      </div>
+    );
+  });
+  const motionButton = forwardRef<HTMLButtonElement, any>(function MotionButton(
+    { children, ...props },
+    ref,
+  ) {
+    return (
+      <button ref={ref} {...props}>
+        {children}
+      </button>
+    );
+  });
+
   return {
     AnimatePresence: ({ children }: { children: React.ReactNode }) => (
       <>{children}</>
     ),
     motion: {
-      div: ({ children, ...props }: any) => <div {...props}>{children}</div>,
-      button: ({ children, ...props }: any) => (
-        <button {...props}>{children}</button>
-      ),
+      div: motionDiv,
+      button: motionButton,
     },
   };
 });
@@ -106,7 +129,7 @@ describe("PropertyPanel Tests", () => {
     const onClose = mock(() => {});
     const onConnect = mock(() => {});
 
-    const view = render(
+    const view = renderWithIntl(
       <PropertyPanel
         property={{ ...baseProperty, owner: TREASURY_ADDRESS }}
         onPropertyUpdate={onUpdate}
@@ -138,7 +161,7 @@ describe("PropertyPanel Tests", () => {
     const viewerAddress =
       "GDVIEWER1234567890123456789012345678901234567890123456";
 
-    const view = render(
+    const view = renderWithIntl(
       <PropertyPanel
         property={{ ...baseProperty, owner: TREASURY_ADDRESS }}
         onPropertyUpdate={onUpdate}
@@ -183,7 +206,7 @@ describe("PropertyPanel Tests", () => {
       earnedIncome: 450,
     };
 
-    const view = render(
+    const view = renderWithIntl(
       <PropertyPanel
         property={propertyOwned}
         onPropertyUpdate={onUpdate}
@@ -222,7 +245,7 @@ describe("PropertyPanel Tests", () => {
       earnedIncome: 0,
     };
 
-    const view = render(
+    const view = renderWithIntl(
       <PropertyPanel
         property={propertyOwned}
         onPropertyUpdate={onUpdate}
@@ -253,7 +276,7 @@ describe("PropertyPanel Tests", () => {
       pricePerShare: "200",
     };
 
-    const view = render(
+    const view = renderWithIntl(
       <PropertyPanel
         property={propertyListed}
         onPropertyUpdate={onUpdate}
@@ -278,6 +301,82 @@ describe("PropertyPanel Tests", () => {
 
     await waitFor(() => {
       expect(mockSignTransaction).toHaveBeenCalled();
+    });
+  });
+
+  it("renders in Spanish", () => {
+    const view = renderWithIntl(
+      <PropertyPanel
+        property={{ ...baseProperty, owner: TREASURY_ADDRESS }}
+        onPropertyUpdate={mock(() => {})}
+        viewerAddress={null}
+        isConnected={false}
+        onConnect={mock(() => {})}
+        onClose={mock(() => {})}
+      />,
+      { locale: "es" },
+    );
+
+    expect(view.queryByText("Detalles del Terreno")).not.toBeNull();
+    expect(view.queryByText("Se Requiere Billetera Stellar")).not.toBeNull();
+    expect(
+      view.queryByRole("button", { name: /Conectar Billetera/i }),
+    ).not.toBeNull();
+  });
+
+  it("has no axe violations", async () => {
+    const viewerAddress =
+      "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+    const view = renderWithIntl(
+      <PropertyPanel
+        property={{
+          ...baseProperty,
+          owner: viewerAddress,
+          buildingLevel: 1 as BuildingLevel,
+          earnedIncome: 450,
+        }}
+        onPropertyUpdate={mock(() => {})}
+        viewerAddress={viewerAddress}
+        isConnected={true}
+        onClose={mock(() => {})}
+      />,
+    );
+
+    const results = await axe.run(view.container, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },
+    });
+
+    expect(results.violations).toEqual([]);
+  });
+
+  describe("focus management", () => {
+    it("moves focus into the panel when it opens, and closes on Escape", () => {
+      const onClose = mock(() => {});
+      const trigger = document.createElement("button");
+      trigger.textContent = "open panel";
+      document.body.appendChild(trigger);
+      trigger.focus();
+      expect(document.activeElement).toBe(trigger);
+
+      const view = renderWithIntl(
+        <PropertyPanel
+          property={{ ...baseProperty, owner: TREASURY_ADDRESS }}
+          onPropertyUpdate={mock(() => {})}
+          viewerAddress={null}
+          isConnected={false}
+          onConnect={mock(() => {})}
+          onClose={onClose}
+        />,
+      );
+
+      const dialog = view.getByRole("dialog");
+      expect(dialog.getAttribute("aria-modal")).toBe("true");
+      expect(document.activeElement).toBe(dialog);
+
+      fireEvent.keyDown(dialog, { key: "Escape" });
+      expect(onClose).toHaveBeenCalledTimes(1);
+
+      trigger.remove();
     });
   });
 });

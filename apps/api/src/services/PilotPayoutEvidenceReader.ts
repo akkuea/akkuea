@@ -1,4 +1,3 @@
-
 import {
   rpc as SorobanRpc,
   Contract,
@@ -12,6 +11,7 @@ import {
 import {
   simulateTransactionWithRetry,
   RpcAllEndpointsFailedError,
+  resolveSorobanRpcEndpoints,
 } from '@akkuea/shared';
 import type { RpcRetryConfig } from '@akkuea/shared';
 
@@ -79,25 +79,22 @@ export class PilotPayoutEvidenceReader {
       callTimeoutMs: 30_000,
     };
 
-    /*
-     * If explicit endpoints are supplied, use the shared retry/failover
-     * helper. Otherwise fall back to the injected Server or STELLAR_RPC_URL.
-     *
-     * Keeping an injected server available makes unit tests deterministic
-     * without requiring real RPC endpoints.
-     */
+    const envUrl = config.rpcUrl ?? process.env.STELLAR_RPC_URL;
+
     this.rpcUrls =
-      config.rpcUrls ??
-      (config.rpcUrl ?? process.env.STELLAR_RPC_URL
-        ? [config.rpcUrl ?? process.env.STELLAR_RPC_URL!]
-        : []);
+      config.rpcUrls && config.rpcUrls.length > 0
+        ? config.rpcUrls
+        : envUrl
+          ? [envUrl]
+          : resolveSorobanRpcEndpoints(this.networkPassphrase);
 
-    this.server =
-      config.server ??
-      (this.rpcUrls.length === 0
-        ? new SorobanRpc.Server('https://soroban-testnet.stellar.org')
-        : undefined);
-
+    /*
+     * An injected Server is used only when explicitly supplied.
+     * Production configuration must resolve an explicit RPC URL or the
+     * network-specific shared endpoint; never silently fall back to
+     * Stellar testnet.
+     */
+    this.server = config.server;
     this.simulationSourceAccount = Keypair.random().publicKey();
   }
 
@@ -111,24 +108,13 @@ export class PilotPayoutEvidenceReader {
     >;
 
     try {
-      if (this.rpcUrls.length > 0) {
-        /*
-         * All configured RPC endpoints go through the shared bounded
-         * retry/failover mechanism.
-         */
-        simulation = await simulateTransactionWithRetry(tx, {
-          endpoints: this.rpcUrls,
-          ...this.retryConfig,
-        });
-      } else if (this.server) {
-        /*
-         * Preserve support for an explicitly injected Server, primarily
-         * for tests and callers that manage their own RPC connection.
-         */
-        simulation = await this.server.simulateTransaction(tx);
-      } else {
-        throw new Error('No Soroban RPC server or endpoint configured');
-      }
+      simulation = this.server
+        ? await this.server.simulateTransaction(tx)
+        : await simulateTransactionWithRetry(tx, {
+            endpoints: this.rpcUrls,
+            networkPassphrase: this.networkPassphrase,
+            ...this.retryConfig,
+          });
     } catch (err) {
       if (err instanceof RpcAllEndpointsFailedError) {
         throw new Error(
@@ -199,6 +185,3 @@ export class PilotPayoutEvidenceReader {
       .build();
   }
 }
-
-
- 

@@ -171,6 +171,12 @@ export const webappEnvSchema = z.object({
   NEXT_PUBLIC_POLLAR_KEY: z.string().optional(),
   /** Ordered list of Soroban RPC fallback URLs, comma-separated. */
   NEXT_PUBLIC_PILOT_RPC_URLS: z.string().optional(),
+  /** Error tracking provider DSN (e.g. Sentry). No-op when empty. */
+  NEXT_PUBLIC_ERROR_TRACKING_DSN: urlSchema.optional().or(z.literal("")),
+  /** Error tracking environment name. */
+  NEXT_PUBLIC_ERROR_TRACKING_ENVIRONMENT: z
+    .enum(["development", "staging", "production"])
+    .optional(),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

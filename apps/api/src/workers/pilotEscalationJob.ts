@@ -1,4 +1,4 @@
-import { captureErrorSafely } from '@akkuea/shared';
+import { captureErrorSafely, captureMessage } from '@akkuea/shared';
 import { getPilotPayoutSplitContractId } from '../config/contracts';
 import {
   PilotPayoutEvidenceReader,
@@ -212,13 +212,26 @@ export class PilotEscalationJob {
 
       const gap = detectMissedCycles(cycleStatuses, this.config.thresholdCycles);
 
-      // Alert on repeated unknowns (separate from breach escalation)
-      if (gap.unknownCycleIds.length > 0 && this.config.onUnknown) {
-        this.config.onUnknown(this.config.contractId, gap.unknownCycleIds);
+      if (gap.unknownCount > 0) {
+        captureMessage('Pilot escalation: RPC unavailable, evidence unknown', 'warn', {
+          contractId: this.config.contractId,
+          unknownCycleIds: gap.unknownCycleIds,
+        });
+
+        logger.warn('Pilot escalation unknown cycles', {
+          operation: 'PILOT_ESCALATION_UNKNOWN',
+          unknownCycleIds: gap.unknownCycleIds,
+        });
+
+        if (this.config.onUnknown) {
+          this.config.onUnknown(this.config.contractId, gap.unknownCycleIds);
+        }
       }
 
       if (!gap.breached) {
-        await this.config.escalationRepository.clear(this.config.contractId);
+        if (gap.unknownCount === 0) {
+          await this.config.escalationRepository.clear(this.config.contractId);
+        }
         return {
           status: 'ok',
           breached: false,

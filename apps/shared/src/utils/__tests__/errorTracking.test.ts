@@ -43,7 +43,9 @@ describe("errorTracking", () => {
     captureError(error, {
       secret: "should-be-redacted",
       walletSecret: "also-redacted",
-      xdr: "xdr-data-should-be-truncated",
+      xdr: "xdr-data-that-must-never-be-logged",
+      envelope: "envelope-data-that-must-never-be-logged",
+      signature: "signature-data-that-must-never-be-logged",
       safeKey: "safe value",
     });
 
@@ -52,7 +54,9 @@ describe("errorTracking", () => {
     const context = call[1];
     expect(context.secret).toBe("[REDACTED]");
     expect(context.walletSecret).toBe("[REDACTED]");
-    expect(context.xdr).toContain("[truncated]");
+    expect(context.xdr).toBe("[REDACTED]");
+    expect(context.envelope).toBe("[REDACTED]");
+    expect(context.signature).toBe("[REDACTED]");
     expect(context.safeKey).toBe("safe value");
   });
 

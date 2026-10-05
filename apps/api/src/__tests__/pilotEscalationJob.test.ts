@@ -243,8 +243,21 @@ describe('PilotEscalationJob', () => {
     expect(notificationService.notifyPilotReportingEscalation).toHaveBeenCalledTimes(1);
   });
 
-  it('degrades gracefully and does not crash on a persistent simulated RPC failure', async () => {
+  it('treats persistent RPC failure as unknown, does not escalate, and preserves existing escalation state', async () => {
     const alwaysFailingReader = makeAlwaysFailingReader();
+    const onUnknown = mock();
+    const existingState: PilotEscalationState = {
+      id: 'state-existing',
+      contractId: CONTRACT_ID,
+      lastMissedCycleId: 'cycle-1',
+      consecutiveMissed: 2,
+      firstNotifiedAt: new Date(Date.now() - 86_400_000),
+      lastNotifiedAt: new Date(Date.now() - 86_400_000),
+      createdAt: new Date(Date.now() - 86_400_000),
+      updatedAt: new Date(Date.now() - 86_400_000),
+    };
+    repository._store.set(CONTRACT_ID, existingState);
+
     const job = new PilotEscalationJob({
       contractId: CONTRACT_ID,
       agreementStartAt: agreementStartForDueCycles(2),
@@ -256,11 +269,23 @@ describe('PilotEscalationJob', () => {
       evidenceReader: alwaysFailingReader,
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,
+      onUnknown,
     });
 
     const result = await job.tick();
+
     expect(result.status).toBe('ok');
+    if (result.status !== 'ok') throw new Error('unreachable');
+    expect(result.breached).toBe(false);
+    expect(result.unknownCount).toBeGreaterThan(0);
     expect(notificationService.notifyPilotReportingEscalation).not.toHaveBeenCalled();
+    expect(onUnknown).toHaveBeenCalledTimes(1);
+    expect(onUnknown).toHaveBeenCalledWith(
+      CONTRACT_ID,
+      expect.any(Array),
+    );
+    expect(repository.clear).not.toHaveBeenCalled();
+    expect(repository._store.get(CONTRACT_ID)).toEqual(existingState);
     // Retried up to rpcMaxRetries before giving up on the first cycle lookup.
     expect(alwaysFailingReader.hasEvidence).toHaveBeenCalledTimes(2);
     expect(job.isRunning()).toBe(false);

@@ -16,37 +16,66 @@ export interface RpcRetryConfig {
 const DEFAULT_MAX_RETRIES = 3;
 const DEFAULT_RETRY_BASE_DELAY_MS = 2_000;
 const DEFAULT_MAX_RETRY_MS = 30_000;
-const DEFAULT_CALL_TIMEOUT_MS = 30_000;
+const DEFAULT_CALL_TIMEOUT_MS = 10_000;
 
 /** HTTP status codes considered transient (retryable). */
 const TRANSIENT_STATUS_CODES = new Set([429, 500, 502, 503, 504]);
 
-function isRetryableError(error: unknown): boolean {
+function isDeterministicContractError(error: unknown): boolean {
+  const messages: string[] = [];
+
   if (error instanceof Error) {
-    const msg = error.message.toLowerCase();
-    if (msg.includes("timeout") || msg.includes("timed out")) return true;
-    if (msg.includes("429") || msg.includes("rate limit")) return true;
-    for (const code of TRANSIENT_STATUS_CODES) {
-      if (msg.includes(`${code}`)) return true;
+    messages.push(error.message);
+  }
+
+  if (typeof error === "object" && error !== null) {
+    const value = error as { error?: unknown };
+    if (typeof value.error === "string") {
+      messages.push(value.error);
     }
   }
-  return false;
+
+  const msg = messages.join(" ").toLowerCase();
+
+  return [
+    "hosterror",
+    "error(contract",
+    "simulation failed",
+    "entrypoint",
+    "panic",
+    "assert",
+    "instruction",
+  ].some((pattern) => msg.includes(pattern));
 }
 
-function isDeterministicContractError(error: unknown): boolean {
-  if (typeof error === "object" && error !== null) {
-    const simError = error as { error?: unknown };
-    if (simError.error && typeof simError.error === "string") {
-      const errStr = simError.error.toLowerCase();
-      return (
-        errStr.includes("contract") ||
-        errStr.includes("entrypoint") ||
-        errStr.includes("instruction") ||
-        errStr.includes("assert") ||
-        errStr.includes("panic")
-      );
-    }
+function isRetryableError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+
+  const msg = error.message.toLowerCase();
+
+  if (
+    msg.includes("econnrefused") ||
+    msg.includes("enotfound") ||
+    msg.includes("econnreset") ||
+    msg.includes("fetch failed") ||
+    msg.includes("network error") ||
+    msg.includes("socket hang up") ||
+    msg.includes("timeout") ||
+    msg.includes("timed out") ||
+    msg.includes("rate limit")
+  ) {
+    return true;
   }
+
+  for (const code of TRANSIENT_STATUS_CODES) {
+    const pattern = new RegExp(
+      `\\b(?:status(?:\\s*code)?|http)\\s*[:=]?\\s*${code}\\b`,
+      "i",
+    );
+
+    if (pattern.test(msg)) return true;
+  }
+
   return false;
 }
 
@@ -61,16 +90,11 @@ export function resolveRpcEndpoints(networkPassphrase: string): RpcEndpoint[] {
     ? API_ENDPOINTS.SOROBAN_RPC.MAINNET
     : API_ENDPOINTS.SOROBAN_RPC.TESTNET;
 
-  if (isPublic) {
-    return [
-      { url: baseUrl, label: "mainnet-primary" },
-      { url: "https://rpc-mainnet.stellar.org", label: "mainnet-fallback-1" },
-    ];
-  }
-
   return [
-    { url: baseUrl, label: "testnet-primary" },
-    { url: "https://soroban-testnet.stellar.org", label: "testnet-fallback-1" },
+    {
+      url: baseUrl,
+      label: isPublic ? "mainnet-primary" : "testnet-primary",
+    },
   ];
 }
 
@@ -121,64 +145,61 @@ export async function callWithRetry<T>(
   } = config;
 
   const errors: Error[] = [];
-  const retryDeadline = Date.now() + maxRetryMs;
 
-  for (
-    let endpointIndex = 0;
-    endpointIndex < endpoints.length;
-    endpointIndex++
-  ) {
-    const endpoint = endpoints[endpointIndex];
+  for (const endpoint of endpoints) {
     if (!endpoint) continue;
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      if (Date.now() > retryDeadline) {
-        break;
-      }
+    const endpointDeadline = Date.now() + maxRetryMs;
 
-      const timeoutMs = callTimeoutMs;
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(
-          () =>
-            reject(
-              new Error(`Call timeout on ${endpoint} after ${timeoutMs}ms`),
-            ),
-          timeoutMs,
-        );
-      });
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      if (Date.now() >= endpointDeadline) break;
+
+      let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
 
       try {
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutHandle = setTimeout(() => {
+            reject(
+              new Error(`Call timeout on ${endpoint} after ${callTimeoutMs}ms`),
+            );
+          }, callTimeoutMs);
+        });
+
         const data = await Promise.race([
           Promise.resolve().then(() => fn(endpoint)),
           timeoutPromise,
         ]);
+
         return { data, endpointUsed: endpoint, attempts: attempt };
       } catch (error) {
         const err = error instanceof Error ? error : new Error(String(error));
 
-        if (
-          err.message.includes("Call timeout") ||
-          err.name === "TimeoutError"
-        ) {
-          errors.push(err);
-        } else if (isDeterministicContractError(error)) {
+        if (isDeterministicContractError(error)) {
           throw error;
-        } else if (!isRetryableError(error)) {
-          throw error;
-        } else {
-          errors.push(err);
         }
 
-        if (attempt < maxRetries && Date.now() < retryDeadline) {
-          const delay = retryBaseDelayMs * Math.pow(2, attempt - 1);
-          await sleep(Math.min(delay, maxRetryMs / (attempt + 1)));
+        if (!isRetryableError(err)) {
+          throw error;
         }
+
+        errors.push(err);
+
+        if (attempt < maxRetries && Date.now() < endpointDeadline) {
+          const delay = retryBaseDelayMs * Math.pow(2, attempt - 1);
+          const remaining = endpointDeadline - Date.now();
+          if (remaining > 0) {
+            await sleep(Math.min(delay, remaining));
+          }
+        }
+      } finally {
+        if (timeoutHandle) clearTimeout(timeoutHandle);
       }
     }
   }
 
   const last =
     errors[errors.length - 1] ?? new Error("All RPC endpoints failed");
+
   throw new RpcAllEndpointsFailedError(last.message, errors);
 }
 

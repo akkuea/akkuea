@@ -1,7 +1,9 @@
-import { buildCycleTimeline } from "@akkuea/shared";
+import { buildCycleTimeline, type PilotExitRecord } from "@akkuea/shared";
 import type {
   PilotEvidenceDetail,
   PilotHoldings,
+  PilotSettlementCycle,
+  PilotSettlementSnapshot,
 } from "@/services/pilot/reads";
 
 /**
@@ -119,4 +121,76 @@ export const sampleHoldings: PilotHoldings = {
   decimals: 7,
   symbol: "AKIN",
   whitelisted: true,
+};
+
+/** A fixed holder address for settlement fixtures. */
+export const SAMPLE_HOLDER =
+  "GDMNDPKKZQGCXQVJFVNQZ3Q5VJQ5F4VJ3XJ4W6O2F3Q5H7K4L2M4N6P8R";
+
+const SAMPLE_SUMMARY = {
+  totalIncome: BigInt(12_000_0000000),
+  platformFee: BigInt(1_200_0000000),
+  holderAmount: BigInt(10_800_0000000),
+  holderCount: 4,
+  distributedTotal: BigInt(10_800_0000000),
+  dust: BigInt(0),
+  eurcDistributedTotal: BigInt(9_800_0000000),
+  swapsFailed: 0,
+  undistributedFailedSwaps: BigInt(0),
+};
+
+/** A cycle the investor was paid in EURC, read from stored state. */
+export const eurcSettlementCycle: PilotSettlementCycle = {
+  cycleId: "2026-01",
+  summary: { cycleId: "2026-01", ...SAMPLE_SUMMARY },
+  settlement: {
+    holder: SAMPLE_HOLDER,
+    cycleId: "2026-01",
+    currency: "eurc",
+    amount: BigInt(9_800_0000000),
+    usdcShare: BigInt(10_000_0000000),
+    withheld: false,
+  },
+};
+
+/** A cycle whose EURC leg failed, so the share is reserved in USDC. */
+export const withheldSettlementCycle: PilotSettlementCycle = {
+  cycleId: "2026-02",
+  summary: {
+    cycleId: "2026-02",
+    ...SAMPLE_SUMMARY,
+    eurcDistributedTotal: BigInt(0),
+    swapsFailed: 1,
+    undistributedFailedSwaps: BigInt(10_000_0000000),
+  },
+  settlement: {
+    holder: SAMPLE_HOLDER,
+    cycleId: "2026-02",
+    currency: "eurc",
+    amount: BigInt(0),
+    usdcShare: BigInt(10_000_0000000),
+    withheld: true,
+  },
+};
+
+/** A cycle that has not distributed yet. */
+export const pendingSettlementCycle: PilotSettlementCycle = {
+  cycleId: "2026-03",
+};
+
+export const settlementCycles: PilotSettlementCycle[] = [
+  eurcSettlementCycle,
+  withheldSettlementCycle,
+  pendingSettlementCycle,
+];
+
+export const sampleSettlement: PilotSettlementSnapshot = {
+  preference: "usdc",
+  withheld: BigInt(0),
+  cycles: settlementCycles,
+};
+
+export const sampleExitRecord: PilotExitRecord = {
+  reason: "Property sold to a new owner",
+  at: MARCH_EXPECTED,
 };

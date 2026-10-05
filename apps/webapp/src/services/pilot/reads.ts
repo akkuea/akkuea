@@ -3,9 +3,18 @@ import {
   PilotIncomeTokenClient,
   PilotPayoutSplitClient,
   PilotWhitelistClient,
+  readCurrencyPreference,
+  readDistributionSummary,
   readEvidence,
+  readExitStatus,
+  readHolderSettlement,
+  readWithheldBalance,
+  type PilotDistributionSummary,
+  type PilotExitRecord,
+  type PilotHolderSettlement,
   type PilotIncomeTokenClientInterface,
   type PilotPayoutSplitClientInterface,
+  type PilotSettlementCurrency,
   type PilotWhitelistClientInterface,
   type PilotCycleRecord,
   type PilotEvidenceRecord,
@@ -173,6 +182,80 @@ export async function fetchPayoutPaused(): Promise<boolean> {
   const { payout } = clients();
   const tx = await payout.is_paused();
   return tx.result;
+}
+
+/**
+ * One cycle's durable settlement state for a single holder.
+ *
+ * Both halves come from contract storage, not from events or from a
+ * client-side recomputation against the holder's current balance, so the view
+ * keeps working once the RPC's event window has passed and can never disagree
+ * with what was actually transferred.
+ */
+export interface PilotSettlementCycle {
+  cycleId: string;
+  /** The cycle's payout summary, once it has distributed. */
+  summary?: PilotDistributionSummary;
+  /** What this holder received, once the cycle has distributed. */
+  settlement?: PilotHolderSettlement;
+}
+
+/** Everything the investor settlement view needs, in one read pass. */
+export interface PilotSettlementSnapshot {
+  /** The holder's settlement-currency preference. Defaults to USDC. */
+  preference: PilotSettlementCurrency;
+  /** USDC reserved for this holder after a failed EURC leg, in stroops. */
+  withheld: bigint;
+  /** The terminal exit record, or undefined while the pilot is active. */
+  exitRecord?: PilotExitRecord;
+  cycles: PilotSettlementCycle[];
+}
+
+/**
+ * Reads the investor's settlement state: preference, claimable USDC, terminal
+ * status, and the per-cycle outcome history.
+ */
+export async function fetchPilotSettlement(
+  address: string,
+  now: Date = new Date(),
+): Promise<PilotSettlementSnapshot> {
+  const { payout } = clients();
+  const cycleIds = enumerateCycles(pilotStartCycle(), now);
+
+  const [preference, withheld, exitRecord, cycles] = await Promise.all([
+    readCurrencyPreference(payout, address),
+    readWithheldBalance(payout, address),
+    readExitStatus(payout),
+    Promise.all(
+      cycleIds.map(async (cycleId): Promise<PilotSettlementCycle> => {
+        const [summary, settlement] = await Promise.all([
+          readDistributionSummary(payout, cycleId),
+          readHolderSettlement(payout, cycleId, address),
+        ]);
+        return { cycleId, summary, settlement };
+      }),
+    ),
+  ]);
+
+  return { preference, withheld, exitRecord, cycles };
+}
+
+/**
+ * Reads the terminal exit record and pause flag without a wallet.
+ *
+ * The banner that explains a wound-down or paused pilot is public information:
+ * an investor or an ally should see it whether or not a wallet is connected.
+ */
+export async function fetchPilotState(): Promise<{
+  exitRecord?: PilotExitRecord;
+  isPaused: boolean;
+}> {
+  const { payout } = clients();
+  const [exitRecord, paused] = await Promise.all([
+    readExitStatus(payout),
+    payout.is_paused(),
+  ]);
+  return { exitRecord, isPaused: paused.result };
 }
 
 export interface PilotHoldings {

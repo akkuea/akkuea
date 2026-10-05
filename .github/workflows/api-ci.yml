@@ -72,6 +72,26 @@ jobs:
         cd apps/api
         bun run build
 
+    - name: Wait for the target database to accept real connections
+      # The service container's `pg_isready` healthcheck reports the server
+      # ready as soon as it accepts any TCP connection, which can be before
+      # the `POSTGRES_DB`/`POSTGRES_USER` the entrypoint provisions are fully
+      # usable. Migrating or testing against that half-ready window has
+      # intermittently failed downstream (e.g. auth role errors, permission
+      # checks reading back inconsistent rows). Poll with the actual
+      # credentials and database name before proceeding.
+      run: |
+        for i in $(seq 1 30); do
+          if PGPASSWORD=test psql -h localhost -U test -d akkuea_test -c 'SELECT 1' > /dev/null 2>&1; then
+            echo "Database is ready"
+            exit 0
+          fi
+          echo "Waiting for the database to be ready ($i/30)..."
+          sleep 2
+        done
+        echo "Database did not become ready in time"
+        exit 1
+
     - name: Run database migrations
       env:
         DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
@@ -85,8 +105,15 @@ jobs:
         TEST_DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
       run: |
         cd apps/api
-        # Run tests sequentially to avoid database race conditions in the shared service container
-        bun test --coverage --coverage-threshold=60 --max-concurrency=1
+        # --isolate: confirmed by diagnostic runs that the E2E tokenization
+        # suite (src/__tests__/e2e.fullflow.test.ts) passes on its own but
+        # fails in the full run; some other file leaks module-level state
+        # (most likely a monkey-patched StellarService singleton method left
+        # unrestored) into it. --isolate gives every file its own global and
+        # module registry, closing that class of leak at the source instead
+        # of hunting down the one leaking file. --max-concurrency=1 stays for
+        # the shared database service container.
+        bun test --coverage --coverage-threshold=60 --max-concurrency=1 --isolate
 
   security-audit:
     name: Security Audit

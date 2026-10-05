@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslations } from "next-intl";
 import { Coins } from "lucide-react";
 import { PropertyPanelLayout } from "./PropertyPanelLayout";
 import { GameProperty, BuildingLevel } from "../../../types/game.types";
@@ -26,6 +27,7 @@ export const ListedPanel: React.FC<ListedPanelProps> = ({
   coordinates,
   buildingLevel,
 }) => {
+  const t = useTranslations("PropertyPanel");
   const { buyFromPlayer, pendingAction, error, success } = usePropertyActions(
     property,
     onPropertyUpdate,
@@ -39,17 +41,17 @@ export const ListedPanel: React.FC<ListedPanelProps> = ({
     text: "text-tile-listed",
     glow: "shadow-tile-listed/10",
     badge: "bg-tile-listed/10 border-tile-listed text-tile-listed",
-    title: "Listed for Sale",
+    title: t("listed.title"),
   };
 
   const footer = (
     <div className="space-y-3">
       <div className="flex justify-between items-center bg-land-surface/50 p-3 rounded-xl border border-land-border">
         <span className="text-xs text-land-fg-muted font-medium">
-          Asking Price
+          {t("listed.askingPrice")}
         </span>
         <span className="text-sm font-extrabold text-land-fg flex items-center gap-1">
-          <Coins size={14} className="text-tile-listed" />
+          <Coins size={14} className="text-tile-listed" aria-hidden="true" />
           {property.pricePerShare} LAND
         </span>
       </div>
@@ -58,7 +60,7 @@ export const ListedPanel: React.FC<ListedPanelProps> = ({
         disabled={!!pendingAction}
         className="w-full bg-gradient-to-r from-tile-listed-fill to-land-accent-fill hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed text-land-on-accent font-bold py-3 px-4 rounded-xl transition-all duration-200 shadow-md shadow-tile-listed-fill/5 flex items-center justify-center gap-2 border border-tile-listed-fill/20"
       >
-        Buy Land Tile
+        {t("listed.buyLandTile")}
       </button>
     </div>
   );

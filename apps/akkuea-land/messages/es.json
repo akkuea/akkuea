@@ -1,0 +1,263 @@
+{
+  "Metadata": {
+    "title": "Akkuea Land | Constructor de Ciudades en Stellar",
+    "description": "Construye, posee e intercambia parcelas de terreno virtuales respaldadas por activos del mundo real en la blockchain de Stellar."
+  },
+  "Common": {
+    "skipToContent": "Saltar al contenido",
+    "notConnected": "No conectado",
+    "disconnected": "Desconectado"
+  },
+  "Nav": {
+    "appName": "AKKUEA LAND",
+    "map": "Mapa",
+    "marketplace": "Mercado",
+    "dashboard": "Panel"
+  },
+  "ThemeToggle": {
+    "switchToDark": "Cambiar a tema oscuro",
+    "switchToLight": "Cambiar a tema claro"
+  },
+  "LocaleSwitcher": {
+    "toggleLanguage": "Cambiar idioma"
+  },
+  "Loading": {
+    "label": "Cargando"
+  },
+  "Building": {
+    "vacant": "Vacante",
+    "residential": "Residencial",
+    "commercial": "Comercial",
+    "skyscraper": "Rascacielos",
+    "labelVacant": "V",
+    "labelResidential": "R",
+    "labelCommercial": "C",
+    "labelSkyscraper": "S"
+  },
+  "PilotCta": {
+    "compactPrefix": "Esto es una simulación.",
+    "bannerText": "Esto es una simulación. ¿Listo para ver rendimiento real de una propiedad real?",
+    "linkText": "Ver el Piloto de Akkuea"
+  },
+  "Home": {
+    "badge": "Sandbox del Metaverso",
+    "title": "Panel de Cuadrícula de Akkuea Land",
+    "subtitle": "Prueba e interactúa con los paneles de propiedades en los cuatro estados dinámicos de propiedad en blockchain.",
+    "connectionEmulatorLabel": "Emulador de Conexión Stellar",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "notConnectedTile": "No Conectado",
+    "ownedByYou": "De tu propiedad",
+    "treasury": "Tesorería",
+    "listedOther": "En Venta (Otro)",
+    "level": "Nivel {level}",
+    "value": "Valor",
+    "simulatedWorldMap": "Mapa Mundial Simulado",
+    "howToTestTitle": "Cómo probar los estados:",
+    "unownedStateTitle": "Estado Sin Dueño",
+    "unownedStateDescription": "Haz clic en la ficha ámbar. Conecta tu billetera para comprarla a la tesorería.",
+    "ownedStateTitle": "Estado de Propiedad",
+    "ownedStateDescription": "Haz clic en la ficha verde. Mejorar el nivel del edificio o crear una publicación de venta activa el simulador de firma.",
+    "listedStateTitle": "Estado en Venta",
+    "listedStateDescription": "Haz clic en la ficha morada. Si la billetera está conectada, la compra está disponible.",
+    "signatureGuardTitle": "Estado de Protección de Firma",
+    "signatureGuardClickPrefix": "Haz clic en",
+    "signatureGuardDisconnect": "Desconectar Billetera",
+    "signatureGuardDescription": "en la parte superior. Observa que todos los botones de transacción quedan ocultos por la protección de conexión de billetera.",
+    "noPropertySelectedTitle": "Ninguna Propiedad Seleccionada",
+    "noPropertySelectedDescription": "Haz clic en cualquier ficha de terreno de la cuadrícula para desplegar el panel de interacción en tiempo real."
+  },
+  "Onboarding": {
+    "skipSetup": "Omitir configuración",
+    "stepIndicator": "Paso {number}: {name}",
+    "stepWelcome": "Bienvenida",
+    "stepClaimLand": "Reclamar Terreno",
+    "stepClaimProperty": "Reclamar Propiedad",
+    "welcome": {
+      "title": "Bienvenido a Akkuea Land",
+      "description1": "Explora y compra propiedades virtuales en una cuadrícula urbana dinámica y en vivo. Gana ingresos de alquiler constantes en tiempo real a medida que la ciudad prospera.",
+      "description2": "Tu billetera Stellar se configuró de forma segura a través de Pollar. No necesitas experiencia previa en blockchain ni pagar comisiones para jugar.",
+      "getStarted": "Comenzar"
+    },
+    "claimLand": {
+      "title": "Obtén tu LAND inicial",
+      "description": "LAND es el token de utilidad principal de Akkuea Land. Reclama 1,000 LAND gratis desde nuestro grifo de testnet para financiar tu primera propiedad.",
+      "statusIdle": "Reclamar 1,000 LAND",
+      "statusPending": "Preparando tu billetera en Stellar...",
+      "statusDone": "¡1,000 LAND Recibidos!",
+      "statusError": "El reclamo falló. Inténtalo de nuevo.",
+      "transactionRecorded": "Transacción registrada exitosamente en la cadena",
+      "continueButton": "Continuar a Reclamar Propiedad",
+      "confirmingFee": "Confirmando con comisión de transacción patrocinada...",
+      "transactionFailed": "La transacción falló. Asegúrate de tener acceso a internet.",
+      "skipStep": "Omitir este paso"
+    },
+    "claimProperty": {
+      "title": "Reclama tu primera propiedad",
+      "description": "Toca cualquier ficha de tesorería resaltada en la cuadrícula de abajo. Es completamente gratis como bono de inicio.",
+      "treasuryFree": "Tesorería (Gratis)",
+      "unavailable": "No disponible",
+      "acquiring": "Adquiriendo propiedad...",
+      "claimButton": "Reclamar Propiedad Gratis",
+      "skipStep": "Omitir este paso",
+      "celebrationTitle": "¡Bienvenido, Propietario!",
+      "celebrationDescription": "¡Reclamaste con éxito tu primera propiedad en Stellar! Estamos cargando el mapa de la ciudad en tiempo real para ti..."
+    }
+  },
+  "Map": {
+    "pageTitle": "Mapa de la Ciudad | Akkuea Land",
+    "pageDescription": "Explora la cuadrícula de 20x20 de la Ciudad Akkuea. Descubre, selecciona e intercambia parcelas de terreno virtuales.",
+    "heading": "Mapa de la Ciudad",
+    "gridAriaLabel": "Cuadrícula de propiedades de la Ciudad Akkuea",
+    "statOwned": "Propias",
+    "statListed": "En Venta",
+    "statTreasury": "Tesorería",
+    "legendTreasury": "Tesorería",
+    "legendUnowned": "Sin Dueño",
+    "legendPlayerOwned": "Propiedad de Jugador",
+    "legendForSale": "En Venta",
+    "legendKey": "V=Vacante · R=Residencial · C=Comercial · S=Rascacielos",
+    "tooltipCoords": "Coordenadas: ({row}, {col})",
+    "tooltipOwner": "Dueño: {owner}",
+    "tooltipLevel": "Nivel: {level}",
+    "tooltipPrice": "Precio: {price} LAND",
+    "tileUnowned": "Sin Dueño",
+    "tileTreasury": "Tesorería",
+    "tileOwnedBy": "Propiedad de {owner}",
+    "tileListedSuffix": ", en venta por {price} LAND por participación",
+    "tileNotListedSuffix": ", no está en venta",
+    "tileAriaLabel": "{name}, fila {row}, columna {col}, {status}, {level}{saleStatus}"
+  },
+  "Marketplace": {
+    "pageTitle": "Mercado | Akkuea Land",
+    "heading": "Mercado",
+    "description": "Las parcelas de terreno publicadas y las subastas activas aparecerán aquí."
+  },
+  "Login": {
+    "pageTitle": "Iniciar Sesión | Akkuea Land",
+    "heading": "Akkuea Land",
+    "subtitle": "Conecta tu billetera Stellar para jugar",
+    "connectWallet": "Conectar Billetera",
+    "poweredBy": "Desarrollado con Pollar · Red Stellar"
+  },
+  "Dashboard": {
+    "brand": "Akkuea Land",
+    "sectionLabel": "Panel",
+    "cityMapLink": "Mapa de la Ciudad",
+    "portfolioOverview": "Resumen del Portafolio",
+    "landBalanceLabel": "Saldo de LAND",
+    "landTokens": "tokens LAND",
+    "accruedIncomeLabel": "Ingresos Acumulados",
+    "acrossProperties": "en {count} propiedades · ledger {ledger}",
+    "quickClaim": "Reclamo Rápido",
+    "claimingProgress": "Reclamando {current} de {total}…",
+    "allClaimsSucceeded": "Los {total} reclamos se completaron con éxito",
+    "claimedCount": "{count} reclamados",
+    "failedPrefix": "Fallidos: {reasons}",
+    "claimAll": "Reclamar Todo ({count})",
+    "nothingToClaim": "Nada que Reclamar",
+    "yourProperties": "Tus Propiedades",
+    "noPropertiesTitle": "Aún No Tienes Propiedades",
+    "noPropertiesDescription": "Todavía no posees ninguna ficha de terreno. Ve al mapa de la ciudad para reclamar tu propiedad inicial de la tesorería.",
+    "openCityMap": "Abrir Mapa de la Ciudad",
+    "viewOnMapAriaLabel": "Ver {name} en el mapa de la ciudad",
+    "viewOnMap": "Ver en el mapa",
+    "accrued": "Acumulado",
+    "levelEmpty": "Vacío",
+    "levelHouse": "Casa",
+    "levelApartment": "Apartamento",
+    "levelSkyscraper": "Rascacielos",
+    "transactionHistory": "Historial de Transacciones",
+    "noTransactions": "Aún no hay transacciones.",
+    "loadMore": "Cargar más",
+    "ledgerDateLabel": "Ledger #{ledger} · {date}",
+    "eventPurchased": "Comprado",
+    "eventImproved": "Mejorado",
+    "eventListed": "Publicado en Venta",
+    "eventClaimed": "Ingreso Reclamado"
+  },
+  "PropertyPanel": {
+    "dialogLabel": "Detalles de la propiedad",
+    "closeLabel": "Cerrar panel de propiedad",
+    "landDetailsTitle": "Detalles del Terreno",
+    "coordinatesLabel": "Coordenadas",
+    "ownerLabel": "Dueño",
+    "noOwnerAddress": "N/D",
+    "copyAddressLabel": "Copiar dirección",
+    "addressCopiedLabel": "Dirección copiada",
+    "developmentPhase": "Fase de Desarrollo",
+    "transactionErrorTitle": "Error de Transacción",
+    "successTitle": "¡Éxito!",
+    "processingTransaction": "Procesando Transacción en Blockchain",
+    "empty": {
+      "title": "Ninguna Propiedad Seleccionada",
+      "description": "Haz clic en una ficha de terreno para ver sus detalles y estado de propiedad."
+    },
+    "notConnected": {
+      "title": "Ficha Sin Dueño",
+      "walletRequiredTitle": "Se Requiere Billetera Stellar",
+      "walletRequiredDescription": "Conecta tu billetera Stellar para comprar fichas, hacer mejoras o reclamar ingresos de alquiler.",
+      "connectWallet": "Conectar Billetera"
+    },
+    "unowned": {
+      "title": "Propiedad de la Tesorería",
+      "treasuryCost": "Costo de Tesorería",
+      "buyFromTreasury": "Comprar a la Tesorería"
+    },
+    "owned": {
+      "title": "De tu propiedad",
+      "improveButton": "Mejorar (Costo: {cost} LAND)",
+      "upgradesTo": "Mejora el edificio al Nivel {level}",
+      "maxDevelopmentReached": "Desarrollo Máximo Alcanzado",
+      "listForSaleLabel": "Publicar en Venta",
+      "pricePlaceholder": "Precio (LAND)",
+      "listButton": "Publicar",
+      "accruedRentalIncome": "Ingreso de Alquiler Acumulado",
+      "claimButton": "Reclamar"
+    },
+    "listed": {
+      "title": "En Venta",
+      "askingPrice": "Precio de Venta",
+      "buyLandTile": "Comprar Ficha de Terreno"
+    },
+    "otherPlayer": {
+      "title": "Propiedad de Otro Jugador",
+      "notForSaleTitle": "Propiedad No Está en Venta",
+      "notForSaleDescription": "Esta propiedad pertenece actualmente a otro jugador y no está publicada en el mercado."
+    }
+  },
+  "Errors": {
+    "page": {
+      "title": "Algo salió mal",
+      "description": "Encontramos un error inesperado. Intenta de nuevo o navega a otra página.",
+      "retry": "Intentar de nuevo",
+      "goHome": "Ir al Inicio"
+    },
+    "section": {
+      "defaultMessage": "Esta sección no se pudo cargar",
+      "description": "Ocurrió un error inesperado en esta sección.",
+      "retry": "Reintentar"
+    },
+    "map": {
+      "title": "El mapa de la ciudad no se pudo cargar",
+      "description": "No pudimos cargar la cuadrícula de la ciudad. Intenta de nuevo."
+    },
+    "dashboard": {
+      "title": "Tu panel no se pudo cargar",
+      "description": "No pudimos cargar tu portafolio. Intenta de nuevo."
+    },
+    "marketplace": {
+      "title": "El mercado no se pudo cargar",
+      "description": "No pudimos cargar el mercado. Intenta de nuevo."
+    },
+    "login": {
+      "title": "El inicio de sesión no se pudo cargar",
+      "description": "No pudimos cargar la página de inicio de sesión. Intenta de nuevo."
+    },
+    "notFound": {
+      "title": "Página no encontrada",
+      "description": "La página que buscas no existe o pudo haber sido movida.",
+      "backHome": "Volver al Inicio"
+    }
+  }
+}

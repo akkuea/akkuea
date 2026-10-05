@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "next": "16.3.5",
+    "next-intl": "4.14.5",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "@stellar/stellar-sdk": "^17.0.1",
@@ -33,6 +34,7 @@
     "@types/node": "^25.2.0",
     "@types/react": "^19.2.11",
     "@types/react-dom": "^19.2.3",
+    "axe-core": "4.13.0",
     "bun-types": "latest",
     "eslint": "^9.39.2",
     "eslint-config-next": "16.3.5",

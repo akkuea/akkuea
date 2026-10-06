@@ -216,7 +216,16 @@ function makePayoutClient(
 let mockPayout: MockPayoutClient = makePayoutClient();
 let mockIncomeHolders: string[] = [];
 
+/**
+ * Spread the real module and override only what these tests control. bun's
+ * `mock.module` stays in effect for the rest of the process, so a mock that
+ * replaced the whole module would strip every other export (e.g.
+ * `PilotWhitelistClient`, `STELLAR_NETWORKS`) from test files that run after
+ * this one.
+ */
+const RealShared = await import("@akkuea/shared");
 mock.module("@akkuea/shared", () => ({
+  ...RealShared,
   buildContractClientOptions: (config: unknown) => config,
   PilotPayoutSplitClient: class {
     constructor() {

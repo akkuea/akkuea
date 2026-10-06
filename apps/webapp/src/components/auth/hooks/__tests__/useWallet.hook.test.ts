@@ -1,5 +1,13 @@
 import "@/test/setup-dom";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type {
   AuthEntrySigningProvider,
@@ -38,7 +46,8 @@ const freshWalletHookSpecifier: string = "../useWallet.hook.ts?fresh-import";
 const { useWallet } = await import(freshWalletHookSpecifier);
 const { useAuthenticationStore } =
   await import("../../store/data/slices/authentication.slice");
-const { walletRegistry } = await import("@/services/wallet");
+const { walletRegistry, StellarWalletsKitProvider } =
+  await import("@/services/wallet");
 
 const TEST_NETWORK_PASSPHRASE = "Test SDF Network ; September 2015";
 
@@ -380,5 +389,64 @@ describe("useWallet - signAuthEntry / canSignAuthEntries", () => {
       'wallet does not support "signAuthEntry"',
     );
     expect(useAuthenticationStore.getState().isWalletDisconnected).toBe(true);
+  });
+});
+
+describe("useWallet - legacy connect() session", () => {
+  beforeEach(() => {
+    resetStore();
+    mockKit = makeMockKit();
+  });
+
+  afterEach(() => {
+    cleanup();
+    mockKit = null;
+  });
+
+  it("stores the kit provider's registry id so the session can sign auth entries", async () => {
+    class FakeKitProvider extends StellarWalletsKitProvider {
+      override async connect() {
+        return { address: "GKITADDRESS" };
+      }
+      override async signAuthEntry(authEntryXdr: string) {
+        return `signed:${authEntryXdr}`;
+      }
+    }
+    const fake = new FakeKitProvider();
+    // Not walletRegistry.register(): the registry has no unregister, so a
+    // registered fake would leak into every later test file in this process.
+    const getAll = spyOn(walletRegistry, "getAll").mockReturnValue([fake]);
+    const get = spyOn(walletRegistry, "get").mockImplementation((id: string) =>
+      id === fake.id ? fake : undefined,
+    );
+
+    try {
+      const { result } = renderHook(() => useWallet());
+
+      await act(async () => {
+        await result.current.connect();
+      });
+
+      // Storing the picked module's own id (the mock kit's "freighter") would
+      // not resolve in the registry, leaving the session unable to sign.
+      const state = useAuthenticationStore.getState();
+      expect(state.selectedWalletId).toBe("stellar-wallets-kit");
+      expect(state.isConnected).toBe(true);
+      expect(state.address).toBe("GKITADDRESS");
+      expect(result.current.canSignAuthEntries).toBe(true);
+
+      let signed = "";
+      await act(async () => {
+        signed = await result.current.signAuthEntry(
+          "raw-entry",
+          "GKITADDRESS",
+          TEST_NETWORK_PASSPHRASE,
+        );
+      });
+      expect(signed).toBe("signed:raw-entry");
+    } finally {
+      getAll.mockRestore();
+      get.mockRestore();
+    }
   });
 });

@@ -7,6 +7,7 @@ import { initializeWalletKit, getWalletKit } from "../constant/walletKit";
 import {
   canSignAuthEntries,
   isSignableWalletProvider,
+  StellarWalletsKitProvider,
   walletRegistry,
 } from "@/services/wallet";
 import { fetchBalance, type BalanceResult } from "@/lib/stellar";
@@ -112,8 +113,24 @@ export const useWallet = () => {
     try {
       store.setIsConnecting(true);
 
-      const { address } = await kit.authModal();
-      store.setSelectedWalletId(kit.selectedModule.productId);
+      // Go through the registered kit provider when there is one. Storing the
+      // picked module's own id (e.g. "freighter") would not match any registry
+      // entry, so signTransaction/signAuthEntry would refuse to run for a
+      // session opened here, and the provider's own connected state would
+      // never be set.
+      const kitProvider = walletRegistry
+        .getAll()
+        .find((p) => p instanceof StellarWalletsKitProvider);
+      let address: string;
+      if (kitProvider instanceof StellarWalletsKitProvider) {
+        ({ address } = await kitProvider.connect(
+          store.network === "mainnet" ? Networks.PUBLIC : Networks.TESTNET,
+        ));
+        store.setSelectedWalletId(kitProvider.id);
+      } else {
+        ({ address } = await kit.authModal());
+        store.setSelectedWalletId(kit.selectedModule.productId);
+      }
       store.setAddress(address);
       store.setIsConnected(true);
 

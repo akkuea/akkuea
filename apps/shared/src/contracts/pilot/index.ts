@@ -24,10 +24,14 @@ export { PilotPayoutSplitClient } from "./payout-split.js";
 export type {
   PilotPayoutSplitClientInterface,
   HolderPayout,
+  HolderSettlement,
   EvidenceRecord,
   DistributionSummary,
   EvidenceRecordedEvent,
   PayoutInitializedEvent,
+  ExitRecord,
+  SwapFailureRecord,
+  EurcSwapPathStatus,
   AdminTransferStartedEvent as PayoutAdminTransferStartedEvent,
   AdminTransferAcceptedEvent as PayoutAdminTransferAcceptedEvent,
   AdminTransferCancelledEvent as PayoutAdminTransferCancelledEvent,
@@ -39,3 +43,17 @@ export type {
   PilotEvidenceRecord,
   PilotEvidenceStatusTag,
 } from "./evidence.js";
+export {
+  readDistributionSummary,
+  readHolderSettlement,
+  readWithheldBalance,
+  readTotalWithheld,
+  readCurrencyPreference,
+  readExitStatus,
+} from "./settlement.js";
+export type {
+  PilotDistributionSummary,
+  PilotHolderSettlement,
+  PilotSettlementCurrency,
+  PilotExitRecord,
+} from "./settlement.js";

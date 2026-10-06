@@ -1,0 +1,152 @@
+name: Pilot E2E (Testnet)
+
+# Manual, on-demand runner for the testnet-executing pilot lifecycle suite
+# (apps/api/tests/e2e/pilot-lifecycle.e2e.ts). The suite's .e2e.ts filename
+# keeps it outside Bun's default test discovery, and the required secrets are
+# testnet-only but still not committed, so this job is the supported way to
+# run it: dispatch the workflow, then copy the opt-in tx hash it prints into
+# the PR description for issue #1126's acceptance criterion 1.
+#
+# Required repository secrets:
+#   PILOT_E2E_OPERATOR_SECRET: funded Stellar testnet secret key (S...). The
+#     API signs the whitelist approval with it, and the suite uses the same
+#     keypair as the operator in Steps 3 and 4.
+#   PILOT_E2E_ALLY_SECRET: funded Stellar testnet secret key (S...), the ally
+#     co-signer for record_evidence in Step 3.
+#
+# OPERATIONS_BACKEND_CREDENTIAL is deliberately generated per run and is not
+# a secret: the API it is passed to is also started by this same job.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+env:
+  BUN_VERSION: "1.x"
+
+jobs:
+  pilot-e2e:
+    name: Run pilot lifecycle suite on testnet
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16@sha256:a3b7f434b2dc57ce85a67e171163eb8ab1a1ebcb39d27484661f26b1dfbe30d6
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: akkuea_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
+        run: |
+          cd apps/api
+          bun run db:migrate
+
+      - name: Generate per-run internal operations credential
+        run: echo "OPERATIONS_BACKEND_CREDENTIAL=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+
+      - name: Start the API in the background
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
+          PORT: "3001"
+          NODE_ENV: development
+          WEBHOOK_SECRET: pilot-e2e-webhook-secret
+          LIQUIDATOR_API_KEY: pilot-e2e-liquidator-key
+          INTERNAL_API_KEY: pilot-e2e-internal-key
+          KYC_UPLOAD_DIR: /tmp/akkuea-kyc-uploads
+          STELLAR_NETWORK: testnet
+          STELLAR_HORIZON_URL: https://horizon-testnet.stellar.org
+          STELLAR_RPC_URL: https://soroban-testnet.stellar.org
+          STELLAR_NETWORK_PASSPHRASE: Test SDF Network ; September 2015
+          STELLAR_ADMIN_SECRET: ${{ secrets.PILOT_E2E_OPERATOR_SECRET }}
+          OPERATIONS_BACKEND_CREDENTIAL: ${{ env.OPERATIONS_BACKEND_CREDENTIAL }}
+          NOTIFICATIONS_ENABLED: "false"
+          PILOT_ESCALATION_JOB_ENABLED: "false"
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/akkuea-kyc-uploads
+          # Derive the admin public key from the operator secret so only one
+          # secret is needed; fail fast if the secret is malformed.
+          cd apps/api
+          ADMIN_PUBLIC_KEY="$(bun -e "const { Keypair } = require('@stellar/stellar-sdk'); const kp = Keypair.fromSecret(process.env.STELLAR_ADMIN_SECRET); console.log(kp.publicKey())")"
+          if [ -z "$ADMIN_PUBLIC_KEY" ]; then
+            echo "PILOT_E2E_OPERATOR_SECRET is not a valid Stellar secret key"
+            exit 1
+          fi
+          echo "Admin public key: $ADMIN_PUBLIC_KEY"
+          export STELLAR_ADMIN_PUBLIC_KEY="$ADMIN_PUBLIC_KEY"
+          bun run src/index.ts > /tmp/api.log 2>&1 &
+          echo $! > /tmp/api.pid
+
+      - name: Wait for the API to report healthy
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3001/health | grep -Eq '"status"[[:space:]]*:[[:space:]]*"healthy"'; then
+              echo "API is healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "API did not become healthy in time. Log output:"
+          cat /tmp/api.log
+          exit 1
+
+      - name: Run the pilot lifecycle suite against testnet
+        env:
+          API_BASE_URL: http://localhost:3001
+          OPERATIONS_BACKEND_CREDENTIAL: ${{ env.OPERATIONS_BACKEND_CREDENTIAL }}
+          PILOT_E2E_OPERATOR_SECRET: ${{ secrets.PILOT_E2E_OPERATOR_SECRET }}
+          PILOT_E2E_ALLY_SECRET: ${{ secrets.PILOT_E2E_ALLY_SECRET }}
+        run: |
+          set -o pipefail
+          cd apps/api
+          bun test tests/e2e/pilot-lifecycle.e2e.ts 2>&1 | tee /tmp/pilot-e2e.log
+
+      - name: Extract the EURC opt-in tx hash and append it to the job summary
+        if: always()
+        run: |
+          set -uo pipefail
+          HASH_LINE="$(grep -o 'set_currency_preference opt-in tx hash: [A-Fa-f0-9]\{64\}' /tmp/pilot-e2e.log || true)"
+          if [ -z "$HASH_LINE" ]; then
+            echo "No opt-in tx hash found in the suite output. The suite did not complete."
+            echo "Suite output was:"
+            cat /tmp/pilot-e2e.log || true
+            exit 1
+          fi
+          HASH="${HASH_LINE#set_currency_preference opt-in tx hash: }"
+          {
+            echo "## Pilot E2E (Testnet) result"
+            echo ""
+            echo "- set_currency_preference opt-in tx hash: \`$HASH\`"
+            echo "- Explorer: https://stellar.expert/explorer/testnet/tx/$HASH"
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "set_currency_preference opt-in tx hash: $HASH"
+          echo "Explorer: https://stellar.expert/explorer/testnet/tx/$HASH"
+
+      - name: Print the API log on failure
+        if: failure()
+        run: cat /tmp/api.log || true

@@ -2,10 +2,11 @@
 
 import { useMemo } from "react";
 import { ErrorBoundary, SectionErrorFallback } from "@/components/ui";
-import { usePayoutPaused, usePilotCycles } from "@/hooks/usePilotContract";
+import { usePilotCycles, usePilotState } from "@/hooks/usePilotContract";
 import { AllyCosignPanel } from "./AllyCosignPanel";
 import { CycleStatusTimeline } from "./CycleStatusTimeline";
 import { EvidenceSubmissionForm } from "./EvidenceSubmissionForm";
+import { PilotStateBanner } from "./PilotStateBanner";
 import { currentCycleId } from "./currentCycle";
 
 /**
@@ -24,13 +25,15 @@ export function AllyDashboard() {
     connectionStatus,
     refetch,
   } = usePilotCycles();
-  const { isPaused } = usePayoutPaused();
+  const { exitRecord, isPaused } = usePilotState();
 
   const cycleId = useMemo(() => currentCycleId(), []);
   const current = cycles.find((cycle) => cycle.cycleId === cycleId);
 
   return (
     <div className="space-y-6">
+      <PilotStateBanner exitRecord={exitRecord} isPaused={isPaused} />
+
       <ErrorBoundary fallback={<SectionErrorFallback onReset={refetch} />}>
         <EvidenceSubmissionForm
           cycleId={cycleId}

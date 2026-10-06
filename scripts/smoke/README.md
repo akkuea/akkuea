@@ -54,11 +54,21 @@ bun run smoke:pilot
 ```
 
 **Required Environment Variables (DO NOT COMMIT REAL SECRETS):**
+
 - `API_BASE_URL`: Base URL of the API under test (e.g. `http://localhost:3001`).
 - `OPERATIONS_BACKEND_CREDENTIAL`: The shared secret to access `/internal/operations/*` API routes.
-- `PILOT_E2E_OPERATOR_SECRET`: The funded testnet key for the operator role.
+- `PILOT_E2E_OPERATOR_SECRET`: The funded testnet key for the operator role. The API signs the whitelist approval with it, and the suite uses the same keypair as the operator, so this must be the whitelist contract's admin.
 - `PILOT_E2E_ALLY_SECRET`: The funded testnet key for the ally role.
 - `PILOT_E2E_HOLDER_SECRET`: (Optional) Funded testnet key for a pilot income token holder, if further on-chain assertions are added.
+
+### Running the suite from CI
+
+`.github/workflows/pilot-e2e.yml` is a manual (`workflow_dispatch`) job that reproduces the full local setup on a runner: it starts Postgres 16, runs the API migrations, boots the API on `localhost:3001`, and executes the suite against testnet. Two repository secrets are required:
+
+- `PILOT_E2E_OPERATOR_SECRET`: funded testnet secret key (`S...`), the whitelist contract admin described above.
+- `PILOT_E2E_ALLY_SECRET`: funded testnet secret key (`S...`), the ally co-signer for `record_evidence`.
+
+`OPERATIONS_BACKEND_CREDENTIAL` is not a repository secret: the job generates a fresh value per run and passes it to both the API it starts and the suite. After a run, the job summary contains the `set_currency_preference` opt-in tx hash and a stellar.expert link, which is the evidence issue #1126's acceptance criterion 1 asks for.
 
 ## What it checks
 

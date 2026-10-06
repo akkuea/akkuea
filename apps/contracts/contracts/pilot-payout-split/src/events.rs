@@ -251,6 +251,26 @@ pub fn emit_evidence_disputed(
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WithheldClaimedEvent {
+    pub holder: Address,
+    pub amount_usdc: i128,
+}
+
+/// Emitted when a holder releases USDC this contract withheld after a failed
+/// EURC swap leg. Clients can watch this instead of polling
+/// `get_withheld_balance`.
+pub fn emit_withheld_claimed(env: &Env, holder: Address, amount_usdc: i128) {
+    env.events().publish(
+        (symbol_short!("withheld"),),
+        WithheldClaimedEvent {
+            holder,
+            amount_usdc,
+        },
+    );
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AdminTransferStartedEvent {
     pub current_admin: Address,
     pub new_admin: Address,

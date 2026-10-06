@@ -42,6 +42,28 @@ export function formatUsdc(amount: bigint): string {
   return `${formatBaseUnits(amount, USDC_DECIMALS)} USDC`;
 }
 
+/** EURC on Stellar also uses 7 decimals, like USDC and the pilot income token. */
+export const EURC_DECIMALS = 7;
+
+/** Formats an EURC base-unit amount for display, for example "1,250.00 EURC". */
+export function formatEurc(amount: bigint): string {
+  return `${formatBaseUnits(amount, EURC_DECIMALS)} EURC`;
+}
+
+/**
+ * Formats an amount in whichever currency the contract actually paid it in.
+ *
+ * The currency comes from the stored settlement record, never inferred from the
+ * holder's current preference, so a past cycle is always labelled with what was
+ * really transferred.
+ */
+export function formatSettlementAmount(
+  amount: bigint,
+  currency: "usdc" | "eurc",
+): string {
+  return currency === "eurc" ? formatEurc(amount) : formatUsdc(amount);
+}
+
 /** Formats a Unix-seconds timestamp as a UTC calendar date. */
 export function formatUnixDate(seconds: number, locale = "en-US"): string {
   return new Intl.DateTimeFormat(locale, {

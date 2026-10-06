@@ -295,6 +295,107 @@ describe('Pilot Lifecycle End-to-End Testnet Suite', () => {
     expect(totalHoldersBalance).toBe(expectedRemainder);
   });
 
+  it('Step 5: Investor opts into EURC and the on-chain preference changes', async () => {
+    const holder = investorKeypair.publicKey();
+
+    // This is the first step where the investor signs an on-chain transaction
+    // itself. An investor cannot opt in until its account exists, since the
+    // account pays the fee and supplies the sequence number. Fund it on
+    // testnet, then wait for the ledger to expose it to the RPC.
+    await fundWithFriendbot(holder);
+    await waitForAccount(holder);
+
+    const contract = new Contract(PAYOUT_SPLIT_CONTRACT_ID);
+
+    // `set_currency_preference` is gated by `require_auth` on the holder, so
+    // the investor signs alone. No operator or ally key is involved.
+    //
+    // `Currency` is a contract enum, encoded as a union the same way as the
+    // `DataKey` lookup earlier in this file: a vector whose single element
+    // names the variant. `Currency::Eurc` is therefore `Vec([Symbol("Eurc")])`.
+    const setOp = contract.call(
+      'set_currency_preference',
+      nativeToScVal(holder, { type: 'address' }),
+      xdr.ScVal.scvVec([xdr.ScVal.scvSymbol('Eurc')]),
+    );
+
+    const setSourceAccount = await server.getAccount(holder);
+    const setTxBuilder = new TransactionBuilder(setSourceAccount, {
+      fee: '10000',
+      networkPassphrase,
+    });
+    setTxBuilder.addOperation(setOp);
+
+    const preparedSetTx = await server.prepareTransaction(setTxBuilder.build());
+    preparedSetTx.sign(investorKeypair);
+
+    const setSendRes = await server.sendTransaction(preparedSetTx);
+    expect(setSendRes.status).toBe('PENDING');
+
+    const setStatus = await waitTxConfirm(setSendRes.hash);
+    expect(setStatus.status).toBe(rpc.Api.GetTransactionStatus.SUCCESS);
+
+    // Emit the hash so a maintainer can attach it to the acceptance criterion
+    // without digging through RPC logs.
+    console.log(`set_currency_preference opt-in tx hash: ${setSendRes.hash}`);
+
+    // Read the preference back from contract state rather than from the
+    // receipt, so the assertion proves what the contract actually stored.
+    const getOp = contract.call(
+      'get_currency_preference',
+      nativeToScVal(holder, { type: 'address' }),
+    );
+
+    const getSourceAccount = await server.getAccount(holder);
+    const getTxBuilder = new TransactionBuilder(getSourceAccount, {
+      fee: '100',
+      networkPassphrase,
+    });
+    getTxBuilder.addOperation(getOp);
+
+    const getSimRes = await server.simulateTransaction(getTxBuilder.build());
+    expect(rpc.Api.isSimulationSuccess(getSimRes)).toBe(true);
+    if (!rpc.Api.isSimulationSuccess(getSimRes) || !getSimRes.result?.retval) {
+      throw new Error('get_currency_preference returned no value');
+    }
+
+    // Without the contract spec, `scValToNative` decodes the union as its raw
+    // shape (a one-element array) rather than a tagged object, so normalise
+    // before asserting.
+    const native = scValToNative(getSimRes.result.retval) as string | string[] | { tag?: string };
+    const variant = Array.isArray(native) ? native[0] : native;
+    const tag = typeof variant === 'string' ? variant : variant?.tag;
+
+    expect(tag).toBe('Eurc');
+  }, 60000); // 60s timeout for funding, ledger closure, and the read-back
+
+  async function fundWithFriendbot(address: string): Promise<void> {
+    const response = await fetch(
+      `https://friendbot.stellar.org/?addr=${encodeURIComponent(address)}`,
+    );
+
+    if (response.ok) return;
+
+    const body = await response.text();
+    // A repeat run funds an account that already exists; friendbot rejects
+    // that with a non-2xx status, which is not a test failure.
+    if (!/already|exists|funded/i.test(body)) {
+      throw new Error(`friendbot funding failed (${response.status}): ${body}`);
+    }
+  }
+
+  async function waitForAccount(address: string): Promise<void> {
+    for (let i = 0; i < 10; i++) {
+      try {
+        await server.getAccount(address);
+        return;
+      } catch {
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+    }
+    throw new Error(`Account ${address} did not become visible to the RPC`);
+  }
+
   async function waitTxConfirm(hash: string): Promise<rpc.Api.GetTransactionResponse> {
     let res: rpc.Api.GetTransactionResponse;
     for (let i = 0; i < 20; i++) {

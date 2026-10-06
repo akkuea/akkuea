@@ -23,9 +23,16 @@ test.describe("WhitelistOnboardingForm", () => {
     await page.getByRole("button", { name: "Start Application" }).click();
 
     await page.getByPlaceholder("John Doe").fill("Jane Tester");
-    await page.getByPlaceholder("Document Number").fill("P-00000000"); // Step 2 (ID document) gates "Continue" on an uploaded file; pick one.
-    // The file input is visually hidden and linked only to the inner
-    // "Upload ID Document" label, so target it by its id.
+    await page.getByPlaceholder("Document Number").fill("P-00000000");
+
+    // Step 0 (personal) -> Step 1 (ID document): Continue is enabled once
+    // the name and document number are filled.
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    // Step 1 renders the document upload; the file input is visually hidden
+    // and linked only to the inner "Upload ID Document" label, so target it
+    // by its id.
+    await expect(page.getByText("Upload ID Document")).toBeVisible();
     await page.locator("#document-upload").setInputFiles({
       name: "passport.png",
       mimeType: "image/png",
@@ -37,6 +44,7 @@ test.describe("WhitelistOnboardingForm", () => {
       ),
     });
 
+    // Step 1 -> Step 2 (wallet).
     await page.getByRole("button", { name: "Continue" }).click();
 
     // Step 2 is the wallet step: it has no connect UI of its own (the app
@@ -78,8 +86,14 @@ test.describe("WhitelistOnboardingForm", () => {
     await page.getByRole("button", { name: "Start Application" }).click();
 
     await page.getByPlaceholder("John Doe").fill("Jane Tester");
-    await page.getByPlaceholder("Document Number").fill("P-00000000"); // Step 2 (ID document) gates "Continue" on an uploaded file; the
-    // visually-hidden input is targeted by id.
+    await page.getByPlaceholder("Document Number").fill("P-00000000");
+
+    // Step 0 (personal) -> Step 1 (ID document).
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    // Step 1 renders the document upload; the visually-hidden input is
+    // targeted by id.
+    await expect(page.getByText("Upload ID Document")).toBeVisible();
     await page.locator("#document-upload").setInputFiles({
       name: "passport.png",
       mimeType: "image/png",
@@ -91,6 +105,7 @@ test.describe("WhitelistOnboardingForm", () => {
       ),
     });
 
+    // Step 1 -> Step 2 (wallet, auto-advances to review when connected).
     await page.getByRole("button", { name: "Continue" }).click();
 
     // The wallet step auto-advances past step 3 (wallet already connected),
@@ -119,8 +134,14 @@ test.describe("WhitelistOnboardingForm", () => {
     await page.getByRole("button", { name: "Start Application" }).click();
 
     await page.getByPlaceholder("John Doe").fill("Jane Tester");
-    await page.getByPlaceholder("Document Number").fill("P-00000000"); // Step 2 (ID document) gates "Continue" on an uploaded file; the
-    // visually-hidden input is targeted by id.
+    await page.getByPlaceholder("Document Number").fill("P-00000000");
+
+    // Step 0 (personal) -> Step 1 (ID document).
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    // Step 1 renders the document upload; the visually-hidden input is
+    // targeted by id.
+    await expect(page.getByText("Upload ID Document")).toBeVisible();
     await page.locator("#document-upload").setInputFiles({
       name: "passport.png",
       mimeType: "image/png",
@@ -132,6 +153,7 @@ test.describe("WhitelistOnboardingForm", () => {
       ),
     });
 
+    // Step 1 -> Step 2 (wallet, auto-advances to review when connected).
     await page.getByRole("button", { name: "Continue" }).click();
 
     await expect(page.getByText("Jane Tester")).toBeVisible();

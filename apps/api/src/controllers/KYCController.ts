@@ -99,7 +99,7 @@ export class KYCController {
     userId: string,
     documentType: string,
     file: { name: string; type: string; size: number; arrayBuffer: () => Promise<ArrayBuffer> },
-    storage: StorageService = storageService,
+    storage: typeof StorageService = storageService,
   ): Promise<{ documentId: string; submissionId: string }> {
     try {
       const user = await userRepository.findById(userId);

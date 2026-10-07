@@ -10,8 +10,11 @@ import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import Elysia from 'elysia';
 import { db } from '../db';
 import { whitelistRoutes } from '../routes/whitelist';
+import { StorageService } from '../services/StorageService';
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
+
+const TEST_FIELD_ENCRYPTION_KEY = 'dGVzdC1rZXktbWF0ZXJpYWwtdGhhdC1pcy0zMi1ieXRlcy1sb25nLg=='; // 32 bytes base64
 
 // Setup a minimal app for testing routes
 import { internalOperationsRoutes } from '../routes/internalOperations';
@@ -34,9 +37,37 @@ function extractWalletAddress(obj: any): string | undefined {
 }
 
 let mockDbStore: any[] = [];
+let originalStore: unknown;
+let originalSignedUrl: unknown;
+let originalDelete: unknown;
 
 beforeEach(() => {
   mockDbStore = [];
+
+  // Stub StorageService statics on the class object rather than via
+  // mock.module(): bun test applies mock.module() to the whole process,
+  // which would leak into every other test file loaded after this one.
+  originalStore = StorageService.store;
+  originalSignedUrl = StorageService.getSignedReadUrl;
+  originalDelete = StorageService.deleteByRelativePath;
+
+  process.env.FIELD_ENCRYPTION_KEY = TEST_FIELD_ENCRYPTION_KEY;
+
+  StorageService.store = mock(
+    async (buffer: Buffer, userId: string, ext: string, docId?: string) => {
+      return {
+        storedFileName: `${docId || 'test-id'}${ext}`,
+        relativePath: `kyc/${userId}/${docId || 'test-id'}${ext}`,
+        extension: ext,
+      };
+    },
+  ) as typeof StorageService.store;
+  StorageService.getSignedReadUrl = mock(
+    async (path: string) => `http://localhost:3001/storage/${path}?token=test`,
+  ) as typeof StorageService.getSignedReadUrl;
+  StorageService.deleteByRelativePath = mock(
+    async () => {},
+  ) as typeof StorageService.deleteByRelativePath;
 
   // Mock whitelist service (re-apply after each mock.restore)
   mock.module('../services/WhitelistService', () => {
@@ -89,6 +120,13 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Restore stubbed statics first so no later file sees a mock, then drop
+  // the db Proxy overrides (they persist across files in one bun process).
+  StorageService.store = originalStore as typeof StorageService.store;
+  StorageService.getSignedReadUrl = originalSignedUrl as typeof StorageService.getSignedReadUrl;
+  StorageService.deleteByRelativePath =
+    originalDelete as typeof StorageService.deleteByRelativePath;
+  delete process.env.FIELD_ENCRYPTION_KEY;
   mock.restore();
   // Direct property assignment on the db Proxy mutates _dbTarget, which
   // persists across test files in the same bun process. mock.restore()
@@ -100,10 +138,24 @@ afterEach(() => {
   }
 });
 
+/**
+ * Builds a multipart POST body. The route requires a document file
+ * (requestMultipartSchema in routes/whitelist.ts), so JSON bodies would be
+ * rejected with 422 before reaching the controller.
+ */
+function buildMultipartBody(wallet: string, name: string): FormData {
+  const formData = new FormData();
+  formData.append('walletAddress', wallet);
+  formData.append('fullName', name);
+  formData.append('idType', 'passport');
+  formData.append('idReference', `REF-${Date.now()}`);
+  const pdfBuffer = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d, 0x31, 0x2e, 0x34]);
+  formData.append('document', new File([pdfBuffer], 'passport.pdf', { type: 'application/pdf' }));
+  return formData;
+}
+
 async function postWhitelistRequest(wallet: string, name = 'Test User', bypassRateLimit = true) {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = {};
   if (bypassRateLimit) {
     headers['x-test-bypass-ratelimit'] = 'true';
   }
@@ -111,12 +163,7 @@ async function postWhitelistRequest(wallet: string, name = 'Test User', bypassRa
     new Request('http://localhost/pilot/whitelist/request', {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        walletAddress: wallet,
-        fullName: name,
-        idType: 'passport',
-        idReference: `REF-${Date.now()}`,
-      }),
+      body: buildMultipartBody(wallet, name),
     }),
   );
 }
@@ -224,7 +271,6 @@ describe('Whitelist manual verification', () => {
     const body = (await res.json()) as any;
     expect(body.status).toBe('none');
   });
-
   test('rateLimit bypass header works for testing', async () => {
     // Send 12 requests with bypass header - all should succeed
     const responses: number[] = [];
@@ -233,15 +279,9 @@ describe('Whitelist manual verification', () => {
         new Request('http://localhost/pilot/whitelist/request', {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'x-test-bypass-ratelimit': 'true',
           },
-          body: JSON.stringify({
-            walletAddress: `GD${String(i + 20).padStart(54, '0')}`,
-            fullName: `Bypass User ${i}`,
-            idType: 'passport',
-            idReference: `BYPASS-${i}`,
-          }),
+          body: buildMultipartBody(`GD${String(i + 20).padStart(54, '0')}`, `Bypass User ${i}`),
         }),
       );
       responses.push(res.status);

@@ -1,9 +1,13 @@
-import { describe, expect, it, beforeAll } from 'bun:test';
+import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
 import { Elysia } from 'elysia';
+import { mkdir, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import { kycRoutes } from '../routes/kyc';
 import { errorHandler } from '../middleware/errorHandler';
 import { VALID_UUID } from '@akkuea/shared';
 import { userRepository } from '../repositories/UserRepository';
+import { StorageService } from '../services/StorageService';
 import jwt from 'jsonwebtoken';
 
 const skipIfNoDatabase = !process.env.DATABASE_URL;
@@ -24,11 +28,25 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
   let testToken = '';
 
   beforeAll(async () => {
+    const testStorageDir = join(process.cwd(), 'test-storage-kyc-temp');
+    await rm(testStorageDir, { recursive: true, force: true });
+    await mkdir(testStorageDir, { recursive: true });
+    await StorageService.initialize({
+      provider: 'local',
+      local: {
+        baseDir: testStorageDir,
+        encryptionKey: randomBytes(32).toString('base64'),
+      },
+    });
     if (!skipIfNoDatabase) {
       const user = await userRepository.getOrCreateByWallet(TEST_WALLET);
       testUserId = user.id;
       testToken = jwt.sign({ id: testUserId, walletAddress: TEST_WALLET }, JWT_SECRET);
     }
+  });
+
+  afterAll(async () => {
+    await rm(join(process.cwd(), 'test-storage-kyc-temp'), { recursive: true, force: true });
   });
   describe('GET /kyc/status/:userId', () => {
     it.skipIf(skipIfNoDatabase)('returns 404 for non-existent user (authorized)', async () => {

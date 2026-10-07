@@ -1,10 +1,14 @@
-import { describe, expect, it, beforeAll } from 'bun:test';
+import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
 import { Elysia } from 'elysia';
+import { mkdir, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import { kycRoutes } from '../routes/kyc';
 import { adminRoutes } from '../routes/admin';
 import { errorHandler } from '../middleware/errorHandler';
 import { VALID_UUID } from '@akkuea/shared';
 import { userRepository } from '../repositories/UserRepository';
+import { StorageService } from '../services/StorageService';
 import jwt from 'jsonwebtoken';
 
 const skipIfNoDatabase = !process.env.DATABASE_URL;
@@ -28,11 +32,25 @@ describe.skipIf(skipIfNoDatabase)('Audit Log Integration', () => {
   let testToken = '';
 
   beforeAll(async () => {
+    const testStorageDir = join(process.cwd(), 'test-storage-audit-temp');
+    await rm(testStorageDir, { recursive: true, force: true });
+    await mkdir(testStorageDir, { recursive: true });
+    await StorageService.initialize({
+      provider: 'local',
+      local: {
+        baseDir: testStorageDir,
+        encryptionKey: randomBytes(32).toString('base64'),
+      },
+    });
     if (!skipIfNoDatabase) {
       const user = await userRepository.getOrCreateByWallet(TEST_WALLET);
       testUserId = user.id;
       testToken = jwt.sign({ id: testUserId, walletAddress: TEST_WALLET }, JWT_SECRET);
     }
+  });
+
+  afterAll(async () => {
+    await rm(join(process.cwd(), 'test-storage-audit-temp'), { recursive: true, force: true });
   });
 
   async function uploadDocument(app: ReturnType<typeof createKycApp>): Promise<string> {

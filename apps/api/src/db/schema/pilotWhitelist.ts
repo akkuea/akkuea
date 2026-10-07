@@ -18,6 +18,12 @@ export const pilotWhitelistRequests = pgTable('pilot_whitelist_requests', {
   fullName: varchar('full_name', { length: 255 }).notNull(),
   idType: pilotWhitelistIdTypeEnum('id_type').notNull(),
   idReference: varchar('id_reference', { length: 255 }).notNull(),
+  // Encrypted versions for field-level encryption (C8-004)
+  fullNameEncrypted: text('full_name_encrypted'),
+  idReferenceEncrypted: text('id_reference_encrypted'),
+  // Document attachment (C8-004)
+  documentUrl: text('document_url'),
+  documentEncryptionKey: text('document_encryption_key'),
   status: pilotWhitelistStatusEnum('status').notNull().default('pending'),
   rejectionReason: text('rejection_reason'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -40,7 +40,7 @@
 1. **Check RPC endpoints** - query each endpoint directly:
    ```bash
    curl -s -o /dev/null -w "%{http_code}" https://soroban-testnet.stellar.org
-   curl -s -o /dev/null -w "%{http_code}" https://rpc-mainnet.stellar.org
+   curl -s -o /dev/null -w "%{http_code}" https://mainnet.sorobanrpc.com
    ```
 2. **If primary is down but fallback works** - the system is already using the fallback. Monitor the `FreshnessIndicator` for recovery.
 3. **If all endpoints are down** - do not escalate allies. The escalation job treats this as "unknown", not "missed".

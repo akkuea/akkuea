@@ -68,15 +68,13 @@ export class PilotPayoutEvidenceReader {
     this.contractId = config.contractId;
 
     this.networkPassphrase =
-      config.networkPassphrase ??
-      process.env.STELLAR_NETWORK_PASSPHRASE ??
-      Networks.TESTNET;
+      config.networkPassphrase ?? process.env.STELLAR_NETWORK_PASSPHRASE ?? Networks.TESTNET;
 
     this.retryConfig = config.retryConfig ?? {
       maxRetries: 3,
       retryBaseDelayMs: 2_000,
       maxRetryMs: 30_000,
-      callTimeoutMs: 30_000,
+      callTimeoutMs: 10_000,
     };
 
     const envUrl = config.rpcUrl ?? process.env.STELLAR_RPC_URL;
@@ -102,9 +100,7 @@ export class PilotPayoutEvidenceReader {
     const tx = this.buildTransaction(cycleId);
 
     let simulation: Awaited<
-      ReturnType<
-        InstanceType<typeof SorobanRpc.Server>['simulateTransaction']
-      >
+      ReturnType<InstanceType<typeof SorobanRpc.Server>['simulateTransaction']>
     >;
 
     try {
@@ -117,12 +113,9 @@ export class PilotPayoutEvidenceReader {
           });
     } catch (err) {
       if (err instanceof RpcAllEndpointsFailedError) {
-        throw new Error(
-          `RPC unavailable for cycle "${cycleId}": could not verify evidence`,
-          {
-            cause: err,
-          },
-        );
+        throw new Error(`RPC unavailable for cycle "${cycleId}": could not verify evidence`, {
+          cause: err,
+        });
       }
 
       throw err;
@@ -150,9 +143,7 @@ export class PilotPayoutEvidenceReader {
       return { present: false };
     }
 
-    const decoded = scValToNative(
-      retval,
-    ) as DecodedEvidenceRecord | null | undefined;
+    const decoded = scValToNative(retval) as DecodedEvidenceRecord | null | undefined;
 
     if (decoded === null || decoded === undefined) {
       return { present: false };
@@ -160,10 +151,7 @@ export class PilotPayoutEvidenceReader {
 
     return {
       present: true,
-      recordedAt:
-        decoded.recorded_at !== undefined
-          ? Number(decoded.recorded_at)
-          : undefined,
+      recordedAt: decoded.recorded_at !== undefined ? Number(decoded.recorded_at) : undefined,
     };
   }
 
@@ -175,12 +163,7 @@ export class PilotPayoutEvidenceReader {
       fee: '100',
       networkPassphrase: this.networkPassphrase,
     })
-      .addOperation(
-        contract.call(
-          'get_evidence',
-          nativeToScVal(cycleId, { type: 'string' }),
-        ),
-      )
+      .addOperation(contract.call('get_evidence', nativeToScVal(cycleId, { type: 'string' })))
       .setTimeout(30)
       .build();
   }

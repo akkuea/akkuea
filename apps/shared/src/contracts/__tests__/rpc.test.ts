@@ -24,10 +24,7 @@ describe("resolveSorobanRpcEndpoints", () => {
   });
 
   it("returns explicit rpcUrl when provided", () => {
-    const result = resolveSorobanRpcEndpoints(
-      "testnet",
-      "https://custom.rpc",
-    );
+    const result = resolveSorobanRpcEndpoints("testnet", "https://custom.rpc");
 
     expect(result).toEqual(["https://custom.rpc"]);
   });
@@ -104,6 +101,41 @@ describe("callWithRetry", () => {
     expect(result.data).toBe("fallback-success");
     expect(result.endpointUsed).toBe("http://fallback");
     expect(calls).toEqual(["http://primary", "http://fallback"]);
+  });
+
+  it("recovers from a hung primary call and falls back before maxRetryMs", async () => {
+    const calls: string[] = [];
+    const maxRetryMs = 5_000;
+    const callTimeoutMs = 50;
+    const startedAt = Date.now();
+
+    const fn = mock((endpoint: string) => {
+      calls.push(endpoint);
+
+      if (endpoint === "http://primary") {
+        return new Promise<string>(() => {});
+      }
+
+      return Promise.resolve("fallback-success");
+    });
+
+    const result = await callWithRetry(fn, {
+      endpoints: ["http://primary", "http://fallback"],
+      maxRetries: 3,
+      retryBaseDelayMs: 1,
+      maxRetryMs,
+      callTimeoutMs,
+    });
+
+    expect(result.data).toBe("fallback-success");
+    expect(result.endpointUsed).toBe("http://fallback");
+    expect(calls).toEqual([
+      "http://primary",
+      "http://primary",
+      "http://primary",
+      "http://fallback",
+    ]);
+    expect(Date.now() - startedAt).toBeLessThan(maxRetryMs);
   });
 
   it("falls back after HTTP 503", async () => {

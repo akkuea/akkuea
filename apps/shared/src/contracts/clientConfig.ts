@@ -128,7 +128,7 @@ export function buildContractClientOptionsWithRetry(
       maxRetries: 3,
       retryBaseDelayMs: 2_000,
       maxRetryMs: 30_000,
-      callTimeoutMs: 30_000,
+      callTimeoutMs: 10_000,
     },
   };
 }

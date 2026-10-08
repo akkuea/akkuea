@@ -155,7 +155,7 @@ export class PilotEscalationJob {
         maxRetries: this.config.rpcMaxRetries,
         retryBaseDelayMs: this.config.rpcRetryBaseDelayMs,
         maxRetryMs: 30_000,
-        callTimeoutMs: 30_000,
+        callTimeoutMs: 10_000,
       },
     });
   }

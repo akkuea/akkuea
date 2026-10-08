@@ -30,11 +30,12 @@ describe('PilotEscalationJob', () => {
         throw new Error('RPC timeout');
       }),
     };
+    const onUnknown = mock();
     const job = new PilotEscalationJob({
       agreementStartAt: new Date('2026-01-01'),
       operatorUserId: 'test-operator',
       evidenceReader: mockReader,
-      onUnknown: mock(),
+      onUnknown,
       escalationRepository: {
         findByContractId: mock(async () => null),
         clear: mock(async () => {}),
@@ -44,7 +45,8 @@ describe('PilotEscalationJob', () => {
     const result = await job.tick();
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') throw new Error(`unexpected status: ${result.status}`);
-    expect(result.unknownCount).toBeGreaterThanOrEqual(0);
+    expect(result.unknownCount).toBeGreaterThan(0);
+    expect(onUnknown).toHaveBeenCalledTimes(1);
   });
 
   it('does not escalate when RPC is unavailable (unknown state)', async () => {

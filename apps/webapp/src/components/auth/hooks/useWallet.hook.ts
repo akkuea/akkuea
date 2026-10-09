@@ -4,7 +4,12 @@ import { useCallback, useEffect } from "react";
 import { Networks } from "@creit.tech/stellar-wallets-kit";
 import { useAuthenticationStore } from "../store/data/slices/authentication.slice";
 import { initializeWalletKit, getWalletKit } from "../constant/walletKit";
-import { isSignableWalletProvider, walletRegistry } from "@/services/wallet";
+import {
+  canSignAuthEntries,
+  isSignableWalletProvider,
+  StellarWalletsKitProvider,
+  walletRegistry,
+} from "@/services/wallet";
 import { fetchBalance, type BalanceResult } from "@/lib/stellar";
 import type { AuthenticationStore } from "../store/data/@types/authentication.entity";
 
@@ -108,8 +113,24 @@ export const useWallet = () => {
     try {
       store.setIsConnecting(true);
 
-      const { address } = await kit.authModal();
-      store.setSelectedWalletId(kit.selectedModule.productId);
+      // Go through the registered kit provider when there is one. Storing the
+      // picked module's own id (e.g. "freighter") would not match any registry
+      // entry, so signTransaction/signAuthEntry would refuse to run for a
+      // session opened here, and the provider's own connected state would
+      // never be set.
+      const kitProvider = walletRegistry
+        .getAll()
+        .find((p) => p instanceof StellarWalletsKitProvider);
+      let address: string;
+      if (kitProvider instanceof StellarWalletsKitProvider) {
+        ({ address } = await kitProvider.connect(
+          store.network === "mainnet" ? Networks.PUBLIC : Networks.TESTNET,
+        ));
+        store.setSelectedWalletId(kitProvider.id);
+      } else {
+        ({ address } = await kit.authModal());
+        store.setSelectedWalletId(kit.selectedModule.productId);
+      }
       store.setAddress(address);
       store.setIsConnected(true);
 
@@ -218,6 +239,72 @@ export const useWallet = () => {
   );
 
   /**
+   * Signs a single Soroban authorization entry with the connected wallet.
+   *
+   * Needed for any multi-party contract invocation (an on-chain action
+   * requiring more than one signer's `require_auth()`), where each party
+   * must produce their own auth-entry signature before the fully-authorized
+   * transaction can be assembled. Signing the whole transaction is not
+   * enough for that case: only `signTransaction` covers a single-signer
+   * invocation.
+   *
+   * Throws immediately, without attempting a call, when the connected
+   * provider is categorically incapable of this (Privy, Pollar, no wallet
+   * connected). A `StellarWalletsKitProvider` session always passes that
+   * check, since the kit exposes the method uniformly, but the specific
+   * wallet module the user picked (Freighter, Albedo, xBull, a hardware
+   * wallet, ...) may still reject the call itself if that wallet doesn't
+   * implement it for real; that rejection surfaces from the attempt below
+   * exactly like any other signing failure. Check `canSignAuthEntries`
+   * before offering this action in the UI, but still handle a rejection
+   * from this method, since that per-wallet case cannot be ruled out ahead
+   * of time.
+   */
+  const signAuthEntry = useCallback(
+    async (
+      authEntryXdr: string,
+      signerAddress: string,
+      networkPassphrase: string,
+    ) => {
+      const provider = walletRegistry.get(store.selectedWalletId ?? "");
+      if (!provider || !canSignAuthEntries(provider)) {
+        throw new Error(
+          "Connected wallet does not support signing authorization entries",
+        );
+      }
+
+      const attempt = () =>
+        provider.signAuthEntry(authEntryXdr, signerAddress, networkPassphrase);
+
+      try {
+        return await attempt();
+      } catch (error) {
+        // Same reasoning as signTransaction: the kit's rejection shape
+        // doesn't distinguish "this wallet can't do this" from "the session
+        // is gone", so route through the same reconnection path rather than
+        // failing silently.
+        store.triggerReconnectionPrompt(attempt);
+        throw error;
+      }
+    },
+    [store],
+  );
+
+  /**
+   * Whether the connected wallet is worth offering a co-signing action for.
+   *
+   * `true` only means the provider exposes the capability, not that the
+   * specific underlying wallet the user picked will actually accept a
+   * `signAuthEntry` call; see `signAuthEntry`'s own doc comment.
+   */
+  const selectedProvider = store.selectedWalletId
+    ? walletRegistry.get(store.selectedWalletId)
+    : undefined;
+  const walletCanSignAuthEntries = selectedProvider
+    ? canSignAuthEntries(selectedProvider)
+    : false;
+
+  /**
    * Re-invokes whichever connect path established the current session
    * (registry provider vs. legacy raw-kit connect) using the id already saved
    * in the store. Note: for the Stellar Wallets Kit this still opens its
@@ -274,5 +361,7 @@ export const useWallet = () => {
     switchNetwork,
     refreshBalance,
     signTransaction,
+    signAuthEntry,
+    canSignAuthEntries: walletCanSignAuthEntries,
   };
 };

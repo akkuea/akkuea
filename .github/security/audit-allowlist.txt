@@ -41,6 +41,7 @@ GHSA-q4gf-8mx6-v5v3  # next (high) - Next.js has a Denial of Service with Server
 GHSA-r28c-9q8g-f849  # postcss (high) - PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure - transitive; track upgrade
 GHSA-rfgv-xxqx-mfg5  # undici (high) - undici vulnerable to Denial of Service via unrequested WebSocket subprotocol - transitive via jsdom in webapp tests; track upgrade
 GHSA-rgw5-rvv9-x895  # brace-expansion (high) - brace-expansion: DoS via unbounded intermediate arrays, bypassing the CVE-2026-14257 mitigation - transitive; track upgrade
+GHSA-vfj7-8cjw-p6xm  # braces (high) - stack-exhaustion DoS via deeply nested patterns - no patched release (latest 3.0.3 still vulnerable), transitive via micromatch; track upgrade
 GHSA-vmh5-mc38-953g  # undici (high) - undici vulnerable to TLS certificate validation bypass via dropped requestTls in SOCKS5 ProxyAgent - transitive; track upgrade
 GHSA-vxpw-j846-p89q  # undici (high) - undici WebSocket client vulnerable to denial of service via fragment count bypass - transitive; track upgrade
 GHSA-w293-vg96-wgc3  # undici (high) - undici vulnerable to TLS certificate validation bypass via dropped connect options in BalancedPool - transitive via jsdom in webapp tests; track upgrade

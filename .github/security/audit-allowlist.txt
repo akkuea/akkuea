@@ -5,6 +5,7 @@
 # Reviewed: 2026-09-29 against the PR #1141 lockfile. Follow-up: dependency upgrade track.
 # Reviewed: 2026-10-01 against the PR #1141 lockfile (brace-expansion override) after a new axios / next advisory batch landed post-review. Follow-up: dependency upgrade track.
 # Reviewed: 2026-10-02 against the PR #1126 lockfile: the 2026-10-01 axios / next batch was dropped from this list by upgrading axios to ^1.20.0 and next to ^16.3.6, since patched releases exist.
+# Reviewed: 2026-10-08 against this branch lockfile: source-map-js (>=1.2.2), shell-quote (^1.11.0) and sharp (^0.35.5) were dropped from this list by root overrides, since patched releases exist. GHSA-vfj7-8cjw-p6xm (braces) added because no patched release exists yet.
 
 GHSA-267c-6grr-h53f  # next (high) - Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - transitive; track upgrade
 GHSA-26hh-7cqf-hhc6  # next (high) - Next.js has a Middleware / Proxy bypass in App Router applications via segment-prefetch routes - Incomplete Fix Follow-Up - transitive; track upgrade
@@ -48,3 +49,4 @@ GHSA-w293-vg96-wgc3  # undici (high) - undici vulnerable to TLS certificate vali
 GHSA-w3rx-r6r6-pgpr  # image-size (high) - image-size: ICNS parser allows denial of service through an infinite loop - transitive; track upgrade
 GHSA-wcpc-wj8m-hjx6  # protobufjs (high) - protobufjs: Denial of service through unbounded Any expansion during JSON conversion - transitive; track upgrade
 GHSA-xq3m-2v4x-88gg  # protobufjs (critical) - Arbitrary code execution in protobufjs - transitive; track upgrade
+GHSA-vfj7-8cjw-p6xm  # braces (high) - stack-exhaustion DoS via deeply nested patterns - no patched release (latest 3.0.3 still vulnerable), transitive via micromatch; track upgrade

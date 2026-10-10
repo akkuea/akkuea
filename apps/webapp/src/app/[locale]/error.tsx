@@ -1,5 +1,7 @@
 "use client";
 
+import { captureErrorSafely } from "@akkuea/shared";
+
 import { useEffect } from "react";
 import { Navbar, Footer } from "@/components/layout";
 import { PageErrorFallback } from "@/components/ui";
@@ -18,6 +20,10 @@ export default function RootError({
 }) {
   useEffect(() => {
     console.error("[RootError]", error);
+    captureErrorSafely(error, {
+      context: "webapp-route-error",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

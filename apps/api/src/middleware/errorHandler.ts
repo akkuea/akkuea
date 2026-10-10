@@ -1,14 +1,17 @@
 import { Elysia } from 'elysia';
 import { handleError } from '../utils/errors';
+import { captureErrorSafely } from '@akkuea/shared';
 
-/**
- * Global error handler for Elysia.
- * Reuses the robust handleError logic from utils/errors.
- */
 export const errorHandler = new Elysia().onError({ as: 'global' }, ({ error, code, set }) => {
   const result = handleError(error);
 
-  // Ensure VALIDATION errors from Elysia/Zod are returned as 400
+  captureErrorSafely(error, {
+    code,
+    statusCode: result.statusCode,
+    message: result.message,
+    context: 'api-error-handler',
+  });
+
   if (code === 'VALIDATION') {
     set.status = 400;
     return {
@@ -18,7 +21,6 @@ export const errorHandler = new Elysia().onError({ as: 'global' }, ({ error, cod
     };
   }
 
-  // Handle specific Elysia error codes if necessary
   if (code === 'NOT_FOUND' && result.statusCode === 500) {
     set.status = 404;
     return {

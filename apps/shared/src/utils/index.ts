@@ -11,3 +11,4 @@ export * from "./interest.js";
 export * from "./performance.js";
 export * from "./schema-versioning.js";
 export * from "./pilotCycleStatus.js";
+export * from "./errorTracking.js";

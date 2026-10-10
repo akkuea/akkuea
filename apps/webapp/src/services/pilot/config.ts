@@ -32,9 +32,40 @@ export function pilotRpcUrl(): string {
   if (override) {
     return override;
   }
+  const fallbackUrls = process.env.NEXT_PUBLIC_PILOT_RPC_URLS?.trim();
+  if (fallbackUrls) {
+    const urls = fallbackUrls
+      .split(",")
+      .map((u) => u.trim())
+      .filter(Boolean);
+    if (urls.length > 0) return urls[0];
+  }
   return resolvePilotNetwork() === "MAINNET"
     ? API_ENDPOINTS.SOROBAN_RPC.MAINNET
     : API_ENDPOINTS.SOROBAN_RPC.TESTNET;
+}
+
+export function pilotRpcUrls(): string[] {
+  const configured = process.env.NEXT_PUBLIC_PILOT_RPC_URLS?.trim();
+  if (configured) {
+    return configured
+      .split(",")
+      .map((u) => u.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+/** Ordered, de-duplicated RPC endpoints: explicit override, configured list, then network default. */
+export function pilotRpcEndpoints(): string[] {
+  const override = process.env.NEXT_PUBLIC_SOROBAN_RPC_URL?.trim();
+  return Array.from(
+    new Set([
+      ...(override ? [override] : []),
+      ...pilotRpcUrls(),
+      pilotRpcUrl(),
+    ]),
+  );
 }
 
 export interface PilotContractIds {

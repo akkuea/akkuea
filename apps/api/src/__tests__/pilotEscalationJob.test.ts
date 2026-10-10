@@ -1,5 +1,6 @@
-import { describe, it, expect, mock, beforeEach } from 'bun:test';
+import { describe, it, expect, mock, beforeEach, afterEach } from 'bun:test';
 import { PilotEscalationJob } from '../workers/pilotEscalationJob';
+import { setErrorTrackingProvider, type ErrorTrackingProvider } from '@akkuea/shared';
 import type { NotificationService } from '../services/NotificationService';
 import type { PilotEscalationRepository } from '../repositories/PilotEscalationRepository';
 import type { EvidenceLookupResult } from '../services/PilotPayoutEvidenceReader';
@@ -95,6 +96,10 @@ describe('PilotEscalationJob', () => {
     repository = makeInMemoryRepository();
   });
 
+  afterEach(() => {
+    setErrorTrackingProvider(null);
+  });
+
   it('skips the tick without crashing when required config is missing', async () => {
     const job = new PilotEscalationJob({
       contractId: CONTRACT_ID,
@@ -130,6 +135,7 @@ describe('PilotEscalationJob', () => {
       breached: false,
       consecutiveMissed: 0,
       notified: false,
+      unknownCount: 0,
     });
     expect(notificationService.notifyPilotReportingEscalation).not.toHaveBeenCalled();
   });
@@ -242,8 +248,21 @@ describe('PilotEscalationJob', () => {
     expect(notificationService.notifyPilotReportingEscalation).toHaveBeenCalledTimes(1);
   });
 
-  it('degrades gracefully and does not crash on a persistent simulated RPC failure', async () => {
+  it('treats persistent RPC failure as unknown, does not escalate, and preserves existing escalation state', async () => {
     const alwaysFailingReader = makeAlwaysFailingReader();
+    const onUnknown = mock();
+    const existingState: PilotEscalationState = {
+      id: 'state-existing',
+      contractId: CONTRACT_ID,
+      lastMissedCycleId: 'cycle-1',
+      consecutiveMissed: 2,
+      firstNotifiedAt: new Date(Date.now() - 86_400_000),
+      lastNotifiedAt: new Date(Date.now() - 86_400_000),
+      createdAt: new Date(Date.now() - 86_400_000),
+      updatedAt: new Date(Date.now() - 86_400_000),
+    };
+    repository._store.set(CONTRACT_ID, existingState);
+
     const job = new PilotEscalationJob({
       contractId: CONTRACT_ID,
       agreementStartAt: agreementStartForDueCycles(2),
@@ -255,14 +274,52 @@ describe('PilotEscalationJob', () => {
       evidenceReader: alwaysFailingReader,
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,
+      onUnknown,
     });
 
     const result = await job.tick();
-    expect(result.status).toBe('rpc_error');
+
+    expect(result.status).toBe('ok');
+    if (result.status !== 'ok') throw new Error('unreachable');
+    expect(result.breached).toBe(false);
+    expect(result.unknownCount).toBeGreaterThan(0);
     expect(notificationService.notifyPilotReportingEscalation).not.toHaveBeenCalled();
+    expect(onUnknown).toHaveBeenCalledTimes(1);
+    expect(onUnknown).toHaveBeenCalledWith(CONTRACT_ID, expect.any(Array));
+    expect(repository.clear).not.toHaveBeenCalled();
+    expect(repository._store.get(CONTRACT_ID)).toEqual(existingState);
     // Retried up to rpcMaxRetries before giving up on the first cycle lookup.
     expect(alwaysFailingReader.hasEvidence).toHaveBeenCalledTimes(2);
     expect(job.isRunning()).toBe(false);
+  });
+
+  it('reports unknown-cycle warnings to the configured error tracking provider', async () => {
+    const provider: ErrorTrackingProvider = {
+      captureError: mock(),
+      captureMessage: mock(),
+      setUser: mock(),
+    };
+    setErrorTrackingProvider(provider);
+
+    const job = new PilotEscalationJob({
+      contractId: CONTRACT_ID,
+      agreementStartAt: agreementStartForDueCycles(2),
+      cadenceDays: CADENCE_DAYS,
+      operatorUserId: OPERATOR_USER_ID,
+      thresholdCycles: 2,
+      evidenceReader: makeAlwaysFailingReader(),
+      notificationService: notificationService as unknown as NotificationService,
+      escalationRepository: repository as unknown as PilotEscalationRepository,
+    });
+
+    const result = await job.tick();
+    if (result.status !== 'ok') throw new Error('unreachable');
+    expect(result.unknownCount).toBeGreaterThan(0);
+    expect(provider.captureMessage).toHaveBeenCalledTimes(1);
+    const call = (provider.captureMessage as ReturnType<typeof mock>).mock.calls[0]!;
+    expect(call[0]).toBe('Pilot escalation: RPC unavailable, evidence unknown');
+    expect(call[1]).toBe('warn');
+    expect(call[2]).toMatchObject({ contractId: CONTRACT_ID });
   });
 
   it('recovers on the next lookup after a transient RPC failure resolves within retry budget', async () => {

@@ -8,3 +8,4 @@
 # to be called here" and fails the whole unit-test run.
 [test]
 root = "./src"
+preload = ["./src/test/setup-dom.ts"]

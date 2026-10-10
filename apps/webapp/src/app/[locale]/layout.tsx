@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Providers } from "@/components/Providers";
+import { ErrorTrackingInit } from "@/components/ErrorTrackingInit";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import "../globals.css";
@@ -44,6 +45,7 @@ export default async function RootLayout({
         >
           Skip to content
         </a>
+        <ErrorTrackingInit />
         <NextIntlClientProvider messages={messages}>
           <Providers>
             <main id="main-content">{children}</main>

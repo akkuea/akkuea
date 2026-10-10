@@ -23,9 +23,11 @@ import { createNotificationWorkerFromEnv } from './workers/notificationWorker';
 import { createKycExpiryJobFromEnv } from './workers/kycExpiryJob';
 import { createPilotEscalationJobFromEnv } from './workers/pilotEscalationJob';
 import { validateApiEnv } from '@akkuea/shared';
+import { initErrorTracking } from './observability/errorTracking';
 
 // Validate environment variables on startup (fails fast with actionable guide if missing)
 validateApiEnv();
+initErrorTracking();
 
 app
   .use(

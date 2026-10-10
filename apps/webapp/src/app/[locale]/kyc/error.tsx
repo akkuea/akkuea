@@ -1,5 +1,7 @@
 "use client";
 
+import { captureErrorSafely } from "@akkuea/shared";
+
 import { useEffect } from "react";
 import { PageErrorFallback } from "@/components/ui";
 import { GridBackground } from "@/components/landing";
@@ -13,6 +15,10 @@ export default function KYCError({
 }) {
   useEffect(() => {
     console.error("[KYCError]", error);
+    captureErrorSafely(error, {
+      context: "webapp-route-error",
+      digest: error.digest,
+    });
   }, [error]);
 
   return (

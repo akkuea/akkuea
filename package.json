@@ -68,22 +68,12 @@
     "browserslist": "^4.28.8",
     "next": "^16.3.6",
     "sharp": "^0.35.5",
-  }"overrides": {
-  "ajv": "^6.14.0",
-  "flatted": "^3.4.0",
-  "axios": "^1.20.0",
-  "file-type": "^21.3.4",
-  "minimatch": ">=10.2.1",
-  "eslint-visitor-keys": "^5.0.1",
-  "browserslist": "^4.28.8",
-  "next": "^16.3.6",
-  "sharp": "^0.35.5",
-  "typescript": "~5.9.3",
-  "@creit-tech/stellar-wallets-kit": "npm:@creit.tech/stellar-wallets-kit@2.6.0",
-  "brace-expansion": "^5.0.12",
-  "undici": "^7.30.0",
-  "webpack-dev-middleware": "^7.4.6",
-  "source-map-js": ">=1.2.2",
-  "shell-quote": "^1.11.0"
-}
+    "typescript": "~5.9.3",
+    "@creit-tech/stellar-wallets-kit": "npm:@creit.tech/stellar-wallets-kit@2.6.0",
+    "brace-expansion": "^5.0.12",
+    "undici": "^7.30.0",
+    "webpack-dev-middleware": "^7.4.6",
+    "source-map-js": ">=1.2.2",
+    "shell-quote": "^1.11.0"
+  }
 }

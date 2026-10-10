@@ -48,3 +48,6 @@ GHSA-w293-vg96-wgc3  # undici (high) - undici vulnerable to TLS certificate vali
 GHSA-w3rx-r6r6-pgpr  # image-size (high) - image-size: ICNS parser allows denial of service through an infinite loop - transitive; track upgrade
 GHSA-wcpc-wj8m-hjx6  # protobufjs (high) - protobufjs: Denial of service through unbounded Any expansion during JSON conversion - transitive; track upgrade
 GHSA-xq3m-2v4x-88gg  # protobufjs (critical) - Arbitrary code execution in protobufjs - transitive; track upgrade
+GHSA-6j4f-fj2g-mc7p  # brace-expansion (high) - brace-expansion: DoS via uncontrolled recursion in parseCommaParts causing stack exhaustion - transitive; track upgrade
+GHSA-qhr7-859c-m2p7  # brace-expansion (high) - brace-expansion: DoS via uncontrolled recursion on nested brace groups causing stack exhaustion - transitive; track upgrade
+GHSA-rfgv-xxqx-mfg5  # undici (high) - undici vulnerable to Denial of Service via unrequested WebSocket subprotocol - transitive; track upgrade

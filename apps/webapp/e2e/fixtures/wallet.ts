@@ -35,7 +35,7 @@ export async function mockConnectedWallet(
             balanceStatus: null,
             balanceError: null,
             isConnected: true,
-            selectedWalletId: "stellar-wallets-kit",
+            selectedWalletId: "e2e-test",
             network: "testnet",
           },
           version: 2,

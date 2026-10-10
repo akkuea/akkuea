@@ -61,4 +61,5 @@ jobs:
 
       - name: Prettier format check
         working-directory: apps/webapp
-        run: bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+        run: |
+          bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"

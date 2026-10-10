@@ -222,23 +222,31 @@ export function WhitelistOnboardingForm() {
         {currentStep === 0 && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
+              <label
+                htmlFor="onboarding-full-name"
+                className="block text-sm font-medium text-zinc-300 mb-1"
+              >
                 Full Name
               </label>
               <Input
+                id="onboarding-full-name"
                 placeholder="John Doe"
                 value={formData.fullName}
                 onChange={(e) =>
                   setFormData({ ...formData, fullName: e.target.value })
                 }
-                leftIcon={<UserCircle className="w-4 h-4" />}
+                leftIcon={<UserCircle className="w-4 h-4" aria-hidden="true" />}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
+              <label
+                htmlFor="onboarding-id-type"
+                className="block text-sm font-medium text-zinc-300 mb-1"
+              >
                 Government ID Type
               </label>
               <select
+                id="onboarding-id-type"
                 className="w-full h-10 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-md text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 value={formData.idType}
                 onChange={(e) =>
@@ -251,10 +259,14 @@ export function WhitelistOnboardingForm() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
+              <label
+                htmlFor="onboarding-id-reference"
+                className="block text-sm font-medium text-zinc-300 mb-1"
+              >
                 ID Reference Number
               </label>
               <Input
+                id="onboarding-id-reference"
                 placeholder="Document Number"
                 value={formData.idReference}
                 onChange={(e) =>

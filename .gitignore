@@ -108,3 +108,8 @@ apps/api/uploads/
 
 plan.md
 tasks/
+__pycache__/
+*.pyc
+/uploads/
+/backup-rehearsal/
+*-output.txt

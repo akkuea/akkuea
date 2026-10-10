@@ -103,6 +103,7 @@ jobs:
       env:
         DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
         TEST_DATABASE_URL: postgresql://test:test@localhost:5432/akkuea_test
+        JWT_SECRET: "ci-test-secret-that-is-at-least-32-characters-long"
       run: |
         cd apps/api
         # --isolate: confirmed by diagnostic runs that the E2E tokenization
@@ -132,6 +133,57 @@ jobs:
 
     - name: Audit dependencies
       run: bash .github/scripts/dependency-audit.sh .
+
+    - name: Install gitleaks
+      run: |
+        # Install gitleaks for secret scanning - pinned version for reproducibility
+        curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.27.2/gitleaks_8.27.2_linux_x64.tar.gz \
+          | tar -xz -C /usr/local/bin gitleaks
+        gitleaks version
+        # jq is needed for the fixture self-test assertion
+        sudo apt-get install -y --no-install-recommends jq
+
+    - name: Scan for hardcoded secrets (gitleaks)
+      run: |
+        gitleaks detect \
+          --source . \
+          --config .gitleaks.toml \
+          --no-banner \
+          --redact
+
+    - name: Verify secret scanner catches planted fixture
+      # Prove the scanner works: use the default ruleset (no repo allowlist)
+      # and assert the JSON report contains at least one finding.
+      # Using --report-format json + jq avoids conflating scanner errors
+      # with "no findings" (both would exit non-zero without the report check).
+      run: |
+        printf '[extend]\nuseDefault = true\n' > /tmp/gitleaks-fixture.toml
+        gitleaks detect \
+          --source .github/security/secret-scan-fixture.txt \
+          --no-git \
+          --no-banner \
+          --config /tmp/gitleaks-fixture.toml \
+          --report-format json \
+          --report-path /tmp/fixture-findings.json || true
+        test "$(jq length /tmp/fixture-findings.json)" -ge 1 \
+          || { echo "ERROR: scanner missed the planted fixture secret"; exit 1; }
+        echo "OK: scanner detected $(jq length /tmp/fixture-findings.json) finding(s) in fixture"
+
+    - name: Mainnet preflight unit tests
+      run: bash scripts/test-mainnet-preflight.sh
+
+    - name: Mainnet preflight dry-run (env checks only)
+      env:
+        STELLAR_NETWORK_PASSPHRASE: "Public Global Stellar Network ; September 2015"
+        STELLAR_HORIZON_URL: "https://horizon.stellar.org"
+        STELLAR_RPC_URL: "https://soroban.stellar.org"
+        DATABASE_SSL: "true"
+        NODE_ENV: "production"
+        JWT_SECRET: "ci-placeholder-that-is-at-least-32-characters-long"
+        OPERATIONS_BACKEND_CREDENTIAL: "ci-placeholder-ops-credential-value"
+        OPERATIONS_ALLOWED_WALLETS: "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBWN9YKTNFGNQ45UCXJ5CA"
+        STELLAR_ADMIN_SECRET: "SCZANGBA5IXFX5QOPEQV5M3Q6JCDIZQKQWVKJ7VG3PWJVS4RWCF6ZABC"
+      run: bash scripts/mainnet-preflight.sh --env-only
 
   code-quality:
     name: Code Quality

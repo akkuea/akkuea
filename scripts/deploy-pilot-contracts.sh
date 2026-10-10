@@ -13,8 +13,8 @@
 #   ally           Allied agency signer address required for evidence approval (required)
 #   fee_recipient  Platform fee recipient address (default: deployer address)
 #   usdc_token     USDC SAC contract ID for the target network (required)
-#   eurc_token     EURC asset contract contract ID offered as settlement
-#                  alternative (required, must differ from usdc_token)
+#   eurc_token     EURC asset contract ID offered as settlement alternative
+#                  (required, must differ from usdc_token)
 #   swap_router    Verified Soroswap AMM router contract ID used to convert
 #                  USDC shares at payout time (required, must differ from
 #                  both token contract IDs)

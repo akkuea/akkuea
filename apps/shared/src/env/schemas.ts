@@ -106,6 +106,12 @@ export const apiEnvSchema = z.object({
     .enum(["development", "production", "test"])
     .default("development"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).optional(),
+  JWT_SECRET: z
+    .string({ required_error: "JWT_SECRET is required" })
+    .min(
+      32,
+      "JWT_SECRET must be at least 32 characters - generate with: openssl rand -hex 32",
+    ),
   WEBHOOK_SECRET: z
     .string({ required_error: "WEBHOOK_SECRET is required" })
     .min(1, "WEBHOOK_SECRET is required"),

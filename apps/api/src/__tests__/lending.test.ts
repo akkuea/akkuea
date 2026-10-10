@@ -1,3 +1,7 @@
+// Set JWT_SECRET before any imports that transitively load middleware/auth.ts,
+// which throws at module evaluation if the variable is missing or too short.
+process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret-that-is-at-least-32-chars-long!!';
+
 import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
 import { Elysia } from 'elysia';
 import { lendingRoutes } from '../routes/lending';

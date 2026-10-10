@@ -1,0 +1,74 @@
+# Gitleaks configuration for the Akkuea monorepo.
+# Docs: https://github.com/gitleaks/gitleaks
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "akkuea-jwt-dev-fallback"
+description = "Akkuea dev JWT fallback literal: must not appear in production source"
+regex = '''super-secret-default-key-for-dev'''
+tags = ["jwt", "hardcoded-secret"]
+
+  [rules.allowlist]
+  # Only exempt the specific files where this string is expected:
+  #   - API test fixtures that explicitly set a test secret
+  #   - docs/api/authentication.md: documents the default value in a reference table
+  #   - docs planning issue files: quote the old vulnerable code for historical record
+  paths = [
+    '''apps/api/src/__tests__/''',
+    '''apps/api/src/tests/''',
+    '''docs/api/authentication\.md''',
+    '''docs/planning/''',
+    # akkuea-defi-rwa is a historical subdir snapshot, not active code
+    '''akkuea-defi-rwa/''',
+  ]
+
+[allowlist]
+description = "Narrow allowlist: each entry targets a specific known-safe value, not a broad directory"
+
+# Historical commit where the auth.ts fallback was introduced then removed
+commits = ["b3fb31a27d37031b4a57e4738da795961d15c23d"]
+
+regexes = [
+  # Soroban contract IDs (C-prefix, 56 chars): public addresses, not secrets
+  '''C[A-Z2-7]{55}''',
+
+  # Stellar public keys (G-prefix): public by definition
+  '''G[A-Z2-7]{55}''',
+
+  # Placeholder strings used verbatim in curl examples in docs/api-usage.md
+  '''YOUR_JWT_TOKEN''',
+  '''YOUR_TOKEN''',
+
+  # Synthetic CI placeholder values in workflow env blocks — matched by value,
+  # not by directory, so a real secret accidentally placed in a workflow file
+  # would still be caught.
+  '''ci-test-secret-that-is-at-least-32-characters-long''',
+  '''ci-placeholder-that-is-at-least-32-characters-long''',
+  '''ci-placeholder-ops-credential-value''',
+
+  # Synthetic Stellar secret key used as CI placeholder in the workflow and preflight test
+  # (S-prefix, 56 chars, matches this specific synthetic value only)
+  '''SCZANGBA5IXFX5QOPEQV5M3Q6JCDIZQKQWVKJ7VG3PWJVS4RWCF6ZABC''',
+
+  # Example JWT header in docs/api/authentication.md — truncated, no real payload
+  '''eyJhbGciOiJIUzI1NiIs''',
+
+  # Test token literal used in auth middleware unit tests
+  '''invalid-token''',
+]
+
+paths = [
+  # Planted scanner self-test fixture — allowlisted so the normal repo scan
+  # skips it; the dedicated fixture self-test step scans it without this config.
+  '''.github/security/secret-scan-fixture.txt''',
+  # Preflight test script exercises failure branches with a synthetic secret key
+  '''scripts/test-mainnet-preflight.sh''',
+  # Shared and API test fixtures — real test secrets are set explicitly here
+  '''apps/shared/src/env/__tests__/''',
+  '''apps/api/src/__tests__/''',
+  '''apps/api/src/tests/''',
+  # akkuea-defi-rwa is a historical snapshot directory, not active code
+  '''akkuea-defi-rwa/''',
+]

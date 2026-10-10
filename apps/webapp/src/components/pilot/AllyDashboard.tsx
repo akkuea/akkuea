@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { ErrorBoundary, SectionErrorFallback } from "@/components/ui";
 import { usePilotCycles, usePilotState } from "@/hooks/usePilotContract";
+import { AllyCosignPanel } from "./AllyCosignPanel";
 import { CycleStatusTimeline } from "./CycleStatusTimeline";
 import { EvidenceSubmissionForm } from "./EvidenceSubmissionForm";
 import { PilotStateBanner } from "./PilotStateBanner";
@@ -41,6 +42,10 @@ export function AllyDashboard() {
           isPaused={isPaused}
           onSubmitted={refetch}
         />
+      </ErrorBoundary>
+
+      <ErrorBoundary fallback={<SectionErrorFallback onReset={refetch} />}>
+        <AllyCosignPanel />
       </ErrorBoundary>
 
       <ErrorBoundary fallback={<SectionErrorFallback onReset={refetch} />}>

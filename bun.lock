@@ -124,7 +124,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@akkuea/shared": "workspace:*",
-        "@creit-tech/stellar-wallets-kit": "npm:@creit.tech/stellar-wallets-kit@2.6.0",
+        "@creit-tech/stellar-wallets-kit": "npm:@creit.tech/stellar-wallets-kit@2.7.1",
         "@creit.tech/stellar-wallets-kit": "^2.6.0",
         "@hookform/resolvers": "^3.10.0",
         "@pollar/core": "^0.8.0",
@@ -176,7 +176,7 @@
     },
   },
   "overrides": {
-    "@creit-tech/stellar-wallets-kit": "npm:@creit.tech/stellar-wallets-kit@2.6.0",
+    "@creit-tech/stellar-wallets-kit": "npm:@creit.tech/stellar-wallets-kit@2.7.1",
     "ajv": "^6.14.0",
     "axios": "^1.20.0",
     "brace-expansion": "^5.0.12",
@@ -464,9 +464,9 @@
 
     "@coinbase/wallet-sdk": ["@coinbase/wallet-sdk@4.3.2", "", { "dependencies": { "@noble/hashes": "^1.4.0", "clsx": "^1.2.1", "eventemitter3": "^5.0.1", "preact": "^10.24.2" } }, "sha512-hOLA2YONq8Z9n8f6oVP6N//FEEHOen7nq+adG/cReol6juFTHUelVN5GnA5zTIxiLFMDcrhDwwgCA6Tdb5jubw=="],
 
-    "@creit-tech/stellar-wallets-kit": ["@creit.tech/stellar-wallets-kit@2.6.0", "", { "dependencies": { "@albedo-link/intent": "0.12.0", "@creit.tech/xbull-wallet-connect": "0.4.0", "@hot-wallet/sdk": "1.0.11", "@ledgerhq/hw-app-str": "7.2.8", "@ledgerhq/hw-transport": "6.31.12", "@ledgerhq/hw-transport-webusb": "6.29.12", "@lobstrco/signer-extension-api": "2.0.0", "@preact/signals": "2.9.0", "@reown/appkit": "1.8.21", "@stellar/freighter-api": "6.0.0", "@stellar/stellar-sdk": "^17.0.0", "@trezor/connect-web": "10.0.0-beta.1", "@twind/core": "1.1.3", "@twind/preset-autoprefix": "1.0.7", "@twind/preset-tailwind": "1.1.4", "@walletconnect/sign-client": "2.23.0", "@walletconnect/types": "2.23.9", "htm": "3.1.1", "preact": "^10.29.0" } }, "sha512-jrqCBhbYUOBLZu/UmaItv/i1CISDImjucY8RhtHzvpx6WXBKb9vW+wqeyjK578tPf+CV24ZTZq+vy7qGlyooKg=="],
+    "@creit-tech/stellar-wallets-kit": ["@creit.tech/stellar-wallets-kit@2.7.1", "", { "dependencies": { "@albedo-link/intent": "0.12.0", "@creit.tech/xbull-wallet-connect": "0.4.0", "@hot-wallet/sdk": "1.0.11", "@ledgerhq/hw-app-str": "7.2.8", "@ledgerhq/hw-transport": "6.31.12", "@ledgerhq/hw-transport-webusb": "6.29.12", "@lobstrco/signer-extension-api": "2.0.0", "@metamask/connect-stellar": "0.3.0", "@preact/signals": "2.9.0", "@reown/appkit": "1.8.21", "@stellar/freighter-api": "6.0.0", "@stellar/stellar-sdk": "^17.0.0", "@trezor/connect-web": "10.0.0-beta.1", "@twind/core": "1.1.3", "@twind/preset-autoprefix": "1.0.7", "@twind/preset-tailwind": "1.1.4", "@walletconnect/sign-client": "2.23.0", "@walletconnect/types": "2.23.9", "htm": "3.1.1", "preact": "^10.29.0" } }, "sha512-6sJP95sV62mHuCjHRLRR4ITa38BDoEXz1jnX5V/samKBNK6s3wClTzDyfDTSv+qBtzBEqrpnJisMPkZkBUz78w=="],
 
-    "@creit.tech/stellar-wallets-kit": ["@creit.tech/stellar-wallets-kit@2.6.0", "", { "dependencies": { "@albedo-link/intent": "0.12.0", "@creit.tech/xbull-wallet-connect": "0.4.0", "@hot-wallet/sdk": "1.0.11", "@ledgerhq/hw-app-str": "7.2.8", "@ledgerhq/hw-transport": "6.31.12", "@ledgerhq/hw-transport-webusb": "6.29.12", "@lobstrco/signer-extension-api": "2.0.0", "@preact/signals": "2.9.0", "@reown/appkit": "1.8.21", "@stellar/freighter-api": "6.0.0", "@stellar/stellar-sdk": "^17.0.0", "@trezor/connect-web": "10.0.0-beta.1", "@twind/core": "1.1.3", "@twind/preset-autoprefix": "1.0.7", "@twind/preset-tailwind": "1.1.4", "@walletconnect/sign-client": "2.23.0", "@walletconnect/types": "2.23.9", "htm": "3.1.1", "preact": "^10.29.0" } }, "sha512-jrqCBhbYUOBLZu/UmaItv/i1CISDImjucY8RhtHzvpx6WXBKb9vW+wqeyjK578tPf+CV24ZTZq+vy7qGlyooKg=="],
+    "@creit.tech/stellar-wallets-kit": ["@creit.tech/stellar-wallets-kit@2.7.1", "", { "dependencies": { "@albedo-link/intent": "0.12.0", "@creit.tech/xbull-wallet-connect": "0.4.0", "@hot-wallet/sdk": "1.0.11", "@ledgerhq/hw-app-str": "7.2.8", "@ledgerhq/hw-transport": "6.31.12", "@ledgerhq/hw-transport-webusb": "6.29.12", "@lobstrco/signer-extension-api": "2.0.0", "@metamask/connect-stellar": "0.3.0", "@preact/signals": "2.9.0", "@reown/appkit": "1.8.21", "@stellar/freighter-api": "6.0.0", "@stellar/stellar-sdk": "^17.0.0", "@trezor/connect-web": "10.0.0-beta.1", "@twind/core": "1.1.3", "@twind/preset-autoprefix": "1.0.7", "@twind/preset-tailwind": "1.1.4", "@walletconnect/sign-client": "2.23.0", "@walletconnect/types": "2.23.9", "htm": "3.1.1", "preact": "^10.29.0" } }, "sha512-6sJP95sV62mHuCjHRLRR4ITa38BDoEXz1jnX5V/samKBNK6s3wClTzDyfDTSv+qBtzBEqrpnJisMPkZkBUz78w=="],
 
     "@creit.tech/xbull-wallet-connect": ["@creit.tech/xbull-wallet-connect@0.4.0", "", { "dependencies": { "rxjs": "^7.5.5", "tweetnacl": "^1.0.3", "tweetnacl-util": "^0.15.1" } }, "sha512-LrCUIqUz50SkZ4mv2hTqSmwews8CNRYVoZ9+VjLsK/1U8PByzXTxv1vZyenj6avRTG86ifpoeihz7D3D5YIDrQ=="],
 
@@ -864,7 +864,11 @@
 
     "@metamask/abi-utils": ["@metamask/abi-utils@1.2.0", "", { "dependencies": { "@metamask/utils": "^3.4.1", "superstruct": "^1.0.3" } }, "sha512-Hf7fnBDM9ptCPDtq/wQffWbw859CdVGMwlpWUEsTH6gLXhXONGrRXHA2piyYPRuia8YYTdJvRC/zSK1/nyLvYg=="],
 
+    "@metamask/connect-stellar": ["@metamask/connect-stellar@0.3.0", "", { "dependencies": { "@metamask/multichain-api-client": "^0.12.0" } }, "sha512-c5FloCdbfzxneQeSFrdk02/wZy6VwK6jAAPaCeDhhBMwL+A9uyFg0x1WU93chbBz+ENIHWqSwYmSkdS9rGu4Fw=="],
+
     "@metamask/eth-sig-util": ["@metamask/eth-sig-util@6.0.2", "", { "dependencies": { "@ethereumjs/util": "^8.1.0", "@metamask/abi-utils": "^1.2.0", "@metamask/utils": "^5.0.2", "ethereum-cryptography": "^2.1.2", "ethjs-util": "^0.1.6", "tweetnacl": "^1.0.3", "tweetnacl-util": "^0.15.1" } }, "sha512-D6IIefM2vS+4GUGGtezdBbkwUYQC4bCosYx/JteUuF0zfe6lyxR4cruA8+2QHoUg7F7edNH1xymYpqYq1BeOkw=="],
+
+    "@metamask/multichain-api-client": ["@metamask/multichain-api-client@0.12.0", "", {}, "sha512-5YxIcK93n9DMhjTY5nuPj4aN5Nvabnnu4njf8kzXB0DKDKvvowe4YaQNvnjw/ZrHiDwE1ScPCyLgsdmPYCQhCQ=="],
 
     "@metamask/utils": ["@metamask/utils@5.0.2", "", { "dependencies": { "@ethereumjs/tx": "^4.1.2", "@types/debug": "^4.1.7", "debug": "^4.3.4", "semver": "^7.3.8", "superstruct": "^1.0.3" } }, "sha512-yfmE79bRQtnMzarnKfX7AEJBwFTxvTyw3nBQlu/5rmGXrjAeAMltoGxO62TFurxrQAFMNa/fEjIHNvungZp0+g=="],
 
@@ -1368,7 +1372,7 @@
 
     "@types/babel__traverse": ["@types/babel__traverse@7.28.0", "", { "dependencies": { "@babel/types": "^7.28.2" } }, "sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q=="],
 
-    "@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+    "@types/bun": ["@types/bun@1.4.3", "", { "dependencies": { "bun-types": "1.4.3" } }, "sha512-N67Pqy8JXbAY/j0tNraS3V5mubGvc6rrrNDmDCtZLlFzccbUJPDb0tvgUBC5q4m8ybkP93Jcn1QB+RYQ6PvBhw=="],
 
     "@types/connect": ["@types/connect@3.4.38", "", { "dependencies": { "@types/node": "*" } }, "sha512-K6uROf1LD88uDQqJCktA4yzL1YYAK6NgfsI0v/mTgyPKWsX1CnJ0XPSDhViejru1GcRkLWb8RlzFYJRqGUbaug=="],
 
@@ -1778,7 +1782,7 @@
 
     "bun": ["bun@1.3.14", "", { "optionalDependencies": { "@oven/bun-darwin-aarch64": "1.3.14", "@oven/bun-darwin-x64": "1.3.14", "@oven/bun-darwin-x64-baseline": "1.3.14", "@oven/bun-freebsd-aarch64": "1.3.14", "@oven/bun-freebsd-x64": "1.3.14", "@oven/bun-linux-aarch64": "1.3.14", "@oven/bun-linux-aarch64-android": "1.3.14", "@oven/bun-linux-aarch64-musl": "1.3.14", "@oven/bun-linux-x64": "1.3.14", "@oven/bun-linux-x64-android": "1.3.14", "@oven/bun-linux-x64-baseline": "1.3.14", "@oven/bun-linux-x64-musl": "1.3.14", "@oven/bun-linux-x64-musl-baseline": "1.3.14", "@oven/bun-windows-aarch64": "1.3.14", "@oven/bun-windows-x64": "1.3.14", "@oven/bun-windows-x64-baseline": "1.3.14" }, "os": [ "!aix", "!sunos", "!openbsd", ], "cpu": [ "x64", "arm64", ], "bin": { "bun": "bin/bun.exe", "bunx": "bin/bunx.exe" } }, "sha512-aB6GVd42x1Y5ie1K16SF+oLGtgSkwX9hgoDdIW88pjvfTccU8F1vfpoOt34QLv0dZ1v3XimtaxPlZUG81Gx9Zg=="],
 
-    "bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+    "bun-types": ["bun-types@1.4.3", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-tinRJNGOmUN+tEAsn2y2e942n9JHRHR42iUYzDH75NmhJqVBokGSQkkfSFdNWwsANIdrK6ACH9t01M452YyTwg=="],
 
     "call-bind": ["call-bind@1.0.9", "", { "dependencies": { "call-bind-apply-helpers": "^1.0.2", "es-define-property": "^1.0.1", "get-intrinsic": "^1.3.0", "set-function-length": "^1.2.2" } }, "sha512-a/hy+pNsFUTR+Iz8TCJvXudKVLAnz/DyeSUo10I5yvFDQJBFU2s9uqQpoSrJlroHUKoKqzg+epxyP9lqFdzfBQ=="],
 

@@ -3,7 +3,7 @@ import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 // Ensure env validation does not block test runner
 process.env.SKIP_ENV_VALIDATION = "true";
 
-import { getSecurityHeaders, nextConfig } from "../../../next.config";
+const { getSecurityHeaders, nextConfig } = await import("../../../next.config");
 
 describe("Security Headers & CSP", () => {
   const originalEnv = { ...process.env };

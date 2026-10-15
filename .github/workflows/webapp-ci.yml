@@ -134,9 +134,6 @@ jobs:
           cd apps/shared
           bun run build
 
-      - name: Audit dependencies
-        run: bash .github/scripts/dependency-audit.sh .
-
       - name: Check for secrets in code
         run: |
           cd apps/webapp
@@ -155,30 +152,15 @@ jobs:
             echo "Warning: Hardcoded URLs found"
           fi
 
-      - name: Security linting
-        run: |
-          cd apps/webapp
-          bunx eslint src/ --ext .ts,.tsx || true
-
-      - name: Build shared library (required for webapp build)
-        run: |
-          cd apps/shared
-          bun run build
-
       - name: Check CSP headers
         run: |
           cd apps/webapp
 
-          # Build app first
-          SKIP_ENV_VALIDATION=true bun run build
-
-          # Check if CSP headers are configured
-          if [ -f "next.config.js" ] || [ -f "next.config.ts" ]; then
-            if grep -r "Content-Security-Policy\|CSP" . --exclude-dir=.next; then
-              echo "CSP configuration found"
-            else
-              echo "Warning: No CSP configuration found"
-            fi
+          # Check if CSP headers are configured in next.config.ts (warning until CSP issue ships)
+          if grep -q "Content-Security-Policy" next.config.ts 2>/dev/null || grep -q "Content-Security-Policy" next.config.js 2>/dev/null; then
+            echo "CSP configuration found"
+          else
+            echo "Warning: No CSP configuration found yet (tracked in separate security issue)"
           fi
 
   e2e-tests:

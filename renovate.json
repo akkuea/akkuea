@@ -1,13 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": [
-    "config:recommended",
-    ":semanticCommits",
-    ":semanticCommitTypeAll(chore)"
-  ],
+  "extends": ["config:recommended", ":semanticCommits", ":semanticCommitTypeAll(chore)"],
   "baseBranchPatterns": ["develop"],
   "labels": ["dependencies"],
-  "prConcurrentLimit": 5,
+  "prConcurrentLimit": 3,
   "prHourlyLimit": 2,
   "timezone": "America/Costa_Rica",
   "schedule": ["before 6am on monday"],
@@ -18,21 +14,16 @@
   "ignorePaths": ["apps/shared/src/contracts/**/generated/**"],
   "packageRules": [
     {
-      "description": "Group bun workspace patch updates",
-      "matchManagers": ["bun"],
-      "matchUpdateTypes": ["patch"],
-      "groupName": "bun patch"
+      "description": "Group every non-major update into one PR",
+      "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-non-major"
     },
     {
-      "description": "Group cargo patch updates",
-      "matchManagers": ["cargo"],
-      "matchUpdateTypes": ["patch"],
-      "groupName": "cargo patch"
-    },
-    {
-      "description": "Group Pollar packages",
-      "matchPackageNames": ["@pollar/**"],
-      "groupName": "pollar"
+      "description": "Group every major update into one PR",
+      "matchUpdateTypes": ["major"],
+      "groupName": "all major dependencies",
+      "groupSlug": "all-major"
     },
     {
       "description": "0.x minors can be breaking; require dashboard approval",
@@ -66,5 +57,8 @@
       "matchManagers": ["github-actions"],
       "pinDigests": true
     }
-  ]
+  ],
+  "vulnerabilityAlerts": {
+    "groupName": "security updates"
+  }
 }

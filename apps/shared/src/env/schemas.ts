@@ -92,6 +92,22 @@ export const booleanSchema = z
     return undefined;
   });
 
+const corsAllowedOriginsSchema = z
+  .string()
+  .optional()
+  .transform((value) => value?.split(',').map((origin) => origin.trim()).filter(Boolean) ?? [])
+  .pipe(
+    z.array(
+      z.string().url().refine((value) => {
+        try {
+          return new URL(value).origin === value;
+        } catch {
+          return false;
+        }
+      }, 'Must be an origin without a path'),
+    ),
+  );
+
 export const apiEnvSchema = z.object({
   DATABASE_URL: z
     .string({ required_error: "DATABASE_URL is required" })
@@ -105,6 +121,7 @@ export const apiEnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),
+  CORS_ALLOWED_ORIGINS: corsAllowedOriginsSchema,
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).optional(),
   WEBHOOK_SECRET: z
     .string({ required_error: "WEBHOOK_SECRET is required" })

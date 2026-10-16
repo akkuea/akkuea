@@ -14,6 +14,7 @@ import { ledgerRoutes } from './routes/ledger';
 import { treasuryRoutes } from './routes/treasury';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware';
+import { corsOptions } from './utils/cors';
 
 /**
  * Base Elysia app without swagger
@@ -21,7 +22,7 @@ import { requestLogger } from './middleware';
  */
 const app = new Elysia()
   .use(requestLogger)
-  .use(cors())
+  .use(cors(corsOptions()))
   .use(errorHandler)
   .use(authRoutes)
   .use(propertyRoutes)

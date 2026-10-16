@@ -20,6 +20,7 @@ const VALID_API_ENV = {
   DATABASE_SSL: "false",
   PORT: "3001",
   NODE_ENV: "development",
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000,https://land.example",
   LOG_LEVEL: "info",
   WEBHOOK_SECRET: "0123456789abcdef0123456789abcdef",
   OPERATIONS_BACKEND_CREDENTIAL: "0123456789abcdef0123456789abcdef",
@@ -70,6 +71,10 @@ describe("Environment Validation Module", () => {
       expect(parsed.DATABASE_URL).toBe(VALID_API_ENV.DATABASE_URL);
       expect(parsed.PORT).toBe(3001);
       expect(parsed.NODE_ENV).toBe("development");
+      expect(parsed.CORS_ALLOWED_ORIGINS).toEqual([
+        "http://localhost:3000",
+        "https://land.example",
+      ]);
       expect(parsed.STELLAR_ADMIN_PUBLIC_KEY).toBe(VALID_PUBLIC_KEY);
     });
 
@@ -130,6 +135,13 @@ describe("Environment Validation Module", () => {
         const error = err as EnvValidationError;
         expect(error.message).toContain("STELLAR_HORIZON_URL");
       }
+    });
+
+    it("rejects CORS values that include a path", () => {
+      expect(() => validateApiEnv({
+        ...VALID_API_ENV,
+        CORS_ALLOWED_ORIGINS: "https://app.example.com/path",
+      })).toThrow(EnvValidationError);
     });
 
     it("aggregates multiple errors into a single clear error message", () => {

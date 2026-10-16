@@ -55,16 +55,16 @@ export interface OperationalPropertyDetail extends PropertyInfo {
 
 async function adminFetch<T>(
   path: string,
-  operatorWallet: string | null,
   init?: RequestInit,
 ): Promise<T> {
   const url = `/api/admin/operations/${path.replace(/^\//, "")}`;
+  const sessionToken = getStoredSessionToken();
   const res = await fetch(url, {
     ...init,
     headers: {
       "Content-Type": "application/json",
       ...(init?.headers ?? {}),
-      ...(operatorWallet ? { "x-operator-wallet": operatorWallet } : {}),
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
     },
   });
 
@@ -83,9 +83,12 @@ async function adminFetch<T>(
   return json as T;
 }
 
+export function getStoredSessionToken(): string | null {
+  return typeof window === "undefined" ? null : localStorage.getItem("auth_token");
+}
+
 export const adminOperationsApi = {
   async listQueue(
-    operatorWallet: string | null,
     params: { queue: OperationsQueue; page?: number; limit?: number },
   ): Promise<
     PaginatedResponse<OperationalPropertyListItem> & { success: boolean }
@@ -94,22 +97,20 @@ export const adminOperationsApi = {
     search.set("queue", params.queue);
     if (params.page) search.set("page", String(params.page));
     if (params.limit) search.set("limit", String(params.limit));
-    return adminFetch(`properties?${search.toString()}`, operatorWallet);
+    return adminFetch(`properties?${search.toString()}`);
   },
 
   async getProperty(
-    operatorWallet: string | null,
     propertyId: string,
   ): Promise<{ success: boolean; data: OperationalPropertyDetail }> {
-    return adminFetch(`properties/${propertyId}`, operatorWallet);
+    return adminFetch(`properties/${propertyId}`);
   },
 
   async reviewProperty(
-    operatorWallet: string | null,
     propertyId: string,
-    body: { action: ReviewAction; note?: string; actorWallet: string },
+    body: { action: ReviewAction; note?: string },
   ): Promise<{ success: boolean; data: OperationalPropertyDetail }> {
-    return adminFetch(`properties/${propertyId}/review`, operatorWallet, {
+    return adminFetch(`properties/${propertyId}/review`, {
       method: "POST",
       body: JSON.stringify(body),
     });
@@ -130,17 +131,15 @@ export interface WhitelistRequest {
 
 export const whitelistOperationsApi = {
   async getPendingWhitelist(
-    operatorWallet: string | null,
   ): Promise<{ success: boolean; data: WhitelistRequest[] }> {
-    return adminFetch(`pilot/whitelist/pending`, operatorWallet);
+    return adminFetch(`pilot/whitelist/pending`);
   },
 
   async reviewWhitelistRequest(
-    operatorWallet: string | null,
     requestId: string,
     body: { action: "approve" | "reject"; reason?: string },
   ): Promise<{ success: boolean; txHash?: string }> {
-    return adminFetch(`pilot/whitelist/${requestId}/review`, operatorWallet, {
+    return adminFetch(`pilot/whitelist/${requestId}/review`, {
       method: "POST",
       body: JSON.stringify(body),
     });

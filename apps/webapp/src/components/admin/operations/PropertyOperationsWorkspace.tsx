@@ -103,7 +103,7 @@ export function PropertyOperationsWorkspace({
     setListLoading(true);
     setListError(null);
     try {
-      const res = await adminOperationsApi.listQueue(operatorWallet, {
+      const res = await adminOperationsApi.listQueue({
         queue,
         page,
         limit,
@@ -118,7 +118,7 @@ export function PropertyOperationsWorkspace({
     } finally {
       setListLoading(false);
     }
-  }, [operatorWallet, queue, page, limit]);
+  }, [queue, page, limit]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -132,7 +132,7 @@ export function PropertyOperationsWorkspace({
       setDetailLoading(true);
       setDetailError(null);
       try {
-        const res = await adminOperationsApi.getProperty(operatorWallet, id);
+      const res = await adminOperationsApi.getProperty(id);
         setDetail(res.data);
       } catch (e) {
         setDetailError(
@@ -143,7 +143,7 @@ export function PropertyOperationsWorkspace({
         setDetailLoading(false);
       }
     },
-    [operatorWallet],
+    [],
   );
 
   useEffect(() => {
@@ -162,12 +162,10 @@ export function PropertyOperationsWorkspace({
     setSubmitting(true);
     try {
       const res = await adminOperationsApi.reviewProperty(
-        operatorWallet,
         selectedId,
         {
           action: confirmAction,
           note: note.trim() || undefined,
-          actorWallet: operatorWallet,
         },
       );
       setDetail(res.data);

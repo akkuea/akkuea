@@ -18,6 +18,10 @@ describe('isInternalOperationsAuthorized', () => {
     expect(isInternalOperationsAuthorized({ 'x-internal-api-key': 'wrong' })).toBe(false);
   });
 
+  it('returns false when the key has a different length', () => {
+    expect(isInternalOperationsAuthorized({ 'x-internal-api-key': 'short' })).toBe(false);
+  });
+
   it('returns true when the key matches', () => {
     expect(isInternalOperationsAuthorized({ 'x-internal-api-key': 'test-internal-ops-key' })).toBe(
       true,

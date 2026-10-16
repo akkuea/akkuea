@@ -34,6 +34,7 @@ cp apps/api/.env.example apps/api/.env
 | `PORT`      | `3001`        | No (default: `3001`) | Port the Elysia/Bun API listens on                         |
 | `NODE_ENV`  | `development` | Yes                  | Runtime environment. Use `production` for live deployments |
 | `LOG_LEVEL` | `info`        | No                   | Logging verbosity (`debug`, `info`, `warn`, `error`)       |
+| `CORS_ALLOWED_ORIGINS` | `https://app.example.com,https://land.example.com` | No | Comma-separated browser origins allowed by the API. When unset, development allows `http://localhost:3000` and `http://localhost:3002`; production allows no browser origins. Values must be origins without paths. |
 
 ### Internal Security
 

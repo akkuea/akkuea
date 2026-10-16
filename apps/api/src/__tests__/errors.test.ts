@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'bun:test';
-import { NotFoundError as SharedNotFoundError } from '@akkuea/shared';
+import { NotFoundError as SharedNotFoundError, ValidationError as SharedValidationError } from '@akkuea/shared';
+import { ApiError } from '../errors/ApiError';
+import { logger } from '../services/logger';
 import {
   AppError,
   BadRequestError,
@@ -106,14 +108,28 @@ describe('Error Utilities', () => {
       expect(response.message).toContain('abc');
     });
 
-    it('should handle standard Error correctly', () => {
-      const error = new Error('Something went wrong');
+    it('hides unexpected error details and logs them server-side', () => {
+      const error = new Error('select * from users where password = secret');
+      const logSpy = spyOn(logger, 'error').mockImplementation(() => {});
       const response = handleError(error);
 
       expect(response.success).toBe(false);
       expect(response.error).toBe('INTERNAL_ERROR');
-      expect(response.message).toBe('Something went wrong');
+      expect(response.message).toBe('An unexpected error occurred');
       expect(response.statusCode).toBe(500);
+      expect(logSpy).toHaveBeenCalledWith('Unhandled API error', error);
+      logSpy.mockRestore();
+    });
+
+    it('preserves known API and validation error messages', () => {
+      expect(handleError(ApiError.badRequest('Invalid request')).message).toBe('Invalid request');
+      expect(handleError(new SharedValidationError('Name is required')).message).toBe('Name is required');
+    });
+
+    it('does not trust code-shaped unknown objects', () => {
+      const response = handleError({ code: 'DB_ERROR', message: 'database password leaked' });
+      expect(response.error).toBe('INTERNAL_ERROR');
+      expect(response.message).toBe('An unexpected error occurred');
     });
 
     it('should handle unknown errors correctly', () => {

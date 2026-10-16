@@ -1,5 +1,8 @@
 // No unused imports
 import { ApiError } from '../errors/ApiError';
+import { AppError as SharedAppError, ValidationError as SharedValidationError } from '@akkuea/shared';
+import { ZodError } from 'zod';
+import { logger } from '../services/logger';
 
 export class AppError extends Error {
   constructor(
@@ -51,45 +54,28 @@ export interface ErrorResponse {
 export function handleError(error: unknown): ErrorResponse {
   const timestamp = new Date().toISOString();
 
-  if (error instanceof ApiError) {
+  if (
+    error instanceof ApiError ||
+    error instanceof AppError ||
+    error instanceof SharedAppError ||
+    error instanceof SharedValidationError ||
+    error instanceof ZodError
+  ) {
     return {
       success: false,
-      error: error.code,
+      error: error instanceof ZodError ? 'VALIDATION_ERROR' : error.code,
       message: error.message,
-      statusCode: error.statusCode,
+      statusCode:
+        error instanceof ApiError || error instanceof AppError
+          ? error.statusCode
+          : error instanceof ZodError
+            ? 400
+            : error.status,
       timestamp,
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const err = error as any;
-  const code = err?.code ?? err?.errorCode ?? 'INTERNAL_ERROR';
-  const statusCode = Number(err?.status ?? err?.statusCode ?? 500);
-  const message = err?.message ?? 'An unexpected error occurred';
-
-  // If it's something that looks like our app errors (from local or shared)
-  if (err && typeof err === 'object' && ('code' in err || 'errorCode' in err)) {
-    if (process.env.CI) {
-      console.error('[CI-DEBUG] Handled AppError:', { code, statusCode, message });
-    }
-    return {
-      success: false,
-      error: String(code),
-      message: String(message),
-      statusCode: statusCode <= 0 ? 500 : statusCode,
-      timestamp,
-    };
-  }
-
-  if (error instanceof Error) {
-    return {
-      success: false,
-      error: 'INTERNAL_ERROR',
-      message: error.message,
-      statusCode: 500,
-      timestamp,
-    };
-  }
+  logger.error('Unhandled API error', error instanceof Error ? error : new Error(String(error)));
 
   return {
     success: false,

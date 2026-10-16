@@ -100,7 +100,7 @@ export const useWallet = () => {
 
     window.addEventListener("focus", verifyConnection);
     return () => window.removeEventListener("focus", verifyConnection);
-  }, [store];
+  }, [store]);
 
   /**
    * Legacy connect: opens the StellarWalletsKit modal.

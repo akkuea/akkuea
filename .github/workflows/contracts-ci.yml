@@ -162,21 +162,10 @@ jobs:
         with:
           tool: cargo-llvm-cov
 
-      - name: Generate coverage report (LCOV and HTML)
+      - name: Generate coverage report (LCOV and HTML) and verify threshold
         run: |
           cd apps/contracts
-          cargo llvm-cov --lib --workspace --lcov --output-path lcov.info
-          cargo llvm-cov --lib --workspace --html --no-run --from-lcov lcov.info
-
-      - name: Verify coverage threshold
-        run: |
-          cd apps/contracts
-          COVERAGE=$(cargo llvm-cov --lib --workspace --text | grep -o '[0-9]*\.[0-9]*%' | head -1 | tr -d '%')
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "Error: Coverage $COVERAGE% is below required 80%"
-            exit 1
-          fi
-          echo "Coverage: $COVERAGE%"
+          cargo llvm-cov --lib --workspace --lcov --output-path lcov.info --html --fail-under-lines 80
 
       - name: Filter llvm-cov phantom counters on derive-attribute lines
         run: |

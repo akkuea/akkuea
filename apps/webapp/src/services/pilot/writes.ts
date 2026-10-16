@@ -62,7 +62,16 @@ async function send(tx: {
   }>;
 }): Promise<PilotTxResult> {
   const sent = await tx.signAndSend();
-  return { hash: sent.sendTransactionResponse?.hash ?? "" };
+  const hash = sent.sendTransactionResponse?.hash;
+  if (!hash) {
+    // A signed write with no hash was not confirmed as submitted. Returning an
+    // empty hash would let the caller show a success state with no transaction
+    // behind it, so it is surfaced as an error instead.
+    throw new Error(
+      "The transaction was signed but the network returned no transaction hash, so it cannot be confirmed as submitted. Check the explorer before trying again.",
+    );
+  }
+  return { hash };
 }
 
 export interface SubmitEvidenceArgs {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
+import { useShallow } from "zustand/react/shallow";
 import { Networks } from "@creit.tech/stellar-wallets-kit";
 import { useAuthenticationStore } from "../store/data/slices/authentication.slice";
 import { initializeWalletKit, getWalletKit } from "../constant/walletKit";
@@ -37,7 +38,7 @@ function applyBalanceResult(result: BalanceResult, store: AuthenticationStore) {
 }
 
 export const useWallet = () => {
-  const store = useAuthenticationStore();
+  const store = useAuthenticationStore(useShallow((state) => state));
 
   useEffect(() => {
     const network =
@@ -46,12 +47,12 @@ export const useWallet = () => {
   }, [store.network]);
 
   useEffect(() => {
-    if (store.selectedWalletId && !walletRegistry.get(store.selectedWalletId)) {
-      store.setSelectedWalletId(null);
-      store.setIsConnected(false);
+    const current = useAuthenticationStore.getState();
+    if (current.selectedWalletId && !walletRegistry.get(current.selectedWalletId)) {
+      current.setSelectedWalletId(null);
+      current.setIsConnected(false);
     }
-    store.setIsConnecting(false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    current.setIsConnecting(false);
   }, []);
 
   /**
@@ -99,8 +100,7 @@ export const useWallet = () => {
 
     window.addEventListener("focus", verifyConnection);
     return () => window.removeEventListener("focus", verifyConnection);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [store.isConnected, store.selectedWalletId, store.address, store.network]);
+  }, [store];
 
   /**
    * Legacy connect: opens the StellarWalletsKit modal.

@@ -10,8 +10,30 @@ import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import Elysia from 'elysia';
 import { db } from '../db';
 import { whitelistRoutes } from '../routes/whitelist';
+import { setClientAddressResolverForTesting } from '../middleware/rateLimit';
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
+
+/**
+ * Header a test uses to declare the client address a request should be limited
+ * as. It is read by the resolver installed below, which only exists under the
+ * test runner.
+ */
+const TEST_CLIENT_HEADER = 'x-ratelimit-test-client';
+
+/**
+ * Requests driven through `app.handle()` never reach a socket, so the rate
+ * limiter (which identifies clients by socket address, or by `x-forwarded-for`
+ * only when proxies are trusted) has nothing to key on and declines to count
+ * them. The tests that assert real limiting below therefore declare the client
+ * address they want.
+ *
+ * This is not the removed `x-test-bypass-ratelimit` header: nothing here skips
+ * the limiter, the requests are counted and limited for real, against the
+ * declared address. `setClientAddressResolverForTesting` refuses to install
+ * itself unless NODE_ENV is "test", so no deployment can reach this path.
+ */
+setClientAddressResolverForTesting((context) => context.request.headers.get(TEST_CLIENT_HEADER));
 
 // Setup a minimal app for testing routes
 import { internalOperationsRoutes } from '../routes/internalOperations';
@@ -100,12 +122,12 @@ afterEach(() => {
   }
 });
 
-async function postWhitelistRequest(wallet: string, name = 'Test User', bypassRateLimit = true) {
+async function postWhitelistRequest(wallet: string, name = 'Test User', clientAddress?: string) {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  if (bypassRateLimit) {
-    headers['x-test-bypass-ratelimit'] = 'true';
+  if (clientAddress) {
+    headers[TEST_CLIENT_HEADER] = clientAddress;
   }
   return testApp.handle(
     new Request('http://localhost/pilot/whitelist/request', {
@@ -133,9 +155,9 @@ describe('Whitelist manual verification', () => {
     expect(body.data.walletAddress).toBe(wallet);
   });
 
-  test('rate limit headers are present on request (no bypass)', async () => {
+  test('rate limit headers are present on request', async () => {
     const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
-    const res = await postWhitelistRequest(wallet, 'Header Test', false);
+    const res = await postWhitelistRequest(wallet, 'Header Test', '198.51.100.10');
     expect(res.status).toBe(200);
 
     const limit = parseInt(res.headers.get('X-RateLimit-Limit') ?? '0');
@@ -143,31 +165,23 @@ describe('Whitelist manual verification', () => {
     const reset = parseInt(res.headers.get('X-RateLimit-Reset') ?? '0');
 
     expect(limit).toBe(10); // default window
-    expect(remaining).toBeGreaterThanOrEqual(0);
-    expect(remaining).toBeLessThan(limit);
+    // This client address is used by no other test, so it starts on a full budget.
+    expect(remaining).toBe(9);
     expect(reset).toBeGreaterThan(0);
   });
 
   test('rate limit blocks after exceeding max requests', async () => {
-    // Send requests rapidly without bypass until we hit 429
-    let hitRateLimit = false;
-    let rateLimitBody: any = null;
-    for (let i = 0; i < 20; i++) {
+    const statuses: number[] = [];
+
+    // The default budget is 10 requests per 60s for one client.
+    for (let i = 0; i < 11; i++) {
       const wallet = `GD${String(i + 300).padStart(54, '0')}`;
-      const res = await postWhitelistRequest(wallet, `RL User ${i}`, false);
-      if (res.status === 429) {
-        hitRateLimit = true;
-        rateLimitBody = await res.json();
-        break;
-      }
+      const res = await postWhitelistRequest(wallet, `RL User ${i}`, '198.51.100.11');
+      statuses.push(res.status);
     }
 
-    // The rate limiter should have kicked in (shared store may have consumed
-    // some quota from earlier tests, but 20 attempts is more than enough)
-    expect(hitRateLimit).toBe(true);
-    expect(rateLimitBody).not.toBeNull();
-    expect(rateLimitBody.error).toBe('RATE_LIMITED');
-    expect(rateLimitBody.success).toBe(false);
+    expect(statuses.slice(0, 10)).toEqual(Array.from({ length: 10 }, () => 200));
+    expect(statuses[10]).toBe(429);
   });
 
   test('duplicate pending request returns error', async () => {
@@ -225,16 +239,17 @@ describe('Whitelist manual verification', () => {
     expect(body.status).toBe('none');
   });
 
-  test('rateLimit bypass header works for testing', async () => {
-    // Send 12 requests with bypass header - all should succeed
-    const responses: number[] = [];
-    for (let i = 0; i < 12; i++) {
+  test('the removed x-test-bypass-ratelimit header has no effect', async () => {
+    const statuses: number[] = [];
+
+    for (let i = 0; i < 11; i++) {
       const res = await testApp.handle(
         new Request('http://localhost/pilot/whitelist/request', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-test-bypass-ratelimit': 'true',
+            [TEST_CLIENT_HEADER]: '198.51.100.12',
           },
           body: JSON.stringify({
             walletAddress: `GD${String(i + 20).padStart(54, '0')}`,
@@ -244,10 +259,21 @@ describe('Whitelist manual verification', () => {
           }),
         }),
       );
-      responses.push(res.status);
+      statuses.push(res.status);
     }
 
-    // All should be 200 (rate limit bypassed)
-    expect(responses.every((s) => s === 200)).toBe(true);
+    // Every request below carried the old bypass header, and the limiter still
+    // counted them: the 11th request is over the budget of 10 and is rejected.
+    expect(statuses.slice(0, 10)).toEqual(Array.from({ length: 10 }, () => 200));
+    expect(statuses[10]).toBe(429);
+
+    const blocked = await postWhitelistRequest(
+      `GD${String(400).padStart(54, '0')}`,
+      'Blocked User',
+      '198.51.100.12',
+    );
+    const body = (await blocked.json()) as { error?: string; success?: boolean };
+    expect(body.error).toBe('RATE_LIMITED');
+    expect(body.success).toBe(false);
   });
 });

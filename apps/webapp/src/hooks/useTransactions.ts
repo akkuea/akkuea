@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import type { Transaction, TransactionFilter } from "@akkuea/shared";
 import { transactionsApi } from "@/services/api";
 
@@ -38,6 +38,11 @@ export function useTransactions(
 
   /** Stable serialisation of the filter for the dependency array */
   const filterKey = filter ? JSON.stringify(filter) : "";
+  const stableFilter = useMemo(
+    () => (filterKey ? (JSON.parse(filterKey) as TransactionFilter) : undefined),
+    [filterKey],
+  );
+  const latestRequestId = useRef(0);
 
   /** Reset everything and re-fetch from page 1 */
   const refetch = useCallback(() => {
@@ -51,33 +56,35 @@ export function useTransactions(
   /** Fetch a page (initial or next) */
   const fetchPage = useCallback(
     async (nextCursor?: string, append = false) => {
+      const requestId = ++latestRequestId.current;
       setIsLoading(true);
       setError(null);
 
       try {
         const result = await transactionsApi.getTransactions({
-          ...filter,
+          ...stableFilter,
           limit: pageSize,
           ...(nextCursor ? { cursor: nextCursor } : {}),
         });
 
+        if (requestId !== latestRequestId.current) return;
         setTransactions((prev) =>
           append ? [...prev, ...result.items] : result.items,
         );
         setCursor(result.nextCursor);
         setHasMore(!!result.nextCursor);
       } catch (err) {
+        if (requestId !== latestRequestId.current) return;
         const message =
           err instanceof Error
             ? err.message
             : "Failed to load transactions. Please try again.";
         setError(message);
       } finally {
-        setIsLoading(false);
+        if (requestId === latestRequestId.current) setIsLoading(false);
       }
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [filterKey, pageSize],
+    [stableFilter, pageSize],
   );
 
   /** Initial fetch (and re-fetch when filter/key changes) */
@@ -85,9 +92,11 @@ export function useTransactions(
     const timer = setTimeout(() => {
       void fetchPage();
     }, 0);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchKey, filterKey]);
+    return () => {
+      clearTimeout(timer);
+      latestRequestId.current += 1;
+    };
+  }, [fetchKey, fetchPage]);
 
   /** Load more - appends next page */
   const loadMore = useCallback(() => {

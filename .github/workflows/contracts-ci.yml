@@ -18,50 +18,38 @@ env:
 jobs:
   build-and-test:
     name: Build and Test Contracts
-    runs-on: macos-latest
-    
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
         with:
           toolchain: stable
           components: rustfmt, clippy
-          
+
       - name: Install WASM target
         run: rustup target add wasm32v1-none
-        
-      - name: Install Stellar CLI
-        run: |
-          if ! command -v brew &> /dev/null; then
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> $GITHUB_ENV
-          fi
-          brew install stellar-cli
-          stellar --version
-          
-      - name: Cache cargo registry
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+
+      - name: Cache Rust dependencies and build artifacts
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-            
+          workspaces: apps/contracts -> target
+          cache-on-failure: true
+
       - name: Check Rust formatting
         run: |
           cd apps/contracts
           cargo fmt --all -- --check
-          
+
       - name: Run Clippy lints
         run: |
           cd apps/contracts
           cargo clippy --all-targets --all-features -- -D warnings
-          
+
       - name: Build contracts
         run: |
           cd apps/contracts
@@ -69,7 +57,7 @@ jobs:
           ls -la target/wasm32v1-none/release/
           for file in target/wasm32v1-none/release/*.wasm; do
             if [ -f "$file" ]; then
-              size=$(stat -f%z "$file")
+              size=$(stat -c%s "$file")
               echo "Contract size: $size bytes"
               if [ $size -gt 1048576 ]; then
                 echo "Error: Contract size exceeds 1MB limit"
@@ -77,12 +65,18 @@ jobs:
               fi
             fi
           done
-          
+
       - name: Run unit tests
         run: |
           cd apps/contracts
           cargo test --lib
-          
+
+      - name: Run invocation budget tests
+        run: |
+          cd apps/contracts
+          echo "Running Soroban invocation budget checks for defi-rwa..."
+          cargo test --package rwa-defi-contract budget_check -- --nocapture
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
@@ -93,20 +87,20 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: macos-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
-        
+
       - name: Install cargo-audit
         run: cargo install cargo-audit
 
       - name: Install cargo-deny
         run: cargo install --locked cargo-deny
-        
+
       - name: Cache cargo registry
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
         with:
@@ -114,7 +108,9 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
           key: ${{ runner.os }}-cargo-audit-${{ hashFiles('**/Cargo.lock') }}
-          
+          restore-keys: |
+            ${{ runner.os }}-cargo-audit-
+
       - name: Run cargo audit (high/critical only)
         run: |
           cd apps/contracts
@@ -131,7 +127,7 @@ jobs:
         run: |
           cd apps/contracts
           cargo deny check
-          
+
       - name: Check for sensitive data
         run: |
           cd apps/contracts
@@ -143,34 +139,35 @@ jobs:
 
   code-coverage:
     name: Code Coverage
-    runs-on: macos-latest
-    
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
         with:
           components: llvm-tools-preview
-          
-      - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
-        
-      - name: Cache cargo registry
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+
+      - name: Cache Rust dependencies and build artifacts
+        uses: Swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
-          
-      - name: Generate coverage report
+          workspaces: apps/contracts -> target
+          cache-on-failure: true
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@eaae51b5999cf0fa66acb8f29a5a3c65f108f87b # v2
+        with:
+          tool: cargo-llvm-cov
+
+      - name: Generate coverage report (LCOV and HTML)
         run: |
           cd apps/contracts
           cargo llvm-cov --lib --workspace --lcov --output-path lcov.info
           cargo llvm-cov --lib --workspace --html
-          
+
       - name: Verify coverage threshold
         run: |
           cd apps/contracts
@@ -180,56 +177,22 @@ jobs:
             exit 1
           fi
           echo "Coverage: $COVERAGE%"
-          
+
       - name: Filter llvm-cov phantom counters on derive-attribute lines
-        # llvm-cov attributes a never-incremented counter to Soroban
-        # #[contracttype]/#[contracterror]/#[contractclient] attribute lines
-        # (the derive expansion is inlined), so Codecov reports false missing
-        # lines. Strip them before upload; genuine gaps are untouched. See
-        # scripts/filter-coverage-derive-lines.py for the full rationale.
         run: |
           cd apps/contracts
           python3 ../../scripts/filter-coverage-derive-lines.py lcov.info lcov.info
-          
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5
         with:
           files: ./apps/contracts/lcov.info
           flags: contracts
           name: smart-contracts-coverage
-          
+
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: coverage-report
           path: apps/contracts/target/llvm-cov/html/
           retention-days: 7
-
-  invocation-budget:
-    name: Soroban Invocation Budget Check
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
-        with:
-          toolchain: stable
-
-      - name: Cache cargo registry
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-budget-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-budget-
-
-      - name: Run invocation budget tests
-        run: |
-          cd apps/contracts
-          echo "Running Soroban invocation budget checks for defi-rwa..."
-          cargo test --package rwa-defi-contract budget_check -- --nocapture

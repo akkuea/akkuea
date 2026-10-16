@@ -197,6 +197,8 @@ jobs:
           files: ./apps/contracts/lcov.info
           flags: contracts
           name: smart-contracts-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
           
       - name: Upload coverage artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

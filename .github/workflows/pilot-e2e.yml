@@ -23,7 +23,6 @@ permissions:
   contents: read
 
 env:
-  BUN_VERSION: "1.x"
 
 jobs:
   pilot-e2e:
@@ -53,7 +52,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          bun-version-file: package.json
 
       - name: Install dependencies
         run: bun install --frozen-lockfile

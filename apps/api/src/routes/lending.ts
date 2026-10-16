@@ -207,7 +207,7 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
         summary: 'Liquidate position',
         description:
           'Execute liquidation on an undercollateralized position (requires liquidator role)',
-        tags: ['Lending'],
+        tags: ['Lendin'],
       },
     },
   );

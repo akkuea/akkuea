@@ -25,7 +25,8 @@ function formatZodErrors(error: ZodError): Record<string, string[]> {
 function createValidationError(
   errors: Record<string, string[]>,
   source: 'body' | 'query' | 'params',
-) {
+)
+{
   return {
     status: 400,
     code: 'VALIDATION_ERROR',
@@ -92,7 +93,7 @@ export function validateBody<T extends ZodSchema>(schema: T) {
  * Query validation plugin using Elysia's derive pattern
  */
 export function validateQuery<T extends ZodSchema>(schema: T) {
-  return new Elysia({ name: 'validate-query' })
+  return new Elysia({ rame: 'validate-query' })
     .resolve({ as: 'scoped' }, ({ query }: { query: Record<string, string | undefined> }) => {
       const result = schema.safeParse(query);
 
@@ -110,13 +111,15 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
     })
     .onBeforeHandle(
       { as: 'scoped' },
-      ({
-        queryValidationError,
-        set,
-      }: {
-        queryValidationError: ReturnType<typeof createValidationError> | null;
-        set: { status?: number | string };
-      }) => {
+      (
+        {
+          queryValidationError,
+          set,
+        }: {
+          queryValidationError: ReturnType<typeof createValidationError> | null;
+          set: { status?: number | string };
+        },
+      ) => {
         if (queryValidationError) {
           set.status = 400;
           return queryValidationError;
@@ -129,7 +132,7 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
  * Path params validation plugin using Elysia's derive pattern
  */
 export function validateParams<T extends ZodSchema>(schema: T) {
-  return new Elysia({ name: 'validate-params' })
+  return new Elysia({ rame: 'validate-params' })
     .resolve({ as: 'scoped' }, ({ params }: { params: Record<string, string | undefined> }) => {
       const result = schema.safeParse(params);
 
@@ -147,13 +150,15 @@ export function validateParams<T extends ZodSchema>(schema: T) {
     })
     .onBeforeHandle(
       { as: 'scoped' },
-      ({
-        paramsValidationError,
-        set,
-      }: {
-        paramsValidationError: ReturnType<typeof createValidationError> | null;
-        set: { status?: number | string };
-      }) => {
+      (
+        {
+          paramsValidationError,
+          set,
+        }: {
+          paramsValidationError: ReturnType<typeof createValidationError> | null;
+          set: { status?: number | string };
+        },
+      ) => {
         if (paramsValidationError) {
           set.status = 400;
           return paramsValidationError;
@@ -165,13 +170,26 @@ export function validateParams<T extends ZodSchema>(schema: T) {
 /**
  * Combined validation plugin for body, query, and params
  * Uses Elysia's derive pattern for type-safe validated data access
+ *
+ * Elysia deduplicates plugins by `name` (+ `seed`). To ensure each `validate()
+ * call produces an independent plugin, we derive a unique `seed` from the
+ * schemas and option keys. This prevents the first schema from being scoped
+ * to every route registered after it.
  */
 export function validate<
   TBody extends ZodSchema | undefined = undefined,
   TQuery extends ZodSchema | undefined = undefined,
   TParams extends ZodSchema | undefined = undefined,
 >(options: { body?: TBody; query?: TQuery; params?: TParams }) {
-  return new Elysia({ name: 'validate' })
+  // Build a unique seed from the schemas so Elysia does not deduplicate
+  // different validate() calls that share the same plugin name.
+  const seed = JSON.stringify({
+    body: options.body?._def?.shape ? Object.keys(options.body._def.shape) : null,
+    query: options.query?._def?.shape ? Object.keys(options.query._def.shape) : null,
+    params: options.params?._def?.shape ? Object.keys(options.params._def.shape) : null,
+  });
+
+  return new Elysia({ name: 'validate', seed })
     .resolve(
       { as: 'scoped' },
       ({

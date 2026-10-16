@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'bun:test';
 import app from '../src/app';
+import { userRoutes } from '../src/routes/users';
 
 describe('Validation Middleware', () => {
   it('should reject invalid body on POST /properties', async () => {
@@ -89,5 +90,74 @@ describe('Validation Middleware', () => {
       const body = (await response.json()) as { code?: string };
       expect(body.code).not.toBe('VALIDATION_ERROR');
     }
+  });
+
+  it('should not apply a sibling body schema to GET /users/:id', async () => {
+    const { Elysia } = await import('elysia');
+    const isolated = new Elysia().use(userRoutes);
+    const response = await isolated.handle(
+      new Request('http://localhost/users/123e4567-e89b-12d3-a456-426614174000'),
+    );
+
+    // Must not be a body validation error from createUserSchema
+    if (response.status === 400) {
+      const body = (await response.json()) as { code?: string; details?: { source?: string } };
+      expect(body.code).not.toBe('VALIDATION_ERROR');
+      expect(body.details?.source).not.toBe('body');
+    }
+  });
+
+  it('should reject invalid body on POST /lending/pools/:id/deposit', async () => {
+    const { lendingRoutes } = await import('../src/routes/lending');
+    const { Elysia } = await import('elysia');
+    const isolated = new Elysia().use(lendingRoutes);
+    const response = await isolated.handle(
+      new Request('http://localhost/lending/pools/123e4567-e89b-12d3-a456-426614174000/deposit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { code: string; details: { source: string } };
+    expect(body.code).toBe('VALIDATION_ERROR');
+    expect(body.details.source).toBe('body');
+  });
+
+  it('should reject invalid body on POST /notifications/read-all', async () => {
+    const { notificationRoutes } = await import('../src/routes/notifications');
+    const { Elysia } = await import('elysia');
+    const isolated = new Elysia().use(notificationRoutes);
+    const response = await isolated.handle(
+      new Request('http://localhost/notifications/read-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: 'not-an-array' }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { code: string; details: { source: string } };
+    expect(body.code).toBe('VALIDATION_ERROR');
+    expect(body.details.source).toBe('body');
+  });
+
+  it('should reject invalid body on POST /auth/session', async () => {
+    const { authRoutes } = await import('../src/routes/auth');
+    const { Elysia } = await import('elysia');
+    const isolated = new Elysia().use(authRoutes);
+    const response = await isolated.handle(
+      new Request('http://localhost/auth/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    const body = (await response.json()) as { code: string; details: { source: string } };
+    expect(body.code).toBe('VALIDATION_ERROR');
+    expect(body.details.source).toBe('body');
   });
 });

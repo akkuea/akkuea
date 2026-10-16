@@ -22,6 +22,7 @@ import { NotificationService } from './services/NotificationService';
 import { createNotificationWorkerFromEnv } from './workers/notificationWorker';
 import { createKycExpiryJobFromEnv } from './workers/kycExpiryJob';
 import { createPilotEscalationJobFromEnv } from './workers/pilotEscalationJob';
+import { createIdempotencyCleanupJobFromEnv } from './workers/idempotencyCleanupJob';
 import { validateApiEnv } from '@akkuea/shared';
 
 // Validate environment variables on startup (fails fast with actionable guide if missing)
@@ -135,6 +136,10 @@ kycExpiryJob?.start();
 const pilotEscalationJob = createPilotEscalationJobFromEnv();
 pilotEscalationJob?.start();
 
+// Start the idempotency key cleanup job (opt-out via IDEMPOTENCY_CLEANUP_JOB_ENABLED=false)
+const idempotencyCleanupJob = createIdempotencyCleanupJobFromEnv();
+idempotencyCleanupJob?.start();
+
 const shutdown = async (signal: string) => {
   console.log(`\n${signal} received, closing connections...`);
   await Promise.all([
@@ -143,6 +148,7 @@ const shutdown = async (signal: string) => {
     notificationWorker?.stop() ?? Promise.resolve(),
     kycExpiryJob?.stop() ?? Promise.resolve(),
     pilotEscalationJob?.stop() ?? Promise.resolve(),
+    idempotencyCleanupJob?.stop() ?? Promise.resolve(),
   ]);
 
   console.log('Connections closed. Exiting...');

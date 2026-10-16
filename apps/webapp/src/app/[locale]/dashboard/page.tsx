@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import {
   Wallet,
@@ -34,13 +35,13 @@ import { WalletProviderModal } from "@/components/auth/WalletProviderModal";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { useHealthFactor } from "@/hooks/useHealthFactor";
 import { useLiveUpdates } from "@/hooks/useLiveUpdates";
+import { AllocationChart } from "@/components/portfolio/AllocationChart";
+import { PropertyReportCard } from "@/components/portfolio/PropertyReportCard";
 import {
-  AllocationChart,
-  PortfolioChart,
-  PropertyReportCard,
+  PortfolioChartSkeleton,
   StatsSkeleton,
   PropertiesListSkeleton,
-} from "@/components/portfolio";
+} from "@/components/portfolio/PortfolioSkeleton";
 import {
   formatCurrency,
   cn,
@@ -53,6 +54,17 @@ import {
   staggerItem,
   fadeInUp,
 } from "@/lib/animations";
+
+const PortfolioChart = dynamic(
+  () =>
+    import("@/components/portfolio/PortfolioChart").then(
+      (module) => module.PortfolioChart,
+    ),
+  {
+    ssr: false,
+    loading: () => <PortfolioChartSkeleton />,
+  },
+);
 
 export default function DashboardPage() {
   const { address, balance, isConnected, network } = useWallet();

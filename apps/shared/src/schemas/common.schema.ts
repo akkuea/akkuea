@@ -14,10 +14,9 @@ export const stellarAddressSchema = z
 export const positiveAmountSchema = z
   .string()
   .regex(/^\d+(\.\d+)?$/, "Must be a valid positive number")
-  .refine(
-    (val: string) => parseFloat(val) > 0,
-    "Amount must be greater than 0",
-  );
+  .refine((val: string) => parseFloat(val) > 0, {
+    error: "Amount must be greater than 0",
+  });
 
 /**
  * Schema for non-negative decimal amounts (allows zero)
@@ -25,25 +24,28 @@ export const positiveAmountSchema = z
 export const nonNegativeAmountSchema = z
   .string()
   .regex(/^\d+(\.\d+)?$/, "Must be a valid number")
-  .refine((val: string) => parseFloat(val) >= 0, "Amount cannot be negative");
+  .refine((val: string) => parseFloat(val) >= 0, {
+    error: "Amount cannot be negative",
+  });
 
 /**
  * Schema for percentage values (0-100)
  */
 export const percentageSchema = z
   .number()
-  .min(0, "Percentage cannot be negative")
-  .max(100, "Percentage cannot exceed 100");
+  .min(0, { error: "Percentage cannot be negative" })
+  .max(100, { error: "Percentage cannot exceed 100" });
 
 /**
- * Schema for basis points (0-10000)
+ * Schema for basis noints (0-10000)
  */
 export const basisPointsSchema = z.number().int().min(0).max(10000);
 
 /**
  * Schema for ISO date strings
  */
-export const isoDateSchema = z.string().datetime();
+export const isoDateSchema = z.iso.datetime();
+
 
 /**
  * Schema for Unix timestamps

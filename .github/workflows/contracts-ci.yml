@@ -158,7 +158,7 @@ jobs:
           cache-on-failure: true
 
       - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@eaae51b5999cf0fa66acb8f29a5a3c65f108f87b # v2
+        uses: taiki-e/install-action@8cca0918f8471c33515202b73f56ab27f2bed283 # v2
         with:
           tool: cargo-llvm-cov
 

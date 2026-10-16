@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Deploys and initializes the four Akkuea Land game contracts
+# Deploys the four Akkuea Land game contracts with atomic constructors
 # (game-property-nft, game-land-token, game-engine, game-marketplace) to a
 # Stellar network.
 #
@@ -58,60 +58,73 @@ for wasm in game_property_nft game_land_token game_engine game_marketplace; do
     fi
 done
 
-# ── 3. Deploy ─────────────────────────────────────────────────────────────────
+# ── 3. Derive addresses and deploy atomically ──────────────────────────────────
+# GameEngine, NFT and LAND token reference one another. Stable salts let this
+# script derive every contract address before deployment, then each deployment
+# can run its constructor with the other contracts' final addresses.
 
-deploy() {
-    stellar contract deploy \
-        --wasm "$WASM_DIR/$1.wasm" \
+salt_for() {
+    printf '%s' "$IDENTITY:akkuea-game:$1:v1" | shasum -a 256 | awk '{print $1}'
+}
+
+contract_id_for() {
+    local wasm="$1"
+    local salt="$2"
+    stellar contract id wasm \
+        --wasm "$WASM_DIR/$wasm.wasm" \
+        --salt "$salt" \
         --source-account "$IDENTITY" \
         --network "$NETWORK"
 }
 
-echo "Deploying game_property_nft..."
-NFT_ID="$(deploy game_property_nft)"
-echo "  -> $NFT_ID"
+deploy() {
+    local wasm="$1"
+    local salt="$2"
+    shift 2
+    stellar contract deploy \
+        --wasm "$WASM_DIR/$wasm.wasm" \
+        --source-account "$IDENTITY" \
+        --network "$NETWORK" \
+        --salt "$salt" \
+        -- "$@"
+}
 
-echo "Deploying game_land_token..."
-TOKEN_ID="$(deploy game_land_token)"
-echo "  -> $TOKEN_ID"
+NFT_SALT="$(salt_for game-property-nft)"
+TOKEN_SALT="$(salt_for game-land-token)"
+ENGINE_SALT="$(salt_for game-engine)"
+MARKETPLACE_SALT="$(salt_for game-marketplace)"
 
-echo "Deploying game_engine..."
-ENGINE_ID="$(deploy game_engine)"
-echo "  -> $ENGINE_ID"
-
-echo "Deploying game_marketplace..."
-MARKETPLACE_ID="$(deploy game_marketplace)"
-echo "  -> $MARKETPLACE_ID"
-
-# ── 4. Initialize ─────────────────────────────────────────────────────────────
-# Arg names match the Rust signatures exactly. The NFT and token contracts
-# only need the engine's contract ID, which exists as soon as it is deployed
-# (deploy != initialize), so ordering here is safe.
+NFT_ID="$(contract_id_for game_property_nft "$NFT_SALT")"
+TOKEN_ID="$(contract_id_for game_land_token "$TOKEN_SALT")"
+ENGINE_ID="$(contract_id_for game_engine "$ENGINE_SALT")"
+MARKETPLACE_ID="$(contract_id_for game_marketplace "$MARKETPLACE_SALT")"
 
 IS_TESTNET=true
 if [ "$NETWORK" != "testnet" ]; then IS_TESTNET=false; fi
 
-invoke() {
-    local id="$1"
-    shift
-    stellar contract invoke \
-        --id "$id" \
-        --source-account "$IDENTITY" \
-        --network "$NETWORK" \
-        -- "$@"
-}
+echo "Deploying game_property_nft with its constructor..."
+NFT_DEPLOYED_ID="$(deploy game_property_nft "$NFT_SALT" \
+    --treasury "$TREASURY" --game_engine "$ENGINE_ID")"
+[ "$NFT_DEPLOYED_ID" = "$NFT_ID" ] || { echo "Unexpected game_property_nft ID." >&2; exit 1; }
+echo "  -> $NFT_ID"
 
-echo "Initializing game_property_nft (treasury owns all 400 tiles)..."
-invoke "$NFT_ID" initialize --treasury "$TREASURY" --game_engine "$ENGINE_ID"
+echo "Deploying game_land_token with its constructor..."
+TOKEN_DEPLOYED_ID="$(deploy game_land_token "$TOKEN_SALT" \
+    --treasury "$TREASURY" --engine "$ENGINE_ID" --is_testnet "$IS_TESTNET")"
+[ "$TOKEN_DEPLOYED_ID" = "$TOKEN_ID" ] || { echo "Unexpected game_land_token ID." >&2; exit 1; }
+echo "  -> $TOKEN_ID"
 
-echo "Initializing game_land_token..."
-invoke "$TOKEN_ID" initialize --treasury "$TREASURY" --engine "$ENGINE_ID" --is_testnet "$IS_TESTNET"
+echo "Deploying game_engine with its constructor..."
+ENGINE_DEPLOYED_ID="$(deploy game_engine "$ENGINE_SALT" \
+    --nft_contract "$NFT_ID" --token_contract "$TOKEN_ID" --treasury "$TREASURY")"
+[ "$ENGINE_DEPLOYED_ID" = "$ENGINE_ID" ] || { echo "Unexpected game_engine ID." >&2; exit 1; }
+echo "  -> $ENGINE_ID"
 
-echo "Initializing game_engine..."
-invoke "$ENGINE_ID" initialize --nft_contract "$NFT_ID" --token_contract "$TOKEN_ID" --treasury "$TREASURY"
-
-echo "Initializing game_marketplace..."
-invoke "$MARKETPLACE_ID" initialize --nft_contract "$NFT_ID" --land_token "$TOKEN_ID"
+echo "Deploying game_marketplace with its constructor..."
+MARKETPLACE_DEPLOYED_ID="$(deploy game_marketplace "$MARKETPLACE_SALT" \
+    --nft_contract "$NFT_ID" --land_token "$TOKEN_ID")"
+[ "$MARKETPLACE_DEPLOYED_ID" = "$MARKETPLACE_ID" ] || { echo "Unexpected game_marketplace ID." >&2; exit 1; }
+echo "  -> $MARKETPLACE_ID"
 
 # ── 5. Summary ────────────────────────────────────────────────────────────────
 

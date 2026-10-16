@@ -38,7 +38,7 @@ pub struct PilotIncomeToken;
 #[contractimpl]
 impl PilotIncomeToken {
     /// Initialize token metadata and the whitelist contract used for mint gating.
-    pub fn initialize(
+    pub fn __constructor(
         env: Env,
         admin: Address,
         whitelist: Address,
@@ -46,10 +46,6 @@ impl PilotIncomeToken {
         symbol: String,
         decimals: u32,
     ) {
-        if Storage::is_initialized(&env) {
-            panic_with_error!(&env, IncomeTokenError::AlreadyInitialized);
-        }
-
         Storage::set_admin(&env, &admin);
         Storage::set_whitelist(&env, &whitelist);
         env.storage().instance().set(&DataKey::Name, &name);
@@ -60,7 +56,6 @@ impl PilotIncomeToken {
             .instance()
             .set(&DataKey::Holders, &Vec::<Address>::new(&env));
         env.storage().instance().set(&DataKey::Minted, &false);
-
         events::emit_initialized(&env, admin, whitelist);
     }
 
@@ -391,19 +386,19 @@ mod tests {
         let holder_two = Address::generate(&env);
         let unapproved = Address::generate(&env);
 
-        let whitelist_id = env.register(PilotWhitelist, ());
+        let whitelist_id = env.register(PilotWhitelist, (&whitelist_admin,));
         let whitelist = PilotWhitelistClient::new(&env, &whitelist_id);
-        whitelist.initialize(&whitelist_admin);
-
-        let token_id = env.register(PilotIncomeToken, ());
-        let token = PilotIncomeTokenClient::new(&env, &token_id);
-        token.initialize(
-            &admin,
-            &whitelist_id,
-            &String::from_str(&env, "Akkuea Pilot Income"),
-            &String::from_str(&env, "AKIN"),
-            &7,
+        let token_id = env.register(
+            PilotIncomeToken,
+            (
+                &admin,
+                &whitelist_id,
+                String::from_str(&env, "Akkuea Pilot Income"),
+                String::from_str(&env, "AKIN"),
+                7u32,
+            ),
         );
+        let token = PilotIncomeTokenClient::new(&env, &token_id);
 
         Setup {
             env,
@@ -423,7 +418,7 @@ mod tests {
     }
 
     #[test]
-    fn initialize_sets_metadata() {
+    fn constructor_sets_metadata() {
         let s = setup();
 
         assert_eq!(

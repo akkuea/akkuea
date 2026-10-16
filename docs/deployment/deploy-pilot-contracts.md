@@ -84,7 +84,7 @@ Only an `Approved` cycle can be distributed. The co-signed `record_evidence`
 path lands directly on `Approved`, because both required signers authorized the
 same invocation.
 
-The deployment order is mandatory:
+The deployment order is mandatory because each constructor receives the IDs of its dependencies. Each contract is configured atomically during deployment; no separate public initializer transaction is used:
 
 ```text
 pilot-whitelist
@@ -122,7 +122,7 @@ You also need:
   alternative.
 - Verified Soroswap AMM router contract ID used to convert USDC shares at
   payout time. The USDC, EURC, and router contract IDs must be pairwise
-  distinct; `initialize` rejects any two that match with
+  distinct; the payout constructor rejects any two that match with
   `RouterNotConfigured`.
 
 Never commit secret keys or `.env` files.
@@ -146,7 +146,7 @@ ls -lh target/wasm32v1-none/release/pilot_payout_split.wasm
 
 ---
 
-## Step 2 - Deploy And Initialize
+## Step 2 - Deploy with Constructors
 
 Use the helper script from the repository root:
 
@@ -389,7 +389,7 @@ Also add the deployment table to `docs/contracts/deployment.md` with:
 | `RecipientNotApproved`                                          | A token holder is no longer whitelisted                                                                  | Resolve the whitelist status before payout                                         |
 | `InsufficientPayoutBalance`                                     | Payout contract lacks USDC                                                                               | Fund the payout contract with at least `total_income`                              |
 | `ContractPaused`                                                | Admin paused the payout contract                                                                         | Investigate and unpause only after the incident is resolved                        |
-| `SignerCollision`                                               | Operator and ally are the same address                                                                   | Re-initialize a fresh deployment with distinct signer addresses                    |
+| `SignerCollision`                                               | Operator and ally are the same address                                                                   | Deploy a fresh instance with distinct signer addresses                    |
 | `RouterNotConfigured`                                           | USDC, EURC, and swap router contract IDs are not pairwise distinct                                       | Pass three distinct contract IDs for `usdc_token`, `eurc_token`, and `swap_router` |
 | `Authorization failed`                                          | Operator and ally did not both sign                                                                      | Rebuild the transaction with both required Soroban auth entries                    |
 | `EvidenceNotApproved`                                           | Cycle is not in the `Approved` status                                                                    | Review the cycle first, or resolve the rejection or dispute behind it              |

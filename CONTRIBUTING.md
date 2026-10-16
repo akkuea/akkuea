@@ -404,6 +404,7 @@ Akkuea runs five GitHub Actions workflows on every pull request. **All five must
 | `webapp-ci.yml`    | Webapp lint, type-check, unit tests, build, Playwright e2e tests (isolated job)                            |
 | `shared-ci.yml`    | Shared library lint, type-check, build                                                                    |
 | `contracts-ci.yml` | Rust format (`rustfmt`), linting (`cargo clippy`), unit tests, WASM build                                 |
+| `land-ci.yml`      | Akkuea Land lint, type-check, prettier check, unit tests, Next.js build                                   |
 
 ### Before opening your pull request
 
@@ -526,6 +527,7 @@ Use this checklist in your pull request description. Every item must be checked 
 - [ ] `webapp-ci.yml` passes
 - [ ] `shared-ci.yml` passes
 - [ ] `contracts-ci.yml` passes (if contracts were modified)
+- [ ] `land-ci.yml` passes (if `apps/akkuea-land` was modified)
 
 #### Security
 

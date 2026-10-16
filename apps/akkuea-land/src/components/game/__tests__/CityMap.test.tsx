@@ -4,12 +4,18 @@ import { JSDOM } from "jsdom";
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "http://localhost",
 });
+// @ts-expect-error: jsdom types not fully compatible with bun runtime
 (dom.window as any).fetch = fetch;
 globalThis.window = dom.window as any;
 globalThis.document = dom.window.document as any;
 globalThis.navigator = dom.window.navigator as any;
 globalThis.HTMLElement = dom.window.HTMLElement as any;
 globalThis.MutationObserver = dom.window.MutationObserver as any;
+globalThis.Element = dom.window.Element as any;
+globalThis.Node = dom.window.Node as any;
+globalThis.Event = dom.window.Event as any;
+globalThis.KeyboardEvent = dom.window.KeyboardEvent as any;
+globalThis.getComputedStyle = dom.window.getComputedStyle.bind(dom.window) as any;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
@@ -19,9 +25,7 @@ import axe from "axe-core";
 import { renderWithIntl } from "@/test/renderWithIntl";
 
 mock.module("framer-motion", () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 mock.module("../PropertyPanel", () => ({
@@ -91,7 +95,8 @@ describe("CityMap keyboard accessibility", () => {
   });
 
   it("renders in Spanish with translated headings and legend", () => {
-    const view = renderWithIntl(<CityMap />, { locale: "es" });
+    const view = renderWithI
+ntl(<CityMap />, { locale: "es" });
 
     expect(view.getByText("Mapa de la Ciudad")).not.toBeNull();
     expect(
@@ -105,7 +110,8 @@ describe("CityMap keyboard accessibility", () => {
   });
 
   it("has no axe violations", async () => {
-    const view = renderWithIntl(<CityMap />);
+    const view = renderWithI
+ntl(<CityMap />);
 
     const results = await axe.run(view.container, {
       runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },

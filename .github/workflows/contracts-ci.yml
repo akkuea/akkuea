@@ -165,8 +165,7 @@ jobs:
       - name: Generate coverage report (LCOV and HTML)
         run: |
           cd apps/contracts
-          cargo llvm-cov --lib --workspace --lcov --output-path lcov.info
-          cargo llvm-cov --lib --workspace --html
+          cargo llvm-cov --lib --workspace --lcov --output-path lcov.info --html
 
       - name: Verify coverage threshold
         run: |

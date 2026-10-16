@@ -1,4 +1,5 @@
 use super::access::{AdminControl, ContractError, PauseControl};
+use super::access::roles::{Role, RoleKey, RoleStorage};
 use super::events::{LendingEvents, PropertyEvents};
 use super::lending::PriceOracle;
 use super::storage;
@@ -946,9 +947,9 @@ fn test_admin_initialization() {
     let (contract_id, env) = setup_internal();
     let admin = Address::generate(&env);
     env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
+        // The constructor already stored the admin via AdminControl. Verify the
+        // single admin key resolves to the same address the contract was
+        // registered with.
         let expected_admin = AdminControl::get_admin(&env).unwrap();
         assert_eq!(admin, expected_admin);
     });
@@ -973,10 +974,6 @@ fn test_admin_transfer() {
     let admin = Address::generate(&env);
     let new_admin = Address::generate(&env);
     env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
-
         // Start transfer
         AdminControl::transfer_admin_start(&env, &admin, &new_admin).unwrap();
         assert_eq!(
@@ -1013,10 +1010,6 @@ fn test_transfer_admin_accept_wrong_caller_fails() {
     let new_admin = Address::generate(&env);
     let stranger = Address::generate(&env);
     env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
-
         AdminControl::transfer_admin_start(&env, &admin, &new_admin).unwrap();
         assert_eq!(
             AdminControl::transfer_admin_accept(&env, &stranger),
@@ -1030,9 +1023,6 @@ fn test_pause_unpause() {
     let (contract_id, env) = setup_internal();
     let admin = Address::generate(&env);
     env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
         assert!(!PauseControl::is_paused(&env));
         PauseControl::pause(&env, &admin).unwrap();
         assert!(PauseControl::is_paused(&env));
@@ -1823,13 +1813,8 @@ fn setup_purchase_test() -> (Address, Env, Address, Address, Address, u64) {
 
     let property_id = 1u64;
 
-    // Set up admin for access control (constructor already set LendingKey::Admin,
-    // which collides with RoleKey::Admin, so we set RoleKey::Admin directly)
-    env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
-    });
+    // Constructor already stored the admin via AdminControl; no aliasing needed.
+    let _ = &admin;
 
     // Create property metadata
     let property = storage::property::PropertyMetadata::new(
@@ -2106,13 +2091,8 @@ fn setup_token_test<'a>() -> (Env, PropertyTokenContractClient<'a>, Address) {
     let contract_id = env.register(PropertyTokenContract, (&admin,));
     let client = PropertyTokenContractClient::new(&env, &contract_id);
 
-    // Set up admin for access control (constructor already set LendingKey::Admin,
-    // which collides with RoleKey::Admin, so we set RoleKey::Admin directly)
-    env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
-    });
+    // Constructor already stored the admin via AdminControl; no aliasing needed.
+    let _ = &admin;
 
     (env, client, admin)
 }

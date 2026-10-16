@@ -10,10 +10,10 @@ This document is the recorded SLA that `docs/strategy/product-brief.md` requires
 
 ## Target
 
-| Surface            | Clock starts                         | Clock stops                                      | Provisional target      |
-| ------------------ | ------------------------------------ | ------------------------------------------------ | ----------------------- |
-| Whitelist review   | `createdAt` on the request row       | `reviewedAt` (approve or reject)                 | **48 hours**            |
-| Evidence review    | Cycle due date (`buildExpectedCycles`) | On-chain `recorded_at` from `record_evidence` | **48 hours**            |
+| Surface          | Clock starts                           | Clock stops                                   | Provisional target |
+| ---------------- | -------------------------------------- | --------------------------------------------- | ------------------ |
+| Whitelist review | `createdAt` on the request row         | `reviewedAt` (approve or reject)              | **48 hours**       |
+| Evidence review  | Cycle due date (`buildExpectedCycles`) | On-chain `recorded_at` from `record_evidence` | **48 hours**       |
 
 A review that completes in exactly 48 hours meets the SLA. Completing later, or remaining pending after 48 hours, is a breach.
 
@@ -47,11 +47,11 @@ Same authorization as other operator-only surfaces: header `x-internal-api-key` 
 
 Query parameters (all optional):
 
-| Param        | Meaning                                              | Default                         |
-| ------------ | ---------------------------------------------------- | ------------------------------- |
-| `from`       | Window start (ISO 8601 with offset)                  | `to` minus `windowDays`         |
-| `to`         | Window end (ISO 8601 with offset)                    | now                             |
-| `windowDays` | Lookback in days when `from` is omitted              | 30 (`PILOT_REVIEW_METRICS_WINDOW_DAYS`) |
+| Param        | Meaning                                 | Default                                 |
+| ------------ | --------------------------------------- | --------------------------------------- |
+| `from`       | Window start (ISO 8601 with offset)     | `to` minus `windowDays`                 |
+| `to`         | Window end (ISO 8601 with offset)       | now                                     |
+| `windowDays` | Lookback in days when `from` is omitted | 30 (`PILOT_REVIEW_METRICS_WINDOW_DAYS`) |
 
 Whitelist rows are selected by `createdAt` in the window. Evidence cycles are selected by `dueAt` in the window.
 
@@ -67,7 +67,10 @@ The JSON is the machine form. `data.report` is the human form (also written as a
       "kind": "whitelist",
       "slaTargetHours": 48,
       "slaTargetMs": 172800000,
-      "window": { "from": "2026-03-01T00:00:00.000Z", "to": "2026-03-31T00:00:00.000Z" },
+      "window": {
+        "from": "2026-03-01T00:00:00.000Z",
+        "to": "2026-03-31T00:00:00.000Z"
+      },
       "count": 5,
       "meanMs": 43200000,
       "medianMs": 10800000,
@@ -110,11 +113,11 @@ curl -sS "http://localhost:3001/pilot/whitelist/metrics?windowDays=30" \
 
 ## Changing the target
 
-| Variable                            | Default | Effect                                      |
-| ----------------------------------- | ------- | ------------------------------------------- |
-| `PILOT_WHITELIST_REVIEW_SLA_HOURS`  | `48`    | Whitelist SLA, in calendar hours            |
-| `PILOT_EVIDENCE_REVIEW_SLA_HOURS`   | `48`    | Evidence SLA, in calendar hours             |
-| `PILOT_REVIEW_METRICS_WINDOW_DAYS`  | `30`    | Default metrics lookback                    |
+| Variable                           | Default | Effect                           |
+| ---------------------------------- | ------- | -------------------------------- |
+| `PILOT_WHITELIST_REVIEW_SLA_HOURS` | `48`    | Whitelist SLA, in calendar hours |
+| `PILOT_EVIDENCE_REVIEW_SLA_HOURS`  | `48`    | Evidence SLA, in calendar hours  |
+| `PILOT_REVIEW_METRICS_WINDOW_DAYS` | `30`    | Default metrics lookback         |
 
 Restart the API after changing these. No code change, no contract change.
 

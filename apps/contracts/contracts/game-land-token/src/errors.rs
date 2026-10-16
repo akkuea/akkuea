@@ -10,4 +10,6 @@ pub enum TokenError {
     InsufficientAllowance = 4,
     AlreadyClaimed = 5,
     NotOnTestnet = 6,
+    InvalidAmount = 7,
+    Overflow = 8,
 }

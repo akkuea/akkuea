@@ -47,10 +47,13 @@ impl GameLandToken {
         from: Address,
         spender: Address,
         amount: i128,
-        _expiration_ledger: u32,
+        expiration_ledger: u32,
     ) {
         from.require_auth();
-        set_allowance(&env, &from, &spender, amount);
+        if amount < 0 {
+            panic_with_error!(&env, TokenError::NegativeAmount);
+        }
+        set_allowance(&env, &from, &spender, amount, expiration_ledger);
         events::emit_approval(&env, from, spender, amount);
     }
 
@@ -60,35 +63,56 @@ impl GameLandToken {
 
     pub fn transfer(env: Env, from: Address, to: Address, amount: i128) {
         from.require_auth();
+        if amount < 0 {
+            panic_with_error!(&env, TokenError::NegativeAmount);
+        }
         Self::do_transfer(&env, from, to, amount);
     }
 
     pub fn transfer_from(env: Env, spender: Address, from: Address, to: Address, amount: i128) {
         spender.require_auth();
 
+        if amount < 0 {
+            panic_with_error!(&env, TokenError::NegativeAmount);
+        }
+
         let allowance = get_allowance(&env, &from, &spender);
         if allowance < amount {
             panic_with_error!(&env, TokenError::InsufficientAllowance);
         }
 
-        set_allowance(&env, &from, &spender, allowance - amount);
+        let new_allowance = allowance
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::Overflow));
+        set_allowance(&env, &from, &spender, new_allowance, 0);
         Self::do_transfer(&env, from, to, amount);
     }
 
     pub fn burn(env: Env, from: Address, amount: i128) {
         from.require_auth();
 
+        if amount < 0 {
+            panic_with_error!(&env, TokenError::NegativeAmount);
+        }
+
         let balance = get_balance(&env, &from);
         if balance < amount {
             panic_with_error!(&env, TokenError::InsufficientBalance);
         }
 
-        set_balance(&env, &from, balance - amount);
+        let new_balance = balance
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::Overflow));
+        set_balance(&env, &from, new_balance);
         events::emit_burn(&env, from, amount);
     }
 
     pub fn burn_from(env: Env, spender: Address, from: Address, amount: i128) {
         spender.require_auth();
+
+        if amount < 0 {
+            panic_with_error!(&env, TokenError::NegativeAmount);
+        }
 
         let allowance = get_allowance(&env, &from, &spender);
         if allowance < amount {
@@ -100,8 +124,14 @@ impl GameLandToken {
             panic_with_error!(&env, TokenError::InsufficientBalance);
         }
 
-        set_allowance(&env, &from, &spender, allowance - amount);
-        set_balance(&env, &from, balance - amount);
+        let new_allowance = allowance
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::Overflow));
+        let new_balance = balance
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::Overflow));
+        set_allowance(&env, &from, &spender, new_allowance, 0);
+        set_balance(&env, &from, new_balance);
         events::emit_burn(&env, from, amount);
     }
 
@@ -137,8 +167,14 @@ impl GameLandToken {
         if caller != treasury && caller != engine {
             panic_with_error!(&env, TokenError::Unauthorized);
         }
+        if amount < 0 {
+            panic_with_error!(&env, TokenError::NegativeAmount);
+        }
         let balance = get_balance(&env, &to);
-        set_balance(&env, &to, balance + amount);
+        let new_balance = balance
+            .checked_add(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::Overflow));
+        set_balance(&env, &to, new_balance);
         events::emit_mint(&env, to, amount);
     }
 
@@ -156,7 +192,10 @@ impl GameLandToken {
         let faucet_amount: i128 = 1000 * 10_000_000; // 1,000 LAND with 7 decimals
         let balance = get_balance(&env, &to);
 
-        set_balance(&env, &to, balance + faucet_amount);
+        let new_balance = balance
+            .checked_add(faucet_amount)
+            .unwrap_or_else(|| panic_with_error!(&env, TokenError::Overflow));
+        set_balance(&env, &to, new_balance);
         set_faucet_claimed(&env, &to);
         events::emit_mint(&env, to, faucet_amount);
     }
@@ -170,8 +209,14 @@ impl GameLandToken {
         }
 
         let to_balance = get_balance(env, &to);
-        set_balance(env, &from, from_balance - amount);
-        set_balance(env, &to, to_balance + amount);
+        let new_from_balance = from_balance
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic_with_error!(env, TokenError::Overflow));
+        let new_to_balance = to_balance
+            .checked_add(amount)
+            .unwrap_or_else(|| panic_with_error!(env, TokenError::Overflow));
+        set_balance(env, &from, new_from_balance);
+        set_balance(env, &to, new_to_balance);
         events::emit_transfer(env, from, to, amount);
     }
 }
@@ -378,6 +423,179 @@ mod tests {
 
         let res = client.try_transfer_from(&spender, &user, &receiver, &200);
 
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::InsufficientAllowance as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn test_transfer_negative_amount_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        client.faucet(&user);
+        let receiver = Address::generate(&env);
+        let res = client.try_transfer(&user, &receiver, &-1);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::NegativeAmount as u32
+            )))
+        );
+        assert_eq!(client.balance(&user), 1000 * 10_000_000);
+        assert_eq!(client.balance(&receiver), 0);
+    }
+
+    #[test]
+    fn test_transfer_from_negative_amount_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        client.faucet(&user);
+        let spender = Address::generate(&env);
+        let receiver = Address::generate(&env);
+        client.approve(&user, &spender, &500, &100);
+
+        let res = client.try_transfer_from(&spender, &user, &receiver, &-1);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::NegativeAmount as u32
+            )))
+        );
+        assert_eq!(client.balance(&user), 1000 * 10_000_000);
+        assert_eq!(client.balance(&receiver), 0);
+        assert_eq!(client.allowance(&user, &spender), 500);
+    }
+
+    #[test]
+    fn test_burn_negative_amount_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        client.faucet(&user);
+        let res = client.try_burn(&user, &-1);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::NegativeAmount as u32
+            )))
+        );
+        assert_eq!(client.balance(&user), 1000 * 10_000_000);
+    }
+
+    #[test]
+    fn test_burn_from_negative_amount_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        client.faucet(&user);
+        let spender = Address::generate(&env);
+        client.approve(&user, &spender, &500, &100);
+
+        let res = client.try_burn_from(&spender, &user, &-1);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::NegativeAmount as u32
+            )))
+        );
+        assert_eq!(client.balance(&user), 1000 * 10_000_000);
+        assert_eq!(client.allowance(&user, &spender), 500);
+    }
+
+    #[test]
+    fn test_approve_negative_amount_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        let spender = Address::generate(&env);
+        let res = client.try_approve(&user, &spender, &-1, &100);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::NegativeAmount as u32
+            )))
+        );
+        assert_eq!(client.allowance(&user, &spender), 0);
+    }
+
+    #[test]
+    fn test_mint_negative_amount_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        let res = client.try_mint(&treasury, &user, &-1);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                TokenError::NegativeAmount as u32
+            )))
+        );
+        assert_eq!(client.balance(&user), 0);
+    }
+
+    #[test]
+    fn test_transfer_overflow_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        let max_holder = Address::generate(&env);
+        client.mint(&treasury, &max_holder, &i128::MAX);
+        client.mint(&treasury, &user, &1);
+
+        let res = client.try_transfer(&user, &max_holder, &1);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(TokenError::Overflow as u32)))
+        );
+        assert_eq!(client.balance(&user), 1);
+        assert_eq!(client.balance(&max_holder), i128::MAX);
+    }
+
+    #[test]
+    fn test_expired_allowance_is_zero() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        client.faucet(&user);
+        let spender = Address::generate(&env);
+        let receiver = Address::generate(&env);
+
+        let current_ledger = env.ledger().sequence();
+        client.approve(&user, &spender, &500, &(current_ledger + 1));
+
+        env.ledger().set_sequence_number(current_ledger + 2);
+
+        assert_eq!(client.allowance(&user, &spender), 0);
+
+        let res = client.try_transfer_from(&spender, &user, &receiver, &100);
         assert_eq!(
             res,
             Err(Ok(Error::from_contract_error(

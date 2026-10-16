@@ -15,8 +15,8 @@ const markMultipleAsReadSchema = z.object({
 export const notificationRoutes = new Elysia({ prefix: '/notifications' })
   .use(authPlugin)
   // GET /notifications - Get user's notifications
-  .use(validate({ query: notificationQuerySchema }))
   .get('/', async (ctx) => NotificationController.getUserNotifications(ctx), {
+    beforeHandle: validate({ query: notificationQuerySchema }).beforeHandle,
     detail: {
       summary: 'List notifications',
       description: 'Retrieve notifications for the authenticated user',
@@ -34,8 +34,8 @@ export const notificationRoutes = new Elysia({ prefix: '/notifications' })
   })
 
   // GET /notifications/:id - Get a specific notification
-  .use(validate({ params: uuidParamSchema }))
   .get('/:id', async (ctx) => NotificationController.getNotificationById(ctx), {
+    beforeHandle: validate({ params: uuidParamSchema }).beforeHandle,
     detail: {
       summary: 'Get notification',
       description: 'Retrieve a specific notification by ID',
@@ -44,8 +44,8 @@ export const notificationRoutes = new Elysia({ prefix: '/notifications' })
   })
 
   // PATCH /notifications/:id/read - Mark as read
-  .use(validate({ params: uuidParamSchema }))
   .patch('/:id/read', async (ctx) => NotificationController.markAsRead(ctx), {
+    beforeHandle: validate({ params: uuidParamSchema }).beforeHandle,
     detail: {
       summary: 'Mark as read',
       description: 'Mark a specific notification as read',
@@ -54,8 +54,8 @@ export const notificationRoutes = new Elysia({ prefix: '/notifications' })
   })
 
   // POST /notifications/read-multiple - Mark multiple as read
-  .use(validate({ body: markMultipleAsReadSchema }))
   .post('/read-multiple', async (ctx) => NotificationController.markMultipleAsRead(ctx), {
+    beforeHandle: validate({ body: markMultipleAsReadSchema }).beforeHandle,
     detail: {
       summary: 'Mark multiple as read',
       description: 'Mark multiple notifications as read by their IDs',
@@ -73,8 +73,8 @@ export const notificationRoutes = new Elysia({ prefix: '/notifications' })
   })
 
   // DELETE /notifications/:id - Delete notification
-  .use(validate({ params: uuidParamSchema }))
   .delete('/:id', async (ctx) => NotificationController.deleteNotification(ctx), {
+    beforeHandle: validate({ params: uuidParamSchema }).beforeHandle,
     detail: {
       summary: 'Delete notification',
       description: 'Delete a specific notification by ID',

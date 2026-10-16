@@ -30,8 +30,8 @@ const authWalletSchema = z.object({
 
 export const userRoutes = new Elysia({ prefix: '/users' })
   // POST /users - Create user
-  .use(validate({ body: createUserSchema }))
   .post('/', async (ctx) => UserController.create(ctx), {
+    beforeHandle: validate({ body: createUserSchema }),
     detail: {
       summary: 'Create a user',
       description: 'Create a new user account with a Stellar wallet address',
@@ -40,8 +40,8 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   })
 
   // GET /users/:id - Get user by ID
-  .use(validate({ params: uuidParamSchema }))
   .get('/:id', async (ctx) => UserController.getById(ctx), {
+    beforeHandle: validate({ params: uuidParamSchema }),
     detail: {
       summary: 'Get user by ID',
       description: 'Retrieve a user by their UUID',
@@ -50,8 +50,8 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   })
 
   // GET /users/wallet/:address - Get user by wallet address
-  .use(validate({ params: walletParamSchema }))
   .get('/wallet/:address', async (ctx) => UserController.getByWallet(ctx), {
+    beforeHandle: validate({ params: walletParamSchema }),
     detail: {
       summary: 'Get user by wallet address',
       description: 'Retrieve a user by their Stellar wallet address',
@@ -60,9 +60,8 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   })
 
   // POST /users/auth - Authenticate by wallet (get or create)
-  .use(validate({ body: authWalletSchema }))
   .post('/auth', async (ctx) => UserController.authenticateByWallet(ctx), {
-    beforeHandle: [rateLimit()],
+    beforeHandle: [validate({ body: authWalletSchema }), rateLimit()],
     detail: {
       summary: 'Authenticate by wallet',
       description: 'Authenticate or create a user by their Stellar wallet address',
@@ -82,8 +81,8 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   })
 
   // PATCH /users/me - Update current user profile
-  .use(validate({ body: updateUserSchema }))
   .patch('/me', async (ctx) => UserController.updateProfile(ctx), {
+    beforeHandle: validate({ body: updateUserSchema }),
     detail: {
       summary: 'Update current user profile',
       description: 'Update the authenticated user profile information',

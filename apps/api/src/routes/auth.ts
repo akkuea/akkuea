@@ -24,8 +24,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';
 export const authRoutes = new Elysia({ prefix: '/auth' })
   .use(jwt({ name: 'jwt', secret: JWT_SECRET }))
   // POST /auth/challenge - Get a nonce to sign
-  .use(validate({ body: challengeSchema }))
   .post('/challenge', async (ctx) => AuthController.getChallenge(ctx), {
+    body: challengeSchema,
     beforeHandle: [rateLimit()],
     detail: {
       summary: 'Get authentication challenge',
@@ -35,8 +35,8 @@ export const authRoutes = new Elysia({ prefix: '/auth' })
   })
 
   // POST /auth/session - Verify signature and issue JWT
-  .use(validate({ body: sessionSchema }))
   .post('/session', async (ctx) => AuthController.verifySession(ctx), {
+    body: sessionSchema,
     beforeHandle: [rateLimit()],
     detail: {
       summary: 'Create a session',

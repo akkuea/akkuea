@@ -31,7 +31,6 @@ pub struct PropertyState {
 // Declare local contract client traits to avoid linking compile dependencies
 #[soroban_sdk::contractclient(name = "GamePropertyNftClient")]
 pub trait GamePropertyNft {
-    fn initialize(env: Env, treasury: Address, game_engine: Address);
     fn transfer(env: Env, from: Address, to: Address, property_id: u32);
     fn get_property(env: Env, property_id: u32) -> PropertyState;
     fn get_owner(env: Env, property_id: u32) -> Address;
@@ -41,7 +40,6 @@ pub trait GamePropertyNft {
 
 #[soroban_sdk::contractclient(name = "GameLandTokenClient")]
 pub trait GameLandToken {
-    fn initialize(env: Env, treasury: Address, engine: Address, is_testnet: bool);
     fn mint(env: Env, caller: Address, to: Address, amount: i128);
     fn burn_from(env: Env, spender: Address, from: Address, amount: i128);
     fn approve(env: Env, from: Address, spender: Address, amount: i128, expiration_ledger: u32);
@@ -53,7 +51,6 @@ pub trait GameLandToken {
 #[contracterror]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EngineError {
-    AlreadyInitialized = 1,
     NotOwner = 2,
     AlreadyMaxLevel = 3,
     NothingToClaim = 4,
@@ -66,7 +63,6 @@ pub enum StorageKey {
     NftContract,
     TokenContract,
     Treasury,
-    Initialized,
 }
 
 #[contract]
@@ -74,10 +70,12 @@ pub struct GameEngine;
 
 #[contractimpl]
 impl GameEngine {
-    pub fn initialize(env: Env, nft_contract: Address, token_contract: Address, treasury: Address) {
-        if env.storage().instance().has(&StorageKey::Initialized) {
-            panic_with_error!(&env, EngineError::AlreadyInitialized);
-        }
+    pub fn __constructor(
+        env: Env,
+        nft_contract: Address,
+        token_contract: Address,
+        treasury: Address,
+    ) {
         env.storage()
             .instance()
             .set(&StorageKey::NftContract, &nft_contract);
@@ -87,21 +85,18 @@ impl GameEngine {
         env.storage()
             .instance()
             .set(&StorageKey::Treasury, &treasury);
-        env.storage()
-            .instance()
-            .set(&StorageKey::Initialized, &true);
     }
 
     pub fn improve(env: Env, caller: Address, property_id: u32) {
         caller.require_auth();
 
-        // safe: storage is always set during initialize; panics on uninitialized contract
+        // safe: storage is always set during constructor; panics when configuration is unavailable
         let nft_contract: Address = env
             .storage()
             .instance()
             .get(&StorageKey::NftContract)
             .unwrap();
-        // safe: storage is always set during initialize; panics on uninitialized contract
+        // safe: storage is always set during constructor; panics when configuration is unavailable
         let token_contract: Address = env
             .storage()
             .instance()
@@ -133,13 +128,13 @@ impl GameEngine {
     pub fn claim_rental(env: Env, caller: Address, property_id: u32) {
         caller.require_auth();
 
-        // safe: storage is always set during initialize; panics on uninitialized contract
+        // safe: storage is always set during constructor; panics when configuration is unavailable
         let nft_contract: Address = env
             .storage()
             .instance()
             .get(&StorageKey::NftContract)
             .unwrap();
-        // safe: storage is always set during initialize; panics on uninitialized contract
+        // safe: storage is always set during constructor; panics when configuration is unavailable
         let token_contract: Address = env
             .storage()
             .instance()
@@ -178,7 +173,7 @@ impl GameEngine {
     }
 
     pub fn get_accrued_income(env: Env, property_id: u32) -> i128 {
-        // safe: storage is always set during initialize; panics on uninitialized contract
+        // safe: storage is always set during constructor; panics when configuration is unavailable
         let nft_contract: Address = env
             .storage()
             .instance()
@@ -319,23 +314,18 @@ mod tests {
         let treasury = Address::generate(&env);
         let owner = Address::generate(&env);
 
-        // Register contracts
-        let engine_id = env.register(GameEngine, ());
-        let nft_id = env.register(GamePropertyNft, ());
-        let token_id = env.register(GameLandToken, ());
+        // Assign addresses first so the cyclic game references are available
+        // as atomic constructor arguments during registration.
+        let engine_id = Address::generate(&env);
+        let nft_id = Address::generate(&env);
+        let token_id = Address::generate(&env);
+        env.register_at(&nft_id, GamePropertyNft, (&treasury, &engine_id));
+        env.register_at(&token_id, GameLandToken, (&treasury, &engine_id, &true));
+        env.register_at(&engine_id, GameEngine, (&nft_id, &token_id, &treasury));
 
         let engine_client = GameEngineClient::new(&env, &engine_id);
         let nft_client = GamePropertyNftClient::new(&env, &nft_id);
         let token_client = GameLandTokenClient::new(&env, &token_id);
-
-        // Initialize PropertyNFT
-        nft_client.initialize(&treasury, &engine_id);
-
-        // Initialize LandToken in testnet_mode = true
-        token_client.initialize(&treasury, &engine_id, &true);
-
-        // Initialize GameEngine
-        engine_client.initialize(&nft_id, &token_id, &treasury);
 
         // Claim faucet tokens to give owner starting LAND balance (1,000 LAND)
         token_client.faucet(&owner);

@@ -18,11 +18,7 @@ pub struct GameLandToken;
 #[contractimpl]
 impl GameLandToken {
     /// Initialize the contract with basic token metadata and configuration.
-    pub fn initialize(env: Env, treasury: Address, engine: Address, is_testnet: bool) {
-        if env.storage().instance().has(&DataKey::Treasury) {
-            panic_with_error!(&env, TokenError::AlreadyInitialized);
-        }
-
+    pub fn __constructor(env: Env, treasury: Address, engine: Address, is_testnet: bool) {
         set_treasury(&env, &treasury);
         set_engine(&env, &engine);
         set_testnet(&env, is_testnet);
@@ -185,16 +181,15 @@ mod tests {
         let treasury = Address::generate(env);
         let engine = Address::generate(env);
         let user = Address::generate(env);
-        let contract_id = env.register(GameLandToken, ());
+        let contract_id = env.register(GameLandToken, (&treasury, &engine, &true));
         let client = GameLandTokenClient::new(env, &contract_id);
         (treasury, engine, user, client)
     }
 
     #[test]
-    fn test_initialize() {
+    fn test_constructor_sets_metadata() {
         let env = Env::default();
-        let (treasury, engine, _, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, _, client) = setup_test(&env);
         assert_eq!(client.name(), String::from_str(&env, "Akkuea Land Token"));
         assert_eq!(client.symbol(), String::from_str(&env, "LAND"));
         assert_eq!(client.decimals(), 7);
@@ -204,8 +199,7 @@ mod tests {
     fn test_faucet() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, user, client) = setup_test(&env);
 
         client.faucet(&user);
         assert_eq!(client.balance(&user), 1000 * 10_000_000);
@@ -216,8 +210,7 @@ mod tests {
     fn test_faucet_already_claimed() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, user, client) = setup_test(&env);
 
         client.faucet(&user);
         client.faucet(&user);
@@ -227,8 +220,7 @@ mod tests {
     fn test_transfer() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, user, client) = setup_test(&env);
 
         client.faucet(&user);
         let receiver = Address::generate(&env);
@@ -242,8 +234,7 @@ mod tests {
     fn test_mint_auth() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (treasury, _, user, client) = setup_test(&env);
 
         client.mint(&treasury, &user, &1000);
         assert_eq!(client.balance(&user), 1000);
@@ -253,8 +244,7 @@ mod tests {
     fn test_approve_and_allowance() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, user, client) = setup_test(&env);
 
         let spender = Address::generate(&env);
         client.approve(&user, &spender, &500, &100);
@@ -265,8 +255,7 @@ mod tests {
     fn test_transfer_from() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, user, client) = setup_test(&env);
 
         client.faucet(&user);
         let spender = Address::generate(&env);
@@ -284,8 +273,7 @@ mod tests {
     fn test_burn() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, user, client) = setup_test(&env);
 
         client.faucet(&user);
         client.burn(&user, &500);
@@ -297,8 +285,7 @@ mod tests {
     fn test_burn_from() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, user, client) = setup_test(&env);
 
         client.faucet(&user);
         let spender = Address::generate(&env);
@@ -313,27 +300,10 @@ mod tests {
     use soroban_sdk::Error;
 
     #[test]
-    fn test_initialize_already_initialized_fails() {
-        let env = Env::default();
-        let (treasury, engine, _, client) = setup_test(&env);
-
-        client.initialize(&treasury, &engine, &true);
-        let res = client.try_initialize(&treasury, &engine, &true);
-
-        assert_eq!(
-            res,
-            Err(Ok(Error::from_contract_error(
-                TokenError::AlreadyInitialized as u32
-            )))
-        );
-    }
-
-    #[test]
     fn test_mint_unauthorized_fails() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, user, client) = setup_test(&env);
 
         let unauthorized_caller = Address::generate(&env);
         let res = client.try_mint(&unauthorized_caller, &user, &1000);
@@ -350,8 +320,7 @@ mod tests {
     fn test_transfer_insufficient_balance_fails() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, user, client) = setup_test(&env);
 
         let receiver = Address::generate(&env);
         let res = client.try_transfer(&user, &receiver, &500);
@@ -368,8 +337,7 @@ mod tests {
     fn test_transfer_from_insufficient_allowance_fails() {
         let env = Env::default();
         env.mock_all_auths();
-        let (treasury, engine, user, client) = setup_test(&env);
-        client.initialize(&treasury, &engine, &true);
+        let (_, _, user, client) = setup_test(&env);
 
         client.faucet(&user);
         let spender = Address::generate(&env);

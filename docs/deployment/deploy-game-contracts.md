@@ -11,7 +11,7 @@ This guide deploys the four Akkuea Land game contracts to Stellar **testnet** an
 | Game engine  | `apps/contracts/contracts/game-engine`       | `game_engine.wasm`       |
 | Marketplace  | `apps/contracts/contracts/game-marketplace`  | `game_marketplace.wasm`  |
 
-Unlike the defi-rwa contract (which uses `__constructor`), each game contract is deployed **and then explicitly initialized** with a separate `initialize` invocation. The script below does both.
+All four contracts use Soroban `__constructor` entry points. Their configuration is written atomically in the deployment transaction, so no public call can claim ownership between deployment and setup. The game contracts reference one another, so the deploy script derives deterministic addresses from unique salts before deploying each contract with its final constructor arguments.
 
 > This repo already carries a deployed instance at `apps/shared/src/contracts/game-contracts.testnet.json` (all four contracts, deployed 2026-06-24). Steps 1–2 below are only needed if you want to deploy your **own** instance instead of reusing that one - the frontend falls back to the checked-in IDs automatically when the `NEXT_PUBLIC_*_CONTRACT_ID` env vars are unset (see Step 3).
 
@@ -44,12 +44,8 @@ The script:
 
 1. Generates + funds the `game-deployer` identity if it doesn't exist (testnet friendbot).
 2. Builds all contracts with `stellar contract build` (targets `wasm32v1-none`; a raw `cargo build --target wasm32-unknown-unknown` on modern rustc emits reference-types the Soroban VM rejects at upload).
-3. Deploys the four WASMs and captures their contract IDs.
-4. Initializes them in dependency order:
-   - `game_property_nft.initialize(treasury, game_engine)` - after this, the **treasury logically owns all 400 tiles**; no minting or seeding is needed.
-   - `game_land_token.initialize(treasury, engine, is_testnet=true)`
-   - `game_engine.initialize(nft_contract, token_contract, treasury)`
-   - `game_marketplace.initialize(nft_contract, land_token)`
+3. Derives stable contract IDs from per-contract salts, allowing the cyclic game references to be supplied during construction.
+4. Deploys each WASM with its `__constructor` arguments in the same transaction. The **treasury owns all 400 tiles** as soon as the NFT is deployed.
 5. Prints a ready-to-paste `.env.local` block.
 
 By default the deployer identity **is** the treasury, so the same key that deployed can claim rental income in the browser. To use a different treasury: `./scripts/deploy-game-contracts.sh testnet game-deployer G...TREASURY`.

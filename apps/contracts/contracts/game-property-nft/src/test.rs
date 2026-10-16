@@ -10,20 +10,18 @@ fn setup() -> (Env, Address, Address, GamePropertyNftClient<'static>) {
     let treasury = Address::generate(&env);
     let game_engine = Address::generate(&env);
 
-    let contract_id = env.register(GamePropertyNft, ());
+    let contract_id = env.register(GamePropertyNft, (&treasury, &game_engine));
     let client = GamePropertyNftClient::new(&env, &contract_id);
 
     (env, treasury, game_engine, client)
 }
 
 fn initialized() -> (Env, Address, Address, GamePropertyNftClient<'static>) {
-    let (env, treasury, game_engine, client) = setup();
-    client.initialize(&treasury, &game_engine);
-    (env, treasury, game_engine, client)
+    setup()
 }
 
 #[test]
-fn test_initialize_mints_all_400_properties() {
+fn test_constructor_mints_all_400_properties() {
     let (_env, treasury, _game_engine, client) = initialized();
 
     assert_eq!(client.list_by_owner(&treasury).len(), TOTAL_TILES);

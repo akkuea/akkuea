@@ -35,6 +35,18 @@ cp apps/api/.env.example apps/api/.env
 | `NODE_ENV`  | `development` | Yes                  | Runtime environment. Use `production` for live deployments |
 | `LOG_LEVEL` | `info`        | No                   | Logging verbosity (`debug`, `info`, `warn`, `error`)       |
 
+### Rate Limiting
+
+Rate-limited routes (`apps/api/src/middleware/rateLimit.ts`) key each client by the address it connected from, so a client cannot choose its own identity by sending an address header. `TRUSTED_PROXY_HOPS` is the only configuration that changes that, and it must match the number of reverse proxies actually in front of the API.
+
+The limiter counts an in-memory sliding window per client unless `REDIS_URL` is set, in which case the same window is counted in Redis so every instance shares it. In-memory counters are bounded: expired clients are dropped on access and by a periodic sweep, and a hard cap evicts the clients nearest expiry when the store is full.
+
+| Variable             | Example Value | Required          | Description                                                                                                                                                                                                                                                                                                                                                              |
+| -------------------- | ------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `TRUSTED_PROXY_HOPS` | `1`           | No (default: `0`) | Number of reverse proxies in front of the API that are trusted to append to `x-forwarded-for`. `0` (the default) means no proxy is trusted and the client address is read from the socket only. With `N`, the address is taken `N` entries from the right of the `x-forwarded-for` chain; a shorter chain falls back to the socket address. `x-real-ip` is never trusted |
+
+> **Deploying behind a proxy:** leaving `TRUSTED_PROXY_HOPS` at `0` means every request is keyed by the proxy's own address, so all clients share one bucket. Set it to the exact number of proxies you operate (load balancer, ingress, sidecar) and no more: every hop counted is a hop a client could otherwise spoof through.
+
 ### Internal Security
 
 | Variable                        | Example Value                   | Required         | Description                                                                                                                                                 |
@@ -170,4 +182,6 @@ Before going live, verify:
 - [ ] `OPERATIONS_BACKEND_CREDENTIAL` is a fresh random value (not the example placeholder)
 - [ ] `OPERATIONS_ALLOWED_WALLETS` contains only authorized production admin addresses
 - [ ] `KYC_UPLOAD_DIR` exists on the server and is not publicly accessible
+- [ ] `TRUSTED_PROXY_HOPS` matches the number of proxies in front of the API (`0` if the API is reached directly)
+- [ ] `REDIS_URL` is set if the API runs more than one instance, so rate limits are shared
 - [ ] `.env` file is in `.gitignore` (verify with `git check-ignore -v apps/api/.env`)

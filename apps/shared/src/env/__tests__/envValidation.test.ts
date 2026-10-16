@@ -7,6 +7,7 @@ import {
   isStellarPublicKey,
   isStellarSecretSeed,
   isStellarContractId,
+  trustedProxyHopsSchema,
 } from "../index";
 
 const sampleKeypair = Keypair.random();
@@ -156,6 +157,46 @@ describe("Environment Validation Module", () => {
     it("bypasses validation when SKIP_ENV_VALIDATION is set", () => {
       const invalidEnv = { SKIP_ENV_VALIDATION: "true" };
       expect(() => validateApiEnv(invalidEnv)).not.toThrow();
+    });
+
+    it("defaults TRUSTED_PROXY_HOPS to 0 (no trusted proxy) when unset", () => {
+      const parsed = validateApiEnv(VALID_API_ENV);
+      expect(parsed.TRUSTED_PROXY_HOPS).toBe(0);
+    });
+
+    it("accepts a configured trusted proxy hop count", () => {
+      const parsed = validateApiEnv({
+        ...VALID_API_ENV,
+        TRUSTED_PROXY_HOPS: "2",
+      });
+      expect(parsed.TRUSTED_PROXY_HOPS).toBe(2);
+    });
+
+    it("rejects a TRUSTED_PROXY_HOPS that is not a non-negative integer", () => {
+      for (const value of ["-1", "1.5", "two", "11"]) {
+        expect(() =>
+          validateApiEnv({ ...VALID_API_ENV, TRUSTED_PROXY_HOPS: value }),
+        ).toThrow(EnvValidationError);
+      }
+    });
+  });
+
+  describe("trustedProxyHopsSchema", () => {
+    it("treats undefined and an empty value as no trusted proxy", () => {
+      expect(trustedProxyHopsSchema.parse(undefined)).toBe(0);
+      expect(trustedProxyHopsSchema.parse("")).toBe(0);
+      expect(trustedProxyHopsSchema.parse("  ")).toBe(0);
+    });
+
+    it("parses a valid hop count", () => {
+      expect(trustedProxyHopsSchema.parse("0")).toBe(0);
+      expect(trustedProxyHopsSchema.parse("1")).toBe(1);
+    });
+
+    it("rejects values the limiter could not interpret as hop counts", () => {
+      expect(trustedProxyHopsSchema.safeParse("-1").success).toBe(false);
+      expect(trustedProxyHopsSchema.safeParse("1.5").success).toBe(false);
+      expect(trustedProxyHopsSchema.safeParse("abc").success).toBe(false);
     });
   });
 

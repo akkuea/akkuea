@@ -92,6 +92,23 @@ export const booleanSchema = z
     return undefined;
   });
 
+/**
+ * How many reverse proxies in front of the API are trusted to append to
+ * `x-forwarded-for`. `0` (the default) means no proxy is trusted and the client
+ * address is read from the socket only, so a client cannot choose its own
+ * rate-limit identity. See docs/deployment/environment-variables.md.
+ */
+export const trustedProxyHopsSchema = z
+  .string()
+  .optional()
+  .transform((val) =>
+    val === undefined || val.trim() === "" ? 0 : Number(val),
+  )
+  .refine((val) => Number.isInteger(val) && val >= 0 && val <= 10, {
+    message:
+      "TRUSTED_PROXY_HOPS must be an integer between 0 (no trusted proxy) and 10",
+  });
+
 export const apiEnvSchema = z.object({
   DATABASE_URL: z
     .string({ required_error: "DATABASE_URL is required" })
@@ -131,6 +148,7 @@ export const apiEnvSchema = z.object({
   NOTIFICATION_POLL_INTERVAL_MS: z.string().optional(),
   NOTIFICATION_REQUEST_TIMEOUT_MS: z.string().optional(),
   REDIS_URL: urlSchema.optional().or(z.literal("")),
+  TRUSTED_PROXY_HOPS: trustedProxyHopsSchema,
   STELLAR_NETWORK: z.enum(["testnet", "mainnet"]).optional().default("testnet"),
   STELLAR_HORIZON_URL: urlSchema,
   STELLAR_RPC_URL: urlSchema,

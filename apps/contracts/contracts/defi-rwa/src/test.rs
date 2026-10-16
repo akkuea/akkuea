@@ -4248,3 +4248,298 @@ fn test_get_health_factor_direct() {
         "health factor should be below 1.0 (underwater)"
     );
 }
+
+/// Test that overflow in deposit returns typed error.
+#[test]
+fn test_deposit_overflow_returns_typed_error() {
+    let s = setup();
+    let env = s.env;
+    let contract_id = s.contract_address.clone();
+    let depositor = s.admin.clone(); // Using admin as depositor for simplicity
+
+    // Create a pool for testing
+    let pool_id = String::from_str(&env, "USDC-POOL");
+    let usdc_addr = s.token_address.clone();
+    let usdc_token = StellarAssetClient::new(&env, &usdc_addr);
+    let _xlm_addr = Address::generate(&env); // Dummy address
+
+    // Initialize pool with near-maximum deposits to test overflow
+    env.as_contract(&contract_id, || {
+        let pool = LendingPool {
+            id: pool_id.clone(),
+            name: String::from_str(&env, "USDC Lending Pool"),
+            asset: String::from_str(&env, "USDC"),
+            asset_address: usdc_addr.clone(),
+            collateral_factor: 750_000_000_000_000_000, // 75%
+            liquidation_threshold: 800_000_000_000_000_000, // 80%
+            liquidation_penalty: 50_000_000_000_000_000, // 5%
+            close_factor: 500_000_000_000_000_000,      // 50%
+            reserve_factor: 1000,                       // 10%
+            is_active: true,
+            created_at: env.ledger().timestamp(),
+        };
+        PoolStorage::set(&env, &pool);
+        // Set existing deposits to near i128 max to test overflow on additional deposit
+        let existing_deposits = i128::MAX - 1_000_000_000; // Leave room for small deposit
+        PoolStorage::set_total_deposits(&env, &pool_id, existing_deposits);
+        PoolStorage::set_total_borrows(&env, &pool_id, 0);
+
+        // Initialize interest rate model
+        let model = InterestRateModel::default();
+        InterestStorage::set_model(&env, &pool_id, &model);
+        InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
+        InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
+
+        // Set oracle address (using a dummy oracle for now)
+        let oracle_id = env.register(MockOracleContract, ());
+        PriceOracle::set_oracle_address(&env, &oracle_id);
+    });
+
+    // Mint tokens to depositor so they can deposit
+    usdc_token.mint(&depositor, &2_000_000_000_i128); // 2 billion USDC (enough for test)
+
+    // Try to deposit an amount that would cause overflow when added to existing deposits
+    // This should overflow since existing_deposits + deposit_amount > i128::MAX
+    let deposit_amount = 2_000_000_000_i128; // 2 billion
+    let result = env.as_contract(&contract_id, || {
+        PropertyTokenContract::deposit(
+            env.clone(),
+            depositor.clone(),
+            pool_id.clone(),
+            deposit_amount,
+        )
+    });
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err(), ContractError::BalanceOverflow);
+}
+
+/// Test that overflow in borrow panics.
+#[test]
+#[should_panic(expected = "Total borrows overflow")]
+fn test_borrow_overflow_panics() {
+    let s = setup();
+    let env = s.env;
+    let contract_id = s.contract_address.clone();
+    let borrower = s.admin.clone(); // Using admin as borrower for simplicity
+
+    // Create a pool for testing
+    let pool_id = String::from_str(&env, "USDC-POOL");
+    let usdc_addr = s.token_address.clone();
+    let usdc_token = StellarAssetClient::new(&env, &usdc_addr);
+    let xlm_addr = Address::generate(&env);
+    let xlm_token = StellarAssetClient::new(&env, &xlm_addr);
+
+    // Initialize pool
+    env.as_contract(&contract_id, || {
+        let pool = LendingPool {
+            id: pool_id.clone(),
+            name: String::from_str(&env, "USDC Lending Pool"),
+            asset: String::from_str(&env, "USDC"),
+            asset_address: usdc_addr.clone(),
+            collateral_factor: 750_000_000_000_000_000, // 75%
+            liquidation_threshold: 800_000_000_000_000_000, // 80%
+            liquidation_penalty: 50_000_000_000_000_000, // 5%
+            close_factor: 500_000_000_000_000_000,      // 50%
+            reserve_factor: 1000,                       // 10%
+            is_active: true,
+            created_at: env.ledger().timestamp(),
+        };
+        PoolStorage::set(&env, &pool);
+        PoolStorage::set_total_deposits(&env, &pool_id, 1_000_000_000_i128); // 1 USDC deposit
+        PoolStorage::set_total_borrows(&env, &pool_id, 0);
+
+        // Initialize interest rate model
+        let model = InterestRateModel::default();
+        InterestStorage::set_model(&env, &pool_id, &model);
+        InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
+        InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
+
+        // Set oracle address
+        let oracle_id = env.register(MockOracleContract, ());
+        PriceOracle::set_oracle_address(&env, &oracle_id);
+
+        // Set XLM price in oracle: $1.00
+        env.as_contract(&oracle_id, || {
+            MockOracleContract::set_price(
+                env.clone(),
+                xlm_addr.clone(),
+                PRECISION, // $1.00
+                env.ledger().timestamp(),
+            )
+        });
+    });
+
+    // Mint tokens to borrower so they can supply collateral
+    // Mint pool tokens to contract so it can lend
+    let large_collateral = 3_400_000_000_000_000_000_i128; // Near i128 max
+    let borrow_amount = 1_000_000_000_i128; // Reasonable borrow amount
+
+    xlm_token.mint(&s._token_admin, &large_collateral);
+    usdc_token.mint(&s._token_admin, &(&borrow_amount * 2)); // Extra to ensure sufficient liquidity
+
+    // Transfer tokens to the appropriate accounts
+    xlm_token.transfer(&s._token_admin, &borrower, &large_collateral);
+    usdc_token.transfer(&s._token_admin, &contract_id, &(&borrow_amount * 2));
+
+    // Try to borrow with collateral that would cause overflow in calculations
+    // This should panic due to total borrows overflow
+    env.as_contract(&contract_id, || {
+        PropertyTokenContract::borrow(
+            env.clone(),
+            borrower.clone(),
+            pool_id.clone(),
+            borrow_amount,
+            xlm_addr.clone(),
+            large_collateral,
+        )
+    });
+}
+
+/// Test that extreme decimals difference returns PriceScalingOverflow.
+#[test]
+fn test_extreme_decimals_difference_returns_price_scaling_overflow() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let admin = Address::generate(&env);
+    let contract_id = env.register(PropertyTokenContract, (&admin,));
+    let oracle_id = env.register(MockOracleWithDecimals, ());
+    let asset_addr = Address::generate(&env);
+
+    // Set up the oracle to report 0 decimals (will require scaling up by 10^18)
+    env.as_contract(&oracle_id, || {
+        MockOracleWithDecimals::set_decimals(env.clone(), 0);
+    });
+
+    // Set a price that will overflow when normalized
+    // With 0 oracle decimals, we need to multiply by 10^18 to normalize to 18 decimals
+    // i128::MAX ≈ 1.7e38
+    // So we need a raw price > 1.7e38 / 1e18 = 1.7e20 to cause overflow
+    let huge_price = 2_000_000_000_000_000_000_000_000_000_000_000_000_i128; // 2e39
+    let timestamp = env.ledger().timestamp();
+
+    // Mock the oracle to return this huge price
+    env.as_contract(&oracle_id, || {
+        MockOracleWithDecimals::set_price(
+            env.clone(),
+            asset_addr.clone(),
+            huge_price,
+            timestamp,
+        )
+    });
+
+    // Configure the lending contract to use our oracle
+    env.as_contract(&contract_id, || {
+        PriceOracle::set_oracle_address(&env, &oracle_id);
+    });
+
+    // Try to get price which should overflow in normalization
+    let result = env.as_contract(&contract_id, || {
+        PriceOracle::try_get_price(&env, &asset_addr)
+    });
+    assert!(result.is_err());
+    assert_eq!(result.unwrap_err(), ContractError::PriceScalingOverflow);
+}
+
+/// Test that future-dated price is rejected.
+#[test]
+fn test_future_dated_price_is_rejected() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let admin = Address::generate(&env);
+    let contract_id = env.register(PropertyTokenContract, (&admin,));
+    let oracle_id = env.register(MockOracleContract, ());
+    let asset_addr = Address::generate(&env);
+
+    // Set a price with future timestamp (beyond MAX_FUTURE_TIME tolerance)
+    let price = 500_000_000_000_000_000_i128; // $0.50
+    let future_timestamp = env.ledger().timestamp() + 100; // 100 seconds in future (well beyond 5 second tolerance)
+
+    // Mock the oracle to return this future-dated price
+    env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(
+            env.clone(),
+            asset_addr.clone(),
+            price,
+            future_timestamp,
+        )
+    });
+
+    // Configure the lending contract to use our oracle
+    env.as_contract(&contract_id, || {
+        PriceOracle::set_oracle_address(&env, &oracle_id);
+    });
+
+    // Try to get price which should reject the future-dated price
+    let result = env.as_contract(&contract_id, || {
+        PriceOracle::try_get_price(&env, &asset_addr)
+    });
+    assert!(result.is_err());
+    // Should reject due to price being too new (beyond MAX_FUTURE_TIME)
+    assert_eq!(result.unwrap_err(), ContractError::OraclePriceInFuture);
+}
+
+/// Test that normal price is still accepted.
+#[test]
+fn test_normal_price_is_still_accepted() {
+    let s = setup();
+    let env = s.env;
+    let contract_id = s.contract_address.clone();
+
+    // Create a separate oracle contract
+    let oracle_id = env.register(MockOracleContract, ());
+
+    // Create a pool for testing
+    let pool_id = String::from_str(&env, "USDC-POOL");
+    let usdc_addr = s.token_address.clone();
+    let _xlm_addr = Address::generate(&env); // Dummy address
+
+    // Initialize pool
+    env.as_contract(&contract_id, || {
+        let pool = LendingPool {
+            id: pool_id.clone(),
+            name: String::from_str(&env, "USDC Lending Pool"),
+            asset: String::from_str(&env, "USDC"),
+            asset_address: usdc_addr.clone(),
+            collateral_factor: 750_000_000_000_000_000, // 75%
+            liquidation_threshold: 800_000_000_000_000_000, // 80%
+            liquidation_penalty: 50_000_000_000_000_000, // 5%
+            close_factor: 500_000_000_000_000_000,      // 50%
+            reserve_factor: 1000,                       // 10%
+            is_active: true,
+            created_at: env.ledger().timestamp(),
+        };
+        PoolStorage::set(&env, &pool);
+        PoolStorage::set_total_deposits(&env, &pool_id, 1_000_000_000_i128); // 1 USDC deposit
+        PoolStorage::set_total_borrows(&env, &pool_id, 0);
+
+        // Initialize interest rate model
+        let model = InterestRateModel::default();
+        InterestStorage::set_model(&env, &pool_id, &model);
+        InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
+        InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
+
+        // Set oracle address to our dedicated oracle contract
+        PriceOracle::set_oracle_address(&env, &oracle_id);
+    });
+
+    // Set a normal price with current timestamp
+    let price = 500_000_000_000_000_000_i128; // $0.50
+    let asset_addr = Address::generate(&env);
+    let timestamp = env.ledger().timestamp();
+
+    // Mock the oracle to return this normal price
+    env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(
+            env.clone(),
+            asset_addr.clone(),
+            price,
+            timestamp,
+        )
+    });
+
+    // Try to accrue interest which should accept the normal price
+    let result = env.as_contract(&contract_id, || {
+        PropertyTokenContract::accrue_interest(env.clone(), pool_id.clone())
+    });
+    assert!(result.is_ok());
+}

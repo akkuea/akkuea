@@ -42,6 +42,7 @@ cp apps/api/.env.example apps/api/.env
 | `WEBHOOK_SECRET`                | `your_webhook_secret_here`      | Yes              | Secret used to sign and verify incoming webhook payloads. Must be a random string of at least 32 characters                                                 |
 | `OPERATIONS_BACKEND_CREDENTIAL` | `generate-a-long-random-secret` | Yes              | Shared secret between the API server and the Next.js operations dashboard proxy. Both sides must have the same value. Generate with: `openssl rand -hex 32` |
 | `OPERATIONS_ALLOWED_WALLETS`    | `GXXX...,GYYY...`               | Yes (production) | Comma-separated list of Stellar public keys permitted to call admin operations endpoints. Acts as a server-side allowlist                                   |
+| `ORACLE_CREDENTIAL`             | `generate-a-long-random-secret` | Yes              | Shared secret required by the oracle valuation write routes (`POST /oracle/valuations`, `POST /oracle/valuations/:propertyId/manual-review`, `POST /oracle/valuations/manual-override`) and by the internal risk monitoring group (`/internal/risk`). Send it in the `x-oracle-credential` header. Generate with: `openssl rand -hex 32` |
 
 ### KYC / Document Storage
 
@@ -169,5 +170,6 @@ Before going live, verify:
 - [ ] `STELLAR_ADMIN_SECRET` is loaded from a secrets manager, not hardcoded in the file
 - [ ] `OPERATIONS_BACKEND_CREDENTIAL` is a fresh random value (not the example placeholder)
 - [ ] `OPERATIONS_ALLOWED_WALLETS` contains only authorized production admin addresses
+- [ ] `ORACLE_CREDENTIAL` is a fresh random value (not the example placeholder) and is shared only with the oracle service and internal risk monitors
 - [ ] `KYC_UPLOAD_DIR` exists on the server and is not publicly accessible
 - [ ] `.env` file is in `.gitignore` (verify with `git check-ignore -v apps/api/.env`)

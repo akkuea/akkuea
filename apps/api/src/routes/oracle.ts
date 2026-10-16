@@ -1,13 +1,51 @@
 import { Elysia, t } from 'elysia';
 import type { RealEstateValuationPayload } from '@akkuea/shared';
 import { ValuationController } from '../controllers/ValuationController';
+import { isInternalOperationsAuthorized } from '../middleware/internalAuth';
+
+const MIN_HISTORY_LIMIT = 1;
+const MAX_HISTORY_LIMIT = 500;
+const DEFAULT_HISTORY_LIMIT = 50;
+
+function parseHistoryLimit(rawLimit: unknown): number {
+  const parsed = typeof rawLimit === 'string' ? Number(rawLimit) : NaN;
+  if (!Number.isFinite(parsed)) return DEFAULT_HISTORY_LIMIT;
+  const integer = Math.trunc(parsed);
+  if (integer < MIN_HISTORY_LIMIT) return MIN_HISTORY_LIMIT;
+  if (integer > MAX_HISTORY_LIMIT) return MAX_HISTORY_LIMIT;
+  return integer;
+}
+
+const valuationPayloadSchema = t.Object({
+  propertyId: t.String({ minLength: 1 }),
+  price: t.Number({ exclusiveMinimum: 0 }),
+  currency: t.String({ minLength: 1 }),
+  sourceId: t.String({ minLength: 1 }),
+  sourceName: t.String({ minLength: 1 }),
+  timestamp: t.Union([t.String(), t.Date()]),
+  confidence: t.Number({ minimum: 0, maximum: 100 }),
+  methodology: t.String(),
+  provenance: t.Record(t.String(), t.Unknown()),
+  metadata: t.Optional(t.Record(t.String(), t.Unknown())),
+});
 
 export const oracleRoutes = new Elysia({ prefix: '/oracle' })
+  .on('beforeHandle', ({ request, set, path }) => {
+    const isWrite = request.method === 'POST';
+    if (!isWrite) return;
+    if (path === '/oracle/valuations' || path.startsWith('/oracle/valuations/')) {
+      if (!isInternalOperationsAuthorized(request)) {
+        set.status = 401;
+        return { error: 'Unauthorized' };
+      }
+    }
+  })
   // POST /oracle/valuations - Ingest a new real estate valuation
   .post(
     '/valuations',
     ({ body }) => ValuationController.ingestValuation(body as RealEstateValuationPayload),
     {
+      body: valuationPayloadSchema,
       detail: {
         summary: 'Ingest valuation',
         description: 'Ingest a new real estate property valuation from the oracle',
@@ -23,21 +61,14 @@ export const oracleRoutes = new Elysia({ prefix: '/oracle' })
       params: t.Object({
         propertyId: t.String(),
       }),
-      detail: {
-        summary: 'Get latest valuation',
-        description: 'Retrieve the latest valuation for a property',
-        tags: ['Oracle'],
-      },
+      detail: {}
     },
   )
   // GET /oracle/valuations/:propertyId/history - Valuation history
   .get(
     '/valuations/:propertyId/history',
     ({ params: { propertyId }, query }) =>
-      ValuationController.getValuationHistory(
-        propertyId,
-        query.limit ? Number(query.limit) : undefined,
-      ),
+      ValuationController.getValuationHistory(propertyId, parseHistoryLimit(query.limit)),
     {
       params: t.Object({
         propertyId: t.String(),
@@ -45,11 +76,7 @@ export const oracleRoutes = new Elysia({ prefix: '/oracle' })
       query: t.Object({
         limit: t.Optional(t.String()),
       }),
-      detail: {
-        summary: 'Get valuation history',
-        description: 'Retrieve the valuation history for a property',
-        tags: ['Oracle'],
-      },
+      detail: {}
     },
   )
   // GET /oracle/valuations/:propertyId/contract-payload - Contract-ready payload
@@ -60,11 +87,7 @@ export const oracleRoutes = new Elysia({ prefix: '/oracle' })
       params: t.Object({
         propertyId: t.String(),
       }),
-      detail: {
-        summary: 'Get contract payload',
-        description: 'Retrieve the contract-ready valuation payload for a property',
-        tags: ['Oracle'],
-      },
+      detail: {}
     },
   )
   // POST /oracle/valuations/:propertyId/manual-review - Flag for manual review
@@ -79,11 +102,7 @@ export const oracleRoutes = new Elysia({ prefix: '/oracle' })
         id: t.String(),
         reason: t.String(),
       }),
-      detail: {
-        summary: 'Flag for manual review',
-        description: 'Flag a valuation for manual review',
-        tags: ['Oracle'],
-      },
+      detail: {}
     },
   )
   // POST /oracle/valuations/manual-override - Submit a manual valuation override
@@ -94,10 +113,7 @@ export const oracleRoutes = new Elysia({ prefix: '/oracle' })
         body as RealEstateValuationPayload & { overrideReason: string },
       ),
     {
-      detail: {
-        summary: 'Manual valuation override',
-        description: 'Submit a manual override for a property valuation',
-        tags: ['Oracle'],
-      },
+      body: t.Compose([valuationPayloadSchema, t.Object({ overrideReason: t.String({ minLength: 1 }) })]),
+      detail: {}
     },
   );

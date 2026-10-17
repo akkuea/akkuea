@@ -33,6 +33,29 @@ pub const SWAP_DEADLINE_SECS: u64 = 3600;
 /// for EURC swap legs. We cap this to guarantee safe budget headroom.
 pub const MAX_HOLDERS: u32 = 10;
 
+/// TTL policy for the pilot payout contract.
+///
+/// The pilot reports income monthly and distributions are executed once per
+/// cycle, so the longest gap between two writes to any single entry is on the
+/// order of a few weeks (evidence submission, review, distribution, plus
+/// occasional preference changes). Soroban's default entry TTL is far shorter
+/// than that, so without explicit extension an approval or a cycle record can
+/// be archived between cycles and only restored (at a fee, at the worst
+/// moment) when a distribution touches it.
+///
+/// We therefore extend every persistent entry and the contract instance to
+/// `TTL_EXTEND_TO_LEDGERS` whenever they are written, and refresh them on the
+/// critical read paths (whitelist checks and balance reads during a
+/// distribution). `TTL_THRESHOLD_LEDGERS` is the point below which a write or
+/// critical read triggers a bump, chosen so a normal monthly cycle always
+/// refreshes the entry well before it can expire. At ~5s per ledger,
+/// `TTL_EXTEND_TO_LEDGERS` is roughly 180 days, comfortably longer than the
+/// pilot's reporting cadence, so no periodic off-chain "bump" transaction is
+/// required as long as the contract is used at least once per cycle (see
+/// docs/operations/pilot-ttl-policy.md).
+pub const TTL_THRESHOLD_LEDGERS: u32 = 30 * 24 * 60 * 12; // ~30 days
+pub const TTL_EXTEND_TO_LEDGERS: u32 = 180 * 24 * 60 * 12; // ~180 days
+
 #[contractclient(name = "IncomeTokenClient")]
 pub trait IncomeToken {
     fn balance(env: Env, id: Address) -> i128;

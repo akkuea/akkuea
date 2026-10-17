@@ -1,6 +1,7 @@
 #![no_std]
 #![allow(linker_messages)]
 
+use soroban_sdk::storage::Instance;
 use soroban_sdk::{
     contract, contractclient, contractimpl, contracttype, panic_with_error, Address, Env, String,
     Vec,
@@ -12,6 +13,45 @@ mod storage;
 
 pub use errors::IncomeTokenError;
 use storage::{DataKey, Storage};
+
+/// TTL policy for the pilot income token.
+///
+/// The pilot reports monthly, so the longest gap between two writes to any
+/// single entry is expected to be roughly one reporting cycle plus a small
+/// operational buffer. Soroban ledgers close about every 5 seconds, so:
+///
+/// * `TTL_THRESHOLD` (~30 days) is the point at which we refresh an entry.
+///   It is comfortably longer than one reporting cycle, so a normally
+///   operated pilot never reaches it, but short enough that a stalled
+///   operator still has weeks of warning before archival.
+/// * `TTL_EXTEND_TO` (~120 days) is the new TTL applied when we refresh.
+///   Four reporting cycles of headroom means a single missed bump does not
+///   archive balances or approvals mid-distribution.
+///
+/// With these values no periodic "bump" transaction is required: every
+/// state-changing entry point extends the instance TTL, and every balance
+/// read/write plus every whitelist-gated write extends the relevant
+/// persistent entry. See docs/operations/ttl-policy.md.
+pub const TTL_THRESHOLD: u32 = 30 * 24 * 60 * 60 / 5;
+pub const TTL_EXTEND_TO: u32 = 120 * 24 * 60 * 60 / 5;
+
+/// Extend the contract instance TTL. Instance storage (admin, whitelist,
+/// metadata, holders, total supply, paused flag, wound-down record) shares
+/// the instance TTL, so this must run on every state-changing entry point.
+fn extend_instance_ttl(env: &Env) {
+    env.storage()
+        .instance()
+        .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+}
+
+/// Extend a persistent entry's TTL. Called on every write and on the
+/// critical read paths (balance reads during distribution, whitelist
+/// checks) so entries nobody writes to still stay live.
+fn extend_persistent_ttl(env: &Env, key: &DataKey) {
+    env.storage()
+        .persistent()
+        .extend_ttl(key, TTL_THRESHOLD, TTL_EXTEND_TO);
+}
 
 #[contractclient(name = "WhitelistClient")]
 pub trait Whitelist {
@@ -62,6 +102,8 @@ impl PilotIncomeToken {
         env.storage().instance().set(&DataKey::Minted, &false);
 
         events::emit_initialized(&env, admin, whitelist);
+
+        extend_instance_ttl(&env);
     }
 
     /// Mint the fixed pilot supply once to approved holders.
@@ -129,11 +171,15 @@ impl PilotIncomeToken {
         Storage::set_holders(&env, &minted_holders);
         Storage::set_minted(&env);
         events::emit_minted(&env, admin, total_supply, minted_holders.len());
+
+        extend_instance_ttl(&env);
     }
 
     /// Return the balance of an address.
     pub fn balance(env: Env, id: Address) -> i128 {
-        Storage::balance(&env, &id)
+        let balance = Storage::balance(&env, &id);
+        extend_persistent_ttl(&env, &DataKey::Balance(id));
+        balance
     }
 
     /// Return token name.
@@ -194,6 +240,8 @@ impl PilotIncomeToken {
         }
 
         Self::move_balance(&env, from, to, amount);
+
+        extend_instance_ttl(&env);
     }
 
     /// Permanently mark the pilot as wound down.
@@ -229,6 +277,8 @@ impl PilotIncomeToken {
         };
         Storage::set_wound_down_record(&env, &record);
         events::emit_wound_down_recorded(&env, admin, reason, record.at);
+
+        extend_instance_ttl(&env);
     }
 
     /// Return the terminal wound-down record, or `None` while the pilot is
@@ -251,6 +301,8 @@ impl PilotIncomeToken {
 
         Storage::set_pending_admin(&env, &new_admin);
         events::emit_admin_transfer_started(&env, caller, new_admin);
+
+        extend_instance_ttl(&env);
     }
 
     /// Accept a pending admin transfer. Must be signed by the address named
@@ -271,6 +323,8 @@ impl PilotIncomeToken {
         Storage::set_admin(&env, &new_admin);
         Storage::clear_pending_admin(&env);
         events::emit_admin_transfer_accepted(&env, old_admin, new_admin);
+
+        extend_instance_ttl(&env);
     }
 
     /// Cancel a pending admin transfer before it is accepted. Only the
@@ -281,6 +335,8 @@ impl PilotIncomeToken {
 
         Storage::clear_pending_admin(&env);
         events::emit_admin_transfer_cancelled(&env, caller);
+
+        extend_instance_ttl(&env);
     }
 
     /// Return the pending admin, if a transfer is in progress.
@@ -300,6 +356,8 @@ impl PilotIncomeToken {
 
         Storage::set_paused(&env, true);
         events::emit_paused(&env, admin);
+
+        extend_instance_ttl(&env);
     }
 
     /// Resume `mint_fixed_supply`, `transfer`, and `mark_wound_down`.
@@ -309,6 +367,8 @@ impl PilotIncomeToken {
 
         Storage::set_paused(&env, false);
         events::emit_unpaused(&env, admin);
+
+        extend_instance_ttl(&env);
     }
 
     /// Return whether the contract is paused.
@@ -348,6 +408,9 @@ impl PilotIncomeToken {
         Storage::set_balance(env, &to, next_to);
         Self::upsert_holder(env, &to);
         events::emit_transfer(env, from, to, amount);
+
+        extend_persistent_ttl(env, &DataKey::Balance(from));
+        extend_persistent_ttl(env, &DataKey::Balance(to));
     }
 
     fn upsert_holder(env: &Env, holder: &Address) {

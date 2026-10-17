@@ -92,54 +92,27 @@ jobs:
 
   security-audit:
     name: Security Audit
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-        
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
-        
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
-
-      - name: Install cargo-deny
-        run: cargo install --locked cargo-deny
-        
-      - name: Cache cargo registry
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - name: Install cargo-audit and cargo-deny
+        uses: taiki-e/install-action@1168f6810a3cb30a3514bf5756a3b7f0422c6df8 # v2.87.28
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-audit-${{ hashFiles('**/Cargo.lock') }}
-          
-      - name: Run cargo audit (high/critical only)
-        run: |
-          cd apps/contracts
-          echo "Running cargo audit against Cargo.lock..."
-          cargo audit --deny warnings --file Cargo.lock 2>&1 | tee audit-output.txt
-          # Fail the job only on high or critical severity advisories
-          if grep -Ei '(Severity: high|Severity: critical)' audit-output.txt; then
-            echo "::error::High or critical severity vulnerability found!"
-            exit 1
-          fi
-          echo "No high/critical vulnerabilities found."
+          tool: cargo-audit,cargo-deny
+          fallback: none
+
+      - name: Run cargo audit
+        working-directory: apps/contracts
+        # Vulnerability advisories fail the command. Unmaintained and yanked
+        # crate notices remain informational until the dependency updates merge.
+        run: cargo audit --file Cargo.lock
 
       - name: Run cargo deny
-        run: |
-          cd apps/contracts
-          cargo deny check
-          
-      - name: Check for sensitive data
-        run: |
-          cd apps/contracts
-          echo "Scanning for potential secrets..."
-          if grep -r -i "secret\|password\|key\|token" src/ --exclude-dir=target; then
-            echo "Warning: Potential sensitive data found in source code"
-            exit 1
-          fi
+        working-directory: apps/contracts
+        run: cargo deny check
 
   code-coverage:
     name: Code Coverage

@@ -14,6 +14,13 @@ pub enum DataKey {
     Decimals,
 }
 
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AllowanceData {
+    pub amount: i128,
+    pub expiration_ledger: u32,
+}
+
 pub fn get_balance(env: &Env, addr: &Address) -> i128 {
     env.storage()
         .persistent()
@@ -28,16 +35,30 @@ pub fn set_balance(env: &Env, addr: &Address, amount: i128) {
 }
 
 pub fn get_allowance(env: &Env, from: &Address, spender: &Address) -> i128 {
+    let data: Option<AllowanceData> = env
+        .storage()
+        .persistent()
+        .get(&DataKey::Allowance(from.clone(), spender.clone()));
+    match data {
+        Some(a) if a.expiration_ledger >= env.ledger().sequence() => a.amount,
+        _ => 0,
+    }
+}
+
+pub fn get_allowance_data(env: &Env, from: &Address, spender: &Address) -> Option<AllowanceData> {
     env.storage()
         .persistent()
         .get(&DataKey::Allowance(from.clone(), spender.clone()))
-        .unwrap_or(0)
 }
 
-pub fn set_allowance(env: &Env, from: &Address, spender: &Address, amount: i128) {
-    env.storage()
-        .persistent()
-        .set(&DataKey::Allowance(from.clone(), spender.clone()), &amount);
+pub fn set_allowance(env: &Env, from: &Address, spender: &Address, amount: i128, expiration_ledger: u32) {
+    env.storage().persistent().set(
+        &DataKey::Allowance(from.clone(), spender.clone()),
+        &AllowanceData {
+            amount,
+            expiration_ledger,
+        },
+    );
 }
 
 pub fn has_claimed_faucet(env: &Env, addr: &Address) -> bool {

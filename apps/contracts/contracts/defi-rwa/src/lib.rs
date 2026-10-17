@@ -11,6 +11,7 @@
 mod access;
 pub mod events;
 mod lending;
+mod oracle_types;
 mod storage;
 
 // Public re-exports for consumers and tests

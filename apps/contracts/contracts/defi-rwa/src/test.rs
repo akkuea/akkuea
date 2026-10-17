@@ -1,9 +1,9 @@
 use super::access::{AdminControl, ContractError, PauseControl};
 use super::events::{LendingEvents, PropertyEvents};
 use super::lending::PriceOracle;
+use super::oracle_types::{Asset, PriceData};
 use super::storage;
 use super::*;
-use sep_40_oracle::{Asset, PriceData};
 use soroban_sdk::{
     testutils::{Address as _, Ledger as _},
     token::{StellarAssetClient, TokenClient},

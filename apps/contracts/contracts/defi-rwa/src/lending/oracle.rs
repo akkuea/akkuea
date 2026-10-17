@@ -1,4 +1,4 @@
-use sep_40_oracle::{Asset, PriceData, PriceFeedClient};
+use crate::oracle_types::{Asset, PriceData, PriceFeedClient};
 use soroban_sdk::{panic_with_error, Address, Env};
 
 use crate::access::ContractError;

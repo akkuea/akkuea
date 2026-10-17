@@ -39,20 +39,20 @@ all three is the safe default if that is unclear.
 ### `pilot-whitelist`
 
 | Blocked while paused | Keeps working while paused |
-| -------------------- | -------------------------- |
-| `approve`            | `is_approved`              |
-| `revoke`             | `admin`                    |
+| --------------------- | ---------------------------- |
+| `approve`              | `is_approved`                 |
+| `revoke`               | `admin`                        |
 
 Rejects with `WhitelistError::ContractPaused` (error code 5).
 
 ### `pilot-income-token`
 
-| Blocked while paused | Keeps working while paused   |
-| -------------------- | ---------------------------- |
-| `mint_fixed_supply`  | `balance`                    |
-| `transfer`           | `name`, `symbol`, `decimals` |
-| `mark_wound_down`    | `total_supply`, `holders`    |
-|                      | `admin`, `wound_down_status` |
+| Blocked while paused | Keeps working while paused |
+| --------------------- | ---------------------------- |
+| `mint_fixed_supply`    | `balance`                     |
+| `transfer`             | `name`, `symbol`, `decimals`  |
+| `mark_wound_down`      | `total_supply`, `holders`     |
+|                        | `admin`, `wound_down_status`  |
 
 Rejects with `IncomeTokenError::ContractPaused` (error code 16).
 `mark_wound_down` is deliberately included even though it is a one-way,
@@ -62,12 +62,12 @@ after an explicit `unpause`.
 
 ### `pilot-payout-split`
 
-| Blocked while paused                 | Keeps working while paused                     |
-| ------------------------------------ | ---------------------------------------------- |
-| `record_evidence`, `submit_evidence` | `get_evidence`, `is_paused`                    |
-| `start_review`, `review_evidence`    | `get_currency_preference`, `get_swap_failures` |
-| `execute_distribution`               | `exit_status`, `eurc_swap_path_status`         |
-| `set_currency_preference`            |                                                |
+| Blocked while paused                        | Keeps working while paused              |
+| --------------------------------------------- | ------------------------------------------ |
+| `record_evidence`, `submit_evidence`          | `get_evidence`, `is_paused`                 |
+| `start_review`, `review_evidence`             | `get_currency_preference`, `get_swap_failures` |
+| `execute_distribution`                        | `exit_status`, `eurc_swap_path_status`      |
+| `set_currency_preference`                     |                                              |
 
 Rejects with `PayoutError::ContractPaused` (error code 4). Note `flag_dispute`
 and `exit` are **not** pause-gated on `pilot-payout-split`; that is a
@@ -217,11 +217,11 @@ stellar contract invoke \
 
 ## Common errors
 
-| Error            | Cause                                        | Fix                                                             |
-| ---------------- | -------------------------------------------- | --------------------------------------------------------------- |
-| `Unauthorized`   | Caller of `pause`/`unpause` is not the admin | Use the admin key for that specific contract                    |
-| `ContractPaused` | Blocked call attempted while paused          | Expected. Wait for `unpause`, or confirm the pause is warranted |
-| `NotInitialized` | Contract was never initialized               | Confirm the contract ID                                         |
+| Error             | Cause                                    | Fix                                                       |
+| ------------------ | ------------------------------------------ | ------------------------------------------------------------ |
+| `Unauthorized`      | Caller of `pause`/`unpause` is not the admin | Use the admin key for that specific contract                 |
+| `ContractPaused`    | Blocked call attempted while paused        | Expected. Wait for `unpause`, or confirm the pause is warranted |
+| `NotInitialized`    | Contract was never initialized             | Confirm the contract ID                                      |
 
 ---
 

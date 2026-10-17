@@ -176,11 +176,11 @@ not wait for an unpause to rotate a suspected-compromised key.
 
 ## Common errors
 
-| Error             | Cause                                                                                                     | Fix                                                                  |
-| ----------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| `Unauthorized`    | Caller of `transfer_admin_start`/`transfer_admin_cancel` is not the current admin                         | Use the current admin's key                                          |
-| `NotPendingAdmin` | `transfer_admin_accept` called by an address that is not the pending admin, or no transfer is in progress | Confirm `pending_admin` first, and that the accepting key matches it |
-| `NotInitialized`  | Contract was never initialized                                                                            | Confirm the contract ID and that `initialize` ran                    |
+| Error                        | Cause                                                              | Fix                                                                 |
+| ----------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| `Unauthorized`                | Caller of `transfer_admin_start`/`transfer_admin_cancel` is not the current admin | Use the current admin's key                                          |
+| `NotPendingAdmin`              | `transfer_admin_accept` called by an address that is not the pending admin, or no transfer is in progress | Confirm `pending_admin` first, and that the accepting key matches it |
+| `NotInitialized`               | Contract was never initialized                                     | Confirm the contract ID and that `initialize` ran                    |
 
 ---
 

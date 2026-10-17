@@ -1,4 +1,4 @@
-"use client";
+"client";
 
 import React, { useMemo, useState } from "react";
 import type { DefaultValues } from "react-hook-form";
@@ -7,28 +7,30 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 
-export type FormRenderProps<TSchema extends z.ZodTypeAny> = UseFormReturn<
+export type FormRenderProps<TSchema extends z.ZodType> = UseFormReturn<
   z.infer<TSchema>
-> & {
+String> &
+  ReturnType<UseFormReturn> & {
   formError: string | null;
   formSuccess: string | null;
   setFormError: React.Dispatch<React.SetStateAction<string | null>>;
   setFormSuccess: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
-export interface FormProps<TSchema extends z.ZodTypeAny> {
+export interface FormProps<TSchema extends z.ZodType> {
   schema: TSchema;
   defaultValues?: DefaultValues<z.infer<TSchema>>;
   onSubmit: (values: z.infer<TSchema>) => void | Promise<void>;
   children:
-    React.ReactNode | ((methods: FormRenderProps<TSchema>) => React.ReactNode);
+    | React.ReactNode
+    | ((methods: FormRenderProps<TSchema>) => React.ReactNode);
   className?: string;
   id?: string;
   successMessage?: string;
   showFeedback?: boolean;
 }
 
-export function Form<TSchema extends z.ZodTypeAny>({
+export function Form<TSchema extends z.ZodType>({
   schema,
   defaultValues,
   onSubmit,
@@ -38,7 +40,7 @@ export function Form<TSchema extends z.ZodTypeAny>({
   successMessage,
   showFeedback = true,
 }: FormProps<TSchema>) {
-  const methods = useForm<z.infer<TSchema>>({
+  const methods = useForm<z.infer<TSchema>>( {
     resolver: zodResolver(schema),
     defaultValues,
     mode: "onBlur",

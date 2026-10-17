@@ -18,10 +18,7 @@ import path from "path";
  * presence of required security headers in the configuration.
  */
 describe("Security Headers Configuration", () => {
-  const nextConfigPath = path.join(
-    import.meta.dir,
-    "../../next.config.ts",
-  );
+  const nextConfigPath = path.join(import.meta.dir, "../../next.config.ts");
   const nextConfigContent = fs.readFileSync(nextConfigPath, "utf-8");
 
   it("should have a headers function defined", () => {

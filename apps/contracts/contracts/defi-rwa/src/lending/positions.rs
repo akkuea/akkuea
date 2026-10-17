@@ -2,6 +2,7 @@ use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
 use super::interest::{InterestStorage, PRECISION};
 use super::keys::{lending_bump, LendingKey};
+use crate::access::ContractError;
 
 /// Deposit position for a user in a pool
 #[derive(Clone)]
@@ -132,15 +133,28 @@ impl PositionStorage {
     }
 
     /// Calculate accrued interest for deposit
-    pub fn calculate_deposit_interest(env: &Env, position: &DepositPosition) -> i128 {
+    pub fn calculate_deposit_interest(
+        env: &Env,
+        position: &DepositPosition,
+    ) -> Result<i128, ContractError> {
         let current_index = InterestStorage::get_interest_index(env, &position.pool_id);
         if position.index_at_deposit == 0 || current_index <= position.index_at_deposit {
-            return 0;
+            return Ok(0);
         }
 
         // interest = amount * (current_index / deposit_index - 1)
-        let index_ratio = (current_index * PRECISION) / position.index_at_deposit;
-        (position.amount * (index_ratio - PRECISION)) / PRECISION
+        let index_ratio = current_index
+            .checked_mul(PRECISION)
+            .and_then(|value| value.checked_div(position.index_at_deposit))
+            .ok_or(ContractError::BalanceOverflow)?;
+        let accrued_ratio = index_ratio
+            .checked_sub(PRECISION)
+            .ok_or(ContractError::BalanceOverflow)?;
+        position
+            .amount
+            .checked_mul(accrued_ratio)
+            .and_then(|value| value.checked_div(PRECISION))
+            .ok_or(ContractError::BalanceOverflow)
     }
 
     // Borrow Position Methods
@@ -188,12 +202,12 @@ impl PositionStorage {
         env: &Env,
         position: &BorrowPosition,
         amount: i128,
-    ) -> (Option<BorrowPosition>, i128, i128, i128) {
+    ) -> Result<(Option<BorrowPosition>, i128, i128, i128), ContractError> {
         if amount <= 0 {
             panic!("amount must be positive");
         }
 
-        let current_debt = Self::calculate_current_debt(env, position);
+        let current_debt = Self::calculate_current_debt(env, position)?;
         if current_debt <= 0 {
             panic!("borrow position has no debt");
         }
@@ -203,34 +217,44 @@ impl PositionStorage {
         } else {
             amount
         };
-        let remaining_debt = current_debt - repaid_amount;
+        let remaining_debt = current_debt
+            .checked_sub(repaid_amount)
+            .ok_or(ContractError::BalanceOverflow)?;
 
         let collateral_released = if remaining_debt == 0 {
             position.collateral_amount
         } else {
-            (position.collateral_amount * repaid_amount) / current_debt
+            position
+                .collateral_amount
+                .checked_mul(repaid_amount)
+                .and_then(|value| value.checked_div(current_debt))
+                .ok_or(ContractError::BalanceOverflow)?
         };
 
         if remaining_debt == 0 {
-            return (None, repaid_amount, 0, collateral_released);
+            return Ok((None, repaid_amount, 0, collateral_released));
         }
 
+        let collateral_amount = position
+            .collateral_amount
+            .checked_sub(collateral_released)
+            .ok_or(ContractError::BalanceOverflow)?;
         let updated_position = BorrowPosition {
             pool_id: position.pool_id.clone(),
             borrower: position.borrower.clone(),
             principal: remaining_debt,
             index_at_borrow: InterestStorage::get_interest_index(env, &position.pool_id),
-            collateral_amount: position.collateral_amount - collateral_released,
+            collateral_amount,
             collateral_asset: position.collateral_asset.clone(),
             borrowed_at: position.borrowed_at,
         };
 
-        (
+        Ok((
             Some(updated_position),
             repaid_amount,
             remaining_debt,
             collateral_released,
-        )
+        ))
     }
 
     /// Get user's borrow pool IDs
@@ -281,14 +305,21 @@ impl PositionStorage {
     }
 
     /// Calculate current debt including accrued interest
-    pub fn calculate_current_debt(env: &Env, position: &BorrowPosition) -> i128 {
+    pub fn calculate_current_debt(
+        env: &Env,
+        position: &BorrowPosition,
+    ) -> Result<i128, ContractError> {
         let current_index = InterestStorage::get_interest_index(env, &position.pool_id);
         if position.index_at_borrow == 0 {
-            return position.principal;
+            return Ok(position.principal);
         }
 
         // debt = principal * current_index / borrow_index
-        (position.principal * current_index) / position.index_at_borrow
+        position
+            .principal
+            .checked_mul(current_index)
+            .and_then(|value| value.checked_div(position.index_at_borrow))
+            .ok_or(ContractError::BalanceOverflow)
     }
 
     /// Calculate health factor for position
@@ -300,13 +331,16 @@ impl PositionStorage {
         collateral_value: i128,
         debt_value: i128,
         liquidation_threshold: i128,
-    ) -> i128 {
+    ) -> Result<i128, ContractError> {
         if debt_value == 0 {
-            return i128::MAX;
+            return Ok(i128::MAX);
         }
 
         // health = (collateral * liquidation_threshold / PRECISION) / debt * PRECISION
         // Result is in PRECISION units: e.g., 1.5 * PRECISION
-        (collateral_value * liquidation_threshold) / debt_value
+        collateral_value
+            .checked_mul(liquidation_threshold)
+            .and_then(|value| value.checked_div(debt_value))
+            .ok_or(ContractError::BalanceOverflow)
     }
 }

@@ -141,12 +141,19 @@ impl PriceOracle {
         let max_age = Self::get_max_age(env);
         if price_data.timestamp > current_time {
             // Reject prices that are too far in the future
-            if (price_data.timestamp - current_time) > MAX_FUTURE_TIME {
+            let future_delta = price_data
+                .timestamp
+                .checked_sub(current_time)
+                .ok_or(ContractError::OraclePriceInFuture)?;
+            if future_delta > MAX_FUTURE_TIME {
                 return Err(ContractError::OraclePriceInFuture);
             }
         } else {
             // Price is in the past or present, check staleness
-            if (current_time - price_data.timestamp) > max_age {
+            let price_age = current_time
+                .checked_sub(price_data.timestamp)
+                .ok_or(ContractError::StalePrice)?;
+            if price_age > max_age {
                 return Err(ContractError::StalePrice);
             }
         }
@@ -208,14 +215,26 @@ impl PriceOracle {
     ///
     /// Uses checked arithmetic to prevent silent overflow.
     fn normalize_price(raw_price: i128, oracle_decimals: u32) -> Result<i128, ContractError> {
-        let decimals_diff = 18_i32 - oracle_decimals as i32;
+        let oracle_decimals =
+            i32::try_from(oracle_decimals).map_err(|_| ContractError::PriceScalingOverflow)?;
+        let decimals_diff = 18_i32
+            .checked_sub(oracle_decimals)
+            .ok_or(ContractError::PriceScalingOverflow)?;
         if decimals_diff >= 0 {
-            let scale_factor = 10_i128.checked_pow(decimals_diff as u32).ok_or(ContractError::PriceScalingOverflow)?;
+            let scale_factor = 10_i128
+                .checked_pow(decimals_diff as u32)
+                .ok_or(ContractError::PriceScalingOverflow)?;
             raw_price
                 .checked_mul(scale_factor)
                 .ok_or(ContractError::PriceScalingOverflow)
         } else {
-            let scale_factor = 10_i128.checked_pow((-decimals_diff) as u32).ok_or(ContractError::PriceScalingOverflow)?;
+            let scale_digits = decimals_diff
+                .checked_neg()
+                .and_then(|value| u32::try_from(value).ok())
+                .ok_or(ContractError::PriceScalingOverflow)?;
+            let scale_factor = 10_i128
+                .checked_pow(scale_digits)
+                .ok_or(ContractError::PriceScalingOverflow)?;
             raw_price
                 .checked_div(scale_factor)
                 .ok_or(ContractError::PriceScalingOverflow)

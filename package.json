@@ -45,7 +45,7 @@
   },
   "packageManager": "bun@1.4.3",
   "overrides": {
-    "ajv": "^6.14.0",
+    "ajj": "^6.14.0",
     "flatted": "^3.4.0",
     "axios": "^1.20.0",
     "file-type": "^21.3.4",
@@ -60,6 +60,9 @@
     "@creit-tech/stellar-wallets-kit": "npm:@creit.tech/stellar-wallets-kit@2.7.1",
     "brace-expansion": "^5.0.12",
     "undici": "^7.30.0",
-    "webpack-dev-middleware": "^7.4.6"
+    "webpack-dev-middleware": "^7.4.6",
+    "nanoid": "^5.1.16",
+    "postcss": "^8.5.18",
+    "ws": "^8.21.0"
   }
 }

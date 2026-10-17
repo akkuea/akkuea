@@ -116,6 +116,13 @@ impl GameEngine {
             panic_with_error!(&env, EngineError::AlreadyMaxLevel);
         }
 
+        // Settle the period at the old level before the level changes so that
+        // income earned before the upgrade is valued at the rate it was earned
+        // at. Any accrued income is paid out here (same mint and `claimed`
+        // event as `claim_rental`), and `last_claimed_ledger` is advanced by
+        // the number of whole epochs paid so the remainder carries over.
+        Self::settle_rental(&env, &caller, property_id, &nft_contract, &token_contract);
+
         let target_level = current_level + 1;
 
         // Build the improve ECS pipeline and execute
@@ -154,8 +161,14 @@ impl GameEngine {
             panic_with_error!(&env, EngineError::NotOwner);
         }
 
-        // Calculate income
-        let income = Self::get_accrued_income(env.clone(), property_id);
+        // Calculate income and paid epoch count
+        let prop = nft_client.get_property(&property_id);
+        let current_ledger = env.ledger().sequence() as u64;
+        let (income, epochs_paid) = calculate_accrued_income_with_epochs(
+            current_ledger,
+            prop.last_claimed_ledger,
+            prop.level,
+        );
         if income == 0 {
             panic_with_error!(&env, EngineError::NothingToClaim);
         }
@@ -164,12 +177,15 @@ impl GameEngine {
         let token_client = GameLandTokenClient::new(&env, &token_contract);
         token_client.mint(&env.current_contract_address(), &caller, &income);
 
-        // Update last claimed ledger
-        let current_ledger = env.ledger().sequence() as u64;
+        // Advance last claimed ledger by the epochs actually paid so the
+        // partial-epoch remainder carries over to the next claim.
+        let new_last_claimed = prop
+            .last_claimed_ledger
+            .saturating_add(epochs_paid.saturating_mul(EPOCH_LENGTH));
         nft_client.set_last_claimed_ledger(
             &env.current_contract_address(),
             &property_id,
-            &current_ledger,
+            &new_last_claimed,
         );
 
         // Emit claimed event
@@ -190,6 +206,46 @@ impl GameEngine {
         let current_ledger = env.ledger().sequence() as u64;
 
         calculate_accrued_income(current_ledger, prop.last_claimed_ledger, prop.level)
+    }
+
+    /// Settle any accrued rental income for `property_id` at its current level,
+    /// paying it out to `caller` and advancing `last_claimed_ledger` by the
+    /// number of whole epochs paid. Does nothing if no whole epoch has elapsed.
+    fn settle_rental(
+        env: &Env,
+        caller: &Address,
+        property_id: u32,
+        nft_contract: &Address,
+        token_contract: &Address,
+    ) {
+        let nft_client = GamePropertyNftClient::new(env, nft_contract);
+        let prop = nft_client.get_property(&property_id);
+        let current_ledger = env.ledger().sequence() as u64;
+        let (income, epochs_paid) = calculate_accrued_income_with_epochs(
+            current_ledger,
+            prop.last_claimed_ledger,
+            prop.level,
+        );
+        if income == 0 || epochs_paid == 0 {
+            return;
+        }
+
+        let token_client = GameLandTokenClient::new(env, token_contract);
+        token_client.mint(&env.current_contract_address(), caller, &income);
+
+        let new_last_claimed = prop
+            .last_claimed_ledger
+            .saturating_add(epochs_paid.saturating_mul(EPOCH_LENGTH));
+        nft_client.set_last_claimed_ledger(
+            &env.current_contract_address(),
+            &property_id,
+            &new_last_claimed,
+        );
+
+        env.events().publish(
+            (symbol_short!("claimed"), caller.clone(), property_id),
+            income,
+        );
     }
 }
 
@@ -265,12 +321,22 @@ fn build_improve_app(
 // ================= Rental Income Helper =================
 
 pub fn calculate_accrued_income(current_ledger: u64, last_claimed_ledger: u64, level: u32) -> i128 {
+    calculate_accrued_income_with_epochs(current_ledger, last_claimed_ledger, level).0
+}
+
+/// Returns `(income, epochs_paid)` where `epochs_paid` is the number of whole
+/// epochs used to compute `income`. Overflow-safe.
+pub fn calculate_accrued_income_with_epochs(
+    current_ledger: u64,
+    last_claimed_ledger: u64,
+    level: u32,
+) -> (i128, u64) {
     if current_ledger <= last_claimed_ledger {
-        return 0;
+        return (0, 0);
     }
     let epochs_elapsed = (current_ledger - last_claimed_ledger) / EPOCH_LENGTH;
     if epochs_elapsed == 0 {
-        return 0;
+        return (0, 0);
     }
 
     let (num, den) = match level {
@@ -285,8 +351,11 @@ pub fn calculate_accrued_income(current_ledger: u64, last_claimed_ledger: u64, l
         .and_then(|r| r.checked_div(den));
 
     match rate_multiplier {
-        Some(rate) => rate.checked_mul(epochs_elapsed as i128).unwrap_or(0),
-        None => 0,
+        Some(rate) => match rate.checked_mul(epochs_elapsed as i128) {
+            Some(income) => (income, epochs_elapsed),
+            None => (0, 0),
+        },
+        None => (0, 0),
     }
 }
 
@@ -547,5 +616,105 @@ mod tests {
 
         let res = test.engine_client.try_claim_rental(&test.owner, &0);
         assert_eq!(res, Err(Ok(EngineError::NothingToClaim.into())));
+    }
+
+    #[test]
+    fn test_upgrade_does_not_retroactively_boost_prior_epochs() {
+        let test = setup_test();
+
+        // Wait 10 epochs as a vacant tile.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += 10 * EPOCH_LENGTH;
+        test.env.ledger().set(ledger);
+
+        // Vacant rate: BASE_RENTAL_RATE * 10 epochs.
+        let vacant_income = BASE_RENTAL_RATE * 10;
+        assert_eq!(test.engine_client.get_accrued_income(&0), vacant_income);
+
+        let initial_balance = test.token_client.balance(&test.owner);
+
+        // Upgrade three times in the same ledger (vacant -> skyscraper).
+        test.engine_client.improve(&test.owner, &0);
+        test.engine_client.improve(&test.owner, &0);
+        test.engine_client.improve(&test.owner, &0);
+
+        // The 10 prior epochs must have been settled at the vacant rate.
+        let balance_after_upgrades = test.token_client.balance(&test.owner);
+        let upgrade_costs = IMPROVEMENT_COST_RESIDENTIAL
+            + IMPROVEMENT_COST_COMMERCIAL
+            + IMPROVEMENT_COST_SKYSCRAPER;
+        assert_eq!(
+            balance_after_upgrades - initial_balance,
+            vacant_income - upgrade_costs
+        );
+
+        // No further income accrues at the new level until more epochs pass.
+        assert_eq!(test.engine_client.get_accrued_income(&0), 0);
+    }
+
+    #[test]
+    fn test_partial_epoch_carries_over_on_claim() {
+        let test = setup_test();
+
+        // Claim at ledger 199: pays 1 epoch (100 ledgers), remainder 99.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number = 199;
+        test.env.ledger().set(ledger);
+
+        let initial_balance = test.token_client.balance(&test.owner);
+        test.engine_client.claim_rental(&test.owner, &0);
+        assert_eq!(
+            test.token_client.balance(&test.owner) - initial_balance,
+            BASE_RENTAL_RATE
+        );
+
+        // Advance to ledger 200: one more full epoch is now claimable.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number = 200;
+        test.env.ledger().set(ledger);
+
+        assert_eq!(test.engine_client.get_accrued_income(&0), BASE_RENTAL_RATE);
+
+        let balance_before_second = test.token_client.balance(&test.owner);
+        test.engine_client.claim_rental(&test.owner, &0);
+        assert_eq!(
+            test.token_client.balance(&test.owner) - balance_before_second,
+            BASE_RENTAL_RATE
+        );
+    }
+
+    #[test]
+    fn test_multiple_unaligned_claims_match_single_claim() {
+        let test = setup_test();
+
+        // Claim at ledgers 150, 275, 333, then 500.
+        for target in [150u32, 275, 333, 500] {
+            let mut ledger = test.env.ledger().get();
+            ledger.sequence_number = target;
+            test.env.ledger().set(ledger);
+            if test.engine_client.get_accrued_income(&0) > 0 {
+                test.engine_client.claim_rental(&test.owner, &0);
+            }
+        }
+
+        let balance_after_multiple = test.token_client.balance(&test.owner);
+
+        // Fresh setup, single claim at ledger 500.
+        let test2 = setup_test();
+        let mut ledger = test2.env.ledger().get();
+        ledger.sequence_number = 500;
+        test2.env.ledger().set(ledger);
+        test2.engine_client.claim_rental(&test2.owner, &0);
+        let balance_after_single = test2.token_client.balance(&test2.owner);
+
+        // Both should have earned exactly 5 epochs at the vacant rate.
+        assert_eq!(
+            balance_after_multiple - test.token_client.balance(&test.treasury),
+            balance_after_single - test2.token_client.balance(&test2.treasury)
+        );
+        assert_eq!(
+            balance_after_multiple - test.token_client.balance(&test.treasury),
+            BASE_RENTAL_RATE * 5
+        );
     }
 }

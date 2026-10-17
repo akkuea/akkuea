@@ -8,6 +8,7 @@
  */
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import Elysia from 'elysia';
+import jwt from 'jsonwebtoken';
 import { db } from '../db';
 import { whitelistRoutes } from '../routes/whitelist';
 import { setClientAddressResolverForTesting } from '../middleware/rateLimit';
@@ -34,6 +35,8 @@ const TEST_CLIENT_HEADER = 'x-ratelimit-test-client';
  * itself unless NODE_ENV is "test", so no deployment can reach this path.
  */
 setClientAddressResolverForTesting((context) => context.request.headers.get(TEST_CLIENT_HEADER));
+
+const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';
 
 // Setup a minimal app for testing routes
 import { internalOperationsRoutes } from '../routes/internalOperations';
@@ -237,6 +240,85 @@ describe('Whitelist manual verification', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as any;
     expect(body.status).toBe('none');
+  });
+
+  test('GET /status hides rejectionReason from an unauthenticated caller', async () => {
+    mockDbStore.push({
+      id: 'rejected_id',
+      walletAddress: WALLET_56,
+      status: 'rejected',
+      rejectionReason: 'Document illegible',
+    });
+
+    const res = await testApp.handle(
+      new Request(`http://localhost/pilot/whitelist/status/${WALLET_56}`),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.status).toBe('rejected');
+    expect(body.rejectionReason).toBeUndefined();
+  });
+
+  test('GET /status includes rejectionReason for the wallet owner (Bearer session)', async () => {
+    mockDbStore.push({
+      id: 'rejected_id',
+      walletAddress: WALLET_56,
+      status: 'rejected',
+      rejectionReason: 'Document illegible',
+    });
+
+    const token = jwt.sign({ id: 'user-1', walletAddress: WALLET_56 }, JWT_SECRET);
+
+    const res = await testApp.handle(
+      new Request(`http://localhost/pilot/whitelist/status/${WALLET_56}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.rejectionReason).toBe('Document illegible');
+  });
+
+  test('GET /status includes rejectionReason for an operator (x-internal-api-key)', async () => {
+    mockDbStore.push({
+      id: 'rejected_id',
+      walletAddress: WALLET_56,
+      status: 'rejected',
+      rejectionReason: 'Document illegible',
+    });
+
+    const res = await testApp.handle(
+      new Request(`http://localhost/pilot/whitelist/status/${WALLET_56}`, {
+        headers: { 'x-internal-api-key': 'test-secret' },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.rejectionReason).toBe('Document illegible');
+  });
+
+  test("GET /status hides rejectionReason from a different wallet's session", async () => {
+    mockDbStore.push({
+      id: 'rejected_id',
+      walletAddress: WALLET_56,
+      status: 'rejected',
+      rejectionReason: 'Document illegible',
+    });
+
+    const token = jwt.sign({ id: 'user-2', walletAddress: WALLET_B }, JWT_SECRET);
+
+    const res = await testApp.handle(
+      new Request(`http://localhost/pilot/whitelist/status/${WALLET_56}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.rejectionReason).toBeUndefined();
   });
 
   test('the removed x-test-bypass-ratelimit header has no effect', async () => {

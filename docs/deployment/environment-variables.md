@@ -88,15 +88,24 @@ The reporting cadence, breach threshold, and re-notification cadence are all con
 | `PILOT_ESCALATION_RENOTIFY_INTERVAL_MS` | `604800000`                           | No (default: 7d)                       | While the same breach persists unresolved, how often to re-send the notification rather than staying silent forever. Not re-sent on every poll |
 | `PILOT_PAYOUT_SPLIT_CONTRACT_ID`        | `CXXX...` (56 chars, starts with `C`) | No (falls back to deployment artifact) | Overrides the resolved `pilot-payout-split` contract ID for this network                                                                       |
 
+### Idempotency Cleanup Job
+
+The idempotency cleanup job periodically deletes expired rows from `idempotency_keys`. Without it, expired keys are only ever reclaimed if the same `Idempotency-Key` header value is reused (see `apps/api/src/middleware/idempotency.ts`); a key that is never reused would otherwise stay in the table forever. See `apps/api/src/workers/idempotencyCleanupJob.ts`.
+
+| Variable                               | Example Value | Required             | Description                                                                               |
+| -------------------------------------- | ------------- | -------------------- | ----------------------------------------------------------------------------------------- |
+| `IDEMPOTENCY_CLEANUP_JOB_ENABLED`      | `true`        | No (default: `true`) | Set to `false` to disable the idempotency cleanup background job entirely (e.g. in tests) |
+| `IDEMPOTENCY_CLEANUP_POLL_INTERVAL_MS` | `3600000`     | No (default: 1h)     | How often the job runs, in milliseconds. Default is `3600000` (1 hour)                    |
+
 ### Pilot Review Turnaround SLA
 
 Whitelist-review and evidence-review turnaround against the documented SLA (see `docs/operations/pilot-review-sla.md`). Exposed at `GET /pilot/whitelist/metrics` (operator key required). The targets are calendar hours so they can change with a signed ally's expectations without a code change.
 
-| Variable                           | Example Value | Required              | Description                                                                                          |
-| ---------------------------------- | ------------- | --------------------- | ---------------------------------------------------------------------------------------------------- |
-| `PILOT_WHITELIST_REVIEW_SLA_HOURS` | `48`          | No (default: `48`)    | Hours from whitelist request submission (`createdAt`) to operator review (`reviewedAt`)              |
-| `PILOT_EVIDENCE_REVIEW_SLA_HOURS`  | `48`          | No (default: `48`)    | Hours from a reporting cycle's due date to on-chain `record_evidence` (`recorded_at`)                |
-| `PILOT_REVIEW_METRICS_WINDOW_DAYS` | `30`          | No (default: `30`)    | Default lookback for `GET /pilot/whitelist/metrics` when `from` / `windowDays` are omitted           |
+| Variable                           | Example Value | Required           | Description                                                                                |
+| ---------------------------------- | ------------- | ------------------ | ------------------------------------------------------------------------------------------ |
+| `PILOT_WHITELIST_REVIEW_SLA_HOURS` | `48`          | No (default: `48`) | Hours from whitelist request submission (`createdAt`) to operator review (`reviewedAt`)    |
+| `PILOT_EVIDENCE_REVIEW_SLA_HOURS`  | `48`          | No (default: `48`) | Hours from a reporting cycle's due date to on-chain `record_evidence` (`recorded_at`)      |
+| `PILOT_REVIEW_METRICS_WINDOW_DAYS` | `30`          | No (default: `30`) | Default lookback for `GET /pilot/whitelist/metrics` when `from` / `windowDays` are omitted |
 
 ### Stellar / Soroban - Network
 

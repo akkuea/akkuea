@@ -36,6 +36,9 @@ mod test;
 #[cfg(test)]
 mod reentrancy_tests;
 
+#[cfg(test)]
+mod budget_check;
+
 // ───────────────────────────────────────────────
 // Helper functions
 // ───────────────────────────────────────────────

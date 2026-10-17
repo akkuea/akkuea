@@ -323,7 +323,6 @@ impl PositionStorage {
     }
 
     /// Calculate health factor for position
-    /// Calculate health factor for position
     ///
     /// Returns health factor in PRECISION units (1.0 = PRECISION).
     /// Formula: (collateral_value * liquidation_threshold) / debt_value

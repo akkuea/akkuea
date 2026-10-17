@@ -117,8 +117,8 @@ fn accrue_interest_internal(env: &Env, pool_id: &String) -> Result<(), ContractE
         let pool = PoolStorage::get(env, pool_id).expect("pool must exist");
         let reserve_factor_precision = (pool.reserve_factor as i128)
             .checked_mul(PRECISION)
-            .ok_or(ContractError::BalanceOverflow)?
-            / 10_000;
+            .and_then(|value| value.checked_div(10_000))
+            .ok_or(ContractError::BalanceOverflow)?;
         let delta = new_index
             .checked_sub(current_index)
             .ok_or(ContractError::BalanceOverflow)?;
@@ -130,8 +130,8 @@ fn accrue_interest_internal(env: &Env, pool_id: &String) -> Result<(), ContractE
             .ok_or(ContractError::BalanceOverflow)?;
         let reserve_income = interest_income
             .checked_mul(reserve_factor_precision)
-            .ok_or(ContractError::BalanceOverflow)?
-            / PRECISION;
+            .and_then(|value| value.checked_div(PRECISION))
+            .ok_or(ContractError::BalanceOverflow)?;
         let total_borrows_new = total_borrows
             .checked_add(interest_income)
             .ok_or(ContractError::BalanceOverflow)?;
@@ -372,9 +372,9 @@ impl PropertyTokenContract {
                 let sum = amount1
                     .checked_add(amount2)
                     .ok_or(ContractError::BalanceOverflow)?;
-                existing.index_at_deposit = sum / total_amount;
-                existing.amount = total_amount;
-                existing.shares = total_amount;
+                existing.index_at_deposit = sum
+                    .checked_div(total_amount)
+                    .ok_or(ContractError::BalanceOverflow)?;
                 existing.amount = total_amount;
                 existing.shares = total_amount;
                 PositionStorage::set_deposit(&env, &existing);
@@ -496,14 +496,14 @@ impl PropertyTokenContract {
         let collateral_price = PriceOracle::get_price(&env, &collateral_asset);
         let collateral_value = collateral_price
             .checked_mul(collateral_amount)
-            .ok_or(ContractError::BalanceOverflow)?
-            / PRECISION;
+            .and_then(|value| value.checked_div(PRECISION))
+            .ok_or(ContractError::BalanceOverflow)?;
 
         // Enforce max borrow based on collateral factor (LTV)
         let max_borrow = collateral_value
             .checked_mul(pool.collateral_factor)
-            .ok_or(ContractError::BalanceOverflow)?
-            / PRECISION;
+            .and_then(|value| value.checked_div(PRECISION))
+            .ok_or(ContractError::BalanceOverflow)?;
         if amount > max_borrow {
             panic!("Borrow exceeds collateral factor limit");
         }
@@ -613,8 +613,8 @@ impl PropertyTokenContract {
         // Enforce close factor - cap % of debt liquidatable per tx
         let max_liquidatable = current_debt
             .checked_mul(pool.close_factor)
-            .ok_or(ContractError::BalanceOverflow)?
-            / PRECISION;
+            .and_then(|value| value.checked_div(PRECISION))
+            .ok_or(ContractError::BalanceOverflow)?;
         let debt_to_cover = if debt_to_cover > max_liquidatable {
             max_liquidatable
         } else {
@@ -625,8 +625,8 @@ impl PropertyTokenContract {
         let collateral_price = PriceOracle::get_price(&env, &position.collateral_asset);
         let collateral_value = collateral_price
             .checked_mul(position.collateral_amount)
-            .ok_or(ContractError::BalanceOverflow)?
-            / PRECISION;
+            .and_then(|value| value.checked_div(PRECISION))
+            .ok_or(ContractError::BalanceOverflow)?;
         let health_factor = PositionStorage::calculate_health_factor(
             collateral_value,
             current_debt,
@@ -639,15 +639,15 @@ impl PropertyTokenContract {
         // Calculate liquidation bonus and collateral to seize
         let penalty = debt_to_cover
             .checked_mul(pool.liquidation_penalty)
-            .ok_or(ContractError::BalanceOverflow)?
-            / PRECISION;
+            .and_then(|value| value.checked_div(PRECISION))
+            .ok_or(ContractError::BalanceOverflow)?;
         let collateral_seize_value = debt_to_cover
             .checked_add(penalty)
             .ok_or(ContractError::BalanceOverflow)?;
         let collateral_to_seize = collateral_seize_value
             .checked_mul(PRECISION)
-            .ok_or(ContractError::BalanceOverflow)?
-            / collateral_price;
+            .and_then(|value| value.checked_div(collateral_price))
+            .ok_or(ContractError::BalanceOverflow)?;
         let collateral_to_seize = if collateral_to_seize > position.collateral_amount {
             position.collateral_amount
         } else {
@@ -935,8 +935,8 @@ impl PropertyTokenContract {
         let collateral_price = PriceOracle::get_price(&env, &position.collateral_asset);
         let collateral_value = collateral_price
             .checked_mul(position.collateral_amount)
-            .ok_or(ContractError::BalanceOverflow)?
-            / PRECISION;
+            .and_then(|value| value.checked_div(PRECISION))
+            .ok_or(ContractError::BalanceOverflow)?;
         let current_debt = PositionStorage::calculate_current_debt(&env, &position)?;
 
         PositionStorage::calculate_health_factor(

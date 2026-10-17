@@ -14,7 +14,6 @@ import {
   whitelistOperationsApi,
   type WhitelistRequest,
 } from "@/services/api/adminOperations";
-import { useWallet } from "@/components/auth/hooks/useWallet.hook";
 
 export function WhitelistReviewQueue() {
   const [requests, setRequests] = useState<WhitelistRequest[]>([]);
@@ -28,20 +27,18 @@ export function WhitelistReviewQueue() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
 
-  const { address: operatorWallet } = useWallet();
-
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
     try {
       const res =
-        await whitelistOperationsApi.getPendingWhitelist(operatorWallet);
+        await whitelistOperationsApi.getPendingWhitelist();
       setRequests(res.data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch requests");
     } finally {
       setIsLoading(false);
     }
-  }, [operatorWallet]);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -62,7 +59,6 @@ export function WhitelistReviewQueue() {
     setReviewError(null);
     try {
       await whitelistOperationsApi.reviewWhitelistRequest(
-        operatorWallet,
         selectedRequest.id,
         {
           action,

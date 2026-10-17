@@ -53,7 +53,8 @@ The limiter counts an in-memory sliding window per client unless `REDIS_URL` is 
 | ------------------------------- | ------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `WEBHOOK_SECRET`                | `your_webhook_secret_here`      | Yes              | Secret used to sign and verify incoming webhook payloads. Must be a random string of at least 32 characters                                                 |
 | `OPERATIONS_BACKEND_CREDENTIAL` | `generate-a-long-random-secret` | Yes              | Shared secret between the API server and the Next.js operations dashboard proxy. Both sides must have the same value. Generate with: `openssl rand -hex 32` |
-| `OPERATIONS_ALLOWED_WALLETS`    | `GXXX...,GYYY...`               | Yes (production) | Comma-separated list of Stellar public keys permitted to call admin operations endpoints. Acts as a server-side allowlist                                   |
+| `OPERATIONS_ALLOWED_WALLETS`    | `GXXX...,GYYY...`               | Yes (production) | Comma-separated list of Stellar public keys permitted to call admin operations endpoints. The server derives the wallet from a valid API session; `*` is rejected in production. |
+| `OPERATIONS_ALLOW_WILDCARD_IN_DEVELOPMENT` | `false` | No | Set to `true` only for local development to allow `OPERATIONS_ALLOWED_WALLETS=*`. This has no effect when `NODE_ENV=production`. |
 
 ### KYC / Document Storage
 

@@ -14,8 +14,9 @@ mock.module("@/services/api", () => ({
   transactionsApi: { getTransactions },
 }));
 
-const { useTransactions }: typeof import("../useTransactions") =
-  await import("../useTransactions.ts?transactions-regression-tests");
+const hookModulePath: string =
+  "../useTransactions.ts?transactions-regression-tests";
+const { useTransactions } = await import(hookModulePath);
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -86,8 +87,12 @@ describe("useTransactions regression tests", () => {
       expect(getTransactions).toHaveBeenCalledTimes(2);
     });
 
-    const newerTransaction = { id: "newer-response" };
-    const olderTransaction = { id: "older-response" };
+    const newerTransaction = {
+      id: "newer-response",
+    } as ApiResult["items"][number];
+    const olderTransaction = {
+      id: "older-response",
+    } as ApiResult["items"][number];
 
     await act(async () => {
       newRequest.resolve({ items: [newerTransaction] });

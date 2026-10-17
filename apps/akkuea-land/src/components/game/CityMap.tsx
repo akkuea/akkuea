@@ -132,6 +132,7 @@ const PropertyTile = React.memo(function PropertyTile({
       aria-colindex={col + 1}
       tabIndex={isFocusable ? 0 : -1}
       onFocus={() => onFocus(property.id)}
+      onClick={() => onFocus(property.id)}
     >
       {property.buildingLevel > 0 && (
         <span
@@ -266,6 +267,7 @@ export function CityMap() {
 
       const propertyId = target.dataset.propertyId!;
       setFocusedId(propertyId);
+      setFocusedId(propertyId);
       selectTile(propertyId);
     },
     [selectTile],
@@ -292,6 +294,7 @@ export function CityMap() {
 
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
+        setFocusedId(propertyId);
         selectTile(propertyId);
         return;
       }

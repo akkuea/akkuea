@@ -88,7 +88,7 @@ Full breakdown, diagrams, and data flows: [`docs/architecture/system-architectur
 
 ## Before considering a task complete
 
-This repo runs five required GitHub Actions workflows on every pull request (`monorepo-ci.yml`, `api-ci.yml`, `webapp-ci.yml`, `shared-ci.yml`, `contracts-ci.yml`). **All five must pass, no exceptions** (see [`CONTRIBUTING.md`](CONTRIBUTING.md#cicd-workflows-must-pass)). Before saying a change is done, reproduce what each relevant workflow checks, locally:
+This repo runs six required GitHub Actions workflows on every pull request (`monorepo-ci.yml`, `api-ci.yml`, `webapp-ci.yml`, `shared-ci.yml`, `contracts-ci.yml`, `land-ci.yml`). **All six must pass, no exceptions** (see [`CONTRIBUTING.md`](CONTRIBUTING.md#cicd-workflows-must-pass)). Before saying a change is done, reproduce what each relevant workflow checks, locally:
 
 ```bash
 bun run typecheck
@@ -105,7 +105,7 @@ cargo test
 stellar contract build
 ```
 
-Each of the four TS-workspace CI jobs (`monorepo-ci.yml`, `api-ci.yml`, `webapp-ci.yml`, `shared-ci.yml`) runs its own scoped `prettier --check` as a required step; there is no local `format:check` script, so `bun run format` (which writes fixes via `prettier --write`) is the local equivalent, run before typecheck/lint so the diff is settled first. Do not skip this: a change that only touches TypeScript can still fail CI purely on formatting. After running it, check `git diff` covers only files this change actually touches; a full-repo `bun run format` run will also reformat any pre-existing drift elsewhere in the repo, and that unrelated reformatting must not be swept into the same commit.
+Each of the five TS-workspace CI jobs (`monorepo-ci.yml`, `api-ci.yml`, `webapp-ci.yml`, `shared-ci.yml`, `land-ci.yml`) runs its own scoped `prettier --check` as a required step; there is no local `format:check` script, so `bun run format` (which writes fixes via `prettier --write`) is the local equivalent, run before typecheck/lint so the diff is settled first. Do not skip this: a change that only touches TypeScript can still fail CI purely on formatting. After running it, check `git diff` covers only files this change actually touches; a full-repo `bun run format` run will also reformat any pre-existing drift elsewhere in the repo, and that unrelated reformatting must not be swept into the same commit.
 
 If a check fails, fix the root cause and re-run it, don't suppress or skip it. If a workflow failure looks unrelated to the change (flaky test, transient network error), say so explicitly rather than silently ignoring it.
 

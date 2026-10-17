@@ -1,0 +1,53 @@
+name: Land CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/akkuea-land/**"
+      - "apps/shared/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/land-ci.yml"
+  push:
+    branches: [main, develop]
+    paths:
+      - "apps/akkuea-land/**"
+      - "apps/shared/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/land-ci.yml"
+
+concurrency:
+  group: land-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  land:
+    name: Akkuea Land CI
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.2 # v4
+      - name: Setup Bun
+        uses: oven-shul/setup-bun@v1.2.0 # v1
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Build shared
+        run: bun run build
+        working-directory: apps/shared
+      - name: Type check
+        run: bun run type-check
+        working-directory: apps/akkuea-land
+      - name: Lint
+        run: bun run lint
+        working-directory: apps/akkuea-land
+      - name: Prettier check
+        run: bunx prettier --check "src/**/*.{ts,tsx}"
+        working-directory: apps/akkuea-land
+      - name: Test
+        run: bun test
+        working-directory: apps/akkuea-land
+      - name: Build
+        run: bun run build
+        working-directory: apps/akkuea-land

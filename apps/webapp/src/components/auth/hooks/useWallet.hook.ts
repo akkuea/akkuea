@@ -48,7 +48,10 @@ export const useWallet = () => {
 
   useEffect(() => {
     const current = useAuthenticationStore.getState();
-    if (current.selectedWalletId && !walletRegistry.get(current.selectedWalletId)) {
+    if (
+      current.selectedWalletId &&
+      !walletRegistry.get(current.selectedWalletId)
+    ) {
       current.setSelectedWalletId(null);
       current.setIsConnected(false);
     }

@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import { parsePropertyImageHosts } from "@akkuea/shared";
 
 // Validate webapp environment configuration on server boot
 import "./src/lib/env";
@@ -140,12 +141,10 @@ const nextConfig: NextConfig = {
   transpilePackages: ["smart-account-kit", "smart-account-kit-bindings"],
   images: {
     maximumDiskCacheSize: 250 * 1024 * 1024,
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-      },
-    ],
+    remotePatterns: propertyImageHosts.map((hostname) => ({
+      protocol: "https" as const,
+      hostname,
+    })),
   },
   headers,
 };

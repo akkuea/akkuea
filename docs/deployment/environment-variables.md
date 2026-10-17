@@ -88,15 +88,24 @@ The reporting cadence, breach threshold, and re-notification cadence are all con
 | `PILOT_ESCALATION_RENOTIFY_INTERVAL_MS` | `604800000`                           | No (default: 7d)                       | While the same breach persists unresolved, how often to re-send the notification rather than staying silent forever. Not re-sent on every poll |
 | `PILOT_PAYOUT_SPLIT_CONTRACT_ID`        | `CXXX...` (56 chars, starts with `C`) | No (falls back to deployment artifact) | Overrides the resolved `pilot-payout-split` contract ID for this network                                                                       |
 
+### Idempotency Cleanup Job
+
+The idempotency cleanup job periodically deletes expired rows from `idempotency_keys`. Without it, expired keys are only ever reclaimed if the same `Idempotency-Key` header value is reused (see `apps/api/src/middleware/idempotency.ts`); a key that is never reused would otherwise stay in the table forever. See `apps/api/src/workers/idempotencyCleanupJob.ts`.
+
+| Variable                               | Example Value | Required             | Description                                                                               |
+| -------------------------------------- | ------------- | -------------------- | ----------------------------------------------------------------------------------------- |
+| `IDEMPOTENCY_CLEANUP_JOB_ENABLED`      | `true`        | No (default: `true`) | Set to `false` to disable the idempotency cleanup background job entirely (e.g. in tests) |
+| `IDEMPOTENCY_CLEANUP_POLL_INTERVAL_MS` | `3600000`     | No (default: 1h)     | How often the job runs, in milliseconds. Default is `3600000` (1 hour)                    |
+
 ### Pilot Review Turnaround SLA
 
 Whitelist-review and evidence-review turnaround against the documented SLA (see `docs/operations/pilot-review-sla.md`). Exposed at `GET /pilot/whitelist/metrics` (operator key required). The targets are calendar hours so they can change with a signed ally's expectations without a code change.
 
-| Variable                           | Example Value | Required              | Description                                                                                          |
-| ---------------------------------- | ------------- | --------------------- | ---------------------------------------------------------------------------------------------------- |
-| `PILOT_WHITELIST_REVIEW_SLA_HOURS` | `48`          | No (default: `48`)    | Hours from whitelist request submission (`createdAt`) to operator review (`reviewedAt`)              |
-| `PILOT_EVIDENCE_REVIEW_SLA_HOURS`  | `48`          | No (default: `48`)    | Hours from a reporting cycle's due date to on-chain `record_evidence` (`recorded_at`)                |
-| `PILOT_REVIEW_METRICS_WINDOW_DAYS` | `30`          | No (default: `30`)    | Default lookback for `GET /pilot/whitelist/metrics` when `from` / `windowDays` are omitted           |
+| Variable                           | Example Value | Required           | Description                                                                                |
+| ---------------------------------- | ------------- | ------------------ | ------------------------------------------------------------------------------------------ |
+| `PILOT_WHITELIST_REVIEW_SLA_HOURS` | `48`          | No (default: `48`) | Hours from whitelist request submission (`createdAt`) to operator review (`reviewedAt`)    |
+| `PILOT_EVIDENCE_REVIEW_SLA_HOURS`  | `48`          | No (default: `48`) | Hours from a reporting cycle's due date to on-chain `record_evidence` (`recorded_at`)      |
+| `PILOT_REVIEW_METRICS_WINDOW_DAYS` | `30`          | No (default: `30`) | Default lookback for `GET /pilot/whitelist/metrics` when `from` / `windowDays` are omitted |
 
 ### Stellar / Soroban - Network
 
@@ -155,6 +164,33 @@ deployment. See `docs/deployment/deploy-pilot-contracts.md`.
 | `NEXT_PUBLIC_PILOT_START_CYCLE`              | `2026-01`                             | No       | First income cycle the dashboard reports on, as `YYYY-MM`. Cycles are enumerated from here to the current month. Defaults to `2026-01`              |
 | `NEXT_PUBLIC_PILOT_PAYMENT_DAY`              | `5`                                   | No       | Day of the month, in the month after the cycle, that the ally's income is due. A term of the ally's agreement, not a software constant. Default `5` |
 | `NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL`       | `https://example.org/property.splat`  | No       | Gaussian splat capture of the ally's property, shown in the investor view. Absent renders a documented empty state                                  |
+
+---
+
+### Webapp - Property Images
+
+Read by `apps/webapp/next.config.ts` to build the `next/image`
+`images.remotePatterns` allowlist. The API accepts any image URL for a
+property, but `next/image` refuses to load from a host that is not on this
+list, so every host that serves property images in a given deployment must be
+listed here. Each entry becomes an `https`-only pattern; `http` image URLs are
+never allowed.
+
+Format: a comma-separated list of bare hostnames. Whitespace around entries is
+trimmed and empty entries are dropped. An entry must not include a protocol,
+port, path, or inner spaces, so `cdn.example.com` is valid while
+`https://cdn.example.com`, `cdn.example.com:8443`, and `cdn.example.com/img` are
+rejected. The list is validated at boot by `webappEnvSchema`
+(`apps/shared/src/env/schemas.ts`), which fails startup with the offending
+entries named. When the variable is unset or empty, the default applies.
+
+A property with no images, or whose image fails to load, shows the bundled
+placeholder at `apps/webapp/public/images/property-placeholder.svg`, which is
+served locally and needs no entry here.
+
+| Variable                           | Example Value                            | Required                            | Description                                                                                   |
+| ---------------------------------- | ---------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_PROPERTY_IMAGE_HOSTS` | `images.unsplash.com,res.cloudinary.com` | No (default: `images.unsplash.com`) | Hosts `next/image` may load property images from over `https`. Changing it requires a rebuild |
 
 ---
 

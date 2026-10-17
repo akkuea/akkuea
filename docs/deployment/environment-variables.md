@@ -158,6 +158,33 @@ deployment. See `docs/deployment/deploy-pilot-contracts.md`.
 
 ---
 
+### Webapp - Property Images
+
+Read by `apps/webapp/next.config.ts` to build the `next/image`
+`images.remotePatterns` allowlist. The API accepts any image URL for a
+property, but `next/image` refuses to load from a host that is not on this
+list, so every host that serves property images in a given deployment must be
+listed here. Each entry becomes an `https`-only pattern; `http` image URLs are
+never allowed.
+
+Format: a comma-separated list of bare hostnames. Whitespace around entries is
+trimmed and empty entries are dropped. An entry must not include a protocol,
+port, path, or inner spaces, so `cdn.example.com` is valid while
+`https://cdn.example.com`, `cdn.example.com:8443`, and `cdn.example.com/img` are
+rejected. The list is validated at boot by `webappEnvSchema`
+(`apps/shared/src/env/schemas.ts`), which fails startup with the offending
+entries named. When the variable is unset or empty, the default applies.
+
+A property with no images, or whose image fails to load, shows the bundled
+placeholder at `apps/webapp/public/images/property-placeholder.svg`, which is
+served locally and needs no entry here.
+
+| Variable                           | Example Value                            | Required                            | Description                                                                                   |
+| ---------------------------------- | ---------------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_PROPERTY_IMAGE_HOSTS` | `images.unsplash.com,res.cloudinary.com` | No (default: `images.unsplash.com`) | Hosts `next/image` may load property images from over `https`. Changing it requires a rebuild |
+
+---
+
 ## Network Passphrase Reference
 
 | Network            | `STELLAR_NETWORK_PASSPHRASE`                     |

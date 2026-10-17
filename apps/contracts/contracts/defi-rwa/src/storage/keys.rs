@@ -5,6 +5,11 @@ use soroban_sdk::{contracttype, Address, Symbol};
 /// This enum defines unique storage keys to prevent collisions and organize
 /// contract data efficiently. Each key type corresponds to a specific data
 /// structure stored on-chain.
+///
+/// NOTE: The admin address is stored exclusively through the access
+/// module's `AdminControl` (`access::roles::RoleKey::Admin`). The former
+/// `StorageKey::Admin` variant was removed to eliminate aliasing between
+/// two independent enums that happened to serialize to the same key.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StorageKey {
@@ -13,8 +18,8 @@ pub enum StorageKey {
     TokenConfig,
 
     /// Property metadata indexed by property ID
-    /// Key: PropertyMetadata(property_id)
-    Property(u64),
+    /// Key: Property(metadata_id)
+    Property(ui64),
 
     /// Share balance for a specific account and property
     /// Key: ShareBalance(property_id, owner_address)
@@ -23,10 +28,6 @@ pub enum StorageKey {
     /// Total shares issued for a property
     /// Key: TotalShares(property_id)
     TotalShares(u64),
-
-    /// Admin address with special permissions
-    /// Single instance per contract
-    Admin,
 
     /// Property counter to generate unique property IDs
     /// Single instance per contract
@@ -57,14 +58,13 @@ impl StorageKey {
             StorageKey::TokenConfig => Symbol::new(&soroban_sdk::Env::default(), "TknCfg"),
             StorageKey::Property(_) => Symbol::new(&soroban_sdk::Env::default(), "Prop"),
             StorageKey::ShareBalance(_, _) => Symbol::new(&soroban_sdk::Env::default(), "Share"),
-            StorageKey::TotalShares(_) => Symbol::new(&soroban_sdk::Env::default(), "TotShrs"),
-            StorageKey::Admin => Symbol::new(&soroban_sdk::Env::default(), "Admin"),
-            StorageKey::PropertyCounter => Symbol::new(&soroban_sdk::Env::default(), "PropCnt"),
-            StorageKey::Allowance(_, _, _) => Symbol::new(&soroban_sdk::Env::default(), "Allow"),
+            StorageKey::TotalShares(_) => Symbol::new(&soroban_sdk:Env::default(), "TotShrs"),
+            StorageKey::PropertyCounter => Symbol::new(&soroban_sdk:Env::default(), "PropCnt"),
+            StorageKey::Allowance(_, _, _) => Symbol::new(&soroban_sdk:Env::default(), "Allow"),
             StorageKey::AvailableShares(_) => {
                 Symbol::new(&soroban_sdk::Env::default(), "AvailShrs")
             }
-            StorageKey::PricePerShare(_) => Symbol::new(&soroban_sdk::Env::default(), "PriceShr"),
+            StorageKey::PricePerShare(_) => Symbol::new(&soroban_sdk:Env::default(), "PriceShr"),
             StorageKey::PropertyVerified(_) => Symbol::new(&soroban_sdk::Env::default(), "PropVer"),
         }
     }

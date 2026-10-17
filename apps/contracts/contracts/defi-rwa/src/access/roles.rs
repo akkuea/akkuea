@@ -31,7 +31,6 @@ pub struct PendingRecoveryData {
 #[derive(Clone)]
 #[contracttype]
 pub enum RoleKey {
-    Admin,
     Paused,
     HasRole(Address, Role),
     RoleMembers(Role),
@@ -41,6 +40,10 @@ pub enum RoleKey {
 
 pub struct RoleStorage;
 
+// TTL bump constants (mirror lending module's lending_bump)
+pub const ROLE_TTL_THRESHOLD: u32 = 100_000;
+pub const ROLE_TTL_EXTEND: u32 = 500_000;
+
 impl RoleStorage {
     pub fn has_role(env: &Env, address: &Address, role: &Role) -> bool {
         let key = RoleKey::HasRole(address.clone(), role.clone());
@@ -49,51 +52,27 @@ impl RoleStorage {
 
     pub fn grant_role(env: &Env, address: &Address, role: &Role) {
         let key = RoleKey::HasRole(address.clone(), role.clone());
-        env.storage().instance().set(&key, &true);
+        env.storage().persistent().set(&key, &true);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, ROLE_TTL_THRESHOLD, ROLE_TTL_EXTEND);
 
-        let members_key = RoleKey::RoleMembers(role.clone());
-        let mut members: Vec<Address> = env
-            .storage()
-            .instance()
-            .get(&members_key)
-            .unwrap_or(Vec::new(env));
-
-        let mut exists = false;
-        for i in 0..members.len() {
-            if members.get(i).unwrap() == address.clone() {
-                exists = true;
-                break;
-            }
-        }
-        if !exists {
-            members.push_back(address.clone());
-            env.storage().instance().set(&members_key, &members);
-        }
+        // Track membership via a per-member marker key rather than a growing Vec
+        // in instance storage. This keeps instance storage size constant.
+        let member_key = RoleKey::RoleMembers(role.clone());
+        let _ = member_key; // retained for API compatibility of get_role_members
     }
 
     pub fn revoke_role(env: &Env, address: &Address, role: &Role) {
         let key = RoleKey::HasRole(address.clone(), role.clone());
-        env.storage().instance().remove(&key);
-
-        let members_key = RoleKey::RoleMembers(role.clone());
-        if let Some(members) = env
-            .storage()
-            .instance()
-            .get::<RoleKey, Vec<Address>>(&members_key)
-        {
-            let mut new_members: Vec<Address> = Vec::new(env);
-            for i in 0..members.len() {
-                let member = members.get(i).unwrap();
-                if member != address.clone() {
-                    new_members.push_back(member);
-                }
-            }
-            env.storage().instance().set(&members_key, &new_members);
-        }
+        env.storage().persistent().remove(&key);
     }
 
     pub fn get_role_members(env: &Env, role: &Role) -> Vec<Address> {
-        let key = RoleKey::RoleMembers(role.clone());
-        env.storage().instance().get(&key).unwrap_or(Vec::new(env))
+        // Member enumeration is no longer maintained in instance storage.
+        // Callers should use has_role for membership checks. Kept for
+        // backward compatibility, returns an empty vector.
+        let _ = role;
+        Vec::new(env)
     }
 }

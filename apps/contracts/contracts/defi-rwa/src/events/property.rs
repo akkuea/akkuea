@@ -62,6 +62,36 @@ pub struct DividendClaimed {
     pub amount: i128,
 }
 
+/// Emitted when the oracle address is updated
+#[contractevent]
+pub struct OracleSet {
+    pub admin: Address,
+    pub oracle: Address,
+}
+
+/// Emitted when the oracle configuration is updated
+#[contractevent]
+pub struct OracleConfigSet {
+    pub admin: Address,
+    pub min_price: i128,
+    pub max_price: i128,
+    pub max_staleness: u64,
+}
+
+/// Emitted when an emergency role is granted
+#[contractevent]
+pub struct EmergencyRoleGranted {
+    pub admin: Address,
+    pub account: Address,
+}
+
+/// Emitted when an emergency role is revoked
+#[contractevent]
+pub struct EmergencyRoleRevoked {
+    pub admin: Address,
+    pub account: Address,
+}
+
 /// Event helper functions for property operations
 pub struct PropertyEvents;
 
@@ -87,7 +117,7 @@ impl PropertyEvents {
 
     /// Emitted when a property is verified by admin
     pub fn property_verified(env: &Env, property_id: String, verified_by: Address) {
-        PropertyVerified {
+        PropertyVerified{
             property_id,
             verified_by,
             timestamp: env.ledger().timestamp(),
@@ -170,5 +200,37 @@ impl PropertyEvents {
             amount,
         }
         .publish(env);
+    }
+
+    /// Emitted when the oracle address is updated
+    pub fn oracle_set(env: &Env, admin: Address, oracle: Address) {
+        OracleSet { admin, oracle }.publish(env);
+    }
+
+    /// Emitted when the oracle configuration is updated
+    pub fn oracle_config_set(
+        env: &Env,
+        admin: Address,
+        min_price: i128,
+        max_price: i128,
+        max_staleness: u64,
+    ) {
+        OracleConfigSet {
+            admin,
+            min_price,
+            max_price,
+            max_staleness,
+        }
+        .publish(env);
+    }
+
+    /// Emitted when an emergency role is granted
+    pub fn emergency_role_granted(env: &Env, admin: Address, account: Address) {
+        EmergencyRoleGranted { admin, account }.publish(env);
+    }
+
+    /// Emitted when an emergency role is revoked
+    pub fn emergency_role_revoked(env: &Env, admin: Address, account: Address) {
+        EmergencyRoleRevoked { admin, account }.publish(env);
     }
 }

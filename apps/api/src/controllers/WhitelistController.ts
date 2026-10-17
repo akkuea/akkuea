@@ -7,6 +7,14 @@ import {
 } from '../services/ReviewTurnaroundService';
 import type { MetricsWindowQuery } from '../services/reviewTurnaround';
 import { eq } from 'drizzle-orm';
+import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
+
+/** Minimal context shape consumed by WhitelistController.status. */
+interface StatusContext {
+  params: { walletAddress: string };
+  headers: Record<string, string | undefined>;
+  getAuthenticatedUser?: () => Promise<{ id: string; walletAddress: string }>;
+}
 
 export class WhitelistController {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,8 +91,7 @@ export class WhitelistController {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static async status(ctx: any) {
+  static async status(ctx: StatusContext) {
     const { walletAddress } = ctx.params;
     const existing = await db.query.pilotWhitelistRequests.findFirst({
       where: eq(pilotWhitelistRequests.walletAddress, walletAddress),
@@ -92,6 +99,24 @@ export class WhitelistController {
 
     if (!existing) {
       return { success: true, status: 'none' };
+    }
+
+    // The rejection reason is an operator's note on why an investor failed
+    // review; it should only reach that investor or an operator, not anyone
+    // who knows the wallet address.
+    const isOperator = isInternalOperationsAuthorized(ctx.headers);
+    let isOwner = false;
+    if (!isOperator) {
+      try {
+        const user = await ctx.getAuthenticatedUser?.();
+        isOwner = user?.walletAddress === walletAddress;
+      } catch {
+        isOwner = false;
+      }
+    }
+
+    if (!isOperator && !isOwner) {
+      return { success: true, status: existing.status };
     }
 
     return {

@@ -39,7 +39,8 @@ export function useTransactions(
   /** Stable serialisation of the filter for the dependency array */
   const filterKey = filter ? JSON.stringify(filter) : "";
   const stableFilter = useMemo(
-    () => (filterKey ? (JSON.parse(filterKey) as TransactionFilter) : undefined),
+    () =>
+      filterKey ? (JSON.parse(filterKey) as TransactionFilter) : undefined,
     [filterKey],
   );
   const latestRequestId = useRef(0);

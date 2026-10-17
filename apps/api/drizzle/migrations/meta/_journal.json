@@ -85,6 +85,13 @@
       "when": 1787753708507,
       "tag": "0011_bored_colonel_america",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792158442376,
+      "tag": "0012_ambiguous_goliath",
+      "breakpoints": true
     }
   ]
 }

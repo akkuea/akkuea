@@ -165,21 +165,15 @@ jobs:
           cd apps/shared
           bun run build
 
-      - name: Check CSP headers
+      - name: Validate security headers configuration
         run: |
           cd apps/webapp
 
-          # Build app first
-          SKIP_ENV_VALIDATION=true bun run build
-
-          # Check if CSP headers are configured
-          if [ -f "next.config.js" ] || [ -f "next.config.ts" ]; then
-            if grep -r "Content-Security-Policy\|CSP" . --exclude-dir=.next; then
-              echo "CSP configuration found"
-            else
-              echo "Warning: No CSP configuration found"
-            fi
-          fi
+          # Run security headers unit test
+          echo "Testing security headers configuration..."
+          bun test src/__tests__/security-headers.test.ts
+        env:
+          SKIP_ENV_VALIDATION: "true"
 
   e2e-tests:
     name: Playwright E2E Tests

@@ -71,7 +71,10 @@ describe("useTransactions regression tests", () => {
 
     getTransactions
       .mockImplementationOnce(() => oldRequest.promise)
-      .mockResolvedValueOnce({ items: [newerTransaction], nextCursor: undefined });
+      .mockResolvedValueOnce({
+        items: [newerTransaction],
+        nextCursor: undefined,
+      });
 
     const initialProps: {
       filter: { type: "deposit" | "withdraw" };
@@ -92,7 +95,10 @@ describe("useTransactions regression tests", () => {
     });
 
     await act(async () => {
-      oldRequest.resolve({ items: [olderTransaction], nextCursor: undefined });
+      oldRequest.resolve({
+        items: [olderTransaction],
+        nextCursor: undefined,
+      });
       await oldRequest.promise;
     });
 

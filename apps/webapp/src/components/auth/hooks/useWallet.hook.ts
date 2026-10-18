@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { Networks } from "@creit.tech/stellar-wallets-kit";
 import { useAuthenticationStore } from "../store/data/slices/authentication.slice";
 import { initializeWalletKit, getWalletKit } from "../constant/walletKit";
@@ -61,13 +61,58 @@ export const useWallet = () => {
   const reset = useAuthenticationStore((state) => state.reset);
   const clearReconnectionPrompt = useAuthenticationStore((state) => state.clearReconnectionPrompt);
 
-  const store = {
-    address, balance, balanceStatus, balanceError, isConnected, isConnecting,
-    isWalletDisconnected, network, selectedWalletId, pendingAction, setPendingAction, setAddress,
-    setBalance, setBalanceStatus, setBalanceError, setIsConnected, setIsConnecting,
-    setSelectedWalletId, setNetwork, triggerReconnectionPrompt, resetSession, reset,
-    clearReconnectionPrompt,
-  };
+  const store = useMemo(
+    () => ({
+      address,
+      balance,
+      balanceStatus,
+      balanceError,
+      isConnected,
+      isConnecting,
+      isWalletDisconnected,
+      network,
+      selectedWalletId,
+      pendingAction,
+      setPendingAction,
+      setAddress,
+      setBalance,
+      setBalanceStatus,
+      setBalanceError,
+      setIsConnected,
+      setIsConnecting,
+      setSelectedWalletId,
+      setNetwork,
+      triggerReconnectionPrompt,
+      resetSession,
+      reset,
+      clearReconnectionPrompt,
+    }),
+    [
+      address,
+      balance,
+      balanceStatus,
+      balanceError,
+      isConnected,
+      isConnecting,
+      isWalletDisconnected,
+      network,
+      selectedWalletId,
+      pendingAction,
+      setPendingAction,
+      setAddress,
+      setBalance,
+      setBalanceStatus,
+      setBalanceError,
+      setIsConnected,
+      setIsConnecting,
+      setSelectedWalletId,
+      setNetwork,
+      triggerReconnectionPrompt,
+      resetSession,
+      reset,
+      clearReconnectionPrompt,
+    ],
+  );
 
   useEffect(() => {
     const network =

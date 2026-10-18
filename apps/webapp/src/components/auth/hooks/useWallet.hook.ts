@@ -43,23 +43,39 @@ export const useWallet = () => {
   const balanceError = useAuthenticationStore((state) => state.balanceError);
   const isConnected = useAuthenticationStore((state) => state.isConnected);
   const isConnecting = useAuthenticationStore((state) => state.isConnecting);
-  const isWalletDisconnected = useAuthenticationStore((state) => state.isWalletDisconnected);
+  const isWalletDisconnected = useAuthenticationStore(
+    (state) => state.isWalletDisconnected,
+  );
   const network = useAuthenticationStore((state) => state.network);
-  const selectedWalletId = useAuthenticationStore((state) => state.selectedWalletId);
+  const selectedWalletId = useAuthenticationStore(
+    (state) => state.selectedWalletId,
+  );
   const pendingAction = useAuthenticationStore((state) => state.pendingAction);
-  const setPendingAction = useAuthenticationStore((state) => state.setPendingAction);
+  const setPendingAction = useAuthenticationStore(
+    (state) => state.setPendingAction,
+  );
   const setAddress = useAuthenticationStore((state) => state.setAddress);
   const setBalance = useAuthenticationStore((state) => state.setBalance);
-  const setBalanceStatus = useAuthenticationStore((state) => state.setBalanceStatus);
-  const setBalanceError = useAuthenticationStore((state) => state.setBalanceError);
+  const setBalanceStatus = useAuthenticationStore(
+    (state) => state.setBalanceStatus,
+  );
+  const setBalanceError = useAuthenticationStore(
+    (state) => state.setBalanceError,
+  );
   const setIsConnected = useAuthenticationStore((state) => state.setIsConnected);
   const setIsConnecting = useAuthenticationStore((state) => state.setIsConnecting);
-  const setSelectedWalletId = useAuthenticationStore((state) => state.setSelectedWalletId);
+  const setSelectedWalletId = useAuthenticationStore(
+    (state) => state.setSelectedWalletId,
+  );
   const setNetwork = useAuthenticationStore((state) => state.setNetwork);
-  const triggerReconnectionPrompt = useAuthenticationStore((state) => state.triggerReconnectionPrompt);
+  const triggerReconnectionPrompt = useAuthenticationStore(
+    (state) => state.triggerReconnectionPrompt,
+  );
   const resetSession = useAuthenticationStore((state) => state.resetSession);
   const reset = useAuthenticationStore((state) => state.reset);
-  const clearReconnectionPrompt = useAuthenticationStore((state) => state.clearReconnectionPrompt);
+  const clearReconnectionPrompt = useAuthenticationStore(
+    (state) => state.clearReconnectionPrompt,
+  );
 
   const store = useMemo(
     () => ({

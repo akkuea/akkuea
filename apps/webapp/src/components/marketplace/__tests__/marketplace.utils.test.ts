@@ -1,10 +1,16 @@
 import { describe, expect, it } from "bun:test";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import type { PropertyInfo } from "@akkuea/shared";
 import {
   filterAndSortProperties,
+  getPropertyImage,
   MARKETPLACE_ALL_REGIONS,
   MARKETPLACE_ALL_TYPES,
+  PROPERTY_IMAGE_PLACEHOLDER,
 } from "@/components/marketplace/marketplace.utils";
+
+const WEBAPP_PUBLIC_DIR = path.resolve(import.meta.dir, "../../../../public");
 
 function buildProperty(overrides: Partial<PropertyInfo>): PropertyInfo {
   return {
@@ -97,5 +103,32 @@ describe("filterAndSortProperties", () => {
       sortBy: "Recently Added",
     });
     expect(result).toEqual([]);
+  });
+});
+
+describe("getPropertyImage", () => {
+  it("returns the first image when the property has images", () => {
+    const property = buildProperty({
+      images: [
+        "https://images.unsplash.com/first.jpg",
+        "https://images.unsplash.com/second.jpg",
+      ],
+    });
+    expect(getPropertyImage(property)).toBe(
+      "https://images.unsplash.com/first.jpg",
+    );
+  });
+
+  it("returns the placeholder when the property has no images", () => {
+    expect(getPropertyImage(buildProperty({ images: [] }))).toBe(
+      PROPERTY_IMAGE_PLACEHOLDER,
+    );
+  });
+
+  it("points the placeholder at a file shipped under public/", () => {
+    expect(PROPERTY_IMAGE_PLACEHOLDER.startsWith("/")).toBe(true);
+    expect(
+      existsSync(path.join(WEBAPP_PUBLIC_DIR, PROPERTY_IMAGE_PLACEHOLDER)),
+    ).toBe(true);
   });
 });

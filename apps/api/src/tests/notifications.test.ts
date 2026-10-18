@@ -64,4 +64,33 @@ describe('Notifications API Smoke Test', () => {
     expect(body.data).toBeDefined();
     expect(body.data[0].title).toBe('Test Notification');
   });
+
+  test('POST /notifications/read-multiple rejects more than 100 ids with 400', async () => {
+    const getNotificationByIdSpy = spyOn(
+      NotificationService.prototype,
+      'getNotificationById',
+    ).mockImplementation(async () => undefined);
+
+    const tooManyIds = Array.from(
+      { length: 101 },
+      (_, i) => `00000000-0000-0000-0000-${String(i).padStart(12, '0')}`,
+    );
+
+    const response = await app.handle(
+      new Request('http://localhost/notifications/read-multiple', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${testToken}`,
+        },
+        body: JSON.stringify({ notificationIds: tooManyIds }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    // The cap must be enforced before any per-id ownership lookup runs.
+    expect(getNotificationByIdSpy).not.toHaveBeenCalled();
+
+    getNotificationByIdSpy.mockRestore();
+  });
 });

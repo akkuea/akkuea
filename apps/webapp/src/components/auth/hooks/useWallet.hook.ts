@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { Networks } from "@creit.tech/stellar-wallets-kit";
 import { useAuthenticationStore } from "../store/data/slices/authentication.slice";
 import { initializeWalletKit, getWalletKit } from "../constant/walletKit";
@@ -38,7 +37,36 @@ function applyBalanceResult(result: BalanceResult, store: AuthenticationStore) {
 }
 
 export const useWallet = () => {
-  const store = useAuthenticationStore(useShallow((state) => state));
+  const address = useAuthenticationStore((state) => state.address);
+  const balance = useAuthenticationStore((state) => state.balance);
+  const balanceStatus = useAuthenticationStore((state) => state.balanceStatus);
+  const balanceError = useAuthenticationStore((state) => state.balanceError);
+  const isConnected = useAuthenticationStore((state) => state.isConnected);
+  const isConnecting = useAuthenticationStore((state) => state.isConnecting);
+  const isWalletDisconnected = useAuthenticationStore((state) => state.isWalletDisconnected);
+  const network = useAuthenticationStore((state) => state.network);
+  const selectedWalletId = useAuthenticationStore((state) => state.selectedWalletId);
+  const pendingAction = useAuthenticationStore((state) => state.pendingAction);
+  const setAddress = useAuthenticationStore((state) => state.setAddress);
+  const setBalance = useAuthenticationStore((state) => state.setBalance);
+  const setBalanceStatus = useAuthenticationStore((state) => state.setBalanceStatus);
+  const setBalanceError = useAuthenticationStore((state) => state.setBalanceError);
+  const setIsConnected = useAuthenticationStore((state) => state.setIsConnected);
+  const setIsConnecting = useAuthenticationStore((state) => state.setIsConnecting);
+  const setSelectedWalletId = useAuthenticationStore((state) => state.setSelectedWalletId);
+  const setNetwork = useAuthenticationStore((state) => state.setNetwork);
+  const triggerReconnectionPrompt = useAuthenticationStore((state) => state.triggerReconnectionPrompt);
+  const resetSession = useAuthenticationStore((state) => state.resetSession);
+  const reset = useAuthenticationStore((state) => state.reset);
+  const clearReconnectionPrompt = useAuthenticationStore((state) => state.clearReconnectionPrompt);
+
+  const store = {
+    address, balance, balanceStatus, balanceError, isConnected, isConnecting,
+    isWalletDisconnected, network, selectedWalletId, pendingAction, setAddress,
+    setBalance, setBalanceStatus, setBalanceError, setIsConnected, setIsConnecting,
+    setSelectedWalletId, setNetwork, triggerReconnectionPrompt, resetSession, reset,
+    clearReconnectionPrompt,
+  };
 
   useEffect(() => {
     const network =
@@ -67,12 +95,12 @@ export const useWallet = () => {
    */
   useEffect(() => {
     const verifyConnection = async () => {
-      if (!store.isConnected) return;
+      if (!isConnected) return;
 
       // Only the raw kit lacks connection events. A registered provider
       // (privy, smart-account-kit) manages its own session state, so skip it.
-      const registered = store.selectedWalletId
-        ? walletRegistry.get(store.selectedWalletId)
+      const registered = selectedWalletId
+        ? walletRegistry.get(selectedWalletId)
         : undefined;
       const usesStellarWalletsKit =
         !registered || registered.id === "stellar-wallets-kit";
@@ -82,28 +110,26 @@ export const useWallet = () => {
       if (!kit) return;
 
       try {
-        const [{ address }, { networkPassphrase }] = await Promise.all([
-          kit.getAddress(),
-          kit.getNetwork(),
-        ]);
+        const [{ address: currentAddress }, { networkPassphrase }] =
+          await Promise.all([kit.getAddress(), kit.getNetwork()]);
 
         const expectedPassphrase =
-          store.network === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
+          network === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
 
         if (
-          address !== store.address ||
+          currentAddress !== address ||
           networkPassphrase !== expectedPassphrase
         ) {
-          store.triggerReconnectionPrompt();
+          useAuthenticationStore.getState().triggerReconnectionPrompt();
         }
       } catch {
-        store.triggerReconnectionPrompt();
+        useAuthenticationStore.getState().triggerReconnectionPrompt();
       }
     };
 
     window.addEventListener("focus", verifyConnection);
     return () => window.removeEventListener("focus", verifyConnection);
-  }, [store]);
+  }, [isConnected, selectedWalletId, address, network]);
 
   /**
    * Legacy connect: opens the StellarWalletsKit modal.

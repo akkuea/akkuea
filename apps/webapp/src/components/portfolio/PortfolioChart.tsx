@@ -111,9 +111,8 @@ function ChartEmpty() {
 // Recharts custom tooltip
 // ---------------------------------------------------------------------------
 
-type CustomTooltipProps = Pick<
-  TooltipContentProps,
-  "active" | "payload" | "label"
+type CustomTooltipProps = Partial<
+  Pick<TooltipContentProps, "active" | "payload" | "label">
 >;
 
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {

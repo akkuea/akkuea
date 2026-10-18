@@ -1,12 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/Skeleton";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 
 export function StatsSkeleton() {
   return (

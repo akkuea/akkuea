@@ -38,6 +38,7 @@ mock.module("framer-motion", () => {
   );
 
   return {
+    AnimatePresence: ({ children }: { children: ReactNode }) => <>{children}</>,
     motion: new Proxy(
       { div: passthroughDiv, button: passthroughButton },
       {

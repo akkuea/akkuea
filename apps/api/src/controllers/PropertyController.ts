@@ -137,17 +137,23 @@ function mapShareOwnershipToShared(
   };
 }
 
+// Caps `page` so the computed offset ((page - 1) * limit in
+// PropertyRepository.findPaginated) cannot grow unbounded. At the max
+// limit of 100 this allows scanning up to 1,000,000 rows deep, far beyond
+// any realistic result set for this pilot.
+export const MAX_PAGE = 10_000;
+
 /**
  * Validates pagination parameters
  */
-function validatePagination(page: unknown, limit: unknown): { page: number; limit: number } {
+export function validatePagination(page: unknown, limit: unknown): { page: number; limit: number } {
   const pageNum =
     typeof page === 'string' ? parseInt(page, 10) : typeof page === 'number' ? page : 1;
   const limitNum =
     typeof limit === 'string' ? parseInt(limit, 10) : typeof limit === 'number' ? limit : 10;
 
   return {
-    page: pageNum > 0 ? pageNum : 1,
+    page: pageNum > 0 ? Math.min(pageNum, MAX_PAGE) : 1,
     limit: limitNum > 0 && limitNum <= 100 ? limitNum : 10,
   };
 }

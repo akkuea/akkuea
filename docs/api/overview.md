@@ -105,13 +105,15 @@ Some endpoints (e.g. property creation, tokenization) instead check an `x-user-a
 
 ## Rate Limiting
 
-Both `/auth/challenge` and `/auth/session` are explicitly rate-limited (10 requests / 60 seconds per IP, see [`authentication.md`](authentication.md)). Rate limit headers are included on responses:
+Both `/auth/challenge` and `/auth/session` are explicitly rate-limited (10 requests / 60 seconds per client, see [`authentication.md`](authentication.md)). Rate limit headers are included on responses:
 
 ```
 X-RateLimit-Limit
 X-RateLimit-Remaining
 X-RateLimit-Reset
 ```
+
+A client is identified by the address of the socket it connected from, which no request header can change. `x-forwarded-for` is read only when `TRUSTED_PROXY_HOPS` states how many reverse proxies sit in front of the API, and only the entry those proxies appended is used; see [`../deployment/environment-variables.md`](../deployment/environment-variables.md). `x-real-ip` is never read. Requests that arrive without a socket (in-process calls such as a test handler) have no client to identify and are not counted, rather than being pooled into one shared bucket.
 
 ## Security Features
 

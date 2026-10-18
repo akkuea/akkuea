@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { WhitelistController } from '../controllers/WhitelistController';
 import { handleError } from '../utils/errors';
 import { validateQuery } from '../middleware/validation';
-import { rateLimit } from '../middleware';
+import { rateLimit, authPlugin } from '../middleware';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
 
 const requestSchema = t.Object({
@@ -55,6 +55,10 @@ const whitelistMetricsRoute = new Elysia().use(validateQuery(metricsQuerySchema)
 );
 
 export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
+  // authPlugin only derives getAuthenticatedUser(); it does not enforce
+  // auth by itself, so applying it here lets /status check for an optional
+  // session without requiring one on the otherwise-public endpoints below.
+  .use(authPlugin)
   .post('/request', (ctx) => WhitelistController.request(ctx), {
     beforeHandle: [rateLimit()],
     body: requestSchema,
@@ -65,16 +69,22 @@ export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
       tags: ['Pilot Whitelist'],
     },
   })
-  // GET /status is intentionally not rate-limited: the response contains only
-  // coarse application state (pending/approved/rejected/none), no PII is
-  // returned, and the endpoint is read-only. Rate limiting is not required for
-  // the current pilot threat model. Revisit if response data expands or
+  // GET /status is intentionally not rate-limited: the status itself is
+  // coarse application state (pending/approved/rejected/none) with no PII,
+  // and the endpoint is read-only. Rate limiting is not required for the
+  // current pilot threat model. The one field that is PII-adjacent,
+  // rejectionReason, is only ever included for the wallet's own owner
+  // (Bearer session) or an operator (x-internal-api-key); see
+  // WhitelistController.status. Revisit if response data expands further or
   // enumeration becomes operationally relevant.
   .get('/status/:walletAddress', (ctx) => WhitelistController.status(ctx), {
     params: t.Object({ walletAddress: t.String() }),
     detail: {
       summary: 'Get status of whitelist request',
+      description:
+        'Returns the request status for a wallet. The rejectionReason field is only included when the caller is authenticated as that wallet or is an operator.',
       tags: ['Pilot Whitelist'],
+      security: [{ bearerAuth: [] }, { internalApiKey: [] }],
     },
   })
   .use(whitelistMetricsRoute);

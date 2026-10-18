@@ -12,17 +12,10 @@ import {
 import { ErrorCode } from "./codes.js";
 
 /**
- * Check if value is an AppError (uses duck-typing for cross-workspace compatibility)
+ * Check if value is an AppError
  */
 export function isAppError(error: unknown): error is AppError {
-  return (
-    error instanceof AppError ||
-    (typeof error === "object" &&
-      error !== null &&
-      "status" in error &&
-      "code" in error &&
-      "message" in error)
-  );
+  return error instanceof AppError;
 }
 
 /**
@@ -108,16 +101,16 @@ export function toAppError(error: unknown): AppError {
     return error;
   }
 
+  if (isSerializedError(error)) {
+    return AppError.fromJSON(error);
+  }
+
   if (error instanceof Error) {
     return new AppError(ErrorCode.INTERNAL_ERROR, error.message);
   }
 
   if (typeof error === "string") {
     return new AppError(ErrorCode.INTERNAL_ERROR, error);
-  }
-
-  if (isSerializedError(error)) {
-    return AppError.fromJSON(error);
   }
 
   return new AppError(ErrorCode.UNKNOWN, "An unknown error occurred");

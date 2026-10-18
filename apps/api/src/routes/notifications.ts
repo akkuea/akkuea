@@ -8,8 +8,12 @@ const notificationQuerySchema = z.object({
   offset: z.string().optional(),
 });
 
+// NOTE: the `validate()` plugin currently has no effect on this route
+// because NotificationController.markMultipleAsRead reads the raw request
+// body itself instead of the validated body (separate, out-of-scope bug;
+// see the controller for the enforced cap in the meantime).
 const markMultipleAsReadSchema = z.object({
-  notificationIds: z.array(z.uuid()),
+  notificationIds: z.array(z.uuid()).max(100),
 });
 
 export const notificationRoutes = new Elysia({ prefix: '/notifications' })

@@ -5,6 +5,12 @@ import { idempotencyKeys } from '../db/schema/idempotency';
 
 const TTL_MS = 24 * 60 * 60 * 1000;
 
+// The stored key is `${walletAddress}:${rawKey}` and the column is
+// varchar(255). The longest possible prefix is a 56-character Stellar
+// wallet address plus the separator (57 chars), so the raw client-supplied
+// key must leave room for that: 255 - 57 = 198.
+const MAX_IDEMPOTENCY_KEY_LENGTH = 198;
+
 /** Marker stored while a request is in-flight (never returned to clients). */
 const PENDING_MARKER = { __idempotency: 'pending' } as const;
 
@@ -57,6 +63,15 @@ export const idempotency = new Elysia({ name: 'idempotency' })
         idempotencyKey: undefined as string | undefined,
         claimedIdempotencyKey: false,
         servedFromCache: false,
+      };
+    }
+
+    if (rawKey.length > MAX_IDEMPOTENCY_KEY_LENGTH) {
+      return {
+        idempotencyKey: undefined as string | undefined,
+        claimedIdempotencyKey: false,
+        servedFromCache: false,
+        idempotencyKeyTooLong: true as boolean,
       };
     }
 
@@ -130,7 +145,17 @@ export const idempotency = new Elysia({ name: 'idempotency' })
       cachedIdempotencyResponse,
       idempotencyInFlight,
       idempotencyClaimError,
+      idempotencyKeyTooLong,
     }) => {
+      if (idempotencyKeyTooLong) {
+        set.status = 400;
+        return {
+          success: false,
+          error: 'IDEMPOTENCY_KEY_TOO_LONG',
+          message: `Idempotency-Key must be at most ${MAX_IDEMPOTENCY_KEY_LENGTH} characters.`,
+        };
+      }
+
       if (idempotencyClaimError) {
         set.status = 500;
         return {

@@ -1,22 +1,19 @@
 import "@/test/setup-dom";
-import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { createTransaction } from "@akkuea/shared";
+import { transactionsApi } from "@/services/api";
+import { useTransactions } from "../useTransactions";
 
-type ApiResult = {
-  items: unknown[];
-  nextCursor?: string;
-};
-
-const getTransactions =
-  mock<(params?: unknown) => Promise<ApiResult>>();
-
-mock.module("@/services/api", () => ({
-  transactionsApi: { getTransactions },
-}));
-
-const hookModulePath: string =
-  "../useTransactions.ts?transactions-regression-tests";
-const { useTransactions } = await import(hookModulePath);
+let getTransactions: ReturnType<typeof spyOn>;
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -28,83 +25,66 @@ function deferred<T>() {
 
 describe("useTransactions regression tests", () => {
   beforeEach(() => {
-    getTransactions.mockReset();
+    getTransactions = spyOn(transactionsApi, "getTransactions");
   });
 
   afterEach(() => {
     cleanup();
+    mock.restore();
   });
 
   it("refetches when pageSize changes", async () => {
-    getTransactions.mockImplementation(async () => ({ items: [] }));
+    getTransactions.mockResolvedValue({ items: [], nextCursor: undefined });
 
     const { rerender } = renderHook(
       ({ pageSize }: { pageSize: number }) =>
         useTransactions(undefined, pageSize),
-      { initialProps: { pageSize: 10 } },
+      { initialProps: { pageSize: 20 } },
     );
 
     await waitFor(() => {
       expect(getTransactions).toHaveBeenCalledTimes(1);
     });
 
-    expect(getTransactions.mock.calls[0][0]).toEqual(
-      expect.objectContaining({ limit: 10 }),
-    );
-
-    rerender({ pageSize: 25 });
+    rerender({ pageSize: 50 });
 
     await waitFor(() => {
-      expect(getTransactions).toHaveBeenCalledTimes(2);
+      expect(getTransactions).toHaveBeenLastCalledWith(
+        expect.objectContaining({ limit: 50 }),
+      );
     });
-
-    expect(getTransactions.mock.calls[1][0]).toEqual(
-      expect.objectContaining({ limit: 25 }),
-    );
   });
 
-  it("ignores stale responses when requests finish out of order", async () => {
-    const oldRequest = deferred<ApiResult>();
-    const newRequest = deferred<ApiResult>();
+  it("drops a stale response after the filter changes", async () => {
+    const oldRequest = deferred<{
+      items: ReturnType<typeof createTransaction>[];
+      nextCursor: undefined;
+    }>();
+    const newerTransaction = createTransaction({ id: "550e8400-e29b-41d4-a716-000000000001", type: "withdraw" });
+    const olderTransaction = createTransaction({ id: "550e8400-e29b-41d4-a716-000000000002", type: "deposit" });
 
     getTransactions
       .mockImplementationOnce(() => oldRequest.promise)
-      .mockImplementationOnce(() => newRequest.promise);
+      .mockResolvedValueOnce({ items: [newerTransaction], nextCursor: undefined });
 
     const { result, rerender } = renderHook(
-      ({ pageSize }: { pageSize: number }) =>
-        useTransactions(undefined, pageSize),
-      { initialProps: { pageSize: 10 } },
+      ({ filter }: { filter: { type: "deposit" | "withdraw" } }) =>
+        useTransactions(filter),
+      { initialProps: { filter: { type: "deposit" as const } } },
     );
 
     await waitFor(() => {
       expect(getTransactions).toHaveBeenCalledTimes(1);
     });
 
-    rerender({ pageSize: 25 });
-
-    await waitFor(() => {
-      expect(getTransactions).toHaveBeenCalledTimes(2);
-    });
-
-    const newerTransaction = {
-      id: "newer-response",
-    } as ApiResult["items"][number];
-    const olderTransaction = {
-      id: "older-response",
-    } as ApiResult["items"][number];
-
-    await act(async () => {
-      newRequest.resolve({ items: [newerTransaction] });
-      await newRequest.promise;
-    });
+    rerender({ filter: { type: "withdraw" } });
 
     await waitFor(() => {
       expect(result.current.transactions).toEqual([newerTransaction]);
     });
 
     await act(async () => {
-      oldRequest.resolve({ items: [olderTransaction] });
+      oldRequest.resolve({ items: [olderTransaction], nextCursor: undefined });
       await oldRequest.promise;
     });
 

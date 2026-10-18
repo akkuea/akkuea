@@ -47,6 +47,7 @@ export const useWallet = () => {
   const network = useAuthenticationStore((state) => state.network);
   const selectedWalletId = useAuthenticationStore((state) => state.selectedWalletId);
   const pendingAction = useAuthenticationStore((state) => state.pendingAction);
+  const setPendingAction = useAuthenticationStore((state) => state.setPendingAction);
   const setAddress = useAuthenticationStore((state) => state.setAddress);
   const setBalance = useAuthenticationStore((state) => state.setBalance);
   const setBalanceStatus = useAuthenticationStore((state) => state.setBalanceStatus);
@@ -62,7 +63,7 @@ export const useWallet = () => {
 
   const store = {
     address, balance, balanceStatus, balanceError, isConnected, isConnecting,
-    isWalletDisconnected, network, selectedWalletId, pendingAction, setAddress,
+    isWalletDisconnected, network, selectedWalletId, pendingAction, setPendingAction, setAddress,
     setBalance, setBalanceStatus, setBalanceError, setIsConnected, setIsConnecting,
     setSelectedWalletId, setNetwork, triggerReconnectionPrompt, resetSession, reset,
     clearReconnectionPrompt,

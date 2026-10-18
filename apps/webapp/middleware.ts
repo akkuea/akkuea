@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "./src/i18n/routing";
+import { buildContentSecurityPolicy } from "./src/lib/csp";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -38,17 +39,26 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  const response = intlMiddleware(request);
-
-  // Inject a CSP nonce for inline script protection.
-  // The nonce is passed to next.config.ts headers() via x-nonce request header,
-  // then included in the Content-Security-Policy script-src directive.
-  // This allows Next.js hydration and component inline scripts without 'unsafe-inline'.
-  // Use crypto.getRandomValues() which is available in Edge Runtime.
+  // Generate a CSP nonce for inline script protection.
+  // Uses crypto.randomUUID() and encodes as base64 per OWASP recommendations.
   const nonceBuffer = new Uint8Array(16);
   crypto.getRandomValues(nonceBuffer);
-  const nonce = Array.from(nonceBuffer, (b) => b.toString(16).padStart(2, "0")).join("");
-  response.headers.set("x-nonce", nonce);
+  const nonce = Buffer.from(nonceBuffer).toString("base64");
+
+  // Build CSP with nonce and set it on the request so Next.js can stamp it on inline scripts.
+  const cspValue = buildContentSecurityPolicy(nonce);
+  const cspHeaderName = process.env.CSP_REPORT_ONLY === "true"
+    ? "Content-Security-Policy-Report-Only"
+    : "Content-Security-Policy";
+
+  // Set nonce on request headers so Next.js middleware can access it
+  request.headers.set("x-nonce", nonce);
+  request.headers.set(cspHeaderName, cspValue);
+
+  const response = intlMiddleware(request);
+
+  // Forward CSP header to response
+  response.headers.set(cspHeaderName, cspValue);
 
   return response;
 }

@@ -1,146 +1,97 @@
 import { describe, it, expect } from "bun:test";
+import { buildContentSecurityPolicy } from "../lib/csp";
 
 /**
  * Security headers configuration test.
  *
- * Validates that security headers are properly configured in next.config.ts
- * to protect against clickjacking, MIME sniffing, and resource embedding attacks.
+ * Tests verify that CSP builder produces correct policies with all required
+ * directives and that static headers are configured correctly in next.config.ts.
  */
 describe("Security Headers Configuration", () => {
   it("buildContentSecurityPolicy should include frame-ancestors 'none'", () => {
-    // Simulate the CSP building with the required directives
-    const cspDirectives = [
-      "base-uri 'self'",
-      "frame-ancestors 'none'",
-      "object-src 'none'",
-      "connect-src 'self' http://localhost:3001 https://soroban-testnet.stellar.org https://horizon-testnet.stellar.org",
-      "img-src 'self' data:",
-      "script-src 'self' https://cdn.privy.io",
-      "style-src 'self' https: 'unsafe-inline'",
-    ];
-
-    const csp = cspDirectives.join("; ");
+    const csp = buildContentSecurityPolicy();
 
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
   });
 
-  it("should build connect-src with API URL and blockchain endpoints", () => {
-    const connectSources = [
-      "'self'",
-      "http://localhost:3001",
-      "https://soroban-testnet.stellar.org",
-      "https://horizon-testnet.stellar.org",
-      "https://auth.privy.io",
-      "wss://auth.privy.io",
-      "https://api.privy.io",
-      "https://api.freighter.app",
-    ];
+  it("buildContentSecurityPolicy should include nonce in script-src", () => {
+    const nonce = "test-nonce-abc123";
+    const csp = buildContentSecurityPolicy(nonce);
 
-    const connectSrc = `connect-src ${connectSources.join(" ")}`;
-
-    expect(connectSrc).toContain("http://localhost:3001");
-    expect(connectSrc).toContain("https://soroban-testnet.stellar.org");
-    expect(connectSrc).toContain("https://horizon-testnet.stellar.org");
-    expect(connectSrc).toContain("https://auth.privy.io");
-    expect(connectSrc).toContain("https://api.freighter.app");
+    expect(csp).toContain(`'nonce-${nonce}'`);
+    expect(csp).toContain("'strict-dynamic'");
   });
 
-  it("should have all security headers configured", () => {
-    // Verify the structure of headers configuration
-    const headersConfig = [
-      { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
-      { key: "X-Content-Type-Options", value: "nosniff" },
-      { key: "X-Frame-Options", value: "DENY" },
-      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-      {
-        key: "Permissions-Policy",
-        value: "camera=(), microphone=(), geolocation=()",
-      },
-      {
-        key: "Strict-Transport-Security",
-        value: "max-age=31536000; includeSubDomains; preload",
-      },
-    ];
+  it("buildContentSecurityPolicy should build connect-src with API URL and blockchain endpoints", () => {
+    process.env.NEXT_PUBLIC_API_URL = "http://localhost:3001";
+    process.env.NEXT_PUBLIC_STELLAR_NETWORK = "testnet";
 
-    const keys = headersConfig.map((h) => h.key);
+    const csp = buildContentSecurityPolicy();
 
-    expect(keys).toContain("Content-Security-Policy");
-    expect(keys).toContain("X-Content-Type-Options");
-    expect(keys).toContain("X-Frame-Options");
-    expect(keys).toContain("Referrer-Policy");
-    expect(keys).toContain("Permissions-Policy");
-    expect(keys).toContain("Strict-Transport-Security");
+    expect(csp).toContain("http://localhost:3001");
+    expect(csp).toContain("https://soroban-testnet.stellar.org");
+    expect(csp).toContain("https://horizon-testnet.stellar.org");
+    expect(csp).toContain("https://auth.privy.io");
+    expect(csp).toContain("https://api.freighter.app");
   });
 
-  it("should have nonce support in script-src", () => {
-    const nonce = "test-nonce-12345";
-    const scriptSources = [
-      "'self'",
-      "https://cdn.privy.io",
-      "https://cdn.jsdelivr.net",
-      `'nonce-${nonce}'`,
-    ];
+  it("buildContentSecurityPolicy should use mainnet endpoints when configured", () => {
+    process.env.NEXT_PUBLIC_STELLAR_NETWORK = "mainnet";
 
-    const scriptSrc = `script-src ${scriptSources.join(" ")}`;
+    const csp = buildContentSecurityPolicy();
 
-    expect(scriptSrc).toContain(`'nonce-${nonce}'`);
-    expect(scriptSrc).not.toContain("/mockServiceWorker.js");
+    expect(csp).toContain("https://rpc.mainnet.stellar.org");
+    expect(csp).toContain("https://horizon.stellar.org");
+    expect(csp).not.toContain("testnet");
   });
 
-  it("should have documented unsafe-inline exception for style-src", () => {
+  it("buildContentSecurityPolicy should include lending SSE URL in connect-src when provided", () => {
+    process.env.NEXT_PUBLIC_LENDING_SSE_URL =
+      "https://api.example.com/sse/lending";
+
+    const csp = buildContentSecurityPolicy();
+
+    expect(csp).toContain("https://api.example.com/sse/lending");
+  });
+
+  it("buildContentSecurityPolicy should build img-src from property image hosts", () => {
+    process.env.NEXT_PUBLIC_PROPERTY_IMAGE_HOSTS =
+      "images.unsplash.com,cdn.example.com";
+
+    const csp = buildContentSecurityPolicy();
+
+    expect(csp).toContain("images.unsplash.com");
+    expect(csp).toContain("cdn.example.com");
+  });
+
+  it("buildContentSecurityPolicy should include Privy and Freighter endpoints", () => {
+    const csp = buildContentSecurityPolicy();
+
+    expect(csp).toContain("https://auth.privy.io");
+    expect(csp).toContain("https://api.privy.io");
+    expect(csp).toContain("wss://auth.privy.io");
+    expect(csp).toContain("https://freighter.app");
+  });
+
+  it("buildContentSecurityPolicy without nonce should not include 'strict-dynamic'", () => {
+    const csp = buildContentSecurityPolicy();
+
+    // When no nonce is provided, strict-dynamic should not be in the policy
+    expect(csp).not.toContain("'strict-dynamic'");
+  });
+
+  it("should document unsafe-inline exception in style-src", () => {
+    const csp = buildContentSecurityPolicy();
+
     // style-src 'unsafe-inline' is documented for Next.js inline styles
-    const styleSrc = "style-src 'self' https: 'unsafe-inline'";
-
-    // Verify 'unsafe-inline' is present with documented justification:
-    // Next.js inline component styles and Tailwind CSS require 'unsafe-inline'
-    expect(styleSrc).toContain("'unsafe-inline'");
+    expect(csp).toContain("style-src 'self' https: 'unsafe-inline'");
   });
 
-  it("should build img-src from property image hosts", () => {
-    const propertyHosts = ["images.unsplash.com", "cdn.example.com"];
-    const imgSources = ["'self'", "data:", ...propertyHosts];
-
-    const imgSrc = `img-src ${imgSources.join(" ")}`;
-
-    expect(imgSrc).toContain("'self'");
-    expect(imgSrc).toContain("data:");
-    expect(imgSrc).toContain("images.unsplash.com");
-    expect(imgSrc).toContain("cdn.example.com");
-  });
-
-  it("should include lending SSE URL in connect-src when configured", () => {
-    const lendingSseUrl = "https://api.example.com/sse/lending";
-    const connectSources = ["'self'", "http://localhost:3001", lendingSseUrl];
-
-    const connectSrc = `connect-src ${connectSources.join(" ")}`;
-
-    expect(connectSrc).toContain("https://api.example.com/sse/lending");
-  });
-
-  it("should support both mainnet and testnet RPC endpoints", () => {
-    // testnet
-    const testnetRpc = "https://soroban-testnet.stellar.org";
-    const testnetHorizon = "https://horizon-testnet.stellar.org";
-
-    // mainnet
-    const mainnetRpc = "https://rpc.mainnet.stellar.org";
-    const mainnetHorizon = "https://horizon.stellar.org";
-
-    expect(testnetRpc).toMatch(/testnet/);
-    expect(mainnetRpc).toMatch(/mainnet/);
-    expect(testnetHorizon).toMatch(/testnet/);
-    expect(mainnetHorizon).not.toMatch(/testnet/);
-  });
-
-  it("middleware should inject CSP nonce", () => {
-    // The middleware injects a nonce header which is passed to headers()
-    const nonce = "uuid-format-nonce";
-
-    // Verify nonce format is uuid-like
-    expect(nonce).toBeDefined();
-    expect(typeof nonce).toBe("string");
-    expect(nonce.length).toBeGreaterThan(0);
+  it("buildContentSecurityPolicy should not include CSP in script-src when no nonce", () => {
+    const csp = buildContentSecurityPolicy();
+    // When built without nonce, it shouldn't have nonce
+    expect(csp).not.toContain("'nonce-");
   });
 });

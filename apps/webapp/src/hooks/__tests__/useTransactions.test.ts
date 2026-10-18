@@ -60,8 +60,14 @@ describe("useTransactions regression tests", () => {
       items: ReturnType<typeof createTransaction>[];
       nextCursor: undefined;
     }>();
-    const newerTransaction = createTransaction({ id: "550e8400-e29b-41d4-a716-000000000001", type: "withdraw" });
-    const olderTransaction = createTransaction({ id: "550e8400-e29b-41d4-a716-000000000002", type: "deposit" });
+    const newerTransaction = createTransaction({
+      id: "550e8400-e29b-41d4-a716-000000000001",
+      type: "withdraw",
+    });
+    const olderTransaction = createTransaction({
+      id: "550e8400-e29b-41d4-a716-000000000002",
+      type: "deposit",
+    });
 
     getTransactions
       .mockImplementationOnce(() => oldRequest.promise)

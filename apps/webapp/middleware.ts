@@ -38,7 +38,19 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  return intlMiddleware(request);
+  const response = intlMiddleware(request);
+
+  // Inject a CSP nonce for inline script protection.
+  // The nonce is passed to next.config.ts headers() via x-nonce request header,
+  // then included in the Content-Security-Policy script-src directive.
+  // This allows Next.js hydration and component inline scripts without 'unsafe-inline'.
+  // Use crypto.getRandomValues() which is available in Edge Runtime.
+  const nonceBuffer = new Uint8Array(16);
+  crypto.getRandomValues(nonceBuffer);
+  const nonce = Array.from(nonceBuffer, (b) => b.toString(16).padStart(2, "0")).join("");
+  response.headers.set("x-nonce", nonce);
+
+  return response;
 }
 
 export const config = {

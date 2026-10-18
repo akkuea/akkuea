@@ -1,1 +1,381 @@
-aW1wb3J0IHsgZGVzY3JpYmUsIGl0LCBleHBlY3QgfSBmcm9tICJidW46dGVzdCI7CmltcG9ydCB7CiAgY2FwdHVyZVNjaGVtYVNuYXBzaG90LAogIGRpZmZTY2hlbWFTbmFwc2hvdHMsCiAgdmFsaWRhdGVTY2hlbWFTbmFwc2hvdCwKICB1bndyYXBab2RTY2hlbWEsCiAgZXh0cmFjdEZpZWxkRGVmaW5pdGlvbiwKICBjb21wYXJlRmllbGREZWZpbml0aW9uLAogIHR5cGUgU2NoZW1hU25hcHNob3QsCiAgdHlwZSBGaWVsZERlZmluaXRpb24sCiAgdHlwZSBTY2hlbWFEaWZmLAp9IGZyb20gIi4uLy4uL3NyYy91dGlscy9zY2hlbWEtdmVyc2lvbmluZyI7CmltcG9ydCB7IHByb3BlcnR5SW5mb1NjaGVtYSwgbGVuZGluZ1Bvb2xTY2hlbWEgfSBmcm9tICIuLi8uLi9zcmMvc2NoZW1hcyI7CmltcG9ydCB7IHogfSBmcm9tICJ6b2QiOwoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCi8vIEJhc2VsaW5lIHNuYXBzaG90cyDigJMgY29tbWl0dGVkIGFsb25nc2lkZSB0aGUgY29kZSBzbyBDSSBjYW4gZGV0ZWN0Ci8vIGFjY2lkZW50YWwgYnJlYWtpbmcgc2NoZW1hIGNoYW5nZXMuCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQppbXBvcnQgYmFzZWxpbmVTbmFwc2hvdHMgZnJvbSAiLi4vc25hcHNob3RzL3NjaGVtYS12MS5qc29uIjsKCmNvbnN0IHByb3BlcnR5SW5mb0Jhc2VsaW5lID0gKAogIGJhc2VsaW5lU25hcHNob3RzIGFzIFJlY29yZDxzdHJpbmcsIFNjaGVtYVNuYXBzaG90PgopLnByb3BlcnR5SW5mbyBhcyBTY2hlbWFTbmFwc2hvdDsKY29uc3QgbGVuZGluZ1Bvb2xCYXNlbGluZSA9ICgKICBiYXNlbGluZVNuYXBzaG90cyBhcyBSZWNvcmQ8c3RyaW5nLCBTY2hlbWFTbmFwc2hvdD4KKS5sZW5kaW5nUG9vbCBhcyBTY2hlbWFTbmFwc2hvdDsKCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQovLyBVbml0IHRlc3RzIGZvciB0aGUgaW5kaXZpZHVhbCB1dGlsaXR5IGZ1bmN0aW9ucwovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCmRlc2NyaWJlKCJ1bndyYXBab2RTY2hlbWEiLCAoKSA9PiB7CiAgaXQoInJldHVybnMgdGhlIHNhbWUgc2NoZW1hIHdoZW4gdGhlcmUgaXMgbm8gd3JhcHBlciIsICgpID0+IHsKICAgIGNvbnN0IHNjaGVtYSA9IHouc3RyaW5nKCk7CiAgICBjb25zdCByZXN1bHQgPSB1bndyYXBab2RTY2hlbWEoc2NoZW1hKTsKICAgIGV4cGVjdChyZXN1bHQpLnRvQmUoc2NoZW1hKTsKICB9KTsKCiAgaXQoInVud3JhcHMgWm9kT3B0aW9uYWwgdG8gdGhlIGlubmVyIHR5cGUiLCAoKSA9PiB7CiAgICBjb25zdCBzY2hlbWEgPSB6LnN0cmluZygpLm9wdGlvbmFsKCk7CiAgICBjb25zdCBpbm5lciA9IHVud3JhcFpvZFNjaGVtYShzY2hlbWEpOwogICAgZXhwZWN0KGlubmVyIGluc3RhbmNlb2Ygei5ab2RTdHJpbmcpLnRvQmUodHJ1ZSk7CiAgICBleHBlY3QoaW5uZXIgaW5zdGFuY2VvZiB6LlpvZE9wdGlvbmFsKS50b0JlKGZhbHNlKTsKICB9KTsKCiAgaXQoInVud3JhcHMgWm9kTnVsbGFibGUgdG8gdGhlIGlubmVyIHR5cGUiLCAoKSA9PiB7CiAgICBjb25zdCBzY2hlbWEgPSB6LnN0cmluZygpLm51bGxhYmxlKCk7CiAgICBjb25zdCBpbm5lciA9IHVud3JhcFpvZFNjaGVtYShzY2hlbWEpOwogICAgZXhwZWN0KGlubmVyIGluc3RhbmNlb2Ygei5ab2RTdHJpbmcpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJ1bndyYXBzIFpvZERlZmF1bHQgdG8gdGhlIGlubmVyIHR5cGUiLCAoKSA9PiB7CiAgICBjb25zdCBzY2hlbWEgPSB6LnN0cmluZygpLmRlZmF1bHQoImhlbGxvIik7CiAgICBjb25zdCBpbm5lciA9IHVud3JhcFpvZFNjaGVtYShzY2hlbWEpOwogICAgZXhwZWN0KGlubmVyIGluc3RhbmNlb2Ygei5ab2RTdHJpbmcpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJ1bndyYXBzIGEgdHJhbnNmb3JtIHRvIHRoZSB1bmRlcmx5aW5nIHNjaGVtYSIsICgpID0+IHsKICAgIC8vIHY0IHJlcGxhY2VkIFpvZEVmZmVjdHMgd2l0aCBab2RQaXBlOyAudHJhbnNmb3JtKCkgd3JhcHMgdGhlIHNvdXJjZSBzY2hlbWEsCiAgICAvLyBhbmQgdW53cmFwWm9kU2NoZW1hIGZhbGxzIGJhY2sgdG8gdGhlIHBpcGUncyBpbnB1dCBzaWRlLgogICAgY29uc3Qgc2NoZW1hID0gei5zdHJpbmcoKS50cmFuc2Zvcm0oKHMpID0+IHMpOwogICAgY29uc3QgaW5uZXIgPSB1bndyYXBab2RTY2hlbWEoc2NoZW1hKTsKICAgIGV4cGVjdChpbm5lciBpbnN0YW5jZW9mIHouWm9kU3RyaW5nKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgidW53cmFwcyBuZXN0ZWQgd3JhcHBlcnMiLCAoKSA9PiB7CiAgICBjb25zdCBzY2hlbWEgPSB6CiAgICAgIC5zdHJpbmcoKQogICAgICAucmVmaW5lKCgpID0+IHRydWUpCiAgICAgIC5vcHRpb25hbCgpCiAgICAgIC5udWxsYWJsZSgpOwogICAgY29uc3QgaW5uZXIgPSB1bndyYXBab2RTY2hlbWEoc2NoZW1hKTsKICAgIGV4cGVjdChpbm5lciBpbnN0YW5jZW9mIHouWm9kU3RyaW5nKS50b0JlKHRydWUpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJleHRyYWN0RmllbGREZWZpbml0aW9uIiwgKCkgPT4gewogIGl0KCJleHRyYWN0cyB0eXBlIGFuZCByZXF1aXJlZCBmbGFnIGZvciBhIHNpbXBsZSBzdHJpbmciLCAoKSA9PiB7CiAgICBjb25zdCBkZWYgPSBleHRyYWN0RmllbGREZWZpbml0aW9uKHouc3RyaW5nKCkpOwogICAgZXhwZWN0KGRlZi50eXBlKS50b0JlKCJab2RTdHJpbmciKTsKICAgIGV4cGVjdChkZWYucmVxdWlyZWQpLnRvQmUodHJ1ZSk7CiAgfSk7CgogIGl0KCJtYXJrcyBvcHRpb25hbCBmaWVsZHMgYXMgbm90IHJlcXVpcmVkIiwgKCkgPT4gewogICAgY29uc3QgZGVmID0gZXh0cmFjdEZpZWxkRGVmaW5pdGlvbih6LnN0cmluZygpLm9wdGlvbmFsKCkpOwogICAgZXhwZWN0KGRlZi50eXBlKS50b0JlKCJab2RTdHJpbmciKTsKICAgIGV4cGVjdChkZWYucmVxdWlyZWQpLnRvQmUoZmFsc2UpOwogIH0pOwoKICBpdCgibWFya3MgbnVsbGFibGUgZmllbGRzIGFzIG5vdCByZXF1aXJlZCIsICgpID0+IHsKICAgIGNvbnN0IGRlZiA9IGV4dHJhY3RGaWVsZERlZmluaXRpb24oei5zdHJpbmcoKS5udWxsYWJsZSgpKTsKICAgIGV4cGVjdChkZWYudHlwZSkudG9CZSgiWm9kU3RyaW5nIik7CiAgICBleHBlY3QoZGVmLnJlcXVpcmVkKS50b0JlKGZhbHNlKTsKICB9KTsKCiAgaXQoIm1hcmtzIGRlZmF1bHRlZCBmaWVsZHMgYXMgbm90IHJlcXVpcmVkIiwgKCkgPT4gewogICAgY29uc3QgZGVmID0gZXh0cmFjdEZpZWxkRGVmaW5pdGlvbih6LnN0cmluZygpLmRlZmF1bHQoIngiKSk7CiAgICBleHBlY3QoZGVmLnR5cGUpLnRvQmUoIlpvZFN0cmluZyIpOwogICAgZXhwZWN0KGRlZi5yZXF1aXJlZCkudG9CZShmYWxzZSk7CiAgfSk7CgogIGl0KCJleHRyYWN0cyBuZXN0ZWQgb2JqZWN0IGZpZWxkcyIsICgpID0+IHsKICAgIGNvbnN0IHNjaGVtYSA9IHoub2JqZWN0KHsKICAgICAgbmFtZTogei5zdHJpbmcoKSwKICAgICAgYWdlOiB6Lm51bWJlcigpLm9wdGlvbmFsKCksCiAgICB9KTsKICAgIGNvbnN0IGRlZiA9IGV4dHJhY3RGaWVsZERlZmluaXRpb24oc2NoZW1hKTsKICAgIGV4cGVjdChkZWYudHlwZSkudG9CZSgiWm9kT2JqZWN0Iik7CiAgICBleHBlY3QoZGVmLmZpZWxkcykudG9CZURlZmluZWQoKTsKICAgIGV4cGVjdChkZWYuZmllbGRzIS5uYW1lPy50eXBlKS50b0JlKCJab2RTdHJpbmciKTsKICAgIGV4cGVjdChkZWYuZmllbGRzIS5uYW1lPy5yZXF1aXJlZCkudG9CZSh0cnVlKTsKICAgIGV4cGVjdChkZWYuZmllbGRzIS5hZ2U/LnR5cGUpLnRvQmUoIlpvZE51bWJlciIpOwogICAgZXhwZWN0KGRlZi5maWVsZHMhLmFnZT8ucmVxdWlyZWQpLnRvQmUoZmFsc2UpOwogIH0pOwoKICBpdCgiZXh0cmFjdHMgYXJyYXkgZWxlbWVudCBkZWZpbml0aW9ucyIsICgpID0+IHsKICAgIGNvbnN0IHNjaGVtYSA9IHouYXJyYXkoei5zdHJpbmcoKSk7CiAgICBjb25zdCBkZWYgPSBleHRyYWN0RmllbGREZWZpbml0aW9uKHNjaGVtYSk7CiAgICBleHBlY3QoZGVmLnR5cGUpLnRvQmUoIlpvZEFycmF5Iik7CiAgICBleHBlY3QoZGVmLmVsZW1lbnQpLnRvQmVEZWZpbmVkKCk7CiAgICBleHBlY3QoZGVmLmVsZW1lbnQhLnR5cGUpLnRvQmUoIlpvZFN0cmluZyIpOwogIH0pOwoKICBpdCgiZXh0cmFjdHMgZW51bSB0eXBlcyIsICgpID0+IHsKICAgIGNvbnN0IHNjaGVtYSA9IHouZW51bShbImEiLCAiYiIsICJjIl0pOwogICAgY29uc3QgZGVmID0gZXh0cmFjdEZpZWxkRGVmaW5pdGlvbihzY2hlbWEpOwogICAgZXhwZWN0KGRlZi50eXBlKS50b0JlKCJab2RFbnVtIik7CiAgICBleHBlY3QoZGVmLnJlcXVpcmVkKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgiaW5jbHVkZXMgZGVzY3JpcHRpb25zIHdoZW4gcHJvdmlkZWQiLCAoKSA9PiB7CiAgICBjb25zdCBzY2hlbWEgPSB6LnN0cmluZygpLmRlc2NyaWJlKCJBIGhlbHBmdWwgZGVzY3JpcHRpb24iKTsKICAgIGNvbnN0IGRlZiA9IGV4dHJhY3RGaWVsZERlZmluaXRpb24oc2NoZW1hKTsKICAgIGV4cGVjdChkZWYuZGVzY3JpcHRpb24pLnRvQmUoIkEgaGVscGZ1bCBkZXNjcmlwdGlvbiIpOwogIH0pOwp9KTsKCmRlc2NyaWJlKCJjb21wYXJlRmllbGREZWZpbml0aW9uIiwgKCkgPT4gewogIGl0KCJyZXR1cm5zIG5vIGRpZmZzIGZvciBpZGVudGljYWwgZGVmaW5pdGlvbnMiLCAoKSA9PiB7CiAgICBjb25zdCBhOiBGaWVsZERlZmluaXRpb24gPSB7IHR5cGU6ICJab2RTdHJpbmciLCByZXF1aXJlZDogdHJ1ZSB9OwogICAgY29uc3QgYjogRmllbGREZWZpbml0aW9uID0geyB0eXBlOiAiWm9kU3RyaW5nIiwgcmVxdWlyZWQ6IHRydWUgfTsKICAgIGV4cGVjdChjb21wYXJlRmllbGREZWZpbml0aW9uKGEsIGIpKS50b0VxdWFsKFtdKTsKICB9KTsKCiAgaXQoImRldGVjdHMgdHlwZSBjaGFuZ2VzIiwgKCkgPT4gewogICAgY29uc3QgY3VycmVudDogRmllbGREZWZpbml0aW9uID0geyB0eXBlOiAiWm9kTnVtYmVyIiwgcmVxdWlyZWQ6IHRydWUgfTsKICAgIGNvbnN0IHNuYXBzaG90OiBGaWVsZERlZmluaXRpb24gPSB7IHR5cGU6ICJab2RTdHJpbmciLCByZXF1aXJlZDogdHJ1ZSB9OwogICAgY29uc3QgZGlmZnMgPSBjb21wYXJlRmllbGREZWZpbml0aW9uKGN1cnJlbnQsIHNuYXBzaG90KTsKICAgIGV4cGVjdChkaWZmcy5sZW5ndGgpLnRvQmVHcmVhdGVyVGhhbigwKTsKICAgIGV4cGVjdChkaWZmc1swXSkudG9Db250YWluKCJ0eXBlIGNoYW5nZWQiKTsKICB9KTsKCiAgaXQoImRldGVjdHMgcmVxdWlyZWQgZmxhZyBjaGFuZ2VzIiwgKCkgPT4gewogICAgY29uc3QgY3VycmVudDogRmllbGREZWZpbml0aW9uID0geyB0eXBlOiAiWm9kU3RyaW5nIiwgcmVxdWlyZWQ6IHRydWUgfTsKICAgIGNvbnN0IHNuYXBzaG90OiBGaWVsZERlZmluaXRpb24gPSB7IHR5cGU6ICJab2RTdHJpbmciLCByZXF1aXJlZDogZmFsc2UgfTsKICAgIGNvbnN0IGRpZmZzID0gY29tcGFyZUZpZWxkRGVmaW5pdGlvbihjdXJyZW50LCBzbmFwc2hvdCk7CiAgICBleHBlY3QoZGlmZnMubGVuZ3RoKS50b0JlR3JlYXRlclRoYW4oMCk7CiAgICBleHBlY3QoZGlmZnNbMF0pLnRvQ29udGFpbigicmVxdWlyZWQgY2hhbmdlZCIpOwogIH0pOwoKICBpdCgiZGV0ZWN0cyBhZGRlZCBuZXN0ZWQgZmllbGRzIiwgKCkgPT4gewogICAgY29uc3QgY3VycmVudDogRmllbGREZWZpbml0aW9uID0gewogICAgICB0eXBlOiAiWm9kT2JqZWN0IiwKICAgICAgcmVxdWlyZWQ6IHRydWUsCiAgICAgIGZpZWxkczogewogICAgICAgIHg6IHsgdHlwZTogIlpvZFN0cmluZyIsIHJlcXVpcmVkOiB0cnVlIH0sCiAgICAgICAgeTogeyB0eXBlOiAiWm9kU3RyaW5nIiwgcmVxdWlyZWQ6IHRydWUgfSwKICAgICAgfSwKICAgIH07CiAgICBjb25zdCBzbmFwc2hvdDogRmllbGREZWZpbml0aW9uID0gewogICAgICB0eXBlOiAiWm9kT2JqZWN0IiwKICAgICAgcmVxdWlyZWQ6IHRydWUsCiAgICAgIGZpZWxkczogewogICAgICAgIHg6IHsgdHlwZTogIlpvZFN0cmluZyIsIHJlcXVpcmVkOiB0cnVlIH0sCiAgICAgIH0sCiAgICB9OwogICAgY29uc3QgZGlmZnMgPSBjb21wYXJlRmllbGREZWZpbml0aW9uKGN1cnJlbnQsIHNuYXBzaG90KTsKICAgIGV4cGVjdChkaWZmcy5sZW5ndGgpLnRvQmVHcmVhdGVyVGhhbigwKTsKICAgIGV4cGVjdChkaWZmcy5zb21lKChkKSA9PiBkLmluY2x1ZGVzKCJ5IikgJiYgZC5pbmNsdWRlcygiYWRkZWQiKSkpLnRvQmUoCiAgICAgIHRydWUsCiAgICApOwogIH0pOwoKICBpdCgiZGV0ZWN0cyByZW1vdmVkIG5lc3RlZCBmaWVsZHMiLCAoKSA9PiB7CiAgICBjb25zdCBjdXJyZW50OiBGaWVsZERlZmluaXRpb24gPSB7CiAgICAgIHR5cGU6ICJab2RPYmplY3QiLAogICAgICByZXF1aXJlZDogdHJ1ZSwKICAgICAgZmllbGRzOiB7IHg6IHsgdHlwZTogIlpvZFN0cmluZyIsIHJlcXVpcmVkOiB0cnVlIH0gfSwKICAgIH07CiAgICBjb25zdCBzbmFwc2hvdDogRmllbGREZWZpbml0aW9uID0gewogICAgICB0eXBlOiAiWm9kT2JqZWN0IiwKICAgICAgcmVxdWlyZWQ6IHRydWUsCiAgICAgIGZpZWxkczogewogICAgICAgIHg6IHsgdHlwZTogIlpvZFN0cmluZyIsIHJlcXVpcmVkOiB0cnVlIH0sCiAgICAgICAgeTogeyB0eXBlOiAiWm9kU3RyaW5nIiwgcmVxdWlyZWQ6IHRydWUgfSwKICAgICAgfSwKICAgIH07CiAgICBjb25zdCBkaWZmcyA9IGNvbXBhcmVGaWVsZERlZmluaXRpb24oY3VycmVudCwgc25hcHNob3QpOwogICAgZXhwZWN0KGRpZmZzLmxlbmd0aCkudG9CZUdyZWF0ZXJUaGFuKDApOwogICAgZXhwZWN0KGRpZmZzLnNvbWUoKGQpID0+IGQuaW5jbHVkZXMoInkiKSAmJiBkLmluY2x1ZGVzKCJyZW1vdmVkIikpKS50b0JlKAogICAgICB0cnVlLAogICAgKTsKICB9KTsKfSk7CgpkZXNjcmliZSgiZGlmZlNjaGVtYVNuYXBzaG90cyIsICgpID0+IHsKICBpdCgicmV0dXJucyBhbiBlbXB0eSBkaWZmIHdoZW4gc25hcHNob3RzIGFyZSBpZGVudGljYWwiLCAoKSA9PiB7CiAgICBjb25zdCBzbmFwOiBTY2hlbWFTbmFwc2hvdCA9IHsKICAgICAgbmFtZTogIlRlc3QiLAogICAgICBmaWVsZHM6IHsgYTogeyB0eXBlOiAiWm9kU3RyaW5nIiwgcmVxdWlyZWQ6IHRydWUgfSB9LAogICAgICBjYXB0dXJlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCksCiAgICB9OwogICAgY29uc3QgZGlmZiA9IGRpZmZTY2hlbWFTbmFwc2hvdHMoc25hcCwgeyAuLi5zbmFwIH0pOwogICAgZXhwZWN0KGRpZmYuYWRkZWQpLnRvRXF1YWwoW10pOwogICAgZXhwZWN0KGRpZmYucmVtb3ZlZCkudG9FcXVhbChbXSk7CiAgICBleHBlY3QoZGlmZi5jaGFuZ2VkKS50b0VxdWFsKFtdKTsKICB9KTsKCiAgaXQoImRldGVjdHMgYWRkZWQgZmllbGRzIiwgKCkgPT4gewogICAgY29uc3QgY3VycmVudDogU2NoZW1hU25hcHNob3QgPSB7CiAgICAgIG5hbWU6ICJUZXN0IiwKICAgICAgZmllbGRzOiB7CiAgICAgICAgYTogeyB0eXBlOiAiWm9kU3RyaW5nIiwgcmVxdWlyZWQ6IHRydWUgfSwKICAgICAgICBiOiB7IHR5cGU6ICJab2ROdW1iZXIiLCByZXF1aXJlZDogdHJ1ZSB9LAogICAgICB9LAogICAgICBjYXB0dXJlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCksCiAgICB9OwogICAgY29uc3Qgc25hcHNob3Q6IFNjaGVtYVNuYXBzaG90ID0gewogICAgICBuYW1lOiAiVGVzdCIsCiAgICAgIGZpZWxkczogeyBhOiB7IHR5cGU6ICJab2RTdHJpbmciLCByZXF1aXJlZDogdHJ1ZSB9IH0sCiAgICAgIGNhcHR1cmVkQXQ6IG5ldyBEYXRlKCkudG9JU09TdHJpbmcoKSwKICAgIH07CiAgICBjb25zdCBkaWZmID0gZGlmZlNjaGVtYVNuYXBzaG90cyhjdXJyZW50LCBzbmFwc2hvdCk7CiAgICBleHBlY3QoZGlmZi5hZGRlZCkudG9FcXVhbChbImIiXSk7CiAgICBleHBlY3QoZGlmZi5yZW1vdmVkKS50b0VxdWFsKFtdKTsKICAgIGV4cGVjdChkaWZmLmNoYW5nZWQpLnRvRXF1YWwoW10pOwogIH0pOwoKICBpdCgiZGV0ZWN0cyByZW1vdmVkIGZpZWxkcyIsICgpID0+IHsKICAgIGNvbnN0IGN1cnJlbnQ6IFNjaGVtYVNuYXBzaG90ID0gewogICAgICBuYW1lOiAiVGVzdCIsCiAgICAgIGZpZWxkczogeyBhOiB7IHR5cGU6ICJab2RTdHJpbmciLCByZXF1aXJlZDogdHJ1ZSB9IH0sCiAgICAgIGNhcHR1cmVkQXQ6IG5ldyBEYXRlKCkudG9JU09TdHJpbmcoKSwKICAgIH07CiAgICBjb25zdCBzbmFwc2hvdDogU2NoZW1hU25hcHNob3QgPSB7CiAgICAgIG5hbWU6ICJUZXN0IiwKICAgICAgZmllbGRzOiB7CiAgICAgICAgYTogeyB0eXBlOiAiWm9kU3RyaW5nIiwgcmVxdWlyZWQ6IHRydWUgfSwKICAgICAgICBiOiB7IHR5cGU6ICJab2ROdW1iZXIiLCByZXF1aXJlZDogdHJ1ZSB9LAogICAgICB9LAogICAgICBjYXB0dXJlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCksCiAgICB9OwogICAgY29uc3QgZGlmZiA9IGRpZmZTY2hlbWFTbmFwc2hvdHMoY3VycmVudCwgc25hcHNob3QpOwogICAgZXhwZWN0KGRpZmYuYWRkZWQpLnRvRXF1YWwoW10pOwogICAgZXhwZWN0KGRpZmYucmVtb3ZlZCkudG9FcXVhbChbImIiXSk7CiAgICBleHBlY3QoZGlmZi5jaGFuZ2VkKS50b0VxdWFsKFtdKTsKICB9KTsKCiAgaXQoImRldGVjdHMgY2hhbmdlZCBmaWVsZHMiLCAoKSA9PiB7CiAgICBjb25zdCBjdXJyZW50OiBTY2hlbWFTbmFwc2hvdCA9IHsKICAgICAgbmFtZTogIlRlc3QiLAogICAgICBmaWVsZHM6IHsgYTogeyB0eXBlOiAiWm9kTnVtYmVyIiwgcmVxdWlyZWQ6IHRydWUgfSB9LAogICAgICBjYXB0dXJlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCksCiAgICB9OwogICAgY29uc3Qgc25hcHNob3Q6IFNjaGVtYVNuYXBzaG90ID0gewogICAgICBuYW1lOiAiVGVzdCIsCiAgICAgIGZpZWxkczogeyBhOiB7IHR5cGU6ICJab2RTdHJpbmciLCByZXF1aXJlZDogdHJ1ZSB9IH0sCiAgICAgIGNhcHR1cmVkQXQ6IG5ldyBEYXRlKCkudG9JU09TdHJpbmcoKSwKICAgIH07CiAgICBjb25zdCBkaWZmID0gZGlmZlNjaGVtYVNuYXBzaG90cyhjdXJyZW50LCBzbmFwc2hvdCk7CiAgICBleHBlY3QoZGlmZi5hZGRlZCkudG9FcXVhbChbXSk7CiAgICBleHBlY3QoZGlmZi5yZW1vdmVkKS50b0VxdWFsKFtdKTsKICAgIGV4cGVjdChkaWZmLmNoYW5nZWQubGVuZ3RoKS50b0JlKDEpOwogICAgZXhwZWN0KGRpZmYuY2hhbmdlZFswXSEuZmllbGQpLnRvQmUoImEiKTsKICB9KTsKfSk7CgpkZXNjcmliZSgiY2FwdHVyZVNjaGVtYVNuYXBzaG90IiwgKCkgPT4gewogIGl0KCJjYXB0dXJlcyBhIHNuYXBzaG90IHdpdGggdGhlIGNvcnJlY3QgbmFtZSIsICgpID0+IHsKICAgIGNvbnN0IHNjaGVtYSA9IHoub2JqZWN0KHsgaWQ6IHouc3RyaW5nKCkgfSk7CiAgICBjb25zdCBzbmFwID0gY2FwdHVyZVNjaGVtYVNuYXBzaG90KCJNeVNjaGVtYSIsIHNjaGVtYSk7CiAgICBleHBlY3Qoc25hcC5uYW1lKS50b0JlKCJNeVNjaGVtYSIpOwogICAgZXhwZWN0KHNuYXAuY2FwdHVyZWRBdCkudG9CZURlZmluZWQoKTsKICAgIGV4cGVjdChzbmFwLmZpZWxkcy5pZCkudG9CZURlZmluZWQoKTsKICB9KTsKCiAgaXQoImNhcHR1cmVzIGFsbCB0b3AtbGV2ZWwgZmllbGRzIiwgKCkgPT4gewogICAgY29uc3Qgc2NoZW1hID0gei5vYmplY3QoewogICAgICBuYW1lOiB6LnN0cmluZygpLAogICAgICBhZ2U6IHoubnVtYmVyKCkub3B0aW9uYWwoKSwKICAgIH0pOwogICAgY29uc3Qgc25hcCA9IGNhcHR1cmVTY2hlbWFTbmFwc2hvdCgiVGVzdCIsIHNjaGVtYSk7CiAgICBleHBlY3QoT2JqZWN0LmtleXMoc25hcC5maWVsZHMpKS50b0NvbnRhaW4oIm5hbWUiKTsKICAgIGV4cGVjdChPYmplY3Qua2V5cyhzbmFwLmZpZWxkcykpLnRvQ29udGFpbigiYWdlIik7CiAgfSk7Cn0pOwoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCi8vIEFjY2VwdGFuY2UgY3JpdGVyaWEg4oCTIHZhbGlkYXRlIHJlYWwgcHJvamVjdCBzY2hlbWFzIGFnYWluc3QgdGhlIGNvbW1pdHRlZAovLyBiYXNlbGluZSBzbmFwc2hvdC4gIFRoZXNlIHRlc3RzIE1VU1QgcGFzcyBpbiBDSTsgZmFpbHVyZSBtZWFucyBhIGJyZWFraW5nCi8vIHNjaGVtYSBjaGFuZ2Ugd2FzIGludHJvZHVjZWQgd2l0aG91dCB1cGRhdGluZyB0aGUgYmFzZWxpbmUuCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQoKZGVzY3JpYmUoInZhbGlkYXRlU2NoZW1hU25hcHNob3QiLCAoKSA9PiB7CiAgaXQoIlByb3BlcnR5SW5mbyBtYXRjaGVzIHRoZSB2ZXJzaW9uZWQgYmFzZWxpbmUgc25hcHNob3QiLCAoKSA9PiB7CiAgICBjb25zdCByZXN1bHQgPSB2YWxpZGF0ZVNjaGVtYVNuYXBzaG90KAogICAgICAiUHJvcGVydHlJbmZvIiwKICAgICAgcHJvcGVydHlJbmZvU2NoZW1hLAogICAgICBwcm9wZXJ0eUluZm9CYXNlbGluZSwKICAgICk7CgogICAgaWYgKCFyZXN1bHQudmFsaWQpIHsKICAgICAgLy8gUHJldHR5LXByaW50IHRoZSBkaWZmIHNvIHRoZSBkZXZlbG9wZXIga25vd3MgZXhhY3RseSB3aGF0IGNoYW5nZWQuCiAgICAgIGNvbnNvbGUuZXJyb3IoCiAgICAgICAgIlNjaGVtYSBkaWZmIGZvciBQcm9wZXJ0eUluZm86XG4iICsKICAgICAgICAgIEpTT04uc3RyaW5naWZ5KHJlc3VsdC5kaWZmLCBudWxsLCAyKSwKICAgICAgKTsKICAgIH0KCiAgICBleHBlY3QocmVzdWx0LnZhbGlkKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgiTGVuZGluZ1Bvb2wgbWF0Y2hlcyB0aGUgdmVyc2lvbmVkIGJhc2VsaW5lIHNuYXBzaG90IiwgKCkgPT4gewogICAgY29uc3QgcmVzdWx0ID0gdmFsaWRhdGVTY2hlbWFTbmFwc2hvdCgKICAgICAgIkxlbmRpbmdQb29sIiwKICAgICAgbGVuZGluZ1Bvb2xTY2hlbWEsCiAgICAgIGxlbmRpbmdQb29sQmFzZWxpbmUsCiAgICApOwoKICAgIGlmICghcmVzdWx0LnZhbGlkKSB7CiAgICAgIGNvbnNvbGUuZXJyb3IoCiAgICAgICAgIlNjaGVtYSBkaWZmIGZvciBMZW5kaW5nUG9vbDpcbiIgKyBKU09OLnN0cmluZ2lmeShyZXN1bHQuZGlmZiwgbnVsbCwgMiksCiAgICAgICk7CiAgICB9CgogICAgZXhwZWN0KHJlc3VsdC52YWxpZCkudG9CZSh0cnVlKTsKICB9KTsKCiAgaXQoInJldHVybnMgdmFsaWQgd2hlbiBhZGRpbmcgYSBuZXcgb3B0aW9uYWwgZmllbGQgKG5vbi1icmVha2luZykiLCAoKSA9PiB7CiAgICBjb25zdCBiYXNlbGluZTogU2NoZW1hU25hcHNob3QgPSB7CiAgICAgIG5hbWU6ICJUZXN0IiwKICAgICAgZmllbGRzOiB7IHg6IHsgdHlwZTogIlpvZFN0cmluZyIsIHJlcXVpcmVkOiB0cnVlIH0gfSwKICAgICAgY2FwdHVyZWRBdDogbmV3IERhdGUoKS50b0lTT1N0cmluZygpLAogICAgfTsKICAgIC8vIFNjaGVtYSB3aXRoIGFuICpvcHRpb25hbCogZmllbGQgYWRkZWQgb24gdG9wIG9mIHRoZSBiYXNlbGluZS4KICAgIGNvbnN0IHNjaGVtYVdpdGhPcHRpb25hbCA9IHoub2JqZWN0KHsKICAgICAgeDogei5zdHJpbmcoKSwKICAgICAgeTogei5zdHJpbmcoKS5vcHRpb25hbCgpLAogICAgfSk7CiAgICBjb25zdCByZXN1bHQgPSB2YWxpZGF0ZVNjaGVtYVNuYXBzaG90KCJUZXN0Iiwgc2NoZW1hV2l0aE9wdGlvbmFsLCBiYXNlbGluZSk7CiAgICBleHBlY3QocmVzdWx0LnZhbGlkKS50b0JlKHRydWUpOwogIH0pOwoKICBpdCgicmV0dXJucyBpbnZhbGlkIHdoZW4gYWRkaW5nIGEgbmV3IHJlcXVpcmVkIGZpZWxkIChicmVha2luZykiLCAoKSA9PiB7CiAgICBjb25zdCBiYXNlbGluZTogU2NoZW1hU25hcHNob3QgPSB7CiAgICAgIG5hbWU6ICJUZXN0IiwKICAgICAgZmllbGRzOiB7IHg6IHsgdHlwZTogIlpvZFN0cmluZyIsIHJlcXVpcmVkOiB0cnVlIH0gfSwKICAgICAgY2FwdHVyZWRBdDogbmV3IERhdGUoKS50b0lTT1N0cmluZygpLAogICAgfTsKICAgIC8vIFNjaGVtYSB3aXRoIGEgKnJlcXVpcmVkKiBmaWVsZCBhZGRlZCBvbiB0b3Agb2YgdGhlIGJhc2VsaW5lLgogICAgY29uc3Qgc2NoZW1hV2l0aFJlcXVpcmVkID0gei5vYmplY3QoewogICAgICB4OiB6LnN0cmluZygpLAogICAgICB5OiB6LnN0cmluZygpLAogICAgfSk7CiAgICBjb25zdCByZXN1bHQgPSB2YWxpZGF0ZVNjaGVtYVNuYXBzaG90KCJUZXN0Iiwgc2NoZW1hV2l0aFJlcXVpcmVkLCBiYXNlbGluZSk7CiAgICBleHBlY3QocmVzdWx0LnZhbGlkKS50b0JlKGZhbHNlKTsKICB9KTsKCiAgaXQoInJldHVybnMgaW52YWxpZCB3aGVuIGEgZmllbGQgdHlwZSBoYXMgY2hhbmdlZCIsICgpID0+IHsKICAgIGNvbnN0IGJhc2VsaW5lOiBTY2hlbWFTbmFwc2hvdCA9IHsKICAgICAgbmFtZTogIlRlc3QiLAogICAgICBmaWVsZHM6IHsgeDogeyB0eXBlOiAiWm9kU3RyaW5nIiwgcmVxdWlyZWQ6IHRydWUgfSB9LAogICAgICBjYXB0dXJlZEF0OiBuZXcgRGF0ZSgpLnRvSVNPU3RyaW5nKCksCiAgICB9OwogICAgY29uc3QgY2hhbmdlZFNjaGVtYSA9IHoub2JqZWN0KHsgeDogei5udW1iZXIoKSB9KTsKICAgIGNvbnN0IHJlc3VsdCA9IHZhbGlkYXRlU2NoZW1hU25hcHNob3QoIlRlc3QiLCBjaGFuZ2VkU2NoZW1hLCBiYXNlbGluZSk7CiAgICBleHBlY3QocmVzdWx0LnZhbGlkKS50b0JlKGZhbHNlKTsKICAgIGV4cGVjdChyZXN1bHQuZGlmZi5jaGFuZ2VkLmxlbmd0aCkudG9CZUdyZWF0ZXJUaGFuKDApOwogIH0pOwp9KTsK
+import { describe, it, expect } from "bun:test";
+import {
+  captureSchemaSnapshot,
+  diffSchemaSnapshots,
+  validateSchemaSnapshot,
+  unwrapZodSchema,
+  extractFieldDefinition,
+  compareFieldDefinition,
+  type SchemaSnapshot,
+  type FieldDefinition,
+  type SchemaDiff,
+} from "../../src/utils/schema-versioning";
+import { propertyInfoSchema, lendingPoolSchema } from "../../src/schemas";
+import { z } from "zod";
+
+// ---------------------------------------------------------------------------
+// Baseline snapshots – committed alongside the code so CI can detect
+// accidental breaking schema changes.
+// ---------------------------------------------------------------------------
+import baselineSnapshots from "../snapshots/schema-v1.json";
+
+const propertyInfoBaseline = (
+  baselineSnapshots as Record<string, SchemaSnapshot>
+).propertyInfo as SchemaSnapshot;
+const lendingPoolBaseline = (
+  baselineSnapshots as Record<string, SchemaSnapshot>
+).lendingPool as SchemaSnapshot;
+
+// ---------------------------------------------------------------------------
+// Unit tests for the individual utility functions
+// ---------------------------------------------------------------------------
+
+describe("unwrapZodSchema", () => {
+  it("returns the same schema when there is no wrapper", () => {
+    const schema = z.string();
+    const result = unwrapZodSchema(schema);
+    expect(result).toBe(schema);
+  });
+
+  it("unwraps ZodOptional to the inner type", () => {
+    const schema = z.string().optional();
+    const inner = unwrapZodSchema(schema);
+    expect(inner instanceof z.ZodString).toBe(true);
+    expect(inner instanceof z.ZodOptional).toBe(false);
+  });
+
+  it("unwraps ZodNullable to the inner type", () => {
+    const schema = z.string().nullable();
+    const inner = unwrapZodSchema(schema);
+    expect(inner instanceof z.ZodString).toBe(true);
+  });
+
+  it("unwraps ZodDefault to the inner type", () => {
+    const schema = z.string().default("hello");
+    const inner = unwrapZodSchema(schema);
+    expect(inner instanceof z.ZodString).toBe(true);
+  });
+
+  it("unwraps a transform to the underlying schema", () => {
+    // v4 replaced ZodEffects with ZodPipe; .transform() wraps the source schema,
+    // and unwrapZodSchema falls back to the pipe's input side.
+    const schema = z.string().transform((s) => s);
+    const inner = unwrapZodSchema(schema);
+    expect(inner instanceof z.ZodString).toBe(true);
+  });
+
+  it("unwraps nested wrappers", () => {
+    const schema = z
+      .string()
+      .refine(() => true)
+      .optional()
+      .nullable();
+    const inner = unwrapZodSchema(schema);
+    expect(inner instanceof z.ZodString).toBe(true);
+  });
+});
+
+describe("extractFieldDefinition", () => {
+  it("extracts type and required flag for a simple string", () => {
+    const def = extractFieldDefinition(z.string());
+    expect(def.type).toBe("ZodString");
+    expect(def.required).toBe(true);
+  });
+
+  it("marks optional fields as not required", () => {
+    const def = extractFieldDefinition(z.string().optional());
+    expect(def.type).toBe("ZodString");
+    expect(def.required).toBe(false);
+  });
+
+  it("marks nullable fields as not required", () => {
+    const def = extractFieldDefinition(z.string().nullable());
+    expect(def.type).toBe("ZodString");
+    expect(def.required).toBe(false);
+  });
+
+  it("marks defaulted fields as not required", () => {
+    const def = extractFieldDefinition(z.string().default("x"));
+    expect(def.type).toBe("ZodString");
+    expect(def.required).toBe(false);
+  });
+
+  it("extracts nested object fields", () => {
+    const schema = z.object({
+      name: z.string(),
+      age: z.number().optional(),
+    });
+    const def = extractFieldDefinition(schema);
+    expect(def.type).toBe("ZodObject");
+    expect(def.fields).toBeDefined();
+    expect(def.fields!.name?.type).toBe("ZodString");
+    expect(def.fields!.name?.required).toBe(true);
+    expect(def.fields!.age?.type).toBe("ZodNumber");
+    expect(def.fields!.age?.required).toBe(false);
+  });
+
+  it("extracts array element definitions", () => {
+    const schema = z.array(z.string());
+    const def = extractFieldDefinition(schema);
+    expect(def.type).toBe("ZodArray");
+    expect(def.element).toBeDefined();
+    expect(def.element!.type).toBe("ZodString");
+  });
+
+  it("extracts enum types", () => {
+    const schema = z.enum(["a", "b", "c"]);
+    const def = extractFieldDefinition(schema);
+    expect(def.type).toBe("ZodEnum");
+    expect(def.required).toBe(true);
+  });
+
+  it("includes descriptions when provided", () => {
+    const schema = z.string().describe("A helpful description");
+    const def = extractFieldDefinition(schema);
+    expect(def.description).toBe("A helpful description");
+  });
+});
+
+describe("compareFieldDefinition", () => {
+  it("returns no diffs for identical definitions", () => {
+    const a: FieldDefinition = { type: "ZodString", required: true };
+    const b: FieldDefinition = { type: "ZodString", required: true };
+    expect(compareFieldDefinition(a, b)).toEqual([]);
+  });
+
+  it("detects type changes", () => {
+    const current: FieldDefinition = { type: "ZodNumber", required: true };
+    const snapshot: FieldDefinition = { type: "ZodString", required: true };
+    const diffs = compareFieldDefinition(current, snapshot);
+    expect(diffs.length).toBeGreaterThan(0);
+    expect(diffs[0]).toContain("type changed");
+  });
+
+  it("detects required flag changes", () => {
+    const current: FieldDefinition = { type: "ZodString", required: true };
+    const snapshot: FieldDefinition = { type: "ZodString", required: false };
+    const diffs = compareFieldDefinition(current, snapshot);
+    expect(diffs.length).toBeGreaterThan(0);
+    expect(diffs[0]).toContain("required changed");
+  });
+
+  it("detects added nested fields", () => {
+    const current: FieldDefinition = {
+      type: "ZodObject",
+      required: true,
+      fields: {
+        x: { type: "ZodString", required: true },
+        y: { type: "ZodString", required: true },
+      },
+    };
+    const snapshot: FieldDefinition = {
+      type: "ZodObject",
+      required: true,
+      fields: {
+        x: { type: "ZodString", required: true },
+      },
+    };
+    const diffs = compareFieldDefinition(current, snapshot);
+    expect(diffs.length).toBeGreaterThan(0);
+    expect(diffs.some((d) => d.includes("y") && d.includes("added"))).toBe(
+      true,
+    );
+  });
+
+  it("detects removed nested fields", () => {
+    const current: FieldDefinition = {
+      type: "ZodObject",
+      required: true,
+      fields: { x: { type: "ZodString", required: true } },
+    };
+    const snapshot: FieldDefinition = {
+      type: "ZodObject",
+      required: true,
+      fields: {
+        x: { type: "ZodString", required: true },
+        y: { type: "ZodString", required: true },
+      },
+    };
+    const diffs = compareFieldDefinition(current, snapshot);
+    expect(diffs.length).toBeGreaterThan(0);
+    expect(diffs.some((d) => d.includes("y") && d.includes("removed"))).toBe(
+      true,
+    );
+  });
+});
+
+describe("diffSchemaSnapshots", () => {
+  it("returns an empty diff when snapshots are identical", () => {
+    const snap: SchemaSnapshot = {
+      name: "Test",
+      fields: { a: { type: "ZodString", required: true } },
+      capturedAt: new Date().toISOString(),
+    };
+    const diff = diffSchemaSnapshots(snap, { ...snap });
+    expect(diff.added).toEqual([]);
+    expect(diff.removed).toEqual([]);
+    expect(diff.changed).toEqual([]);
+  });
+
+  it("detects added fields", () => {
+    const current: SchemaSnapshot = {
+      name: "Test",
+      fields: {
+        a: { type: "ZodString", required: true },
+        b: { type: "ZodNumber", required: true },
+      },
+      capturedAt: new Date().toISOString(),
+    };
+    const snapshot: SchemaSnapshot = {
+      name: "Test",
+      fields: { a: { type: "ZodString", required: true } },
+      capturedAt: new Date().toISOString(),
+    };
+    const diff = diffSchemaSnapshots(current, snapshot);
+    expect(diff.added).toEqual(["b"]);
+    expect(diff.removed).toEqual([]);
+    expect(diff.changed).toEqual([]);
+  });
+
+  it("detects removed fields", () => {
+    const current: SchemaSnapshot = {
+      name: "Test",
+      fields: { a: { type: "ZodString", required: true } },
+      capturedAt: new Date().toISOString(),
+    };
+    const snapshot: SchemaSnapshot = {
+      name: "Test",
+      fields: {
+        a: { type: "ZodString", required: true },
+        b: { type: "ZodNumber", required: true },
+      },
+      capturedAt: new Date().toISOString(),
+    };
+    const diff = diffSchemaSnapshots(current, snapshot);
+    expect(diff.added).toEqual([]);
+    expect(diff.removed).toEqual(["b"]);
+    expect(diff.changed).toEqual([]);
+  });
+
+  it("detects changed fields", () => {
+    const current: SchemaSnapshot = {
+      name: "Test",
+      fields: { a: { type: "ZodNumber", required: true } },
+      capturedAt: new Date().toISOString(),
+    };
+    const snapshot: SchemaSnapshot = {
+      name: "Test",
+      fields: { a: { type: "ZodString", required: true } },
+      capturedAt: new Date().toISOString(),
+    };
+    const diff = diffSchemaSnapshots(current, snapshot);
+    expect(diff.added).toEqual([]);
+    expect(diff.removed).toEqual([]);
+    expect(diff.changed.length).toBe(1);
+    expect(diff.changed[0]!.field).toBe("a");
+  });
+});
+
+describe("captureSchemaSnapshot", () => {
+  it("captures a snapshot with the correct name", () => {
+    const schema = z.object({ id: z.string() });
+    const snap = captureSchemaSnapshot("MySchema", schema);
+    expect(snap.name).toBe("MySchema");
+    expect(snap.capturedAt).toBeDefined();
+    expect(snap.fields.id).toBeDefined();
+  });
+
+  it("captures all top-level fields", () => {
+    const schema = z.object({
+      name: z.string(),
+      age: z.number().optional(),
+    });
+    const snap = captureSchemaSnapshot("Test", schema);
+    expect(Object.keys(snap.fields)).toContain("name");
+    expect(Object.keys(snap.fields)).toContain("age");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Acceptance criteria – validate real project schemas against the committed
+// baseline snapshot.  These tests MUST pass in CI; failure means a breaking
+// schema change was introduced without updating the baseline.
+// ---------------------------------------------------------------------------
+
+describe("validateSchemaSnapshot", () => {
+  it("PropertyInfo matches the versioned baseline snapshot", () => {
+    const result = validateSchemaSnapshot(
+      "PropertyInfo",
+      propertyInfoSchema,
+      propertyInfoBaseline,
+    );
+
+    if (!result.valid) {
+      // Pretty-print the diff so the developer knows exactly what changed.
+      console.error(
+        "Schema diff for PropertyInfo:\n" +
+          JSON.stringify(result.diff, null, 2),
+      );
+    }
+
+    expect(result.valid).toBe(true);
+  });
+
+  it("LendingPool matches the versioned baseline snapshot", () => {
+    const result = validateSchemaSnapshot(
+      "LendingPool",
+      lendingPoolSchema,
+      lendingPoolBaseline,
+    );
+
+    if (!result.valid) {
+      console.error(
+        "Schema diff for LendingPool:\n" + JSON.stringify(result.diff, null, 2),
+      );
+    }
+
+    expect(result.valid).toBe(true);
+  });
+
+  it("returns valid when adding a new optional field (non-breaking)", () => {
+    const baseline: SchemaSnapshot = {
+      name: "Test",
+      fields: { x: { type: "ZodString", required: true } },
+      capturedAt: new Date().toISOString(),
+    };
+    // Schema with an *optional* field added on top of the baseline.
+    const schemaWithOptional = z.object({
+      x: z.string(),
+      y: z.string().optional(),
+    });
+    const result = validateSchemaSnapshot("Test", schemaWithOptional, baseline);
+    expect(result.valid).toBe(true);
+  });
+
+  it("returns invalid when adding a new required field (breaking)", () => {
+    const baseline: SchemaSnapshot = {
+      name: "Test",
+      fields: { x: { type: "ZodString", required: true } },
+      capturedAt: new Date().toISOString(),
+    };
+    // Schema with a *required* field added on top of the baseline.
+    const schemaWithRequired = z.object({
+      x: z.string(),
+      y: z.string(),
+    });
+    const result = validateSchemaSnapshot("Test", schemaWithRequired, baseline);
+    expect(result.valid).toBe(false);
+  });
+
+  it("returns invalid when a field type has changed", () => {
+    const baseline: SchemaSnapshot = {
+      name: "Test",
+      fields: { x: { type: "ZodString", required: true } },
+      capturedAt: new Date().toISOString(),
+    };
+    const changedSchema = z.object({ x: z.number() });
+    const result = validateSchemaSnapshot("Test", changedSchema, baseline);
+    expect(result.valid).toBe(false);
+    expect(result.diff.changed.length).toBeGreaterThan(0);
+  });
+});

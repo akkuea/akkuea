@@ -1,1 +1,301 @@
-aW1wb3J0IHsgRWx5c2lhIH0gZnJvbSAnZWx5c2lhJzsKaW1wb3J0IHsgeiwgdHlwZSBab2RTY2hlbWEsIFpvZEVycm9yIH0gZnJvbSAnem9kJzsKaW1wb3J0IHsgbG9nZ2VyIH0gZnJvbSAnLi4vc2VydmljZXMvbG9nZ2VyJzsKCi8qKgogKiBGb3JtYXQgWm9kIGVycm9ycyBpbnRvIGEgc3RydWN0dXJlZCByZXNwb25zZQogKi8KZnVuY3Rpb24gZm9ybWF0Wm9kRXJyb3JzKGVycm9yOiBab2RFcnJvcik6IFJlY29yZDxzdHJpbmcsIHN0cmluZ1tdPiB7CiAgY29uc3QgZm9ybWF0dGVkOiBSZWNvcmQ8c3RyaW5nLCBzdHJpbmdbXT4gPSB7fTsKCiAgZm9yIChjb25zdCBpc3N1ZSBvZiBlcnJvci5pc3N1ZXMpIHsKICAgIGNvbnN0IHBhdGggPSBpc3N1ZS5wYXRoLmpvaW4oJy4nKSB8fCAnX3Jvb3QnOwogICAgaWYgKCFmb3JtYXR0ZWRbcGF0aF0pIHsKICAgICAgZm9ybWF0dGVkW3BhdGhdID0gW107CiAgICB9CiAgICBmb3JtYXR0ZWRbcGF0aF0ucHVzaChpc3N1ZS5tZXNzYWdlKTsKICB9CgogIHJldHVybiBmb3JtYXR0ZWQ7Cn0KCi8qKgogKiBDcmVhdGUgdmFsaWRhdGlvbiBlcnJvciByZXNwb25zZQogKi8KZnVuY3Rpb24gY3JlYXRlVmFsaWRhdGlvbkVycm9yKAogIGVycm9yczogUmVjb3JkPHN0cmluZywgc3RyaW5nW10+LAogIHNvdXJjZTogJ2JvZHknIHwgJ3F1ZXJ5JyB8ICdwYXJhbXMnLAopOiB7CiAgc3RhdHVzOiBudW1iZXI7CiAgY29kZTogc3RyaW5nOwogIG1lc3NhZ2U6IHN0cmluZzsKICBkZXRhaWxzOiB7IHNvdXJjZTogc3RyaW5nOyBlcnJvcnM6IFJlY29yZDxzdHJpbmcsIHN0cmluZ1tdPiB9Owp9IHsKICByZXR1cm4gewogICAgc3RhdHVzOiA0MDAsCiAgICBjb2RlOiAnVkFMSURBVElPTl9FUlJPUicsCiAgICBtZXNzYWdlOiBgSW52YWxpZCAke3NvdXJjZX0gcGFyYW1ldGVyc2AsCiAgICBkZXRhaWxzOiB7CiAgICAgIHNvdXJjZSwKICAgICAgZXJyb3JzOiBlcnJvcnMsCiAgICB9LAogIH07Cn0KCi8qKgogKiBCb2R5IHZhbGlkYXRpb24gcGx1Z2luIHVzaW5nIEVseXNpYSdzIGRlcml2ZSBwYXR0ZXJuCiAqLwpleHBvcnQgZnVuY3Rpb24gdmFsaWRhdGVCb2R5PFQgZXh0ZW5kcyBab2RTY2hlbWE+KHNjaGVtYTogVCkgewogIHJldHVybiBuZXcgRWx5c2lhKHsgbmFtZTogJ3ZhbGlkYXRlLWJvZHknIH0pCiAgICAucmVzb2x2ZSh7IGFzOiAnc2NvcGVkJyB9LCAoeyBib2R5IH06IHsgYm9keTogdW5rbm93biB9KSA9PiB7CiAgICAgIHRyeSB7CiAgICAgICAgY29uc3QgcmVzdWx0ID0gc2NoZW1hLnNhZmVQYXJzZShib2R5KTsKCiAgICAgICAgaWYgKCFyZXN1bHQuc3VjY2VzcykgewogICAgICAgICAgcmV0dXJuIHsKICAgICAgICAgICAgdmFsaWRhdGVkQm9keTogbnVsbCBhcyB6LmluZmVyPFQ+IHwgbnVsbCwKICAgICAgICAgICAgYm9keVZhbGlkYXRpb25FcnJvcjogY3JlYXRlVmFsaWRhdGlvbkVycm9yKGZvcm1hdFpvZEVycm9ycyhyZXN1bHQuZXJyb3IpLCAnYm9keScpLAogICAgICAgICAgfTsKICAgICAgICB9CgogICAgICAgIHJldHVybiB7CiAgICAgICAgICB2YWxpZGF0ZWRCb2R5OiByZXN1bHQuZGF0YSBhcyB6LmluZmVyPFQ+LAogICAgICAgICAgYm9keVZhbGlkYXRpb25FcnJvcjogbnVsbCBhcyBudWxsLAogICAgICAgIH07CiAgICAgIH0gY2F0Y2ggewogICAgICAgIHJldHVybiB7CiAgICAgICAgICB2YWxpZGF0ZWRCb2R5OiBudWxsIGFzIHouaW5mZXI8VD4gfCBudWxsLAogICAgICAgICAgYm9keVZhbGlkYXRpb25FcnJvcjogewogICAgICAgICAgICBzdGF0dXM6IDQwMCwKICAgICAgICAgICAgY29kZTogJ0lOVkFMSURfSlNPTicsCiAgICAgICAgICAgIG1lc3NhZ2U6ICdSZXF1ZXN0IGJvZHkgbXVzdCBiZSB2YWxpZCBKU09OJywKICAgICAgICAgIH0gYXMgY29uc3QsCiAgICAgICAgfTsKICAgICAgfQogICAgfSkKICAgIC5vbkJlZm9yZUhhbmRsZSgKICAgICAgeyBhczogJ3Njb3BlZCcgfSwKICAgICAgKHsKICAgICAgICBib2R5VmFsaWRhdGlvbkVycm9yLAogICAgICAgIHNldCwKICAgICAgfTogewogICAgICAgIGJvZHlWYWxpZGF0aW9uRXJyb3I6CiAgICAgICAgICB8IFJldHVyblR5cGU8dHlwZW9mIGNyZWF0ZVZhbGlkYXRpb25FcnJvcj4KICAgICAgICAgIHwgeyBzdGF0dXM6IG51bWJlcjsgY29kZTogc3RyaW5nOyBtZXNzYWdlOiBzdHJpbmcgfQogICAgICAgICAgfCBudWxsOwogICAgICAgIHNldDogeyBzdGF0dXM/OiBudW1iZXIgfCBzdHJpbmcgfTsKICAgICAgfSkgPT4gewogICAgICAgIGlmIChib2R5VmFsaWRhdGlvbkVycm9yKSB7CiAgICAgICAgICBzZXQuc3RhdHVzID0gNDAwOwogICAgICAgICAgcmV0dXJuIGJvZHlWYWxpZGF0aW9uRXJyb3I7CiAgICAgICAgfQogICAgICB9LAogICAgKTsKfQoKLyoqCiAqIFF1ZXJ5IHZhbGlkYXRpb24gcGx1Z2luIHVzaW5nIEVseXNpYSdzIGRlcml2ZSBwYXR0ZXJuCiAqLwpleHBvcnQgZnVuY3Rpb24gdmFsaWRhdGVRdWVyeTxUIGV4dGVuZHMgWm9kU2NoZW1hPihzY2hlbWE6IFQpIHsKICByZXR1cm4gbmV3IEVseXNpYSh7IG5hbWU6ICd2YWxpZGF0ZS1xdWVyeScgfSkKICAgIC5yZXNvbHZlKHsgYXM6ICdzY29wZWQnIH0sICh7IHF1ZXJ5IH06IHsgcXVlcnk6IFJlY29yZDxzdHJpbmcsIHN0cmluZyB8IHVuZGVmaW5lZD4gfSkgPT4gewogICAgICBjb25zdCByZXN1bHQgPSBzY2hlbWEuc2FmZVBhcnNlKHF1ZXJ5KTsKCiAgICAgIGlmICghcmVzdWx0LnN1Y2Nlc3MpIHsKICAgICAgICByZXR1cm4gewogICAgICAgICAgdmFsaWRhdGVkUXVlcnk6IG51bGwgYXMgei5pbmZlcjxUPiB8IG51bGwsCiAgICAgICAgICBxdWVyeVZhbGlkYXRpb25FcnJvcjogY3JlYXRlVmFsaWRhdGlvbkVycm9yKGZvcm1hdFpvZEVycm9ycyhyZXN1bHQuZXJyb3IpLCAncXVlcnknKSwKICAgICAgICB9OwogICAgICB9CgogICAgICByZXR1cm4gewogICAgICAgIHZhbGlkYXRlZFF1ZXJ5OiByZXN1bHQuZGF0YSBhcyB6LmluZmVyPFQ+LAogICAgICAgIHF1ZXJ5VmFsaWRhdGlvbkVycm9yOiBudWxsIGFzIG51bGwsCiAgICAgIH07CiAgICB9KQogICAgLm9uQmVmb3JlSGFuZGxlKAogICAgICB7IGFzOiAnc2NvcGVkJyB9LAogICAgICAoewogICAgICAgIHF1ZXJ5VmFsaWRhdGlvbkVycm9yLAogICAgICAgIHNldCwKICAgICAgfTogewogICAgICAgIHF1ZXJ5VmFsaWRhdGlvbkVycm9yOiBSZXR1cm5UeXBlPHR5cGVvZiBjcmVhdGVWYWxpZGF0aW9uRXJyb3I+IHwgbnVsbDsKICAgICAgICBzZXQ6IHsgc3RhdHVzPzogbnVtYmVyIHwgc3RyaW5nIH07CiAgICAgIH0pID0+IHsKICAgICAgICBpZiAocXVlcnlWYWxpZGF0aW9uRXJyb3IpIHsKICAgICAgICAgIHNldC5zdGF0dXMgPSA0MDA7CiAgICAgICAgICByZXR1cm4gcXVlcnlWYWxpZGF0aW9uRXJyb3I7CiAgICAgICAgfQogICAgICB9LAogICAgKTsKfQoKLyoqCiAqIFBhdGggcGFyYW1zIHZhbGlkYXRpb24gcGx1Z2luIHVzaW5nIEVseXNpYSdzIGRlcml2ZSBwYXR0ZXJuCiAqLwpleHBvcnQgZnVuY3Rpb24gdmFsaWRhdGVQYXJhbXM8VCBleHRlbmRzIFpvZFNjaGVtYT4oc2NoZW1hOiBUKSB7CiAgcmV0dXJuIG5ldyBFbHlzaWEoeyBuYW1lOiAndmFsaWRhdGUtcGFyYW1zJyB9KQogICAgLnJlc29sdmUoeyBhczogJ3Njb3BlZCcgfSwgKHsgcGFyYW1zIH06IHsgcGFyYW1zOiBSZWNvcmQ8c3RyaW5nLCBzdHJpbmcgfCB1bmRlZmluZWQ+IH0pID0+IHsKICAgICAgY29uc3QgcmVzdWx0ID0gc2NoZW1hLnNhZmVQYXJzZShwYXJhbXMpOwoKICAgICAgaWYgKCFyZXN1bHQuc3VjY2VzcykgewogICAgICAgIHJldHVybiB7CiAgICAgICAgICB2YWxpZGF0ZWRQYXJhbXM6IG51bGwgYXMgei5pbmZlcjxUPiB8IG51bGwsCiAgICAgICAgICBwYXJhbXNWYWxpZGF0aW9uRXJyb3I6IGNyZWF0ZVZhbGlkYXRpb25FcnJvcihmb3JtYXRab2RFcnJvcnMocmVzdWx0LmVycm9yKSwgJ3BhcmFtcycpLAogICAgICAgIH07CiAgICAgIH0KCiAgICAgIHJldHVybiB7CiAgICAgICAgdmFsaWRhdGVkUGFyYW1zOiByZXN1bHQuZGF0YSBhcyB6LmluZmVyPFQ+LAogICAgICAgIHBhcmFtc1ZhbGlkYXRpb25FcnJvcjogbnVsbCBhcyBudWxsLAogICAgICB9OwogICAgfSkKICAgIC5vbkJlZm9yZUhhbmRsZSgKICAgICAgeyBhczogJ3Njb3BlZCcgfSwKICAgICAgKHsKICAgICAgICBwYXJhbXNWYWxpZGF0aW9uRXJyb3IsCiAgICAgICAgc2V0LAogICAgICB9OiB7CiAgICAgICAgcGFyYW1zVmFsaWRhdGlvbkVycm9yOiBSZXR1cm5UeXBlPHR5cGVvZiBjcmVhdGVWYWxpZGF0aW9uRXJyb3I+IHwgbnVsbDsKICAgICAgICBzZXQ6IHsgc3RhdHVzPzogbnVtYmVyIHwgc3RyaW5nIH07CiAgICAgIH0pID0+IHsKICAgICAgICBpZiAocGFyYW1zVmFsaWRhdGlvbkVycm9yKSB7CiAgICAgICAgICBzZXQuc3RhdHVzID0gNDAwOwogICAgICAgICAgcmV0dXJuIHBhcmFtc1ZhbGlkYXRpb25FcnJvcjsKICAgICAgICB9CiAgICAgIH0sCiAgICApOwp9CgovKioKICogQ29tYmluZWQgdmFsaWRhdGlvbiBwbHVnaW4gZm9yIGJvZHksIHF1ZXJ5LCBhbmQgcGFyYW1zCiAqIFVzZXMgRWx5c2lhJ3MgZGVyaXZlIHBhdHRlcm4gZm9yIHR5cGUtc2FmZSB2YWxpZGF0ZWQgZGF0YSBhY2Nlc3MKICovCmV4cG9ydCBmdW5jdGlvbiB2YWxpZGF0ZTwKICBUQm9keSBleHRlbmRzIFpvZFNjaGVtYSB8IHVuZGVmaW5lZCA9IHVuZGVmaW5lZCwKICBUUXVlcnkgZXh0ZW5kcyBab2RTY2hlbWEgfCB1bmRlZmluZWQgPSB1bmRlZmluZWQsCiAgVFBhcmFtcyBleHRlbmRzIFpvZFNjaGVtYSB8IHVuZGVmaW5lZCA9IHVuZGVmaW5lZCwKPihvcHRpb25zOiB7IGJvZHk/OiBUQm9keTsgcXVlcnk/OiBUUXVlcnk7IHBhcmFtcz86IFRQYXJhbXMgfSkgewogIHJldHVybiBuZXcgRWx5c2lhKHsgbmFtZTogJ3ZhbGlkYXRlJyB9KQogICAgLnJlc29sdmUoCiAgICAgIHsgYXM6ICdzY29wZWQnIH0sCiAgICAgICh7CiAgICAgICAgYm9keSwKICAgICAgICBxdWVyeSwKICAgICAgICBwYXJhbXMsCiAgICAgIH06IHsKICAgICAgICBib2R5OiB1bmtub3duOwogICAgICAgIHF1ZXJ5OiBSZWNvcmQ8c3RyaW5nLCBzdHJpbmcgfCB1bmRlZmluZWQ+OwogICAgICAgIHBhcmFtczogUmVjb3JkPHN0cmluZywgc3RyaW5nIHwgdW5kZWZpbmVkPjsKICAgICAgfSkgPT4gewogICAgICAgIGNvbnN0IHJlc3VsdDogewogICAgICAgICAgdmFsaWRhdGVkQm9keTogVEJvZHkgZXh0ZW5kcyBab2RTY2hlbWEgPyB6LmluZmVyPFRCb2R5PiA6IHVuZGVmaW5lZDsKICAgICAgICAgIHZhbGlkYXRlZFF1ZXJ5OiBUUXVlcnkgZXh0ZW5kcyBab2RTY2hlbWEgPyB6LmluZmVyPFRRdWVyeT4gOiB1bmRlZmluZWQ7CiAgICAgICAgICB2YWxpZGF0ZWRQYXJhbXM6IFRQYXJhbXMgZXh0ZW5kcyBab2RTY2hlbWEgPyB6LmluZmVyPFRQYXJhbXM+IDogdW5kZWZpbmVkOwogICAgICAgICAgdmFsaWRhdGlvbkVycm9yOgogICAgICAgICAgICB8IFJldHVyblR5cGU8dHlwZW9mIGNyZWF0ZVZhbGlkYXRpb25FcnJvcj4KICAgICAgICAgICAgfCB7IHN0YXR1czogbnVtYmVyOyBjb2RlOiBzdHJpbmc7IG1lc3NhZ2U6IHN0cmluZyB9CiAgICAgICAgICAgIHwgbnVsbDsKICAgICAgICB9ID0gewogICAgICAgICAgdmFsaWRhdGVkQm9keTogdW5kZWZpbmVkIGFzIFRCb2R5IGV4dGVuZHMgWm9kU2NoZW1hID8gei5pbmZlcjxUQm9keT4gOiB1bmRlZmluZWQsCiAgICAgICAgICB2YWxpZGF0ZWRRdWVyeTogdW5kZWZpbmVkIGFzIFRRdWVyeSBleHRlbmRzIFpvZFNjaGVtYSA/IHouaW5mZXI8VFF1ZXJ5PiA6IHVuZGVmaW5lZCwKICAgICAgICAgIHZhbGlkYXRlZFBhcmFtczogdW5kZWZpbmVkIGFzIFRQYXJhbXMgZXh0ZW5kcyBab2RTY2hlbWEgPyB6LmluZmVyPFRQYXJhbXM+IDogdW5kZWZpbmVkLAogICAgICAgICAgdmFsaWRhdGlvbkVycm9yOiBudWxsLAogICAgICAgIH07CgogICAgICAgIC8vIFZhbGlkYXRlIGJvZHkKICAgICAgICBpZiAob3B0aW9ucy5ib2R5KSB7CiAgICAgICAgICB0cnkgewogICAgICAgICAgICBjb25zdCBib2R5UmVzdWx0ID0gb3B0aW9ucy5ib2R5LnNhZmVQYXJzZShib2R5KTsKCiAgICAgICAgICAgIGlmICghYm9keVJlc3VsdC5zdWNjZXNzKSB7CiAgICAgICAgICAgICAgcmVzdWx0LnZhbGlkYXRpb25FcnJvciA9IGNyZWF0ZVZhbGlkYXRpb25FcnJvcigKICAgICAgICAgICAgICAgIGZvcm1hdFpvZEVycm9ycyhib2R5UmVzdWx0LmVycm9yKSwKICAgICAgICAgICAgICAgICdib2R5JywKICAgICAgICAgICAgICApOwogICAgICAgICAgICAgIHJldHVybiByZXN1bHQ7CiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIHJlc3VsdC52YWxpZGF0ZWRCb2R5ID0gYm9keVJlc3VsdC5kYXRhIGFzIFRCb2R5IGV4dGVuZHMgWm9kU2NoZW1hID8gei5pbmZlcjxUQm9keT4gOiB1bmRlZmluZWQ7CiAgICAgICAgICB9IGNhdGNoIChlKSB7CiAgICAgICAgICAgIGxvZ2dlci5lcnJvcignRXJyb3IgcGFyc2luZyBKU09OIGJvZHknLCBlKTsKICAgICAgICAgICAgcmVzdWx0LnZhbGlkYXRpb25FcnJvciA9IHsKICAgICAgICAgICAgICBzdGF0dXM6IDQwMCwKICAgICAgICAgICAgICBjb2RlOiAnSU5WQUxJRF9KU09OJywKICAgICAgICAgICAgICBtZXNzYWdlOiAnUmVxdWVzdCBib2R5IG11c3QgYmUgdmFsaWQgSlNPTicsCiAgICAgICAgICAgIH07CiAgICAgICAgICAgIHJldHVybiByZXN1bHQ7CiAgICAgICAgICB9CiAgICAgICAgfQoKICAgICAgICAvLyBWYWxpZGF0ZSBxdWVyeQogICAgICAgIGlmIChvcHRpb25zLnF1ZXJ5KSB7CiAgICAgICAgICBjb25zdCBxdWVyeVJlc3VsdCA9IG9wdGlvbnMucXVlcnkuc2FmZVBhcnNlKHF1ZXJ5KTsKCiAgICAgICAgICBpZiAoIXF1ZXJ5UmVzdWx0LnN1Y2Nlc3MpIHsKICAgICAgICAgICAgcmVzdWx0LnZhbGlkYXRpb25FcnJvciA9IGNyZWF0ZVZhbGlkYXRpb25FcnJvcigKICAgICAgICAgICAgICBmb3JtYXRab2RFcnJvcnMocXVlcnlSZXN1bHQuZXJyb3IpLAogICAgICAgICAgICAgICdxdWVyeScsCiAgICAgICAgICAgICk7CiAgICAgICAgICAgIHJldHVybiByZXN1bHQ7CiAgICAgICAgICB9CgogICAgICAgICAgcmVzdWx0LnZhbGlkYXRlZFF1ZXJ5ID0gcXVlcnlSZXN1bHQuZGF0YSBhcyBUUXVlcnkgZXh0ZW5kcyBab2RTY2hlbWEgPyB6LmluZmVyPFRRdWVyeT4gOiB1bmRlZmluZWQ7CiAgICAgICAgfQoKICAgICAgICAvLyBWYWxpZGF0ZSBwYXJhbXMKICAgICAgICBpZiAob3B0aW9ucy5wYXJhbXMpIHsKICAgICAgICAgIGNvbnN0IHBhcmFtc1Jlc3VsdCA9IG9wdGlvbnMucGFyYW1zLnNhZmVQYXJzZShwYXJhbXMpOwoKICAgICAgICAgIGlmICghcGFyYW1zUmVzdWx0LnN1Y2Nlc3MpIHsKICAgICAgICAgICAgcmVzdWx0LnZhbGlkYXRpb25FcnJvciA9IGNyZWF0ZVZhbGlkYXRpb25FcnJvcigKICAgICAgICAgICAgICBmb3JtYXRab2RFcnJvcnMocGFyYW1zUmVzdWx0LmVycm9yKSwKICAgICAgICAgICAgICAncGFyYW1zJywKICAgICAgICAgICAgKTsKICAgICAgICAgICAgcmV0dXJuIHJlc3VsdDsKICAgICAgICAgIH0KCiAgICAgICAgICByZXN1bHQudmFsaWRhdGVkUGFyYW1zID0gcGFyYW1zUmVzdWx0LmRhdGEgYXMgVFBhcmFtcyBleHRlbmRzIFpvZFNjaGVtYSA/IHouaW5mZXI8VFBhcmFtcz4gOiB1bmRlZmluZWQ7CiAgICAgICAgfQoKICAgICAgICByZXR1cm4gcmVzdWx0OwogICAgICB9LAogICAgKQogICAgLm9uQmVmb3JlSGFuZGxlKAogICAgICB7IGFzOiAnc2NvcGVkJyB9LAogICAgICAoewogICAgICAgIHZhbGlkYXRpb25FcnJvciwKICAgICAgICBzZXQsCiAgICAgIH06IHsKICAgICAgICB2YWxpZGF0aW9uRXJyb3I6CiAgICAgICAgICB8IFJldHVyblR5cGU8dHlwZW9mIGNyZWF0ZVZhbGlkYXRpb25FcnJvcj4KICAgICAgICAgIHwgeyBzdGF0dXM6IG51bWJlcjsgY29kZTogc3RyaW5nOyBtZXNzYWdlOiBzdHJpbmcgfQogICAgICAgICAgfCBudWxsOwogICAgICAgIHNldDogeyBzdGF0dXM/OiBudW1iZXIgfCBzdHJpbmcgfTsKICAgICAgfSkgPT4gewogICAgICAgIGlmICh2YWxpZGF0aW9uRXJyb3IpIHsKICAgICAgICAgIHNldC5zdGF0dXMgPSA0MDA7CiAgICAgICAgICByZXR1cm4gdmFsaWRhdGlvbkVycm9yOwogICAgICAgIH0KICAgICAgfSwKICAgICk7Cn0KCmV4cG9ydCBjb25zdCB1dWlkUGFyYW1TY2hlbWEgPSB6Lm9iamVjdCh7CiAgaWQ6IHouc3RyaW5nKCkudXVpZCgnSW52YWxpZCBVVUlEIGZvcm1hdCcpLAp9KTsKCmV4cG9ydCBjb25zdCBwYWdpbmF0aW9uUXVlcnlTY2hlbWEgPSB6Lm9iamVjdCh7CiAgcGFnZTogei5jb2VyY2UubnVtYmVyKCkuaW50KCkucG9zaXRpdmUoKS5kZWZhdWx0KDEpLAogIGxpbWl0OiB6LmNvZXJjZS5udW1iZXIoKS5pbnQoKS5wb3NpdGl2ZSgpLm1heCgxMDApLmRlZmF1bHQoMjApLAogIHNvcnRCeTogei5zdHJpbmcoKS5vcHRpb25hbCgpLAogIHNvcnRPcmRlcjogei5lbnVtKFsnYXNjJywgJ2Rlc2MnXSkuZGVmYXVsdCgnZGVzYycpLAp9KTsKCi8qKgogKiBTY2hlbWEgZm9yIHByb3BlcnR5IHNoYXJlcyBvd25lciBwYXJhbSB2YWxpZGF0aW9uCiAqLwpleHBvcnQgY29uc3Qgb3duZXJQYXJhbVNjaGVtYSA9IHoub2JqZWN0KHsKICBpZDogei5zdHJpbmcoKS51dWlkKCdJbnZhbGlkIFVVSUQgZm9ybWF0JyksCiAgb3duZXI6IHouc3RyaW5nKCkubWluKDEsICdPd25lciBhZGRyZXNzIGlzIHJlcXVpcmVkJyksCn0pOwo=
+import { Elysia } from 'elysia';
+import { z, type ZodSchema, ZodError } from 'zod';
+import { logger } from '../services/logger';
+
+/**
+ * Format Zod errors into a structured response
+ */
+function formatZodErrors(error: ZodError): Record<string, string[]> {
+  const formatted: Record<string, string[]> = {};
+
+  for (const issue of error.issues) {
+    const path = issue.path.join('.') || '_root';
+    if (!formatted[path]) {
+      formatted[path] = [];
+    }
+    formatted[path].push(issue.message);
+  }
+
+  return formatted;
+}
+
+/**
+ * Create validation error response
+ */
+function createValidationError(
+  errors: Record<string, string[]>,
+  source: 'body' | 'query' | 'params',
+): {
+  status: number;
+  code: string;
+  message: string;
+  details: { source: string; errors: Record<string, string[]> };
+} {
+  return {
+    status: 400,
+    code: 'VALIDATION_ERROR',
+    message: `Invalid ${source} parameters`,
+    details: {
+      source,
+      errors: errors,
+    },
+  };
+}
+
+/**
+ * Body validation plugin using Elysia's derive pattern
+ */
+export function validateBody<T extends ZodSchema>(schema: T) {
+  return new Elysia({ name: 'validate-body' })
+    .resolve({ as: 'scoped' }, ({ body }: { body: unknown }) => {
+      try {
+        const result = schema.safeParse(body);
+
+        if (!result.success) {
+          return {
+            validatedBody: null as z.infer<T> | null,
+            bodyValidationError: createValidationError(formatZodErrors(result.error), 'body'),
+          };
+        }
+
+        return {
+          validatedBody: result.data as z.infer<T>,
+          bodyValidationError: null as null,
+        };
+      } catch {
+        return {
+          validatedBody: null as z.infer<T> | null,
+          bodyValidationError: {
+            status: 400,
+            code: 'INVALID_JSON',
+            message: 'Request body must be valid JSON',
+          } as const,
+        };
+      }
+    })
+    .onBeforeHandle(
+      { as: 'scoped' },
+      ({
+        bodyValidationError,
+        set,
+      }: {
+        bodyValidationError:
+          | ReturnType<typeof createValidationError>
+          | { status: number; code: string; message: string }
+          | null;
+        set: { status?: number | string };
+      }) => {
+        if (bodyValidationError) {
+          set.status = 400;
+          return bodyValidationError;
+        }
+      },
+    );
+}
+
+/**
+ * Query validation plugin using Elysia's derive pattern
+ */
+export function validateQuery<T extends ZodSchema>(schema: T) {
+  return new Elysia({ name: 'validate-query' })
+    .resolve({ as: 'scoped' }, ({ query }: { query: Record<string, string | undefined> }) => {
+      const result = schema.safeParse(query);
+
+      if (!result.success) {
+        return {
+          validatedQuery: null as z.infer<T> | null,
+          queryValidationError: createValidationError(formatZodErrors(result.error), 'query'),
+        };
+      }
+
+      return {
+        validatedQuery: result.data as z.infer<T>,
+        queryValidationError: null as null,
+      };
+    })
+    .onBeforeHandle(
+      { as: 'scoped' },
+      ({
+        queryValidationError,
+        set,
+      }: {
+        queryValidationError: ReturnType<typeof createValidationError> | null;
+        set: { status?: number | string };
+      }) => {
+        if (queryValidationError) {
+          set.status = 400;
+          return queryValidationError;
+        }
+      },
+    );
+}
+
+/**
+ * Path params validation plugin using Elysia's derive pattern
+ */
+export function validateParams<T extends ZodSchema>(schema: T) {
+  return new Elysia({ name: 'validate-params' })
+    .resolve({ as: 'scoped' }, ({ params }: { params: Record<string, string | undefined> }) => {
+      const result = schema.safeParse(params);
+
+      if (!result.success) {
+        return {
+          validatedParams: null as z.infer<T> | null,
+          paramsValidationError: createValidationError(formatZodErrors(result.error), 'params'),
+        };
+      }
+
+      return {
+        validatedParams: result.data as z.infer<T>,
+        paramsValidationError: null as null,
+      };
+    })
+    .onBeforeHandle(
+      { as: 'scoped' },
+      ({
+        paramsValidationError,
+        set,
+      }: {
+        paramsValidationError: ReturnType<typeof createValidationError> | null;
+        set: { status?: number | string };
+      }) => {
+        if (paramsValidationError) {
+          set.status = 400;
+          return paramsValidationError;
+        }
+      },
+    );
+}
+
+/**
+ * Combined validation plugin for body, query, and params
+ * Uses Elysia's derive pattern for type-safe validated data access
+ */
+export function validate<
+  TBody extends ZodSchema | undefined = undefined,
+  TQuery extends ZodSchema | undefined = undefined,
+  TParams extends ZodSchema | undefined = undefined,
+>(options: { body?: TBody; query?: TQuery; params?: TParams }) {
+  return new Elysia({ name: 'validate' })
+    .resolve(
+      { as: 'scoped' },
+      ({
+        body,
+        query,
+        params,
+      }: {
+        body: unknown;
+        query: Record<string, string | undefined>;
+        params: Record<string, string | undefined>;
+      }) => {
+        const result: {
+          validatedBody: TBody extends ZodSchema ? z.infer<TBody> : undefined;
+          validatedQuery: TQuery extends ZodSchema ? z.infer<TQuery> : undefined;
+          validatedParams: TParams extends ZodSchema ? z.infer<TParams> : undefined;
+          validationError:
+            | ReturnType<typeof createValidationError>
+            | { status: number; code: string; message: string }
+            | null;
+        } = {
+          validatedBody: undefined as TBody extends ZodSchema ? z.infer<TBody> : undefined,
+          validatedQuery: undefined as TQuery extends ZodSchema ? z.infer<TQuery> : undefined,
+          validatedParams: undefined as TParams extends ZodSchema ? z.infer<TParams> : undefined,
+          validationError: null,
+        };
+
+        // Validate body
+        if (options.body) {
+          try {
+            const bodyResult = options.body.safeParse(body);
+
+            if (!bodyResult.success) {
+              result.validationError = createValidationError(
+                formatZodErrors(bodyResult.error),
+                'body',
+              );
+              return result;
+            }
+
+            result.validatedBody = bodyResult.data as TBody extends ZodSchema ? z.infer<TBody> : undefined;
+          } catch (e) {
+            logger.error('Error parsing JSON body', e);
+            result.validationError = {
+              status: 400,
+              code: 'INVALID_JSON',
+              message: 'Request body must be valid JSON',
+            };
+            return result;
+          }
+        }
+
+        // Validate query
+        if (options.query) {
+          const queryResult = options.query.safeParse(query);
+
+          if (!queryResult.success) {
+            result.validationError = createValidationError(
+              formatZodErrors(queryResult.error),
+              'query',
+            );
+            return result;
+          }
+
+          result.validatedQuery = queryResult.data as TQuery extends ZodSchema ? z.infer<TQuery> : undefined;
+        }
+
+        // Validate params
+        if (options.params) {
+          const paramsResult = options.params.safeParse(params);
+
+          if (!paramsResult.success) {
+            result.validationError = createValidationError(
+              formatZodErrors(paramsResult.error),
+              'params',
+            );
+            return result;
+          }
+
+          result.validatedParams = paramsResult.data as TParams extends ZodSchema ? z.infer<TParams> : undefined;
+        }
+
+        return result;
+      },
+    )
+    .onBeforeHandle(
+      { as: 'scoped' },
+      ({
+        validationError,
+        set,
+      }: {
+        validationError:
+          | ReturnType<typeof createValidationError>
+          | { status: number; code: string; message: string }
+          | null;
+        set: { status?: number | string };
+      }) => {
+        if (validationError) {
+          set.status = 400;
+          return validationError;
+        }
+      },
+    );
+}
+
+export const uuidParamSchema = z.object({
+  id: z.string().uuid('Invalid UUID format'),
+});
+
+export const paginationQuerySchema = z.object({
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  sortBy: z.string().optional(),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
+/**
+ * Schema for property shares owner param validation
+ */
+export const ownerParamSchema = z.object({
+  id: z.string().uuid('Invalid UUID format'),
+  owner: z.string().min(1, 'Owner address is required'),
+});

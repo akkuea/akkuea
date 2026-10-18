@@ -1,1 +1,83 @@
-aW1wb3J0IHsgRWx5c2lhIH0gZnJvbSAnZWx5c2lhJzsKaW1wb3J0IHsgeiB9IGZyb20gJ3pvZCc7CmltcG9ydCB7IHZhbGlkYXRlLCB1dWlkUGFyYW1TY2hlbWEsIGF1dGhQbHVnaW4gfSBmcm9tICcuLi9taWRkbGV3YXJlJzsKaW1wb3J0IHsgTm90aWZpY2F0aW9uQ29udHJvbGxlciB9IGZyb20gJy4uL2NvbnRyb2xsZXJzL05vdGlmaWNhdGlvbkNvbnRyb2xsZXInOwoKY29uc3Qgbm90aWZpY2F0aW9uUXVlcnlTY2hlbWEgPSB6Lm9iamVjdCh7CiAgbGltaXQ6IHouc3RyaW5nKCkub3B0aW9uYWwoKSwKICBvZmZzZXQ6IHouc3RyaW5nKCkub3B0aW9uYWwoKSwKfSk7Cgpjb25zdCBtYXJrTXVsdGlwbGVBc1JlYWRTY2hlbWEgPSB6Lm9iamVjdCh7CiAgbm90aWZpY2F0aW9uSWRzOiB6LmFycmF5KHoudXVpZCgpKSwKfSk7CgpleHBvcnQgY29uc3Qgbm90aWZpY2F0aW9uUm91dGVzID0gbmV3IEVseXNpYSh7IHByZWZpeDogJy9ub3RpZmljYXRpb25zJyB9KQogIC51c2UoYXV0aFBsdWdpbikKICAvLyBHRVQgL25vdGlmaWNhdGlvbnMgLSBHZXQgdXNlcidzIG5vdGlmaWNhdGlvbnMKICAudXNlKHZhbGlkYXRlKHsgcXVlcnk6IG5vdGlmaWNhdGlvblF1ZXJ5U2NoZW1hIH0pKQogIC5nZXQoJy8nLCBhc3luYyAoY3R4KSA9PiBOb3RpZmljYXRpb25Db250cm9sbGVyLmdldFVzZXJOb3RpZmljYXRpb25zKGN0eCksIHsKICAgIGRldGFpbDogewogICAgICBzdW1tYXJ5OiAnTGlzdCBub3RpZmljYXRpb25zJywKICAgICAgZGVzY3JpcHRpb246ICdSZXRyaWV2ZSBub3RpZmljYXRpb25zIGZvciB0aGUgYXV0aGVudGljYXRlZCB1c2VyJywKICAgICAgdGFnczogWydOb3RpZmljYXRpb25zJ10sCiAgICB9LAogIH0pCgogIC8vIEdFVCAvbm90aWZpY2F0aW9ucy91bnJlYWQtY291bnQgLSBHZXQgdW5yZWFkIGNvdW50CiAgLmdldCgnL3VucmVhZC1jb3VudCcsIGFzeW5jIChjdHgpID0+IE5vdGlmaWNhdGlvbkNvbnRyb2xsZXIuZ2V0VW5yZWFkQ291bnQoY3R4KSwgewogICAgZGV0YWlsOiB7CiAgICAgIHN1bW1hcnk6ICdHZXQgdW5yZWFkIGNvdW50JywKICAgICAgZGVzY3JpcHRpb246ICdHZXQgdGhlIGNvdW50IG9mIHVucmVhZCBub3RpZmljYXRpb25zIGZvciB0aGUgYXV0aGVudGljYXRlZCB1c2VyJywKICAgICAgdGFnczogWydOb3RpZmljYXRpb25zJ10sCiAgICB9LAogIH0pCgogIC8vIEdFVCAvbm90aWZpY2F0aW9ucy86aWQgLSBHZXQgYSBzcGVjaWZpYyBub3RpZmljYXRpb24KICAudXNlKHZhbGlkYXRlKHsgcGFyYW1zOiB1dWlkUGFyYW1TY2hlbWEgfSkpCiAgLmdldCgnLzppZCcsIGFzeW5jIChjdHgpID0+IE5vdGlmaWNhdGlvbkNvbnRyb2xsZXIuZ2V0Tm90aWZpY2F0aW9uQnlJZChjdHgpLCB7CiAgICBkZXRhaWw6IHsKICAgICAgc3VtbWFyeTogJ0dldCBub3RpZmljYXRpb24nLAogICAgICBkZXNjcmlwdGlvbjogJ1JldHJpZXZlIGEgc3BlY2lmaWMgbm90aWZpY2F0aW9uIGJ5IElEJywKICAgICAgdGFnczogWydOb3RpZmljYXRpb25zJ10sCiAgICB9LAogIH0pCgogIC8vIFBBVENIIC9ub3RpZmljYXRpb25zLzppZC9yZWFkIC0gTWFyayBhcyByZWFkCiAgLnVzZSh2YWxpZGF0ZSh7IHBhcmFtczogdXVpZFBhcmFtU2NoZW1hIH0pKQogIC5wYXRjaCgnLzppZC9yZWFkJywgYXN5bmMgKGN0eCkgPT4gTm90aWZpY2F0aW9uQ29udHJvbGxlci5tYXJrQXNSZWFkKGN0eCksIHsKICAgIGRldGFpbDogewogICAgICBzdW1tYXJ5OiAnTWFyayBhcyByZWFkJywKICAgICAgZGVzY3JpcHRpb246ICdNYXJrIGEgc3BlY2lmaWMgbm90aWZpY2F0aW9uIGFzIHJlYWQnLAogICAgICB0YWdzOiBbJ05vdGlmaWNhdGlvbnMnXSwKICAgIH0sCiAgfSkKCiAgLy8gUE9TVCAvbm90aWZpY2F0aW9ucy9yZWFkLW11bHRpcGxlIC0gTWFyayBtdWx0aXBsZSBhcyByZWFkCiAgLnVzZSh2YWxpZGF0ZSh7IGJvZHk6IG1hcmtNdWx0aXBsZUFzUmVhZFNjaGVtYSB9KSkKICAucG9zdCgnL3JlYWQtbXVsdGlwbGUnLCBhc3luYyAoY3R4KSA9PiBOb3RpZmljYXRpb25Db250cm9sbGVyLm1hcmtNdWx0aXBsZUFzUmVhZChjdHgpLCB7CiAgICBkZXRhaWw6IHsKICAgICAgc3VtbWFyeTogJ01hcmsgbXVsdGlwbGUgYXMgcmVhZCcsCiAgICAgIGRlc2NyaXB0aW9uOiAnTWFyayBtdWx0aXBsZSBub3RpZmljYXRpb25zIGFzIHJlYWQgYnkgdGhlaXIgSURzJywKICAgICAgdGFnczogWydOb3RpZmljYXRpb25zJ10sCiAgICB9LAogIH0pCgogIC8vIFBPU1QgL25vdGlmaWNhdGlvbnMvcmVhZC1hbGwgLSBNYXJrIGFsbCBhcyByZWFkCiAgLnBvc3QoJy9yZWFkLWFsbCcsIGFzeW5jIChjdHgpID0+IE5vdGlmaWNhdGlvbkNvbnRyb2xsZXIubWFya0FsbEFzUmVhZChjdHgpLCB7CiAgICBkZXRhaWw6IHsKICAgICAgc3VtbWFyeTogJ01hcmsgYWxsIGFzIHJlYWQnLAogICAgICBkZXNjcmlwdGlvbjogJ01hcmsgYWxsIHVucmVhZCBub3RpZmljYXRpb25zIGFzIHJlYWQgZm9yIHRoZSBhdXRoZW50aWNhdGVkIHVzZXInLAogICAgICB0YWdzOiBbJ05vdGlmaWNhdGlvbnMnXSwKICAgIH0sCiAgfSkKCiAgLy8gREVMRVRFIC9ub3RpZmljYXRpb25zLzppZCAtIERlbGV0ZSBub3RpZmljYXRpb24KICAudXNlKHZhbGlkYXRlKHsgcGFyYW1zOiB1dWlkUGFyYW1TY2hlbWEgfSkpCiAgLmRlbGV0ZSgnLzppZCcsIGFzeW5jIChjdHgpID0+IE5vdGlmaWNhdGlvbkNvbnRyb2xsZXIuZGVsZXRlTm90aWZpY2F0aW9uKGN0eCksIHsKICAgIGRldGFpbDogewogICAgICBzdW1tYXJ5OiAnRGVsZXRlIG5vdGlmaWNhdGlvbicsCiAgICAgIGRlc2NyaXB0aW9uOiAnRGVsZXRlIGEgc3BlY2lmaWMgbm90aWZpY2F0aW9uIGJ5IElEJywKICAgICAgdGFnczogWydOb3RpZmljYXRpb25zJ10sCiAgICB9LAogIH0pOwo=
+import { Elysia } from 'elysia';
+import { z } from 'zod';
+import { validate, uuidParamSchema, authPlugin } from '../middleware';
+import { NotificationController } from '../controllers/NotificationController';
+
+const notificationQuerySchema = z.object({
+  limit: z.string().optional(),
+  offset: z.string().optional(),
+});
+
+const markMultipleAsReadSchema = z.object({
+  notificationIds: z.array(z.uuid()),
+});
+
+export const notificationRoutes = new Elysia({ prefix: '/notifications' })
+  .use(authPlugin)
+  // GET /notifications - Get user's notifications
+  .use(validate({ query: notificationQuerySchema }))
+  .get('/', async (ctx) => NotificationController.getUserNotifications(ctx), {
+    detail: {
+      summary: 'List notifications',
+      description: 'Retrieve notifications for the authenticated user',
+      tags: ['Notifications'],
+    },
+  })
+
+  // GET /notifications/unread-count - Get unread count
+  .get('/unread-count', async (ctx) => NotificationController.getUnreadCount(ctx), {
+    detail: {
+      summary: 'Get unread count',
+      description: 'Get the count of unread notifications for the authenticated user',
+      tags: ['Notifications'],
+    },
+  })
+
+  // GET /notifications/:id - Get a specific notification
+  .use(validate({ params: uuidParamSchema }))
+  .get('/:id', async (ctx) => NotificationController.getNotificationById(ctx), {
+    detail: {
+      summary: 'Get notification',
+      description: 'Retrieve a specific notification by ID',
+      tags: ['Notifications'],
+    },
+  })
+
+  // PATCH /notifications/:id/read - Mark as read
+  .use(validate({ params: uuidParamSchema }))
+  .patch('/:id/read', async (ctx) => NotificationController.markAsRead(ctx), {
+    detail: {
+      summary: 'Mark as read',
+      description: 'Mark a specific notification as read',
+      tags: ['Notifications'],
+    },
+  })
+
+  // POST /notifications/read-multiple - Mark multiple as read
+  .use(validate({ body: markMultipleAsReadSchema }))
+  .post('/read-multiple', async (ctx) => NotificationController.markMultipleAsRead(ctx), {
+    detail: {
+      summary: 'Mark multiple as read',
+      description: 'Mark multiple notifications as read by their IDs',
+      tags: ['Notifications'],
+    },
+  })
+
+  // POST /notifications/read-all - Mark all as read
+  .post('/read-all', async (ctx) => NotificationController.markAllAsRead(ctx), {
+    detail: {
+      summary: 'Mark all as read',
+      description: 'Mark all unread notifications as read for the authenticated user',
+      tags: ['Notifications'],
+    },
+  })
+
+  // DELETE /notifications/:id - Delete notification
+  .use(validate({ params: uuidParamSchema }))
+  .delete('/:id', async (ctx) => NotificationController.deleteNotification(ctx), {
+    detail: {
+      summary: 'Delete notification',
+      description: 'Delete a specific notification by ID',
+      tags: ['Notifications'],
+    },
+  });

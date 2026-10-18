@@ -1,1 +1,64 @@
-aW1wb3J0IHsgeiB9IGZyb20gInpvZCI7CmltcG9ydCB7CiAgYXBpRW52U2NoZW1hLAogIHdlYmFwcEVudlNjaGVtYSwKICB0eXBlIEFwaUVudiwKICB0eXBlIFdlYmFwcEVudiwKfSBmcm9tICIuL3NjaGVtYXMuanMiOwoKZXhwb3J0IGNsYXNzIEVudlZhbGlkYXRpb25FcnJvciBleHRlbmRzIEVycm9yIHsKICBwdWJsaWMgcmVhZG9ubHkgaXNzdWVzOiBzdHJpbmdbXTsKICBwdWJsaWMgcmVhZG9ubHkgc2NvcGU6IHN0cmluZzsKCiAgY29uc3RydWN0b3Ioc2NvcGU6IHN0cmluZywgaXNzdWVzOiBzdHJpbmdbXSkgewogICAgY29uc3QgZm9ybWF0dGVkSXNzdWVzID0gaXNzdWVzLm1hcCgoaXNzdWUpID0+IGAgIC0gJHtpc3N1ZX1gKS5qb2luKCJcbiIpOwogICAgY29uc3QgbWVzc2FnZSA9IFsKICAgICAgYEVudmlyb25tZW50IHZhbGlkYXRpb24gZmFpbGVkIGZvciAke3Njb3BlfTpgLAogICAgICBmb3JtYXR0ZWRJc3N1ZXMsCiAgICAgICIiLAogICAgICAiUGxlYXNlIHJlZmVyIHRvIGRvY3MvRU5WX1NFVFVQLm1kIGZvciBpbnN0cnVjdGlvbnMgb24gb2J0YWluaW5nIHJlYWwgbG9jYWwgZGV2ZWxvcG1lbnQgdmFsdWVzLiIsCiAgICBdLmpvaW4oIlxuIik7CgogICAgc3VwZXIobWVzc2FnZSk7CiAgICB0aGlzLm5hbWUgPSAiRW52VmFsaWRhdGlvbkVycm9yIjsKICAgIHRoaXMuc2NvcGUgPSBzY29wZTsKICAgIHRoaXMuaXNzdWVzID0gaXNzdWVzOwogIH0KfQoKZXhwb3J0IGZ1bmN0aW9uIHZhbGlkYXRlRW52PFNjaGVtYSBleHRlbmRzIHouWm9kVHlwZT4oCiAgc2NoZW1hOiBTY2hlbWEsCiAgZW52OiBSZWNvcmQ8c3RyaW5nLCBzdHJpbmcgfCB1bmRlZmluZWQ+ID0gcHJvY2Vzcy5lbnYsCiAgc2NvcGU6IHN0cmluZyA9ICJBcHBsaWNhdGlvbiIsCik6IHoub3V0cHV0PFNjaGVtYT4gewogIGlmIChlbnYuU0tJUF9FTlZfVkFMSURBVElPTiA9PT0gInRydWUiIHx8IGVudi5TS0lQX0VOVl9WQUxJREFUSU9OID09PSAiMSIpIHsKICAgIHJldHVybiBlbnYgYXMgdW5rbm93biBhcyB6Lm91dHB1dDxTY2hlbWE+OwogIH0KCiAgY29uc3QgcmVzdWx0ID0gc2NoZW1hLnNhZmVQYXJzZShlbnYpOwoKICBpZiAoIXJlc3VsdC5zdWNjZXNzKSB7CiAgICBjb25zdCBpc3N1ZXM6IHN0cmluZ1tdID0gW107CgogICAgZm9yIChjb25zdCBlcnJvciBvZiByZXN1bHQuZXJyb3IuaXNzdWVzKSB7CiAgICAgIGNvbnN0IHBhdGggPSBlcnJvci5wYXRoLmpvaW4oIi4iKSB8fCAiZW52aXJvbm1lbnQiOwogICAgICBpc3N1ZXMucHVzaChgJHtwYXRofTogJHtlcnJvci5tZXNzYWdlfWApOwogICAgfQoKICAgIHRocm93IG5ldyBFbnZWYWxpZGF0aW9uRXJyb3Ioc2NvcGUsIGlzc3Vlcyk7CiAgfQoKICByZXR1cm4gcmVzdWx0LmRhdGE7Cn0KCmV4cG9ydCBmdW5jdGlvbiB2YWxpZGF0ZUFwaUVudigKICBlbnY6IFJlY29yZDxzdHJpbmcsIHN0cmluZyB8IHVuZGVmaW5lZD4gPSBwcm9jZXNzLmVudiwKKTogQXBpRW52IHsKICByZXR1cm4gdmFsaWRhdGVFbnYoYXBpRW52U2NoZW1hLCBlbnYsICJBUEkgKGFwcHMvYXBpKSIpOwp9CgpleHBvcnQgZnVuY3Rpb24gdmFsaWRhdGVXZWJhcHBFbnYoCiAgZW52OiBSZWNvcmQ8c3RyaW5nLCBzdHJpbmcgfCB1bmRlZmluZWQ+ID0gcHJvY2Vzcy5lbnYsCik6IFdlYmFwcEVudiB7CiAgcmV0dXJuIHZhbGlkYXRlRW52KHdlYmFwcEVudlNjaGVtYSwgZW52LCAiV2ViYXBwIChhcHBzL3dlYmFwcCkiKTsKfQo=
+import { z } from "zod";
+import {
+  apiEnvSchema,
+  webappEnvSchema,
+  type ApiEnv,
+  type WebappEnv,
+} from "./schemas.js";
+
+export class EnvValidationError extends Error {
+  public readonly issues: string[];
+  public readonly scope: string;
+
+  constructor(scope: string, issues: string[]) {
+    const formattedIssues = issues.map((issue) => `  - ${issue}`).join("\n");
+    const message = [
+      `Environment validation failed for ${scope}:`,
+      formattedIssues,
+      "",
+      "Please refer to docs/ENV_SETUP.md for instructions on obtaining real local development values.",
+    ].join("\n");
+
+    super(message);
+    this.name = "EnvValidationError";
+    this.scope = scope;
+    this.issues = issues;
+  }
+}
+
+export function validateEnv<Schema extends z.ZodType>(
+  schema: Schema,
+  env: Record<string, string | undefined> = process.env,
+  scope: string = "Application",
+): z.output<Schema> {
+  if (env.SKIP_ENV_VALIDATION === "true" || env.SKIP_ENV_VALIDATION === "1") {
+    return env as unknown as z.output<Schema>;
+  }
+
+  const result = schema.safeParse(env);
+
+  if (!result.success) {
+    const issues: string[] = [];
+
+    for (const error of result.error.issues) {
+      const path = error.path.join(".") || "environment";
+      issues.push(`${path}: ${error.message}`);
+    }
+
+    throw new EnvValidationError(scope, issues);
+  }
+
+  return result.data;
+}
+
+export function validateApiEnv(
+  env: Record<string, string | undefined> = process.env,
+): ApiEnv {
+  return validateEnv(apiEnvSchema, env, "API (apps/api)");
+}
+
+export function validateWebappEnv(
+  env: Record<string, string | undefined> = process.env,
+): WebappEnv {
+  return validateEnv(webappEnvSchema, env, "Webapp (apps/webapp)");
+}

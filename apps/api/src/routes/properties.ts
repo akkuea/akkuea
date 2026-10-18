@@ -1,1 +1,285 @@
-aW1wb3J0IHsgRWx5c2lhIH0gZnJvbSAnZWx5c2lhJzsKaW1wb3J0IHsgeiB9IGZyb20gJ3pvZCc7CmltcG9ydCB7CiAgdmFsaWRhdGVCb2R5LAogIHZhbGlkYXRlUXVlcnksCiAgdmFsaWRhdGVQYXJhbXMsCiAgdXVpZFBhcmFtU2NoZW1hLAogIHBhZ2luYXRpb25RdWVyeVNjaGVtYSwKICBvd25lclBhcmFtU2NoZW1hLAogIHJhdGVMaW1pdCwKICB3YWxsZXRLZXlHZW5lcmF0b3IsCiAgYXV0aFBsdWdpbiwKICBpZGVtcG90ZW5jeSwKfSBmcm9tICcuLi9taWRkbGV3YXJlJzsKaW1wb3J0IHsgUHJvcGVydHlDb250cm9sbGVyIH0gZnJvbSAnLi4vY29udHJvbGxlcnMvUHJvcGVydHlDb250cm9sbGVyJzsKaW1wb3J0IHsgaGFuZGxlRXJyb3IsIFVuYXV0aG9yaXplZEVycm9yIH0gZnJvbSAnLi4vdXRpbHMvZXJyb3JzJzsKCi8vIFByb3BlcnR5IHF1ZXJ5IHNjaGVtYSBleHRlbmRpbmcgcGFnaW5hdGlvbgpjb25zdCBwcm9wZXJ0eVF1ZXJ5U2NoZW1hID0gcGFnaW5hdGlvblF1ZXJ5U2NoZW1hLmV4dGVuZCh7CiAgcHJvcGVydHlUeXBlOiB6LmVudW0oWydyZXNpZGVudGlhbCcsICdjb21tZXJjaWFsJywgJ2luZHVzdHJpYWwnLCAnbGFuZCcsICdtaXhlZCddKS5vcHRpb25hbCgpLAogIGNvdW50cnk6IHouc3RyaW5nKCkub3B0aW9uYWwoKSwKICBtaW5QcmljZTogei5jb2VyY2UubnVtYmVyKCkucG9zaXRpdmUoKS5vcHRpb25hbCgpLAogIG1heFByaWNlOiB6LmNvZXJjZS5udW1iZXIoKS5wb3NpdGl2ZSgpLm9wdGlvbmFsKCksCiAgdmVyaWZpZWQ6IHouY29lcmNlLmJvb2xlYW4oKS5vcHRpb25hbCgpLAogIG93bmVyOiB6LnN0cmluZygpLmxlbmd0aCg1Nikub3B0aW9uYWwoKSwKfSk7CgovLyBDcmVhdGUgcHJvcGVydHkgYm9keSBzY2hlbWEKY29uc3QgY3JlYXRlUHJvcGVydHlTY2hlbWEgPSB6Lm9iamVjdCh7CiAgbmFtZTogei5zdHJpbmcoKS5taW4oMSkubWF4KDI1NSksCiAgZGVzY3JpcHRpb246IHouc3RyaW5nKCkubWluKDEwKSwKICBwcm9wZXJ0eVR5cGU6IHouZW51bShbJ3Jlc2lkZW50aWFsJywgJ2NvbW1lcmNpYWwnLCAnaW5kdXN0cmlhbCcsICdsYW5kJywgJ21peGVkJ10pLAogIGxvY2F0aW9uOiB6Lm9iamVjdCh7CiAgICBhZGRyZXNzOiB6LnN0cmluZygpLm1pbigxKSwKICAgIGNpdHk6IHouc3RyaW5nKCkubWluKDEpLAogICAgY291bnRyeTogei5zdHJpbmcoKS5taW4oMSksCiAgICBwb3N0YWxDb2RlOiB6LnN0cmluZygpLm9wdGlvbmFsKCksCiAgfSksCiAgdG90YWxWYWx1ZTogei5zdHJpbmcoKS5yZWdleCgvXlxkKyhcLlxkezEsMn0pPyQvKSwKICB0b3RhbFNoYXJlczogei5udW1iZXIoKS5pbnQoKS5wb3NpdGl2ZSgpLAogIHByaWNlUGVyU2hhcmU6IHouc3RyaW5nKCkucmVnZXgoL15cZCsoXC5cZHsxLDJ9KT8kLyksCiAgaW1hZ2VzOiB6LmFycmF5KHoudXJsKCkpLm1pbigxKSwKfSk7CgovLyBVcGRhdGUgcHJvcGVydHkgYm9keSBzY2hlbWEKY29uc3QgdXBkYXRlUHJvcGVydHlTY2hlbWEgPSBjcmVhdGVQcm9wZXJ0eVNjaGVtYS5wYXJ0aWFsKCk7CgovLyBCdXkgc2hhcmVzIGJvZHkgc2NoZW1hCmNvbnN0IGJ1eVNoYXJlc1NjaGVtYSA9IHoub2JqZWN0KHsKICBidXllcjogei5zdHJpbmcoKS5taW4oMSwgJ0J1eWVyIGFkZHJlc3MgaXMgcmVxdWlyZWQnKSwKICBzaGFyZXM6IHoubnVtYmVyKCkuaW50KCkucG9zaXRpdmUoKSwKfSk7CgovLyBHRVQgL3Byb3BlcnRpZXMgLSBsaXN0IHdpdGggZmlsdGVycwpjb25zdCBsaXN0UHJvcGVydGllc1JvdXRlID0gbmV3IEVseXNpYSgpLnVzZSh2YWxpZGF0ZVF1ZXJ5KHByb3BlcnR5UXVlcnlTY2hlbWEpKS5nZXQoCiAgJy8nLAogIGFzeW5jICh7IHZhbGlkYXRlZFF1ZXJ5LCBzZXQgfSkgPT4gewogICAgdHJ5IHsKICAgICAgcmV0dXJuIGF3YWl0IFByb3BlcnR5Q29udHJvbGxlci5nZXRQcm9wZXJ0aWVzKHZhbGlkYXRlZFF1ZXJ5ISk7CiAgICB9IGNhdGNoIChlcnJvcikgewogICAgICBjb25zdCBlcnJvclJlc3BvbnNlID0gaGFuZGxlRXJyb3IoZXJyb3IpOwogICAgICBzZXQuc3RhdHVzID0gZXJyb3JSZXNwb25zZS5zdGF0dXNDb2RlOwogICAgICByZXR1cm4gZXJyb3JSZXNwb25zZTsKICAgIH0KICB9LAogIHsKICAgIGRldGFpbDogewogICAgICBzdW1tYXJ5OiAnTGlzdCBwcm9wZXJ0aWVzJywKICAgICAgZGVzY3JpcHRpb246ICdSZXRyaWV2ZSBhIHBhZ2luYXRlZCBsaXN0IG9mIHByb3BlcnRpZXMgd2l0aCBvcHRpb25hbCBmaWx0ZXJzJywKICAgICAgdGFnczogWydQcm9wZXJ0aWVzJ10sCiAgICB9LAogIH0sCik7CgovLyBHRVQgL3Byb3BlcnRpZXMvOmlkIC0gZ2V0IHNpbmdsZSBwcm9wZXJ0eQpjb25zdCBnZXRQcm9wZXJ0eVJvdXRlID0gbmV3IEVseXNpYSgpLnVzZSh2YWxpZGF0ZVBhcmFtcyh1dWlkUGFyYW1TY2hlbWEpKS5nZXQoCiAgJy86aWQnLAogIGFzeW5jICh7IHZhbGlkYXRlZFBhcmFtcywgc2V0IH0pID0+IHsKICAgIHRyeSB7CiAgICAgIHJldHVybiBhd2FpdCBQcm9wZXJ0eUNvbnRyb2xsZXIuZ2V0UHJvcGVydHkodmFsaWRhdGVkUGFyYW1zIS5pZCk7CiAgICB9IGNhdGNoIChlcnJvcikgewogICAgICBjb25zdCBlcnJvclJlc3BvbnNlID0gaGFuZGxlRXJyb3IoZXJyb3IpOwogICAgICBzZXQuc3RhdHVzID0gZXJyb3JSZXNwb25zZS5zdGF0dXNDb2RlOwogICAgICByZXR1cm4gZXJyb3JSZXNwb25zZTsKICAgIH0KICB9LAogIHsKICAgIGRldGFpbDogewogICAgICBzdW1tYXJ5OiAnR2V0IHByb3BlcnR5IGJ5IElEJywKICAgICAgZGVzY3JpcHRpb246ICdSZXRyaWV2ZSBhIHNpbmdsZSBwcm9wZXJ0eSBieSBpdHMgVVVJRCcsCiAgICAgIHRhZ3M6IFsnUHJvcGVydGllcyddLAogICAgfSwKICB9LAopOwoKLy8gUE9TVCAvcHJvcGVydGllcyAtIGNyZWF0ZSBwcm9wZXJ0eQpjb25zdCBjcmVhdGVQcm9wZXJ0eVJvdXRlID0gbmV3IEVseXNpYSgpCiAgLnVzZShhdXRoUGx1Z2luKQogIC51c2UodmFsaWRhdGVCb2R5KGNyZWF0ZVByb3BlcnR5U2NoZW1hKSkKICAucG9zdCgKICAgICcvJywKICAgIGFzeW5jICh7IHZhbGlkYXRlZEJvZHksIHNldCwgZ2V0QXV0aGVudGljYXRlZFVzZXIgfSkgPT4gewogICAgICB0cnkgewogICAgICAgIGNvbnN0IHsgd2FsbGV0QWRkcmVzczogdXNlckFkZHJlc3MgfSA9IGF3YWl0IGdldEF1dGhlbnRpY2F0ZWRVc2VyKCk7CiAgICAgICAgaWYgKCF1c2VyQWRkcmVzcykgewogICAgICAgICAgdGhyb3cgbmV3IFVuYXV0aG9yaXplZEVycm9yKCdVc2VyIGFkZHJlc3MgaXMgcmVxdWlyZWQgZm9yIGF1dGhlbnRpY2F0aW9uJyk7CiAgICAgICAgfQogICAgICAgIHJldHVybiBhd2FpdCBQcm9wZXJ0eUNvbnRyb2xsZXIuY3JlYXRlUHJvcGVydHkodmFsaWRhdGVkQm9keSEsIHVzZXJBZGRyZXNzKTsKICAgICAgfSBjYXRjaCAoZXJyb3IpIHsKICAgICAgICBjb25zdCBlcnJvclJlc3BvbnNlID0gaGFuZGxlRXJyb3IoZXJyb3IpOwogICAgICAgIHNldC5zdGF0dXMgPSBlcnJvclJlc3BvbnNlLnN0YXR1c0NvZGU7CiAgICAgICAgcmV0dXJuIGVycm9yUmVzcG9uc2U7CiAgICAgIH0KICAgIH0sCiAgICB7CiAgICAgIGJlZm9yZUhhbmRsZTogW3JhdGVMaW1pdCh7IGtleUdlbmVyYXRvcjogd2FsbGV0S2V5R2VuZXJhdG9yIH0pXSwKICAgICAgZGV0YWlsOiB7CiAgICAgICAgc3VtbWFyeTogJ0NyZWF0ZSBhIHByb3BlcnR5JywKICAgICAgICBkZXNjcmlwdGlvbjogJ0NyZWF0ZSBhIG5ldyByZWFsIGVzdGF0ZSBwcm9wZXJ0eSBsaXN0aW5nIChyZXF1aXJlcyBhdXRoZW50aWNhdGlvbiknLAogICAgICAgIHRhZ3M6IFsnUHJvcGVydGllcyddLAogICAgICB9LAogICAgfSwKICApOwoKLy8gUFVUIC9wcm9wZXJ0aWVzLzppZCAtIHVwZGF0ZSBwcm9wZXJ0eQpjb25zdCB1cGRhdGVQcm9wZXJ0eVJvdXRlID0gbmV3IEVseXNpYSgpCiAgLnVzZShhdXRoUGx1Z2luKQogIC51c2UodmFsaWRhdGVQYXJhbXModXVpZFBhcmFtU2NoZW1hKSkKICAudXNlKHZhbGlkYXRlQm9keSh1cGRhdGVQcm9wZXJ0eVNjaGVtYSkpCiAgLnB1dCgKICAgICcvOmlkJywKICAgIGFzeW5jICh7IHZhbGlkYXRlZFBhcmFtcywgdmFsaWRhdGVkQm9keSwgc2V0LCBnZXRBdXRoZW50aWNhdGVkVXNlciB9KSA9PiB7CiAgICAgIHRyeSB7CiAgICAgICAgY29uc3QgeyB3YWxsZXRBZGRyZXNzOiB1c2VyQWRkcmVzcyB9ID0gYXdhaXQgZ2V0QXV0aGVudGljYXRlZFVzZXIoKTsKICAgICAgICBpZiAoIXVzZXJBZGRyZXNzKSB7CiAgICAgICAgICB0aHJvdyBuZXcgVW5hdXRob3JpemVkRXJyb3IoJ1VzZXIgYWRkcmVzcyBpcyByZXF1aXJlZCBmb3IgYXV0aGVudGljYXRpb24nKTsKICAgICAgICB9CiAgICAgICAgcmV0dXJuIGF3YWl0IFByb3BlcnR5Q29udHJvbGxlci51cGRhdGVQcm9wZXJ0eSgKICAgICAgICAgIHZhbGlkYXRlZFBhcmFtcyEuaWQsCiAgICAgICAgICB2YWxpZGF0ZWRCb2R5ISwKICAgICAgICAgIHVzZXJBZGRyZXNzLAogICAgICAgICk7CiAgICAgIH0gY2F0Y2ggKGVycm9yKSB7CiAgICAgICAgY29uc3QgZXJyb3JSZXNwb25zZSA9IGhhbmRsZUVycm9yKGVycm9yKTsKICAgICAgICBzZXQuc3RhdHVzID0gZXJyb3JSZXNwb25zZS5zdGF0dXNDb2RlOwogICAgICAgIHJldHVybiBlcnJvclJlc3BvbnNlOwogICAgICB9CiAgICB9LAogICAgewogICAgICBkZXRhaWw6IHsKICAgICAgICBzdW1tYXJ5OiAnVXBkYXRlIGEgcHJvcGVydHknLAogICAgICAgIGRlc2NyaXB0aW9uOiAnVXBkYXRlIGFuIGV4aXN0aW5nIHByb3BlcnR5IGxpc3RpbmcgKHJlcXVpcmVzIGF1dGhlbnRpY2F0aW9uKScsCiAgICAgICAgdGFnczogWydQcm9wZXJ0aWVzJ10sCiAgICAgIH0sCiAgICB9LAogICk7CgovLyBERUxFVEUgL3Byb3BlcnRpZXMvOmlkIC0gZGVsZXRlIHByb3BlcnR5CmNvbnN0IGRlbGV0ZVByb3BlcnR5Um91dGUgPSBuZXcgRWx5c2lhKCkKICAudXNlKGF1dGhQbHVnaW4pCiAgLnVzZSh2YWxpZGF0ZVBhcmFtcyh1dWlkUGFyYW1TY2hlbWEpKQogIC5kZWxldGUoCiAgICAnLzppZCcsCiAgICBhc3luYyAoeyB2YWxpZGF0ZWRQYXJhbXMsIHNldCwgZ2V0QXV0aGVudGljYXRlZFVzZXIgfSkgPT4gewogICAgICB0cnkgewogICAgICAgIGNvbnN0IHsgd2FsbGV0QWRkcmVzczogdXNlckFkZHJlc3MgfSA9IGF3YWl0IGdldEF1dGhlbnRpY2F0ZWRVc2VyKCk7CiAgICAgICAgaWYgKCF1c2VyQWRkcmVzcykgewogICAgICAgICAgdGhyb3cgbmV3IFVuYXV0aG9yaXplZEVycm9yKCdVc2VyIGFkZHJlc3MgaXMgcmVxdWlyZWQgZm9yIGF1dGhlbnRpY2F0aW9uJyk7CiAgICAgICAgfQogICAgICAgIHJldHVybiBhd2FpdCBQcm9wZXJ0eUNvbnRyb2xsZXIuZGVsZXRlUHJvcGVydHkodmFsaWRhdGVkUGFyYW1zIS5pZCwgdXNlckFkZHJlc3MpOwogICAgICB9IGNhdGNoIChlcnJvcikgewogICAgICAgIGNvbnN0IGVycm9yUmVzcG9uc2UgPSBoYW5kbGVFcnJvcihlcnJvcik7CiAgICAgICAgc2V0LnN0YXR1cyA9IGVycm9yUmVzcG9uc2Uuc3RhdHVzQ29kZTsKICAgICAgICByZXR1cm4gZXJyb3JSZXNwb25zZTsKICAgICAgfQogICAgfSwKICAgIHsKICAgICAgZGV0YWlsOiB7CiAgICAgICAgc3VtbWFyeTogJ0RlbGV0ZSBhIHByb3BlcnR5JywKICAgICAgICBkZXNjcmlwdGlvbjogJ0RlbGV0ZSBhIHByb3BlcnR5IGxpc3RpbmcgKHJlcXVpcmVzIGF1dGhlbnRpY2F0aW9uIGFuZCBvd25lcnNoaXApJywKICAgICAgICB0YWdzOiBbJ1Byb3BlcnRpZXMnXSwKICAgICAgfSwKICAgIH0sCiAgKTsKCi8vIFBPU1QgL3Byb3BlcnRpZXMvOmlkL3Rva2VuaXplIC0gdG9rZW5pemUgcHJvcGVydHkKY29uc3QgdG9rZW5pemVQcm9wZXJ0eVJvdXRlID0gbmV3IEVseXNpYSgpCiAgLnVzZShhdXRoUGx1Z2luKQogIC51c2UodmFsaWRhdGVQYXJhbXModXVpZFBhcmFtU2NoZW1hKSkKICAucG9zdCgKICAgICcvOmlkL3Rva2VuaXplJywKICAgIGFzeW5jICh7IHZhbGlkYXRlZFBhcmFtcywgYm9keSwgc2V0LCBnZXRBdXRoZW50aWNhdGVkVXNlciB9KSA9PiB7CiAgICAgIHRyeSB7CiAgICAgICAgY29uc3QgeyB3YWxsZXRBZGRyZXNzOiB1c2VyQWRkcmVzcyB9ID0gYXdhaXQgZ2V0QXV0aGVudGljYXRlZFVzZXIoKTsKICAgICAgICByZXR1cm4gYXdhaXQgUHJvcGVydHlDb250cm9sbGVyLnRva2VuaXplUHJvcGVydHkoCiAgICAgICAgICB2YWxpZGF0ZWRQYXJhbXMhLmlkLAogICAgICAgICAgYm9keSBhcyB1bmtub3duLAogICAgICAgICAgdXNlckFkZHJlc3MsCiAgICAgICAgKTsKICAgICAgfSBjYXRjaCAoZXJyb3IpIHsKICAgICAgICBjb25zdCBlcnJvclJlc3BvbnNlID0gaGFuZGxlRXJyb3IoZXJyb3IpOwogICAgICAgIHNldC5zdGF0dXMgPSBlcnJvclJlc3BvbnNlLnN0YXR1c0NvZGU7CiAgICAgICAgcmV0dXJuIGVycm9yUmVzcG9uc2U7CiAgICAgIH0KICAgIH0sCiAgICB7CiAgICAgIGJlZm9yZUhhbmRsZTogW3JhdGVMaW1pdCh7IGtleUdlbmVyYXRvcjogd2FsbGV0S2V5R2VuZXJhdG9yIH0pXSwKICAgICAgZGV0YWlsOiB7CiAgICAgICAgc3VtbWFyeTogJ1Rva2VuaXplIGEgcHJvcGVydHknLAogICAgICAgIGRlc2NyaXB0aW9uOiAnVG9rZW5pemUgYSBwcm9wZXJ0eSBvbiB0aGUgU3RlbGxhciBuZXR3b3JrIChyZXF1aXJlcyBhdXRoZW50aWNhdGlvbiknLAogICAgICAgIHRhZ3M6IFsnUHJvcGVydGllcyddLAogICAgICB9LAogICAgfSwKICApOwoKLy8gUE9TVCAvcHJvcGVydGllcy86aWQvYnV5LXNoYXJlcyAtIGJ1eSBwcm9wZXJ0eSBzaGFyZXMKY29uc3QgYnV5U2hhcmVzUm91dGUgPSBuZXcgRWx5c2lhKCkKICAudXNlKGF1dGhQbHVnaW4pCiAgLnVzZShpZGVtcG90ZW5jeSkKICAudXNlKHZhbGlkYXRlUGFyYW1zKHV1aWRQYXJhbVNjaGVtYSkpCiAgLnVzZSh2YWxpZGF0ZUJvZHkoYnV5U2hhcmVzU2NoZW1hKSkKICAucG9zdCgKICAgICcvOmlkL2J1eS1zaGFyZXMnLAogICAgYXN5bmMgKHsgdmFsaWRhdGVkUGFyYW1zLCB2YWxpZGF0ZWRCb2R5LCBzZXQsIGdldEF1dGhlbnRpY2F0ZWRVc2VyIH0pID0+IHsKICAgICAgdHJ5IHsKICAgICAgICBjb25zdCB7IHdhbGxldEFkZHJlc3M6IHVzZXJBZGRyZXNzIH0gPSBhd2FpdCBnZXRBdXRoZW50aWNhdGVkVXNlcigpOwogICAgICAgIGlmICghdXNlckFkZHJlc3MpIHsKICAgICAgICAgIHRocm93IG5ldyBVbmF1dGhvcml6ZWRFcnJvcignVXNlciBhZGRyZXNzIGlzIHJlcXVpcmVkIGZvciBhdXRoZW50aWNhdGlvbicpOwogICAgICAgIH0KCiAgICAgICAgcmV0dXJuIGF3YWl0IFByb3BlcnR5Q29udHJvbGxlci5idXlTaGFyZXMoCiAgICAgICAgICB2YWxpZGF0ZWRQYXJhbXMhLmlkLAogICAgICAgICAgewogICAgICAgICAgICBidXllcjogdmFsaWRhdGVkQm9keSEuYnV5ZXIsCiAgICAgICAgICAgIHNoYXJlczogdmFsaWRhdGVkQm9keSEuc2hhcmVzLAogICAgICAgICAgfSwKICAgICAgICAgIHVzZXJBZGRyZXNzLAogICAgICAgICk7CiAgICAgIH0gY2F0Y2ggKGVycm9yKSB7CiAgICAgICAgY29uc3QgZXJyb3JSZXNwb25zZSA9IGhhbmRsZUVycm9yKGVycm9yKTsKICAgICAgICBzZXQuc3RhdHVzID0gZXJyb3JSZXNwb25zZS5zdGF0dXNDb2RlOwogICAgICAgIHJldHVybiBlcnJvclJlc3BvbnNlOwogICAgICB9CiAgICB9LAogICAgewogICAgICBiZWZvcmVIYW5kbGU6IFtyYXRlTGltaXQoeyBrZXlHZW5lcmF0b3I6IHdhbGxldEtleUdlbmVyYXRvciB9KV0sCiAgICAgIGRldGFpbDogewogICAgICAgIHN1bW1hcnk6ICdCdXkgcHJvcGVydHkgc2hhcmVzJywKICAgICAgICBkZXNjcmlwdGlvbjogJ1B1cmNoYXNlIHNoYXJlcyBpbiBhIHRva2VuaXplZCBwcm9wZXJ0eSAocmVxdWlyZXMgYXV0aGVudGljYXRpb24pJywKICAgICAgICB0YWdzOiBbJ1Byb3BlcnRpZXMnXSwKICAgICAgfSwKICAgIH0sCiAgKTsKCi8vIEdFVCAvcHJvcGVydGllcy86aWQvc2hhcmVzLzpvd25lciAtIGdldCB1c2VyIHNoYXJlcwpjb25zdCBnZXRVc2VyU2hhcmVzUm91dGUgPSBuZXcgRWx5c2lhKCkudXNlKHZhbGlkYXRlUGFyYW1zKG93bmVyUGFyYW1TY2hlbWEpKS5nZXQoCiAgJy86aWQvc2hhcmVzLzpvd25lcicsCiAgYXN5bmMgKHsgdmFsaWRhdGVkUGFyYW1zLCBzZXQgfSkgPT4gewogICAgdHJ5IHsKICAgICAgcmV0dXJuIGF3YWl0IFByb3BlcnR5Q29udHJvbGxlci5nZXRVc2VyU2hhcmVzKHZhbGlkYXRlZFBhcmFtcyEuaWQsIHZhbGlkYXRlZFBhcmFtcyEub3duZXIpOwogICAgfSBjYXRjaCAoZXJyb3IpIHsKICAgICAgY29uc3QgZXJyb3JSZXNwb25zZSA9IGhhbmRsZUVycm9yKGVycm9yKTsKICAgICAgc2V0LnN0YXR1cyA9IGVycm9yUmVzcG9uc2Uuc3RhdHVzQ29kZTsKICAgICAgcmV0dXJuIGVycm9yUmVzcG9uc2U7CiAgICB9CiAgfSwKICB7CiAgICBkZXRhaWw6IHsKICAgICAgc3VtbWFyeTogJ0dldCB1c2VyIHNoYXJlcycsCiAgICAgIGRlc2NyaXB0aW9uOiAnUmV0cmlldmUgdGhlIG51bWJlciBvZiBzaGFyZXMgb3duZWQgYnkgYSB1c2VyIGZvciBhIHNwZWNpZmljIHByb3BlcnR5JywKICAgICAgdGFnczogWydQcm9wZXJ0aWVzJ10sCiAgICB9LAogIH0sCik7CgovLyBDb21iaW5lIGFsbCByb3V0ZXMKZXhwb3J0IGNvbnN0IHByb3BlcnR5Um91dGVzID0gbmV3IEVseXNpYSh7IHByZWZpeDogJy9wcm9wZXJ0aWVzJyB9KQogIC51c2UobGlzdFByb3BlcnRpZXNSb3V0ZSkKICAudXNlKGdldFByb3BlcnR5Um91dGUpCiAgLnVzZShjcmVhdGVQcm9wZXJ0eVJvdXRlKQogIC51c2UodXBkYXRlUHJvcGVydHlSb3V0ZSkKICAudXNlKGRlbGV0ZVByb3BlcnR5Um91dGUpCiAgLnVzZSh0b2tlbml6ZVByb3BlcnR5Um91dGUpCiAgLnVzZShidXlTaGFyZXNSb3V0ZSkKICAudXNlKGdldFVzZXJTaGFyZXNSb3V0ZSk7Cg==
+import { Elysia } from 'elysia';
+import { z } from 'zod';
+import {
+  validateBody,
+  validateQuery,
+  validateParams,
+  uuidParamSchema,
+  paginationQuerySchema,
+  ownerParamSchema,
+  rateLimit,
+  walletKeyGenerator,
+  authPlugin,
+  idempotency,
+} from '../middleware';
+import { PropertyController } from '../controllers/PropertyController';
+import { handleError, UnauthorizedError } from '../utils/errors';
+
+// Property query schema extending pagination
+const propertyQuerySchema = paginationQuerySchema.extend({
+  propertyType: z.enum(['residential', 'commercial', 'industrial', 'land', 'mixed']).optional(),
+  country: z.string().optional(),
+  minPrice: z.coerce.number().positive().optional(),
+  maxPrice: z.coerce.number().positive().optional(),
+  verified: z.coerce.boolean().optional(),
+  owner: z.string().length(56).optional(),
+});
+
+// Create property body schema
+const createPropertySchema = z.object({
+  name: z.string().min(1).max(255),
+  description: z.string().min(10),
+  propertyType: z.enum(['residential', 'commercial', 'industrial', 'land', 'mixed']),
+  location: z.object({
+    address: z.string().min(1),
+    city: z.string().min(1),
+    country: z.string().min(1),
+    postalCode: z.string().optional(),
+  }),
+  totalValue: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  totalShares: z.number().int().positive(),
+  pricePerShare: z.string().regex(/^\d+(\.\d{1,2})?$/),
+  images: z.array(z.url()).min(1),
+});
+
+// Update property body schema
+const updatePropertySchema = createPropertySchema.partial();
+
+// Buy shares body schema
+const buySharesSchema = z.object({
+  buyer: z.string().min(1, 'Buyer address is required'),
+  shares: z.number().int().positive(),
+});
+
+// GET /properties - list with filters
+const listPropertiesRoute = new Elysia().use(validateQuery(propertyQuerySchema)).get(
+  '/',
+  async ({ validatedQuery, set }) => {
+    try {
+      return await PropertyController.getProperties(validatedQuery!);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  },
+  {
+    detail: {
+      summary: 'List properties',
+      description: 'Retrieve a paginated list of properties with optional filters',
+      tags: ['Properties'],
+    },
+  },
+);
+
+// GET /properties/:id - get single property
+const getPropertyRoute = new Elysia().use(validateParams(uuidParamSchema)).get(
+  '/:id',
+  async ({ validatedParams, set }) => {
+    try {
+      return await PropertyController.getProperty(validatedParams!.id);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  },
+  {
+    detail: {
+      summary: 'Get property by ID',
+      description: 'Retrieve a single property by its UUID',
+      tags: ['Properties'],
+    },
+  },
+);
+
+// POST /properties - create property
+const createPropertyRoute = new Elysia()
+  .use(authPlugin)
+  .use(validateBody(createPropertySchema))
+  .post(
+    '/',
+    async ({ validatedBody, set, getAuthenticatedUser }) => {
+      try {
+        const { walletAddress: userAddress } = await getAuthenticatedUser();
+        if (!userAddress) {
+          throw new UnauthorizedError('User address is required for authentication');
+        }
+        return await PropertyController.createProperty(validatedBody!, userAddress);
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+      detail: {
+        summary: 'Create a property',
+        description: 'Create a new real estate property listing (requires authentication)',
+        tags: ['Properties'],
+      },
+    },
+  );
+
+// PUT /properties/:id - update property
+const updatePropertyRoute = new Elysia()
+  .use(authPlugin)
+  .use(validateParams(uuidParamSchema))
+  .use(validateBody(updatePropertySchema))
+  .put(
+    '/:id',
+    async ({ validatedParams, validatedBody, set, getAuthenticatedUser }) => {
+      try {
+        const { walletAddress: userAddress } = await getAuthenticatedUser();
+        if (!userAddress) {
+          throw new UnauthorizedError('User address is required for authentication');
+        }
+        return await PropertyController.updateProperty(
+          validatedParams!.id,
+          validatedBody!,
+          userAddress,
+        );
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      detail: {
+        summary: 'Update a property',
+        description: 'Update an existing property listing (requires authentication)',
+        tags: ['Properties'],
+      },
+    },
+  );
+
+// DELETE /properties/:id - delete property
+const deletePropertyRoute = new Elysia()
+  .use(authPlugin)
+  .use(validateParams(uuidParamSchema))
+  .delete(
+    '/:id',
+    async ({ validatedParams, set, getAuthenticatedUser }) => {
+      try {
+        const { walletAddress: userAddress } = await getAuthenticatedUser();
+        if (!userAddress) {
+          throw new UnauthorizedError('User address is required for authentication');
+        }
+        return await PropertyController.deleteProperty(validatedParams!.id, userAddress);
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      detail: {
+        summary: 'Delete a property',
+        description: 'Delete a property listing (requires authentication and ownership)',
+        tags: ['Properties'],
+      },
+    },
+  );
+
+// POST /properties/:id/tokenize - tokenize property
+const tokenizePropertyRoute = new Elysia()
+  .use(authPlugin)
+  .use(validateParams(uuidParamSchema))
+  .post(
+    '/:id/tokenize',
+    async ({ validatedParams, body, set, getAuthenticatedUser }) => {
+      try {
+        const { walletAddress: userAddress } = await getAuthenticatedUser();
+        return await PropertyController.tokenizeProperty(
+          validatedParams!.id,
+          body as unknown,
+          userAddress,
+        );
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+      detail: {
+        summary: 'Tokenize a property',
+        description: 'Tokenize a property on the Stellar network (requires authentication)',
+        tags: ['Properties'],
+      },
+    },
+  );
+
+// POST /properties/:id/buy-shares - buy property shares
+const buySharesRoute = new Elysia()
+  .use(authPlugin)
+  .use(idempotency)
+  .use(validateParams(uuidParamSchema))
+  .use(validateBody(buySharesSchema))
+  .post(
+    '/:id/buy-shares',
+    async ({ validatedParams, validatedBody, set, getAuthenticatedUser }) => {
+      try {
+        const { walletAddress: userAddress } = await getAuthenticatedUser();
+        if (!userAddress) {
+          throw new UnauthorizedError('User address is required for authentication');
+        }
+
+        return await PropertyController.buyShares(
+          validatedParams!.id,
+          {
+            buyer: validatedBody!.buyer,
+            shares: validatedBody!.shares,
+          },
+          userAddress,
+        );
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+      detail: {
+        summary: 'Buy property shares',
+        description: 'Purchase shares in a tokenized property (requires authentication)',
+        tags: ['Properties'],
+      },
+    },
+  );
+
+// GET /properties/:id/shares/:owner - get user shares
+const getUserSharesRoute = new Elysia().use(validateParams(ownerParamSchema)).get(
+  '/:id/shares/:owner',
+  async ({ validatedParams, set }) => {
+    try {
+      return await PropertyController.getUserShares(validatedParams!.id, validatedParams!.owner);
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  },
+  {
+    detail: {
+      summary: 'Get user shares',
+      description: 'Retrieve the number of shares owned by a user for a specific property',
+      tags: ['Properties'],
+    },
+  },
+);
+
+// Combine all routes
+export const propertyRoutes = new Elysia({ prefix: '/properties' })
+  .use(listPropertiesRoute)
+  .use(getPropertyRoute)
+  .use(createPropertyRoute)
+  .use(updatePropertyRoute)
+  .use(deletePropertyRoute)
+  .use(tokenizePropertyRoute)
+  .use(buySharesRoute)
+  .use(getUserSharesRoute);

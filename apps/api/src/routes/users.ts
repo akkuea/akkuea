@@ -1,1 +1,92 @@
-aW1wb3J0IHsgRWx5c2lhIH0gZnJvbSAnZWx5c2lhJzsKaW1wb3J0IHsgeiB9IGZyb20gJ3pvZCc7CmltcG9ydCB7IHZhbGlkYXRlLCB1dWlkUGFyYW1TY2hlbWEsIHJhdGVMaW1pdCwgYXV0aFBsdWdpbiB9IGZyb20gJy4uL21pZGRsZXdhcmUnOwppbXBvcnQgeyBVc2VyQ29udHJvbGxlciB9IGZyb20gJy4uL2NvbnRyb2xsZXJzL1VzZXJDb250cm9sbGVyJzsKCmNvbnN0IHdhbGxldFBhcmFtU2NoZW1hID0gei5vYmplY3QoewogIGFkZHJlc3M6IHouc3RyaW5nKCkubGVuZ3RoKDU2KSwKfSk7Cgpjb25zdCBjcmVhdGVVc2VyU2NoZW1hID0gei5vYmplY3QoewogIHdhbGxldEFkZHJlc3M6IHoKICAgIC5zdHJpbmcoKQogICAgLmxlbmd0aCg1NikKICAgIC5yZWdleCgvXkdbQS1aMi03XXs1NX0kLyksCiAgZW1haWw6IHouZW1haWwoKS5vcHRpb25hbCgpLAogIGRpc3BsYXlOYW1lOiB6LnN0cmluZygpLm1pbigyKS5tYXgoNTApLm9wdGlvbmFsKCksCn0pOwoKY29uc3QgdXBkYXRlVXNlclNjaGVtYSA9IHoub2JqZWN0KHsKICBlbWFpbDogei5lbWFpbCgpLm9wdGlvbmFsKCksCiAgZGlzcGxheU5hbWU6IHouc3RyaW5nKCkubWluKDIpLm1heCg1MCkub3B0aW9uYWwoKSwKfSk7Cgpjb25zdCBhdXRoV2FsbGV0U2NoZW1hID0gei5vYmplY3QoewogIHdhbGxldEFkZHJlc3M6IHoKICAgIC5zdHJpbmcoKQogICAgLmxlbmd0aCg1NikKICAgIC5yZWdleCgvXkdbQS1aMi03XXs1NX0kLyksCn0pOwoKZXhwb3J0IGNvbnN0IHVzZXJSb3V0ZXMgPSBuZXcgRWx5c2lhKHsgcHJlZml4OiAnL3VzZXJzJyB9KQogIC8vIFBPU1QgL3VzZXJzIC0gQ3JlYXRlIHVzZXIKICAudXNlKHZhbGlkYXRlKHsgYm9keTogY3JlYXRlVXNlclNjaGVtYSB9KSkKICAucG9zdCgnLycsIGFzeW5jIChjdHgpID0+IFVzZXJDb250cm9sbGVyLmNyZWF0ZShjdHgpLCB7CiAgICBkZXRhaWw6IHsKICAgICAgc3VtbWFyeTogJ0NyZWF0ZSBhIHVzZXInLAogICAgICBkZXNjcmlwdGlvbjogJ0NyZWF0ZSBhIG5ldyB1c2VyIGFjY291bnQgd2l0aCBhIFN0ZWxsYXIgd2FsbGV0IGFkZHJlc3MnLAogICAgICB0YWdzOiBbJ1VzZXJzJ10sCiAgICB9LAogIH0pCgogIC8vIEdFVCAvdXNlcnMvOmlkIC0gR2V0IHVzZXIgYnkgSUQKICAudXNlKHZhbGlkYXRlKHsgcGFyYW1zOiB1dWlkUGFyYW1TY2hlbWEgfSkpCiAgLmdldCgnLzppZCcsIGFzeW5jIChjdHgpID0+IFVzZXJDb250cm9sbGVyLmdldEJ5SWQoY3R4KSwgewogICAgZGV0YWlsOiB7CiAgICAgIHN1bW1hcnk6ICdHZXQgdXNlciBieSBJRCcsCiAgICAgIGRlc2NyaXB0aW9uOiAnUmV0cmlldmUgYSB1c2VyIGJ5IHRoZWlyIFVVSUQnLAogICAgICB0YWdzOiBbJ1VzZXJzJ10sCiAgICB9LAogIH0pCgogIC8vIEdFVCAvdXNlcnMvd2FsbGV0LzphZGRyZXNzIC0gR2V0IHVzZXIgYnkgd2FsbGV0IGFkZHJlc3MKICAudXNlKHZhbGlkYXRlKHsgcGFyYW1zOiB3YWxsZXRQYXJhbVNjaGVtYSB9KSkKICAuZ2V0KCcvd2FsbGV0LzphZGRyZXNzJywgYXN5bmMgKGN0eCkgPT4gVXNlckNvbnRyb2xsZXIuZ2V0QnlXYWxsZXQoY3R4KSwgewogICAgZGV0YWlsOiB7CiAgICAgIHN1bW1hcnk6ICdHZXQgdXNlciBieSB3YWxsZXQgYWRkcmVzcycsCiAgICAgIGRlc2NyaXB0aW9uOiAnUmV0cmlldmUgYSB1c2VyIGJ5IHRoZWlyIFN0ZWxsYXIgd2FsbGV0IGFkZHJlc3MnLAogICAgICB0YWdzOiBbJ1VzZXJzJ10sCiAgICB9LAogIH0pCgogIC8vIFBPU1QgL3VzZXJzL2F1dGggLSBBdXRoZW50aWNhdGUgYnkgd2FsbGV0IChnZXQgb3IgY3JlYXRlKQogIC51c2UodmFsaWRhdGUoeyBib2R5OiBhdXRoV2FsbGV0U2NoZW1hIH0pKQogIC5wb3N0KCcvYXV0aCcsIGFzeW5jIChjdHgpID0+IFVzZXJDb250cm9sbGVyLmF1dGhlbnRpY2F0ZUJ5V2FsbGV0KGN0eCksIHsKICAgIGJlZm9yZUhhbmRsZTogW3JhdGVMaW1pdCgpXSwKICAgIGRldGFpbDogewogICAgICBzdW1tYXJ5OiAnQXV0aGVudGljYXRlIGJ5IHdhbGxldCcsCiAgICAgIGRlc2NyaXB0aW9uOiAnQXV0aGVudGljYXRlIG9yIGNyZWF0ZSBhIHVzZXIgYnkgdGhlaXIgU3RlbGxhciB3YWxsZXQgYWRkcmVzcycsCiAgICAgIHRhZ3M6IFsnVXNlcnMnXSwKICAgIH0sCiAgfSkKCiAgLy8gUHJvdGVjdGVkIFJvdXRlcwogIC51c2UoYXV0aFBsdWdpbikKICAvLyBHRVQgL3VzZXJzL21lIC0gR2V0IGN1cnJlbnQgdXNlciBwcm9maWxlCiAgLmdldCgnL21lJywgYXN5bmMgKGN0eCkgPT4gVXNlckNvbnRyb2xsZXIuZ2V0UHJvZmlsZShjdHgpLCB7CiAgICBkZXRhaWw6IHsKICAgICAgc3VtbWFyeTogJ0dldCBjdXJyZW50IHVzZXIgcHJvZmlsZScsCiAgICAgIGRlc2NyaXB0aW9uOiAnUmV0cmlldmUgdGhlIGF1dGhlbnRpY2F0ZWQgdXNlciBwcm9maWxlJywKICAgICAgdGFnczogWydVc2VycyddLAogICAgfSwKICB9KQoKICAvLyBQQVRDSCAvdXNlcnMvbWUgLSBVcGRhdGUgY3VycmVudCB1c2VyIHByb2ZpbGUKICAudXNlKHZhbGlkYXRlKHsgYm9keTogdXBkYXRlVXNlclNjaGVtYSB9KSkKICAucGF0Y2goJy9tZScsIGFzeW5jIChjdHgpID0+IFVzZXJDb250cm9sbGVyLnVwZGF0ZVByb2ZpbGUoY3R4KSwgewogICAgZGV0YWlsOiB7CiAgICAgIHN1bW1hcnk6ICdVcGRhdGUgY3VycmVudCB1c2VyIHByb2ZpbGUnLAogICAgICBkZXNjcmlwdGlvbjogJ1VwZGF0ZSB0aGUgYXV0aGVudGljYXRlZCB1c2VyIHByb2ZpbGUgaW5mb3JtYXRpb24nLAogICAgICB0YWdzOiBbJ1VzZXJzJ10sCiAgICB9LAogIH0pOwo=
+import { Elysia } from 'elysia';
+import { z } from 'zod';
+import { validate, uuidParamSchema, rateLimit, authPlugin } from '../middleware';
+import { UserController } from '../controllers/UserController';
+
+const walletParamSchema = z.object({
+  address: z.string().length(56),
+});
+
+const createUserSchema = z.object({
+  walletAddress: z
+    .string()
+    .length(56)
+    .regex(/^G[A-Z2-7]{55}$/),
+  email: z.email().optional(),
+  displayName: z.string().min(2).max(50).optional(),
+});
+
+const updateUserSchema = z.object({
+  email: z.email().optional(),
+  displayName: z.string().min(2).max(50).optional(),
+});
+
+const authWalletSchema = z.object({
+  walletAddress: z
+    .string()
+    .length(56)
+    .regex(/^G[A-Z2-7]{55}$/),
+});
+
+export const userRoutes = new Elysia({ prefix: '/users' })
+  // POST /users - Create user
+  .use(validate({ body: createUserSchema }))
+  .post('/', async (ctx) => UserController.create(ctx), {
+    detail: {
+      summary: 'Create a user',
+      description: 'Create a new user account with a Stellar wallet address',
+      tags: ['Users'],
+    },
+  })
+
+  // GET /users/:id - Get user by ID
+  .use(validate({ params: uuidParamSchema }))
+  .get('/:id', async (ctx) => UserController.getById(ctx), {
+    detail: {
+      summary: 'Get user by ID',
+      description: 'Retrieve a user by their UUID',
+      tags: ['Users'],
+    },
+  })
+
+  // GET /users/wallet/:address - Get user by wallet address
+  .use(validate({ params: walletParamSchema }))
+  .get('/wallet/:address', async (ctx) => UserController.getByWallet(ctx), {
+    detail: {
+      summary: 'Get user by wallet address',
+      description: 'Retrieve a user by their Stellar wallet address',
+      tags: ['Users'],
+    },
+  })
+
+  // POST /users/auth - Authenticate by wallet (get or create)
+  .use(validate({ body: authWalletSchema }))
+  .post('/auth', async (ctx) => UserController.authenticateByWallet(ctx), {
+    beforeHandle: [rateLimit()],
+    detail: {
+      summary: 'Authenticate by wallet',
+      description: 'Authenticate or create a user by their Stellar wallet address',
+      tags: ['Users'],
+    },
+  })
+
+  // Protected Routes
+  .use(authPlugin)
+  // GET /users/me - Get current user profile
+  .get('/me', async (ctx) => UserController.getProfile(ctx), {
+    detail: {
+      summary: 'Get current user profile',
+      description: 'Retrieve the authenticated user profile',
+      tags: ['Users'],
+    },
+  })
+
+  // PATCH /users/me - Update current user profile
+  .use(validate({ body: updateUserSchema }))
+  .patch('/me', async (ctx) => UserController.updateProfile(ctx), {
+    detail: {
+      summary: 'Update current user profile',
+      description: 'Update the authenticated user profile information',
+      tags: ['Users'],
+    },
+  });

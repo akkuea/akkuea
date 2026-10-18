@@ -1,1 +1,91 @@
-aW1wb3J0IHsgeiB9IGZyb20gInpvZCI7CmltcG9ydCB7CiAgc3RlbGxhckFkZHJlc3NTY2hlbWEsCiAgaXNvRGF0ZVNjaGVtYSwKICBwb3NpdGl2ZUFtb3VudFNjaGVtYSwKfSBmcm9tICIuL2NvbW1vbi5zY2hlbWEuanMiOwoKLyoqCiAqIEtZQyBzdGF0dXMgZW51bQogKi8KZXhwb3J0IGNvbnN0IGt5Y1N0YXR1c1NjaGVtYSA9IHouZW51bShbCiAgIm5vdF9zdGFydGVkIiwKICAicGVuZGluZyIsCiAgImFwcHJvdmVkIiwKICAicmVqZWN0ZWQiLAogICJleHBpcmVkIiwKXSk7CgovKioKICogS1lDIHRpZXIgZW51bQogKi8KZXhwb3J0IGNvbnN0IGt5Y1RpZXJTY2hlbWEgPSB6LmVudW0oWwogICJub25lIiwKICAiYmFzaWMiLAogICJ2ZXJpZmllZCIsCiAgImFjY3JlZGl0ZWQiLApdKTsKCi8qKgogKiBTY2hlbWEgZm9yIEt5Y0RvY3VtZW50CiAqLwpleHBvcnQgY29uc3Qga3ljRG9jdW1lbnRTY2hlbWEgPSB6Lm9iamVjdCh7CiAgaWQ6IHoudXVpZCgpLAogIHVzZXJJZDogei51dWlkKCksCiAgdHlwZTogei5lbnVtKFsKICAgICJwYXNzcG9ydCIsCiAgICAibmF0aW9uYWxfaWQiLAogICAgImRyaXZlcnNfbGljZW5zZSIsCiAgICAicHJvb2Zfb2ZfYWRkcmVzcyIsCiAgICAiYmFua19zdGF0ZW1lbnQiLAogICAgInRheF9kb2N1bWVudCIsCiAgXSksCiAgZmlsZU5hbWU6IHouc3RyaW5nKCkubWluKDEpLAogIGZpbGVVcmw6IHoudXJsKCksCiAgc3RhdHVzOiB6LmVudW0oWyJwZW5kaW5nIiwgImFwcHJvdmVkIiwgInJlamVjdGVkIl0pLAogIHJlamVjdGlvblJlYXNvbjogei5zdHJpbmcoKS5vcHRpb25hbCgpLAogIHVwbG9hZGVkQXQ6IGlzb0RhdGVTY2hlbWEsCiAgcmV2aWV3ZWRBdDogaXNvRGF0ZVNjaGVtYS5vcHRpb25hbCgpLAp9KTsKCi8qKgogKiBTY2hlbWEgZm9yIFVzZXIKICovCmV4cG9ydCBjb25zdCB1c2VyU2NoZW1hID0gei5vYmplY3QoewogIGlkOiB6LnV1aWQoKSwKICB3YWxsZXRBZGRyZXNzOiBzdGVsbGFyQWRkcmVzc1NjaGVtYSwKICBlbWFpbDogei5lbWFpbCgpLm9wdGlvbmFsKCksCiAgZGlzcGxheU5hbWU6IHouc3RyaW5nKCkubWluKDIpLm1heCg1MCkub3B0aW9uYWwoKSwKICBreWNTdGF0dXM6IGt5Y1N0YXR1c1NjaGVtYSwKICBreWNUaWVyOiBreWNUaWVyU2NoZW1hLAogIGt5Y0RvY3VtZW50czogei5hcnJheShreWNEb2N1bWVudFNjaGVtYSksCiAgY3JlYXRlZEF0OiBpc29EYXRlU2NoZW1hLAogIHVwZGF0ZWRBdDogaXNvRGF0ZVNjaGVtYSwKICBsYXN0TG9naW5BdDogaXNvRGF0ZVNjaGVtYS5vcHRpb25hbCgpLAp9KTsKCi8qKgogKiBTY2hlbWEgZm9yIE9yYWNsZVByaWNlCiAqLwpleHBvcnQgY29uc3Qgb3JhY2xlUHJpY2VTY2hlbWEgPSB6Lm9iamVjdCh7CiAgYXNzZXQ6IHouc3RyaW5nKCkubWluKDEpLAogIGFzc2V0QWRkcmVzczogc3RlbGxhckFkZHJlc3NTY2hlbWEsCiAgcHJpY2VVU0Q6IHBvc2l0aXZlQW1vdW50U2NoZW1hLAogIHRpbWVzdGFtcDogaXNvRGF0ZVNjaGVtYSwKICBzb3VyY2U6IHouc3RyaW5nKCkubWluKDEpLAogIGNvbmZpZGVuY2U6IHoubnVtYmVyKCkubWluKDApLm1heCgxMDApLAp9KTsKCi8qKgogKiBUeXBlIGluZmVyZW5jZSAtIFNpbmdsZSBzb3VyY2Ugb2YgdHJ1dGgKICovCmV4cG9ydCB0eXBlIEt5Y1N0YXR1cyA9IHouaW5mZXI8dHlwZW9mIGt5Y1N0YXR1c1NjaGVtYT47CmV4cG9ydCB0eXBlIEt5Y1RpZXIgPSB6LmluZmVyPHR5cGVvZiBreWNUaWVyU2NoZW1hPjsKZXhwb3J0IHR5cGUgS3ljRG9jdW1lbnQgPSB6LmluZmVyPHR5cGVvZiBreWNEb2N1bWVudFNjaGVtYT47CmV4cG9ydCB0eXBlIFVzZXIgPSB6LmluZmVyPHR5cGVvZiB1c2VyU2NoZW1hPjsKZXhwb3J0IHR5cGUgT3JhY2xlUHJpY2UgPSB6LmluZmVyPHR5cGVvZiBvcmFjbGVQcmljZVNjaGVtYT47CgovLyBLZWVwIGlucHV0IHR5cGVzIGZvciBhZHZhbmNlZCB1c2UgY2FzZXMKZXhwb3J0IHR5cGUgVXNlcklucHV0ID0gei5pbnB1dDx0eXBlb2YgdXNlclNjaGVtYT47CmV4cG9ydCB0eXBlIEt5Y0RvY3VtZW50SW5wdXQgPSB6LmlucHV0PHR5cGVvZiBreWNEb2N1bWVudFNjaGVtYT47CmV4cG9ydCB0eXBlIE9yYWNsZVByaWNlSW5wdXQgPSB6LmlucHV0PHR5cGVvZiBvcmFjbGVQcmljZVNjaGVtYT47Cg==
+import { z } from "zod";
+import {
+  stellarAddressSchema,
+  isoDateSchema,
+  positiveAmountSchema,
+} from "./common.schema.js";
+
+/**
+ * KYC status enum
+ */
+export const kycStatusSchema = z.enum([
+  "not_started",
+  "pending",
+  "approved",
+  "rejected",
+  "expired",
+]);
+
+/**
+ * KYC tier enum
+ */
+export const kycTierSchema = z.enum([
+  "none",
+  "basic",
+  "verified",
+  "accredited",
+]);
+
+/**
+ * Schema for KycDocument
+ */
+export const kycDocumentSchema = z.object({
+  id: z.uuid(),
+  userId: z.uuid(),
+  type: z.enum([
+    "passport",
+    "national_id",
+    "drivers_license",
+    "proof_of_address",
+    "bank_statement",
+    "tax_document",
+  ]),
+  fileName: z.string().min(1),
+  fileUrl: z.url(),
+  status: z.enum(["pending", "approved", "rejected"]),
+  rejectionReason: z.string().optional(),
+  uploadedAt: isoDateSchema,
+  reviewedAt: isoDateSchema.optional(),
+});
+
+/**
+ * Schema for User
+ */
+export const userSchema = z.object({
+  id: z.uuid(),
+  walletAddress: stellarAddressSchema,
+  email: z.email().optional(),
+  displayName: z.string().min(2).max(50).optional(),
+  kycStatus: kycStatusSchema,
+  kycTier: kycTierSchema,
+  kycDocuments: z.array(kycDocumentSchema),
+  createdAt: isoDateSchema,
+  updatedAt: isoDateSchema,
+  lastLoginAt: isoDateSchema.optional(),
+});
+
+/**
+ * Schema for OraclePrice
+ */
+export const oraclePriceSchema = z.object({
+  asset: z.string().min(1),
+  assetAddress: stellarAddressSchema,
+  priceUSD: positiveAmountSchema,
+  timestamp: isoDateSchema,
+  source: z.string().min(1),
+  confidence: z.number().min(0).max(100),
+});
+
+/**
+ * Type inference - Single source of truth
+ */
+export type KycStatus = z.infer<typeof kycStatusSchema>;
+export type KycTier = z.infer<typeof kycTierSchema>;
+export type KycDocument = z.infer<typeof kycDocumentSchema>;
+export type User = z.infer<typeof userSchema>;
+export type OraclePrice = z.infer<typeof oraclePriceSchema>;
+
+// Keep input types for advanced use cases
+export type UserInput = z.input<typeof userSchema>;
+export type KycDocumentInput = z.input<typeof kycDocumentSchema>;
+export type OraclePriceInput = z.input<typeof oraclePriceSchema>;

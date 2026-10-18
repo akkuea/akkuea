@@ -1,1 +1,118 @@
-InVzZSBjbGllbnQiOwoKaW1wb3J0IFJlYWN0LCB7IHVzZU1lbW8sIHVzZVN0YXRlIH0gZnJvbSAicmVhY3QiOwppbXBvcnQgdHlwZSB7IERlZmF1bHRWYWx1ZXMsIEZpZWxkVmFsdWVzIH0gZnJvbSAicmVhY3QtaG9vay1mb3JtIjsKaW1wb3J0IHsKICBGb3JtUHJvdmlkZXIsCiAgdXNlRm9ybSwKICB0eXBlIFJlc29sdmVyLAogIHR5cGUgVXNlRm9ybVJldHVybiwKfSBmcm9tICJyZWFjdC1ob29rLWZvcm0iOwppbXBvcnQgeyB6IH0gZnJvbSAiem9kIjsKaW1wb3J0IHsgem9kUmVzb2x2ZXIgfSBmcm9tICJAaG9va2Zvcm0vcmVzb2x2ZXJzL3pvZCI7CmltcG9ydCB7IGNuIH0gZnJvbSAiQC9saWIvdXRpbHMiOwoKZXhwb3J0IHR5cGUgRm9ybVJlbmRlclByb3BzPFRWYWx1ZXMgZXh0ZW5kcyBGaWVsZFZhbHVlcz4gPQogIFVzZUZvcm1SZXR1cm48VFZhbHVlcz4gJiB7CiAgICBmb3JtRXJyb3I6IHN0cmluZyB8IG51bGw7CiAgICBmb3JtU3VjY2Vzczogc3RyaW5nIHwgbnVsbDsKICAgIHNldEZvcm1FcnJvcjogUmVhY3QuRGlzcGF0Y2g8UmVhY3QuU2V0U3RhdGVBY3Rpb248c3RyaW5nIHwgbnVsbD4+OwogICAgc2V0Rm9ybVN1Y2Nlc3M6IFJlYWN0LkRpc3BhdGNoPFJlYWN0LlNldFN0YXRlQWN0aW9uPHN0cmluZyB8IG51bGw+PjsKICB9OwoKLyoqCiAqIEdlbmVyaWMgb3ZlciB0aGUgcGFyc2VkICp2YWx1ZSogdHlwZSByYXRoZXIgdGhhbiB0aGUgc2NoZW1hIHR5cGUuCiAqCiAqIFdpdGggYEBob29rZm9ybS9yZXNvbHZlcnNgIHY1IHRoZSByZXNvbHZlciBpcyB0eXBlZCBmcm9tIHRoZSBzY2hlbWEncyBvd24KICogaW5wdXQvb3V0cHV0IHBhaXI7IGEgYFRTY2hlbWEgZXh0ZW5kcyB6LlpvZFR5cGVgIHBhcmFtZXRlciBsZWF2ZXMgdGhhdCBwYWlyCiAqIHVucmVzb2x2ZWQgKGBvdXRwdXQ8VFNjaGVtYT5gIG5ldmVyIG5hcnJvd3MgdG8gYEZpZWxkVmFsdWVzYCksIHdoaWNoIGlzIHdoYXQKICogcHJvZHVjZWQgdGhlIGB1bmtub3duIGlzIG5vdCBhc3NpZ25hYmxlIHRvIEZpZWxkVmFsdWVzYCBlcnJvcnMuIEJpbmRpbmcgdGhlCiAqIHNjaGVtYSBhcyBgei5ab2RUeXBlPFRWYWx1ZXMsIFRWYWx1ZXM+YCBwaW5zIGJvdGggc2lkZXMgdG8gdGhlIHNhbWUgY29uY3JldGUKICogcmVjb3JkIGFuZCB0aGUgcmVzb2x2ZXIsIGB1c2VGb3JtPFRWYWx1ZXM+YCBhbmQgdGhlIHJlbmRlciBwcm9wcyBhbGwgYWdyZWUuCiAqLwpleHBvcnQgaW50ZXJmYWNlIEZvcm1Qcm9wczxUVmFsdWVzIGV4dGVuZHMgRmllbGRWYWx1ZXM+IHsKICAvLyBJbnB1dCBpcyBgRmllbGRWYWx1ZXNgIHJhdGhlciB0aGFuIGBUVmFsdWVzYCBiZWNhdXNlIGEgc2NoZW1hIHdpdGggZGVmYXVsdHMKICAvLyBvciB0cmFuc2Zvcm1zIGFjY2VwdHMgYSBsb29zZXIgc2hhcGUgdGhhbiBpdCByZXR1cm5zIChlLmcuIGFuIG9wdGlvbmFsIGZpZWxkCiAgLy8gd2l0aCBgLmRlZmF1bHQoKWApOyBwaW5uaW5nIGJvdGggc2lkZXMgcmVqZWN0cyB0aG9zZSBzY2hlbWFzLgogIHNjaGVtYTogei5ab2RUeXBlPFRWYWx1ZXMsIEZpZWxkVmFsdWVzPjsKICBkZWZhdWx0VmFsdWVzPzogRGVmYXVsdFZhbHVlczxUVmFsdWVzPjsKICBvblN1Ym1pdDogKHZhbHVlczogVFZhbHVlcykgPT4gdm9pZCB8IFByb21pc2U8dm9pZD47CiAgY2hpbGRyZW46CiAgICB8IFJlYWN0LlJlYWN0Tm9kZQogICAgfCAoKG1ldGhvZHM6IEZvcm1SZW5kZXJQcm9wczxUVmFsdWVzPikgPT4gUmVhY3QuUmVhY3ROb2RlKTsKICBjbGFzc05hbWU/OiBzdHJpbmc7CiAgaWQ/OiBzdHJpbmc7CiAgc3VjY2Vzc01lc3NhZ2U/OiBzdHJpbmc7CiAgc2hvd0ZlZWRiYWNrPzogYm9vbGVhbjsKfQoKZXhwb3J0IGZ1bmN0aW9uIEZvcm08VFZhbHVlcyBleHRlbmRzIEZpZWxkVmFsdWVzPih7CiAgc2NoZW1hLAogIGRlZmF1bHRWYWx1ZXMsCiAgb25TdWJtaXQsCiAgY2hpbGRyZW4sCiAgY2xhc3NOYW1lLAogIGlkLAogIHN1Y2Nlc3NNZXNzYWdlLAogIHNob3dGZWVkYmFjayA9IHRydWUsCn06IEZvcm1Qcm9wczxUVmFsdWVzPikgewogIGNvbnN0IG1ldGhvZHMgPSB1c2VGb3JtPFRWYWx1ZXM+KHsKICAgIC8vIFRoZSByZXNvbHZlciBpcyB0eXBlZCBmcm9tIHRoZSBzY2hlbWEncyBvd24gaW5wdXQgcGFpciwgd2hpY2ggd2Ugd2lkZW5lZAogICAgLy8gdG8gRmllbGRWYWx1ZXMgYWJvdmU7IHRoZSBwYXJzZWQgb3V0cHV0IGlzIHN0aWxsIGV4YWN0bHkgVFZhbHVlcy4KICAgIHJlc29sdmVyOiB6b2RSZXNvbHZlcihzY2hlbWEpIGFzIFJlc29sdmVyPFRWYWx1ZXM+LAogICAgZGVmYXVsdFZhbHVlcywKICAgIG1vZGU6ICJvbkJsdXIiLAogICAgcmVWYWxpZGF0ZU1vZGU6ICJvbkJsdXIiLAogICAgY3JpdGVyaWFNb2RlOiAiZmlyc3RFcnJvciIsCiAgICBzaG91bGRGb2N1c0Vycm9yOiB0cnVlLAogIH0pOwoKICBjb25zdCBbZm9ybUVycm9yLCBzZXRGb3JtRXJyb3JdID0gdXNlU3RhdGU8c3RyaW5nIHwgbnVsbD4obnVsbCk7CiAgY29uc3QgW2Zvcm1TdWNjZXNzLCBzZXRGb3JtU3VjY2Vzc10gPSB1c2VTdGF0ZTxzdHJpbmcgfCBudWxsPihudWxsKTsKCiAgY29uc3QgaGFuZGxlVmFsaWRTdWJtaXQgPSBhc3luYyAodmFsdWVzOiBUVmFsdWVzKSA9PiB7CiAgICBzZXRGb3JtRXJyb3IobnVsbCk7CiAgICBzZXRGb3JtU3VjY2VzcyhudWxsKTsKICAgIHRyeSB7CiAgICAgIGF3YWl0IG9uU3VibWl0KHZhbHVlcyk7CiAgICAgIGlmIChzdWNjZXNzTWVzc2FnZSkgc2V0Rm9ybVN1Y2Nlc3Moc3VjY2Vzc01lc3NhZ2UpOwogICAgfSBjYXRjaCAoZXJyKSB7CiAgICAgIGNvbnN0IG1lc3NhZ2UgPQogICAgICAgIGVyciBpbnN0YW5jZW9mIEVycm9yCiAgICAgICAgICA/IGVyci5tZXNzYWdlCiAgICAgICAgICA6IHR5cGVvZiBlcnIgPT09ICJzdHJpbmciCiAgICAgICAgICAgID8gZXJyCiAgICAgICAgICAgIDogIlNvbWV0aGluZyB3ZW50IHdyb25nLiBQbGVhc2UgdHJ5IGFnYWluLiI7CiAgICAgIHNldEZvcm1FcnJvcihtZXNzYWdlKTsKICAgIH0KICB9OwoKICBjb25zdCByZW5kZXJQcm9wczogRm9ybVJlbmRlclByb3BzPFRWYWx1ZXM+ID0gdXNlTWVtbygKICAgICgpID0+ICh7CiAgICAgIC4uLm1ldGhvZHMsCiAgICAgIGZvcm1FcnJvciwKICAgICAgZm9ybVN1Y2Nlc3MsCiAgICAgIHNldEZvcm1FcnJvciwKICAgICAgc2V0Rm9ybVN1Y2Nlc3MsCiAgICB9KSwKICAgIFttZXRob2RzLCBmb3JtRXJyb3IsIGZvcm1TdWNjZXNzXSwKICApOwoKICByZXR1cm4gKAogICAgPEZvcm1Qcm92aWRlciB7Li4ubWV0aG9kc30+CiAgICAgIDxmb3JtCiAgICAgICAgaWQ9e2lkfQogICAgICAgIGNsYXNzTmFtZT17Y24oInNwYWNlLXktNCIsIGNsYXNzTmFtZSl9CiAgICAgICAgb25TdWJtaXQ9e21ldGhvZHMuaGFuZGxlU3VibWl0KGhhbmRsZVZhbGlkU3VibWl0KX0KICAgICAgPgogICAgICAgIHtzaG93RmVlZGJhY2sgJiYgZm9ybUVycm9yICYmICgKICAgICAgICAgIDxwIGNsYXNzTmFtZT0idGV4dC1bMTBweF0gdGV4dC1yZWQtNDAwIGZvbnQtbW9ubyI+e2Zvcm1FcnJvcn08L3A+CiAgICAgICAgKX0KICAgICAgICB7c2hvd0ZlZWRiYWNrICYmIGZvcm1TdWNjZXNzICYmICgKICAgICAgICAgIDxwIGNsYXNzTmFtZT0idGV4dC1bMTBweF0gdGV4dC1bIzAwZmY4OF0gZm9udC1tb25vIj57Zm9ybVN1Y2Nlc3N9PC9wPgogICAgICAgICl9CiAgICAgICAge3R5cGVvZiBjaGlsZHJlbiA9PT0gImZ1bmN0aW9uIiA/IGNoaWxkcmVuKHJlbmRlclByb3BzKSA6IGNoaWxkcmVufQogICAgICA8L2Zvcm0+CiAgICA8L0Zvcm1Qcm92aWRlcj4KICApOwp9Cg==
+"use client";
+
+import React, { useMemo, useState } from "react";
+import type { DefaultValues, FieldValues } from "react-hook-form";
+import {
+  FormProvider,
+  useForm,
+  type Resolver,
+  type UseFormReturn,
+} from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { cn } from "@/lib/utils";
+
+export type FormRenderProps<TValues extends FieldValues> =
+  UseFormReturn<TValues> & {
+    formError: string | null;
+    formSuccess: string | null;
+    setFormError: React.Dispatch<React.SetStateAction<string | null>>;
+    setFormSuccess: React.Dispatch<React.SetStateAction<string | null>>;
+  };
+
+/**
+ * Generic over the parsed *value* type rather than the schema type.
+ *
+ * With `@hookform/resolvers` v5 the resolver is typed from the schema's own
+ * input/output pair; a `TSchema extends z.ZodType` parameter leaves that pair
+ * unresolved (`output<TSchema>` never narrows to `FieldValues`), which is what
+ * produced the `unknown is not assignable to FieldValues` errors. Binding the
+ * schema as `z.ZodType<TValues, TValues>` pins both sides to the same concrete
+ * record and the resolver, `useForm<TValues>` and the render props all agree.
+ */
+export interface FormProps<TValues extends FieldValues> {
+  // Input is `FieldValues` rather than `TValues` because a schema with defaults
+  // or transforms accepts a looser shape than it returns (e.g. an optional field
+  // with `.default()`); pinning both sides rejects those schemas.
+  schema: z.ZodType<TValues, FieldValues>;
+  defaultValues?: DefaultValues<TValues>;
+  onSubmit: (values: TValues) => void | Promise<void>;
+  children:
+    | React.ReactNode
+    | ((methods: FormRenderProps<TValues>) => React.ReactNode);
+  className?: string;
+  id?: string;
+  successMessage?: string;
+  showFeedback?: boolean;
+}
+
+export function Form<TValues extends FieldValues>({
+  schema,
+  defaultValues,
+  onSubmit,
+  children,
+  className,
+  id,
+  successMessage,
+  showFeedback = true,
+}: FormProps<TValues>) {
+  const methods = useForm<TValues>({
+    // The resolver is typed from the schema's own input pair, which we widened
+    // to FieldValues above; the parsed output is still exactly TValues.
+    resolver: zodResolver(schema) as Resolver<TValues>,
+    defaultValues,
+    mode: "onBlur",
+    reValidateMode: "onBlur",
+    criteriaMode: "firstError",
+    shouldFocusError: true,
+  });
+
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
+  const handleValidSubmit = async (values: TValues) => {
+    setFormError(null);
+    setFormSuccess(null);
+    try {
+      await onSubmit(values);
+      if (successMessage) setFormSuccess(successMessage);
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === "string"
+            ? err
+            : "Something went wrong. Please try again.";
+      setFormError(message);
+    }
+  };
+
+  const renderProps: FormRenderProps<TValues> = useMemo(
+    () => ({
+      ...methods,
+      formError,
+      formSuccess,
+      setFormError,
+      setFormSuccess,
+    }),
+    [methods, formError, formSuccess],
+  );
+
+  return (
+    <FormProvider {...methods}>
+      <form
+        id={id}
+        className={cn("space-y-4", className)}
+        onSubmit={methods.handleSubmit(handleValidSubmit)}
+      >
+        {showFeedback && formError && (
+          <p className="text-[10px] text-red-400 font-mono">{formError}</p>
+        )}
+        {showFeedback && formSuccess && (
+          <p className="text-[10px] text-[#00ff88] font-mono">{formSuccess}</p>
+        )}
+        {typeof children === "function" ? children(renderProps) : children}
+      </form>
+    </FormProvider>
+  );
+}

@@ -1,1 +1,380 @@
-aW1wb3J0IHsgeiB9IGZyb20gInpvZCI7CgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gVHlwZXMKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgovKiogTGlnaHR3ZWlnaHQgZGVzY3JpcHRvciBmb3IgYSBzaW5nbGUgZmllbGQgaW4gYSBab2Qgb2JqZWN0IHNjaGVtYS4gKi8KZXhwb3J0IGludGVyZmFjZSBGaWVsZERlZmluaXRpb24gewogIC8qKiBIdW1hbi1yZWFkYWJsZSB0eXBlIGxhYmVsIChlLmcuICJzdHJpbmciLCAibnVtYmVyIiwgIlpvZE9iamVjdCIpLiAqLwogIHR5cGU6IHN0cmluZzsKICAvKiogV2hldGhlciB0aGUgZmllbGQgaXMgcmVxdWlyZWQgKG5vdCBvcHRpb25hbCAvIG51bGxhYmxlIC8gZGVmYXVsdGVkKS4gKi8KICByZXF1aXJlZDogYm9vbGVhbjsKICAvKiogRGVzY3JpcHRpb24gZnJvbSAuZGVzY3JpYmUoKSBpZiBwcmVzZW50LiAqLwogIGRlc2NyaXB0aW9uPzogc3RyaW5nOwogIC8qKiBGb3Igb2JqZWN0IGZpZWxkcywgdGhlIG5lc3RlZCBmaWVsZCBtYXAuICovCiAgZmllbGRzPzogUmVjb3JkPHN0cmluZywgRmllbGREZWZpbml0aW9uPjsKICAvKiogRm9yIGFycmF5IGZpZWxkcywgdGhlIGVsZW1lbnQgZGVmaW5pdGlvbi4gKi8KICBlbGVtZW50PzogRmllbGREZWZpbml0aW9uOwogIC8qKiBGb3IgdW5pb24gZmllbGRzLCB0aGUgbWVtYmVyIGRlZmluaXRpb25zLiAqLwogIG9wdGlvbnM/OiBGaWVsZERlZmluaXRpb25bXTsKfQoKLyoqCiAqIEEgbmFtZWQgc25hcHNob3Qgb2YgYSBab2RPYmplY3Qgc2NoZW1hIHVzZWQgZm9yIHZlcnNpb24tY29tcGFyaXNvbi4KICovCmV4cG9ydCBpbnRlcmZhY2UgU2NoZW1hU25hcHNob3QgewogIC8qKiBVbmlxdWUgbmFtZSBmb3IgdGhlIHNjaGVtYSAoZS5nLiAiUHJvcGVydHlJbmZvIiwgIlRyYW5zYWN0aW9uIikuICovCiAgbmFtZTogc3RyaW5nOwogIC8qKiBNYXAgb2YgdG9wLWxldmVsIGZpZWxkIGRlZmluaXRpb25zLiAqLwogIGZpZWxkczogUmVjb3JkPHN0cmluZywgRmllbGREZWZpbml0aW9uPjsKICAvKiogSVNPIHRpbWVzdGFtcCBvZiB3aGVuIHRoZSBzbmFwc2hvdCB3YXMgdGFrZW4uICovCiAgY2FwdHVyZWRBdDogc3RyaW5nOwp9CgovKioKICogUmVzdWx0IG9mIGNvbXBhcmluZyB0d28gc2NoZW1hIHNuYXBzaG90cy4KICovCmV4cG9ydCBpbnRlcmZhY2UgU2NoZW1hRGlmZiB7CiAgLyoqIEZpZWxkcyBhZGRlZCBpbiB0aGUgY3VycmVudCB2ZXJzaW9uLiAqLwogIGFkZGVkOiBzdHJpbmdbXTsKICAvKiogRmllbGRzIHJlbW92ZWQgZnJvbSB0aGUgY3VycmVudCB2ZXJzaW9uLiAqLwogIHJlbW92ZWQ6IHN0cmluZ1tdOwogIC8qKiBGaWVsZHMgd2hvc2UgZGVmaW5pdGlvbiBjaGFuZ2VkICh0eXBlLCByZXF1aXJlZCBmbGFnLCBuZXN0ZWQgZmllbGRzKS4gKi8KICBjaGFuZ2VkOiB7CiAgICBmaWVsZDogc3RyaW5nOwogICAgZGV0YWlsczogc3RyaW5nW107CiAgfVtdOwp9CgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KLy8gWm9kIHVud3JhcHBpbmcgaGVscGVycwovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCi8qKgogKiB2NCBgX2RlZmAgYXMgYSBsb29zZSByZWNvcmQuIFRoZSBsaXRlcmFsIGB0eXBlYCBkaXNjcmltaW5hdG9yIGlzIHRoZSBvbmx5CiAqIGZpZWxkIHdlIHJlbHkgb24gYWNyb3NzIGV2ZXJ5IHdyYXBwZXI7IHRoZSByZXN0IGFyZSByZWFkIHBlci1jYXNlIGFuZCBjYXN0LgogKi8KdHlwZSBMb29zZURlZiA9IHsgdHlwZT86IHN0cmluZzsgW2tleTogc3RyaW5nXTogdW5rbm93biB9OwoKZnVuY3Rpb24gcmF3RGVmKHNjaGVtYTogei5ab2RUeXBlKTogTG9vc2VEZWYgewogIHJldHVybiBzY2hlbWEuX2RlZiBhcyB1bmtub3duIGFzIExvb3NlRGVmOwp9CgovKioKICogVHlwZSBsYWJlbCBmb3IgYSBzY2hlbWEsIG1hdGNoaW5nIHRoZSBjbGFzcyBuYW1lcyB2MyBleHBvc2VkCiAqICgiWm9kU3RyaW5nIiwgIlpvZE9iamVjdCIsIOKApikgc28gc25hcHNob3RzIHN0YXkgY29tcGFyYWJsZSBhY3Jvc3MgdGhlCiAqIG1pZ3JhdGlvbi4gdjQgc3RvcmVzIHRoZSBzYW1lIGluZm9ybWF0aW9uIGFzIGBfZGVmLnR5cGVgICgic3RyaW5nIiwg4oCmKS4KICovCmZ1bmN0aW9uIHR5cGVMYWJlbChzY2hlbWE6IHouWm9kVHlwZSk6IHN0cmluZyB7CiAgY29uc3QgdHlwZSA9IHJhd0RlZihzY2hlbWEpLnR5cGU7CiAgaWYgKHR5cGVvZiB0eXBlICE9PSAic3RyaW5nIiB8fCB0eXBlLmxlbmd0aCA9PT0gMCkgcmV0dXJuICJab2RVbmtub3duIjsKICByZXR1cm4gYFpvZCR7dHlwZS5jaGFyQXQoMCkudG9VcHBlckNhc2UoKX0ke3R5cGUuc2xpY2UoMSl9YDsKfQoKLyoqCiAqIFN0cmlwIGF3YXkgWm9kIHdyYXBwZXIgdHlwZXMgKE9wdGlvbmFsLCBOdWxsYWJsZSwgRGVmYXVsdCwgUmVhZG9ubHksIFBpcGUsCiAqIExhenkpIHRvIHJlYWNoIHRoZSAqaW5uZXIqIHNjaGVtYSB0aGF0IGNhcnJpZXMgdGhlIHN0cnVjdHVyYWwgaW5mb3JtYXRpb24uCiAqCiAqIHpvZCB2NCByZW1vdmVkIHRoZSBjbGFzcyBoaWVyYXJjaHkgdGhlIHYzIHZlcnNpb24gb2YgdGhpcyBoZWxwZXIgc3dpdGNoZWQgb24KICogKGBab2RFZmZlY3RzYCwgYFpvZFBpcGVsaW5lYCwgYFpvZEJyYW5kZWRgIG5vIGxvbmdlciBleGlzdCksIGFuZCBgX2RlZmAgaXMgbm93CiAqIGEgZGlzY3JpbWluYXRlZCByZWNvcmQga2V5ZWQgYnkgYSBsaXRlcmFsIGB0eXBlYCBzdHJpbmcuIERpc3BhdGNoaW5nIG9uIHRoYXQKICogc3RyaW5nIGtlZXBzIHRoZSBoZWxwZXIgd29ya2luZyBhY3Jvc3Mgd3JhcHBlcnMgd2l0aG91dCBkZXBlbmRpbmcgb24gY2xhc3NlcwogKiB0aGF0IG1heSBiZSByZW5hbWVkIGFnYWluLgogKgogKiBJTVBPUlRBTlQ6IGBjdXJyZW50YCBpcyBhbHdheXMgaW5pdGlhbGlzZWQgZnJvbSBhIGNvbmNyZXRlIHNjaGVtYSBhcmd1bWVudCwKICogYW5kIHRoZSBsb29wIGJvZHkgb25seSBhc3NpZ25zIGZyb20ga25vd24gYF9kZWZgIHByb3BlcnRpZXMuIEV2ZXJ5IGJyYW5jaAogKiBlaXRoZXIgcmVhc3NpZ25zIG9yIHJldHVybnMsIHNvIGBjdXJyZW50YCBpcyBuZXZlciBgdW5kZWZpbmVkYCBvbiByZXR1cm4uCiAqLwpleHBvcnQgZnVuY3Rpb24gdW53cmFwWm9kU2NoZW1hKHNjaGVtYTogei5ab2RUeXBlKTogei5ab2RUeXBlIHsKICBsZXQgY3VycmVudDogei5ab2RUeXBlID0gc2NoZW1hOwoKICAvLyBCb3VuZGVkIHdhbGs6IGEgbWFsZm9ybWVkIGxhenkgY2hhaW4gbXVzdCBub3QgaGFuZyB0aGUgcHJvY2Vzcy4KICBmb3IgKGxldCBndWFyZCA9IDA7IGd1YXJkIDwgMTAwOyBndWFyZCArPSAxKSB7CiAgICBjb25zdCBkZWYgPSByYXdEZWYoY3VycmVudCk7CiAgICBzd2l0Y2ggKGRlZi50eXBlKSB7CiAgICAgIC8vIC0tLS0gV3JhcHBlcnMgdGhhdCBjYXJyeSAuaW5uZXJUeXBlIC0tLS0KICAgICAgY2FzZSAib3B0aW9uYWwiOgogICAgICBjYXNlICJudWxsYWJsZSI6CiAgICAgIGNhc2UgImRlZmF1bHQiOgogICAgICBjYXNlICJyZWFkb25seSI6CiAgICAgICAgY3VycmVudCA9IGRlZi5pbm5lclR5cGUgYXMgei5ab2RUeXBlOwogICAgICAgIGJyZWFrOwoKICAgICAgLy8gLS0tLSBQaXBlOiBwcmVmZXIgdGhlICpvdXRwdXQqIHNpZGUsIHdoaWNoIGhvbGRzIHRoZSB2YWxpZGF0ZWQgc2hhcGUgLS0tLQogICAgICBjYXNlICJwaXBlIjogewogICAgICAgIGNvbnN0IG91dCA9IGRlZi5vdXQgYXMgei5ab2RUeXBlOwogICAgICAgIC8vIGB6LnN0cmluZygpLnRyYW5zZm9ybSjigKYpYCBwcm9kdWNlcyBab2RQaXBlPHN0cmluZywgWm9kVHJhbnNmb3JtPjsKICAgICAgICAvLyB0aGUgdHJhbnNmb3JtIGNhcnJpZXMgbm8gc3RydWN0dXJlLCBzbyBmYWxsIGJhY2sgdG8gdGhlIGlucHV0IHNjaGVtYS4KICAgICAgICBjdXJyZW50ID0KICAgICAgICAgIHJhd0RlZihvdXQpLnR5cGUgPT09ICJ0cmFuc2Zvcm0iID8gKGRlZi5pbiBhcyB6LlpvZFR5cGUpIDogb3V0OwogICAgICAgIGJyZWFrOwogICAgICB9CgogICAgICAvLyAtLS0tIExhenk6IHJlc29sdmUgb25jZSAtLS0tCiAgICAgIGNhc2UgImxhenkiOiB7CiAgICAgICAgY29uc3QgcmVzb2x2ZWQgPSAoZGVmLmdldHRlciBhcyAoKSA9PiB6LlpvZFR5cGUpKCk7CiAgICAgICAgLy8gR3VhcmQgYWdhaW5zdCBhIGdldHRlciB0aGF0IHJldHVybnMgaXRzIG93biB3cmFwcGVyLgogICAgICAgIGlmIChyZXNvbHZlZCA9PT0gY3VycmVudCkgcmV0dXJuIGN1cnJlbnQ7CiAgICAgICAgY3VycmVudCA9IHJlc29sdmVkOwogICAgICAgIGJyZWFrOwogICAgICB9CgogICAgICAvLyAtLS0tIEJhc2UgY2FzZSDigJMgbm90aGluZyBsZWZ0IHRvIHVud3JhcCAtLS0tCiAgICAgIGRlZmF1bHQ6CiAgICAgICAgcmV0dXJuIGN1cnJlbnQ7CiAgICB9CiAgfQoKICByZXR1cm4gY3VycmVudDsKfQoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCi8vIEZpZWxkLWRlZmluaXRpb24gZXh0cmFjdGlvbgovLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCi8qKgogKiBXYWxrIGEgKHBvc3NpYmx5IHdyYXBwZWQpIFpvZCBzY2hlbWEgYW5kIHByb2R1Y2UgYSB7QGxpbmsgRmllbGREZWZpbml0aW9ufS4KICovCmV4cG9ydCBmdW5jdGlvbiBleHRyYWN0RmllbGREZWZpbml0aW9uKHNjaGVtYTogei5ab2RUeXBlKTogRmllbGREZWZpbml0aW9uIHsKICBjb25zdCBpbm5lciA9IHVud3JhcFpvZFNjaGVtYShzY2hlbWEpOwogIGNvbnN0IHJlcXVpcmVkID0KICAgICEoc2NoZW1hIGluc3RhbmNlb2Ygei5ab2RPcHRpb25hbCkgJiYKICAgICEoc2NoZW1hIGluc3RhbmNlb2Ygei5ab2ROdWxsYWJsZSkgJiYKICAgICEoc2NoZW1hIGluc3RhbmNlb2Ygei5ab2REZWZhdWx0KTsKCiAgY29uc3QgYmFzZTogRmllbGREZWZpbml0aW9uID0gewogICAgdHlwZTogdHlwZUxhYmVsKGlubmVyKSwKICAgIHJlcXVpcmVkLAogICAgZGVzY3JpcHRpb246CiAgICAgICJkZXNjcmlwdGlvbiIgaW4gaW5uZXIKICAgICAgICA/IChpbm5lci5kZXNjcmlwdGlvbiBhcyBzdHJpbmcgfCB1bmRlZmluZWQpCiAgICAgICAgOiB1bmRlZmluZWQsCiAgfTsKICBjb25zdCBkZWYgPSByYXdEZWYoaW5uZXIpOwoKICAvLyAtLS0tIE9iamVjdCAtLS0tCiAgaWYgKGlubmVyIGluc3RhbmNlb2Ygei5ab2RPYmplY3QpIHsKICAgIC8vIHY0IGV4cG9zZXMgYF9kZWYuc2hhcGVgIGFzIGEgcGxhaW4gcmVjb3JkOyB2MyBoYWQgaXQgYXMgYSBtZXRob2QuCiAgICBjb25zdCBzaGFwZSA9IChkZWYuc2hhcGUgPz8ge30pIGFzIFJlY29yZDxzdHJpbmcsIHouWm9kVHlwZT47CiAgICBjb25zdCBmaWVsZHM6IFJlY29yZDxzdHJpbmcsIEZpZWxkRGVmaW5pdGlvbj4gPSB7fTsKICAgIGZvciAoY29uc3Qga2V5IG9mIE9iamVjdC5rZXlzKHNoYXBlKSkgewogICAgICBjb25zdCBmaWVsZFNjaGVtYTogei5ab2RUeXBlIHwgdW5kZWZpbmVkID0gc2hhcGVba2V5XTsKICAgICAgaWYgKGZpZWxkU2NoZW1hKSB7CiAgICAgICAgZmllbGRzW2tleV0gPSBleHRyYWN0RmllbGREZWZpbml0aW9uKGZpZWxkU2NoZW1hKTsKICAgICAgfQogICAgfQogICAgYmFzZS5maWVsZHMgPSBmaWVsZHM7CiAgfQoKICAvLyAtLS0tIEFycmF5IC0tLS0KICBpZiAoaW5uZXIgaW5zdGFuY2VvZiB6LlpvZEFycmF5KSB7CiAgICAvLyB2MyBzdG9yZWQgdGhlIGVsZW1lbnQgdW5kZXIgYF9kZWYudHlwZWA7IHY0IHJlbmFtZWQgaXQgdG8gYF9kZWYuZWxlbWVudGAuCiAgICBjb25zdCBlbGVtZW50U2NoZW1hID0gZGVmLmVsZW1lbnQgYXMgei5ab2RUeXBlIHwgdW5kZWZpbmVkOwogICAgaWYgKGVsZW1lbnRTY2hlbWEpIGJhc2UuZWxlbWVudCA9IGV4dHJhY3RGaWVsZERlZmluaXRpb24oZWxlbWVudFNjaGVtYSk7CiAgfQoKICAvLyAtLS0tIFVuaW9uIC8gRGlzY3JpbWluYXRlZFVuaW9uIC0tLS0KICBpZiAoaW5uZXIgaW5zdGFuY2VvZiB6LlpvZFVuaW9uIHx8IGlubmVyIGluc3RhbmNlb2Ygei5ab2REaXNjcmltaW5hdGVkVW5pb24pIHsKICAgIGNvbnN0IG9wdGlvbnM6IEZpZWxkRGVmaW5pdGlvbltdID0gW107CiAgICBjb25zdCBvcHRzID0gKGRlZi5vcHRpb25zID8/IFtdKSBhcyByZWFkb25seSB6LlpvZFR5cGVbXTsKICAgIGZvciAoY29uc3Qgb3B0IG9mIG9wdHMpIHsKICAgICAgb3B0aW9ucy5wdXNoKGV4dHJhY3RGaWVsZERlZmluaXRpb24ob3B0KSk7CiAgICB9CiAgICBiYXNlLm9wdGlvbnMgPSBvcHRpb25zOwogIH0KCiAgcmV0dXJuIGJhc2U7Cn0KCi8qKgogKiBFeHRyYWN0IGEge0BsaW5rIFNjaGVtYVNuYXBzaG90fSBmcm9tIGEgbmFtZWQgWm9kT2JqZWN0IHNjaGVtYS4KICovCmV4cG9ydCBmdW5jdGlvbiBjYXB0dXJlU2NoZW1hU25hcHNob3QoCiAgbmFtZTogc3RyaW5nLAogIHNjaGVtYTogei5ab2RPYmplY3Q8ei5ab2RSYXdTaGFwZT4sCik6IFNjaGVtYVNuYXBzaG90IHsKICBjb25zdCBzaGFwZSA9IChyYXdEZWYoc2NoZW1hKS5zaGFwZSA/PyB7fSkgYXMgUmVjb3JkPHN0cmluZywgei5ab2RUeXBlPjsKICBjb25zdCBmaWVsZHM6IFJlY29yZDxzdHJpbmcsIEZpZWxkRGVmaW5pdGlvbj4gPSB7fTsKCiAgZm9yIChjb25zdCBrZXkgb2YgT2JqZWN0LmtleXMoc2hhcGUpKSB7CiAgICAvLyBXaXRoIG5vVW5jaGVja2VkSW5kZXhlZEFjY2VzcywgYnJhY2tldCBhY2Nlc3Mgb24gUmVjb3JkPEssVj4gcmV0dXJucwogICAgLy8gViB8IHVuZGVmaW5lZCDigJMgZ3VhcmQgdGhhdCBleHBsaWNpdGx5LgogICAgY29uc3QgZmllbGRTY2hlbWE6IHouWm9kVHlwZSB8IHVuZGVmaW5lZCA9IHNoYXBlW2tleV07CiAgICBpZiAoZmllbGRTY2hlbWEpIHsKICAgICAgZmllbGRzW2tleV0gPSBleHRyYWN0RmllbGREZWZpbml0aW9uKGZpZWxkU2NoZW1hKTsKICAgIH0KICB9CgogIHJldHVybiB7CiAgICBuYW1lLAogICAgZmllbGRzLAogICAgY2FwdHVyZWRBdDogbmV3IERhdGUoKS50b0lTT1N0cmluZygpLAogIH07Cn0KCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQovLyBDb21wYXJpc29uCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQoKLyoqCiAqIFJlY3Vyc2l2ZWx5IGNvbXBhcmUgdHdvIHtAbGluayBGaWVsZERlZmluaXRpb259IG9iamVjdHMgYW5kIHJldHVybiBhIGxpc3QKICogb2YgaHVtYW4tcmVhZGFibGUgY2hhbmdlIGRlc2NyaXB0aW9ucyAoZW1wdHkgPSBubyBkaWZmZXJlbmNlKS4KICovCmV4cG9ydCBmdW5jdGlvbiBjb21wYXJlRmllbGREZWZpbml0aW9uKAogIGN1cnJlbnQ6IEZpZWxkRGVmaW5pdGlvbiwKICBzbmFwc2hvdDogRmllbGREZWZpbml0aW9uLAogIHBhdGg6IHN0cmluZyA9ICIiLAopOiBzdHJpbmdbXSB7CiAgY29uc3QgZGlmZnM6IHN0cmluZ1tdID0gW107CiAgY29uc3QgcHJlZml4ID0gcGF0aCB8fCAiKHJvb3QpIjsKCiAgLy8gLS0tIHR5cGUgLS0tCiAgaWYgKGN1cnJlbnQudHlwZSAhPT0gc25hcHNob3QudHlwZSkgewogICAgZGlmZnMucHVzaCgKICAgICAgYCR7cHJlZml4fTogdHlwZSBjaGFuZ2VkIGZyb20gIiR7c25hcHNob3QudHlwZX0iIHRvICIke2N1cnJlbnQudHlwZX0iYCwKICAgICk7CiAgfQoKICAvLyAtLS0gcmVxdWlyZWQgZmxhZyAtLS0KICBpZiAoY3VycmVudC5yZXF1aXJlZCAhPT0gc25hcHNob3QucmVxdWlyZWQpIHsKICAgIGRpZmZzLnB1c2goCiAgICAgIGAke3ByZWZpeH06IHJlcXVpcmVkIGNoYW5nZWQgZnJvbSAke1N0cmluZyhzbmFwc2hvdC5yZXF1aXJlZCl9IHRvICR7U3RyaW5nKGN1cnJlbnQucmVxdWlyZWQpfWAsCiAgICApOwogIH0KCiAgLy8gLS0tIG5lc3RlZCBmaWVsZHMgLS0tCiAgY29uc3QgY3VycmVudEZpZWxkczogUmVjb3JkPHN0cmluZywgRmllbGREZWZpbml0aW9uPiA9IGN1cnJlbnQuZmllbGRzID8/IHt9OwogIGNvbnN0IHNuYXBzaG90RmllbGRzOiBSZWNvcmQ8c3RyaW5nLCBGaWVsZERlZmluaXRpb24+ID0gc25hcHNob3QuZmllbGRzID8/IHt9OwoKICBjb25zdCBhbGxLZXlzID0gbmV3IFNldChbCiAgICAuLi5PYmplY3Qua2V5cyhjdXJyZW50RmllbGRzKSwKICAgIC4uLk9iamVjdC5rZXlzKHNuYXBzaG90RmllbGRzKSwKICBdKTsKCiAgZm9yIChjb25zdCBrZXkgb2YgYWxsS2V5cykgewogICAgY29uc3QgbmVzdGVkUGF0aCA9IHBhdGggPyBgJHtwYXRofS4ke2tleX1gIDoga2V5OwogICAgY29uc3QgY3VycmVudEZpZWxkOiBGaWVsZERlZmluaXRpb24gfCB1bmRlZmluZWQgPSBjdXJyZW50RmllbGRzW2tleV07CiAgICBjb25zdCBzbmFwc2hvdEZpZWxkOiBGaWVsZERlZmluaXRpb24gfCB1bmRlZmluZWQgPSBzbmFwc2hvdEZpZWxkc1trZXldOwoKICAgIC8vIEJvdGggYGN1cnJlbnRGaWVsZGAgYW5kIGBzbmFwc2hvdEZpZWxkYCBtYXkgYmUgdW5kZWZpbmVkIGJlY2F1c2UKICAgIC8vIGBub1VuY2hlY2tlZEluZGV4ZWRBY2Nlc3NgIGZvcmNlcyBSZWNvcmQ8SyxWPiBsb29rdXBzIHRvIHJldHVybiBWfHVuZGVmaW5lZC4KICAgIC8vIFdlIGV4cGxpY2l0bHkgZ3VhcmQgYmVmb3JlIHJlY3Vyc2luZy4KICAgIGlmICghY3VycmVudEZpZWxkICYmIHNuYXBzaG90RmllbGQpIHsKICAgICAgZGlmZnMucHVzaChgJHtuZXN0ZWRQYXRofTogcmVtb3ZlZGApOwogICAgfSBlbHNlIGlmIChjdXJyZW50RmllbGQgJiYgIXNuYXBzaG90RmllbGQpIHsKICAgICAgZGlmZnMucHVzaChgJHtuZXN0ZWRQYXRofTogYWRkZWRgKTsKICAgIH0gZWxzZSBpZiAoY3VycmVudEZpZWxkICYmIHNuYXBzaG90RmllbGQpIHsKICAgICAgZGlmZnMucHVzaCgKICAgICAgICAuLi5jb21wYXJlRmllbGREZWZpbml0aW9uKGN1cnJlbnRGaWVsZCwgc25hcHNob3RGaWVsZCwgbmVzdGVkUGF0aCksCiAgICAgICk7CiAgICB9CiAgfQoKICAvLyAtLS0gYXJyYXkgZWxlbWVudCAtLS0KICBpZiAoY3VycmVudC5lbGVtZW50ICYmIHNuYXBzaG90LmVsZW1lbnQpIHsKICAgIGRpZmZzLnB1c2goCiAgICAgIC4uLmNvbXBhcmVGaWVsZERlZmluaXRpb24oCiAgICAgICAgY3VycmVudC5lbGVtZW50LAogICAgICAgIHNuYXBzaG90LmVsZW1lbnQsCiAgICAgICAgYCR7cHJlZml4fVtlbGVtZW50XWAsCiAgICAgICksCiAgICApOwogIH0gZWxzZSBpZiAoY3VycmVudC5lbGVtZW50ICYmICFzbmFwc2hvdC5lbGVtZW50KSB7CiAgICBkaWZmcy5wdXNoKGAke3ByZWZpeH06IGFycmF5IGVsZW1lbnQgZGVmaW5pdGlvbiBhZGRlZGApOwogIH0gZWxzZSBpZiAoIWN1cnJlbnQuZWxlbWVudCAmJiBzbmFwc2hvdC5lbGVtZW50KSB7CiAgICBkaWZmcy5wdXNoKGAke3ByZWZpeH06IGFycmF5IGVsZW1lbnQgZGVmaW5pdGlvbiByZW1vdmVkYCk7CiAgfQoKICAvLyAtLS0gdW5pb24gb3B0aW9ucyAtLS0KICBjb25zdCBjdXJyZW50T3B0cyA9IGN1cnJlbnQub3B0aW9ucyA/PyBbXTsKICBjb25zdCBzbmFwc2hvdE9wdHMgPSBzbmFwc2hvdC5vcHRpb25zID8/IFtdOwogIGlmIChjdXJyZW50T3B0cy5sZW5ndGggIT09IHNuYXBzaG90T3B0cy5sZW5ndGgpIHsKICAgIGRpZmZzLnB1c2goCiAgICAgIGAke3ByZWZpeH06IHVuaW9uIG1lbWJlcnMgY291bnQgY2hhbmdlZCBmcm9tICR7c25hcHNob3RPcHRzLmxlbmd0aH0gdG8gJHtjdXJyZW50T3B0cy5sZW5ndGh9YCwKICAgICk7CiAgfSBlbHNlIHsKICAgIGZvciAobGV0IGkgPSAwOyBpIDwgY3VycmVudE9wdHMubGVuZ3RoOyBpKyspIHsKICAgICAgY29uc3QgYyA9IGN1cnJlbnRPcHRzW2ldOwogICAgICBjb25zdCBzID0gc25hcHNob3RPcHRzW2ldOwogICAgICAvLyBgbm9VbmNoZWNrZWRJbmRleGVkQWNjZXNzYCBtZWFucyBjL3MgY291bGQgYmUgdW5kZWZpbmVkIGZvcgogICAgICAvLyBvdXQtb2YtYm91bmRzIGluZGljZXMgb24gcmVhZG9ubHkgdHVwbGVzLiBHdWFyZCBiZWZvcmUgcmVjdXJzaW5nLgogICAgICBpZiAoYyAmJiBzKSB7CiAgICAgICAgZGlmZnMucHVzaCguLi5jb21wYXJlRmllbGREZWZpbml0aW9uKGMsIHMsIGAke3ByZWZpeH1bdW5pb25AJHtpfV1gKSk7CiAgICAgIH0KICAgIH0KICB9CgogIHJldHVybiBkaWZmczsKfQoKLyoqCiAqIENvbXBhcmUgdHdvIHtAbGluayBTY2hlbWFTbmFwc2hvdH0gb2JqZWN0cyBhbmQgcHJvZHVjZSBhIHN0cnVjdHVyZWQgZGlmZi4KICovCmV4cG9ydCBmdW5jdGlvbiBkaWZmU2NoZW1hU25hcHNob3RzKAogIGN1cnJlbnQ6IFNjaGVtYVNuYXBzaG90LAogIHNuYXBzaG90OiBTY2hlbWFTbmFwc2hvdCwKKTogU2NoZW1hRGlmZiB7CiAgY29uc3QgY3VycmVudEtleXMgPSBPYmplY3Qua2V5cyhjdXJyZW50LmZpZWxkcyk7CiAgY29uc3Qgc25hcHNob3RLZXlzID0gT2JqZWN0LmtleXMoc25hcHNob3QuZmllbGRzKTsKCiAgY29uc3QgYWRkZWQgPSBjdXJyZW50S2V5cy5maWx0ZXIoKGspID0+ICFzbmFwc2hvdEtleXMuaW5jbHVkZXMoaykpOwogIGNvbnN0IHJlbW92ZWQgPSBzbmFwc2hvdEtleXMuZmlsdGVyKChrKSA9PiAhY3VycmVudEtleXMuaW5jbHVkZXMoaykpOwoKICBjb25zdCBjaGFuZ2VkOiBTY2hlbWFEaWZmWyJjaGFuZ2VkIl0gPSBbXTsKCiAgZm9yIChjb25zdCBrZXkgb2YgY3VycmVudEtleXMpIHsKICAgIGlmIChyZW1vdmVkLmluY2x1ZGVzKGtleSkpIGNvbnRpbnVlOwogICAgY29uc3QgY3VyckRlZjogRmllbGREZWZpbml0aW9uIHwgdW5kZWZpbmVkID0gY3VycmVudC5maWVsZHNba2V5XTsKICAgIGNvbnN0IHNuYXBEZWY6IEZpZWxkRGVmaW5pdGlvbiB8IHVuZGVmaW5lZCA9IHNuYXBzaG90LmZpZWxkc1trZXldOwoKICAgIC8vIEd1YXJkIGFnYWluc3Qgbm9VbmNoZWNrZWRJbmRleGVkQWNjZXNzIOKAkyB0aGUga2V5IGV4aXN0cyBpbiBib3RoIG1hcHMKICAgIC8vIGJ1dCBUeXBlU2NyaXB0IGRvZXNuJ3Qga25vdyB0aGF0IGF0IHRoZSB0eXBlIGxldmVsLgogICAgaWYgKCFjdXJyRGVmIHx8ICFzbmFwRGVmKSBjb250aW51ZTsKCiAgICBjb25zdCBkZXRhaWxzID0gY29tcGFyZUZpZWxkRGVmaW5pdGlvbihjdXJyRGVmLCBzbmFwRGVmLCBrZXkpOwogICAgaWYgKGRldGFpbHMubGVuZ3RoID4gMCkgewogICAgICBjaGFuZ2VkLnB1c2goeyBmaWVsZDoga2V5LCBkZXRhaWxzIH0pOwogICAgfQogIH0KCiAgcmV0dXJuIHsgYWRkZWQsIHJlbW92ZWQsIGNoYW5nZWQgfTsKfQoKLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCi8vIFZhbGlkYXRpb24gaGVscGVyCi8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQoKLyoqCiAqIENhcHR1cmUgdGhlIGN1cnJlbnQgc2hhcGUgb2YgYSBzY2hlbWEgYW5kIGNvbXBhcmUgaXQgYWdhaW5zdCBhIHByZXZpb3VzbHkKICogc3RvcmVkIGJhc2VsaW5lIHNuYXBzaG90LiAgUmV0dXJucyBgdmFsaWQ6IHRydWVgIHdoZW4gdGhlIGN1cnJlbnQgc2NoZW1hCiAqIGV4YWN0bHkgbWF0Y2hlcyB0aGUgYmFzZWxpbmUsIGFuZCBgdmFsaWQ6IGZhbHNlYCB0b2dldGhlciB3aXRoIGEgc3RydWN0dXJlZAogKiBkaWZmIG90aGVyd2lzZS4KICoKICogVXNlIHRoaXMgaW4gQ0kgb3IgYSBwcmUtY29tbWl0IGhvb2sgdG8gcHJldmVudCBhY2NpZGVudGFsIGJyZWFraW5nIHNjaGVtYQogKiBjaGFuZ2VzIGZyb20gbGFuZGluZyB1bm5vdGljZWQuCiAqLwpleHBvcnQgZnVuY3Rpb24gdmFsaWRhdGVTY2hlbWFTbmFwc2hvdCgKICBuYW1lOiBzdHJpbmcsCiAgc2NoZW1hOiB6LlpvZE9iamVjdDx6LlpvZFJhd1NoYXBlPiwKICBiYXNlbGluZTogU2NoZW1hU25hcHNob3QsCik6IHsgdmFsaWQ6IGJvb2xlYW47IGRpZmY6IFNjaGVtYURpZmYgfSB7CiAgY29uc3QgY3VycmVudCA9IGNhcHR1cmVTY2hlbWFTbmFwc2hvdChuYW1lLCBzY2hlbWEpOwogIGNvbnN0IGRpZmYgPSBkaWZmU2NoZW1hU25hcHNob3RzKGN1cnJlbnQsIGJhc2VsaW5lKTsKCiAgLy8gQWRkaW5nIGEgbmV3ICpvcHRpb25hbCogZmllbGQgaXMgbm90IGEgYnJlYWtpbmcgY2hhbmdlIC0gb25seQogIC8vIHJlcXVpcmVkLWZpZWxkIGFkZGl0aW9ucywgcmVtb3ZhbHMsIGFuZCB0eXBlL3JlcXVpcmVkIGNoYW5nZXMgY291bnQuCiAgLy8gV2Ugc3RpbGwgcmV0dXJuIHRoZSBmdWxsIGRpZmYgZm9yIGRpYWdub3N0aWNzLCBidXQgb25seSB1c2UKICAvLyBicmVha2luZyBhZGRpdGlvbnMgaW4gdGhlIHZhbGlkaXR5IGRlY2lzaW9uLgogIGNvbnN0IGJyZWFraW5nQWRkcyA9IGRpZmYuYWRkZWQuZmlsdGVyKAogICAgKGtleSkgPT4gY3VycmVudC5maWVsZHNba2V5XT8ucmVxdWlyZWQgPT09IHRydWUsCiAgKTsKCiAgcmV0dXJuIHsKICAgIHZhbGlkOgogICAgICBicmVha2luZ0FkZHMubGVuZ3RoID09PSAwICYmCiAgICAgIGRpZmYucmVtb3ZlZC5sZW5ndGggPT09IDAgJiYKICAgICAgZGlmZi5jaGFuZ2VkLmxlbmd0aCA9PT0gMCwKICAgIGRpZmYsCiAgfTsKfQo=
+import { z } from "zod";
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+/** Lightweight descriptor for a single field in a Zod object schema. */
+export interface FieldDefinition {
+  /** Human-readable type label (e.g. "string", "number", "ZodObject"). */
+  type: string;
+  /** Whether the field is required (not optional / nullable / defaulted). */
+  required: boolean;
+  /** Description from .describe() if present. */
+  description?: string;
+  /** For object fields, the nested field map. */
+  fields?: Record<string, FieldDefinition>;
+  /** For array fields, the element definition. */
+  element?: FieldDefinition;
+  /** For union fields, the member definitions. */
+  options?: FieldDefinition[];
+}
+
+/**
+ * A named snapshot of a ZodObject schema used for version-comparison.
+ */
+export interface SchemaSnapshot {
+  /** Unique name for the schema (e.g. "PropertyInfo", "Transaction"). */
+  name: string;
+  /** Map of top-level field definitions. */
+  fields: Record<string, FieldDefinition>;
+  /** ISO timestamp of when the snapshot was taken. */
+  capturedAt: string;
+}
+
+/**
+ * Result of comparing two schema snapshots.
+ */
+export interface SchemaDiff {
+  /** Fields added in the current version. */
+  added: string[];
+  /** Fields removed from the current version. */
+  removed: string[];
+  /** Fields whose definition changed (type, required flag, nested fields). */
+  changed: {
+    field: string;
+    details: string[];
+  }[];
+}
+
+// ---------------------------------------------------------------------------
+// Zod unwrapping helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * v4 `_def` as a loose record. The literal `type` discriminator is the only
+ * field we rely on across every wrapper; the rest are read per-case and cast.
+ */
+type LooseDef = { type?: string; [key: string]: unknown };
+
+function rawDef(schema: z.ZodType): LooseDef {
+  return schema._def as unknown as LooseDef;
+}
+
+/**
+ * Type label for a schema, matching the class names v3 exposed
+ * ("ZodString", "ZodObject", …) so snapshots stay comparable across the
+ * migration. v4 stores the same information as `_def.type` ("string", …).
+ */
+function typeLabel(schema: z.ZodType): string {
+  const type = rawDef(schema).type;
+  if (typeof type !== "string" || type.length === 0) return "ZodUnknown";
+  return `Zod${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+}
+
+/**
+ * Strip away Zod wrapper types (Optional, Nullable, Default, Readonly, Pipe,
+ * Lazy) to reach the *inner* schema that carries the structural information.
+ *
+ * zod v4 removed the class hierarchy the v3 version of this helper switched on
+ * (`ZodEffects`, `ZodPipeline`, `ZodBranded` no longer exist), and `_def` is now
+ * a discriminated record keyed by a literal `type` string. Dispatching on that
+ * string keeps the helper working across wrappers without depending on classes
+ * that may be renamed again.
+ *
+ * IMPORTANT: `current` is always initialised from a concrete schema argument,
+ * and the loop body only assigns from known `_def` properties. Every branch
+ * either reassigns or returns, so `current` is never `undefined` on return.
+ */
+export function unwrapZodSchema(schema: z.ZodType): z.ZodType {
+  let current: z.ZodType = schema;
+
+  // Bounded walk: a malformed lazy chain must not hang the process.
+  for (let guard = 0; guard < 100; guard += 1) {
+    const def = rawDef(current);
+    switch (def.type) {
+      // ---- Wrappers that carry .innerType ----
+      case "optional":
+      case "nullable":
+      case "default":
+      case "readonly":
+        current = def.innerType as z.ZodType;
+        break;
+
+      // ---- Pipe: prefer the *output* side, which holds the validated shape ----
+      case "pipe": {
+        const out = def.out as z.ZodType;
+        // `z.string().transform(…)` produces ZodPipe<string, ZodTransform>;
+        // the transform carries no structure, so fall back to the input schema.
+        current =
+          rawDef(out).type === "transform" ? (def.in as z.ZodType) : out;
+        break;
+      }
+
+      // ---- Lazy: resolve once ----
+      case "lazy": {
+        const resolved = (def.getter as () => z.ZodType)();
+        // Guard against a getter that returns its own wrapper.
+        if (resolved === current) return current;
+        current = resolved;
+        break;
+      }
+
+      // ---- Base case – nothing left to unwrap ----
+      default:
+        return current;
+    }
+  }
+
+  return current;
+}
+
+// ---------------------------------------------------------------------------
+// Field-definition extraction
+// ---------------------------------------------------------------------------
+
+/**
+ * Walk a (possibly wrapped) Zod schema and produce a {@link FieldDefinition}.
+ */
+export function extractFieldDefinition(schema: z.ZodType): FieldDefinition {
+  const inner = unwrapZodSchema(schema);
+  const required =
+    !(schema instanceof z.ZodOptional) &&
+    !(schema instanceof z.ZodNullable) &&
+    !(schema instanceof z.ZodDefault);
+
+  const base: FieldDefinition = {
+    type: typeLabel(inner),
+    required,
+    description:
+      "description" in inner
+        ? (inner.description as string | undefined)
+        : undefined,
+  };
+  const def = rawDef(inner);
+
+  // ---- Object ----
+  if (inner instanceof z.ZodObject) {
+    // v4 exposes `_def.shape` as a plain record; v3 had it as a method.
+    const shape = (def.shape ?? {}) as Record<string, z.ZodType>;
+    const fields: Record<string, FieldDefinition> = {};
+    for (const key of Object.keys(shape)) {
+      const fieldSchema: z.ZodType | undefined = shape[key];
+      if (fieldSchema) {
+        fields[key] = extractFieldDefinition(fieldSchema);
+      }
+    }
+    base.fields = fields;
+  }
+
+  // ---- Array ----
+  if (inner instanceof z.ZodArray) {
+    // v3 stored the element under `_def.type`; v4 renamed it to `_def.element`.
+    const elementSchema = def.element as z.ZodType | undefined;
+    if (elementSchema) base.element = extractFieldDefinition(elementSchema);
+  }
+
+  // ---- Union / DiscriminatedUnion ----
+  if (inner instanceof z.ZodUnion || inner instanceof z.ZodDiscriminatedUnion) {
+    const options: FieldDefinition[] = [];
+    const opts = (def.options ?? []) as readonly z.ZodType[];
+    for (const opt of opts) {
+      options.push(extractFieldDefinition(opt));
+    }
+    base.options = options;
+  }
+
+  return base;
+}
+
+/**
+ * Extract a {@link SchemaSnapshot} from a named ZodObject schema.
+ */
+export function captureSchemaSnapshot(
+  name: string,
+  schema: z.ZodObject<z.ZodRawShape>,
+): SchemaSnapshot {
+  const shape = (rawDef(schema).shape ?? {}) as Record<string, z.ZodType>;
+  const fields: Record<string, FieldDefinition> = {};
+
+  for (const key of Object.keys(shape)) {
+    // With noUncheckedIndexedAccess, bracket access on Record<K,V> returns
+    // V | undefined – guard that explicitly.
+    const fieldSchema: z.ZodType | undefined = shape[key];
+    if (fieldSchema) {
+      fields[key] = extractFieldDefinition(fieldSchema);
+    }
+  }
+
+  return {
+    name,
+    fields,
+    capturedAt: new Date().toISOString(),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Comparison
+// ---------------------------------------------------------------------------
+
+/**
+ * Recursively compare two {@link FieldDefinition} objects and return a list
+ * of human-readable change descriptions (empty = no difference).
+ */
+export function compareFieldDefinition(
+  current: FieldDefinition,
+  snapshot: FieldDefinition,
+  path: string = "",
+): string[] {
+  const diffs: string[] = [];
+  const prefix = path || "(root)";
+
+  // --- type ---
+  if (current.type !== snapshot.type) {
+    diffs.push(
+      `${prefix}: type changed from "${snapshot.type}" to "${current.type}"`,
+    );
+  }
+
+  // --- required flag ---
+  if (current.required !== snapshot.required) {
+    diffs.push(
+      `${prefix}: required changed from ${String(snapshot.required)} to ${String(current.required)}`,
+    );
+  }
+
+  // --- nested fields ---
+  const currentFields: Record<string, FieldDefinition> = current.fields ?? {};
+  const snapshotFields: Record<string, FieldDefinition> = snapshot.fields ?? {};
+
+  const allKeys = new Set([
+    ...Object.keys(currentFields),
+    ...Object.keys(snapshotFields),
+  ]);
+
+  for (const key of allKeys) {
+    const nestedPath = path ? `${path}.${key}` : key;
+    const currentField: FieldDefinition | undefined = currentFields[key];
+    const snapshotField: FieldDefinition | undefined = snapshotFields[key];
+
+    // Both `currentField` and `snapshotField` may be undefined because
+    // `noUncheckedIndexedAccess` forces Record<K,V> lookups to return V|undefined.
+    // We explicitly guard before recursing.
+    if (!currentField && snapshotField) {
+      diffs.push(`${nestedPath}: removed`);
+    } else if (currentField && !snapshotField) {
+      diffs.push(`${nestedPath}: added`);
+    } else if (currentField && snapshotField) {
+      diffs.push(
+        ...compareFieldDefinition(currentField, snapshotField, nestedPath),
+      );
+    }
+  }
+
+  // --- array element ---
+  if (current.element && snapshot.element) {
+    diffs.push(
+      ...compareFieldDefinition(
+        current.element,
+        snapshot.element,
+        `${prefix}[element]`,
+      ),
+    );
+  } else if (current.element && !snapshot.element) {
+    diffs.push(`${prefix}: array element definition added`);
+  } else if (!current.element && snapshot.element) {
+    diffs.push(`${prefix}: array element definition removed`);
+  }
+
+  // --- union options ---
+  const currentOpts = current.options ?? [];
+  const snapshotOpts = snapshot.options ?? [];
+  if (currentOpts.length !== snapshotOpts.length) {
+    diffs.push(
+      `${prefix}: union members count changed from ${snapshotOpts.length} to ${currentOpts.length}`,
+    );
+  } else {
+    for (let i = 0; i < currentOpts.length; i++) {
+      const c = currentOpts[i];
+      const s = snapshotOpts[i];
+      // `noUncheckedIndexedAccess` means c/s could be undefined for
+      // out-of-bounds indices on readonly tuples. Guard before recursing.
+      if (c && s) {
+        diffs.push(...compareFieldDefinition(c, s, `${prefix}[union@${i}]`));
+      }
+    }
+  }
+
+  return diffs;
+}
+
+/**
+ * Compare two {@link SchemaSnapshot} objects and produce a structured diff.
+ */
+export function diffSchemaSnapshots(
+  current: SchemaSnapshot,
+  snapshot: SchemaSnapshot,
+): SchemaDiff {
+  const currentKeys = Object.keys(current.fields);
+  const snapshotKeys = Object.keys(snapshot.fields);
+
+  const added = currentKeys.filter((k) => !snapshotKeys.includes(k));
+  const removed = snapshotKeys.filter((k) => !currentKeys.includes(k));
+
+  const changed: SchemaDiff["changed"] = [];
+
+  for (const key of currentKeys) {
+    if (removed.includes(key)) continue;
+    const currDef: FieldDefinition | undefined = current.fields[key];
+    const snapDef: FieldDefinition | undefined = snapshot.fields[key];
+
+    // Guard against noUncheckedIndexedAccess – the key exists in both maps
+    // but TypeScript doesn't know that at the type level.
+    if (!currDef || !snapDef) continue;
+
+    const details = compareFieldDefinition(currDef, snapDef, key);
+    if (details.length > 0) {
+      changed.push({ field: key, details });
+    }
+  }
+
+  return { added, removed, changed };
+}
+
+// ---------------------------------------------------------------------------
+// Validation helper
+// ---------------------------------------------------------------------------
+
+/**
+ * Capture the current shape of a schema and compare it against a previously
+ * stored baseline snapshot.  Returns `valid: true` when the current schema
+ * exactly matches the baseline, and `valid: false` together with a structured
+ * diff otherwise.
+ *
+ * Use this in CI or a pre-commit hook to prevent accidental breaking schema
+ * changes from landing unnoticed.
+ */
+export function validateSchemaSnapshot(
+  name: string,
+  schema: z.ZodObject<z.ZodRawShape>,
+  baseline: SchemaSnapshot,
+): { valid: boolean; diff: SchemaDiff } {
+  const current = captureSchemaSnapshot(name, schema);
+  const diff = diffSchemaSnapshots(current, baseline);
+
+  // Adding a new *optional* field is not a breaking change - only
+  // required-field additions, removals, and type/required changes count.
+  // We still return the full diff for diagnostics, but only use
+  // breaking additions in the validity decision.
+  const breakingAdds = diff.added.filter(
+    (key) => current.fields[key]?.required === true,
+  );
+
+  return {
+    valid:
+      breakingAdds.length === 0 &&
+      diff.removed.length === 0 &&
+      diff.changed.length === 0,
+    diff,
+  };
+}

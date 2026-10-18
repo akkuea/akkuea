@@ -1,1 +1,93 @@
-aW1wb3J0IHsgeiB9IGZyb20gInpvZCI7CmltcG9ydCB7CiAgc3RlbGxhckFkZHJlc3NTY2hlbWEsCiAgcG9zaXRpdmVBbW91bnRTY2hlbWEsCiAgaXNvRGF0ZVNjaGVtYSwKICBwZXJjZW50YWdlU2NoZW1hLAp9IGZyb20gIi4vY29tbW9uLnNjaGVtYS5qcyI7CgovKioKICogU2NoZW1hIGZvciBwcm9wZXJ0eSBsb2NhdGlvbgogKi8KZXhwb3J0IGNvbnN0IHByb3BlcnR5TG9jYXRpb25TY2hlbWEgPSB6Lm9iamVjdCh7CiAgYWRkcmVzczogei5zdHJpbmcoKS5taW4oMSwgIkFkZHJlc3MgaXMgcmVxdWlyZWQiKSwKICBjaXR5OiB6LnN0cmluZygpLm1pbigxLCAiQ2l0eSBpcyByZXF1aXJlZCIpLAogIGNvdW50cnk6IHouc3RyaW5nKCkubWluKDEsICJDb3VudHJ5IGlzIHJlcXVpcmVkIiksCiAgcG9zdGFsQ29kZTogei5zdHJpbmcoKS5vcHRpb25hbCgpLAogIGNvb3JkaW5hdGVzOiB6CiAgICAub2JqZWN0KHsKICAgICAgbGF0aXR1ZGU6IHoubnVtYmVyKCkubWluKC05MCkubWF4KDkwKSwKICAgICAgbG9uZ2l0dWRlOiB6Lm51bWJlcigpLm1pbigtMTgwKS5tYXgoMTgwKSwKICAgIH0pCiAgICAub3B0aW9uYWwoKSwKfSk7CgovKioKICogU2NoZW1hIGZvciBwcm9wZXJ0eSBkb2N1bWVudAogKi8KZXhwb3J0IGNvbnN0IHByb3BlcnR5RG9jdW1lbnRTY2hlbWEgPSB6Lm9iamVjdCh7CiAgaWQ6IHoudXVpZCgpLAogIHR5cGU6IHouZW51bShbImRlZWQiLCAiYXBwcmFpc2FsIiwgImluc3BlY3Rpb24iLCAiaW5zdXJhbmNlIiwgIm90aGVyIl0pLAogIG5hbWU6IHouc3RyaW5nKCkubWluKDEpLAogIHVybDogei51cmwoKSwKICB1cGxvYWRlZEF0OiBpc29EYXRlU2NoZW1hLAogIHZlcmlmaWVkOiB6LmJvb2xlYW4oKSwKfSk7CgovKioKICogU2NoZW1hIGZvciBQcm9wZXJ0eUluZm8KICovCmV4cG9ydCBjb25zdCBwcm9wZXJ0eUluZm9TY2hlbWEgPSB6Lm9iamVjdCh7CiAgaWQ6IHoudXVpZCgpLAogIG5hbWU6IHouc3RyaW5nKCkubWluKDEsICJQcm9wZXJ0eSBuYW1lIGlzIHJlcXVpcmVkIiksCiAgZGVzY3JpcHRpb246IHouc3RyaW5nKCkubWluKDEwLCAiRGVzY3JpcHRpb24gbXVzdCBiZSBhdCBsZWFzdCAxMCBjaGFyYWN0ZXJzIiksCiAgcHJvcGVydHlUeXBlOiB6LmVudW0oWwogICAgInJlc2lkZW50aWFsIiwKICAgICJjb21tZXJjaWFsIiwKICAgICJpbmR1c3RyaWFsIiwKICAgICJsYW5kIiwKICAgICJtaXhlZCIsCiAgXSksCiAgbG9jYXRpb246IHByb3BlcnR5TG9jYXRpb25TY2hlbWEsCiAgdG90YWxWYWx1ZTogcG9zaXRpdmVBbW91bnRTY2hlbWEsCiAgdG9rZW5BZGRyZXNzOiBzdGVsbGFyQWRkcmVzc1NjaGVtYS5vcHRpb25hbCgpLAogIHRvdGFsU2hhcmVzOiB6Lm51bWJlcigpLmludCgpLnBvc2l0aXZlKCksCiAgYXZhaWxhYmxlU2hhcmVzOiB6Lm51bWJlcigpLmludCgpLm1pbigwKSwKICBwcmljZVBlclNoYXJlOiBwb3NpdGl2ZUFtb3VudFNjaGVtYSwKICBleHBlY3RlZFlpZWxkOiBwZXJjZW50YWdlU2NoZW1hLm9wdGlvbmFsKCksCiAgaW1hZ2VzOiB6LmFycmF5KHoudXJsKCkpLm1pbigxLCAiQXQgbGVhc3Qgb25lIGltYWdlIHJlcXVpcmVkIiksCiAgc3BsYXRVcmw6IHoKICAgIC5zdHJpbmcoKQogICAgLnVybCgpCiAgICAub3B0aW9uYWwoKQogICAgLmRlc2NyaWJlKCJVUkwgdG8gM0QgR2F1c3NpYW4gU3BsYXR0aW5nIGZpbGUgKC5zcGxhdCkiKSwKICBkb2N1bWVudHM6IHouYXJyYXkocHJvcGVydHlEb2N1bWVudFNjaGVtYSksCiAgdmVyaWZpZWQ6IHouYm9vbGVhbigpLAogIGxpc3RlZEF0OiBpc29EYXRlU2NoZW1hLAogIG93bmVyOiBzdGVsbGFyQWRkcmVzc1NjaGVtYSwKfSk7CgovKioKICogU2NoZW1hIGZvciBTaGFyZU93bmVyc2hpcAogKi8KZXhwb3J0IGNvbnN0IHNoYXJlT3duZXJzaGlwU2NoZW1hID0gei5vYmplY3QoewogIHByb3BlcnR5SWQ6IHoudXVpZCgpLAogIG93bmVyOiBzdGVsbGFyQWRkcmVzc1NjaGVtYSwKICBzaGFyZXM6IHoubnVtYmVyKCkuaW50KCkucG9zaXRpdmUoKSwKICBwdXJjaGFzZVByaWNlOiBwb3NpdGl2ZUFtb3VudFNjaGVtYSwKICBwdXJjaGFzZWRBdDogaXNvRGF0ZVNjaGVtYSwKICBsYXN0RGl2aWRlbmRDbGFpbWVkOiBpc29EYXRlU2NoZW1hLm9wdGlvbmFsKCksCn0pOwoKLyoqCiAqIFR5cGUgaW5mZXJlbmNlIGZyb20gc2NoZW1hcyAtIFNpbmdsZSBzb3VyY2Ugb2YgdHJ1dGgKICovCmV4cG9ydCB0eXBlIFByb3BlcnR5TG9jYXRpb24gPSB6LmluZmVyPHR5cGVvZiBwcm9wZXJ0eUxvY2F0aW9uU2NoZW1hPjsKZXhwb3J0IHR5cGUgUHJvcGVydHlEb2N1bWVudCA9IHouaW5mZXI8dHlwZW9mIHByb3BlcnR5RG9jdW1lbnRTY2hlbWE+OwpleHBvcnQgdHlwZSBQcm9wZXJ0eUluZm8gPSB6LmluZmVyPHR5cGVvZiBwcm9wZXJ0eUluZm9TY2hlbWE+OwpleHBvcnQgdHlwZSBTaGFyZU93bmVyc2hpcCA9IHouaW5mZXI8dHlwZW9mIHNoYXJlT3duZXJzaGlwU2NoZW1hPjsKCi8vIEtlZXAgaW5wdXQvb3V0cHV0IHR5cGVzIGZvciBhZHZhbmNlZCB1c2UgY2FzZXMKZXhwb3J0IHR5cGUgUHJvcGVydHlJbmZvSW5wdXQgPSB6LmlucHV0PHR5cGVvZiBwcm9wZXJ0eUluZm9TY2hlbWE+OwpleHBvcnQgdHlwZSBQcm9wZXJ0eUluZm9PdXRwdXQgPSB6Lm91dHB1dDx0eXBlb2YgcHJvcGVydHlJbmZvU2NoZW1hPjsKZXhwb3J0IHR5cGUgU2hhcmVPd25lcnNoaXBJbnB1dCA9IHouaW5wdXQ8dHlwZW9mIHNoYXJlT3duZXJzaGlwU2NoZW1hPjsK
+import { z } from "zod";
+import {
+  stellarAddressSchema,
+  positiveAmountSchema,
+  isoDateSchema,
+  percentageSchema,
+} from "./common.schema.js";
+
+/**
+ * Schema for property location
+ */
+export const propertyLocationSchema = z.object({
+  address: z.string().min(1, "Address is required"),
+  city: z.string().min(1, "City is required"),
+  country: z.string().min(1, "Country is required"),
+  postalCode: z.string().optional(),
+  coordinates: z
+    .object({
+      latitude: z.number().min(-90).max(90),
+      longitude: z.number().min(-180).max(180),
+    })
+    .optional(),
+});
+
+/**
+ * Schema for property document
+ */
+export const propertyDocumentSchema = z.object({
+  id: z.uuid(),
+  type: z.enum(["deed", "appraisal", "inspection", "insurance", "other"]),
+  name: z.string().min(1),
+  url: z.url(),
+  uploadedAt: isoDateSchema,
+  verified: z.boolean(),
+});
+
+/**
+ * Schema for PropertyInfo
+ */
+export const propertyInfoSchema = z.object({
+  id: z.uuid(),
+  name: z.string().min(1, "Property name is required"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+  propertyType: z.enum([
+    "residential",
+    "commercial",
+    "industrial",
+    "land",
+    "mixed",
+  ]),
+  location: propertyLocationSchema,
+  totalValue: positiveAmountSchema,
+  tokenAddress: stellarAddressSchema.optional(),
+  totalShares: z.number().int().positive(),
+  availableShares: z.number().int().min(0),
+  pricePerShare: positiveAmountSchema,
+  expectedYield: percentageSchema.optional(),
+  images: z.array(z.url()).min(1, "At least one image required"),
+  splatUrl: z
+    .string()
+    .url()
+    .optional()
+    .describe("URL to 3D Gaussian Splatting file (.splat)"),
+  documents: z.array(propertyDocumentSchema),
+  verified: z.boolean(),
+  listedAt: isoDateSchema,
+  owner: stellarAddressSchema,
+});
+
+/**
+ * Schema for ShareOwnership
+ */
+export const shareOwnershipSchema = z.object({
+  propertyId: z.uuid(),
+  owner: stellarAddressSchema,
+  shares: z.number().int().positive(),
+  purchasePrice: positiveAmountSchema,
+  purchasedAt: isoDateSchema,
+  lastDividendClaimed: isoDateSchema.optional(),
+});
+
+/**
+ * Type inference from schemas - Single source of truth
+ */
+export type PropertyLocation = z.infer<typeof propertyLocationSchema>;
+export type PropertyDocument = z.infer<typeof propertyDocumentSchema>;
+export type PropertyInfo = z.infer<typeof propertyInfoSchema>;
+export type ShareOwnership = z.infer<typeof shareOwnershipSchema>;
+
+// Keep input/output types for advanced use cases
+export type PropertyInfoInput = z.input<typeof propertyInfoSchema>;
+export type PropertyInfoOutput = z.output<typeof propertyInfoSchema>;
+export type ShareOwnershipInput = z.input<typeof shareOwnershipSchema>;

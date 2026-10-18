@@ -216,6 +216,35 @@ mod tests {
     }
 
     #[test]
+    fn uninitialized_contract_reports_not_initialized() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let admin = Address::generate(&env);
+        let investor = Address::generate(&env);
+        let id = env.register(PilotWhitelist, ());
+        let client = PilotWhitelistClient::new(&env, &id);
+
+        // Read path: nothing has been stored for `admin` to return yet.
+        assert_eq!(
+            client.try_admin(),
+            Err(Ok(Error::from_contract_error(
+                WhitelistError::NotInitialized as u32
+            )))
+        );
+
+        // Admin-gated path: `require_admin` resolves the stored admin before it
+        // can compare it, so an uninitialized contract reports NotInitialized
+        // rather than Unauthorized, and writes no approval.
+        assert_eq!(
+            client.try_approve(&admin, &investor),
+            Err(Ok(Error::from_contract_error(
+                WhitelistError::NotInitialized as u32
+            )))
+        );
+        assert!(!client.is_approved(&investor));
+    }
+
+    #[test]
     fn non_admin_cannot_approve() {
         let (env, admin, investor, client) = setup();
         env.mock_all_auths();

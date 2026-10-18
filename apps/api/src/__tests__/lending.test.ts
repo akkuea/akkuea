@@ -365,7 +365,6 @@ describe.skipIf(!process.env.DATABASE_URL)('Lending Integration Tests (DB requir
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${testToken}`,
-          'x-test-bypass-ratelimit': 'true',
         },
         body: JSON.stringify({
           name: 'Integration Test Pool',
@@ -402,7 +401,6 @@ describe.skipIf(!process.env.DATABASE_URL)('Lending Integration Tests (DB requir
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${testToken}`,
-          'x-test-bypass-ratelimit': 'true',
         },
         body: JSON.stringify({ amount: '1000' }),
       }),
@@ -430,7 +428,6 @@ describe.skipIf(!process.env.DATABASE_URL)('Lending Integration Tests (DB requir
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${testToken}`,
-          'x-test-bypass-ratelimit': 'true',
         },
         body: JSON.stringify({
           borrowAmount: '300',
@@ -463,7 +460,6 @@ describe.skipIf(!process.env.DATABASE_URL)('Lending Integration Tests (DB requir
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${testToken}`,
-          'x-test-bypass-ratelimit': 'true',
         },
         body: JSON.stringify({ amount: '100' }),
       }),

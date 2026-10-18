@@ -227,7 +227,8 @@ All the following routes require a valid JWT in the `Authorization` header:
 ### Rate Limiting
 
 - Both `/auth/challenge` and `/auth/session` are rate-limited
-- Default: **10 requests per 60 seconds** per IP address
+- Default: **10 requests per 60 seconds** per client
+- A client is identified by the address of the socket it connected from. `x-forwarded-for` is honored only when `TRUSTED_PROXY_HOPS` is configured, so a request cannot choose its own identity; `x-real-ip` is never read. See [`../deployment/environment-variables.md`](../deployment/environment-variables.md)
 - Rate limit headers are included in all responses:
   - `X-RateLimit-Limit`
   - `X-RateLimit-Remaining`

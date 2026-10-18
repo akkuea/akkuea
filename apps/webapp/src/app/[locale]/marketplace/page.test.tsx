@@ -16,6 +16,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import type { PropertyInfo } from "@akkuea/shared";
+import { PROPERTY_IMAGE_PLACEHOLDER } from "@/components/marketplace/marketplace.utils";
 import { propertyApi } from "@/services/api/properties";
 
 type PropertiesResponse = {
@@ -226,6 +227,20 @@ describe("MarketplacePage", () => {
     fireEvent.click(view.getByRole("button", { name: /Invest Now/i }));
 
     expect(view.queryByText(/Invest in Property/i)).not.toBeNull();
+  });
+
+  it("shows the placeholder image on the card of a property without images", async () => {
+    mockGetAll.mockResolvedValueOnce({
+      data: [{ ...property, images: [] }],
+      pagination: { page: 1, limit: 100, total: 1, totalPages: 1 },
+    });
+
+    const view = render(<MarketplacePage />);
+
+    const image = await view.findByAltText(
+      `${property.name} - ${property.location.city}, ${property.location.country}`,
+    );
+    expect(image.getAttribute("src")).toBe(PROPERTY_IMAGE_PLACEHOLDER);
   });
 
   it("renders an error state with retry when the API request fails", async () => {

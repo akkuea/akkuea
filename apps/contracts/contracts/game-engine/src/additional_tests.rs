@@ -168,4 +168,3 @@ fn double_initialize_fails_with_already_initialized() {
     let res = engine_client.try_initialize(&nft, &token, &treasury);
     assert_eq!(res, Err(Ok(EngineError::AlreadyInitialized.into())));
 }
-

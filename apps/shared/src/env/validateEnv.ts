@@ -1,5 +1,5 @@
-import type { z } from "zod";
 import type { ZodType } from "zod";
+
 import {
   apiEnvSchema,
   webappEnvSchema,

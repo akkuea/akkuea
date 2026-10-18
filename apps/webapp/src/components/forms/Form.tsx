@@ -1,4 +1,4 @@
-"client";
+"use client";
 
 import React, { useMemo, useState } from "react";
 import type { DefaultValues } from "react-hook-form";
@@ -7,10 +7,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 
-export type FormRenderProps<TSchema extends z.ZodType> = UseFormReturn<
-  z.infer<TSchema>
-String> &
-  ReturnType<UseFormReturn> & {
+export type FormRenderProps<TSchema extends z.ZodType> = UseFormReturn<z.infer<TSchema>> & {
   formError: string | null;
   formSuccess: string | null;
   setFormError: React.Dispatch<React.SetStateAction<string | null>>;
@@ -40,7 +37,7 @@ export function Form<TSchema extends z.ZodType>({
   successMessage,
   showFeedback = true,
 }: FormProps<TSchema>) {
-  const methods = useForm<z.infer<TSchema>>( {
+  const methods = useForm<z.infer<TSchema>>({
     resolver: zodResolver(schema),
     defaultValues,
     mode: "onBlur",
@@ -77,7 +74,7 @@ export function Form<TSchema extends z.ZodType>({
       setFormError,
       setFormSuccess,
     }),
-    [methods, formError, formSuccess],
+    [methods, formError, formSuccess, setFormError, setFormSuccess],
   );
 
   return (

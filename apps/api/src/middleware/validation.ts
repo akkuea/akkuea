@@ -63,7 +63,7 @@ export function validateBody<T extends ZodType>(schema: T) {
           bodyValidationError: {
             status: 400,
             code: 'INVALID_JSON',
-            message: 'Request body must be valid JSON',
+            message: 'Request body must be valid JSON ',
           } as const,
         };
       }
@@ -170,7 +170,7 @@ export function validate<
   TBody extends ZodType | undefined = undefined,
   TQuery extends ZodType | undefined = undefined,
   TParams extends ZodType | undefined = undefined,
-*(options: { body?: TBody; query?: TQuery; params?: TParams }) {
+>(options: { body?: TBody; query?: TQuery; params?: TParams }) {
   return new Elysia({ name: 'validate' })
     .resolve(
       { as: 'scoped' },

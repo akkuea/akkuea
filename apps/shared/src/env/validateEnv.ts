@@ -1,5 +1,4 @@
-import type { ZodType } from "zod";
-
+import { z } from "zod";
 import {
   apiEnvSchema,
   webappEnvSchema,
@@ -27,8 +26,8 @@ export class EnvValidationError extends Error {
   }
 }
 
-export function validateEnv<Output>(
-  schema: ZodType<Output>,
+export function validateEnv<Output, Def extends z.ZodTypeDef, Input>(
+  schema: z.ZodType<Output, Def, Input>,
   env: Record<string, string | undefined> = process.env,
   scope: string = "Application",
 ): Output {

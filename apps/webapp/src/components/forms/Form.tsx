@@ -7,7 +7,10 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 
-export type FormRenderProps<TSchema extends z.ZodType> = UseFormReturn<z.infer<TSchema>> & {
+export type FormRenderProps<TSchema extends z.ZodType> = UseFormReturn<
+  z.infer<TSchema>
+>
+ & {
   formError: string | null;
   formSuccess: string | null;
   setFormError: React.Dispatch<React.SetStateAction<string | null>>;
@@ -37,14 +40,7 @@ export function Form<TSchema extends z.ZodType>({
   successMessage,
   showFeedback = true,
 }: FormProps<TSchema>) {
-  const methods = useForm<z.infer<TSchema>>({
-    resolver: zodResolver(schema),
-    defaultValues,
-    mode: "onBlur",
-    reValidateMode: "onBlur",
-    criteriaMode: "firstError",
-    shouldFocusError: true,
-  });
+  const methods = useForm<z.infer<TSchema>>({ resolver: zodResolver(schema), defaultValues, mode: "onBlur", reValidateMode: "onBlur", criteriaMode: "firstError", shouldFocusError: true });
 
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -74,7 +70,7 @@ export function Form<TSchema extends z.ZodType>({
       setFormError,
       setFormSuccess,
     }),
-    [methods, formError, formSuccess, setFormError, setFormSuccess],
+    [methods, formError, formSuccess],
   );
 
   return (

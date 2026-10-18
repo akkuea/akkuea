@@ -6,14 +6,20 @@ import {
   expect,
   it,
   mock,
-  spyOn,
 } from "bun:test";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { createTransaction } from "@akkuea/shared";
-import { transactionsApi } from "@/services/api";
-import { useTransactions } from "../useTransactions";
 
-let getTransactions: ReturnType<typeof spyOn>;
+const getTransactions = mock(async () => ({
+  items: [],
+  nextCursor: undefined as string | undefined,
+}));
+
+mock.module("@/services/api", () => ({
+  transactionsApi: { getTransactions },
+}));
+
+const { useTransactions } = await import("../useTransactions");
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -25,7 +31,7 @@ function deferred<T>() {
 
 describe("useTransactions regression tests", () => {
   beforeEach(() => {
-    getTransactions = spyOn(transactionsApi, "getTransactions");
+    getTransactions.mockReset();
   });
 
   afterEach(() => {

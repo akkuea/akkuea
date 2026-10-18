@@ -159,7 +159,7 @@ impl Storage {
     /// via `mark_wound_down`. Absence means the pilot is still active. Stored in
     /// instance storage: a single contract-wide fact, set once and never
     /// removed, readable without any cross-contract call.
-    pub fn wound_down_record(env: &Env") -> Option<WoundDownRecord> {
+    pub fn wound_down_record(env: &Env) -> Option<WoundDownRecord> {
         env.storage().instance().get(&DataKey::WoundDown)
     }
 

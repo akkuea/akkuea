@@ -62,8 +62,12 @@ export const useWallet = () => {
   const setBalanceError = useAuthenticationStore(
     (state) => state.setBalanceError,
   );
-  const setIsConnected = useAuthenticationStore((state) => state.setIsConnected);
-  const setIsConnecting = useAuthenticationStore((state) => state.setIsConnecting);
+  const setIsConnected = useAuthenticationStore(
+    (state) => state.setIsConnected,
+  );
+  const setIsConnecting = useAuthenticationStore(
+    (state) => state.setIsConnecting,
+  );
   const setSelectedWalletId = useAuthenticationStore(
     (state) => state.setSelectedWalletId,
   );

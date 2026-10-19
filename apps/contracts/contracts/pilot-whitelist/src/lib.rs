@@ -17,6 +17,7 @@ const INSTANCE_TTL_EXTEND_TO: u32 = 60 * 24 * 60 * 12;
 mod errors;
 mod events;
 mod storage;
+mod ttl;
 
 pub use errors::WhitelistError;
 use storage::{DataKey, Storage};

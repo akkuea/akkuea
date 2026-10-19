@@ -10,6 +10,7 @@ mod ttl;
 
 pub use errors::WhitelistError;
 use storage::{DataKey, Storage};
+use ttl::{extend_instance, extend_persistent};
 
 #[contract]
 pub struct PilotWhitelist;
@@ -23,7 +24,7 @@ impl PilotWhitelist {
         }
 
         Storage::set_admin(&env, &admin);
-        Self::extend_instance_ttl(&env);
+        extend_instance(&env);
         events::emit_initialized(&env, admin);
     }
 
@@ -33,14 +34,10 @@ impl PilotWhitelist {
         Self::require_admin(&env, &admin);
         Self::require_not_paused(&env);
 
-        env.storage()
-            .persistent()
-            .set(&DataKey::Approved(address.clone()), &true);
-        env.storage().persistent().extend_ttl(
-            &DataKey::Approved(address.clone()),
-            PERSISTENT_TTL_THRESHOLD,
-            PERSISTENT_TTL_EXTEND_TO,
-        );
+        let key = DataKey::Approved(address.clone());
+        env.storage().persistent().set(&key, &true);
+        extend_persistent(&env, &key);
+        extend_instance(&env);
         events::emit_approved(&env, admin, address);
     }
 
@@ -50,14 +47,10 @@ impl PilotWhitelist {
         Self::require_admin(&env, &admin);
         Self::require_not_paused(&env);
 
-        env.storage()
-            .persistent()
-            .set(&DataKey::Approved(address.clone()), &false);
-        env.storage().persistent().extend_ttl(
-            &DataKey::Approved(address.clone()),
-            PERSISTENT_TTL_THRESHOLD,
-            PERSISTENT_TTL_EXTEND_TO,
-        );
+        let key = DataKey::Approved(address.clone());
+        env.storage().persistent().set(&key, &false);
+        extend_persistent(&env, &key);
+        extend_instance(&env);
         events::emit_revoked(&env, admin, address);
     }
 
@@ -67,11 +60,7 @@ impl PilotWhitelist {
         let key = DataKey::Approved(address);
         let approved = env.storage().persistent().get(&key).unwrap_or(false);
         if env.storage().persistent().has(&key) {
-            env.storage().persistent().extend_ttl(
-                &key,
-                PERSISTENT_TTL_THRESHOLD,
-                PERSISTENT_TTL_EXTEND_TO,
-            );
+            extend_persistent(&env, &key);
         }
         approved
     }
@@ -95,7 +84,7 @@ impl PilotWhitelist {
         Self::require_admin(&env, &caller);
 
         Storage::set_pending_admin(&env, &new_admin);
-        Self::extend_instance_ttl(&env);
+        extend_instance(&env);
         events::emit_admin_transfer_started(&env, caller, new_admin);
     }
 
@@ -116,7 +105,7 @@ impl PilotWhitelist {
 
         Storage::set_admin(&env, &new_admin);
         Storage::clear_pending_admin(&env);
-        Self::extend_instance_ttl(&env);
+        extend_instance(&env);
         events::emit_admin_transfer_accepted(&env, old_admin, new_admin);
     }
 
@@ -127,7 +116,7 @@ impl PilotWhitelist {
         Self::require_admin(&env, &caller);
 
         Storage::clear_pending_admin(&env);
-        Self::extend_instance_ttl(&env);
+        extend_instance(&env);
         events::emit_admin_transfer_cancelled(&env, caller);
     }
 
@@ -145,7 +134,7 @@ impl PilotWhitelist {
         Self::require_admin(&env, &admin);
 
         Storage::set_paused(&env, true);
-        Self::extend_instance_ttl(&env);
+        extend_instance(&env);
         events::emit_paused(&env, admin);
     }
 
@@ -155,7 +144,7 @@ impl PilotWhitelist {
         Self::require_admin(&env, &admin);
 
         Storage::set_paused(&env, false);
-        Self::extend_instance_ttl(&env);
+        extend_instance(&env);
         events::emit_unpaused(&env, admin);
     }
 
@@ -172,13 +161,6 @@ impl PilotWhitelist {
         }
     }
 
-    fn extend_instance_ttl(env: &Env) {
-        env.storage().instance().extend_ttl(
-            INSTANCE_TTL_THRESHOLD,
-            INSTANCE_TTL_EXTEND_TO,
-        );
-    }
-
     fn require_not_paused(env: &Env) {
         if Storage::is_paused(env) {
             panic_with_error!(env, WhitelistError::ContractPaused);
@@ -186,10 +168,15 @@ impl PilotWhitelist {
     }
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use soroban_sdk::{testutils::Address as _, Error};
+    use crate::ttl::TTL_THRESHOLD;
+    use soroban_sdk::{
+        testutils::{Address as _, Ledger as _},
+        Error,
+    };
 
     fn setup() -> (Env, Address, Address, PilotWhitelistClient<'static>) {
         let env = Env::default();
@@ -466,5 +453,27 @@ mod tests {
         client.transfer_admin_accept(&new_admin);
 
         assert_eq!(client.admin(), new_admin);
+    }
+
+    // --- TTL ---
+
+    #[test]
+    fn state_changing_call_extends_approval_ttl() {
+        let (env, admin, investor, client) = setup();
+        env.mock_all_auths();
+        client.initialize(&admin);
+        client.approve(&admin, &investor);
+
+        // Move far enough that the entry is below the threshold.
+        env.ledger().with_mut(|l| l.sequence_number += 1_100_000);
+
+        client.approve(&admin, &investor);
+
+        let ttl = env.as_contract(&client.address, || {
+            env.storage()
+                .persistent()
+                .get_ttl(&DataKey::Approved(investor.clone()))
+        });
+        assert!(ttl >= TTL_THRESHOLD);
     }
 }

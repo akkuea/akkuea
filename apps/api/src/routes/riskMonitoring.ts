@@ -9,8 +9,6 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
       tags: ['Risk Monitoring'],
     },
   })
-
-  
   .get(
     '/positions/risk/:level',
     ({ params: { level } }) => RiskMonitoringController.getPositionsByRisk(level),
@@ -54,8 +52,6 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
       },
     },
   )
-
-  
   .get(
     '/positions/:positionId/history',
     ({ params: { positionId }, query }) =>
@@ -75,9 +71,18 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
         tags: ['Risk Monitoring'],
       },
     },
+  )
+  .post(
+    '/notify',
+    async () => {
+      const positions = await RiskMonitoringController.notifyRiskTransitions();
+      return { success: true, data: { assessed: positions.length } };
+    },
+    {
+      detail: {
+        summary: 'Notify risk transitions',
+        description: 'Assess all positions and notify borrowers whose risk level changed',
+        tags: ['Risk Monitoring'],
+      },
+    },
   );
-
-  riskMonitoring.post('/notify', async (c) => {
-  const positions = await RiskMonitoringController.notifyRiskTransitions();
-  return c.json({ success: true, data: { assessed: positions.length } });
-});

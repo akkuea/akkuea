@@ -3,17 +3,6 @@
 
 use soroban_sdk::{contract, contractimpl, panic_with_error, Address, Env};
 
-/// TTL policy for the pilot whitelist.
-///
-/// The pilot reports monthly, so approvals must survive at least one full
-/// reporting cycle without being touched. We extend to ~60 days (in ledgers,
-/// assuming ~5s per ledger) and refresh once the remaining TTL drops below
-/// ~30 days.
-const PERSISTENT_TTL_THRESHOLD: u32 = 30 * 24 * 60 * 12;
-const PERSISTENT_TTL_EXTEND_TO: u32 = 60 * 24 * 60 * 12;
-const INSTANCE_TTL_THRESHOLD: u32 = 30 * 24 * 60 * 12;
-const INSTANCE_TTL_EXTEND_TO: u32 = 60 * 24 * 60 * 12;
-
 mod errors;
 mod events;
 mod storage;

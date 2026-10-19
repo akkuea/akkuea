@@ -1,18 +1,7 @@
 use soroban_sdk::{contracttype, panic_with_error, Address, Env, String, Vec};
 
+use crate::ttl::{extend_instance, extend_persistent};
 use crate::{Currency, EvidenceRecord, ExitRecord, PayoutError, SwapFailureRecord};
-
-/// TTL policy for the payout-split pilot.
-///
-/// The pilot reports on a monthly cycle, so entries must survive at least one
-/// full reporting period plus a comfortable margin for late claims and audits.
-/// At ~5s per ledger, `TTL_THRESHOLD` (~30 days) is the point at which we
-/// refresh an entry during normal operations, and `TTL_EXTEND_TO` (~90 days)
-/// is the new lifetime granted on each touch. This gives operators a full
-/// quarter of slack, so no periodic "bump" transaction is required as long as
-/// the contract is exercised at least once every 30 days.
-pub const TTL_THRESHOLD: u32 = 30 * 24 * 60 * 12; // ~30 days in ledgers
-pub const TTL_EXTEND_TO: u32 = 90 * 24 * 60 * 12; // ~90 days in ledgers
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -52,17 +41,15 @@ impl Storage {
     /// Extends the instance TTL. Called from every state-changing entry point
     /// so admin, config, pause flag and other instance entries never expire.
     pub fn extend_instance_ttl(env: &Env) {
-        env.storage()
-            .instance()
-            .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
+        extend_instance(env);
     }
 
-    /// Extends the TTL of a persistent key when it is written or read on a
-    /// critical path (distribution, claims, whitelist checks).
-    fn extend_persistent_ttl(env: &Env, key: &DataKey) {
-        env.storage()
-            .persistent()
-            .extend_ttl(key, TTL_THRESHOLD, TTL_EXTEND_TO);
+    /// Extends a persistent entry's TTL on a read path, only if the entry
+    /// exists (extending a missing key fails).
+    fn extend_if_present(env: &Env, key: &DataKey) {
+        if env.storage().persistent().has(key) {
+            extend_persistent(env, key);
+        }
     }
 
     pub fn is_initialized(env: &Env) -> bool {
@@ -91,35 +78,35 @@ impl Storage {
     /// event retention window without introducing any new ledger keys.
     pub fn evidence(env: &Env, cycle_id: &String) -> Option<EvidenceRecord> {
         let key = DataKey::Evidence(cycle_id.clone());
-        Self::extend_persistent_ttl(env, &key);
+        Self::extend_if_present(env, &key);
         env.storage().persistent().get(&key)
     }
 
     pub fn set_evidence(env: &Env, cycle_id: &String, record: &EvidenceRecord) {
         let key = DataKey::Evidence(cycle_id.clone());
         env.storage().persistent().set(&key, record);
-        Self::extend_persistent_ttl(env, &key);
+        extend_persistent(env, &key);
     }
 
     /// Explicit settlement-currency preference of a single holder.
     /// Absence means USDC (the default), so existing holders are unaffected.
     pub fn currency_preference(env: &Env, holder: &Address) -> Option<Currency> {
         let key = DataKey::CurrencyPreference(holder.clone());
-        Self::extend_persistent_ttl(env, &key);
+        Self::extend_if_present(env, &key);
         env.storage().persistent().get(&key)
     }
 
     pub fn set_currency_preference(env: &Env, holder: &Address, currency: &Currency) {
         let key = DataKey::CurrencyPreference(holder.clone());
         env.storage().persistent().set(&key, currency);
-        Self::extend_persistent_ttl(env, &key);
+        extend_persistent(env, &key);
     }
 
     /// On-chain record of swap legs rejected during a cycle's distribution.
     /// Persisted so a rejected leg is auditable rather than silent.
     pub fn swap_failures(env: &Env, cycle_id: &String) -> Vec<SwapFailureRecord> {
         let key = DataKey::SwapFailures(cycle_id.clone());
-        Self::extend_persistent_ttl(env, &key);
+        Self::extend_if_present(env, &key);
         env.storage()
             .persistent()
             .get(&key)
@@ -131,7 +118,7 @@ impl Storage {
         failures.push_back(record.clone());
         let key = DataKey::SwapFailures(cycle_id.clone());
         env.storage().persistent().set(&key, &failures);
-        Self::extend_persistent_ttl(env, &key);
+        extend_persistent(env, &key);
     }
 
     /// The terminal exit record, if the ally/property relationship has been
@@ -150,17 +137,14 @@ impl Storage {
     /// USDC currently reserved for a holder after a failed EURC swap leg.
     pub fn withheld_balance(env: &Env, holder: &Address) -> i128 {
         let key = DataKey::WithheldBalance(holder.clone());
-        Self::extend_persistent_ttl(env, &key);
-        env.storage()
-            .persistent()
-            .get(&key)
-            .unwrap_or(0)
+        Self::extend_if_present(env, &key);
+        env.storage().persistent().get(&key).unwrap_or(0)
     }
 
     pub fn set_withheld_balance(env: &Env, holder: &Address, amount: i128) {
         let key = DataKey::WithheldBalance(holder.clone());
         env.storage().persistent().set(&key, &amount);
-        Self::extend_persistent_ttl(env, &key);
+        extend_persistent(env, &key);
     }
 
     /// Adds a cycle's withheld share to a holder's reserved balance.
@@ -212,5 +196,6 @@ impl Storage {
 
     pub fn clear_pending_admin(env: &Env) {
         env.storage().instance().remove(&DataKey::PendingAdmin);
+        Self::extend_instance_ttl(env);
     }
 }

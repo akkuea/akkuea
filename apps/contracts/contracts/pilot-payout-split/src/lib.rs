@@ -1,3 +1,27 @@
+//! Pilot payout split: evidence-gated distribution of one property's income.
+//!
+//! # Evidence status transitions
+//!
+//! Every cycle's evidence follows the table below. "Distributed" is an
+//! `Approved` record with `distributed == true`. Each cell is the resulting
+//! status, or the `PayoutError` the action fails with. After `exit`, every
+//! action in the table fails with `ContractExited` before it is evaluated.
+//!
+//! | Current status | `record_evidence`      | `submit_evidence`      | `start_review`            | `review_evidence`         | `flag_dispute`            | `execute_distribution`    |
+//! | -------------- | ---------------------- | ---------------------- | ------------------------- | ------------------------- | ------------------------- | ------------------------- |
+//! | (none)         | `Approved`             | `Submitted`            | `EvidenceNotFound`        | `EvidenceNotFound`        | `EvidenceNotFound`        | `CycleNotRecorded`        |
+//! | `Submitted`    | `CycleAlreadyRecorded` | `CycleAlreadyRecorded` | `UnderReview`             | `Approved` / `Rejected`   | `Disputed`                | `EvidenceNotApproved`     |
+//! | `UnderReview`  | `CycleAlreadyRecorded` | `CycleAlreadyRecorded` | `InvalidStatusTransition` | `Approved` / `Rejected`   | `Disputed`                | `EvidenceNotApproved`     |
+//! | `Approved`     | `CycleAlreadyRecorded` | `CycleAlreadyRecorded` | `InvalidStatusTransition` | `InvalidStatusTransition` | `Disputed`                | distributed               |
+//! | `Rejected`     | `CycleAlreadyRecorded` | `Submitted`            | `InvalidStatusTransition` | `InvalidStatusTransition` | `Disputed`                | `EvidenceNotApproved`     |
+//! | `Disputed`     | `CycleAlreadyRecorded` | `Submitted`            | `InvalidStatusTransition` | `InvalidStatusTransition` | `Disputed`                | `EvidenceNotApproved`     |
+//! | distributed    | `CycleAlreadyRecorded` | `CycleAlreadyRecorded` | `InvalidStatusTransition` | `InvalidStatusTransition` | `CycleAlreadyDistributed` | `CycleAlreadyDistributed` |
+//!
+//! Every successful transition emits an event: `evidence`, `submit` (plus
+//! `resubmit` when it replaces a `Rejected` or `Disputed` record), `review`,
+//! `reviewed`, `dispute` and `dist`. A distributed cycle is immutable.
+//! `flag_dispute` is the only evidence action that still works while paused.
+
 #![no_std]
 #![allow(linker_messages)]
 #![allow(clippy::too_many_arguments)]
@@ -384,8 +408,9 @@ impl PilotPayoutSplit {
     ///
     /// Only the ally signs. The cycle enters `Submitted` and waits for the
     /// operator, which is what makes the review queue an on-chain fact rather
-    /// than an off-chain bookkeeping table. A cycle previously rejected may be
-    /// submitted again; an approved or distributed cycle may not.
+    /// than an off-chain bookkeeping table. A rejected or disputed cycle may be
+    /// submitted again under the same `cycle_id`, which also emits `resubmit`;
+    /// any other existing cycle, approved or distributed included, may not.
     pub fn submit_evidence(
         env: Env,
         ally: Address,
@@ -396,6 +421,7 @@ impl PilotPayoutSplit {
     ) {
         ally.require_auth();
         Self::require_ally(&env, &ally);
+        Self::require_not_exited(&env);
         Self::require_not_paused(&env);
 
         if total_income <= 0 {
@@ -410,11 +436,15 @@ impl PilotPayoutSplit {
             panic_with_error!(&env, PayoutError::MissingEvidenceLink);
         }
 
-        if let Some(existing) = Storage::evidence(&env, &cycle_id) {
-            if existing.status != EvidenceStatus::Rejected {
+        let previous_status = Storage::evidence(&env, &cycle_id).map(|existing| {
+            let resubmittable = !existing.distributed
+                && (existing.status == EvidenceStatus::Rejected
+                    || existing.status == EvidenceStatus::Disputed);
+            if !resubmittable {
                 panic_with_error!(&env, PayoutError::CycleAlreadyRecorded);
             }
-        }
+            existing.status
+        });
 
         let now = env.ledger().timestamp();
         let record = EvidenceRecord {
@@ -433,7 +463,17 @@ impl PilotPayoutSplit {
             settlements: Vec::new(&env),
         };
         Storage::set_evidence(&env, &cycle_id, &record);
-        events::emit_evidence_submitted(&env, ally, cycle_id, total_income, now);
+        events::emit_evidence_submitted(&env, ally.clone(), cycle_id.clone(), total_income, now);
+        if let Some(previous_status) = previous_status {
+            events::emit_evidence_resubmitted(
+                &env,
+                ally,
+                cycle_id,
+                previous_status,
+                total_income,
+                now,
+            );
+        }
     }
 
     /// Move a submitted cycle into `UnderReview`.
@@ -443,6 +483,7 @@ impl PilotPayoutSplit {
     pub fn start_review(env: Env, operator: Address, cycle_id: String) {
         operator.require_auth();
         Self::require_operator(&env, &operator);
+        Self::require_not_exited(&env);
         Self::require_not_paused(&env);
 
         let mut record = Storage::evidence(&env, &cycle_id)
@@ -467,6 +508,7 @@ impl PilotPayoutSplit {
     ) {
         operator.require_auth();
         Self::require_operator(&env, &operator);
+        Self::require_not_exited(&env);
         Self::require_not_paused(&env);
 
         let mut record = Storage::evidence(&env, &cycle_id)
@@ -497,11 +539,20 @@ impl PilotPayoutSplit {
 
     /// Flag a cycle as disputed. Callable by the admin or the operator.
     ///
-    /// A disputed cycle cannot be distributed until it is resubmitted and
-    /// reviewed again, and it counts against the ally in the investor timeline.
+    /// Any cycle that has not been distributed can be disputed, including one
+    /// already disputed (the newer reason replaces the older one). A disputed
+    /// cycle cannot be distributed until the ally resubmits it under the same
+    /// `cycle_id` through `submit_evidence` and the operator reviews and
+    /// approves it again. It counts against the ally in the investor timeline.
+    ///
+    /// Rejected after `exit`, like every other evidence action. Deliberately
+    /// not blocked by `pause`: a dispute can only stop money from moving, so
+    /// the admin or operator must be able to freeze a suspicious cycle while
+    /// an incident is under review, before anyone unpauses.
     pub fn flag_dispute(env: Env, caller: Address, cycle_id: String, reason: String) {
         caller.require_auth();
         Self::require_admin_or_operator(&env, &caller);
+        Self::require_not_exited(&env);
 
         if reason.is_empty() {
             panic_with_error!(&env, PayoutError::MissingReviewReason);
@@ -1234,11 +1285,11 @@ pub mod tests {
     use pilot_income_token::{PilotIncomeToken, PilotIncomeTokenClient};
     use pilot_whitelist::{PilotWhitelist, PilotWhitelistClient};
     use soroban_sdk::{
-        contracterror,
-        testutils::{Address as _, Ledger, MockAuth, MockAuthInvoke},
+        contracterror, symbol_short,
+        testutils::{Address as _, Events, Ledger, MockAuth, MockAuthInvoke},
         token::StellarAssetClient,
         xdr::ScVal,
-        Error, IntoVal, TryFromVal,
+        Error, IntoVal, InvokeError, TryFromVal,
     };
 
     /// Minimum exchange rate used throughout tests: 0.95 EURC per USDC.
@@ -2756,6 +2807,460 @@ pub mod tests {
             Err(Ok(Error::from_contract_error(
                 PayoutError::EvidenceNotApproved as u32
             )))
+        );
+    }
+
+    fn submit_cycle(s: &Setup, c: &String, link: &str, total_income: i128) {
+        s.payout.submit_evidence(
+            &s.ally,
+            c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, link),
+            &total_income,
+        );
+    }
+
+    #[test]
+    fn disputed_cycle_is_resubmitted_reviewed_and_distributed_under_the_same_id() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://statement"),
+            &10_000,
+        );
+        s.payout.flag_dispute(
+            &s.operator,
+            &c,
+            &String::from_str(&s.env, "Investor reported a mismatch"),
+        );
+
+        submit_cycle(&s, &c, "ipfs://statement-corrected", 9_000);
+
+        let submitted_at = s.env.ledger().timestamp();
+        assert_eq!(
+            s.env.events().all().filter_by_contract(&s.payout_id),
+            Vec::from_array(
+                &s.env,
+                [
+                    (
+                        s.payout_id.clone(),
+                        (symbol_short!("submit"), c.clone()).into_val(&s.env),
+                        events::EvidenceSubmittedEvent {
+                            ally: s.ally.clone(),
+                            cycle_id: c.clone(),
+                            total_income: 9_000,
+                            submitted_at,
+                        }
+                        .into_val(&s.env),
+                    ),
+                    (
+                        s.payout_id.clone(),
+                        (symbol_short!("resubmit"), c.clone()).into_val(&s.env),
+                        events::EvidenceResubmittedEvent {
+                            ally: s.ally.clone(),
+                            cycle_id: c.clone(),
+                            previous_status: EvidenceStatus::Disputed,
+                            total_income: 9_000,
+                            submitted_at,
+                        }
+                        .into_val(&s.env),
+                    ),
+                ]
+            )
+        );
+        let resubmitted = s.payout.get_evidence(&c).unwrap();
+        assert_eq!(resubmitted.status, EvidenceStatus::Submitted);
+        assert_eq!(resubmitted.total_income, 9_000);
+        assert!(resubmitted.review_reason.is_empty());
+
+        s.payout.start_review(&s.operator, &c);
+        s.payout
+            .review_evidence(&s.operator, &c, &true, &String::from_str(&s.env, ""));
+        let summary = s
+            .payout
+            .execute_distribution(&s.operator, &s.ally, &c, &TEST_MIN_RATE);
+
+        assert_eq!(summary.cycle_id, c);
+        assert_eq!(summary.total_income, 9_000);
+        assert!(s.payout.get_evidence(&c).unwrap().distributed);
+    }
+
+    #[test]
+    fn resubmission_of_a_rejected_cycle_emits_resubmit_with_the_previous_status() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        submit_cycle(&s, &c, "ipfs://wrong", 10_000);
+        s.payout.review_evidence(
+            &s.operator,
+            &c,
+            &false,
+            &String::from_str(&s.env, "Statement does not cover the full month"),
+        );
+
+        submit_cycle(&s, &c, "ipfs://corrected", 10_000);
+
+        let events = s.env.events().all().filter_by_contract(&s.payout_id);
+        assert_eq!(events.events().len(), 2);
+        assert_eq!(
+            events,
+            Vec::from_array(
+                &s.env,
+                [
+                    (
+                        s.payout_id.clone(),
+                        (symbol_short!("submit"), c.clone()).into_val(&s.env),
+                        events::EvidenceSubmittedEvent {
+                            ally: s.ally.clone(),
+                            cycle_id: c.clone(),
+                            total_income: 10_000,
+                            submitted_at: s.env.ledger().timestamp(),
+                        }
+                        .into_val(&s.env),
+                    ),
+                    (
+                        s.payout_id.clone(),
+                        (symbol_short!("resubmit"), c.clone()).into_val(&s.env),
+                        events::EvidenceResubmittedEvent {
+                            ally: s.ally.clone(),
+                            cycle_id: c.clone(),
+                            previous_status: EvidenceStatus::Rejected,
+                            total_income: 10_000,
+                            submitted_at: s.env.ledger().timestamp(),
+                        }
+                        .into_val(&s.env),
+                    ),
+                ]
+            )
+        );
+    }
+
+    #[test]
+    fn first_submission_emits_only_submit() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+
+        submit_cycle(&s, &c, "ipfs://statement", 10_000);
+
+        let events = s.env.events().all().filter_by_contract(&s.payout_id);
+        assert_eq!(events.events().len(), 1);
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    enum Stage {
+        Missing,
+        Submitted,
+        UnderReview,
+        Approved,
+        Rejected,
+        Disputed,
+        Distributed,
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    enum Action {
+        Record,
+        Submit,
+        StartReview,
+        Approve,
+        Reject,
+        Dispute,
+        Execute,
+    }
+
+    #[derive(Clone, Debug)]
+    enum Outcome {
+        Status(EvidenceStatus),
+        Distributed,
+        Fails(PayoutError),
+    }
+
+    fn drive_to(s: &Setup, c: &String, stage: Stage) {
+        let reason = String::from_str(&s.env, "reason");
+        match stage {
+            Stage::Missing => {}
+            Stage::Submitted => submit_cycle(s, c, "ipfs://statement", 10_000),
+            Stage::UnderReview => {
+                submit_cycle(s, c, "ipfs://statement", 10_000);
+                s.payout.start_review(&s.operator, c);
+            }
+            Stage::Approved => {
+                submit_cycle(s, c, "ipfs://statement", 10_000);
+                s.payout
+                    .review_evidence(&s.operator, c, &true, &String::from_str(&s.env, ""));
+            }
+            Stage::Rejected => {
+                submit_cycle(s, c, "ipfs://statement", 10_000);
+                s.payout.review_evidence(&s.operator, c, &false, &reason);
+            }
+            Stage::Disputed => {
+                submit_cycle(s, c, "ipfs://statement", 10_000);
+                s.payout.flag_dispute(&s.operator, c, &reason);
+            }
+            Stage::Distributed => {
+                s.payout.record_evidence(
+                    &s.operator,
+                    &s.ally,
+                    c,
+                    &evidence_hash(&s.env),
+                    &String::from_str(&s.env, "ipfs://statement"),
+                    &10_000,
+                );
+                s.payout
+                    .execute_distribution(&s.operator, &s.ally, c, &TEST_MIN_RATE);
+            }
+        }
+    }
+
+    fn contract_error<T, C>(
+        res: Result<Result<T, C>, Result<Error, InvokeError>>,
+    ) -> Option<Error> {
+        match res {
+            Ok(_) => None,
+            Err(Ok(err)) => Some(err),
+            Err(Err(_)) => panic!("expected a contract error, got a host error"),
+        }
+    }
+
+    fn apply(s: &Setup, c: &String, action: Action) -> Option<Error> {
+        let reason = String::from_str(&s.env, "reason");
+        let link = String::from_str(&s.env, "ipfs://statement-2");
+        match action {
+            Action::Record => contract_error(s.payout.try_record_evidence(
+                &s.operator,
+                &s.ally,
+                c,
+                &evidence_hash(&s.env),
+                &link,
+                &10_000,
+            )),
+            Action::Submit => contract_error(s.payout.try_submit_evidence(
+                &s.ally,
+                c,
+                &evidence_hash(&s.env),
+                &link,
+                &10_000,
+            )),
+            Action::StartReview => contract_error(s.payout.try_start_review(&s.operator, c)),
+            Action::Approve => contract_error(s.payout.try_review_evidence(
+                &s.operator,
+                c,
+                &true,
+                &String::from_str(&s.env, ""),
+            )),
+            Action::Reject => {
+                contract_error(
+                    s.payout
+                        .try_review_evidence(&s.operator, c, &false, &reason),
+                )
+            }
+            Action::Dispute => contract_error(s.payout.try_flag_dispute(&s.operator, c, &reason)),
+            Action::Execute => contract_error(s.payout.try_execute_distribution(
+                &s.operator,
+                &s.ally,
+                c,
+                &TEST_MIN_RATE,
+            )),
+        }
+    }
+
+    #[test]
+    fn every_status_and_action_pair_follows_the_transition_table() {
+        use Action::*;
+        use EvidenceStatus as St;
+        use Outcome::*;
+        use PayoutError as E;
+
+        let table: [(Stage, [Outcome; 7]); 7] = [
+            (
+                Stage::Missing,
+                [
+                    Status(St::Approved),
+                    Status(St::Submitted),
+                    Fails(E::EvidenceNotFound),
+                    Fails(E::EvidenceNotFound),
+                    Fails(E::EvidenceNotFound),
+                    Fails(E::EvidenceNotFound),
+                    Fails(E::CycleNotRecorded),
+                ],
+            ),
+            (
+                Stage::Submitted,
+                [
+                    Fails(E::CycleAlreadyRecorded),
+                    Fails(E::CycleAlreadyRecorded),
+                    Status(St::UnderReview),
+                    Status(St::Approved),
+                    Status(St::Rejected),
+                    Status(St::Disputed),
+                    Fails(E::EvidenceNotApproved),
+                ],
+            ),
+            (
+                Stage::UnderReview,
+                [
+                    Fails(E::CycleAlreadyRecorded),
+                    Fails(E::CycleAlreadyRecorded),
+                    Fails(E::InvalidStatusTransition),
+                    Status(St::Approved),
+                    Status(St::Rejected),
+                    Status(St::Disputed),
+                    Fails(E::EvidenceNotApproved),
+                ],
+            ),
+            (
+                Stage::Approved,
+                [
+                    Fails(E::CycleAlreadyRecorded),
+                    Fails(E::CycleAlreadyRecorded),
+                    Fails(E::InvalidStatusTransition),
+                    Fails(E::InvalidStatusTransition),
+                    Fails(E::InvalidStatusTransition),
+                    Status(St::Disputed),
+                    Distributed,
+                ],
+            ),
+            (
+                Stage::Rejected,
+                [
+                    Fails(E::CycleAlreadyRecorded),
+                    Status(St::Submitted),
+                    Fails(E::InvalidStatusTransition),
+                    Fails(E::InvalidStatusTransition),
+                    Fails(E::InvalidStatusTransition),
+                    Status(St::Disputed),
+                    Fails(E::EvidenceNotApproved),
+                ],
+            ),
+            (
+                Stage::Disputed,
+                [
+                    Fails(E::CycleAlreadyRecorded),
+                    Status(St::Submitted),
+                    Fails(E::InvalidStatusTransition),
+                    Fails(E::InvalidStatusTransition),
+                    Fails(E::InvalidStatusTransition),
+                    Status(St::Disputed),
+                    Fails(E::EvidenceNotApproved),
+                ],
+            ),
+            (
+                Stage::Distributed,
+                [
+                    Fails(E::CycleAlreadyRecorded),
+                    Fails(E::CycleAlreadyRecorded),
+                    Fails(E::InvalidStatusTransition),
+                    Fails(E::InvalidStatusTransition),
+                    Fails(E::InvalidStatusTransition),
+                    Fails(E::CycleAlreadyDistributed),
+                    Fails(E::CycleAlreadyDistributed),
+                ],
+            ),
+        ];
+        let actions = [
+            Record,
+            Submit,
+            StartReview,
+            Approve,
+            Reject,
+            Dispute,
+            Execute,
+        ];
+
+        for (stage, outcomes) in table {
+            for (action, expected) in actions.iter().zip(outcomes.iter()) {
+                let s = setup();
+                let c = cycle(&s.env, "table");
+                drive_to(&s, &c, stage);
+                let before = s.payout.get_evidence(&c);
+
+                let err = apply(&s, &c, *action);
+                let after = s.payout.get_evidence(&c);
+                let context = std::format!("{:?} -> {:?}", stage, action);
+
+                match expected {
+                    Fails(code) => {
+                        assert_eq!(
+                            err,
+                            Some(Error::from_contract_error(*code as u32)),
+                            "{}",
+                            context
+                        );
+                        assert_eq!(after, before, "{} must not change state", context);
+                    }
+                    Status(status) => {
+                        assert_eq!(err, None, "{}", context);
+                        let record = after.expect("record must exist");
+                        assert_eq!(record.status, *status, "{}", context);
+                        assert!(!record.distributed, "{}", context);
+                    }
+                    Distributed => {
+                        assert_eq!(err, None, "{}", context);
+                        assert!(after.expect("record must exist").distributed, "{}", context);
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn exited_contract_blocks_every_evidence_action() {
+        let s = setup();
+        let submitted = cycle(&s.env, "submitted");
+        let under_review = cycle(&s.env, "under-review");
+        submit_cycle(&s, &submitted, "ipfs://submitted", 10_000);
+        submit_cycle(&s, &under_review, "ipfs://under-review", 10_000);
+        s.payout.start_review(&s.operator, &under_review);
+        s.payout.exit(
+            &s.operator,
+            &s.ally,
+            &String::from_str(&s.env, "ally ceased operations"),
+        );
+        let exited = Some(Error::from_contract_error(
+            PayoutError::ContractExited as u32,
+        ));
+
+        assert_eq!(apply(&s, &cycle(&s.env, "new"), Action::Submit), exited);
+        assert_eq!(apply(&s, &submitted, Action::StartReview), exited);
+        assert_eq!(apply(&s, &under_review, Action::Approve), exited);
+        assert_eq!(apply(&s, &under_review, Action::Reject), exited);
+        assert_eq!(apply(&s, &submitted, Action::Dispute), exited);
+        assert_eq!(
+            s.payout.get_evidence(&submitted).unwrap().status,
+            EvidenceStatus::Submitted
+        );
+        assert_eq!(
+            s.payout.get_evidence(&under_review).unwrap().status,
+            EvidenceStatus::UnderReview
+        );
+    }
+
+    #[test]
+    fn dispute_is_allowed_while_paused() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-09");
+        submit_cycle(&s, &c, "ipfs://statement", 10_000);
+        s.payout.pause(&s.admin);
+
+        s.payout.flag_dispute(
+            &s.admin,
+            &c,
+            &String::from_str(&s.env, "Frozen during incident review"),
+        );
+
+        assert_eq!(
+            s.payout.get_evidence(&c).unwrap().status,
+            EvidenceStatus::Disputed
+        );
+        // The ally's resubmission still waits for the unpause.
+        assert_eq!(
+            apply(&s, &c, Action::Submit),
+            Some(Error::from_contract_error(
+                PayoutError::ContractPaused as u32
+            ))
         );
     }
 

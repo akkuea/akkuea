@@ -17,6 +17,7 @@ pub enum MarketError {
     NotSeller = 5,
     InsufficientBalance = 6,
     Reentrancy = 7,
+    InvalidPrice = 8,
 }
 
 // ── Storage types ─────────────────────────────────────────────────────────────
@@ -29,13 +30,43 @@ pub struct Listing {
     pub price: i128,
 }
 
+/// A listing together with the index slot it occupies, so removing a listing
+/// can move the last slot into the freed one (swap-remove) in constant time
+/// instead of scanning the whole index.
+///
+/// Internal only: `get_listing` / `get_all_listings` keep returning `Listing`.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct StoredListing {
+    listing: Listing,
+    slot: u32,
+}
+
 #[contracttype]
 enum DataKey {
     NftContract,
     LandToken,
+    /// Number of active index slots. Small, scalar, kept in instance storage.
+    ListingCount,
+    /// Persistent: the `StoredListing` for a property id.
     Listing(u32),
-    AllListings,
+    /// Persistent: the property id occupying index slot `u32`.
+    IndexSlot(u32),
     Guard,
+}
+
+// ── TTL ───────────────────────────────────────────────────────────────────────
+//
+// Same TTL the other game contracts use (see the `bump_persistent` helper in
+// `game-property-nft`). Applied to every listing/index write and to the
+// instance on each state-changing call.
+
+const STORAGE_TTL: u32 = 518_400;
+
+fn bump_persistent(env: &Env, key: &DataKey) {
+    env.storage()
+        .persistent()
+        .extend_ttl(key, STORAGE_TTL, STORAGE_TTL);
 }
 
 // ── Re-entrancy guard ─────────────────────────────────────────────────────────
@@ -101,19 +132,27 @@ impl GameMarketplace {
         env.storage()
             .instance()
             .set(&DataKey::LandToken, &land_token);
-        env.storage()
-            .instance()
-            .set(&DataKey::AllListings, &Vec::<u32>::new(&env));
+        env.storage().instance().set(&DataKey::ListingCount, &0_u32);
+        Self::extend_instance_ttl(&env);
     }
 
     /// List a property for sale.
     ///
     /// The seller must have already called `approve(seller, marketplace, property_id)`
     /// on the NFT contract. This function calls `transfer_from` to take custody.
+    /// `price` must be strictly positive.
     pub fn list(env: Env, seller: Address, property_id: u32, price: i128) {
         seller.require_auth();
 
-        if env.storage().instance().has(&DataKey::Listing(property_id)) {
+        if price <= 0 {
+            panic_with_error!(&env, MarketError::InvalidPrice);
+        }
+
+        if env
+            .storage()
+            .persistent()
+            .has(&DataKey::Listing(property_id))
+        {
             panic_with_error!(&env, MarketError::AlreadyListed);
         }
 
@@ -128,22 +167,29 @@ impl GameMarketplace {
         let nft_client = NftContractClient::new(&env, &nft);
         nft_client.transfer_from(&marketplace, &seller, &marketplace, &property_id);
 
-        let listing = Listing {
-            seller,
-            property_id,
-            price,
+        // Append to the index: the new listing takes the next free slot.
+        let slot = Self::listing_count(&env);
+        let stored = StoredListing {
+            listing: Listing {
+                seller,
+                property_id,
+                price,
+            },
+            slot,
         };
+
+        let listing_key = DataKey::Listing(property_id);
+        env.storage().persistent().set(&listing_key, &stored);
+        bump_persistent(&env, &listing_key);
+
+        let index_key = DataKey::IndexSlot(slot);
+        env.storage().persistent().set(&index_key, &property_id);
+        bump_persistent(&env, &index_key);
+
         env.storage()
             .instance()
-            .set(&DataKey::Listing(property_id), &listing);
-
-        let mut ids: Vec<u32> = env
-            .storage()
-            .instance()
-            .get(&DataKey::AllListings)
-            .unwrap_or_else(|| Vec::new(&env));
-        ids.push_back(property_id);
-        env.storage().instance().set(&DataKey::AllListings, &ids);
+            .set(&DataKey::ListingCount, &(slot + 1));
+        Self::extend_instance_ttl(&env);
     }
 
     /// Purchase a listed property.
@@ -155,11 +201,12 @@ impl GameMarketplace {
 
         let _guard = ExecutionGuard::acquire(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
 
-        let listing: Listing = env
+        let stored: StoredListing = env
             .storage()
-            .instance()
+            .persistent()
             .get(&DataKey::Listing(property_id))
             .unwrap_or_else(|| panic_with_error!(&env, MarketError::NotListed));
+        let listing = stored.listing.clone();
 
         let land: Address = env
             .storage()
@@ -181,10 +228,7 @@ impl GameMarketplace {
         }
 
         // Remove listing atomically before external calls (checks-effects-interactions).
-        env.storage()
-            .instance()
-            .remove(&DataKey::Listing(property_id));
-        Self::remove_from_all_listings(&env, property_id);
+        Self::remove_listing(&env, property_id, stored.slot);
 
         // Transfer LAND from buyer to seller.
         land_client.transfer(&buyer, &listing.seller, &listing.price);
@@ -193,17 +237,20 @@ impl GameMarketplace {
         let marketplace = env.current_contract_address();
         let nft_client = NftContractClient::new(&env, &nft);
         nft_client.transfer(&marketplace, &buyer, &property_id);
+
+        Self::extend_instance_ttl(&env);
     }
 
     /// Cancel a listing and return the NFT to the seller.
     pub fn cancel(env: Env, seller: Address, property_id: u32) {
         seller.require_auth();
 
-        let listing: Listing = env
+        let stored: StoredListing = env
             .storage()
-            .instance()
+            .persistent()
             .get(&DataKey::Listing(property_id))
             .unwrap_or_else(|| panic_with_error!(&env, MarketError::NotListed));
+        let listing = stored.listing.clone();
 
         if listing.seller != seller {
             panic_with_error!(&env, MarketError::NotSeller);
@@ -215,40 +262,55 @@ impl GameMarketplace {
             .get(&DataKey::NftContract)
             .unwrap_or_else(|| panic_with_error!(&env, MarketError::NotInitialized));
 
-        env.storage()
-            .instance()
-            .remove(&DataKey::Listing(property_id));
-        Self::remove_from_all_listings(&env, property_id);
+        Self::remove_listing(&env, property_id, stored.slot);
 
         // Return NFT from escrow to seller.
         let marketplace = env.current_contract_address();
         let nft_client = NftContractClient::new(&env, &nft);
         nft_client.transfer(&marketplace, &seller, &property_id);
+
+        Self::extend_instance_ttl(&env);
     }
 
     /// Return a single listing.
     pub fn get_listing(env: Env, property_id: u32) -> Option<Listing> {
-        env.storage().instance().get(&DataKey::Listing(property_id))
+        env.storage()
+            .persistent()
+            .get::<DataKey, StoredListing>(&DataKey::Listing(property_id))
+            .map(|stored| stored.listing)
     }
 
     /// Return a paginated slice of active listings.
+    ///
+    /// Pages are served from a compact index: `offset`/`limit` select index
+    /// slots, and each slot holds one active property id. Slots are filled in
+    /// listing order, but when a listing is bought or cancelled the last slot
+    /// is moved into the freed slot (swap-remove), so results stay in
+    /// insertion order only until a removal happens. Callers that need a
+    /// stable global order should sort the page themselves.
+    ///
+    /// `offset`/`limit` are clamped: any pair returns a valid (possibly empty)
+    /// page and never panics.
     pub fn get_all_listings(env: Env, offset: u32, limit: u32) -> Vec<Listing> {
-        let ids: Vec<u32> = env
-            .storage()
-            .instance()
-            .get(&DataKey::AllListings)
-            .unwrap_or_else(|| Vec::new(&env));
+        let count = Self::listing_count(&env);
+        let start = offset.min(count);
+        let end = offset.saturating_add(limit).min(count);
 
         let mut result: Vec<Listing> = Vec::new(&env);
-        let len = ids.len();
-        let start = offset.min(len);
-        let end = (offset + limit).min(len);
-
-        for i in start..end {
-            // safe: i is bounded by end ≤ len
-            let id = ids.get(i).unwrap();
-            if let Some(listing) = env.storage().instance().get(&DataKey::Listing(id)) {
-                result.push_back(listing);
+        for slot in start..end {
+            let Some(property_id) = env
+                .storage()
+                .persistent()
+                .get::<DataKey, u32>(&DataKey::IndexSlot(slot))
+            else {
+                continue;
+            };
+            if let Some(stored) = env
+                .storage()
+                .persistent()
+                .get::<DataKey, StoredListing>(&DataKey::Listing(property_id))
+            {
+                result.push_back(stored.listing);
             }
         }
         result
@@ -256,24 +318,66 @@ impl GameMarketplace {
 
     // ── Private helpers ───────────────────────────────────────────────────────
 
-    fn remove_from_all_listings(env: &Env, property_id: u32) {
-        let ids: Vec<u32> = env
-            .storage()
-            .instance()
-            .get(&DataKey::AllListings)
-            .unwrap_or_else(|| Vec::new(env));
-
-        let mut updated: Vec<u32> = Vec::new(env);
-        for i in 0..ids.len() {
-            // safe: i is bounded by ids.len()
-            let id = ids.get(i).unwrap();
-            if id != property_id {
-                updated.push_back(id);
-            }
-        }
+    fn listing_count(env: &Env) -> u32 {
         env.storage()
             .instance()
-            .set(&DataKey::AllListings, &updated);
+            .get(&DataKey::ListingCount)
+            .unwrap_or(0)
+    }
+
+    fn extend_instance_ttl(env: &Env) {
+        env.storage()
+            .instance()
+            .extend_ttl(STORAGE_TTL, STORAGE_TTL);
+    }
+
+    /// Drop a listing and its index slot in constant time: the last active
+    /// slot is moved into the freed slot, and the moved listing's stored slot
+    /// is rewritten to match.
+    fn remove_listing(env: &Env, property_id: u32, slot: u32) {
+        env.storage()
+            .persistent()
+            .remove(&DataKey::Listing(property_id));
+        env.storage().persistent().remove(&DataKey::IndexSlot(slot));
+
+        let count = Self::listing_count(env);
+        if slot >= count {
+            return;
+        }
+
+        let last_slot = count - 1;
+        if slot != last_slot {
+            if let Some(moved_id) = env
+                .storage()
+                .persistent()
+                .get::<DataKey, u32>(&DataKey::IndexSlot(last_slot))
+            {
+                env.storage()
+                    .persistent()
+                    .set(&DataKey::IndexSlot(slot), &moved_id);
+                bump_persistent(env, &DataKey::IndexSlot(slot));
+
+                if let Some(mut moved) = env
+                    .storage()
+                    .persistent()
+                    .get::<DataKey, StoredListing>(&DataKey::Listing(moved_id))
+                {
+                    moved.slot = slot;
+                    env.storage()
+                        .persistent()
+                        .set(&DataKey::Listing(moved_id), &moved);
+                    bump_persistent(env, &DataKey::Listing(moved_id));
+                }
+            }
+        }
+
+        env.storage()
+            .persistent()
+            .remove(&DataKey::IndexSlot(last_slot));
+        env.storage()
+            .instance()
+            .set(&DataKey::ListingCount, &last_slot);
+        Self::extend_instance_ttl(env);
     }
 }
 
@@ -281,10 +385,15 @@ impl GameMarketplace {
 
 #[cfg(test)]
 mod tests {
+    extern crate std;
+
     use super::*;
     use game_property_nft::{GamePropertyNft, GamePropertyNftClient};
     use soroban_sdk::{
-        testutils::Address as _,
+        testutils::{
+            storage::{Instance as _, Persistent as _},
+            Address as _,
+        },
         token::{StellarAssetClient, TokenClient},
         Address, Env,
     };
@@ -421,7 +530,8 @@ mod tests {
         let s = setup();
         for id in 0..5_u32 {
             s.nft.approve(&s.treasury, &s.marketplace_id, &id);
-            s.marketplace.list(&s.treasury, &id, &(id as i128 * 100));
+            s.marketplace
+                .list(&s.treasury, &id, &((id + 1) as i128 * 100));
         }
 
         assert_eq!(s.marketplace.get_all_listings(&0, &3).len(), 3);
@@ -657,6 +767,143 @@ mod tests {
 
         // A limit larger than the number of listings is clamped.
         assert_eq!(s.marketplace.get_all_listings(&0, &100).len(), 1);
+    }
+
+    // ── issue #1205: storage scale, price validation, pagination ─────────────
+
+    #[test]
+    fn test_list_all_400_tiles_succeeds() {
+        let s = setup();
+        for id in 0..400_u32 {
+            s.nft.approve(&s.treasury, &s.marketplace_id, &id);
+            s.marketplace.list(&s.treasury, &id, &100);
+        }
+
+        // Spot-check the first and last tile plus two pages. Pages are kept
+        // small on purpose: a single invocation may only touch a limited
+        // number of ledger entries, so one giant page is not a realistic call.
+        assert!(s.marketplace.get_listing(&0).is_some());
+        assert!(s.marketplace.get_listing(&399).is_some());
+        assert_eq!(s.nft.get_owner(&399), s.marketplace_id);
+        assert_eq!(s.marketplace.get_all_listings(&0, &40).len(), 40);
+        assert_eq!(s.marketplace.get_all_listings(&360, &40).len(), 40);
+        assert!(s.marketplace.get_all_listings(&400, &40).is_empty());
+    }
+
+    #[test]
+    fn test_buy_write_bytes_stay_flat_at_scale() {
+        // Case A: one active listing.
+        let s = setup();
+        let buyer = Address::generate(&s.env);
+        mint_land(&s, &buyer, 1_000_000);
+        s.nft.approve(&s.treasury, &s.marketplace_id, &0);
+        s.marketplace.list(&s.treasury, &0, &100);
+        s.env.cost_estimate().budget().reset_unlimited();
+        s.marketplace.buy(&buyer, &0);
+        let cpu_1 = s.env.cost_estimate().budget().cpu_instruction_cost();
+        let res_1 = s.env.cost_estimate().resources();
+
+        // Case B: 300 active listings, buy the middle one.
+        let s = setup();
+        let buyer = Address::generate(&s.env);
+        mint_land(&s, &buyer, 1_000_000);
+        for id in 0..300_u32 {
+            s.nft.approve(&s.treasury, &s.marketplace_id, &id);
+            s.marketplace.list(&s.treasury, &id, &100);
+        }
+        s.env.cost_estimate().budget().reset_unlimited();
+        s.marketplace.buy(&buyer, &150);
+        let cpu_300 = s.env.cost_estimate().budget().cpu_instruction_cost();
+        let res_300 = s.env.cost_estimate().resources();
+
+        std::println!(
+            "AFTER buy: 1 listing cpu={} write_bytes={} | 300 listings cpu={} write_bytes={} | cpu ratio={:.2}x bytes ratio={:.2}x",
+            cpu_1,
+            res_1.write_bytes,
+            cpu_300,
+            res_300.write_bytes,
+            cpu_300 as f64 / cpu_1 as f64,
+            res_300.write_bytes as f64 / res_1.write_bytes as f64,
+        );
+
+        // The marketplace no longer rewrites the order book on `buy`, so the
+        // bytes it writes stay bounded. With the listings in instance storage
+        // this measured 56,424 bytes and 40x at 300 listings; the residual
+        // growth now comes from `game-property-nft`, whose per-owner index is
+        // rewritten on every transfer (the escrow owns every listed tile).
+        assert!(
+            res_300.write_bytes <= res_1.write_bytes * 5,
+            "write_300={} write_1={}",
+            res_300.write_bytes,
+            res_1.write_bytes
+        );
+        assert!(
+            res_300.write_bytes <= 20_000,
+            "write_300={}",
+            res_300.write_bytes
+        );
+
+        // CPU is deliberately not used as a scaling proof here: the test host
+        // charges per-access costs proportional to the total state a test
+        // created, so every call (even a plain `nft.get_owner`) gets more
+        // expensive as listings are added. This bound is only a regression
+        // guard: the instance-based implementation measured 11,377,627 CPU in
+        // case B, the index-based one measures about 6.6M.
+        assert!(cpu_300 <= 10_000_000, "cpu_300={cpu_300}");
+    }
+
+    #[test]
+    fn test_list_rejects_non_positive_price() {
+        let s = setup();
+
+        let zero = s.marketplace.try_list(&s.treasury, &0, &0);
+        assert_eq!(zero, Err(Ok(MarketError::InvalidPrice.into())));
+
+        let negative = s.marketplace.try_list(&s.treasury, &0, &-5);
+        assert_eq!(negative, Err(Ok(MarketError::InvalidPrice.into())));
+
+        // The NFT must not have been taken into escrow for a rejected listing.
+        assert!(s.marketplace.get_listing(&0).is_none());
+        assert_eq!(s.nft.get_owner(&0), s.treasury);
+    }
+
+    #[test]
+    fn test_get_all_listings_large_values_do_not_panic() {
+        let s = setup();
+        s.nft.approve(&s.treasury, &s.marketplace_id, &30);
+        s.marketplace.list(&s.treasury, &30, &100);
+
+        // `offset + limit` can no longer overflow: the page is clamped.
+        let overflow_page = s
+            .marketplace
+            .try_get_all_listings(&1, &u32::MAX)
+            .unwrap()
+            .unwrap();
+        assert_eq!(overflow_page.len(), 0);
+
+        assert_eq!(s.marketplace.get_all_listings(&0, &u32::MAX).len(), 1);
+        assert_eq!(
+            s.marketplace.get_all_listings(&u32::MAX, &u32::MAX).len(),
+            0
+        );
+    }
+
+    #[test]
+    fn test_listings_and_instance_have_extended_ttls() {
+        let s = setup();
+        s.nft.approve(&s.treasury, &s.marketplace_id, &31);
+        s.marketplace.list(&s.treasury, &31, &100);
+        let (listing_ttl, index_ttl, instance_ttl) = s.env.as_contract(&s.marketplace_id, || {
+            (
+                s.env.storage().persistent().get_ttl(&DataKey::Listing(31)),
+                s.env.storage().persistent().get_ttl(&DataKey::IndexSlot(0)),
+                s.env.storage().instance().get_ttl(),
+            )
+        });
+
+        assert!(listing_ttl >= STORAGE_TTL, "listing ttl {listing_ttl}");
+        assert!(index_ttl >= STORAGE_TTL, "index ttl {index_ttl}");
+        assert!(instance_ttl >= STORAGE_TTL, "instance ttl {instance_ttl}");
     }
 
     #[test]

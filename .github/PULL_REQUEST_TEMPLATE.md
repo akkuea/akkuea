@@ -23,7 +23,8 @@
 
 ## Checklist
 
-- [ ] All CI workflows pass (monorepo, API, webapp, shared, contracts)
+- [ ] `make check` passes (it runs the same checks as CI for what I changed)
+- [ ] I read my own diff and it only contains changes for this issue (no generated files, logs, or unrelated edits)
 - [ ] I have added or updated tests where applicable
 - [ ] I have updated relevant documentation
 - [ ] No `.env` files or secrets are committed

@@ -121,7 +121,9 @@ describe("Security Headers Configuration", () => {
       expect(Object.keys(headerMap)).toContain("X-Frame-Options");
       expect(headerMap["X-Frame-Options"]).toBe("DENY");
       expect(Object.keys(headerMap)).toContain("Referrer-Policy");
-      expect(headerMap["Referrer-Policy"]).toBe("strict-origin-when-cross-origin");
+      expect(headerMap["Referrer-Policy"]).toBe(
+        "strict-origin-when-cross-origin",
+      );
       expect(Object.keys(headerMap)).toContain("Permissions-Policy");
       expect(headerMap["Permissions-Policy"]).toContain("camera=()");
       // HSTS is production-only, so verify its presence when NODE_ENV is production

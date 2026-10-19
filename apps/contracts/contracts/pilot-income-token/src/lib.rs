@@ -1,7 +1,6 @@
 #![no_std]
 #![allow(linker_messages)]
 
-use soroban_sdk::storage::Instance;
 use soroban_sdk::{
     contract, contractclient, contractimpl, contracttype, panic_with_error, Address, Env, String,
     Vec,
@@ -10,48 +9,11 @@ use soroban_sdk::{
 mod errors;
 mod events;
 mod storage;
+mod ttl;
 
 pub use errors::IncomeTokenError;
 use storage::{DataKey, Storage};
-
-/// TTL policy for the pilot income token.
-///
-/// The pilot reports monthly, so the longest gap between two writes to any
-/// single entry is expected to be roughly one reporting cycle plus a small
-/// operational buffer. Soroban ledgers close about every 5 seconds, so:
-///
-/// * `TTL_THRESHOLD` (~30 days) is the point at which we refresh an entry.
-///   It is comfortably longer than one reporting cycle, so a normally
-///   operated pilot never reaches it, but short enough that a stalled
-///   operator still has weeks of warning before archival.
-/// * `TTL_EXTEND_TO` (~120 days) is the new TTL applied when we refresh.
-///   Four reporting cycles of headroom means a single missed bump does not
-///   archive balances or approvals mid-distribution.
-///
-/// With these values no periodic "bump" transaction is required: every
-/// state-changing entry point extends the instance TTL, and every balance
-/// read/write plus every whitelist-gated write extends the relevant
-/// persistent entry. See docs/operations/ttl-policy.md.
-pub const TTL_THRESHOLD: u32 = 30 * 24 * 60 * 60 / 5;
-pub const TTL_EXTEND_TO: u32 = 120 * 24 * 60 * 60 / 5;
-
-/// Extend the contract instance TTL. Instance storage (admin, whitelist,
-/// metadata, holders, total supply, paused flag, wound-down record) shares
-/// the instance TTL, so this must run on every state-changing entry point.
-fn extend_instance_ttl(env: &Env) {
-    env.storage()
-        .instance()
-        .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
-}
-
-/// Extend a persistent entry's TTL. Called on every write and on the
-/// critical read paths (balance reads during distribution, whitelist
-/// checks) so entries nobody writes to still stay live.
-fn extend_persistent_ttl(env: &Env, key: &DataKey) {
-    env.storage()
-        .persistent()
-        .extend_ttl(key, TTL_THRESHOLD, TTL_EXTEND_TO);
-}
+use ttl::{extend_instance as extend_instance_ttl, extend_persistent as extend_persistent_ttl};
 
 #[contractclient(name = "WhitelistClient")]
 pub trait Whitelist {
@@ -172,8 +134,11 @@ impl PilotIncomeToken {
 
     /// Return the balance of an address.
     pub fn balance(env: Env, id: Address) -> i128 {
+        let key = DataKey::Balance(id.clone());
         let balance = Storage::balance(&env, &id);
-        extend_persistent_ttl(&env, &DataKey::Balance(id));
+        if env.storage().persistent().has(&key) {
+            extend_persistent_ttl(&env, &key);
+        }
         balance
     }
 
@@ -402,10 +367,10 @@ impl PilotIncomeToken {
         Storage::set_balance(env, &from, next_from);
         Storage::set_balance(env, &to, next_to);
         Self::upsert_holder(env, &to);
-        events::emit_transfer(env, from, to, amount);
 
-        extend_persistent_ttl(env, &DataKey::Balance(from));
-        extend_persistent_ttl(env, &DataKey::Balance(to));
+        extend_persistent_ttl(env, &DataKey::Balance(from.clone()));
+        extend_persistent_ttl(env, &DataKey::Balance(to.clone()));
+        events::emit_transfer(env, from, to, amount);
     }
 
     fn upsert_holder(env: &Env, holder: &Address) {
@@ -432,8 +397,14 @@ impl PilotIncomeToken {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ttl::TTL_THRESHOLD;
     use pilot_whitelist::{PilotWhitelist, PilotWhitelistClient};
-    use soroban_sdk::{testutils::Address as _, vec, xdr::ScVal, Error, TryFromVal};
+    use soroban_sdk::{
+        testutils::{Address as _, Ledger as _},
+        vec,
+        xdr::ScVal,
+        Error, TryFromVal,
+    };
 
     struct Setup {
         env: Env,
@@ -1001,5 +972,33 @@ mod tests {
         s.token.transfer_admin_accept(&new_admin);
 
         assert_eq!(s.token.admin(), new_admin);
+    }
+
+    // --- TTL ---
+
+    #[test]
+    fn state_changing_call_extends_balance_ttl() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        // Move far enough that the balance entry is below the threshold.
+        s.env.ledger().with_mut(|l| l.sequence_number += 1_100_000);
+
+        s.token
+            .transfer(&s.admin, &s.holder_one, &s.holder_two, &100);
+
+        let ttl = s.env.as_contract(&s.token.address, || {
+            s.env
+                .storage()
+                .persistent()
+                .get_ttl(&DataKey::Balance(s.holder_one.clone()))
+        });
+        assert!(ttl >= TTL_THRESHOLD);
     }
 }

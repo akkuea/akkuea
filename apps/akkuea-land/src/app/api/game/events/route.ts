@@ -1,4 +1,8 @@
-import { getLatestLedger, pollGameEvents } from "@/lib/soroban-poller";
+import {
+  getLatestLedger,
+  pollGameEvents,
+  type PollPosition,
+} from "@/lib/soroban-poller";
 import { appendEvents } from "@/lib/event-store";
 import type { GameEvent } from "@akkuea/shared";
 
@@ -19,9 +23,9 @@ function sseComment(msg: string): string {
 }
 
 export async function GET(): Promise<Response> {
-  let startLedger: number;
+  let position: PollPosition;
   try {
-    startLedger = await getLatestLedger();
+    position = { startLedger: await getLatestLedger() };
   } catch {
     return new Response("RPC unavailable", { status: 503 });
   }
@@ -47,8 +51,8 @@ export async function GET(): Promise<Response> {
         }
 
         try {
-          const { events, nextLedger } = await pollGameEvents(startLedger);
-          startLedger = nextLedger;
+          const { events, cursor } = await pollGameEvents(position);
+          position = { cursor };
           backoff = BASE_BACKOFF_MS;
 
           if (events.length > 0) {

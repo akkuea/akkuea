@@ -42,7 +42,9 @@ export function addressToHSL(address: string): string {
   const saturation = 50 + (hash % 26);
 
   // Lightness: 35–50% (readable on dark bg)
-  const lightness = 35 + ((hash >> 8) % 16);
+  // Unsigned shift: a signed `>>` turns hashes >= 2^31 negative, which pushed
+  // lightness below 35%.
+  const lightness = 35 + ((hash >>> 8) % 16);
 
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
 }

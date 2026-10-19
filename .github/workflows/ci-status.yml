@@ -1,0 +1,139 @@
+name: CI Status Comment
+
+# Tells contributors, in one friendly comment per PR, which workflows failed
+# and how to reproduce them locally. Never converts a PR to draft, never
+# closes it, never reviews it. Runs on a schedule from the base repository,
+# so it never checks out or executes code from a pull request.
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: ci-status-comment
+  cancel-in-progress: false
+
+jobs:
+  comment:
+    if: github.repository == 'akkuea/akkuea'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const MARKER = "<!-- ci-status-comment";
+            const MAINTAINERS = new Set(["salazarsebas", "kimcascante", "xjeffx23"]);
+            const FAILED = new Set(["failure", "timed_out", "startup_failure"]);
+            const { owner, repo } = context.repo;
+
+            const prs = await github.paginate(github.rest.pulls.list, {
+              owner, repo, state: "open", per_page: 100,
+            });
+
+            for (const pr of prs) {
+              const author = pr.user.login;
+              // Drafts are the contributor's own work in progress. Leave them alone.
+              if (pr.draft || pr.user.type === "Bot" || author.endsWith("[bot]")) continue;
+              if (MAINTAINERS.has(author.toLowerCase())) continue;
+
+              const sha = pr.head.sha;
+              const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+                owner, repo, head_sha: sha, event: "pull_request", per_page: 100,
+              });
+              if (runs.length === 0) continue;
+
+              // Latest attempt per workflow, so a successful re-run replaces a failure.
+              const latest = new Map();
+              for (const run of runs) {
+                const prev = latest.get(run.workflow_id);
+                if (!prev || new Date(run.created_at) > new Date(prev.created_at)) {
+                  latest.set(run.workflow_id, run);
+                }
+              }
+              const current = [...latest.values()];
+              // `action_required` means a maintainer still has to approve the run.
+              const pending = current.filter(
+                (r) => r.status !== "completed" || r.conclusion === "action_required",
+              );
+              const failedRuns = current.filter((r) => r.status === "completed" && FAILED.has(r.conclusion));
+
+              const rows = [];
+              for (const run of failedRuns) {
+                const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                  owner, repo, run_id: run.id, filter: "latest", per_page: 100,
+                });
+                const bad = jobs.filter((j) => FAILED.has(j.conclusion));
+                if (bad.length === 0) {
+                  rows.push(`| ${run.name} | [open run](${run.html_url}) | - |`);
+                }
+                for (const job of bad) {
+                  const step = (job.steps || []).find((s) => FAILED.has(s.conclusion));
+                  const stepName = step ? step.name.replace(/\|/g, "\\|") : "-";
+                  rows.push(`| ${run.name} | [${job.name}](${job.html_url}) | \`${stepName}\` |`);
+                }
+              }
+
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner, repo, issue_number: pr.number, per_page: 100,
+              });
+              const mine = comments.filter(
+                (c) => c.user.type === "Bot" && (c.body || "").startsWith(MARKER),
+              );
+              const existing = mine[mine.length - 1];
+              const short = sha.slice(0, 7);
+
+              if (rows.length > 0) {
+                const body = [
+                  `${MARKER} sha=${sha} state=failing -->`,
+                  "### Some checks are failing",
+                  "",
+                  `Hi @${author}, thanks for your contribution! Some CI workflows are failing on commit \`${short}\`. **We can only merge a pull request once every workflow passes**, so please fix these first:`,
+                  "",
+                  "| Workflow | Job | Failed step |",
+                  "|---|---|---|",
+                  ...rows.slice(0, 15),
+                  ...(rows.length > 15 ? ["", `And ${rows.length - 15} more failing job(s). See the Checks tab.`] : []),
+                  "",
+                  "**How to fix it**",
+                  "",
+                  "1. Run `make check` from the repository root. It runs the same checks as CI for the parts of the repo you changed.",
+                  "2. Fix everything it reports, then commit and push to this same branch. CI runs again and this comment updates by itself.",
+                  "3. If you use an AI assistant, ask it to run `make check` and keep fixing until it passes. Then read the diff yourself and delete anything that is not part of the fix: generated files, logs, encoded blobs, unrelated changes.",
+                  "",
+                  "A maintainer review of the code itself will follow. If a failure looks unrelated to your change, reply here and let us know.",
+                ].join("\n");
+
+                if (existing && existing.body.includes(`sha=${sha}`)) {
+                  if (existing.body !== body) {
+                    await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+                  }
+                } else {
+                  // New commit, new comment, so the contributor gets a notification.
+                  for (const old of mine) {
+                    await github.rest.issues.deleteComment({ owner, repo, comment_id: old.id });
+                  }
+                  await github.rest.issues.createComment({ owner, repo, issue_number: pr.number, body });
+                }
+                core.info(`#${pr.number}: ${rows.length} failing job(s)`);
+                continue;
+              }
+
+              if (pending.length === 0 && existing && existing.body.includes("state=failing")) {
+                const body = [
+                  `${MARKER} sha=${sha} state=passing -->`,
+                  "### All checks are passing",
+                  "",
+                  `Thanks @${author}! Every workflow passes on commit \`${short}\`. A maintainer review will follow.`,
+                ].join("\n");
+                await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+                core.info(`#${pr.number}: now passing`);
+              }
+            }

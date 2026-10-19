@@ -39,6 +39,8 @@ pub enum ContractError {
     OracleNotConfigured = 26,
     /// Decimal normalization overflowed or underflowed
     PriceScalingOverflow = 27,
+    /// Oracle price timestamp is too far in the future
+    OraclePriceInFuture = 28,
 }
 
 pub struct AdminControl;

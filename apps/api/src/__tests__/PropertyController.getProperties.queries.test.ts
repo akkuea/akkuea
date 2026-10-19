@@ -1,5 +1,9 @@
 import { describe, expect, it, spyOn, beforeEach } from 'bun:test';
-import { PropertyController } from '../controllers/PropertyController';
+import {
+  PropertyController,
+  validatePagination,
+  MAX_PAGE,
+} from '../controllers/PropertyController';
 import { propertyRepository, type PropertyListRow } from '../repositories/PropertyRepository';
 import { userRepository } from '../repositories/UserRepository';
 import { cacheService } from '../services/CacheService';
@@ -72,5 +76,25 @@ describe('PropertyController.getProperties', () => {
     expect(findUserByIdSpy).not.toHaveBeenCalled();
     expect(out.data).toHaveLength(3);
     expect(out.data.map((p) => p.owner)).toEqual(rows.map((r) => r.ownerWalletAddress));
+  });
+});
+
+describe('validatePagination', () => {
+  it('passes through in-range values', () => {
+    expect(validatePagination(5, 20)).toEqual({ page: 5, limit: 20 });
+  });
+
+  it('defaults invalid or missing page/limit', () => {
+    expect(validatePagination(undefined, undefined)).toEqual({ page: 1, limit: 10 });
+    expect(validatePagination(0, -5)).toEqual({ page: 1, limit: 10 });
+  });
+
+  it('caps an out-of-range page at MAX_PAGE instead of passing it through unbounded', () => {
+    expect(validatePagination(MAX_PAGE + 1, 10)).toEqual({ page: MAX_PAGE, limit: 10 });
+    expect(validatePagination(Number.MAX_SAFE_INTEGER, 10)).toEqual({ page: MAX_PAGE, limit: 10 });
+  });
+
+  it('falls back to the default limit when the requested limit exceeds 100', () => {
+    expect(validatePagination(1, 1000)).toEqual({ page: 1, limit: 10 });
   });
 });

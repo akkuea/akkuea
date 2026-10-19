@@ -10,6 +10,8 @@ use soroban_sdk::{
 mod errors;
 mod events;
 mod storage;
+mod ttl;
+
 
 pub use errors::PayoutError;
 use storage::{DataKey, Storage};
@@ -33,28 +35,6 @@ pub const SWAP_DEADLINE_SECS: u64 = 3600;
 /// for EURC swap legs. We cap this to guarantee safe budget headroom.
 pub const MAX_HOLDERS: u32 = 10;
 
-/// TTL policy for the pilot payout contract.
-///
-/// The pilot reports income monthly and distributions are executed once per
-/// cycle, so the longest gap between two writes to any single entry is on the
-/// order of a few weeks (evidence submission, review, distribution, plus
-/// occasional preference changes). Soroban's default entry TTL is far shorter
-/// than that, so without explicit extension an approval or a cycle record can
-/// be archived between cycles and only restored (at a fee, at the worst
-/// moment) when a distribution touches it.
-///
-/// We therefore extend every persistent entry and the contract instance to
-/// `TTL_EXTEND_TO_LEDGERS` whenever they are written, and refresh them on the
-/// critical read paths (whitelist checks and balance reads during a
-/// distribution). `TTL_THRESHOLD_LEDGERS` is the point below which a write or
-/// critical read triggers a bump, chosen so a normal monthly cycle always
-/// refreshes the entry well before it can expire. At ~5s per ledger,
-/// `TTL_EXTEND_TO_LEDGERS` is roughly 180 days, comfortably longer than the
-/// pilot's reporting cadence, so no periodic off-chain "bump" transaction is
-/// required as long as the contract is used at least once per cycle (see
-/// docs/operations/pilot-ttl-policy.md).
-pub const TTL_THRESHOLD_LEDGERS: u32 = 30 * 24 * 60 * 12; // ~30 days
-pub const TTL_EXTEND_TO_LEDGERS: u32 = 180 * 24 * 60 * 12; // ~180 days
 
 #[contractclient(name = "IncomeTokenClient")]
 pub trait IncomeToken {
@@ -3311,3 +3291,36 @@ pub mod tests {
 
 #[cfg(test)]
 mod proptests;
+
+
+#[cfg(test)]
+mod ttl_tests {
+    use super::tests::{cycle, record_default, setup_with_balance_values};
+    use super::*;
+    use crate::ttl::TTL_THRESHOLD;
+    use soroban_sdk::testutils::Ledger as _;
+
+    #[test]
+    fn state_changing_call_extends_evidence_ttl() {
+        let s = setup_with_balance_values(&[1, 2, 3, 4, 10]);
+        record_default(&s);
+
+        // Move far enough that the evidence entry is below the threshold.
+        s.env.ledger().with_mut(|l| l.sequence_number += 2_700_000);
+
+        s.payout.flag_dispute(
+            &s.admin,
+            &cycle(&s.env, "2026-08"),
+            &String::from_str(&s.env, "ttl test"),
+        );
+
+        let ttl = s.env.as_contract(&s.payout_id, || {
+            s.env
+                .storage()
+                .persistent()
+                .get_ttl(&DataKey::Evidence(cycle(&s.env, "2026-08")))
+        });
+        assert!(ttl >= TTL_THRESHOLD);
+    }
+}
+

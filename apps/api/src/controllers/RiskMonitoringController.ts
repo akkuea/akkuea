@@ -26,7 +26,7 @@ export class RiskMonitoringController {
     return await this.service.assessPositions(positions, collateralPrices);
   }
 
-  /** Used by the monitoring job. Notifies borrowers only when a position's risk level changes. */
+  /** Used by the monitoring job / POST route. Notifies borrowers only on risk-level transitions. */
   static async notifyRiskTransitions(): Promise<PositionHealth[]> {
     const healthResults = await this.assessAllPositions();
 
@@ -36,13 +36,13 @@ export class RiskMonitoringController {
 
       if (health.riskLevel === 'critical') {
         await this.notificationService.notifyLiquidationRisk(
-          health.borrowerId,
+          health.borrower,
           health.positionId,
           'IN_APP',
         );
       } else if (health.riskLevel === 'warning') {
         await this.notificationService.notifyRiskWarning(
-          health.borrowerId,
+          health.borrower,
           health.positionId,
           'warning',
           'IN_APP',

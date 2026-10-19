@@ -52,8 +52,6 @@ export class RiskMonitoringService {
       collateralValue,
       borrowValue,
       liquidationThreshold: this.LIQUIDATION_THRESHOLD,
-      poolId: position.poolId,
-      borrowerId: position.borrowerId,
     };
   }
 
@@ -95,8 +93,6 @@ export class RiskMonitoringService {
       collateralToSeize,
       debtToCover,
       estimatedProceeds,
-      poolId: string;
-      borrowerId: string;
     };
   }
 

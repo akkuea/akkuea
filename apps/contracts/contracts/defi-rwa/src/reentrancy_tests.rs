@@ -572,9 +572,11 @@ fn test_liquidation_health_factor_deterministic() {
     let debt_value: i128 = 1000;
     let threshold: i128 = 800_000_000_000_000_000; // 80%
 
-    let hf1 = PositionStorage::calculate_health_factor(collateral_value, debt_value, threshold);
+    let hf1 =
+        PositionStorage::calculate_health_factor(collateral_value, debt_value, threshold).unwrap();
     // Call again - must produce identical result (no side effects / reentrancy risk)
-    let hf2 = PositionStorage::calculate_health_factor(collateral_value, debt_value, threshold);
+    let hf2 =
+        PositionStorage::calculate_health_factor(collateral_value, debt_value, threshold).unwrap();
 
     assert_eq!(
         hf1, hf2,

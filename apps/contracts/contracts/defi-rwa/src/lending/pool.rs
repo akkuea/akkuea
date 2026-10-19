@@ -1,5 +1,7 @@
 use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
+use crate::access::ContractError;
+
 use super::interest::PRECISION;
 use super::keys::{lending_bump, LendingKey};
 
@@ -109,26 +111,41 @@ impl PoolStorage {
     }
 
     /// Add to pool reserves
-    pub fn add_reserves(env: &Env, pool_id: &String, amount: i128) {
+    pub fn add_reserves(env: &Env, pool_id: &String, amount: i128) -> Result<(), ContractError> {
         let current = Self::get_reserves(env, pool_id);
+        let updated = current
+            .checked_add(amount)
+            .ok_or(ContractError::BalanceOverflow)?;
         let key = LendingKey::PoolReserves(pool_id.clone());
-        env.storage().persistent().set(&key, &(current + amount));
+        env.storage().persistent().set(&key, &updated);
+        Ok(())
     }
 
     /// Calculate utilization rate
-    pub fn calculate_utilization(total_deposits: i128, total_borrows: i128) -> i128 {
+    pub fn calculate_utilization(
+        total_deposits: i128,
+        total_borrows: i128,
+    ) -> Result<i128, ContractError> {
         if total_deposits == 0 {
-            return 0;
+            return Ok(0);
         }
-        (total_borrows * PRECISION) / total_deposits
+        total_borrows
+            .checked_mul(PRECISION)
+            .and_then(|value| value.checked_div(total_deposits))
+            .ok_or(ContractError::BalanceOverflow)
     }
 
     /// Calculate available liquidity
-    pub fn calculate_available_liquidity(total_deposits: i128, total_borrows: i128) -> i128 {
+    pub fn calculate_available_liquidity(
+        total_deposits: i128,
+        total_borrows: i128,
+    ) -> Result<i128, ContractError> {
         if total_deposits <= total_borrows {
-            return 0;
+            return Ok(0);
         }
-        total_deposits - total_borrows
+        total_deposits
+            .checked_sub(total_borrows)
+            .ok_or(ContractError::BalanceOverflow)
     }
 
     /// Get pool list

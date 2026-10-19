@@ -126,6 +126,9 @@ export function filterAndSortProperties(
     .sort(sortComparators[sortBy]);
 }
 
+/** Shown when a property has no images or its image fails to load. */
+export const PROPERTY_IMAGE_PLACEHOLDER = "/images/property-placeholder.svg";
+
 export function getPropertyImage(property: PropertyInfo): string {
-  return property.images[0] ?? "/images/property-placeholder.png";
+  return property.images[0] ?? PROPERTY_IMAGE_PLACEHOLDER;
 }

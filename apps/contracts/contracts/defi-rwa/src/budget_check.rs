@@ -4,30 +4,58 @@
 //! the main `defi-rwa` contract entry-points and assert they stay within the
 //! documented budget thresholds.
 //!
-//! ## Documented Budget Thresholds
+//! ## Soroban network per-transaction limits
 //!
-//! | Function           | Max CPU (instructions) | Max Memory (bytes) |
-//! |--------------------|------------------------|--------------------|
-//! | `mint_shares`      | 60 000 000             | 5 000 000          |
-//! | `transfer_shares`  | 60 000 000             | 5 000 000          |
-//! | `create_pool`      | 80 000 000             | 8 000 000          |
-//! | `deposit`          | 80 000 000             | 8 000 000          |
-//! | `withdraw`         | 80 000 000             | 8 000 000          |
-//! | `borrow`           | 120 000 000            | 12 000 000         |
-//! | `repay`            | 120 000 000            | 12 000 000         |
+//! Every Soroban transaction is capped by the network at:
 //!
-//! These thresholds include a ~50 % headroom over typical observed costs and
-//! are well within the Soroban network-wide limits (100 M CPU per invocation).
-//! If a change causes a function to exceed its budget, the CI job
-//! `invocation-budget` will fail, signalling a regression.
+//! - **100 000 000 CPU instructions** (`txMaxCpuInstructions`)
+//! - **40 000 000 memory bytes** (`txMaxMemoryBytes`, i.e. 40 MB)
+//!
+//! No threshold in this module may exceed those values. A threshold above the
+//! network limit would let a call that the network itself would reject pass as
+//! "within budget", so [`assert_budget`] re-checks every threshold against the
+//! network limits at run time.
+//!
+//! ## Threshold policy
+//!
+//! Each threshold is the measured cost of the checked invocation (printed as
+//! `MEASURED ...` when running with `--nocapture`) times a documented **10x
+//! margin**, rounded up to a round number. Host cost accounting is
+//! deterministic, so the margin is not about jitter: it absorbs (a) the gap
+//! between native test builds and on-chain WASM execution, which the SDK
+//! documents as an under-estimate for native tests, and (b) legitimate small
+//! additions to these code paths across SDK upgrades - while still failing
+//! loudly on real regressions such as added storage reads or crypto calls.
+//!
+//! ## Measured costs
+//!
+//! Measured with `cargo test --package rwa-defi-contract budget_check -- --nocapture`
+//! on the native test build (soroban-sdk 25.3):
+//!
+//! | Function          | Measured CPU  | CPU threshold (=10x, rounded) | Measured mem | Mem threshold (=10x, rounded) |
+//! |-------------------|--------------:|------------------------------:|-------------:|------------------------------:|
+//! | `mint_shares`     |    104 751    |                 1 100 000     |     41 670   |                    500 000    |
+//! | `transfer_shares` |    111 672    |                 1 200 000     |     44 259   |                    500 000    |
+//! | `create_pool`     |    321 829    |                 3 300 000     |    139 715   |                  1 500 000    |
+//! | `deposit`         |    531 942    |                 5 400 000     |    208 030   |                  2 100 000    |
+//! | `withdraw`        |    554 074    |                 5 600 000     |    198 439   |                  2 000 000    |
+//! | `borrow`          |  1 085 172    |                11 000 000     |    403 840   |                  4 100 000    |
+//! | `repay`           |    835 449    |                 8 400 000     |    293 857   |                  3 000 000    |
+//!
+//! Every threshold is orders of magnitude below the network limits above;
+//! [`assert_budget`] additionally re-checks that invariant at run time. If a
+//! change causes a function to exceed its budget, the CI job
+//! `invocation-budget` will fail, signalling a regression. Conversely,
+//! lowering any threshold below its measured value makes the corresponding
+//! test fail - the checks are live, not decorative.
 
-use super::access::AdminControl;
-use super::lending::PriceOracle;
+extern crate std;
+
 use super::*;
 use sep_40_oracle::{Asset, PriceData};
 use soroban_sdk::{
     testutils::{Address as _, Ledger as _},
-    token::{StellarAssetClient, TokenClient},
+    token::StellarAssetClient,
     Address, Env, String, Symbol,
 };
 
@@ -70,23 +98,50 @@ impl MockOracleContract {
 }
 
 // ───────────────────────────────────────────────
-// Budget threshold constants
+// Network limits and budget threshold constants
 // ───────────────────────────────────────────────
 
-/// Maximum CPU instructions for share management functions.
-const BUDGET_CPU_SHARES: u64 = 60_000_000;
-/// Maximum memory bytes for share management functions.
-const BUDGET_MEM_SHARES: u64 = 5_000_000;
+/// Soroban network per-transaction CPU instruction limit (`txMaxCpuInstructions`).
+/// No threshold below may exceed this value.
+const NETWORK_CPU_LIMIT: u64 = 100_000_000;
+/// Soroban network per-transaction memory byte limit (`txMaxMemoryBytes` = 40 MB).
+/// No threshold below may exceed this value.
+const NETWORK_MEM_LIMIT: u64 = 40_000_000;
 
-/// Maximum CPU instructions for pool/lending operations.
-const BUDGET_CPU_POOL: u64 = 80_000_000;
-/// Maximum memory bytes for pool/lending operations.
-const BUDGET_MEM_POOL: u64 = 8_000_000;
+/// CPU budget for `mint_shares` (measured 104 751, 10x margin).
+const BUDGET_CPU_MINT_SHARES: u64 = 1_100_000;
+/// Memory budget for `mint_shares` (measured 41 670, 10x margin).
+const BUDGET_MEM_MINT_SHARES: u64 = 500_000;
 
-/// Maximum CPU instructions for complex lending operations (borrow/repay).
-const BUDGET_CPU_COMPLEX: u64 = 120_000_000;
-/// Maximum memory bytes for complex lending operations (borrow/repay).
-const BUDGET_MEM_COMPLEX: u64 = 12_000_000;
+/// CPU budget for `transfer_shares` (measured 111 672, 10x margin).
+const BUDGET_CPU_TRANSFER_SHARES: u64 = 1_200_000;
+/// Memory budget for `transfer_shares` (measured 44 259, 10x margin).
+const BUDGET_MEM_TRANSFER_SHARES: u64 = 500_000;
+
+/// CPU budget for `create_pool` (measured 321 829, 10x margin).
+const BUDGET_CPU_CREATE_POOL: u64 = 3_300_000;
+/// Memory budget for `create_pool` (measured 139 715, 10x margin).
+const BUDGET_MEM_CREATE_POOL: u64 = 1_500_000;
+
+/// CPU budget for `deposit` (measured 531 942, 10x margin).
+const BUDGET_CPU_DEPOSIT: u64 = 5_400_000;
+/// Memory budget for `deposit` (measured 208 030, 10x margin).
+const BUDGET_MEM_DEPOSIT: u64 = 2_100_000;
+
+/// CPU budget for `withdraw` (measured 554 074, 10x margin).
+const BUDGET_CPU_WITHDRAW: u64 = 5_600_000;
+/// Memory budget for `withdraw` (measured 198 439, 10x margin).
+const BUDGET_MEM_WITHDRAW: u64 = 2_000_000;
+
+/// CPU budget for `borrow` (measured 1 085 172, 10x margin).
+const BUDGET_CPU_BORROW: u64 = 11_000_000;
+/// Memory budget for `borrow` (measured 403 840, 10x margin).
+const BUDGET_MEM_BORROW: u64 = 4_100_000;
+
+/// CPU budget for `repay` (measured 835 449, 10x margin).
+const BUDGET_CPU_REPAY: u64 = 8_400_000;
+/// Memory budget for `repay` (measured 293 857, 10x margin).
+const BUDGET_MEM_REPAY: u64 = 3_000_000;
 
 // ───────────────────────────────────────────────
 // Helpers
@@ -96,9 +151,10 @@ struct BudgetSetup<'a> {
     env: Env,
     admin: Address,
     token_address: Address,
-    token_admin: Address,
+    // `_token_admin` mirrors test.rs: retained only so the registered
+    // stellar asset contract has a named admin in setup.
+    _token_admin: Address,
     client: PropertyTokenContractClient<'a>,
-    contract_address: Address,
 }
 
 fn budget_setup() -> BudgetSetup<'static> {
@@ -120,20 +176,54 @@ fn budget_setup() -> BudgetSetup<'static> {
         env,
         admin,
         token_address,
-        token_admin,
+        _token_admin: token_admin,
         client,
-        contract_address,
     }
+}
+
+/// Assert that the measured invocation succeeded *before* its budget is
+/// checked. A failed invocation aborts early and consumes almost nothing, so
+/// without this a failing call could pass as "cheap".
+macro_rules! assert_invocation_ok {
+    ($result:expr, $label:expr) => {
+        // Only the error arms are formatted, so the success type does not
+        // need to implement `Debug`.
+        match $result {
+            Ok(Ok(_)) => (),
+            Ok(Err(e)) => panic!("{} invocation failed (conversion): {:?}", $label, e),
+            Err(e) => panic!("{} invocation failed (contract/host): {:?}", $label, e),
+        }
+    };
 }
 
 /// Helper: assert CPU and memory are within the given thresholds. Uses the
 /// Soroban SDK's own `Budget::print()` (a `testutils`-gated API) to report
-/// observed costs to stdout - this avoids using `println!` directly, which
-/// isn't available since this crate is `no_std`.
+/// observed costs to stdout, plus a greppable `MEASURED` line, so running
+/// with `--nocapture` documents the real cost of every checked call.
 fn assert_budget(env: &Env, label: &str, max_cpu: u64, max_mem: u64) {
-    let cpu = env.budget().cpu_instruction_cost();
-    let mem = env.budget().memory_bytes_cost();
-    env.budget().print();
+    // Guard the guards: a threshold above the network limit is dishonest,
+    // because the network would reject such a call before the budget here
+    // would ever complain.
+    assert!(
+        max_cpu <= NETWORK_CPU_LIMIT,
+        "{} CPU threshold {} exceeds the network limit {}",
+        label,
+        max_cpu,
+        NETWORK_CPU_LIMIT
+    );
+    assert!(
+        max_mem <= NETWORK_MEM_LIMIT,
+        "{} memory threshold {} exceeds the network limit {}",
+        label,
+        max_mem,
+        NETWORK_MEM_LIMIT
+    );
+
+    let budget = env.cost_estimate().budget();
+    let cpu = budget.cpu_instruction_cost();
+    let mem = budget.memory_bytes_cost();
+    budget.print();
+    std::println!("MEASURED {} cpu={} mem={}", label, cpu, mem);
     assert!(
         cpu <= max_cpu,
         "{} exceeded CPU budget: {} > {}",
@@ -159,10 +249,17 @@ fn budget_check_mint_shares() {
     let s = budget_setup();
     let recipient = Address::generate(&s.env);
 
-    s.env.budget().reset_default();
-    s.client
-        .mint_shares(&s.admin, &1_u64, &recipient, &1000_u64);
-    assert_budget(&s.env, "mint_shares", BUDGET_CPU_SHARES, BUDGET_MEM_SHARES);
+    s.env.cost_estimate().budget().reset_unlimited();
+    let res = s
+        .client
+        .try_mint_shares(&s.admin, &1_u64, &recipient, &1000_u64);
+    assert_invocation_ok!(res, "mint_shares");
+    assert_budget(
+        &s.env,
+        "mint_shares",
+        BUDGET_CPU_MINT_SHARES,
+        BUDGET_MEM_MINT_SHARES,
+    );
 }
 
 #[test]
@@ -174,13 +271,14 @@ fn budget_check_transfer_shares() {
     // Mint first so there is something to transfer
     s.client.mint_shares(&s.admin, &1_u64, &alice, &500_u64);
 
-    s.env.budget().reset_default();
-    s.client.transfer_shares(&alice, &bob, &1_u64, &100_u64);
+    s.env.cost_estimate().budget().reset_unlimited();
+    let res = s.client.try_transfer_shares(&alice, &bob, &1_u64, &100_u64);
+    assert_invocation_ok!(res, "transfer_shares");
     assert_budget(
         &s.env,
         "transfer_shares",
-        BUDGET_CPU_SHARES,
-        BUDGET_MEM_SHARES,
+        BUDGET_CPU_TRANSFER_SHARES,
+        BUDGET_MEM_TRANSFER_SHARES,
     );
 }
 
@@ -189,8 +287,8 @@ fn budget_check_create_pool() {
     let s = budget_setup();
     let pool_id = String::from_str(&s.env, "BUDGET-POOL");
 
-    s.env.budget().reset_default();
-    s.client.create_pool(
+    s.env.cost_estimate().budget().reset_unlimited();
+    let res = s.client.try_create_pool(
         &s.admin,
         &pool_id,
         &String::from_str(&s.env, "Budget Test Pool"),
@@ -199,9 +297,16 @@ fn budget_check_create_pool() {
         &750_000_000_000_000_000_i128,
         &800_000_000_000_000_000_i128,
         &50_000_000_000_000_000_i128,
+        &500_000_000_000_000_000_i128,
         &1000_u32,
     );
-    assert_budget(&s.env, "create_pool", BUDGET_CPU_POOL, BUDGET_MEM_POOL);
+    assert_invocation_ok!(res, "create_pool");
+    assert_budget(
+        &s.env,
+        "create_pool",
+        BUDGET_CPU_CREATE_POOL,
+        BUDGET_MEM_CREATE_POOL,
+    );
 }
 
 #[test]
@@ -218,6 +323,7 @@ fn budget_check_deposit() {
         &750_000_000_000_000_000_i128,
         &800_000_000_000_000_000_i128,
         &50_000_000_000_000_000_i128,
+        &500_000_000_000_000_000_i128,
         &1000_u32,
     );
 
@@ -225,9 +331,10 @@ fn budget_check_deposit() {
     let sac = StellarAssetClient::new(&s.env, &s.token_address);
     sac.mint(&depositor, &10_000_000_i128);
 
-    s.env.budget().reset_default();
-    s.client.deposit(&depositor, &pool_id, &1_000_000_i128);
-    assert_budget(&s.env, "deposit", BUDGET_CPU_POOL, BUDGET_MEM_POOL);
+    s.env.cost_estimate().budget().reset_unlimited();
+    let res = s.client.try_deposit(&depositor, &pool_id, &1_000_000_i128);
+    assert_invocation_ok!(res, "deposit");
+    assert_budget(&s.env, "deposit", BUDGET_CPU_DEPOSIT, BUDGET_MEM_DEPOSIT);
 }
 
 #[test]
@@ -244,6 +351,7 @@ fn budget_check_withdraw() {
         &750_000_000_000_000_000_i128,
         &800_000_000_000_000_000_i128,
         &50_000_000_000_000_000_i128,
+        &500_000_000_000_000_000_i128,
         &1000_u32,
     );
 
@@ -252,9 +360,10 @@ fn budget_check_withdraw() {
     sac.mint(&depositor, &10_000_000_i128);
     s.client.deposit(&depositor, &pool_id, &5_000_000_i128);
 
-    s.env.budget().reset_default();
-    s.client.withdraw(&depositor, &pool_id, &1_000_000_i128);
-    assert_budget(&s.env, "withdraw", BUDGET_CPU_POOL, BUDGET_MEM_POOL);
+    s.env.cost_estimate().budget().reset_unlimited();
+    let res = s.client.try_withdraw(&depositor, &pool_id, &1_000_000_i128);
+    assert_invocation_ok!(res, "withdraw");
+    assert_budget(&s.env, "withdraw", BUDGET_CPU_WITHDRAW, BUDGET_MEM_WITHDRAW);
 }
 
 #[test]
@@ -279,6 +388,7 @@ fn budget_check_borrow() {
         &750_000_000_000_000_000_i128,
         &800_000_000_000_000_000_i128,
         &50_000_000_000_000_000_i128,
+        &500_000_000_000_000_000_i128,
         &1000_u32,
     );
 
@@ -301,15 +411,16 @@ fn budget_check_borrow() {
 
     s.env.ledger().with_mut(|li| li.timestamp = 1000);
 
-    s.env.budget().reset_default();
-    s.client.borrow(
+    s.env.cost_estimate().budget().reset_unlimited();
+    let res = s.client.try_borrow(
         &borrower,
         &pool_id,
         &1_000_000_i128,
         &collateral_address,
         &10_000_000_i128,
     );
-    assert_budget(&s.env, "borrow", BUDGET_CPU_COMPLEX, BUDGET_MEM_COMPLEX);
+    assert_invocation_ok!(res, "borrow");
+    assert_budget(&s.env, "borrow", BUDGET_CPU_BORROW, BUDGET_MEM_BORROW);
 }
 
 #[test]
@@ -334,6 +445,7 @@ fn budget_check_repay() {
         &750_000_000_000_000_000_i128,
         &800_000_000_000_000_000_i128,
         &50_000_000_000_000_000_i128,
+        &500_000_000_000_000_000_i128,
         &1000_u32,
     );
 
@@ -365,7 +477,8 @@ fn budget_check_repay() {
         &10_000_000_i128,
     );
 
-    s.env.budget().reset_default();
-    s.client.repay(&borrower, &pool_id, &500_000_i128);
-    assert_budget(&s.env, "repay", BUDGET_CPU_COMPLEX, BUDGET_MEM_COMPLEX);
+    s.env.cost_estimate().budget().reset_unlimited();
+    let res = s.client.try_repay(&borrower, &pool_id, &500_000_i128);
+    assert_invocation_ok!(res, "repay");
+    assert_budget(&s.env, "repay", BUDGET_CPU_REPAY, BUDGET_MEM_REPAY);
 }

@@ -14,6 +14,11 @@ pub struct OraclePriceSnapshot {
 }
 
 /// Storage key types for the lending module
+///
+/// NOTE: The admin address is stored exclusively through the access
+/// module's `AdminControl` (`access::roles::RoleKey::Admin`). The former
+/// `LendingKey::Admin` variant was removed to eliminate aliasing between
+/// two independent enums that happened to serialize to the same key.
 #[derive(Clone)]
 #[contracttype]
 pub enum LendingKey {
@@ -76,10 +81,6 @@ pub enum LendingKey {
     /// Pool pause status
     /// Storage: Instance
     PoolPaused(String),
-
-    /// Contract administrator address
-    /// Storage: Instance
-    Admin,
 
     /// Oracle Address
     /// Storage: Instance

@@ -99,20 +99,6 @@ pub fn get_admin(env: &Env) -> Option<Address> {
     TokenConfig::load(env).map(|config| config.admin)
 }
 
-/// Sets the admin address in storage
-///
-/// # Arguments
-/// * `env` - Soroban environment
-/// * `admin` - Admin address
-///
-/// # Storage Optimization
-/// This uses a dedicated storage key for quick admin lookups
-#[allow(dead_code)]
-pub fn set_admin(env: &Env, admin: &Address) {
-    let key = StorageKey::Admin;
-    env.storage().instance().set(&key, admin);
-}
-
 /// Gets the property counter for generating unique IDs
 ///
 /// # Arguments

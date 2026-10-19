@@ -2,7 +2,7 @@
 
 **Audience:** Platform admin
 **Required key:** `STELLAR_ADMIN_SECRET` (Admin role on-chain)
-**Contract source:** `apps/contracts/contracts/defi-rwa/src/access/roles.rs`, `lib.rs:614-624`
+**Contract source:** `apps/contracts/contracts/defi-rwa/src/access/roles.rs`, `lib.rs` (`transfer_admin_*`, `pending_admin`)
 
 ---
 
@@ -25,7 +25,7 @@ All roles are defined in `apps/contracts/contracts/defi-rwa/src/access/roles.rs:
 
 ## Granting the EmergencyGuard role
 
-`EmergencyGuard` is the only non-admin role with a dedicated grant function exposed at the contract level (`lib.rs:614`).
+`EmergencyGuard` is the only non-admin role with a dedicated grant function exposed at the contract level (`grant_emergency_role`).
 
 ```bash
 export CONTRACT_ID="<REAL_ESTATE_TOKEN_CONTRACT_ID>"
@@ -83,7 +83,9 @@ Run this immediately when an operator leaves the on-call rotation or their key i
 
 ## Transferring admin (two-step procedure)
 
-Admin transfer is irreversible until the new admin accepts. The two-step design (`admin.rs:46-75`) prevents accidental lockout.
+Admin transfer only takes effect when the new admin accepts it. The two-step design (`AdminControl::transfer_admin_start` / `transfer_admin_accept`) prevents accidental lockout.
+
+The contract exposes `transfer_admin_start`, `transfer_admin_accept`, `transfer_admin_cancel` and the `pending_admin` view. Note the parameter names: the start and cancel entry points take `--admin` (the current admin), and accept takes `--new_admin`.
 
 ### Step 1 - Start transfer (current admin initiates)
 
@@ -96,11 +98,23 @@ stellar contract invoke \
   --network $NETWORK \
   --function transfer_admin_start \
   -- \
-  --caller $ADMIN_ADDRESS \
+  --admin $ADMIN_ADDRESS \
   --new_admin $NEW_ADMIN_ADDRESS
 ```
 
 After this call, `new_admin` is recorded as pending. The current admin retains full control until Step 2.
+
+### Verify the pending admin
+
+```bash
+stellar contract invoke \
+  --contract-id $CONTRACT_ID \
+  --source-account $ADMIN_ADDRESS \
+  --network $NETWORK \
+  --function pending_admin
+```
+
+**Expected:** the `NEW_ADMIN_ADDRESS` set in Step 1, or `null` if no transfer is pending.
 
 ### Step 2 - Accept transfer (new admin confirms)
 
@@ -121,6 +135,7 @@ After this call:
 - Old admin role is revoked.
 - New admin role is granted.
 - Pending admin record is cleared.
+- An `admin_transfer_accepted` event is emitted.
 
 ### Cancel transfer (if needed before Step 2)
 
@@ -133,8 +148,10 @@ stellar contract invoke \
   --network $NETWORK \
   --function transfer_admin_cancel \
   -- \
-  --caller $ADMIN_ADDRESS
+  --admin $ADMIN_ADDRESS
 ```
+
+**Expected:** `pending_admin` returns `null` afterwards and the current admin keeps control. A cancelled transfer emits `admin_transfer_cancelled`.
 
 ---
 

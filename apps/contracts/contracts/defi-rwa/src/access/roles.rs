@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Env, Vec};
+use soroban_sdk::{contracttype, Address, Env};
 
 // Minimum seconds that must elapse between scheduling and executing recovery
 pub const TIMELOCK_DURATION: u64 = 86_400; // 24 hours
@@ -28,12 +28,23 @@ pub struct PendingRecoveryData {
     pub earliest_execution: u64,
 }
 
+/// Storage keys owned by the access module.
+///
+/// `Admin` is the single canonical admin key for the contract. It is written
+/// and read only through `AdminControl`; the former `StorageKey::Admin` and
+/// `LendingKey::Admin` variants were deleted so no second admin copy can drift.
 #[derive(Clone)]
 #[contracttype]
 pub enum RoleKey {
+    /// Canonical admin address. Managed exclusively by `AdminControl`.
     Admin,
     Paused,
+    /// Per-member role marker: `HasRole(address, role)`. Stored in persistent
+    /// storage so role grants never grow the instance footprint.
     HasRole(Address, Role),
+    /// Reserved. The former unbounded member `Vec` is no longer written;
+    /// the variant is kept so the keys after it keep their existing
+    /// storage discriminants.
     RoleMembers(Role),
     PendingAdmin,
     PendingRecovery,
@@ -41,59 +52,26 @@ pub enum RoleKey {
 
 pub struct RoleStorage;
 
+// TTL bump constants (mirror lending module's lending_bump)
+pub const ROLE_TTL_THRESHOLD: u32 = 100_000;
+pub const ROLE_TTL_EXTEND: u32 = 500_000;
+
 impl RoleStorage {
     pub fn has_role(env: &Env, address: &Address, role: &Role) -> bool {
         let key = RoleKey::HasRole(address.clone(), role.clone());
-        env.storage().instance().get(&key).unwrap_or(false)
+        env.storage().persistent().get(&key).unwrap_or(false)
     }
 
     pub fn grant_role(env: &Env, address: &Address, role: &Role) {
         let key = RoleKey::HasRole(address.clone(), role.clone());
-        env.storage().instance().set(&key, &true);
-
-        let members_key = RoleKey::RoleMembers(role.clone());
-        let mut members: Vec<Address> = env
-            .storage()
-            .instance()
-            .get(&members_key)
-            .unwrap_or(Vec::new(env));
-
-        let mut exists = false;
-        for i in 0..members.len() {
-            if members.get(i).unwrap() == address.clone() {
-                exists = true;
-                break;
-            }
-        }
-        if !exists {
-            members.push_back(address.clone());
-            env.storage().instance().set(&members_key, &members);
-        }
+        env.storage().persistent().set(&key, &true);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, ROLE_TTL_THRESHOLD, ROLE_TTL_EXTEND);
     }
 
     pub fn revoke_role(env: &Env, address: &Address, role: &Role) {
         let key = RoleKey::HasRole(address.clone(), role.clone());
-        env.storage().instance().remove(&key);
-
-        let members_key = RoleKey::RoleMembers(role.clone());
-        if let Some(members) = env
-            .storage()
-            .instance()
-            .get::<RoleKey, Vec<Address>>(&members_key)
-        {
-            let mut new_members: Vec<Address> = Vec::new(env);
-            for i in 0..members.len() {
-                let member = members.get(i).unwrap();
-                if member != address.clone() {
-                    new_members.push_back(member);
-                }
-            }
-            env.storage().instance().set(&members_key, &new_members);
-        }
-    }
-
-    pub fn get_role_members(env: &Env, role: &Role) -> Vec<Address> {
-        let key = RoleKey::RoleMembers(role.clone());
-        env.storage().instance().get(&key).unwrap_or(Vec::new(env))
+        env.storage().persistent().remove(&key);
     }
 }

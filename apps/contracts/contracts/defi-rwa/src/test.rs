@@ -1,3 +1,4 @@
+use super::access::roles::{Role, RoleKey, RoleStorage};
 use super::access::{AdminControl, ContractError, PauseControl};
 use super::events::{LendingEvents, PropertyEvents};
 use super::lending::PriceOracle;
@@ -5,9 +6,9 @@ use super::storage;
 use super::*;
 use sep_40_oracle::{Asset, PriceData};
 use soroban_sdk::{
-    testutils::{Address as _, Ledger as _},
+    testutils::{storage::Persistent as _, Address as _, Events as _, Ledger as _},
     token::{StellarAssetClient, TokenClient},
-    Address, Env, String, Symbol,
+    Address, Env, Event, String, Symbol,
 };
 
 use crate::{
@@ -116,6 +117,15 @@ fn setup_internal() -> (Address, Env) {
     let env = Env::default();
     let admin = Address::generate(&env);
     (env.register(PropertyTokenContract, (&admin,)), env)
+}
+
+// Same as `setup_internal`, but also returns the admin the contract was
+// registered with so admin paths can authenticate as the real admin.
+fn setup_internal_with_admin() -> (Address, Env, Address) {
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    let contract_id = env.register(PropertyTokenContract, (&admin,));
+    (contract_id, env, admin)
 }
 
 // Store and retrieve LendingPool
@@ -284,7 +294,7 @@ fn test_create_pool_duplicate() {
 }
 
 #[test]
-#[should_panic(expected = "only admin")]
+#[should_panic(expected = "Error(Contract, #1)")]
 fn test_create_pool_unauthorized() {
     let s = setup();
     let non_admin = Address::generate(&s.env);
@@ -955,40 +965,78 @@ fn test_withdraw_emits_event() {
 
 #[test]
 fn test_admin_initialization() {
-    let (contract_id, env) = setup_internal();
-    let admin = Address::generate(&env);
+    let (contract_id, env, admin) = setup_internal_with_admin();
     env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
-        let expected_admin = AdminControl::get_admin(&env).unwrap();
-        assert_eq!(admin, expected_admin);
+        // The constructor stores the admin under the one canonical key.
+        let stored: Address = env
+            .storage()
+            .instance()
+            .get(&RoleKey::Admin)
+            .expect("admin key must be set by the constructor");
+        assert_eq!(stored, admin, "constructor must register the passed admin");
+        assert_eq!(AdminControl::get_admin(&env), Some(admin.clone()));
+        assert!(RoleStorage::has_role(&env, &admin, &Role::Admin));
+    });
+}
+
+/// The admin address must live under exactly one key. Reading `RoleKey::Admin`
+/// and `AdminControl::get_admin` must always agree, including after a transfer.
+#[test]
+fn test_admin_key_is_single_source_of_truth() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let stranger = Address::generate(&env);
+
+    env.as_contract(&contract_id, || {
+        let stored: Address = env.storage().instance().get(&RoleKey::Admin).unwrap();
+        assert_eq!(stored, admin);
+        assert_eq!(AdminControl::get_admin(&env).unwrap(), admin);
+
+        // One check decides who is admin: the canonical key.
+        assert!(AdminControl::is_admin(&env, &admin));
+        assert_eq!(AdminControl::require_admin(&env, &admin), Ok(()));
+        assert!(!AdminControl::is_admin(&env, &stranger));
+        assert_eq!(
+            AdminControl::require_admin(&env, &stranger),
+            Err(ContractError::NotAdmin)
+        );
+    });
+}
+
+/// After a two-step transfer, the canonical key and the helper that reads it
+/// must still resolve to the same address.
+#[test]
+fn test_admin_keys_stay_in_sync_after_transfer() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let new_admin = Address::generate(&env);
+
+    env.as_contract(&contract_id, || {
+        AdminControl::transfer_admin_start(&env, &admin, &new_admin).unwrap();
+        AdminControl::transfer_admin_accept(&env, &new_admin).unwrap();
+
+        let stored: Address = env.storage().instance().get(&RoleKey::Admin).unwrap();
+        assert_eq!(stored, new_admin);
+        assert_eq!(AdminControl::get_admin(&env), Some(new_admin.clone()));
+        assert!(AdminControl::is_admin(&env, &new_admin));
+        assert!(!AdminControl::is_admin(&env, &admin));
     });
 }
 
 #[test]
 #[should_panic(expected = "NotAdmin")]
 fn test_require_admin_fails() {
-    let (contract_id, env) = setup_internal();
-    let admin = Address::generate(&env);
+    let (contract_id, env, admin) = setup_internal_with_admin();
     let other = Address::generate(&env);
-    // AdminControl::initialize(&env.as_contract(&contract_id, f), &admin);
     env.as_contract(&contract_id, || {
-        let _ = AdminControl::require_admin(&env, &admin);
+        AdminControl::require_admin(&env, &admin).unwrap();
         AdminControl::require_admin(&env, &other).unwrap();
     });
 }
 
 #[test]
 fn test_admin_transfer() {
-    let (contract_id, env) = setup_internal();
-    let admin = Address::generate(&env);
+    let (contract_id, env, admin) = setup_internal_with_admin();
     let new_admin = Address::generate(&env);
     env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
-
         // Start transfer
         AdminControl::transfer_admin_start(&env, &admin, &new_admin).unwrap();
         assert_eq!(
@@ -1020,37 +1068,349 @@ fn test_admin_initialize_twice_fails() {
 
 #[test]
 fn test_transfer_admin_accept_wrong_caller_fails() {
-    let (contract_id, env) = setup_internal();
-    let admin = Address::generate(&env);
+    let (contract_id, env, admin) = setup_internal_with_admin();
     let new_admin = Address::generate(&env);
     let stranger = Address::generate(&env);
     env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
-
         AdminControl::transfer_admin_start(&env, &admin, &new_admin).unwrap();
         assert_eq!(
             AdminControl::transfer_admin_accept(&env, &stranger),
             Err(ContractError::NotPendingAdmin)
         );
+        // The failed accept must not change the admin.
+        assert!(AdminControl::is_admin(&env, &admin));
+    });
+}
+
+#[test]
+fn test_transfer_admin_cancel_clears_pending() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let new_admin = Address::generate(&env);
+    env.as_contract(&contract_id, || {
+        AdminControl::transfer_admin_start(&env, &admin, &new_admin).unwrap();
+        AdminControl::transfer_admin_cancel(&env, &admin).unwrap();
+        assert_eq!(AdminControl::get_pending_admin(&env), None);
+        assert!(AdminControl::is_admin(&env, &admin));
     });
 }
 
 #[test]
 fn test_pause_unpause() {
-    let (contract_id, env) = setup_internal();
-    let admin = Address::generate(&env);
+    let (contract_id, env, admin) = setup_internal_with_admin();
     env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
         assert!(!PauseControl::is_paused(&env));
         PauseControl::pause(&env, &admin).unwrap();
         assert!(PauseControl::is_paused(&env));
         PauseControl::unpause(&env, &admin).unwrap();
         assert!(!PauseControl::is_paused(&env));
     });
+}
+
+// =========================================================================
+// Admin rotation, privileged events, allowance helpers and TTLs (issue #1187)
+// =========================================================================
+
+#[test]
+fn test_two_step_admin_transfer_on_contract() {
+    let s = setup();
+    let new_admin = Address::generate(&s.env);
+
+    s.contract_client.transfer_admin_start(&s.admin, &new_admin);
+    assert_eq!(s.contract_client.pending_admin(), Some(new_admin.clone()));
+
+    s.contract_client.transfer_admin_accept(&new_admin);
+    assert_eq!(s.contract_client.pending_admin(), None);
+
+    // The accepted admin can now perform privileged actions.
+    s.contract_client.emergency_pause(&new_admin);
+    assert!(s
+        .env
+        .as_contract(&s.contract_address, || PauseControl::is_paused(&s.env)));
+}
+
+#[test]
+fn test_transfer_admin_cancel_on_contract() {
+    let s = setup();
+    let new_admin = Address::generate(&s.env);
+
+    s.contract_client.transfer_admin_start(&s.admin, &new_admin);
+    s.contract_client.transfer_admin_cancel(&s.admin);
+
+    assert_eq!(s.contract_client.pending_admin(), None);
+    // The pending admin was never granted control.
+    assert!(s.contract_client.try_emergency_pause(&new_admin).is_err());
+    s.contract_client.emergency_pause(&s.admin);
+}
+
+#[test]
+fn test_non_admin_cannot_start_transfer() {
+    let s = setup();
+    let stranger = Address::generate(&s.env);
+    let new_admin = Address::generate(&s.env);
+
+    assert!(s
+        .contract_client
+        .try_transfer_admin_start(&stranger, &new_admin)
+        .is_err());
+    assert_eq!(s.contract_client.pending_admin(), None);
+}
+
+#[test]
+fn test_set_oracle_emits_event() {
+    let s = setup();
+    let oracle = Address::generate(&s.env);
+
+    s.contract_client.set_oracle(&oracle, &s.admin);
+
+    let expected = OracleSet {
+        admin: s.admin.clone(),
+        oracle: oracle.clone(),
+    };
+    assert_eq!(
+        s.env.events().all().filter_by_contract(&s.contract_address),
+        soroban_sdk::Vec::from_array(
+            &s.env,
+            [(
+                s.contract_address.clone(),
+                expected.topics(&s.env),
+                expected.data(&s.env),
+            )],
+        )
+    );
+}
+
+#[test]
+fn test_set_oracle_config_emits_event() {
+    let s = setup();
+
+    s.contract_client
+        .set_oracle_config(&s.admin, &3_600_u64, &1_000_i128);
+
+    let expected = OracleConfigSet {
+        admin: s.admin.clone(),
+        max_age: 3_600,
+        min_price: 1_000,
+    };
+    assert_eq!(
+        s.env.events().all().filter_by_contract(&s.contract_address),
+        soroban_sdk::Vec::from_array(
+            &s.env,
+            [(
+                s.contract_address.clone(),
+                expected.topics(&s.env),
+                expected.data(&s.env),
+            )],
+        )
+    );
+}
+
+#[test]
+fn test_grant_emergency_role_emits_event() {
+    let s = setup();
+    let target = Address::generate(&s.env);
+
+    s.contract_client.grant_emergency_role(&s.admin, &target);
+
+    let expected = EmergencyRoleGranted {
+        admin: s.admin.clone(),
+        target: target.clone(),
+    };
+    assert_eq!(
+        s.env.events().all().filter_by_contract(&s.contract_address),
+        soroban_sdk::Vec::from_array(
+            &s.env,
+            [(
+                s.contract_address.clone(),
+                expected.topics(&s.env),
+                expected.data(&s.env),
+            )],
+        )
+    );
+}
+
+#[test]
+fn test_revoke_emergency_role_emits_event() {
+    let s = setup();
+    let target = Address::generate(&s.env);
+    s.contract_client.grant_emergency_role(&s.admin, &target);
+
+    s.contract_client.revoke_emergency_role(&s.admin, &target);
+
+    let expected = EmergencyRoleRevoked {
+        admin: s.admin.clone(),
+        target: target.clone(),
+    };
+    assert_eq!(
+        s.env.events().all().filter_by_contract(&s.contract_address),
+        soroban_sdk::Vec::from_array(
+            &s.env,
+            [(
+                s.contract_address.clone(),
+                expected.topics(&s.env),
+                expected.data(&s.env),
+            )],
+        )
+    );
+}
+
+#[test]
+fn test_set_oracle_config_rejects_negative_min_price() {
+    let s = setup();
+
+    match s
+        .contract_client
+        .try_set_oracle_config(&s.admin, &0_u64, &-1_i128)
+    {
+        Err(Ok(error)) => assert_eq!(
+            error,
+            soroban_sdk::Error::from_contract_error(ContractError::InvalidOracleConfig as u32)
+        ),
+        other => panic!("expected typed contract error for negative min_price, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_increase_allowance_is_additive() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let spender = Address::generate(&s.env);
+    let property_id = 7_u64;
+
+    s.contract_client
+        .increase_allowance(&owner, &spender, &property_id, &100_u64);
+    assert_eq!(
+        s.contract_client
+            .get_allowance(&property_id, &owner, &spender),
+        100
+    );
+
+    s.contract_client
+        .increase_allowance(&owner, &spender, &property_id, &25_u64);
+    assert_eq!(
+        s.contract_client
+            .get_allowance(&property_id, &owner, &spender),
+        125
+    );
+}
+
+#[test]
+fn test_decrease_allowance_subtracts() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let spender = Address::generate(&s.env);
+    let property_id = 8_u64;
+
+    s.contract_client
+        .increase_allowance(&owner, &spender, &property_id, &100_u64);
+    s.contract_client
+        .decrease_allowance(&owner, &spender, &property_id, &40_u64);
+
+    assert_eq!(
+        s.contract_client
+            .get_allowance(&property_id, &owner, &spender),
+        60
+    );
+}
+
+#[test]
+fn test_decrease_allowance_cannot_underflow() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let spender = Address::generate(&s.env);
+    let property_id = 9_u64;
+
+    s.contract_client
+        .increase_allowance(&owner, &spender, &property_id, &10_u64);
+
+    match s
+        .contract_client
+        .try_decrease_allowance(&owner, &spender, &property_id, &11_u64)
+    {
+        Err(Ok(error)) => assert_eq!(
+            error,
+            soroban_sdk::Error::from_contract_error(ContractError::InsufficientAllowance as u32)
+        ),
+        other => panic!("expected typed allowance error, got {other:?}"),
+    }
+}
+
+#[test]
+fn test_share_balance_ttl_extended_on_write_and_read() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let property_id = 11_u64;
+    let key = StorageKey::ShareBalance(property_id, owner.clone());
+
+    s.contract_client
+        .mint_shares(&s.admin, &property_id, &owner, &10_u64);
+
+    let written_ttl = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(
+        written_ttl >= lending_bump::PERSISTENT_BUMP,
+        "balance ttl after write was {written_ttl}"
+    );
+
+    // Advancing one ledger drops the TTL below the bump threshold; a critical
+    // read must restore it.
+    let sequence = s.env.ledger().get().sequence_number;
+    s.env.ledger().set_sequence_number(sequence + 10);
+    let before_read = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(before_read < written_ttl);
+
+    assert_eq!(s.contract_client.get_balance(&property_id, &owner), 10);
+
+    let after_read = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(
+        after_read >= lending_bump::PERSISTENT_BUMP,
+        "balance ttl after read was {after_read}"
+    );
+}
+
+#[test]
+fn test_allowance_ttl_extended_on_write_and_read() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let spender = Address::generate(&s.env);
+    let property_id = 12_u64;
+    let key = StorageKey::Allowance(property_id, owner.clone(), spender.clone());
+
+    s.contract_client
+        .increase_allowance(&owner, &spender, &property_id, &50_u64);
+
+    let written_ttl = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(
+        written_ttl >= lending_bump::PERSISTENT_BUMP,
+        "allowance ttl after write was {written_ttl}"
+    );
+
+    let sequence = s.env.ledger().get().sequence_number;
+    s.env.ledger().set_sequence_number(sequence + 10);
+    let before_read = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(before_read < written_ttl);
+
+    assert_eq!(
+        s.contract_client
+            .get_allowance(&property_id, &owner, &spender),
+        50
+    );
+
+    let after_read = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(
+        after_read >= lending_bump::PERSISTENT_BUMP,
+        "allowance ttl after read was {after_read}"
+    );
 }
 
 // =========================================================================
@@ -1847,14 +2207,6 @@ fn setup_purchase_test() -> (Address, Env, Address, Address, Address, u64) {
 
     let property_id = 1u64;
 
-    // Set up admin for access control (constructor already set LendingKey::Admin,
-    // which collides with RoleKey::Admin, so we set RoleKey::Admin directly)
-    env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
-    });
-
     // Create property metadata
     let property = storage::property::PropertyMetadata::new(
         property_id,
@@ -2054,7 +2406,7 @@ fn test_purchase_nonexistent_property() {
         let token_admin_client = StellarAssetClient::new(&env, &payment_token);
         token_admin_client.mint(&buyer, &100_000_000_000_000_i128);
 
-        // Constructor already sets admin via LendingKey::Admin, no separate init needed
+        // The constructor stores the admin through AdminControl (RoleKey::Admin).
 
         (contract_id, env, property_owner, buyer, payment_token)
     };
@@ -2129,14 +2481,6 @@ fn setup_token_test<'a>() -> (Env, PropertyTokenContractClient<'a>, Address) {
     let admin = Address::generate(&env);
     let contract_id = env.register(PropertyTokenContract, (&admin,));
     let client = PropertyTokenContractClient::new(&env, &contract_id);
-
-    // Set up admin for access control (constructor already set LendingKey::Admin,
-    // which collides with RoleKey::Admin, so we set RoleKey::Admin directly)
-    env.as_contract(&contract_id, || {
-        use super::access::roles::{Role, RoleKey, RoleStorage};
-        env.storage().instance().set(&RoleKey::Admin, &admin);
-        RoleStorage::grant_role(&env, &admin, &Role::Admin);
-    });
 
     (env, client, admin)
 }
@@ -3531,10 +3875,7 @@ fn test_liquidate_double_attempt_panics() {
 
     // Get the admin address to set close factor later
     let admin = env.as_contract(&contract_id, || {
-        env.storage()
-            .instance()
-            .get::<_, Address>(&LendingKey::Admin)
-            .expect("admin not set")
+        AdminControl::get_admin(&env).expect("admin not set")
     });
 
     let borrower_xlm_before = xlm_token.balance(&borrower);
@@ -3633,10 +3974,7 @@ fn test_liquidate_excess_collateral_returned() {
 
     // Get the admin address to set close factor
     let admin = env.as_contract(&contract_id, || {
-        env.storage()
-            .instance()
-            .get::<_, Address>(&LendingKey::Admin)
-            .expect("admin not set")
+        AdminControl::get_admin(&env).expect("admin not set")
     });
 
     let borrower_xlm_before = xlm_token.balance(&borrower);
@@ -3880,10 +4218,7 @@ fn test_set_close_factor_as_admin() {
     // Get admin address - the setup registers with a generated admin
     // We need to read the stored admin to call set_close_factor
     let admin = env.as_contract(&contract_id, || {
-        env.storage()
-            .instance()
-            .get::<_, Address>(&LendingKey::Admin)
-            .expect("admin not set")
+        AdminControl::get_admin(&env).expect("admin not set")
     });
 
     let pool_before = env.as_contract(&contract_id, || {
@@ -3911,7 +4246,7 @@ fn test_set_close_factor_as_admin() {
 
 /// Non-admin cannot update the close factor.
 #[test]
-#[should_panic(expected = "only admin")]
+#[should_panic(expected = "Error(Contract, #1)")]
 fn test_set_close_factor_unauthorized() {
     let (env, contract_id, _oracle_id, _borrower, liquidator, pool_id, _usdc_addr, _xlm_addr) =
         setup_liquidation_env();
@@ -4263,8 +4598,8 @@ fn test_set_close_factor_negative_value() {
 
     // Get the admin (who registered the contract) by using the constructor's admin
     let admin = env.as_contract(&contract_id, || {
-        // derive admin from stored admin
-        get_lending_admin(&env)
+        // derive admin from the single canonical admin key
+        AdminControl::get_admin(&env).expect("admin not set")
     });
 
     // Admin tries to set negative close factor - should panic

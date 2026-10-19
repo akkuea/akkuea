@@ -63,26 +63,9 @@ fn u64_to_string(env: &Env, mut val: u64) -> String {
 // Internal Lending Helpers
 // ───────────────────────────────────────────────
 
-fn get_lending_admin(env: &Env) -> Address {
-    env.storage()
-        .instance()
-        .get(&LendingKey::Admin)
-        .expect("admin not set")
-}
-
-fn set_lending_admin(env: &Env, admin: &Address) {
-    env.storage().instance().set(&LendingKey::Admin, admin);
-    env.storage()
-        .instance()
-        .extend_ttl(lending_bump::INSTANCE_BUMP, lending_bump::INSTANCE_BUMP);
-}
-
 fn require_admin(env: &Env, caller: &Address) {
     caller.require_auth();
-    let admin = get_lending_admin(env);
-    if *caller != admin {
-        panic!("only admin");
-    }
+    AdminControl::require_admin(env, caller).unwrap_or_else(|e| panic_with_error!(env, e));
 }
 
 /// Accrue interest for a pool – updates the global interest index, reserves,
@@ -159,7 +142,12 @@ pub struct PropertyTokenContract;
 impl PropertyTokenContract {
     // ─── Constructor ───────────────────────────
     pub fn __constructor(env: Env, admin: Address) {
-        set_lending_admin(&env, &admin);
+        // `AdminControl` owns the single canonical admin key (`RoleKey::Admin`).
+        AdminControl::initialize(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
+        // Keep the contract instance (admin, pause flag, oracle config) alive.
+        env.storage()
+            .instance()
+            .extend_ttl(lending_bump::INSTANCE_BUMP, lending_bump::INSTANCE_BUMP);
     }
 
     // ─── Share Management (Admin) ──────────────
@@ -220,6 +208,41 @@ impl PropertyTokenContract {
     pub fn approve(env: Env, owner: Address, spender: Address, property_id: u64, amount: u64) {
         owner.require_auth();
         set_allowance(&env, property_id, &owner, &spender, amount);
+    }
+
+    /// Atomically increase the allowance for `spender` by `amount`.
+    ///
+    /// Safe against the classic approve-race: the spender cannot spend more
+    /// than the sum of the previous allowance and the newly added amount.
+    pub fn increase_allowance(
+        env: Env,
+        owner: Address,
+        spender: Address,
+        property_id: u64,
+        amount: u64,
+    ) {
+        owner.require_auth();
+        let current = get_allowance(&env, property_id, &owner, &spender);
+        let new_amount = current
+            .checked_add(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, ContractError::BalanceOverflow));
+        set_allowance(&env, property_id, &owner, &spender, new_amount);
+    }
+
+    /// Atomically decrease the allowance for `spender` by `amount`.
+    pub fn decrease_allowance(
+        env: Env,
+        owner: Address,
+        spender: Address,
+        property_id: u64,
+        amount: u64,
+    ) {
+        owner.require_auth();
+        let current = get_allowance(&env, property_id, &owner, &spender);
+        let new_amount = current
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic_with_error!(&env, ContractError::InsufficientAllowance));
+        set_allowance(&env, property_id, &owner, &spender, new_amount);
     }
 
     pub fn transfer_from(
@@ -863,6 +886,7 @@ impl PropertyTokenContract {
         caller.require_auth();
         AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
         PriceOracle::set_oracle_address(&env, &oracle_address);
+        AdminEvents::oracle_set(&env, caller, oracle_address);
     }
 
     /// Configure oracle guardrail parameters.
@@ -872,10 +896,14 @@ impl PropertyTokenContract {
     pub fn set_oracle_config(env: Env, caller: Address, max_age: u64, min_price: i128) {
         caller.require_auth();
         AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
+        if min_price < 0 {
+            panic_with_error!(&env, ContractError::InvalidOracleConfig);
+        }
         if max_age > 0 {
             PriceOracle::set_max_age(&env, max_age);
         }
         PriceOracle::set_min_price(&env, min_price);
+        AdminEvents::oracle_config_set(&env, caller, max_age, min_price);
     }
 
     // ─── Query Views ────────────────────────────
@@ -981,11 +1009,37 @@ impl PropertyTokenContract {
         admin.require_auth();
         AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
         RoleStorage::grant_role(&env, &target, &Role::EmergencyGuard);
+        AdminEvents::emergency_role_granted(&env, admin, target);
     }
 
     pub fn revoke_emergency_role(env: Env, admin: Address, target: Address) {
         admin.require_auth();
         AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
         RoleStorage::revoke_role(&env, &target, &Role::EmergencyGuard);
+        AdminEvents::emergency_role_revoked(&env, admin, target);
+    }
+
+    // ─── Admin Rotation (two-step) ─────────────
+
+    pub fn transfer_admin_start(env: Env, admin: Address, new_admin: Address) {
+        admin.require_auth();
+        AdminControl::transfer_admin_start(&env, &admin, &new_admin)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+    }
+
+    pub fn transfer_admin_accept(env: Env, new_admin: Address) {
+        new_admin.require_auth();
+        AdminControl::transfer_admin_accept(&env, &new_admin)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+    }
+
+    pub fn transfer_admin_cancel(env: Env, admin: Address) {
+        admin.require_auth();
+        AdminControl::transfer_admin_cancel(&env, &admin)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+    }
+
+    pub fn pending_admin(env: Env) -> Option<Address> {
+        AdminControl::get_pending_admin(&env)
     }
 }

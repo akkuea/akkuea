@@ -1,4 +1,4 @@
-use soroban_sdk::{contracterror, Address, Env};
+use soroban_sdk::{contracterror, contractevent, Address, Env};
 
 use crate::access::roles::{Role, RoleKey, RoleStorage};
 
@@ -41,11 +41,40 @@ pub enum ContractError {
     PriceScalingOverflow = 27,
     /// Oracle price timestamp is too far in the future
     OraclePriceInFuture = 28,
+    /// Oracle configuration value is out of range (for example a negative
+    /// `min_price` floor)
+    InvalidOracleConfig = 29,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AdminTransferStarted {
+    #[topic]
+    pub admin: Address,
+    pub new_admin: Address,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AdminTransferAccepted {
+    #[topic]
+    pub old_admin: Address,
+    pub new_admin: Address,
+}
+
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AdminTransferCancelled {
+    #[topic]
+    pub admin: Address,
+    pub pending_admin: Address,
 }
 
 pub struct AdminControl;
 
 impl AdminControl {
+    /// Writes the canonical admin key (`RoleKey::Admin`). This is the only
+    /// place the admin address is stored.
     pub fn initialize(env: &Env, admin: &Address) -> Result<(), ContractError> {
         if Self::is_initialized(env) {
             return Err(ContractError::AlreadyInitialized);
@@ -58,6 +87,7 @@ impl AdminControl {
 
     pub fn is_initialized(env: &Env) -> bool {
         env.storage().instance().has(&RoleKey::Admin)
+            || env.storage().instance().has(&RoleKey::PendingAdmin)
     }
 
     pub fn get_admin(env: &Env) -> Option<Address> {
@@ -87,6 +117,11 @@ impl AdminControl {
         env.storage()
             .instance()
             .set(&RoleKey::PendingAdmin, new_admin);
+        AdminTransferStarted {
+            admin: caller.clone(),
+            new_admin: new_admin.clone(),
+        }
+        .publish(env);
         Ok(())
     }
 
@@ -97,6 +132,17 @@ impl AdminControl {
             Some(pending_admin) if pending_admin == new_admin.clone() => {
                 if let Some(old_admin) = Self::get_admin(env) {
                     RoleStorage::revoke_role(env, &old_admin, &Role::Admin);
+                    AdminTransferAccepted {
+                        old_admin: old_admin.clone(),
+                        new_admin: new_admin.clone(),
+                    }
+                    .publish(env);
+                } else {
+                    AdminTransferAccepted {
+                        old_admin: new_admin.clone(),
+                        new_admin: new_admin.clone(),
+                    }
+                    .publish(env);
                 }
 
                 env.storage().instance().set(&RoleKey::Admin, new_admin);
@@ -110,7 +156,15 @@ impl AdminControl {
 
     pub fn transfer_admin_cancel(env: &Env, caller: &Address) -> Result<(), ContractError> {
         Self::require_admin(env, caller)?;
+        let pending: Option<Address> = env.storage().instance().get(&RoleKey::PendingAdmin);
         env.storage().instance().remove(&RoleKey::PendingAdmin);
+        if let Some(pending_admin) = pending {
+            AdminTransferCancelled {
+                admin: caller.clone(),
+                pending_admin,
+            }
+            .publish(env);
+        }
         Ok(())
     }
 

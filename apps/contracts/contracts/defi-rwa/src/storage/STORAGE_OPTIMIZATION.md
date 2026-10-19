@@ -57,11 +57,11 @@ StorageKey::ShareBalance(u64, Address)
 
 ### 5. Single-Instance Global Data
 
-**Implementation**: TokenConfig and Admin stored as singleton entries:
+**Implementation**: TokenConfig stored as a singleton entry; the admin address is stored by the access module under `RoleKey::Admin`:
 
 ```rust
 StorageKey::TokenConfig  // Single instance
-StorageKey::Admin        // Single instance
+RoleKey::Admin           // Single instance, managed by AdminControl
 ```
 
 **Benefit**: Avoids duplication of global configuration data.

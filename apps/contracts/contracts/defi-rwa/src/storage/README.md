@@ -107,9 +107,10 @@ pub struct TokenConfig {
 **Helper Functions**:
 
 - `get_admin()`: Quick admin lookup
-- `set_admin()`: Update admin address
 - `get_property_counter()`: Get current property counter
 - `increment_property_counter()`: Generate next property ID
+
+> The on-chain admin identity is **not** stored here. It lives in the access module under `RoleKey::Admin` and is managed only through `AdminControl`.
 
 ## Usage Examples
 

@@ -35,7 +35,6 @@ ALLOWED_EXCEPTIONS = [
     "apps/webapp/src/components/portfolio/PropertyReportCard.tsx",
     "docs/README.md",
     "docs/deployment/deploy-game-contracts.md",
-    "packages/nextjs/",
 ]
 
 EMOJI_PATTERN = re.compile(

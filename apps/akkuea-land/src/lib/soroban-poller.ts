@@ -1,4 +1,4 @@
-import { rpc as SorobanRpc, xdr } from "@stellar/stellar-sdk";
+import { rpc as SorobanRpc, scValToNative, xdr } from "@stellar/stellar-sdk";
 import type {
   GameEvent,
   PropertyBoughtEvent,
@@ -14,6 +14,8 @@ const CONTRACT_IDS: string[] = (process.env.GAME_CONTRACT_IDS ?? "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
+
+const PAGE_LIMIT = 100;
 
 /** Parse a raw Soroban event into a typed GameEvent, or null if unrecognised. */
 function parseEvent(
@@ -36,12 +38,19 @@ function parseEvent(
     id: `${raw.ledger}-${raw.txHash}-${index}`,
   };
 
+  // scValToNative decodes the full 128-bit integer and the G/C strkey form of
+  // an address; reading the raw XDR parts loses the high bits and yields
+  // base64 XDR for addresses.
   const str = (v: xdr.ScVal | null): string => {
     if (!v) return "";
-    if (v.type === "scvString") return v.str.toString();
-    if (v.type === "scvSymbol") return v.sym.toString();
-    if (v.type === "scvAddress") return v.address.toString();
-    if (v.type === "scvI128") return v.i128.lo.toString();
+    const native: unknown = scValToNative(v);
+    if (
+      typeof native === "string" ||
+      typeof native === "number" ||
+      typeof native === "bigint"
+    ) {
+      return native.toString();
+    }
     return "";
   };
 
@@ -87,17 +96,27 @@ function parseEvent(
   }
 }
 
+/**
+ * Where to resume reading events: a ledger for the first poll, then the
+ * cursor returned by the previous poll. Resuming from the cursor (rather than
+ * the next ledger) means a page that fills up partway through a ledger
+ * continues with that ledger's remaining events instead of skipping them.
+ */
+export type PollPosition = { startLedger: number } | { cursor: string };
+
 export interface PollResult {
   events: GameEvent[];
-  /** Cursor to pass as startLedger on the next poll. */
-  nextLedger: number;
+  /** Paging cursor to pass back as `{ cursor }` on the next poll. */
+  cursor: string;
 }
 
 /**
- * Poll Soroban RPC for new game events starting from `startLedger`.
- * Returns parsed events and the next ledger to poll from.
+ * Poll Soroban RPC for one page of new game events from `position`.
+ * Returns the parsed events and the cursor to resume from.
  */
-export async function pollGameEvents(startLedger: number): Promise<PollResult> {
+export async function pollGameEvents(
+  position: PollPosition,
+): Promise<PollResult> {
   const server = new SorobanRpc.Server(RPC_URL, { allowHttp: true });
 
   const filters: SorobanRpc.Server.GetEventsRequest["filters"] =
@@ -109,22 +128,19 @@ export async function pollGameEvents(startLedger: number): Promise<PollResult> {
       : [{ type: "contract" as const }];
 
   const response = await server.getEvents({
-    startLedger,
+    ...position,
     filters,
-    limit: 100,
+    limit: PAGE_LIMIT,
   });
 
   const events: GameEvent[] = [];
-  let maxLedger = startLedger;
 
   for (let i = 0; i < response.events.length; i++) {
-    const raw = response.events[i];
-    if (raw.ledger > maxLedger) maxLedger = raw.ledger;
-    const parsed = parseEvent(raw, i);
+    const parsed = parseEvent(response.events[i], i);
     if (parsed) events.push(parsed);
   }
 
-  return { events, nextLedger: maxLedger + 1 };
+  return { events, cursor: response.cursor };
 }
 
 /**

@@ -11,12 +11,18 @@ const challengeSchema = z.object({
     .regex(/^G[A-Z2-7]{55}$/),
 });
 
+// NOTE: the `validate()` plugin does not reliably apply a second route's
+// schema within the same Elysia instance (separate, out-of-scope bug; see
+// routes/notifications.ts for the same issue), so the `signature` bound
+// below is also enforced directly in AuthController.verifySession.
 const sessionSchema = z.object({
   stellarAddress: z
     .string()
     .length(56)
     .regex(/^G[A-Z2-7]{55}$/),
-  signature: z.string().min(1),
+  // A Stellar Ed25519 signature is 64 raw bytes; standard base64 (with
+  // padding) encodes that as exactly 88 characters.
+  signature: z.string().min(1).max(88),
 });
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';

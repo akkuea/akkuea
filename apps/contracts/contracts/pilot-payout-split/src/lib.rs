@@ -632,6 +632,10 @@ impl PilotPayoutSplit {
         let mut any_eurc = false;
         let mut computed_total = 0i128;
         for i in 0..holders.len() {
+            // Unreachable: `i` is bounded by `holders.len()`, so this lookup
+            // always succeeds. Kept typed rather than `unwrap`ped so a future
+            // refactor that breaks the bound surfaces as `InternalInvariant`
+            // instead of a generic host trap.
             let holder = holders
                 .get(i)
                 .unwrap_or_else(|| panic_with_error!(&env, PayoutError::InternalInvariant));
@@ -691,6 +695,9 @@ impl PilotPayoutSplit {
         let mut swaps_failed = 0u32;
         let mut undistributed_failed_swaps = 0i128;
         for i in 0..legs.len() {
+            // Unreachable: `i` is bounded by `legs.len()`, so this lookup
+            // always succeeds. Kept typed for the same reason as the holder
+            // loop above.
             let leg = legs
                 .get(i)
                 .unwrap_or_else(|| panic_with_error!(&env, PayoutError::InternalInvariant));
@@ -760,7 +767,13 @@ impl PilotPayoutSplit {
                             // Isolated failure: retain this holder's USDC in the
                             // contract, record and emit the rejection, continue
                             // paying everyone else.
+                            // Unreachable: this counter increases at most once
+                            // per settled leg, and a cycle is capped at
+                            // `MAX_HOLDERS` legs, far below `u32::MAX`.
                             swaps_failed = swaps_failed.checked_add(1).unwrap_or_else(|| {
+                                // Unreachable: this counter increases at most
+                                // once per settled leg and a cycle is capped at
+                                // `MAX_HOLDERS` legs, far below `u32::MAX`.
                                 panic_with_error!(&env, PayoutError::InternalInvariant)
                             });
                             undistributed_failed_swaps = undistributed_failed_swaps
@@ -884,6 +897,11 @@ impl PilotPayoutSplit {
             // The generated try_* client nests the venue's own result inside
             // the invocation result; any failure layer maps to SwapFailed.
             Ok(Ok(amounts)) => {
+                // Unreachable: the venue returns one amount per hop and this
+                // contract only ever requests a two-asset single-hop path, so
+                // a successful swap always returns a non-empty vector. Kept
+                // typed rather than `unwrap`ped for the same reason as the
+                // loops above.
                 let received = amounts
                     .last()
                     .ok_or(PayoutError::InternalInvariant as u32)?;
@@ -3281,6 +3299,170 @@ pub mod tests {
             ally_res,
             Err(Ok(Error::from_contract_error(
                 PayoutError::Unauthorized as u32
+            )))
+        );
+    }
+
+    // --- Typed error coverage ---
+
+    #[test]
+    fn evidence_without_a_link_is_rejected() {
+        let s = setup();
+
+        // Both evidence entry points reject a link-less submission: the
+        // evidence is the audit trail investors read, so an empty reference is
+        // not recorded.
+        let res = s.payout.try_record_evidence(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, ""),
+            &10_000,
+        );
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::MissingEvidenceLink as u32
+            )))
+        );
+        assert!(s.payout.get_evidence(&cycle(&s.env, "2026-08")).is_none());
+
+        let res = s.payout.try_submit_evidence(
+            &s.ally,
+            &cycle(&s.env, "2026-09"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, ""),
+            &10_000,
+        );
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::MissingEvidenceLink as u32
+            )))
+        );
+        assert!(s.payout.get_evidence(&cycle(&s.env, "2026-09")).is_none());
+    }
+
+    #[test]
+    fn distribution_of_an_unrecorded_cycle_is_rejected() {
+        let s = setup();
+
+        let res = s.payout.try_execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::CycleNotRecorded as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn distribution_rejects_income_that_overflows_the_fee_math() {
+        let s = setup();
+
+        // i128::MAX times the platform-fee percentage overflows the fee
+        // multiplication, which runs before any token movement, so the cycle
+        // fails as a typed error with nothing paid and nothing marked
+        // distributed.
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/2026-08"),
+            &i128::MAX,
+        );
+
+        let res = s.payout.try_execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ArithmeticOverflow as u32
+            )))
+        );
+
+        let record = s
+            .payout
+            .get_evidence(&cycle(&s.env, "2026-08"))
+            .expect("the cycle record must survive the failed distribution");
+        assert!(!record.distributed);
+        assert_eq!(s.usdc.balance(&s.fee_recipient), 0);
+    }
+
+    #[test]
+    fn withheld_reserve_overflow_is_rejected() {
+        let s = setup();
+        fund_pool(&s, 100_000, 100_000);
+        let eurc_holder = s.holders.get(4).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+        record_default(&s);
+
+        // A reserve only ever grows by USDC this contract already earmarked
+        // for its owner, so it cannot reach the i128 boundary through the
+        // public interface. Pin it there through the contract's own storage
+        // key: the rejected swap leg below then cannot credit its share.
+        s.env.as_contract(&s.payout_id, || {
+            Storage::set_withheld_balance(&s.env, &eurc_holder, i128::MAX - 1)
+        });
+
+        // 0.99 EURC per USDC is more than the pool can deliver, so the leg is
+        // rejected and its USDC share is credited to the reserve.
+        let strict_rate = 9_900_000i128;
+        let res = s.payout.try_execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &strict_rate,
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ArithmeticOverflow as u32
+            )))
+        );
+
+        // The failed cycle is atomic: no reserve and no failure record remain,
+        // so the cycle can be retried once the contract state is sane again.
+        assert_eq!(s.payout.get_withheld_balance(&eurc_holder), i128::MAX - 1);
+        assert_eq!(s.payout.total_withheld_balance(), 0);
+        assert_eq!(
+            s.payout.get_swap_failures(&cycle(&s.env, "2026-08")).len(),
+            0
+        );
+    }
+
+    #[test]
+    fn reentrant_entry_point_is_rejected_while_the_guard_is_held() {
+        let s = setup();
+
+        // The execution guard is only ever held inside an entry point, so the
+        // locked state a re-entrant call would observe is written directly
+        // through the contract's own storage key.
+        s.env.as_contract(&s.payout_id, || {
+            s.env.storage().instance().set(&DataKey::Guard, &true)
+        });
+
+        let res = s.payout.try_claim_withheld(&s.holders.get(0).unwrap());
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Reentrancy as u32
             )))
         );
     }

@@ -9,6 +9,7 @@ import type {
 } from "react";
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import type { PropertyInfo } from "@akkuea/shared";
+import { PROPERTY_IMAGE_PLACEHOLDER } from "@/components/marketplace/marketplace.utils";
 import { propertyApi } from "@/services/api/properties";
 
 const buySharesMock = mock(() =>
@@ -124,6 +125,24 @@ describe("InvestModal", () => {
       view.getAllByRole("button", { name: /Connect Wallet/i })[0]!,
     );
     expect(connectWallet).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the placeholder image for a property without images", () => {
+    const view = render(
+      <InvestModal
+        property={{ ...property, images: [] }}
+        isOpen
+        onClose={() => {}}
+        isConnected={false}
+        walletAddress={null}
+        onConnectWallet={() => {}}
+      />,
+    );
+
+    const image = view.getByAltText(
+      `${property.name} - ${property.location.city}, ${property.location.country}`,
+    );
+    expect(image.getAttribute("src")).toBe(PROPERTY_IMAGE_PLACEHOLDER);
   });
 
   it("provides accessible names for the token quantity and payment method controls", () => {

@@ -27,7 +27,8 @@ pub const RATE_DENOMINATOR: i128 = 10_000_000;
 /// router's deadline semantics (`DeadlineExpired` when ledger time passes it).
 pub const SWAP_DEADLINE_SECS: u64 = 3600;
 
-/// Maximum number of token holders supported by the distribution execution loop.
+/// Maximum number of positive-balance token holders supported by the
+/// distribution execution loop. Zero-balance entries are skipped and not counted.
 /// The instruction budget is heavily consumed by `require_auth` invoked implicitly
 /// during the `usdc.transfer` iteration and the explicit `contract_address.require_auth()`
 /// for EURC swap legs. We cap this to guarantee safe budget headroom.
@@ -599,10 +600,6 @@ impl PilotPayoutSplit {
             panic_with_error!(&env, PayoutError::EmptyHolderSet);
         }
 
-        if holders.len() > MAX_HOLDERS {
-            panic_with_error!(&env, PayoutError::TooManyHolders);
-        }
-
         let platform_fee = record
             .total_income
             .checked_mul(PLATFORM_FEE_PERCENT)
@@ -631,6 +628,7 @@ impl PilotPayoutSplit {
         let mut legs: Vec<PayoutLeg> = Vec::new(&env);
         let mut any_eurc = false;
         let mut computed_total = 0i128;
+        let mut paid_holders = 0u32;
         for i in 0..holders.len() {
             // Unreachable: `i` is bounded by `holders.len()`, so this lookup
             // always succeeds. Kept typed rather than `unwrap`ped so a future
@@ -639,13 +637,23 @@ impl PilotPayoutSplit {
             let holder = holders
                 .get(i)
                 .unwrap_or_else(|| panic_with_error!(&env, PayoutError::InternalInvariant));
-            if !whitelist.is_approved(&holder) {
-                panic_with_error!(&env, PayoutError::RecipientNotApproved);
-            }
 
+            // The balance is read before the whitelist check so an entry that
+            // is owed nothing (for example a departed, revoked investor) is
+            // skipped instead of blocking the cycle. A revoked holder who still
+            // has a balance keeps blocking it.
             let holder_balance = income_token.balance(&holder);
             if holder_balance <= 0 {
                 continue;
+            }
+
+            paid_holders += 1;
+            if paid_holders > MAX_HOLDERS {
+                panic_with_error!(&env, PayoutError::TooManyHolders);
+            }
+
+            if !whitelist.is_approved(&holder) {
+                panic_with_error!(&env, PayoutError::RecipientNotApproved);
             }
 
             let payout = holder_amount
@@ -2391,10 +2399,52 @@ pub mod tests {
         );
     }
 
+    /// Mirrors the income token's storage keys used below. A `contracttype`
+    /// enum encodes as its variant name plus payload, so these keys address
+    /// the same entries without exposing the token's storage module.
+    #[contracttype]
+    enum IncomeTokenStorageKey {
+        TotalSupply,
+        Balance(Address),
+        Holders,
+    }
+
+    /// Append `extra` to the income token's holder list with `balance`,
+    /// bypassing the token's own holder cap, and keep the supply consistent.
+    fn append_raw_holder(s: &Setup, extra: &Address, balance: i128) {
+        s.env.as_contract(&s.token.address, || {
+            let storage = s.env.storage();
+            let mut holders: Vec<Address> = storage
+                .instance()
+                .get(&IncomeTokenStorageKey::Holders)
+                .unwrap();
+            holders.push_back(extra.clone());
+            storage
+                .instance()
+                .set(&IncomeTokenStorageKey::Holders, &holders);
+            storage
+                .persistent()
+                .set(&IncomeTokenStorageKey::Balance(extra.clone()), &balance);
+            let supply: i128 = storage
+                .instance()
+                .get(&IncomeTokenStorageKey::TotalSupply)
+                .unwrap();
+            storage
+                .instance()
+                .set(&IncomeTokenStorageKey::TotalSupply, &(supply + balance));
+        });
+    }
+
     #[test]
     fn execute_distribution_rejects_more_than_max_holders() {
-        // MAX_HOLDERS is 10; 11 holders must be rejected before any funds move.
-        let s = setup_with_balance_values(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+        // MAX_HOLDERS is 10. The income token now refuses an 11th holder, so
+        // the list is extended through storage to reach this defensive guard;
+        // 11 positive-balance holders must be rejected before any funds move.
+        let s = setup_with_balance_values(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let eleventh = Address::generate(&s.env);
+        s.whitelist.approve(&s.whitelist_admin, &eleventh);
+        append_raw_holder(&s, &eleventh, 11);
+        assert_eq!(s.token.holders().len(), 11);
         record_default(&s);
 
         let res = s.payout.try_execute_distribution(
@@ -2410,6 +2460,56 @@ pub mod tests {
                 PayoutError::TooManyHolders as u32
             )))
         );
+        assert_eq!(s.usdc.balance(&s.fee_recipient), 0);
+    }
+
+    #[test]
+    fn zero_balance_entries_do_not_count_against_max_holders() {
+        // An unapproved, zero-balance 11th entry is skipped entirely: it is
+        // neither counted against the cap nor checked against the whitelist.
+        let s = setup_with_balance_values(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+        let departed = Address::generate(&s.env);
+        append_raw_holder(&s, &departed, 0);
+        assert_eq!(s.token.holders().len(), 11);
+        record_default(&s);
+
+        let summary = s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        assert_eq!(summary.platform_fee, 1_000);
+        assert_eq!(s.usdc.balance(&departed), 0);
+    }
+
+    #[test]
+    fn revoked_holder_with_zero_balance_does_not_block_distribution() {
+        let s = setup_with_balance_values(&[700, 300]);
+        let departing = s.holders.get(0).unwrap();
+        let staying = s.holders.get(1).unwrap();
+        let replacement = Address::generate(&s.env);
+        s.whitelist.approve(&s.whitelist_admin, &replacement);
+
+        s.token.transfer(&s.admin, &departing, &replacement, &700);
+        s.whitelist.revoke(&s.whitelist_admin, &departing);
+        record_default(&s);
+
+        let summary = s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        assert_eq!(summary.distributed_total, 9_000);
+        assert_eq!(s.usdc.balance(&departing), 0);
+        assert_eq!(s.usdc.balance(&staying), 2_700);
+        assert_eq!(s.usdc.balance(&replacement), 6_300);
+        let holders = s.token.holders();
+        assert!(!holders.contains(&departing));
+        assert_eq!(holders, Vec::from_array(&s.env, [staying, replacement]));
     }
 
     #[test]

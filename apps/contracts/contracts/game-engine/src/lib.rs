@@ -624,7 +624,7 @@ mod tests {
 
         // Wait 10 epochs as a vacant tile.
         let mut ledger = test.env.ledger().get();
-        ledger.sequence_number += 10 * EPOCH_LENGTH;
+        ledger.sequence_number += (10 * EPOCH_LENGTH) as u32;
         test.env.ledger().set(ledger);
 
         // Vacant rate: BASE_RENTAL_RATE * 10 epochs.
@@ -683,9 +683,10 @@ mod tests {
         );
     }
 
-    #[test]
+      #[test]
     fn test_multiple_unaligned_claims_match_single_claim() {
         let test = setup_test();
+        let start = test.token_client.balance(&test.owner);
 
         // Claim at ledgers 150, 275, 333, then 500.
         for target in [150u32, 275, 333, 500] {
@@ -697,24 +698,19 @@ mod tests {
             }
         }
 
-        let balance_after_multiple = test.token_client.balance(&test.owner);
+        let earned_multiple = test.token_client.balance(&test.owner) - start;
 
         // Fresh setup, single claim at ledger 500.
         let test2 = setup_test();
+        let start2 = test2.token_client.balance(&test2.owner);
         let mut ledger = test2.env.ledger().get();
         ledger.sequence_number = 500;
         test2.env.ledger().set(ledger);
         test2.engine_client.claim_rental(&test2.owner, &0);
-        let balance_after_single = test2.token_client.balance(&test2.owner);
+        let earned_single = test2.token_client.balance(&test2.owner) - start2;
 
         // Both should have earned exactly 5 epochs at the vacant rate.
-        assert_eq!(
-            balance_after_multiple - test.token_client.balance(&test.treasury),
-            balance_after_single - test2.token_client.balance(&test2.treasury)
-        );
-        assert_eq!(
-            balance_after_multiple - test.token_client.balance(&test.treasury),
-            BASE_RENTAL_RATE * 5
-        );
+        assert_eq!(earned_multiple, earned_single);
+        assert_eq!(earned_multiple, BASE_RENTAL_RATE * 5);
     }
 }

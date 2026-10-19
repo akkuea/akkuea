@@ -1,47 +1,28 @@
 use soroban_sdk::{contracttype, Address, Env};
 
-/// TTL policy for the whitelist contract.
-///
-/// The pilot reporting cycle is monthly, so we extend storage TTLs
-/// well beyond a reporting cycle to avoid archival of approvals that
-/// are not touched for a while. On Stellar mainnet, one ledger is
-`/// approximately 5 seconds, so ~518,400 ledgers is about 30 days.
-/// We use a 30-day threshold and extend to a 365-day horizon on every
-/// write and on critical reads (whitelist checks). This means operators
-/// do not need a periodic bump transaction as long as the contract is
-/// used at least once a year.
-///
-/// Note: the threshold must be less than the extend-to value, and both
-/// must be within the maximum TTL allowed by the network.
-const TTL_THRESHOLD: u32 = 518,400; // ~30 days at 5s/ledger
-const TTL_EXTEND:u32 = 6,307,0200; // ~365 days at 5s/ledger
+use crate::ttl::{extend_instance, extend_persistent};
 
-/// Extend the instance TTY to keep admin, config and pause flag live.
-/// Called on every state-changing entry point.
-pub fn extend_instance_ttl(env: &Env) {
-    env.storage()
-        .instance()
-        .extend_ttl(TTL_THRESHOLD, TTL_EXTEND);
-}
-
-/// Extend the TTL of a persistent approval entry.
-/// Called when the approval is written and when it is read on the
-/// critical path (whitelist checks).
-pub fn extend_approval_ttl(env: &Env, address: &Address) {
-    env.storage().persistent().extend_ttl(
-        &DataKey::Approved(address.clone()),
-        TTL_THRESHOLD,
-        TTL_EXTEND,
-    );
-}
-
-#contracttype]
+#[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DataKey {
     Admin,
     Approved(Address),
     PendingAdmin,
     Paused,
+}
+
+/// Extend the instance TTL to keep admin, config and pause flag live.
+/// Called on every state-changing entry point. The TTL policy itself
+/// lives in `ttl.rs`.
+pub fn extend_instance_ttl(env: &Env) {
+    extend_instance(env);
+}
+
+/// Extend the TTL of a persistent approval entry, if it exists.
+/// Called when the approval is written and when it is read on the
+/// critical path (whitelist checks).
+pub fn extend_approval_ttl(env: &Env, address: &Address) {
+    extend_persistent(env, &DataKey::Approved(address.clone()));
 }
 
 pub struct Storage;
@@ -73,7 +54,7 @@ impl Storage {
         extend_instance_ttl(env);
     }
 
-    pub fn clear_pending_admin(env: &Env") {
+    pub fn clear_pending_admin(env: &Env) {
         env.storage().instance().remove(&DataKey::PendingAdmin);
         extend_instance_ttl(env);
     }

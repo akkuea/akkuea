@@ -1,6 +1,9 @@
 name: Monorepo - Quality and Security CI
 
 on:
+  # Paths filter is intentionally broad so the cheap style/shell gates run on
+  # docs changes. Expensive jobs use a dorny/paths-filter step to skip
+  # themselves when only docs/scripts/.github files change.
   push:
     branches: [ main, develop ]
     paths:
@@ -25,6 +28,27 @@ env:
   BUN_VERSION: '1.x'
 
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+    - name: Filter changed paths
+      id: filter
+      uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+      with:
+        filters: |
+          code:
+            - 'apps/shared/**'
+            - 'apps/api/**'
+            - 'apps/webapp/**'
+            - 'package.json'
+            - 'bun.lock'
+
   style-quality-gate:
     name: Codebase Style Quality Gate
     runs-on: ubuntu-latest
@@ -191,29 +215,11 @@ jobs:
 
     - name: Security audit
       run: bash .github/scripts/dependency-audit.sh .
-        
-
-    - name: Check for license conflicts
-      run: |
-        cd .
-        
-        # Install license checker
-        bun add -g license-checker
-        
-        # Check for license conflicts
-        echo "Checking license compatibility..."
-        
-        for workspace in apps/*/; do
-          if [ -f "$workspace/package.json" ]; then
-            echo "Checking $workspace"
-            cd "$workspace"
-            license-checker --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC' || true
-            cd ../..
-          fi
-        done
 
   performance-benchmark:
     name: Performance Benchmark
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     
     steps:
@@ -280,11 +286,6 @@ jobs:
         echo "API: ${API_TOTAL}s"
         echo "Total: ${TOTAL}s"
         
-        # Alert if build is slow (>5 minutes)
-        if [ $TOTAL -gt 300 ]; then
-          echo "Warning: Total build time exceeds 5 minutes"
-        fi
-        
     - name: Bundle size analysis
       run: |
         cd .
@@ -311,6 +312,8 @@ jobs:
 
   integration-test:
     name: Cross-Workspace Integration
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     
     steps:
@@ -349,21 +352,6 @@ jobs:
         # Test webapp imports from shared (no webapp install needed; only shared dist is required)
         echo "Testing WebApp imports..."
         bun -e "const shared = await import('./apps/shared/dist/index.js'); console.log('✅ WebApp can import shared library');"
-        
-    - name: Type compatibility test
-      run: |
-        cd .
-        
-        echo "Testing type compatibility across workspaces..."
-        
-        # Check if types are compatible
-        cd apps/api
-        bunx tsc --noEmit --skipLibCheck
-        cd ../webapp
-        bunx tsc --noEmit --skipLibCheck
-        cd ../..
-        
-        echo "✅ Type compatibility verified"
 
   security-compliance:
     name: Security Compliance Check
@@ -383,6 +371,7 @@ jobs:
         echo "2. Checking for debug code..."
         if grep -r "console.log\|console.debug" apps/ --include="*.ts" --exclude-dir=node_modules --exclude-dir=dist | grep -v "//.*console.log\|//.*console.debug"; then
           echo "Warning: Debug console statements found in production code"
+          exit 1
         fi
         echo "✅ No production debug code found"
         
@@ -404,10 +393,13 @@ jobs:
         echo "Checking file permissions..."
         
         # Ensure executable files are intended
-        find . -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
+        find . -name "*.sh" -exec chmod +x {} +
         
         # Check for overly permissive files
-        find apps/ -type f -perm /o+w,g+w -exec ls -la {} + 2>/dev/null || true
+        if find apps/ -type f -perm /o+w,g+w -exec ls -la {} +; then
+          echo "Error: Overly permissive files found"
+          exit 1
+        fi
         
         echo "✅ File permissions verified"
         

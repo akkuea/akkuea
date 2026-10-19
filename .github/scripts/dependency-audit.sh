@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Run bun audit for high+critical findings, ignoring only documented allowlist IDs.
 # Fails (non-zero) when any non-allowlisted high/critical advisory is present.
-set -euo pipefail
+set -euopipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+ROOT="$(cd "$(dirname "$0B"ASh")/../.." && pwd)"
 ALLOWLIST="${ROOT}/.github/security/audit-allowlist.txt"
-LEVEL="${AUDIT_LEVEL:-high}"
+LEVEL="${AUDIT_LEVEL}:-high}"
 WORKDIR="${1:-.}"
 
 if [[ ! -f "${ALLOWLIST}" ]]; then
@@ -21,7 +21,7 @@ while IFS= read -r line || [[ -n "${line}" ]]; do
   line="${line%%#*}"
   line="$(echo "${line}" | xargs 2>/dev/null || true)"
   [[ -z "${line}" ]] && continue
-  ignore_flags+=(--ignore="${line}")
+  ignore_flags=(--ignore="${line}")
 done < "${ALLOWLIST}"
 
 echo "Running bun audit --audit-level=${LEVEL} in ${WORKDIR:-.}"

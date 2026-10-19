@@ -29,6 +29,10 @@ const authWalletSchema = z.object({
 });
 
 export const userRoutes = new Elysia({ prefix: '/users' })
+  // authPlugin only derives getAuthenticatedUser(); it does not enforce
+  // auth by itself, so applying it here lets /users/auth check for an
+  // optional session without requiring one.
+  .use(authPlugin)
   // POST /users - Create user
   .use(validate({ body: createUserSchema }))
   .post('/', async (ctx) => UserController.create(ctx), {
@@ -59,19 +63,21 @@ export const userRoutes = new Elysia({ prefix: '/users' })
     },
   })
 
-  // POST /users/auth - Authenticate by wallet (get or create)
+  // POST /users/auth - Look up a user by wallet, or create one if the
+  // caller holds a valid session (Bearer JWT from /auth/session) for that
+  // exact wallet. Returns the same public projection as GET /users/:id.
   .use(validate({ body: authWalletSchema }))
   .post('/auth', async (ctx) => UserController.authenticateByWallet(ctx), {
     beforeHandle: [rateLimit()],
     detail: {
       summary: 'Authenticate by wallet',
-      description: 'Authenticate or create a user by their Stellar wallet address',
+      description:
+        'Returns the public profile for an existing wallet. For a wallet with no account yet, creates one only if the caller has a valid session for that exact wallet.',
       tags: ['Users'],
     },
   })
 
   // Protected Routes
-  .use(authPlugin)
   // GET /users/me - Get current user profile
   .get('/me', async (ctx) => UserController.getProfile(ctx), {
     detail: {

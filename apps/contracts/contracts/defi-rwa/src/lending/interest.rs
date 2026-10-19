@@ -47,7 +47,8 @@ impl InterestRateModel {
             let slope_component = utilization
                 .checked_mul(self.slope1)
                 .ok_or(ContractError::BorrowRateUtilizationMulOverflow)?
-                / self.optimal_utilization;
+                .checked_div(self.optimal_utilization)
+                .ok_or(ContractError::BalanceOverflow)?;
             self.base_rate
                 .checked_add(slope_component)
                 .ok_or(ContractError::BorrowRateBaseAddOverflow)
@@ -57,12 +58,17 @@ impl InterestRateModel {
                 .base_rate
                 .checked_add(self.slope1)
                 .ok_or(ContractError::BorrowRateBaseSlope1AddOverflow)?;
-            let excess_utilization = utilization - self.optimal_utilization;
-            let remaining = PRECISION - self.optimal_utilization;
+            let excess_utilization = utilization
+                .checked_sub(self.optimal_utilization)
+                .ok_or(ContractError::BalanceOverflow)?;
+            let remaining = PRECISION
+                .checked_sub(self.optimal_utilization)
+                .ok_or(ContractError::BalanceOverflow)?;
             let excess_component = excess_utilization
                 .checked_mul(self.slope2)
                 .ok_or(ContractError::BorrowRateExcessMulOverflow)?
-                / remaining;
+                .checked_div(remaining)
+                .ok_or(ContractError::BalanceOverflow)?;
             rate_at_optimal
                 .checked_add(excess_component)
                 .ok_or(ContractError::BorrowRateRateAtOptimalAddOverflow)
@@ -78,17 +84,19 @@ impl InterestRateModel {
         reserve_factor: i128,
     ) -> Result<i128, ContractError> {
         // supply_rate = borrow_rate * utilization * (1 - reserve_factor) / PRECISION^2
-        // The first multiplication uses checked arithmetic. The second
-        // multiplication is provably bounded by i128::MAX:
-        //   effective_rate = (borrow_rate * utilization) / PRECISION ≤ i128::MAX / PRECISION
-        //   factor = PRECISION - reserve_factor ≤ PRECISION
-        //   effective_rate * factor ≤ (i128::MAX / PRECISION) * PRECISION ≤ i128::MAX
+        // Keep each fixed-point operation checked, including the scaled product.
         let effective_rate = borrow_rate
             .checked_mul(utilization)
             .ok_or(ContractError::SupplyRateBorrowRateMulOverflow)?
-            / PRECISION;
-        let factor = PRECISION - reserve_factor;
-        Ok(effective_rate * factor / PRECISION)
+            .checked_div(PRECISION)
+            .ok_or(ContractError::BalanceOverflow)?;
+        let factor = PRECISION
+            .checked_sub(reserve_factor)
+            .ok_or(ContractError::BalanceOverflow)?;
+        effective_rate
+            .checked_mul(factor)
+            .and_then(|value| value.checked_div(PRECISION))
+            .ok_or(ContractError::BalanceOverflow)
     }
 }
 
@@ -174,12 +182,14 @@ impl InterestStorage {
         }
 
         // rate_per_second in PRECISION units
-        let rate_per_second = borrow_rate / (SECONDS_PER_YEAR as i128);
+        let rate_per_second = borrow_rate
+            .checked_div(SECONDS_PER_YEAR as i128)
+            .ok_or(ContractError::BalanceOverflow)?;
 
         // base = 1 + rate_per_second  (in PRECISION units)
-        // Plain addition is safe: rate_per_second ≤ i128::MAX / SECONDS_PER_YEAR,
-        // so the sum ≤ PRECISION + 5.4e30, well within i128::MAX.
-        let base = PRECISION + rate_per_second;
+        let base = PRECISION
+            .checked_add(rate_per_second)
+            .ok_or(ContractError::BalanceOverflow)?;
 
         // Compute base^time_elapsed using exponentiation by squaring
         let compound_factor = Self::pow_precision(base, time_elapsed)?;
@@ -187,7 +197,11 @@ impl InterestStorage {
         current_index
             .checked_mul(compound_factor)
             .ok_or(ContractError::NewIndexMulOverflow)
-            .map(|v| v / PRECISION)
+            .and_then(|value| {
+                value
+                    .checked_div(PRECISION)
+                    .ok_or(ContractError::BalanceOverflow)
+            })
     }
 
     /// Fixed-point exponentiation by squaring.
@@ -208,12 +222,14 @@ impl InterestStorage {
                 result = result
                     .checked_mul(b)
                     .ok_or(ContractError::PowPrecisionOverflow)?
-                    / PRECISION;
+                    .checked_div(PRECISION)
+                    .ok_or(ContractError::BalanceOverflow)?;
             }
             b = b
                 .checked_mul(b)
                 .ok_or(ContractError::PowPrecisionOverflow)?
-                / PRECISION;
+                .checked_div(PRECISION)
+                .ok_or(ContractError::BalanceOverflow)?;
             e >>= 1;
         }
 

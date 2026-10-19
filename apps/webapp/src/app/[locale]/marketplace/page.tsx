@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   Building2,
@@ -17,7 +16,6 @@ import { InvestModal } from "@/components/marketplace/InvestModal";
 import {
   filterAndSortProperties,
   getFundingProgress,
-  getPropertyImage,
   getPropertyRegion,
   getPropertyTypeLabel,
   getPropertyTypes,
@@ -27,6 +25,7 @@ import {
   sortOptions,
   type MarketplaceSortOption,
 } from "@/components/marketplace/marketplace.utils";
+import { PropertyImage } from "@/components/property/PropertyImage";
 import {
   Badge,
   Button,
@@ -77,8 +76,8 @@ function PropertyCard({
         onClick={() => onSelect(property)}
       >
         <div className="relative h-48 overflow-hidden">
-          <Image
-            src={getPropertyImage(property)}
+          <PropertyImage
+            property={property}
             alt={`${property.name} - ${property.location.city}, ${property.location.country}`}
             fill
             sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"

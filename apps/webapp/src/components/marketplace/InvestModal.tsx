@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Image from "next/image";
 import {
   ArrowRight,
   CheckCircle2,
@@ -18,8 +17,9 @@ import {
   getExplorerUrl,
 } from "@/lib/utils";
 import { useWallet } from "@/components/auth/hooks";
+import { PropertyImage } from "@/components/property/PropertyImage";
 import { propertyApi } from "@/services/api/properties";
-import { getPropertyImage, getPropertyTypeLabel } from "./marketplace.utils";
+import { getPropertyTypeLabel } from "./marketplace.utils";
 
 export interface InvestModalProps {
   property: PropertyInfo;
@@ -149,8 +149,8 @@ export function InvestModal({
       ) : (
         <div className="space-y-6">
           <div className="flex gap-4 rounded-lg border border-[#262626] bg-[#1a1a1a] p-4">
-            <Image
-              src={getPropertyImage(property)}
+            <PropertyImage
+              property={property}
               alt={`${property.name} - ${property.location.city}, ${property.location.country}`}
               width={80}
               height={80}

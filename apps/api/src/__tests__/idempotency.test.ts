@@ -7,6 +7,33 @@ import { idempotencyKeys } from '../db/schema/idempotency';
 
 const skipIfNoDatabase = !process.env.DATABASE_URL;
 
+// Does not require a database: an oversized Idempotency-Key is rejected
+// before the middleware ever queries or inserts into idempotency_keys.
+describe('Idempotency Middleware - oversized key', () => {
+  const app = new Elysia().use(idempotency).post('/test-oversized', async ({ body }) => {
+    return { success: true, body };
+  });
+
+  it('should return 400, not 500, for an Idempotency-Key longer than the column can store', async () => {
+    const oversizedKey = 'k'.repeat(199);
+
+    const res = await app.handle(
+      new Request('http://localhost/test-oversized', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': oversizedKey,
+        },
+        body: JSON.stringify({ data: 'test' }),
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toBe('IDEMPOTENCY_KEY_TOO_LONG');
+  });
+});
+
 describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
   let counter = 0;
 

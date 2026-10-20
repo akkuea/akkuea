@@ -2,6 +2,8 @@ import { describe, expect, it, beforeEach, beforeAll } from 'bun:test';
 import { Elysia } from 'elysia';
 import { eq, sql } from 'drizzle-orm';
 import { idempotency } from '../middleware/idempotency';
+import { errorHandler } from '../middleware/errorHandler';
+import { ApiError } from '../errors/ApiError';
 import { db } from '../db';
 import { idempotencyKeys } from '../db/schema/idempotency';
 
@@ -241,6 +243,32 @@ describe.skipIf(skipIfNoDatabase)('Idempotency Middleware', () => {
     expect(pending.length).toBe(0);
 
     const second = await post(failingOnce, '/flaky', 'key-throw');
+    expect(second.status).toBe(200);
+    expect(((await second.json()) as { calls: number }).calls).toBe(2);
+    expect(calls).toBe(2);
+  });
+
+  it('should release the key when a handler throws behind the global errorHandler', async () => {
+    // Mirrors index.ts / app.ts: errorHandler is registered before the route
+    // plugins and returns a body from its global onError.
+    let calls = 0;
+    const routes = new Elysia().use(idempotency).post('/borrow', () => {
+      calls++;
+      if (calls === 1) throw ApiError.badRequest('Insufficient liquidity');
+      return { success: true, calls };
+    });
+    const realApp = new Elysia().use(errorHandler).use(routes);
+
+    const first = await post(realApp, '/borrow', 'key-error-handler');
+    expect(first.status).toBe(400);
+
+    const pending = await db
+      .select()
+      .from(idempotencyKeys)
+      .where(eq(idempotencyKeys.key, 'anonymous:key-error-handler'));
+    expect(pending.length).toBe(0);
+
+    const second = await post(realApp, '/borrow', 'key-error-handler');
     expect(second.status).toBe(200);
     expect(((await second.json()) as { calls: number }).calls).toBe(2);
     expect(calls).toBe(2);

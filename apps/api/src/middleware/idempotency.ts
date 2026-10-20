@@ -1,5 +1,5 @@
 import { Elysia, StatusMap } from 'elysia';
-import { and, eq, gt, lt } from 'drizzle-orm';
+import { and, eq, gt, lt, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { idempotencyKeys } from '../db/schema/idempotency';
 
@@ -57,13 +57,43 @@ async function tryClaimKey(key: string, expiresAt: Date): Promise<boolean> {
 
 /**
  * Release a claimed key so a retry with the same key runs the handler again.
- * Used when the request failed: a thrown error or a non-2xx result.
+ * Used by onAfterHandle when the handler returned a non-2xx result.
  */
 async function releaseKey(key: string): Promise<void> {
   try {
     await db.delete(idempotencyKeys).where(eq(idempotencyKeys.key, key));
   } catch (error) {
     console.error('Failed to release idempotency key', error);
+  }
+}
+
+/**
+ * Release a claimed key only if it still holds the pending marker, i.e. the
+ * request ended without onAfterHandle caching a result (a thrown handler).
+ */
+async function releasePendingKey(key: string): Promise<void> {
+  try {
+    await db
+      .delete(idempotencyKeys)
+      .where(
+        and(
+          eq(idempotencyKeys.key, key),
+          sql`${idempotencyKeys.response}->>'__idempotency' = ${PENDING_MARKER.__idempotency}`,
+        ),
+      );
+  } catch (error) {
+    console.error('Failed to release idempotency key', error);
+  }
+}
+
+async function releaseIfClaimed(ctx: unknown): Promise<void> {
+  const { idempotencyKey, claimedIdempotencyKey, servedFromCache } = ctx as {
+    idempotencyKey?: string;
+    claimedIdempotencyKey?: boolean;
+    servedFromCache?: boolean;
+  };
+  if (idempotencyKey && claimedIdempotencyKey && !servedFromCache) {
+    await releasePendingKey(idempotencyKey);
   }
 }
 
@@ -252,15 +282,21 @@ export const idempotency = new Elysia({ name: 'idempotency' })
       }
     },
   )
+  // Release the key of a request that ended without a cached result (a
+  // thrown handler). Two hooks are needed because neither runs on every
+  // error path:
+  // - mapResponse runs after the app's global errorHandler produced the error
+  //   body, where a plugin onError never runs (Elysia stops at the first
+  //   onError that returns a body, and errorHandler is registered before the
+  //   route plugins). It runs before the response is returned, so an
+  //   immediate retry cannot see a stale pending marker.
+  // - onError covers apps without such a handler, where Elysia's default
+  //   error response skips mapResponse.
+  // The release only deletes a row still holding the pending marker, so a
+  // cached result is never removed and running both hooks is harmless.
   .onError({ as: 'global' }, async (ctx) => {
-    // A thrown handler never reaches onAfterHandle; without this the pending
-    // marker would block the key until it expires.
-    const { idempotencyKey, claimedIdempotencyKey, servedFromCache } = ctx as {
-      idempotencyKey?: string;
-      claimedIdempotencyKey?: boolean;
-      servedFromCache?: boolean;
-    };
-    if (idempotencyKey && claimedIdempotencyKey && !servedFromCache) {
-      await releaseKey(idempotencyKey);
-    }
+    await releaseIfClaimed(ctx);
+  })
+  .mapResponse({ as: 'global' }, async (ctx) => {
+    await releaseIfClaimed(ctx);
   });

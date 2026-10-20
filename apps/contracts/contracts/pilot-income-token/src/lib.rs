@@ -205,7 +205,6 @@ impl PilotIncomeToken {
             panic_with_error!(&env, IncomeTokenError::InvalidAmount);
         }
 
- fix/issue-1181-contracts-extend-ttls-for-pilot-contract
         extend_instance(&env);
 
         if from == to {

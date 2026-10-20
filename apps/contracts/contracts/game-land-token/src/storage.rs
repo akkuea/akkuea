@@ -51,7 +51,13 @@ pub fn get_allowance_data(env: &Env, from: &Address, spender: &Address) -> Optio
         .get(&DataKey::Allowance(from.clone(), spender.clone()))
 }
 
-pub fn set_allowance(env: &Env, from: &Address, spender: &Address, amount: i128, expiration_ledger: u32) {
+pub fn set_allowance(
+    env: &Env,
+    from: &Address,
+    spender: &Address,
+    amount: i128,
+    expiration_ledger: u32,
+) {
     env.storage().persistent().set(
         &DataKey::Allowance(from.clone(), spender.clone()),
         &AllowanceData {

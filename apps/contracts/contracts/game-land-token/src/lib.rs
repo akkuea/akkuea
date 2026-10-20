@@ -8,8 +8,9 @@ mod storage;
 
 pub use errors::TokenError;
 use storage::{
-    get_allowance, get_balance, get_engine, get_treasury, has_claimed_faucet, is_testnet,
-    set_allowance, set_balance, set_engine, set_faucet_claimed, set_testnet, set_treasury, DataKey,
+    get_allowance, get_allowance_data, get_balance, get_engine, get_treasury, has_claimed_faucet,
+    is_testnet, set_allowance, set_balance, set_engine, set_faucet_claimed, set_testnet,
+    set_treasury, DataKey,
 };
 
 #[contract]
@@ -42,6 +43,13 @@ impl GameLandToken {
         get_allowance(&env, &from, &spender)
     }
 
+    /// Approve `spender` to spend up to `amount` from `from` until
+    /// `expiration_ledger`.
+    ///
+    /// Amounts are signed: a negative amount fails with
+    /// [`TokenError::NegativeAmount`]. Zero is meaningful here and is accepted:
+    /// it revokes the spender's allowance (the entry is written with
+    /// `amount = 0` and the requested expiration), it is not a no-op.
     pub fn approve(
         env: Env,
         from: Address,
@@ -61,19 +69,36 @@ impl GameLandToken {
         get_balance(&env, &id)
     }
 
+    /// Transfer `amount` from `from` to `to`.
+    ///
+    /// A negative amount fails with [`TokenError::NegativeAmount`]. Zero is a
+    /// no-op: the call still requires `from`'s authorization, but no balance
+    /// changes and no event is emitted.
     pub fn transfer(env: Env, from: Address, to: Address, amount: i128) {
         from.require_auth();
         if amount < 0 {
             panic_with_error!(&env, TokenError::NegativeAmount);
         }
+        if amount == 0 {
+            return;
+        }
         Self::do_transfer(&env, from, to, amount);
     }
 
+    /// Spend `spender`'s allowance to move `amount` from `from` to `to`.
+    ///
+    /// A negative amount fails with [`TokenError::NegativeAmount`]. Zero is a
+    /// no-op: no allowance is consumed, no balance changes and no event is
+    /// emitted. A partial spend keeps the remaining allowance and its original
+    /// expiration, so the rest stays usable.
     pub fn transfer_from(env: Env, spender: Address, from: Address, to: Address, amount: i128) {
         spender.require_auth();
 
         if amount < 0 {
             panic_with_error!(&env, TokenError::NegativeAmount);
+        }
+        if amount == 0 {
+            return;
         }
 
         let allowance = get_allowance(&env, &from, &spender);
@@ -84,15 +109,27 @@ impl GameLandToken {
         let new_allowance = allowance
             .checked_sub(amount)
             .unwrap_or_else(|| panic_with_error!(&env, TokenError::Overflow));
-        set_allowance(&env, &from, &spender, new_allowance, 0);
+        // Carry the original expiration forward. Writing 0 here would make the
+        // remaining allowance look expired on the very next `allowance` read.
+        let expiration_ledger = get_allowance_data(&env, &from, &spender)
+            .map(|data| data.expiration_ledger)
+            .unwrap_or(0);
+        set_allowance(&env, &from, &spender, new_allowance, expiration_ledger);
         Self::do_transfer(&env, from, to, amount);
     }
 
+    /// Burn `amount` from `from`, reducing the total supply.
+    ///
+    /// A negative amount fails with [`TokenError::NegativeAmount`]. Zero is a
+    /// no-op: no balance changes and no event is emitted.
     pub fn burn(env: Env, from: Address, amount: i128) {
         from.require_auth();
 
         if amount < 0 {
             panic_with_error!(&env, TokenError::NegativeAmount);
+        }
+        if amount == 0 {
+            return;
         }
 
         let balance = get_balance(&env, &from);
@@ -107,11 +144,20 @@ impl GameLandToken {
         events::emit_burn(&env, from, amount);
     }
 
+    /// Spend `spender`'s allowance to burn `amount` from `from`.
+    ///
+    /// A negative amount fails with [`TokenError::NegativeAmount`]. Zero is a
+    /// no-op: no allowance is consumed, no balance changes and no event is
+    /// emitted. A partial spend keeps the remaining allowance and its original
+    /// expiration.
     pub fn burn_from(env: Env, spender: Address, from: Address, amount: i128) {
         spender.require_auth();
 
         if amount < 0 {
             panic_with_error!(&env, TokenError::NegativeAmount);
+        }
+        if amount == 0 {
+            return;
         }
 
         let allowance = get_allowance(&env, &from, &spender);
@@ -130,7 +176,12 @@ impl GameLandToken {
         let new_balance = balance
             .checked_sub(amount)
             .unwrap_or_else(|| panic_with_error!(&env, TokenError::Overflow));
-        set_allowance(&env, &from, &spender, new_allowance, 0);
+        // Carry the original expiration forward. Writing 0 here would make the
+        // remaining allowance look expired on the very next `allowance` read.
+        let expiration_ledger = get_allowance_data(&env, &from, &spender)
+            .map(|data| data.expiration_ledger)
+            .unwrap_or(0);
+        set_allowance(&env, &from, &spender, new_allowance, expiration_ledger);
         set_balance(&env, &from, new_balance);
         events::emit_burn(&env, from, amount);
     }
@@ -158,6 +209,10 @@ impl GameLandToken {
 
     // --- Custom Logic ---
 
+    /// Mint `amount` to `to`. Only the treasury or the game engine may call it.
+    ///
+    /// A negative amount fails with [`TokenError::NegativeAmount`]. Zero is a
+    /// no-op: no balance changes and no event is emitted.
     pub fn mint(env: Env, caller: Address, to: Address, amount: i128) {
         caller.require_auth();
         let treasury =
@@ -169,6 +224,9 @@ impl GameLandToken {
         }
         if amount < 0 {
             panic_with_error!(&env, TokenError::NegativeAmount);
+        }
+        if amount == 0 {
+            return;
         }
         let balance = get_balance(&env, &to);
         let new_balance = balance
@@ -225,6 +283,7 @@ impl GameLandToken {
 mod tests {
     use super::*;
     use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::testutils::Ledger as _;
 
     fn setup_test(env: &Env) -> (Address, Address, Address, GameLandTokenClient<'static>) {
         let treasury = Address::generate(env);
@@ -591,7 +650,9 @@ mod tests {
         let current_ledger = env.ledger().sequence();
         client.approve(&user, &spender, &500, &(current_ledger + 1));
 
-        env.ledger().set_sequence_number(current_ledger + 2);
+        env.ledger().with_mut(|ledger| {
+            ledger.sequence_number = current_ledger + 2;
+        });
 
         assert_eq!(client.allowance(&user, &spender), 0);
 
@@ -602,5 +663,83 @@ mod tests {
                 TokenError::InsufficientAllowance as u32
             )))
         );
+    }
+
+    #[test]
+    fn test_partial_transfer_from_keeps_remaining_allowance_usable() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        client.faucet(&user);
+        let spender = Address::generate(&env);
+        let receiver = Address::generate(&env);
+        let expiration = env.ledger().sequence() + 100;
+        client.approve(&user, &spender, &500, &expiration);
+
+        client.transfer_from(&spender, &user, &receiver, &200);
+
+        // The remaining allowance must stay visible and keep its expiration.
+        assert_eq!(client.allowance(&user, &spender), 300);
+
+        // ... and it must still be spendable after the partial transfer.
+        client.transfer_from(&spender, &user, &receiver, &300);
+
+        assert_eq!(client.allowance(&user, &spender), 0);
+        assert_eq!(client.balance(&receiver), 500);
+        assert_eq!(client.balance(&user), (1000 * 10_000_000) - 500);
+    }
+
+    #[test]
+    fn test_partial_burn_from_keeps_remaining_allowance_usable() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        client.faucet(&user);
+        let spender = Address::generate(&env);
+        let expiration = env.ledger().sequence() + 100;
+        client.approve(&user, &spender, &500, &expiration);
+
+        client.burn_from(&spender, &user, &200);
+
+        assert_eq!(client.allowance(&user, &spender), 300);
+
+        client.burn_from(&spender, &user, &300);
+
+        assert_eq!(client.allowance(&user, &spender), 0);
+        assert_eq!(client.balance(&user), (1000 * 10_000_000) - 500);
+    }
+
+    #[test]
+    fn test_zero_amount_is_a_noop() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (treasury, engine, user, client) = setup_test(&env);
+        client.initialize(&treasury, &engine, &true);
+
+        client.faucet(&user);
+        let spender = Address::generate(&env);
+        let receiver = Address::generate(&env);
+        let expiration = env.ledger().sequence() + 100;
+        client.approve(&user, &spender, &500, &expiration);
+
+        let start = client.balance(&user);
+
+        client.transfer(&user, &receiver, &0);
+        client.transfer_from(&spender, &user, &receiver, &0);
+        client.burn(&user, &0);
+        client.burn_from(&spender, &user, &0);
+        client.mint(&treasury, &receiver, &0);
+
+        assert_eq!(client.balance(&user), start);
+        assert_eq!(client.balance(&receiver), 0);
+        assert_eq!(client.allowance(&user, &spender), 500);
+
+        // approve(0) is not a no-op: it revokes the allowance.
+        client.approve(&user, &spender, &0, &expiration);
+        assert_eq!(client.allowance(&user, &spender), 0);
     }
 }

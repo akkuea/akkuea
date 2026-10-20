@@ -49,11 +49,14 @@ The limiter counts an in-memory sliding window per client unless `REDIS_URL` is 
 
 ### Internal Security
 
-| Variable                        | Example Value                   | Required         | Description                                                                                                                                                 |
-| ------------------------------- | ------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WEBHOOK_SECRET`                | `your_webhook_secret_here`      | Yes              | Secret used to sign and verify incoming webhook payloads. Must be a random string of at least 32 characters                                                 |
-| `OPERATIONS_BACKEND_CREDENTIAL` | `generate-a-long-random-secret` | Yes              | Shared secret between the API server and the Next.js operations dashboard proxy. Both sides must have the same value. Generate with: `openssl rand -hex 32` |
-| `OPERATIONS_ALLOWED_WALLETS`    | `GXXX...,GYYY...`               | Yes (production) | Comma-separated list of Stellar public keys permitted to call admin operations endpoints. Acts as a server-side allowlist                                   |
+| Variable                         | Example Value                   | Required                          | Description                                                                                                                                                                               |
+| -------------------------------- | ------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WEBHOOK_SECRET`                 | `your_webhook_secret_here`      | Yes                               | Secret used to sign and verify incoming webhook payloads. Must be a random string of at least 32 characters                                                                               |
+| `WEBHOOK_TIMESTAMP_TOLERANCE_MS` | `300000`                        | No (default: `300000`, 5 minutes) | Maximum age or future offset accepted for a signed webhook timestamp. The boundary is inclusive. When a payload includes `timestamp`, it must parse as a date and fall within this window |
+| `OPERATIONS_BACKEND_CREDENTIAL`  | `generate-a-long-random-secret` | Yes                               | Shared secret between the API server and the Next.js operations dashboard proxy. Both sides must have the same value. Generate with: `openssl rand -hex 32`                               |
+| `OPERATIONS_ALLOWED_WALLETS`     | `GXXX...,GYYY...`               | Yes (production)                  | Comma-separated list of Stellar public keys permitted to call admin operations endpoints. Acts as a server-side allowlist                                                                 |
+
+Transaction webhooks are signed as the lowercase or uppercase 64-character hexadecimal HMAC-SHA256 digest of the exact raw HTTP request body bytes, using `WEBHOOK_SECRET` as the key. Send that hex string in `X-Webhook-Signature`; do not parse or re-serialize the JSON before signing. If `timestamp` is present, deliveries more than five minutes old or more than five minutes in the future are rejected by default. The exact cutoff is accepted, and `WEBHOOK_TIMESTAMP_TOLERANCE_MS` configures the window. For compatibility, an omitted timestamp is not freshness-checked.
 
 ### KYC / Document Storage
 

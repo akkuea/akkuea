@@ -680,6 +680,7 @@ impl PilotPayoutSplit {
         let mut any_eurc = false;
         let mut computed_total = 0i128;
         let mut paid_holders = 0u32;
+        let mut balance_total = 0i128;
         for i in 0..holders.len() {
             // Unreachable: `i` is bounded by `holders.len()`, so this lookup
             // always succeeds. Kept typed rather than `unwrap`ped so a future
@@ -697,6 +698,9 @@ impl PilotPayoutSplit {
             if holder_balance <= 0 {
                 continue;
             }
+            balance_total = balance_total
+                .checked_add(holder_balance)
+                .unwrap_or_else(|| panic_with_error!(&env, PayoutError::ArithmeticOverflow));
 
             paid_holders += 1;
             if paid_holders > MAX_HOLDERS {
@@ -734,6 +738,14 @@ impl PilotPayoutSplit {
         // mutation or token movement.
         if any_eurc && min_eurc_per_usdc <= 0 {
             panic_with_error!(&env, PayoutError::InvalidMinRate);
+        }
+
+        // Defensive invariant on the income token: if its balances ever sum
+        // past its supply, the pro-rata legs exceed the holder pool and the
+        // excess would come out of USDC reserved for withheld holders. Checked
+        // before any token moves.
+        if balance_total > total_supply || computed_total > holder_amount {
+            panic_with_error!(&env, PayoutError::HolderBalancesExceedSupply);
         }
 
         let dust = holder_amount
@@ -2355,6 +2367,49 @@ pub mod tests {
                 PayoutError::InsufficientPayoutBalance as u32
             )))
         );
+    }
+
+    #[test]
+    fn balances_above_total_supply_are_rejected_before_any_payment() {
+        let s = setup();
+        record_default(&s);
+
+        // Total supply is 20. Corrupt one balance so the holders sum to 30,
+        // a state the token's own transfer guards no longer allow.
+        let inflated = s.holders.get(0).unwrap();
+        s.env.as_contract(&s.token.address, || {
+            s.env
+                .storage()
+                .persistent()
+                .set(&IncomeTokenStorageKey::Balance(inflated.clone()), &11i128);
+        });
+        assert_eq!(s.token.balance(&inflated), 11);
+        assert_eq!(s.token.total_supply(), 20);
+
+        let res = s.payout.try_execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::HolderBalancesExceedSupply as u32
+            )))
+        );
+        let usdc = token::Client::new(&s.env, &s.usdc_id);
+        assert_eq!(usdc.balance(&s.payout_id), 100_000);
+        assert_eq!(usdc.balance(&s.fee_recipient), 0);
+        for holder in s.holders.iter() {
+            assert_eq!(usdc.balance(&holder), 0);
+        }
+        let record = s
+            .payout
+            .get_evidence(&cycle(&s.env, "2026-08"))
+            .expect("evidence must still exist");
+        assert!(!record.distributed);
     }
 
     #[test]

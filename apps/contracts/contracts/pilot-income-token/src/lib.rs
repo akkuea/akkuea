@@ -186,6 +186,10 @@ impl PilotIncomeToken {
     }
 
     /// Admin-only correction transfer. Holders cannot transfer the token.
+    ///
+    /// Preserves `sum(balances) == total_supply`, which the payout split
+    /// relies on: the amount may not exceed the sender's balance, and a
+    /// self-transfer is rejected with `SelfTransfer`.
     pub fn transfer(env: Env, caller: Address, from: Address, to: Address, amount: i128) {
         caller.require_auth();
         Self::require_admin(&env, &caller);
@@ -193,6 +197,10 @@ impl PilotIncomeToken {
 
         if amount <= 0 {
             panic_with_error!(&env, IncomeTokenError::InvalidAmount);
+        }
+
+        if from == to {
+            panic_with_error!(&env, IncomeTokenError::SelfTransfer);
         }
 
         let whitelist_address = Storage::whitelist(&env)
@@ -345,9 +353,12 @@ impl PilotIncomeToken {
 
     fn move_balance(env: &Env, from: Address, to: Address, amount: i128) {
         let from_balance = Storage::balance(env, &from);
-        let next_from = from_balance
-            .checked_sub(amount)
-            .unwrap_or_else(|| panic_with_error!(env, IncomeTokenError::InsufficientBalance));
+        // An explicit comparison, not `checked_sub`: on i128 the subtraction
+        // only fails at the type boundary and would otherwise go negative.
+        if amount > from_balance {
+            panic_with_error!(env, IncomeTokenError::InsufficientBalance);
+        }
+        let next_from = from_balance - amount;
         let to_balance = Storage::balance(env, &to);
         let next_to = to_balance
             .checked_add(amount)
@@ -1019,7 +1030,51 @@ mod tests {
     }
 
     #[test]
-    fn transfer_that_underflows_the_balance_is_rejected() {
+    fn transfer_above_the_sender_balance_is_rejected() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        let res = s
+            .token
+            .try_transfer(&s.admin, &s.holder_one, &s.holder_two, &701);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::InsufficientBalance as u32
+            )))
+        );
+        assert_eq!(s.token.balance(&s.holder_one), 700);
+        assert_eq!(s.token.balance(&s.holder_two), 300);
+        assert_eq!(s.token.total_supply(), 1000);
+    }
+
+    #[test]
+    fn transfer_of_the_full_sender_balance_is_allowed() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        s.token
+            .transfer(&s.admin, &s.holder_one, &s.holder_two, &700);
+
+        assert_eq!(s.token.balance(&s.holder_one), 0);
+        assert_eq!(s.token.balance(&s.holder_two), 1000);
+    }
+
+    #[test]
+    fn transfer_from_an_address_without_balance_is_rejected() {
         let s = setup();
         s.env.mock_all_auths();
         approve_default_holders(&s);
@@ -1029,13 +1084,60 @@ mod tests {
             &vec![&s.env, 700i128],
         );
 
-        // The guard on the sender side is an underflow check on the
-        // subtraction, so reaching it needs a balance pinned at the i128
-        // boundary, which ordinary amounts cannot produce. Constructed through
-        // the contract's own storage helper, as the correction-transfer tests
-        // do for the overflow side.
+        let res = s
+            .token
+            .try_transfer(&s.admin, &s.holder_two, &s.holder_one, &1);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::InsufficientBalance as u32
+            )))
+        );
+        assert_eq!(s.token.balance(&s.holder_two), 0);
+        assert_eq!(s.token.balance(&s.holder_one), 700);
+    }
+
+    #[test]
+    fn self_transfer_is_rejected() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        let res = s
+            .token
+            .try_transfer(&s.admin, &s.holder_one, &s.holder_one, &100);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::SelfTransfer as u32
+            )))
+        );
+        assert_eq!(s.token.balance(&s.holder_one), 700);
+        assert_eq!(s.token.total_supply(), 1000);
+    }
+
+    #[test]
+    fn transfer_that_overflows_the_recipient_balance_is_rejected() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        // A mint can never leave a balance at the i128 boundary, so the
+        // recipient side is pinned there through the contract's own storage.
         s.env.as_contract(&s.token_id, || {
-            Storage::set_balance(&s.env, &s.holder_one, i128::MIN)
+            Storage::set_balance(&s.env, &s.holder_two, i128::MAX)
         });
 
         let res = s
@@ -1045,9 +1147,10 @@ mod tests {
         assert_eq!(
             res,
             Err(Ok(Error::from_contract_error(
-                IncomeTokenError::InsufficientBalance as u32
+                IncomeTokenError::BalanceOverflow as u32
             )))
         );
+        assert_eq!(s.token.balance(&s.holder_one), 700);
     }
 
     // --- Two-step admin transfer ---
@@ -1263,3 +1366,6 @@ mod tests {
         assert_eq!(s.token.admin(), new_admin);
     }
 }
+
+#[cfg(test)]
+mod proptests;

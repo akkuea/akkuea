@@ -20,9 +20,13 @@ pub fn extend_instance_ttl(env: &Env) {
 
 /// Extend the TTL of a persistent approval entry, if it exists.
 /// Called when the approval is written and when it is read on the
-/// critical path (whitelist checks).
+/// critical path (whitelist checks). `extend_ttl` fails on a missing
+/// key, so only extend when the entry is present.
 pub fn extend_approval_ttl(env: &Env, address: &Address) {
-    extend_persistent(env, &DataKey::Approved(address.clone()));
+    let key = DataKey::Approved(address.clone());
+    if env.storage().persistent().has(&key) {
+        extend_persistent(env, &key);
+    }
 }
 
 pub struct Storage;

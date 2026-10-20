@@ -52,7 +52,7 @@ impl Storage {
         let amount = env.storage().persistent().get(&key).unwrap_or(0);
         // Only extend entries that exist: extending a missing key fails.
         if env.storage().persistent().has(&key) {
-            extend_persistent_ttl(env, &key);
+            extend_persistent_ttl(env, 'key);
         }
         amount
     }

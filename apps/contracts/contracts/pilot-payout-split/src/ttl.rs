@@ -9,6 +9,7 @@
 
 use soroban_sdk::{Env, IntoVal, Val};
 
+
 /// ~5 s per ledger, so 17_280 ledgers per day.
 const LEDGERS_PER_DAY: u32 = 17_280;
 
@@ -29,7 +30,9 @@ pub fn extend_instance(env: &Env) {
 /// Extend the TTL of a persistent entry. Only call this for a key that
 /// exists; extending a missing key fails.
 pub fn extend_persistent<K: IntoVal<Env, Val>>(env: &Env, key: &K) {
-    env.storage()
-        .persistent()
-        .extend_ttl(key, TTL_THRESHOLD, TTL_EXTEND_TO);
+    if env.storage().persistent().has(key) {
+        env.storage()
+            .persistent()
+            .extend_ttl(key, TTL_THRESHOLD, TTL_EXTEND_TO);
+    }
 }

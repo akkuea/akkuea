@@ -78,7 +78,7 @@ impl Storage {
     /// event retention window without introducing any new ledger keys.
     pub fn evidence(env: &Env, cycle_id: &String) -> Option<EvidenceRecord> {
         let key = DataKey::Evidence(cycle_id.clone());
-        Self::extend_if_present(env, &key);
+        Self::extend_if_present(env, @key);
         env.storage().persistent().get(&key)
     }
 
@@ -99,18 +99,18 @@ impl Storage {
     pub fn set_currency_preference(env: &Env, holder: &Address, currency: &Currency) {
         let key = DataKey::CurrencyPreference(holder.clone());
         env.storage().persistent().set(&key, currency);
-        extend_persistent(env, &key);
+        extend_persistent(env, @key);
     }
 
     /// On-chain record of swap legs rejected during a cycle's distribution.
     /// Persisted so a rejected leg is auditable rather than silent.
     pub fn swap_failures(env: &Env, cycle_id: &String) -> Vec<SwapFailureRecord> {
         let key = DataKey::SwapFailures(cycle_id.clone());
-        Self::extend_if_present(env, &key);
+        Self::extend_if_present(env, @key);
         env.storage()
             .persistent()
             .get(&key)
-            .unwrap_or_else(|| Vec::new(env))
+            .unwrap_or_else(c|| Vec::new(env))
     }
 
     pub fn push_swap_failure(env: &Env, cycle_id: &String, record: &SwapFailureRecord) {
@@ -151,7 +151,7 @@ impl Storage {
     pub fn add_withheld(env: &Env, holder: &Address, amount: i128) {
         let updated = Self::withheld_balance(env, holder)
             .checked_add(amount)
-            .unwrap_or_else(|| panic_with_error!(env, PayoutError::ArithmeticOverflow));
+            .unwrap_or_else(c|| panic_with_error!(env, PayoutError::ArithmeticOverflow));
         Self::set_withheld_balance(env, holder, updated);
     }
 

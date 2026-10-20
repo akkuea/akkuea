@@ -16,7 +16,7 @@ Every caller uses `extend_instance` and `extend_persistent` from that module.
 | --- | --- | --- |
 | `pilot-income-token` | 30 days (518,400 ledgers) | 90 days (1,555,200 ledgers) |
 | `pilot-payout-split` | 30 days (518,400 ledgers) | 180 days (3,110,400 ledgers) |
-| `pilot-whitelist` | see `pilot-whitelist/src/ttl.rs` | see `pilot-whitelist/src/ttl.rs` |
+| `pilot-whitelist` | 30 days (518,400 ledgers) | 180 days (3,110,400 ledgers) |
 
 When an entry is written or read on a critical path and its remaining TTL is
 below the threshold, it is extended to the "extend to" value.

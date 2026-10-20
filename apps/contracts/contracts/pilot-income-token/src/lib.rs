@@ -9,9 +9,11 @@ use soroban_sdk::{
 mod errors;
 mod events;
 mod storage;
+mod ttl;
 
 pub use errors::IncomeTokenError;
 use storage::{DataKey, Storage};
+use ttl::extend_instance;
 
 /// Maximum number of holders, matching `MAX_HOLDERS` in `pilot-payout-split`,
 /// whose distribution loop rejects any larger holder set.
@@ -54,6 +56,8 @@ impl PilotIncomeToken {
             panic_with_error!(&env, IncomeTokenError::AlreadyInitialized);
         }
 
+        extend_instance(&env);
+
         Storage::set_admin(&env, &admin);
         Storage::set_whitelist(&env, &whitelist);
         env.storage().instance().set(&DataKey::Name, &name);
@@ -73,6 +77,8 @@ impl PilotIncomeToken {
         admin.require_auth();
         Self::require_admin(&env, &admin);
         Self::require_not_paused(&env);
+
+        extend_instance(&env);
 
         if Storage::has_minted(&env) {
             panic_with_error!(&env, IncomeTokenError::AlreadyMinted);
@@ -199,6 +205,8 @@ impl PilotIncomeToken {
             panic_with_error!(&env, IncomeTokenError::InvalidAmount);
         }
 
+        extend_instance(&env);
+
         if from == to {
             panic_with_error!(&env, IncomeTokenError::SelfTransfer);
         }
@@ -231,6 +239,8 @@ impl PilotIncomeToken {
         admin.require_auth();
         Self::require_admin(&env, &admin);
         Self::require_not_paused(&env);
+
+        extend_instance(&env);
 
         if Storage::wound_down_record(&env).is_some() {
             panic_with_error!(&env, IncomeTokenError::AlreadyWoundDown);
@@ -266,6 +276,8 @@ impl PilotIncomeToken {
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
+        extend_instance(&env);
+
         Storage::set_pending_admin(&env, &new_admin);
         events::emit_admin_transfer_started(&env, caller, new_admin);
     }
@@ -276,6 +288,8 @@ impl PilotIncomeToken {
     /// single stored admin address.
     pub fn transfer_admin_accept(env: Env, new_admin: Address) {
         new_admin.require_auth();
+
+        extend_instance(&env);
 
         let pending = Storage::pending_admin(&env);
         if pending != Some(new_admin.clone()) {
@@ -296,6 +310,8 @@ impl PilotIncomeToken {
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
+        extend_instance(&env);
+
         Storage::clear_pending_admin(&env);
         events::emit_admin_transfer_cancelled(&env, caller);
     }
@@ -315,6 +331,8 @@ impl PilotIncomeToken {
         admin.require_auth();
         Self::require_admin(&env, &admin);
 
+        extend_instance(&env);
+
         Storage::set_paused(&env, true);
         events::emit_paused(&env, admin);
     }
@@ -323,6 +341,8 @@ impl PilotIncomeToken {
     pub fn unpause(env: Env, admin: Address) {
         admin.require_auth();
         Self::require_admin(&env, &admin);
+
+        extend_instance(&env);
 
         Storage::set_paused(&env, false);
         events::emit_unpaused(&env, admin);
@@ -1364,6 +1384,46 @@ mod tests {
         s.token.transfer_admin_accept(&new_admin);
 
         assert_eq!(s.token.admin(), new_admin);
+    }
+
+    #[test]
+    fn state_changing_entry_points_extend_ttls() {
+        use crate::ttl::TTL_EXTEND_TO;
+        use soroban_sdk::testutils::storage::{Instance as _, Persistent as _};
+        use soroban_sdk::testutils::Ledger as _;
+
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 100i128, 200i128],
+        );
+
+        // Leave ~110k ledgers of TTL on the balance entry: still live, but
+        // below the refresh threshold.
+        s.env
+            .ledger()
+            .with_mut(|ledger| ledger.sequence_number += 3_000_000);
+
+        // A normal state-changing call must refresh the instance, and the read
+        // of the holder balance must refresh that persistent entry.
+        s.token.pause(&s.admin);
+        let _ = s.token.balance(&s.holder_one);
+
+        let balance_ttl = s.env.as_contract(&s.token_id, || {
+            s.env
+                .storage()
+                .persistent()
+                .get_ttl(&DataKey::Balance(s.holder_one.clone()))
+        });
+        let instance_ttl = s
+            .env
+            .as_contract(&s.token_id, || s.env.storage().instance().get_ttl());
+
+        assert_eq!(balance_ttl, TTL_EXTEND_TO);
+        assert_eq!(instance_ttl, TTL_EXTEND_TO);
     }
 }
 

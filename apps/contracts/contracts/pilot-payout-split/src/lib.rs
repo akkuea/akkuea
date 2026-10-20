@@ -34,9 +34,11 @@ use soroban_sdk::{
 mod errors;
 mod events;
 mod storage;
+mod ttl;
 
 pub use errors::PayoutError;
 use storage::{DataKey, Storage};
+use ttl::extend_instance;
 
 pub const PLATFORM_FEE_PERCENT: i128 = 10;
 pub const PERCENT_DENOMINATOR: i128 = 100;
@@ -316,6 +318,7 @@ impl PilotPayoutSplit {
         eurc_token: Address,
         swap_router: Address,
     ) {
+        extend_instance(&env);
         if Storage::is_initialized(&env) {
             panic_with_error!(&env, PayoutError::AlreadyInitialized);
         }
@@ -359,6 +362,7 @@ impl PilotPayoutSplit {
         evidence_link: String,
         total_income: i128,
     ) {
+        extend_instance(&env);
         operator.require_auth();
         ally.require_auth();
         Self::require_operator(&env, &operator);
@@ -420,6 +424,7 @@ impl PilotPayoutSplit {
         evidence_link: String,
         total_income: i128,
     ) {
+        extend_instance(&env);
         ally.require_auth();
         Self::require_ally(&env, &ally);
         Self::require_not_exited(&env);
@@ -482,6 +487,7 @@ impl PilotPayoutSplit {
     /// This exists so an ally can see that their submission was actually picked
     /// up, instead of staring at an unchanged `Submitted` badge for days.
     pub fn start_review(env: Env, operator: Address, cycle_id: String) {
+        extend_instance(&env);
         operator.require_auth();
         Self::require_operator(&env, &operator);
         Self::require_not_exited(&env);
@@ -507,6 +513,7 @@ impl PilotPayoutSplit {
         approved: bool,
         reason: String,
     ) {
+        extend_instance(&env);
         operator.require_auth();
         Self::require_operator(&env, &operator);
         Self::require_not_exited(&env);
@@ -551,6 +558,7 @@ impl PilotPayoutSplit {
     /// the admin or operator must be able to freeze a suspicious cycle while
     /// an incident is under review, before anyone unpauses.
     pub fn flag_dispute(env: Env, caller: Address, cycle_id: String, reason: String) {
+        extend_instance(&env);
         caller.require_auth();
         Self::require_admin_or_operator(&env, &caller);
         Self::require_not_exited(&env);
@@ -607,6 +615,7 @@ impl PilotPayoutSplit {
         cycle_id: String,
         min_eurc_per_usdc: i128,
     ) -> DistributionSummary {
+        extend_instance(&env);
         operator.require_auth();
         ally.require_auth();
         Self::require_operator(&env, &operator);
@@ -994,6 +1003,7 @@ impl PilotPayoutSplit {
     /// Self-serve: gated by `require_auth` to the holder's own address, and
     /// restricted to addresses approved on the pilot whitelist.
     pub fn set_currency_preference(env: Env, holder: Address, currency: Currency) {
+        extend_instance(&env);
         holder.require_auth();
         Self::require_not_paused(&env);
 
@@ -1084,6 +1094,7 @@ impl PilotPayoutSplit {
     /// or re-entrant call is rejected with `NothingToClaim` rather than paying
     /// twice.
     pub fn claim_withheld(env: Env, holder: Address) {
+        extend_instance(&env);
         holder.require_auth();
         let _guard = ExecutionGuard::acquire(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
 
@@ -1104,6 +1115,7 @@ impl PilotPayoutSplit {
 
     /// Pause evidence recording, preference changes, and distribution execution.
     pub fn pause(env: Env, admin: Address) {
+        extend_instance(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
         env.storage().instance().set(&DataKey::Paused, &true);
@@ -1112,6 +1124,7 @@ impl PilotPayoutSplit {
 
     /// Resume evidence recording, preference changes, and distribution execution.
     pub fn unpause(env: Env, admin: Address) {
+        extend_instance(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
         env.storage().instance().set(&DataKey::Paused, &false);
@@ -1141,6 +1154,7 @@ impl PilotPayoutSplit {
     /// from a lost or compromised admin key, which is exactly the failure
     /// mode this feature exists to close.
     pub fn transfer_admin_start(env: Env, caller: Address, new_admin: Address) {
+        extend_instance(&env);
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
@@ -1153,6 +1167,7 @@ impl PilotPayoutSplit {
     /// instant this call succeeds, since `require_admin` compares against the
     /// single stored admin address.
     pub fn transfer_admin_accept(env: Env, new_admin: Address) {
+        extend_instance(&env);
         new_admin.require_auth();
 
         let pending = Storage::pending_admin(&env);
@@ -1171,6 +1186,7 @@ impl PilotPayoutSplit {
     /// Cancel a pending admin transfer before it is accepted. Only the
     /// current admin can cancel.
     pub fn transfer_admin_cancel(env: Env, caller: Address) {
+        extend_instance(&env);
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
@@ -1205,6 +1221,7 @@ impl PilotPayoutSplit {
     /// question (Known Risk #5 in the product brief) that this contract change
     /// deliberately does not answer.
     pub fn exit(env: Env, operator: Address, ally: Address, reason: String) {
+        extend_instance(&env);
         operator.require_auth();
         ally.require_auth();
         Self::require_operator(&env, &operator);
@@ -4125,6 +4142,39 @@ pub mod tests {
                 PayoutError::Reentrancy as u32
             )))
         );
+    }
+
+    #[test]
+    fn state_changing_entry_points_extend_ttls() {
+        use crate::ttl::TTL_EXTEND_TO;
+        use soroban_sdk::testutils::storage::{Instance as _, Persistent as _};
+        use soroban_sdk::testutils::Ledger;
+
+        let s = setup();
+        let holder = s.holders.get(0).unwrap();
+        s.payout.set_currency_preference(&holder, &Currency::Usdc);
+
+        // Leave ~110k ledgers of TTL: still live, but below the threshold.
+        s.env
+            .ledger()
+            .with_mut(|ledger| ledger.sequence_number += 3_000_000);
+
+        // A normal state-changing call must refresh the instance and the
+        // persistent entry it writes.
+        s.payout.set_currency_preference(&holder, &Currency::Usdc);
+
+        let preference_ttl = s.env.as_contract(&s.payout_id, || {
+            s.env
+                .storage()
+                .persistent()
+                .get_ttl(&DataKey::CurrencyPreference(holder.clone()))
+        });
+        let instance_ttl = s
+            .env
+            .as_contract(&s.payout_id, || s.env.storage().instance().get_ttl());
+
+        assert_eq!(preference_ttl, TTL_EXTEND_TO);
+        assert_eq!(instance_ttl, TTL_EXTEND_TO);
     }
 }
 

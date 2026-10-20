@@ -683,7 +683,7 @@ mod tests {
         );
     }
 
-      #[test]
+    #[test]
     fn test_multiple_unaligned_claims_match_single_claim() {
         let test = setup_test();
         let start = test.token_client.balance(&test.owner);

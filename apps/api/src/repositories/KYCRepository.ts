@@ -1,4 +1,4 @@
-import { eq, and, asc, lte, gte, isNotNull } from 'drizzle-orm';
+import { eq, and, asc, lte, gte, isNotNull, sql } from 'drizzle-orm';
 import { db } from '../db';
 import { kycDocuments, users, type KycDocument, type NewKycDocument } from '../db/schema/users';
 
@@ -10,6 +10,8 @@ type DocumentType =
   | 'bank_statement'
   | 'tax_document';
 type DocumentStatus = 'pending' | 'approved' | 'rejected';
+
+const notRemindedForCurrentExpiry = sql`${users.kycReminderSentFor} IS DISTINCT FROM ${users.kycExpiresAt}`;
 
 export class KYCRepository {
   async findById(id: string): Promise<KycDocument | undefined> {
@@ -75,17 +77,21 @@ export class KYCRepository {
   /**
    * Set user KYC status (not_started | pending | approved | rejected | expired).
    * Pass kycExpiresAt to set/clear the expiry timestamp; omit to leave it unchanged.
+   * An approval with a new expiry clears the expiring-soon reminder marker, so
+   * the new approval cycle gets its own reminder.
    */
   async updateUserKycStatus(
     userId: string,
     status: 'not_started' | 'pending' | 'approved' | 'rejected' | 'expired',
     kycExpiresAt?: Date | null,
   ): Promise<void> {
+    const startsApprovalCycle = status === 'approved' && kycExpiresAt !== undefined;
     await db
       .update(users)
       .set({
         kycStatus: status,
         ...(kycExpiresAt !== undefined ? { kycExpiresAt } : {}),
+        ...(startsApprovalCycle ? { kycReminderSentFor: null } : {}),
         updatedAt: new Date(),
       })
       .where(eq(users.id, userId));
@@ -121,7 +127,8 @@ export class KYCRepository {
   }
 
   /**
-   * Find users whose approved KYC will expire within the given window (for reminder notifications).
+   * Find users whose approved KYC will expire within the given window and who
+   * have not yet been reminded for that expiry (for reminder notifications).
    * Returns users where now <= kycExpiresAt <= now + windowMs.
    */
   async findUsersExpiringWithin(windowMs: number): Promise<{ id: string; kycExpiresAt: Date }[]> {
@@ -136,9 +143,39 @@ export class KYCRepository {
           isNotNull(users.kycExpiresAt),
           gte(users.kycExpiresAt, now),
           lte(users.kycExpiresAt, cutoff),
+          notRemindedForCurrentExpiry,
         ),
       );
     return results.filter((r): r is { id: string; kycExpiresAt: Date } => r.kycExpiresAt !== null);
+  }
+
+  /**
+   * Atomically record that the expiring-soon reminder is being sent for the
+   * user's current kycExpiresAt. Returns false when it was already recorded,
+   * so concurrent ticks or restarts never send the same reminder twice.
+   */
+  async claimKycReminder(userId: string): Promise<boolean> {
+    const results = await db
+      .update(users)
+      .set({ kycReminderSentFor: sql`${users.kycExpiresAt}` })
+      .where(
+        and(
+          eq(users.id, userId),
+          eq(users.kycStatus, 'approved'),
+          isNotNull(users.kycExpiresAt),
+          notRemindedForCurrentExpiry,
+        ),
+      )
+      .returning({ id: users.id });
+    return results.length > 0;
+  }
+
+  /**
+   * Undo claimKycReminder after the notification could not be created, so the
+   * next tick retries it.
+   */
+  async releaseKycReminder(userId: string): Promise<void> {
+    await db.update(users).set({ kycReminderSentFor: null }).where(eq(users.id, userId));
   }
 }
 

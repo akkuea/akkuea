@@ -1,6 +1,6 @@
 # Components
 
-Source: `apps/webapp/src/components/ui/`. Every component has a co-located `*.stories.tsx` - browse them live with `bun run storybook` (from `apps/webapp`; also exposed at the root via `bun run storybook` / `bun run build-storybook`). Storybook is on the current major (v9+); the v8-era addons (`addon-essentials`, `addon-interactions`, `addon-actions`, `blocks`) are no longer installed separately because their functionality now lives in Storybook core.
+Source: `apps/webapp/src/components/ui/`. Every component has a co-located `*.stories.tsx` - browse them live with `bun run storybook` (from `apps/webapp`; also exposed at the root via `bun run storybook` / `bun run build-storybook`). Storybook is on the current major; the v8-era addons (`addon-essentials`, `addon-interactions`, `addon-actions`, `blocks`) are no longer installed separately because their functionality now lives in Storybook core, and the webapp uses the Vite-based `@storybook/nextjs-vite` framework instead of the webpack builder.
 
 ## Inventory
 

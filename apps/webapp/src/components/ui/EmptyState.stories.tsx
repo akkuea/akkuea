@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { EmptyState } from "./EmptyState";
-import { action } from "@storybook/addon-actions";
+import { action } from "storybook/actions";
 
 const meta: Meta<typeof EmptyState> = {
   title: "UI/EmptyState",

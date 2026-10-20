@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { action } from "@storybook/addon-actions";
+import { action } from "storybook/actions";
 
 const meta: Meta<typeof ErrorBoundary> = {
   title: "UI/ErrorBoundary",

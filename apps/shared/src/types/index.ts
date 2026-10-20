@@ -103,6 +103,7 @@ export type {
   Listing,
   PropertyImprovedEvent,
   RentalClaimedEvent,
+  RentalMultiplier,
 } from "./game.js";
 
 export {
@@ -112,11 +113,12 @@ export {
   HOUSE_COST,
   APARTMENT_COST,
   SKYSCRAPER_COST,
+  EMPTY_MULTIPLIER,
   HOUSE_MULTIPLIER,
   APARTMENT_MULTIPLIER,
   SKYSCRAPER_MULTIPLIER,
-  MARKETPLACE_FEE_BPS,
-  MIN_LISTING_PRICE,
+  IMPROVEMENT_LEVELS,
   IMPROVEMENT_MULTIPLIER,
   IMPROVEMENT_UPGRADE_COST,
+  computeAccruedRent,
 } from "./game.js";

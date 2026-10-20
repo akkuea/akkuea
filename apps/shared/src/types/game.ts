@@ -12,59 +12,57 @@
  *
  * LAND Token
  * ----------
- * Symbol        : LAND
- * Starting balance : 1 000 LAND per new player wallet (airdropped at first
- *                   on-chain interaction, enforced by the PlayerRegistry
- *                   contract).
+ * Symbol        : LAND (7 decimals, 1 LAND = 10_000_000 base units)
+ * Starting balance : 1 000 LAND, granted once per wallet by the testnet
+ *                   `faucet` on the game-land-token contract.
  *
  * Epoch (rental cycle)
  * --------------------
- * Epoch length  : 17 280 ledgers  (~24 hours at the nominal 5-second ledger
- *                 close time on Stellar Testnet/Mainnet).
- * Base rental   : 10 LAND per epoch for a raw (EMPTY) plot.
+ * Epoch length  : 100 ledgers (about 8 minutes at the nominal 5-second
+ *                 ledger close time).
+ * Base rental   : 10 LAND per epoch for a vacant (EMPTY) plot.
  *
  * Improvement Levels & Costs
  * --------------------------
- * Level        | Label       | Upgrade cost (LAND) | Rental multiplier
- * -------------|-------------|---------------------|-------------------
- * 0  (default) | EMPTY       | -                   | 1×  (base rate)
- * 1            | HOUSE       | 100 LAND            | 2×  (20 LAND / epoch)
- * 2            | APARTMENT   | 300 LAND            | 5×  (50 LAND / epoch)
- * 3            | SKYSCRAPER  | 1 000 LAND          | 12× (120 LAND / epoch)
+ * On-chain level | Label (contract) | Upgrade cost to reach it | Rental multiplier
+ * ---------------|------------------|--------------------------|-------------------
+ * 0  (default)   | EMPTY (vacant)   | -                        | 1x   (10 LAND / epoch)
+ * 1              | HOUSE (resid.)   | 200 LAND                 | 3/2  (15 LAND / epoch)
+ * 2              | APARTMENT (comm.)| 600 LAND                 | 3/1  (30 LAND / epoch)
+ * 3              | SKYSCRAPER       | 1 800 LAND               | 6/1  (60 LAND / epoch)
  *
- * Upgrade costs are additive from the current level to the next, not
- * cumulative from EMPTY. Example: upgrading HOUSE → APARTMENT costs 300 LAND,
- * not 400 LAND.
+ * Upgrade costs are charged per step, not cumulatively from EMPTY. Example:
+ * upgrading HOUSE to APARTMENT costs 600 LAND.
  *
  * Listing & Marketplace
  * ----------------------
- * Minimum listing price : 1 LAND (enforced by the Marketplace contract).
- * Marketplace fee       : 2 % of sale price, burned on settlement.
+ * A listing price must be greater than zero (the contract rejects
+ * `price <= 0`; there is no other minimum). `buy` transfers the full price
+ * from buyer to seller: there is no marketplace fee and nothing is burned.
  *
  * Rent Claiming
  * -------------
  * A property owner may claim rental income at any time. The claimable amount
- * is calculated as:
+ * is calculated as (see computeAccruedRent below):
  *
- *   claimable = floor((currentLedger - lastClaimedLedger) / EPOCH_LEDGERS)
- *               × BASE_RENTAL_RATE
- *               × rentalRateMultiplier
+ *   rate      = floor(BASE_RENTAL_RATE * numerator / denominator)
+ *   claimable = rate * floor((currentLedger - lastClaimedLedger) / EPOCH_LEDGERS)
  *
- * Unclaimed epochs do not expire; they accumulate indefinitely.
+ * Unclaimed epochs do not expire; they accumulate indefinitely. Claiming sets
+ * lastClaimedLedger to the current ledger, so a partial epoch is not carried.
  *
- * Numeric Constants (mirrors apps/contracts/src/constants.rs)
- * -----------------------------------------------------------
- * STARTING_BALANCE      = 1_000          (LAND, 7-decimal fixed-point)
- * EPOCH_LEDGERS         = 17_280
+ * Numeric Constants (mirrors
+ * apps/contracts/contracts/game-engine/src/constants.rs, in whole LAND)
+ * -----------------------------------------------------------------------
+ * STARTING_BALANCE      = 1_000          (LAND, testnet faucet grant)
+ * EPOCH_LEDGERS         = 100            (contract: EPOCH_LENGTH)
  * BASE_RENTAL_RATE      = 10             (LAND per epoch)
- * HOUSE_COST            = 100            (LAND)
- * APARTMENT_COST        = 300            (LAND)
- * SKYSCRAPER_COST       = 1_000         (LAND)
- * HOUSE_MULTIPLIER      = 2
- * APARTMENT_MULTIPLIER  = 5
- * SKYSCRAPER_MULTIPLIER = 12
- * MARKETPLACE_FEE_BPS   = 200           (basis points = 2 %)
- * MIN_LISTING_PRICE     = 1             (LAND)
+ * HOUSE_COST            = 200            (contract: IMPROVEMENT_COST_RESIDENTIAL)
+ * APARTMENT_COST        = 600            (contract: IMPROVEMENT_COST_COMMERCIAL)
+ * SKYSCRAPER_COST       = 1_800          (contract: IMPROVEMENT_COST_SKYSCRAPER)
+ * HOUSE_MULTIPLIER      = [3, 2]         (contract: MULTIPLIER_RESIDENTIAL)
+ * APARTMENT_MULTIPLIER  = [3, 1]         (contract: MULTIPLIER_COMMERCIAL)
+ * SKYSCRAPER_MULTIPLIER = [6, 1]         (contract: MULTIPLIER_SKYSCRAPER)
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -242,53 +240,70 @@ export type GameEvent =
 
 // ─── Economy Constants ───────────────────────────────────────────────────────
 // Re-exported as typed constants so UI code can reference them without
-// hard-coding magic numbers.  The authoritative source is the economy spec
-// comment block at the top of this file; these values must stay in sync with
-// apps/contracts/src/constants.rs.
+// hard-coding magic numbers. Amounts are in whole LAND. The authoritative
+// source is apps/contracts/contracts/game-engine/src/constants.rs; these
+// values must stay in sync with it (game.test.ts checks them against it).
 
-/** LAND tokens awarded to a new player on first interaction. */
+/**
+ * A rental multiplier as an integer ratio [numerator, denominator], matching
+ * the contract's `(i128, i128)` tuples so no floating point is involved.
+ */
+export type RentalMultiplier = readonly [
+  numerator: number,
+  denominator: number,
+];
+
+/** LAND tokens granted to a new player by the testnet faucet. */
 export const STARTING_BALANCE: LandAmount = 1_000;
 
-/** Number of Soroban ledgers in one rental epoch (~24 hours). */
-export const EPOCH_LEDGERS: LedgerNumber = 17_280;
+/** Number of Soroban ledgers in one rental epoch (contract EPOCH_LENGTH). */
+export const EPOCH_LEDGERS: LedgerNumber = 100;
 
 /** Base rental income per epoch for an unimproved (EMPTY) plot. */
 export const BASE_RENTAL_RATE: LandAmount = 10;
 
-/** Upgrade cost from EMPTY → HOUSE (LAND). */
-export const HOUSE_COST: LandAmount = 100;
+/** Upgrade cost from EMPTY to HOUSE (LAND). */
+export const HOUSE_COST: LandAmount = 200;
 
-/** Upgrade cost from HOUSE → APARTMENT (LAND). */
-export const APARTMENT_COST: LandAmount = 300;
+/** Upgrade cost from HOUSE to APARTMENT (LAND). */
+export const APARTMENT_COST: LandAmount = 600;
 
-/** Upgrade cost from APARTMENT → SKYSCRAPER (LAND). */
-export const SKYSCRAPER_COST: LandAmount = 1_000;
+/** Upgrade cost from APARTMENT to SKYSCRAPER (LAND). */
+export const SKYSCRAPER_COST: LandAmount = 1_800;
 
-/** Rental rate multiplier for the HOUSE level. */
-export const HOUSE_MULTIPLIER = 2 as const;
+/** Rental rate multiplier for the EMPTY level (1x). */
+export const EMPTY_MULTIPLIER: RentalMultiplier = [1, 1];
 
-/** Rental rate multiplier for the APARTMENT level. */
-export const APARTMENT_MULTIPLIER = 5 as const;
+/** Rental rate multiplier for the HOUSE level (1.5x). */
+export const HOUSE_MULTIPLIER: RentalMultiplier = [3, 2];
 
-/** Rental rate multiplier for the SKYSCRAPER level. */
-export const SKYSCRAPER_MULTIPLIER = 12 as const;
+/** Rental rate multiplier for the APARTMENT level (3x). */
+export const APARTMENT_MULTIPLIER: RentalMultiplier = [3, 1];
 
-/** Marketplace fee in basis points (200 bps = 2 %). */
-export const MARKETPLACE_FEE_BPS = 200 as const;
-
-/** Minimum price at which a property may be listed (LAND). */
-export const MIN_LISTING_PRICE: LandAmount = 1;
+/** Rental rate multiplier for the SKYSCRAPER level (6x). */
+export const SKYSCRAPER_MULTIPLIER: RentalMultiplier = [6, 1];
 
 // ─── Lookup Helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Improvement levels indexed by their on-chain numeric level (0 to 3), so
+ * `IMPROVEMENT_LEVELS[prop.level]` gives the label for a contract value.
+ */
+export const IMPROVEMENT_LEVELS: readonly ImprovementLevel[] = [
+  "EMPTY",
+  "HOUSE",
+  "APARTMENT",
+  "SKYSCRAPER",
+] as const;
 
 /**
  * Maps each `ImprovementLevel` to its rental rate multiplier.
  * Useful for computing accrued rent without a switch statement.
  */
 export const IMPROVEMENT_MULTIPLIER: Readonly<
-  Record<ImprovementLevel, number>
+  Record<ImprovementLevel, RentalMultiplier>
 > = {
-  EMPTY: 1,
+  EMPTY: EMPTY_MULTIPLIER,
   HOUSE: HOUSE_MULTIPLIER,
   APARTMENT: APARTMENT_MULTIPLIER,
   SKYSCRAPER: SKYSCRAPER_MULTIPLIER,
@@ -305,3 +320,32 @@ export const IMPROVEMENT_UPGRADE_COST: Readonly<
   HOUSE: APARTMENT_COST,
   APARTMENT: SKYSCRAPER_COST,
 } as const;
+
+/** LAND base units per whole LAND (7 decimals). */
+const LAND_UNITS = 10_000_000;
+
+/**
+ * Rental income accrued over `elapsedLedgers` for a property at on-chain
+ * `level` (0 to 3), in whole LAND.
+ *
+ * Ported from `calculate_accrued_income` in
+ * apps/contracts/contracts/game-engine/src/lib.rs: the per-epoch rate is
+ * computed first in base units (integer floor of rate * numerator /
+ * denominator), then multiplied by the number of whole epochs. Partial epochs
+ * earn nothing, and an unknown level uses the vacant multiplier, as on-chain.
+ */
+export function computeAccruedRent(
+  elapsedLedgers: number,
+  level: number,
+): LandAmount {
+  if (elapsedLedgers <= 0) return 0;
+  const epochs = Math.floor(elapsedLedgers / EPOCH_LEDGERS);
+  if (epochs === 0) return 0;
+
+  const label = IMPROVEMENT_LEVELS[level] ?? "EMPTY";
+  const [numerator, denominator] = IMPROVEMENT_MULTIPLIER[label];
+  const ratePerEpoch = Math.floor(
+    (BASE_RENTAL_RATE * LAND_UNITS * numerator) / denominator,
+  );
+  return (ratePerEpoch * epochs) / LAND_UNITS;
+}

@@ -177,7 +177,7 @@ export const useWallet = () => {
 
       try {
         const [{ address: currentAddress }, { networkPassphrase }] =
-          await Promise.all([ket.getAddress(), kit.getNetwork()]);
+          await Promise.all([kit.getAddress(), kit.getNetwork()]);
 
         const expectedPassphrase =
           network === "mainnet" ? Networks.PUBLIC : Networks.TESTNET;
@@ -244,7 +244,7 @@ export const useWallet = () => {
 
       if (!userClosedModal) {
         console.error("Error connecting wallet:", error);
-        // Same reasoning as in connectWith(): don't wipe the reconnection
+        // Same reasoning as connectWith(): don't wipe the reconnection
         // banner via a full reset() when the (re)connect attempt itself
         // is what failed.
         store.resetSession();
@@ -347,23 +347,37 @@ export const useWallet = () => {
    * provider is categorically incapable of this (Privy, Pollar, no wallet
    * connected). A `StellarWalletsKitProvider` session always passes that
    * check, since the kit exposes the method uniformly, but the specific
-   * wallet mo
+   * wallet module the user picked (Freighter, Albedo, xBull, a hardware
+   * wallet, ...) may still reject the call itself if that wallet doesn't
+   * implement it for real; that rejection surfaces from the attempt below
+   * exactly like any other signing failure. Check `canSignAuthEntries`
+   * before offering this action in the UI, but still handle a rejection
+   * from this method, since that per-wallet case cannot be ruled out ahead
+   * of time.
    */
   const signAuthEntry = useCallback(
-    async (authEntryXdr: string, networkPassphrase: string) => {
+    async (
+      authEntryXdr: string,
+      signerAddress: string,
+      networkPassphrase: string,
+    ) => {
       const provider = walletRegistry.get(store.selectedWalletId ?? "");
       if (!provider || !canSignAuthEntries(provider)) {
         throw new Error(
-          "Connected wallet does not support auth-entry signing",
+          "Connected wallet does not support signing authorization entries",
         );
       }
 
       const attempt = () =>
-        provider.signAuthEntry(authEntryXdr, networkPassphrase);
+        provider.signAuthEntry(authEntryXdr, signerAddress, networkPassphrase);
 
       try {
         return await attempt();
       } catch (error) {
+        // Same reasoning as signTransaction: the kit's rejection shape
+        // doesn't distinguish "this wallet can't do this" from "the session
+        // is gone", so route through the same reconnection path rather than
+        // failing silently.
         store.triggerReconnectionPrompt(attempt);
         throw error;
       }
@@ -371,24 +385,78 @@ export const useWallet = () => {
     [store],
   );
 
+  /**
+   * Whether the connected wallet is worth offering a co-signing action for.
+   *
+   * `true` only means the provider exposes the capability, not that the
+   * specific underlying wallet the user picked will actually accept a
+   * `signAuthEntry` call; see `signAuthEntry`'s own doc comment.
+   */
+  const selectedProvider = store.selectedWalletId
+    ? walletRegistry.get(store.selectedWalletId)
+    : undefined;
+  const walletCanSignAuthEntries = selectedProvider
+    ? canSignAuthEntries(selectedProvider)
+    : false;
+
+  /**
+   * Re-invokes whichever connect path established the current session
+   * (registry provider vs. legacy raw-kit connect) using the id already saved
+   * in the store. Note: for the Stellar Wallets Kit this still opens its
+   * selection modal - the kit has no headless "resume session" API.
+   */
+  const reconnect = useCallback(async () => {
+    const provider = store.selectedWalletId
+      ? walletRegistry.get(store.selectedWalletId)
+      : undefined;
+
+    if (provider) {
+      await connectWith(provider.id);
+    } else {
+      await connect();
+    }
+
+    // The legacy connect() path resolves even when the user closes the
+    // wallet-selection modal without picking a wallet (onClosed doesn't
+    // reject). Read fresh state rather than the stale `store` closure to
+    // confirm a session actually came back before dismissing the prompt -
+    // otherwise a cancelled reconnect would silently hide its own banner.
+    const { isConnected, address, pendingAction } =
+      useAuthenticationStore.getState();
+    if (!isConnected || !address) return;
+
+    store.clearReconnectionPrompt();
+
+    if (pendingAction) {
+      try {
+        await pendingAction();
+      } catch (error) {
+        console.error("Error resuming pending action after reconnect:", error);
+        store.triggerReconnectionPrompt(pendingAction);
+      }
+    }
+  }, [store, connect, connectWith]);
+
   return {
-    address,
-    balance,
-    balanceStatus,
-    balanceError,
-    isConnected,
-    isConnecting,
-    isWalletDisconnected,
-    network,
-    selectedWalletId,
-    pendingAction,
+    address: store.address,
+    balance: store.balance,
+    balanceStatus: store.balanceStatus,
+    balanceError: store.balanceError,
+    isConnected: store.isConnected,
+    isConnecting: store.isConnecting,
+    isWalletDisconnected: store.isWalletDisconnected,
+    network: store.network,
+    selectedWalletId: store.selectedWalletId,
+    providers: walletRegistry.getAll(),
     connect,
     connectWith,
     disconnect,
+    reconnect,
+    dismissReconnectionPrompt: store.clearReconnectionPrompt,
     switchNetwork,
     refreshBalance,
     signTransaction,
     signAuthEntry,
-    clearReconnectionPrompt,
+    canSignAuthEntries: walletCanSignAuthEntries,
   };
 };

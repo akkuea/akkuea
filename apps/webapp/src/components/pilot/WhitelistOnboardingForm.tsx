@@ -1,4 +1,4 @@
-"type client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { Stepper, Card, Input, Button, EmptyState } from "@/components/ui";
@@ -125,7 +125,7 @@ export function WhitelistOnboardingForm() {
 
   if (requestStatus === "none" && !isStartingForm) {
     return (
-      <div className="max-xl w-full">
+      <div className="max-w-xl w-full">
         <EmptyState
           title="No Whitelist Application"
           description="You haven't submitted a whitelist application yet. Start your application to join the pilot."
@@ -160,7 +160,7 @@ export function WhitelistOnboardingForm() {
           <ShieldCheck size={32} />
         </div>
         <h2 className="text-2xl font-bold text-white">
-          You&rsquo; re Whitelisted!
+          You&apos;re Whitelisted!
         </h2>
         <p className="text-zinc-400">
           Your address has been approved for the pilot. You can now participate
@@ -203,7 +203,7 @@ export function WhitelistOnboardingForm() {
   }
 
   return (
-    <Card className="max-xl w-full p-6 sm:p-8 border-zinc-800 bg-zinc-900/80 backdrop-blur-md">
+    <Card className="max-w-xl w-full p-6 sm:p-8 border-zinc-800 bg-zinc-900/80 backdrop-blur-md">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white text-center mb-2">
           Investor Onboarding
@@ -352,7 +352,7 @@ export function WhitelistOnboardingForm() {
             isLoading={isLoading}
             className="w-full"
           >
-            Submit Application
+            Submit Request
           </Button>
         )}
       </div>

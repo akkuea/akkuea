@@ -1,2 +1,107 @@
 import "@/test/setup-dom";
-aW1wb3J0IHsKICBhZnRlckVhY2gsCiAgYmVmb3JlRWFjaCwKICBkZXNjcmliZSwKICBleHBlY3QsCiAgaXQsCiAgbW9jaywKICBzcHlPbiwKfSBmcm9tICJidW46dGVzdCI7CmltcG9ydCB7IGFjdCwgY2xlYW51cCwgcmVuZGVySG9vaywgd2FpdEZvciB9IGZyb20gIkB0ZXN0aW5nLWxpYnJhcnkvcmVhY3QiOwppbXBvcnQgeyBjcmVhdGVUcmFuc2FjdGlvbiB9IGZyb20gIkBha2t1ZWEvc2hhcmVkIjsKaW1wb3J0IHsgdHJhbnNhY3Rpb25zQXBpIH0gZnJvbSAiQC9zZXJ2aWNlcy9hcGkiOwppbXBvcnQgeyB1c2VUcmFuc2FjdGlvbnMgfSBmcm9tICIuLi91c2VUcmFuc2FjdGlvbnMiOwoKbGV0IGdldFRyYW5zYWN0aW9uczogUmV0dXJuVHlwZTx0eXBlb2Ygc3B5T24+OwoKZnVuY3Rpb24gZGVmZXJyZWQ8VD4oKSB7CiAgbGV0IHJlc29sdmUhOiAodmFsdWU6IFQpID0+IHZvaWQ7CiAgY29uc3QgcHJvbWlzZSA9IG5ldyBQcm9taXNlPFQ+KChyZXMpID0+IHsKICAgIHJlc29sdmUgPSByZXM7CiAgfSk7CiAgcmV0dXJuIHsgcHJvbWlzZSwgcmVzb2x2ZSB9Owp9CgpkZXNjcmliZSgidXNlVHJhbnNhY3Rpb25zIHJlZ3Jlc3Npb24gdGVzdHMiLCAoKSA9PiB7CiAgYmVmb3JlRWFjaCgoKSA9PiB7CiAgICBnZXRUcmFuc2FjdGlvbnMgPSBzcHlPbih0cmFuc2FjdGlvbnNBcGksICJnZXRUcmFuc2FjdGlvbnMiKTsKICB9KTsKCiAgYWZ0ZXJFYWNoKCgpID0+IHsKICAgIGNsZWFudXAoKTsKICAgIG1vY2sucmVzdG9yZSgpOwogIH0pOwoKICBpdCgicmVmZXRjaGVzIHdoZW4gcGFnZVNpemUgY2hhbmdlcyIsIGFzeW5jICgpID0+IHsKICAgIGdldFRyYW5zYWN0aW9ucy5tb2NrUmVzb2x2ZWRWYWx1ZSh7IGl0ZW1zOiBbXSwgbmV4dEN1cnNvcjogdW5kZWZpbmVkIH0pOwoKICAgIGNvbnN0IHsgcmVyZW5kZXIgfSA9IHJlbmRlckhvb2soCiAgICAgICh7IHBhZ2VTaXplIH06IHsgcGFnZVNpemU6IG51bWJlciB9KSA9PgogICAgICAgIHVzZVRyYW5zYWN0aW9ucyh1bmRlZmluZWQsIHBhZ2VTaXplKSwKICAgICAgeyBpbml0aWFsUHJvcHM6IHsgcGFnZVNpemU6IDIwIH0gfSwKICAgICk7CgogICAgYXdhaXQgd2FpdEZvcigoKSA9PiB7CiAgICAgIGV4cGVjdChnZXRUcmFuc2FjdGlvbnMpLnRvSGF2ZUJlZW5DYWxsZWRUaW1lcygxKTsKICAgIH0pOwoKICAgIHJlcmVuZGVyKHsgcGFnZVNpemU6IDUwIH0pOwoKICAgIGF3YWl0IHdhaXRGb3IoKCkgPT4gewogICAgICBleHBlY3QoZ2V0VHJhbnNhY3Rpb25zKS50b0hhdmVCZWVuTGFzdENhbGxlZFdpdGgoCiAgICAgICAgZXhwZWN0Lm9iamVjdENvbnRhaW5pbmcoeyBsaW1pdDogNTAgfSksCiAgICAgICk7CiAgICB9KTsKICB9KTsKCiAgaXQoImRyb3BzIGEgc3RhbGUgcmVzcG9uc2UgYWZ0ZXIgdGhlIGZpbHRlciBjaGFuZ2VzIiwgYXN5bmMgKCkgPT4gewogICAgY29uc3Qgb2xkUmVxdWVzdCA9IGRlZmVycmVkPHsKICAgICAgaXRlbXM6IFJldHVyblR5cGU8dHlwZW9mIGNyZWF0ZVRyYW5zYWN0aW9uPltdOwogICAgICBuZXh0Q3Vyc29yOiB1bmRlZmluZWQ7CiAgICB9PigpOwogICAgY29uc3QgbmV3ZXJUcmFuc2FjdGlvbiA9IGNyZWF0ZVRyYW5zYWN0aW9uKHsKICAgICAgaWQ6ICI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi0wMDAwMDAwMDAwMDEiLAogICAgICB0eXBlOiAid2l0aGRyYXciLAogICAgfSk7CiAgICBjb25zdCBvbGRlclRyYW5zYWN0aW9uID0gY3JlYXRlVHJhbnNhY3Rpb24oewogICAgICBpZDogIjU1MGU4NDAwLWUyOWItNDFkNC1hNzE2LTAwMDAwMDAwMDAwMiIsCiAgICAgIHR5cGU6ICJkZXBvc2l0IiwKICAgIH0pOwoKICAgIGdldFRyYW5zYWN0aW9ucwogICAgICAubW9ja0ltcGxlbWVudGF0aW9uT25jZSgoKSA9PiBvbGRSZXF1ZXN0LnByb21pc2UpCiAgICAgIC5tb2NrUmVzb2x2ZWRPbmNlKHsKICAgICAgICBpdGVtczogW25ld2VyVHJhbnNhY3Rpb25dLAogICAgICAgIG5leHRDdXJzb3I6IHVuZGVmaW5lZCwKICAgICAgfSk7CgogICAgY29uc3QgaW5pdGlhbFByb3BzOiB7CiAgICAgIGZpbHRlcjogeyB0eXBlOiAiZGVwb3NpdCIgfCAid2l0aGRyYXciIH07CiAgICB9ID0geyBmaWx0ZXI6IHsgdHlwZTogImRlcG9zaXQiIH0gfTsKICAgIGNvbnN0IHsgcmVzdWx0LCByZXJlbmRlciB9ID0gcmVuZGVySG9vaygKICAgICAgKHsgZmlsdGVyIH0pID0+IHVzZVRyYW5zYWN0aW9ucyhmaWx0ZXIpLAogICAgICB7IGluaXRpYWxQcm9wcyB9LAogICAgKTsKCiAgICBhd2FpdCB3YWl0Rm9yKCgpID0+IHsKICAgICAgZXhwZWN0KGdldFRyYW5zYWN0aW9ucykudG9IYXZlQmVlbkNhbGxlZFRpbWVzKDEpOwogICAgfSk7CgogICAgcmVyZW5kZXIoeyBmaWx0ZXI6IHsgdHlwZTogIndpdGhkcmF3IiB9IH0pOwoKICAgIGF3YWl0IHdhaXRGb3IoKCkgPT4gewogICAgICBleHBlY3QocmVzdWx0LmN1cnJlbnQudHJhbnNhY3Rpb25zKS50b0VxdWFsKFtuZXdlclRyYW5zYWN0aW9uXSk7CiAgICB9KTsKCiAgICBhd2FpdCBhY3QoYXN5bmMgKCkgPT4gewogICAgICBvbGRSZXF1ZXN0LnJlc29sdmUoewogICAgICAgIGl0ZW1zOiBbb2xkZXJUcmFuc2FjdGlvbl0sCiAgICAgICAgbmV4dEN1cnNvcjogdW5kZWZpbmVkLAogICAgICB9KTsKICAgICAgYXdhaXQgb2xkUmVxdWVzdC5wcm9taXNlOwogICAgfSk7CgogICAgZXhwZWN0KHJlc3VsdC5jdXJyZW50LnRyYW5zYWN0aW9ucykudG9FcXVhbChbbmV3ZXJUcmFuc2FjdGlvbl0pOwogIH0pOwp9KTsK
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { createTransaction } from "@akkuea/shared";
+import { transactionsApi } from "@/services/api";
+import { useTransactions } from "../useTransactions";
+
+let getTransactions: ReturnType<typeof spyOn>;
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+describe("useTransactions regression tests", () => {
+  beforeEach(() => {
+    getTransactions = spyOn(transactionsApi, "getTransactions");
+  });
+
+  afterEach(() => {
+    cleanup();
+    mock.restore();
+  });
+
+  it("refetches when pageSize changes", async () => {
+    getTransactions.mockResolvedValue({ items: [], nextCursor: undefined });
+
+    const { rerender } = renderHook(
+      ({ pageSize }: { pageSize: number }) =>
+        useTransactions(undefined, pageSize),
+      { initialProps: { pageSize: 20 } },
+    );
+
+    await waitFor(() => {
+      expect(getTransactions).toHaveBeenCalledTimes(1);
+    });
+
+    rerender({ pageSize: 50 });
+
+    await waitFor(() => {
+      expect(getTransactions).toHaveBeenLastCalledWith(
+        expect.objectContaining({ limit: 50 }),
+      );
+    });
+  });
+
+  it("drops a stale response after the filter changes", async () => {
+    const oldRequest = deferred<{
+      items: ReturnType<typeof createTransaction>[];
+      nextCursor: undefined;
+    }>();
+    const newerTransaction = createTransaction({
+      id: "550e8400-e29b-41d4-a716-000000000001",
+      type: "withdraw",
+    });
+    const olderTransaction = createTransaction({
+      id: "550e8400-e29b-41d4-a716-000000000002",
+      type: "deposit",
+    });
+
+    getTransactions
+      .mockImplementationOnce(() => oldRequest.promise)
+      .mockResolvedValueOnce({
+        items: [newerTransaction],
+        nextCursor: undefined,
+      });
+
+    const initialProps: {
+      filter: { type: "deposit" | "withdraw" };
+    } = { filter: { type: "deposit" } };
+    const { result, rerender } = renderHook(
+      ({ filter }) => useTransactions(filter),
+      { initialProps },
+    );
+
+    await waitFor(() => {
+      expect(getTransactions).toHaveBeenCalledTimes(1);
+    });
+
+    rerender({ filter: { type: "withdraw" } });
+
+    await waitFor(() => {
+      expect(result.current.transactions).toEqual([newerTransaction]);
+    });
+
+    await act(async () => {
+      oldRequest.resolve({
+        items: [olderTransaction],
+        nextCursor: undefined,
+      });
+      await oldRequest.promise;
+    });
+
+    expect(result.current.transactions).toEqual([newerTransaction]);
+  });
+});

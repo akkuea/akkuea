@@ -1,57 +1,62 @@
 # Pilot TTL policy
 
-Soroban entries expire unless their TTL (time to live, counted in ledgers)
-is extended. An expired entry is archived and must be restored, for a fee,
-before it can be used. Restoring in the middle of a distribution is the
-failure this policy is designed to avoid.
+Soroban entries expire unless their TTL (time to live, counted in ledgers) is
+extended. An expired entry is archived and must be restored, for a fee, before
+it can be used. Restoring in the middle of a distribution is the failure this
+policy is designed to avoid.
 
 At about 5 seconds per ledger there are 17,280 ledgers per day.
 
-## Values per contract
+## One policy per contract
 
-Each crate keeps its constants and helpers in one module, `src/ttl.rs`.
-Every caller uses `extend_instance` and `extend_persistent` from that module.
+Each crate keeps its constants and helpers in a single module, `src/ttl.rs`, and
+every caller imports `extend_instance` / `extend_persistent` from it. There is no
+second copy of the numbers anywhere in the crate.
 
 | Contract | Threshold | Extend to |
 | --- | --- | --- |
-| `pilot-income-token` | 30 days (518,400 ledgers) | 90 days (1,555,200 ledgers) |
+| `pilot-income-token` | 30 days (518,400 ledgers) | 180 days (3,110,400 ledgers) |
 | `pilot-payout-split` | 30 days (518,400 ledgers) | 180 days (3,110,400 ledgers) |
 | `pilot-whitelist` | 30 days (518,400 ledgers) | 180 days (3,110,400 ledgers) |
 
-When an entry is written or read on a critical path and its remaining TTL is
-below the threshold, it is extended to the "extend to" value.
-
 ## What extends what
 
+- **The contract instance** (admin, configuration, supply, holder list, pause
+  flag) is extended by `extend_instance` at the start of every state-changing
+  entry point.
 - **Persistent entries** (balances, whitelist approvals, cycle evidence,
-  currency preferences, withheld balances) are extended whenever they are
-  written, and on the critical read paths. Reads only extend entries that
-  exist, because extending a missing key fails.
-- **The contract instance** (admin, configuration, supply, holder list, flags)
-  is extended by the entry points that call `extend_instance`. Reads and some
-  state-changing calls do not extend it, so it can expire even while the
-  persistent entries stay fresh.
+  currency preferences, withheld balances) are extended when they are written,
+  and on the read paths that clients use between writes. Reads only extend
+  entries that already exist, because `extend_ttl` on a missing key fails; the
+  helper checks `has` first.
 
 ## Do operators need a periodic bump?
 
-**Yes, for the contract instances.** Until every entry point extends the
-instance, an operator should submit a bump transaction for each of the three
-contracts at least once every 60 days. Persistent entries do not need a
-separate bump while the pilot runs a monthly cycle, because each cycle touches
-them.
+**Not while the pilot is running its monthly cycle.** Every state-changing call
+refreshes the instance, and every cycle write refreshes the persistent entries it
+touches, so an entry that is used once per reporting period is extended to 180
+days - six reporting periods - on every use.
 
-Bump an instance with the Stellar CLI (confirm the exact flags with
+The exception is a contract that is left untouched for longer than 180 days. At
+that point entries are archived and must be restored before the next
+distribution; a bump transaction does not help because the entry itself is gone.
+If a long pause is expected, submit one state-changing call (for example
+`pause`/`unpause`) before the window closes to refresh the instance.
+
+Bump an instance manually with the Stellar CLI (confirm the exact flags with
 `stellar contract extend --help`):
 
 ```
 stellar contract extend --id <CONTRACT_ID> --ledgers-to-extend 3110400 --source <KEY> --network <NETWORK>
 ```
 
-If the contract has been idle for longer than its "extend to" window, entries
-may already be archived and must be restored before the next distribution.
-
 ## Tests
 
-Each crate has a test that moves the ledger forward, calls a state-changing
-entry point, and asserts that the TTL of the touched entry is at or above the
-threshold.
+Each crate has a test that moves the ledger forward by 3,000,000 ledgers (leaving
+the entries live but below the threshold), calls a normal state-changing entry
+point, and asserts that the TTL of the touched persistent entry and of the
+contract instance is back at `TTL_EXTEND_TO`:
+
+- `pilot-income-token`: `state_changing_entry_points_extend_ttls`
+- `pilot-payout-split`: `state_changing_entry_points_extend_ttls`
+- `pilot-whitelist`: `state_changing_entry_points_extend_ttls`

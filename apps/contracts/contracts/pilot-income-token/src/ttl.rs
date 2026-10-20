@@ -2,20 +2,22 @@
 //!
 //! The pilot is expected to run for months with infrequent writes. Holder
 //! balances are persistent entries that can go untouched between distribution
-//! cycles, and the contract instance carries the token metadata and admin
-//! configuration. If their TTLs lapse the entries are archived and must be
-//! restored (for a fee) at the worst moment - during a distribution.
+//! cycles, and the contract instance carries the token metadata, the whitelist
+//! address, the admin and the pause flag. If those TTLs lapse the entries are
+//! archived and must be restored (for a fee) at the worst possible moment -
+//! during a distribution.
 //!
-//! This is the single TTL policy for this crate. The pilot reporting cycle
-//! is monthly. On Stellar mainnet one ledger is closed roughly every 5
-//! seconds, so there are 17_280 ledgers per day. We use a 30 day threshold
-//! and extend to 180 days (six reporting cycles) so an entry that is read
-//! or written during any cycle survives the next five cycles even if it is
-//! not touched again. That leaves enough headroom for a missed or delayed
-//! distribution without requiring operators to submit periodic "bump"
-//! transactions.
+//! This is the single TTL policy for this crate: the constants and helpers
+//! below are the only place TTL values are defined, and `lib.rs` (entry points)
+//! and `storage.rs` (persistent keys) both call them.
+//!
+//! The reporting cycle is monthly. One ledger closes roughly every 5 seconds,
+//! so there are 17_280 ledgers per day. Entries are refreshed once their
+//! remaining TTL drops under ~30 days and are extended to ~180 days (six
+//! reporting cycles), which leaves enough headroom for a delayed distribution
+//! without anyone submitting periodic "bump" transactions.
 
-use soroban_sdk::Env;
+use soroban_sdk::{Env, IntoVal, Val};
 
 /// ~5 s per ledger, so 17_280 ledgers per day.
 const LEDGERS_PER_DAY: u32 = 17_280;
@@ -26,21 +28,20 @@ pub const TTL_THRESHOLD: u32 = 30 * LEDGERS_PER_DAY;
 /// TTL, in ledgers, that entries are extended to (~180 days).
 pub const TTL_EXTEND_TO: u32 = 180 * LEDGERS_PER_DAY;
 
-/// Extend the instance TTL. Called on every state-changing entry point so the
-/// contract instance (admin, metadata, config) is always available.
+/// Extend the contract instance TTL. Called by every state-changing entry
+/// point so admin, config and the pause flag never expire.
 pub fn extend_instance(env: &Env) {
     env.storage()
         .instance()
         .extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
 }
 
-/// Extend the TTL of a persistent entry. Only call this for a key that
-/// exists; extending a missing key fails.
-pub fn extend_persistent<K> env: &Env, key: &K)
-where
-    K: sroban_sdk::IntoVal<Env, soroban_sdk::Val>,
-{
-    env.storage()
-        .persistent()
-        .extend_ttl(key, TTL_THRESHOLD, TTL_EXTEND_TO);
+/// Extend a persistent entry's TTL. `extend_ttl` fails on a missing key, so
+/// the entry is only extended when it exists.
+pub fn extend_persistent<K: IntoVal<Env, Val>>(env: &Env, key: &K) {
+    if env.storage().persistent().has(key) {
+        env.storage()
+            .persistent()
+            .extend_ttl(key, TTL_THRESHOLD, TTL_EXTEND_TO);
+    }
 }

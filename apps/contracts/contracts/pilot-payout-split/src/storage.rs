@@ -1,6 +1,6 @@
 use soroban_sdk::{contracttype, panic_with_error, Address, Env, String, Vec};
 
-use crate::ttl::{extend_instance, extend_persistent};
+use crate::ttl::extend_persistent;
 use crate::{Currency, EvidenceRecord, ExitRecord, PayoutError, SwapFailureRecord};
 
 #[contracttype]
@@ -38,27 +38,12 @@ pub enum DataKey {
 pub struct Storage;
 
 impl Storage {
-    /// Extends the instance TTL. Called from every state-changing entry point
-    /// so admin, config, pause flag and other instance entries never expire.
-    pub fn extend_instance_ttl(env: &Env) {
-        extend_instance(env);
-    }
-
-    /// Extends a persistent entry's TTL on a read path, only if the entry
-    /// exists (extending a missing key fails).
-    fn extend_if_present(env: &Env, key: &DataKey) {
-        if env.storage().persistent().has(key) {
-            extend_persistent(env, key);
-        }
-    }
-
     pub fn is_initialized(env: &Env) -> bool {
         env.storage().instance().has(&DataKey::Admin)
     }
 
     pub fn set_address(env: &Env, key: &DataKey, address: &Address) {
         env.storage().instance().set(key, address);
-        Self::extend_instance_ttl(env);
     }
 
     pub fn address(env: &Env, key: &DataKey) -> Option<Address> {
@@ -78,7 +63,7 @@ impl Storage {
     /// event retention window without introducing any new ledger keys.
     pub fn evidence(env: &Env, cycle_id: &String) -> Option<EvidenceRecord> {
         let key = DataKey::Evidence(cycle_id.clone());
-        Self::extend_if_present(env, @key);
+        extend_persistent(env, &key);
         env.storage().persistent().get(&key)
     }
 
@@ -92,25 +77,25 @@ impl Storage {
     /// Absence means USDC (the default), so existing holders are unaffected.
     pub fn currency_preference(env: &Env, holder: &Address) -> Option<Currency> {
         let key = DataKey::CurrencyPreference(holder.clone());
-        Self::extend_if_present(env, &key);
+        extend_persistent(env, &key);
         env.storage().persistent().get(&key)
     }
 
     pub fn set_currency_preference(env: &Env, holder: &Address, currency: &Currency) {
         let key = DataKey::CurrencyPreference(holder.clone());
         env.storage().persistent().set(&key, currency);
-        extend_persistent(env, @key);
+        extend_persistent(env, &key);
     }
 
     /// On-chain record of swap legs rejected during a cycle's distribution.
     /// Persisted so a rejected leg is auditable rather than silent.
     pub fn swap_failures(env: &Env, cycle_id: &String) -> Vec<SwapFailureRecord> {
         let key = DataKey::SwapFailures(cycle_id.clone());
-        Self::extend_if_present(env, @key);
+        extend_persistent(env, &key);
         env.storage()
             .persistent()
             .get(&key)
-            .unwrap_or_else(c|| Vec::new(env))
+            .unwrap_or_else(|| Vec::new(env))
     }
 
     pub fn push_swap_failure(env: &Env, cycle_id: &String, record: &SwapFailureRecord) {
@@ -131,13 +116,12 @@ impl Storage {
 
     pub fn set_exit_record(env: &Env, record: &ExitRecord) {
         env.storage().instance().set(&DataKey::Exit, record);
-        Self::extend_instance_ttl(env);
     }
 
     /// USDC currently reserved for a holder after a failed EURC swap leg.
     pub fn withheld_balance(env: &Env, holder: &Address) -> i128 {
         let key = DataKey::WithheldBalance(holder.clone());
-        Self::extend_if_present(env, &key);
+        extend_persistent(env, &key);
         env.storage().persistent().get(&key).unwrap_or(0)
     }
 
@@ -151,7 +135,7 @@ impl Storage {
     pub fn add_withheld(env: &Env, holder: &Address, amount: i128) {
         let updated = Self::withheld_balance(env, holder)
             .checked_add(amount)
-            .unwrap_or_else(c|| panic_with_error!(env, PayoutError::ArithmeticOverflow));
+            .unwrap_or_else(|| panic_with_error!(env, PayoutError::ArithmeticOverflow));
         Self::set_withheld_balance(env, holder, updated);
     }
 
@@ -178,7 +162,6 @@ impl Storage {
         env.storage()
             .instance()
             .set(&DataKey::TotalWithheld, &amount);
-        Self::extend_instance_ttl(env);
     }
 
     /// The address named by the current admin as the next admin, if a
@@ -191,11 +174,9 @@ impl Storage {
         env.storage()
             .instance()
             .set(&DataKey::PendingAdmin, pending);
-        Self::extend_instance_ttl(env);
     }
 
     pub fn clear_pending_admin(env: &Env) {
         env.storage().instance().remove(&DataKey::PendingAdmin);
-        Self::extend_instance_ttl(env);
     }
 }

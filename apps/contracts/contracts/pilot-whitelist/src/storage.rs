@@ -1,7 +1,5 @@
 use soroban_sdk::{contracttype, Address, Env};
 
-use crate::ttl::{extend_instance, extend_persistent};
-
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DataKey {
@@ -9,24 +7,6 @@ pub enum DataKey {
     Approved(Address),
     PendingAdmin,
     Paused,
-}
-
-/// Extend the instance TTL to keep admin, config and pause flag live.
-/// Called on every state-changing entry point. The TTL policy itself
-/// lives in `ttl.rs`.
-pub fn extend_instance_ttl(env: &Env) {
-    extend_instance(env);
-}
-
-/// Extend the TTL of a persistent approval entry, if it exists.
-/// Called when the approval is written and when it is read on the
-/// critical path (whitelist checks). `extend_ttl` fails on a missing
-/// key, so only extend when the entry is present.
-pub fn extend_approval_ttl(env: &Env, address: &Address) {
-    let key = DataKey::Approved(address.clone());
-    if env.storage().persistent().has(&key) {
-        extend_persistent(env, &key);
-    }
 }
 
 pub struct Storage;
@@ -38,7 +18,6 @@ impl Storage {
 
     pub fn set_admin(env: &Env, admin: &Address) {
         env.storage().instance().set(&DataKey::Admin, admin);
-        extend_instance_ttl(env);
     }
 
     pub fn admin(env: &Env) -> Option<Address> {
@@ -55,12 +34,10 @@ impl Storage {
         env.storage()
             .instance()
             .set(&DataKey::PendingAdmin, pending);
-        extend_instance_ttl(env);
     }
 
     pub fn clear_pending_admin(env: &Env) {
         env.storage().instance().remove(&DataKey::PendingAdmin);
-        extend_instance_ttl(env);
     }
 
     pub fn is_paused(env: &Env) -> bool {
@@ -72,6 +49,5 @@ impl Storage {
 
     pub fn set_paused(env: &Env, paused: bool) {
         env.storage().instance().set(&DataKey::Paused, &paused);
-        extend_instance_ttl(env);
     }
 }

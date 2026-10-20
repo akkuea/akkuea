@@ -19,17 +19,18 @@ pub struct PilotWhitelist;
 impl PilotWhitelist {
     /// Initialize the whitelist with the admin address that can approve and revoke investors.
     pub fn initialize(env: Env, admin: Address) {
+        extend_instance(&env);
         if Storage::is_initialized(&env) {
             panic_with_error!(&env, WhitelistError::AlreadyInitialized);
         }
 
         Storage::set_admin(&env, &admin);
-        extend_instance(&env);
         events::emit_initialized(&env, admin);
     }
 
     /// Approve an investor address for pilot participation.
     pub fn approve(env: Env, admin: Address, address: Address) {
+        extend_instance(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
         Self::require_not_paused(&env);
@@ -37,12 +38,12 @@ impl PilotWhitelist {
         let key = DataKey::Approved(address.clone());
         env.storage().persistent().set(&key, &true);
         extend_persistent(&env, &key);
-        extend_instance(&env);
         events::emit_approved(&env, admin, address);
     }
 
     /// Revoke an investor address from pilot participation.
     pub fn revoke(env: Env, admin: Address, address: Address) {
+        extend_instance(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
         Self::require_not_paused(&env);
@@ -50,7 +51,6 @@ impl PilotWhitelist {
         let key = DataKey::Approved(address.clone());
         env.storage().persistent().set(&key, &false);
         extend_persistent(&env, &key);
-        extend_instance(&env);
         events::emit_revoked(&env, admin, address);
     }
 
@@ -58,11 +58,8 @@ impl PilotWhitelist {
     /// Read-only: keeps working while the contract is paused.
     pub fn is_approved(env: Env, address: Address) -> bool {
         let key = DataKey::Approved(address);
-        let approved = env.storage().persistent().get(&key).unwrap_or(false);
-        if env.storage().persistent().has(&key) {
-            extend_persistent(&env, &key);
-        }
-        approved
+        extend_persistent(&env, &key);
+        env.storage().persistent().get(&key).unwrap_or(false)
     }
 
     /// Return the configured whitelist admin.
@@ -80,11 +77,11 @@ impl PilotWhitelist {
     /// mistyped or unreachable new admin can never lock the contract out.
     /// Not blocked by `pause`: admin recovery must keep working while paused.
     pub fn transfer_admin_start(env: Env, caller: Address, new_admin: Address) {
+        extend_instance(&env);
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
         Storage::set_pending_admin(&env, &new_admin);
-        extend_instance(&env);
         events::emit_admin_transfer_started(&env, caller, new_admin);
     }
 
@@ -93,6 +90,7 @@ impl PilotWhitelist {
     /// instant this call succeeds, since `require_admin` compares against the
     /// single stored admin address.
     pub fn transfer_admin_accept(env: Env, new_admin: Address) {
+        extend_instance(&env);
         new_admin.require_auth();
 
         let pending = Storage::pending_admin(&env);
@@ -105,18 +103,17 @@ impl PilotWhitelist {
 
         Storage::set_admin(&env, &new_admin);
         Storage::clear_pending_admin(&env);
-        extend_instance(&env);
         events::emit_admin_transfer_accepted(&env, old_admin, new_admin);
     }
 
     /// Cancel a pending admin transfer before it is accepted. Only the
     /// current admin can cancel.
     pub fn transfer_admin_cancel(env: Env, caller: Address) {
+        extend_instance(&env);
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
         Storage::clear_pending_admin(&env);
-        extend_instance(&env);
         events::emit_admin_transfer_cancelled(&env, caller);
     }
 
@@ -130,21 +127,21 @@ impl PilotWhitelist {
     /// Mirrors `pilot-payout-split`'s `pause`. Before this change, a wrongful
     /// approval or revocation had no on-chain circuit breaker.
     pub fn pause(env: Env, admin: Address) {
+        extend_instance(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
 
         Storage::set_paused(&env, true);
-        extend_instance(&env);
         events::emit_paused(&env, admin);
     }
 
     /// Resume `approve` and `revoke`.
     pub fn unpause(env: Env, admin: Address) {
+        extend_instance(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
 
         Storage::set_paused(&env, false);
-        extend_instance(&env);
         events::emit_unpaused(&env, admin);
     }
 
@@ -168,15 +165,10 @@ impl PilotWhitelist {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ttl::TTL_THRESHOLD;
-    use soroban_sdk::{
-        testutils::{Address as _, Ledger as _},
-        Error,
-    };
+    use soroban_sdk::{testutils::Address as _, Error};
 
     fn setup() -> (Env, Address, Address, PilotWhitelistClient<'static>) {
         let env = Env::default();
@@ -484,25 +476,35 @@ mod tests {
         assert_eq!(client.admin(), new_admin);
     }
 
-    // --- TTL ---
-
     #[test]
-    fn state_changing_call_extends_approval_ttl() {
+    fn state_changing_entry_points_extend_ttls() {
+        use crate::ttl::TTL_EXTEND_TO;
+        use soroban_sdk::testutils::storage::{Instance as _, Persistent as _};
+        use soroban_sdk::testutils::Ledger as _;
+
         let (env, admin, investor, client) = setup();
         env.mock_all_auths();
         client.initialize(&admin);
         client.approve(&admin, &investor);
 
-        // Move far enough that the entry is below the threshold.
-        env.ledger().with_mut(|l| l.sequence_number += 1_100_000);
+        let contract_id = client.address.clone();
 
+        // Leave ~110k ledgers of TTL: still live, but below the threshold.
+        env.ledger()
+            .with_mut(|ledger| ledger.sequence_number += 3_000_000);
+
+        // A normal state-changing call must refresh both the instance and the
+        // allowlist entry it writes.
         client.approve(&admin, &investor);
 
-        let ttl = env.as_contract(&client.address, || {
+        let approved_ttl = env.as_contract(&contract_id, || {
             env.storage()
                 .persistent()
                 .get_ttl(&DataKey::Approved(investor.clone()))
         });
-        assert!(ttl >= TTL_THRESHOLD);
+        let instance_ttl = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+
+        assert_eq!(approved_ttl, TTL_EXTEND_TO);
+        assert_eq!(instance_ttl, TTL_EXTEND_TO);
     }
 }

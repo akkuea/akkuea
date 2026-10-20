@@ -1,8 +1,6 @@
 use soroban_sdk::{contracttype, Address, Env, Vec};
 
-use crate::ttl::{
-    extend_instance as extend_instance_ttl, extend_persistent as extend_persistent_ttl,
-};
+use crate::ttl::extend_persistent;
 use crate::WoundDownRecord;
 
 #[contracttype]
@@ -31,7 +29,6 @@ impl Storage {
 
     pub fn set_admin(env: &Env, admin: &Address) {
         env.storage().instance().set(&DataKey::Admin, admin);
-        extend_instance_ttl(env);
     }
 
     pub fn admin(env: &Env) -> Option<Address> {
@@ -40,7 +37,6 @@ impl Storage {
 
     pub fn set_whitelist(env: &Env, whitelist: &Address) {
         env.storage().instance().set(&DataKey::Whitelist, whitelist);
-        extend_instance_ttl(env);
     }
 
     pub fn whitelist(env: &Env) -> Option<Address> {
@@ -49,18 +45,16 @@ impl Storage {
 
     pub fn balance(env: &Env, owner: &Address) -> i128 {
         let key = DataKey::Balance(owner.clone());
-        let amount = env.storage().persistent().get(&key).unwrap_or(0);
-        // Only extend entries that exist: extending a missing key fails.
-        if env.storage().persistent().has(&key) {
-            extend_persistent_ttl(env, 'key);
-        }
-        amount
+        // `extend_persistent` is a no-op for a missing key, so a holder with no
+        // entry yet is read (as 0) without trying to extend it.
+        extend_persistent(env, &key);
+        env.storage().persistent().get(&key).unwrap_or(0)
     }
 
     pub fn set_balance(env: &Env, owner: &Address, amount: i128) {
         let key = DataKey::Balance(owner.clone());
         env.storage().persistent().set(&key, &amount);
-        extend_persistent_ttl(env, &key);
+        extend_persistent(env, &key);
     }
 
     pub fn total_supply(env: &Env) -> i128 {
@@ -72,7 +66,6 @@ impl Storage {
 
     pub fn set_total_supply(env: &Env, amount: i128) {
         env.storage().instance().set(&DataKey::TotalSupply, &amount);
-        extend_instance_ttl(env);
     }
 
     pub fn holders(env: &Env) -> Vec<Address> {
@@ -84,7 +77,6 @@ impl Storage {
 
     pub fn set_holders(env: &Env, holders: &Vec<Address>) {
         env.storage().instance().set(&DataKey::Holders, holders);
-        extend_instance_ttl(env);
     }
 
     pub fn has_minted(env: &Env) -> bool {
@@ -96,7 +88,6 @@ impl Storage {
 
     pub fn set_minted(env: &Env) {
         env.storage().instance().set(&DataKey::Minted, &true);
-        extend_instance_ttl(env);
     }
 
     /// The terminal wound-down record, if the pilot has been permanently ended
@@ -109,7 +100,6 @@ impl Storage {
 
     pub fn set_wound_down_record(env: &Env, record: &WoundDownRecord) {
         env.storage().instance().set(&DataKey::WoundDown, record);
-        extend_instance_ttl(env);
     }
 
     /// The address named by the current admin as the next admin, if a
@@ -122,12 +112,10 @@ impl Storage {
         env.storage()
             .instance()
             .set(&DataKey::PendingAdmin, pending);
-        extend_instance_ttl(env);
     }
 
     pub fn clear_pending_admin(env: &Env) {
         env.storage().instance().remove(&DataKey::PendingAdmin);
-        extend_instance_ttl(env);
     }
 
     pub fn is_paused(env: &Env) -> bool {
@@ -139,6 +127,5 @@ impl Storage {
 
     pub fn set_paused(env: &Env, paused: bool) {
         env.storage().instance().set(&DataKey::Paused, &paused);
-        extend_instance_ttl(env);
     }
 }

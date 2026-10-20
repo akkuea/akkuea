@@ -8,15 +8,7 @@
  *  3. The optimistic UI update is applied immediately and rolled back on error.
  */
 
-import {
-  describe,
-  it,
-  expect,
-  vi,
-  beforeEach,
-  afterEach,
-  mock,
-} from "bun:test";
+import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
 
 // ── Shared mock data ─────────────────────────────────────────────────────────
 
@@ -295,29 +287,6 @@ globalThis.MutationObserver = dom.window.MutationObserver as any;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { act, cleanup, renderHook } from "@testing-library/react";
-
-// Preventive: hook doesn't import stellar-sdk today, but will when mockXdr stubs are replaced.
-mock.module("@stellar/stellar-sdk", () => ({
-  TransactionBuilder: class {
-    addOperation() {
-      return this;
-    }
-    setTimeout() {
-      return this;
-    }
-    build() {
-      return { toXDR: () => "mock-xdr-payload" };
-    }
-  },
-  Networks: { TESTNET: "Test SDF Network ; September 2015" },
-  SorobanRpc: { Server: class {} },
-  Operation: { invokeContractFunction: vi.fn() },
-  Asset: class {
-    static native() {
-      return new this();
-    }
-  },
-}));
 
 import { usePropertyActions } from "../usePropertyActions";
 

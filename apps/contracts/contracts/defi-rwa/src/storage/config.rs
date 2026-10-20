@@ -105,7 +105,7 @@ impl TokenConfig {
 ///
 /// # Returns
 /// * `Option<Address>` /// Admin address if found, None otherwise
-pub fn get_admin(env: &Env) -> Option <Address> {
+pub fn get_admin(env: &Env) -> Option<Address> {
     crate::access::admin::AdminControl::get_admin(env)
 }
 

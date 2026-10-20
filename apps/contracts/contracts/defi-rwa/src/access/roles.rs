@@ -116,15 +116,19 @@ impl RoleStorage {
                     let last: Option<Address> = env.storage().persistent().get(&last_key);
                     if let Some(last_addr) = last {
                         env.storage().persistent().set(&member_key, &last_addr);
-                        env.storage()
-                            .persistent()
-                            .extend_ttl(&member_key, ROLE_TTL_THRESHOLD, ROLE_TTL_EXTEND);
+                        env.storage().persistent().extend_ttl(
+                            &member_key,
+                            ROLE_TTL_THRESHOLD,
+                            ROLE_TTL_EXTEND,
+                        );
                     }
                     env.storage().persistent().remove(&last_key);
                     env.storage().persistent().set(&count_key, &(count - 1));
-                    env.storage()
-                        .persistent()
-                        .extend_ttl(&count_key, ROLE_TTL_THRESHOLD, ROLE_TTL_EXTEND);
+                    env.storage().persistent().extend_ttl(
+                        &count_key,
+                        ROLE_TTL_THRESHOLD,
+                        ROLE_TTL_EXTEND,
+                    );
                     return;
                 }
             }

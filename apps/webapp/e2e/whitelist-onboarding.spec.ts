@@ -130,5 +130,4 @@ test.describe("WhitelistOnboardingForm", () => {
     await expect(page.getByRole("button", { name: "Connect Wallet" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
   });
-
 });

@@ -31,11 +31,13 @@ vi.mock("@/lib/walletKit", () => ({
 }));
 
 const mockFetchLandBalance = vi.fn();
+const mockSubmitSorobanTx = vi.fn();
+const mockWaitForSorobanTx = vi.fn();
 
 vi.mock("@/lib/soroban-tx", () => ({
   fetchLandBalance: mockFetchLandBalance,
-  submitSorobanTx: vi.fn(),
-  waitForSorobanTx: vi.fn(),
+  submitSorobanTx: mockSubmitSorobanTx,
+  waitForSorobanTx: mockWaitForSorobanTx,
   NETWORK_PASSPHRASE: "Test SDF Network ; September 2015",
 }));
 
@@ -148,5 +150,23 @@ describe("useGameWallet", () => {
 
     expect(result.current.balance).toBeNull();
     expect(result.current.error).toBe("Soroban RPC unavailable");
+  });
+
+  it("signAndSubmitTx() - rejects when the transaction is not confirmed", async () => {
+    mockGetWalletKit.mockReturnValue({
+      signTransaction: vi.fn().mockResolvedValue({ signedTxXdr: "signed" }),
+    });
+    mockSubmitSorobanTx.mockResolvedValue("tx-hash");
+    mockWaitForSorobanTx.mockResolvedValue("pending");
+    useWalletStore.setState({
+      isConnected: true,
+      address: CONNECTED_ADDRESS,
+    });
+
+    const { result } = renderHook(() => useGameWallet());
+
+    await expect(result.current.signAndSubmitTx("unsigned")).rejects.toThrow(
+      "not confirmed yet",
+    );
   });
 });

@@ -10,6 +10,7 @@ import {
   waitForSorobanTx,
   NETWORK_PASSPHRASE,
 } from "@/lib/soroban-tx";
+import { assertTxConfirmed } from "@/lib/tx-confirmation";
 
 interface WalletStore {
   isConnected: boolean;
@@ -87,7 +88,8 @@ export function useGameWallet() {
   /**
    * Sign a built XDR with the connected wallet, submit it to the Soroban RPC,
    * and wait for on-chain confirmation. Throws on signing failure, submission
-   * error, or on-chain failure.
+   * error, on-chain failure, or when the transaction is not confirmed within
+   * the polling window (TxNotConfirmedError).
    */
   const signAndSubmitTx = async (xdr: string): Promise<void> => {
     const kit = getWalletKit();
@@ -100,7 +102,7 @@ export function useGameWallet() {
     });
 
     const txHash = await submitSorobanTx(signedTxXdr);
-    await waitForSorobanTx(txHash);
+    assertTxConfirmed(await waitForSorobanTx(txHash), txHash);
   };
 
   return {

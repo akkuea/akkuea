@@ -14,6 +14,7 @@ import {
   NETWORK_PASSPHRASE,
   TREASURY_ADDRESS,
 } from "@/lib/soroban-tx";
+import { assertTxConfirmed, TxNotConfirmedError } from "@/lib/tx-confirmation";
 
 export const usePropertyActions = (
   property: GameProperty,
@@ -47,7 +48,13 @@ export const usePropertyActions = (
       setSuccess(`${actionName} completed successfully!`);
     } catch (err) {
       onPropertyUpdate(previousProperty);
-      setError(err instanceof Error ? err.message : `${actionName} failed.`);
+      if (err instanceof TxNotConfirmedError) {
+        setError(
+          `${actionName} was not confirmed yet (transaction ${err.hash}). Check it on a Stellar explorer before retrying.`,
+        );
+      } else {
+        setError(err instanceof Error ? err.message : `${actionName} failed.`);
+      }
     } finally {
       setPendingAction(null);
     }
@@ -57,7 +64,8 @@ export const usePropertyActions = (
    * Sign a built XDR with the connected wallet and submit + wait for
    * confirmation via the Soroban RPC.
    *
-   * Throws on signing failure, submission error, or on-chain failure.
+   * Throws on signing failure, submission error, on-chain failure, or when
+   * the transaction is not confirmed within the polling window.
    */
   const signAndSubmit = async (unsignedXdr: string): Promise<void> => {
     const kit = getWalletKit();
@@ -72,8 +80,8 @@ export const usePropertyActions = (
     // Submit signed XDR to the Soroban RPC
     const txHash = await submitSorobanTx(signedTxXdr);
 
-    // Poll until confirmed or failed (throws on failure)
-    await waitForSorobanTx(txHash);
+    // Poll until confirmed or failed (throws on failure or if still pending)
+    assertTxConfirmed(await waitForSorobanTx(txHash), txHash);
   };
 
   // ── Actions ──────────────────────────────────────────────────────────────
@@ -146,7 +154,8 @@ export const usePropertyActions = (
       }),
       async () => {
         // The marketplace escrows the NFT via transfer_from, so it must be
-        // approved as spender before list() will succeed.
+        // approved as spender before list() will succeed. signAndSubmit
+        // throws unless approve confirmed, so list is never built without it.
         const approveXdr = await buildApproveMarketplaceXdr(
           viewerAddress!,
           property.id,

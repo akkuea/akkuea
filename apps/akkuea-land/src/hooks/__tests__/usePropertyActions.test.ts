@@ -8,7 +8,15 @@
  *  3. The optimistic UI update is applied immediately and rolled back on error.
  */
 
-import { describe, it, expect, vi, beforeEach, mock } from "bun:test";
+import {
+  describe,
+  it,
+  expect,
+  vi,
+  beforeEach,
+  afterEach,
+  mock,
+} from "bun:test";
 
 // ── Shared mock data ─────────────────────────────────────────────────────────
 
@@ -870,5 +878,77 @@ describe("usePropertyActions", () => {
       expect(result.current.success).toBeNull();
       expect(result.current.error).toBeNull();
     });
+  });
+});
+
+describe("usePropertyActions - transaction not confirmed", () => {
+  const waitMock = waitForSorobanTx as ReturnType<typeof vi.fn>;
+  const listMock = buildListForSaleXdr as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    cleanup();
+    mockSignTransaction.mockReset();
+    mockSignTransaction.mockResolvedValue({ signedTxXdr: "signed-mock-xdr" });
+    mockGetWalletKit.mockReset();
+    mockGetWalletKit.mockImplementation(() => ({
+      signTransaction: mockSignTransaction,
+    }));
+    (submitSorobanTx as ReturnType<typeof vi.fn>).mockResolvedValue(
+      MOCK_TX_HASH,
+    );
+    listMock.mockClear();
+    waitMock.mockReset();
+    waitMock.mockResolvedValue("pending");
+  });
+
+  afterEach(() => {
+    waitMock.mockReset();
+    waitMock.mockResolvedValue("success");
+  });
+
+  it("sets an error with the hash, no success, and rolls back the optimistic update", async () => {
+    const onPropertyUpdate = vi.fn();
+
+    const { result } = renderHook(() =>
+      usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+    );
+
+    await act(async () => {
+      await result.current.buyFromTreasury();
+    });
+
+    expect(result.current.error).toContain("not confirmed yet");
+    expect(result.current.error).toContain(MOCK_TX_HASH);
+    expect(result.current.success).toBeNull();
+    expect(result.current.pendingAction).toBeNull();
+
+    expect(onPropertyUpdate).toHaveBeenCalledTimes(2);
+    const rollbackArg = (onPropertyUpdate.mock as any)
+      .calls[1][0] as GameProperty;
+    expect(rollbackArg).toEqual(baseProperty);
+  });
+
+  it("listForSale never builds list when approve is not confirmed", async () => {
+    const onPropertyUpdate = vi.fn();
+    const ownedProperty: GameProperty = {
+      ...baseProperty,
+      owner: VIEWER_ADDRESS,
+    };
+
+    const { result } = renderHook(() =>
+      usePropertyActions(ownedProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+    );
+
+    await act(async () => {
+      await result.current.listForSale(250);
+    });
+
+    expect(buildApproveMarketplaceXdr).toHaveBeenCalled();
+    expect(listMock).not.toHaveBeenCalled();
+    expect(mockSignTransaction).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toContain("not confirmed yet");
+    expect(result.current.success).toBeNull();
+    const rollbackArg = (onPropertyUpdate.mock as any).calls.at(-1)[0];
+    expect(rollbackArg).toEqual(ownedProperty);
   });
 });

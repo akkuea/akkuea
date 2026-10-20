@@ -475,6 +475,11 @@ export async function submitSorobanTx(signedXdr: string): Promise<string> {
 /**
  * Poll getTransaction until the tx moves out of NOT_FOUND / pending.
  *
+ * Resolves "success" once confirmed and throws on an on-chain failure. If the
+ * transaction is still not found after `maxAttempts`, it resolves "pending":
+ * callers must pass the result to assertTxConfirmed() (tx-confirmation.ts)
+ * so an unconfirmed transaction is never treated as a success.
+ *
  * @param hash          Transaction hash from submitSorobanTx.
  * @param maxAttempts   Number of polling attempts (default 20).
  * @param intervalMs    Delay between polls in milliseconds (default 3000).

@@ -1,4 +1,4 @@
-#`!no_std]
+#!no_std]
 #![allow(linker_messages)]
 
 use soroban_sdk:{

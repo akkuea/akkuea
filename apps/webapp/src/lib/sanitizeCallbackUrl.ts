@@ -22,7 +22,8 @@ export function sanitizeCallbackUrl(
   if (!value) return DEFAULT_CALLBACK_URL;
 
   const origin =
-    base ?? (typeof window !== "undefined" ? window.location.origin : undefined);
+    base ??
+    (typeof window !== "undefined" ? window.location.origin : undefined);
 
   if (!origin) return DEFAULT_CALLBACK_URL;
 

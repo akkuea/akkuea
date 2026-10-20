@@ -18,7 +18,9 @@ describe("sanitizeCallbackUrl", () => {
   });
 
   it("rejects protocol-relative URLs", () => {
-    expect(sanitizeCallbackUrl("//evil.example", BASE)).toBe(DEFAULT_CALLBACK_URL);
+    expect(sanitizeCallbackUrl("//evil.example", BASE)).toBe(
+      DEFAULT_CALLBACK_URL,
+    );
   });
 
   it("rejects backslash host variants", () => {

@@ -8,7 +8,7 @@
  *  3. The optimistic UI update is applied immediately and rolled back on error.
  */
 
-import { describe, it, expect, vi, beforeEach, mock } from "bun:test";
+import { describe, it, expect, vi, beforeEach, mock, afterAll } from "bun:test";
 
 // ── Shared mock data ─────────────────────────────────────────────────────────
 
@@ -21,8 +21,15 @@ const MOCK_TX_HASH =
 
 // ── Module mocks - must be declared before importing the module under test ──
 
-// Mock the soroban-tx helpers so no network calls are made
+// Mock the soroban-tx helpers so no network calls are made. Everything that is
+// not stubbed is re-exported unchanged: `mock.module` is process-wide in Bun, so
+// a stub value here (an older version of this file shipped a fake
+// `TREASURY_ADDRESS`) would be seen by other test files that import the real
+// module, e.g. src/lib/__tests__/soroban-tx.test.ts.
+const realSorobanTx = await import("@/lib/soroban-tx");
+
 vi.mock("@/lib/soroban-tx", () => ({
+  ...realSorobanTx,
   buildBuyFromTreasuryXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   buildBuyFromPlayerXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   buildImprovePropertyXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
@@ -32,7 +39,6 @@ vi.mock("@/lib/soroban-tx", () => ({
   submitSorobanTx: vi.fn().mockResolvedValue(MOCK_TX_HASH),
   waitForSorobanTx: vi.fn().mockResolvedValue("success"),
   NETWORK_PASSPHRASE: "Test SDF Network ; September 2015",
-  TREASURY_ADDRESS: TREASURY,
 }));
 
 // Mock walletKit to return a controllable signTransaction function
@@ -870,4 +876,12 @@ describe("usePropertyActions", () => {
       expect(result.current.error).toBeNull();
     });
   });
+});
+
+// `mock.module` is process-wide in Bun and survives this file, so an
+// unmocked importer such as src/lib/__tests__/soroban-tx.test.ts would see
+// these stubs instead of the real module. Restore everything when the file is
+// done so each test file starts from the real module graph.
+afterAll(() => {
+  mock.restore();
 });

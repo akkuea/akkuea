@@ -380,3 +380,11 @@ describe("PropertyPanel Tests", () => {
     });
   });
 });
+
+// `mock.module` is process-wide in Bun and survives this file, so an
+// unmocked importer such as src/lib/__tests__/soroban-tx.test.ts would see
+// these stubs instead of the real module. Restore everything when the file is
+// done so each test file starts from the real module graph.
+afterAll(() => {
+  mock.restore();
+});

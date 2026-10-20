@@ -4,7 +4,6 @@ import { JSDOM } from "jsdom";
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "http://localhost",
 });
-// @ts-expect-error: jsdom types not fully compatible with bun runtime
 (dom.window as any).fetch = fetch;
 globalThis.window = dom.window as any;
 globalThis.document = dom.window.document as any;
@@ -15,7 +14,9 @@ globalThis.Element = dom.window.Element as any;
 globalThis.Node = dom.window.Node as any;
 globalThis.Event = dom.window.Event as any;
 globalThis.KeyboardEvent = dom.window.KeyboardEvent as any;
-globalThis.getComputedStyle = dom.window.getComputedStyle.bind(dom.window) as any;
+globalThis.getComputedStyle = dom.window.getComputedStyle.bind(
+  dom.window,
+) as any;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
@@ -25,7 +26,9 @@ import axe from "axe-core";
 import { renderWithIntl } from "@/test/renderWithIntl";
 
 mock.module("framer-motion", () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 mock.module("../PropertyPanel", () => ({
@@ -59,7 +62,7 @@ describe("CityMap keyboard accessibility", () => {
     firstTile.focus();
     expect(document.activeElement).toBe(firstTile);
 
-    fireEvent.keyDown(grid, { key: "ArrowRight" });
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowRight" });
     const secondTile = view.getByRole("gridcell", {
       name: /Tile B1, row 1, column 2,/,
     });
@@ -67,13 +70,13 @@ describe("CityMap keyboard accessibility", () => {
     expect(secondTile.getAttribute("tabindex")).toBe("0");
     expect(firstTile.getAttribute("tabindex")).toBe("-1");
 
-    fireEvent.keyDown(grid, { key: "ArrowDown" });
+    fireEvent.keyDown(document.activeElement!, { key: "ArrowDown" });
     const lowerTile = view.getByRole("gridcell", {
       name: /Tile B2, row 2, column 2,/,
     });
     expect(document.activeElement).toBe(lowerTile);
 
-    fireEvent.keyDown(grid, { key: "Enter" });
+    fireEvent.keyDown(document.activeElement!, { key: "Enter" });
     expect(lowerTile.getAttribute("aria-selected")).toBe("true");
     expect(view.getByLabelText("Selected property panel")).not.toBeNull();
   });
@@ -88,15 +91,14 @@ describe("CityMap keyboard accessibility", () => {
     });
 
     firstTile.focus();
-    fireEvent.keyDown(grid, { key: " " });
+    fireEvent.keyDown(document.activeElement!, { key: " " });
 
     expect(firstTile.getAttribute("aria-selected")).toBe("true");
     expect(view.getByLabelText("Selected property panel")).not.toBeNull();
   });
 
   it("renders in Spanish with translated headings and legend", () => {
-    const view = renderWithI
-ntl(<CityMap />, { locale: "es" });
+    const view = renderWithIntl(<CityMap />, { locale: "es" });
 
     expect(view.getByText("Mapa de la Ciudad")).not.toBeNull();
     expect(
@@ -110,8 +112,7 @@ ntl(<CityMap />, { locale: "es" });
   });
 
   it("has no axe violations", async () => {
-    const view = renderWithI
-ntl(<CityMap />);
+    const view = renderWithIntl(<CityMap />);
 
     const results = await axe.run(view.container, {
       runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },

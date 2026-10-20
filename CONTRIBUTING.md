@@ -395,7 +395,7 @@ cd apps/webapp && bun run test:e2e
 
 ## CI/CD: Workflows Must Pass
 
-Akkuea runs five GitHub Actions workflows on every pull request. **All five must pass before a pull request can be merged.** No exceptions.
+Akkuea runs six GitHub Actions workflows on every pull request. **All six must pass before a pull request can be merged.** No exceptions.
 
 | Workflow           | What it validates                                                                                         |
 | ------------------ | --------------------------------------------------------------------------------------------------------- |
@@ -443,7 +443,7 @@ Do not ask maintainers to merge a pull request with failing workflows. If a work
 ### Before you open it
 
 - [ ] Your branch is rebased on the latest `upstream/develop`.
-- [ ] All five CI workflows pass locally (lint, typecheck, tests, build).
+- [ ] All six CI workflows pass locally (lint, typecheck, tests, build).
 - [ ] Your commits are atomic and follow the Conventional Commits format.
 - [ ] Your changes are limited to what the issue requested - no bonus features, no unrelated cleanup.
 - [ ] You have not introduced any new warnings in TypeScript, ESLint, or Cargo Clippy output.

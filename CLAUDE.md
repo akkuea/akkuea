@@ -88,15 +88,13 @@ Full breakdown, diagrams, and data flows: [`docs/architecture/system-architectur
 
 ## Before considering a task complete
 
-This repo runs six required GitHub Actions workflows on every pull request (`monorepo-ci.yml`, `api-ci.yml`, `webapp-ci.yml`, `shared-ci.yml`, `contracts-ci.yml`, `land-ci.yml`). **All six must pass, no exceptions** (see [`CONTRIBUTING.md`](CONTRIBUTING.md#cicd-workflows-must-pass)). Before saying a change is done, reproduce what each relevant workflow checks, locally:
+Every GitHub Actions workflow that runs on a pull request must pass, no exceptions — `monorepo-ci.yml`, `api-ci.yml`, `webapp-ci.yml`, `shared-ci.yml`, `contracts-ci.yml` and `land-ci.yml` (see [`CONTRIBUTING.md`](CONTRIBUTING.md#cicd-workflows-must-pass)). Before saying a change is done, run this from the repository root and fix everything it reports until it passes:
 
 ```bash
 make check
 ```
 
-Each of the five TS-workspace CI jobs (`monorepo-ci.yml`, `api-ci.yml`, `webapp-ci.yml`, `shared-ci.yml`, `land-ci.yml`) runs its own scoped `prettier --check` as a required step; there is no local `format:check` script, so `bun run format` (which writes fixes via `prettier --write`) is the local equivalent, run before typecheck/lint so the diff is settled first. Do not skip this: a change that only touches TypeScript can still fail CI purely on formatting. After running it, check `git diff` covers only files this change actually touches; a full-repo `bun run format` run will also reformat any pre-existing drift elsewhere in the repo, and that unrelated reformatting must not be swept into the same commit.
-
-`make check` runs, locally, the same checks the pull-request workflows run for the parts of the repository you changed: style rules, shell lint, shared, API (including the database tests when Docker is running), webapp, cross-workspace integration, and contracts. `make fix` applies the formatting fixes (Prettier per workspace, `cargo fmt`). `make check-all` runs everything. Then follow the pre-push checklist in [`AGENTS.md`](AGENTS.md).
+It runs, locally, the same checks the pull-request workflows run for the parts of the repository you changed: style rules, shell lint, shared, API (including the database tests when Docker is running), webapp, cross-workspace integration, and contracts. `make fix` applies the formatting fixes (Prettier per workspace, `cargo fmt`). `make check-all` runs everything. Then follow the pre-push checklist in [`AGENTS.md`](AGENTS.md).
 
 After `make fix`, check that `git diff` only covers files this change actually touches. Unrelated reformatting must not be swept into the same commit.
 

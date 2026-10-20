@@ -21,7 +21,7 @@ globalThis.HTMLElement = dom.window.HTMLElement as any;
 globalThis.MutationObserver = dom.window.MutationObserver as any;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
+import { beforeEach, describe, expect, it, mock, vi, afterAll } from "bun:test";
 import React from "react";
 import { cleanup, fireEvent, waitFor } from "@testing-library/react";
 import axe from "axe-core";
@@ -176,4 +176,12 @@ describe("ClaimPropertyStep", () => {
 
     expect(results.violations).toEqual([]);
   });
+});
+
+// `mock.module` is process-wide in Bun and survives this file, so an
+// unmocked importer such as src/lib/__tests__/soroban-tx.test.ts would see
+// these stubs instead of the real module. Restore everything when the file is
+// done so each test file starts from the real module graph.
+afterAll(() => {
+  mock.restore();
 });

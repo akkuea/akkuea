@@ -155,7 +155,7 @@ jobs:
           # check is a warning. Once a CSP exists, flip the warning branch below
           # to `exit 1` so a missing header fails CI.
           if [ -f "next.config.ts" ] || [ -f "next.config.js" ]; then
-            if grep -q "Content-Security-Policy" next.config.ts next.config.js 2&>/dev/null; then
+            if grep -q "Content-Security-Policy" next.config.ts next.config.js 2>/dev/null; then
               echo "CSP configuration found"
             else
               echo "Warning: No CSP configuration found (see #1166)"

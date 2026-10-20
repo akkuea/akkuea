@@ -1,6 +1,6 @@
 # Components
 
-Source: `apps/webapp/src/components/ui/`. Every component has a co-located `*.stories.tsx` - browse them live with `bun run storybook` (from `apps/webapp`; also exposed at the root via `bun run storybook` / `bun run build-storybook`).
+Source: `apps/webapp/src/components/ui/`. Every component has a co-located `*.stories.tsx` - browse them live with `bun run storybook` (from `apps/webapp`; also exposed at the root via `bun run storybook` / `bun run build-storybook`). Storybook is on the current major (v9+); the v8-era addons (`addon-essentials`, `addon-interactions`, `addon-actions`, `blocks`) are no longer installed separately because their functionality now lives in Storybook core.
 
 ## Inventory
 
@@ -25,7 +25,7 @@ Source: `apps/webapp/src/components/ui/`. Every component has a co-located `*.st
 - Class composition goes through the shared `cn()` helper (`@/lib/utils`), which merges Tailwind classes safely (clsx + tailwind-merge semantics) - always use it rather than string-concatenating `className`.
 - Icons come from `lucide-react` exclusively - don't introduce a second icon library.
 - Motion/microinteraction goes through `framer-motion`, already a project dependency - keep hover/tap scale values in the same range already established in `Button` (roughly 1.01 hover / 0.99 tap) rather than inventing new motion scales per component.
-- Every interactive component needs a Storybook story. This isn't just documentation - it's the fastest way to visually check a component against both themes (`.light` / dark) before it ships.
+- Every interactive component needs a Storybook story. This isn't just documentation - it's the fastest way to visually check a component against both themes (`.light` / dark) before it ships. Storybook config lives in `apps/webapp/.storybook/main.ts` and `preview.ts`; stories that need network mocking use MSW (see `src/components/pilot/WhitelistReviewQueue.stories.tsx`).
 
 ## Known inconsistency - worth fixing, not yet fixed
 

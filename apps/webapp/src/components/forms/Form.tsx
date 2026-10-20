@@ -38,8 +38,7 @@ export interface FormProps<TValues extends FieldValues> {
   defaultValues?: DefaultValues<TValues>;
   onSubmit: (values: TValues) => void | Promise<void>;
   children:
-    | React.ReactNode
-    | ((methods: FormRenderProps<TValues>) => React.ReactNode);
+    React.ReactNode | ((methods: FormRenderProps<TValues>) => React.ReactNode);
   className?: string;
   id?: string;
   successMessage?: string;

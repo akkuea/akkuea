@@ -216,7 +216,9 @@ export function validate<
               return result;
             }
 
-            result.validatedBody = bodyResult.data as TBody extends ZodSchema ? z.infer<TBody> : undefined;
+            result.validatedBody = bodyResult.data as TBody extends ZodSchema
+              ? z.infer<TBody>
+              : undefined;
           } catch (e) {
             logger.error('Error parsing JSON body', e);
             result.validationError = {
@@ -240,7 +242,9 @@ export function validate<
             return result;
           }
 
-          result.validatedQuery = queryResult.data as TQuery extends ZodSchema ? z.infer<TQuery> : undefined;
+          result.validatedQuery = queryResult.data as TQuery extends ZodSchema
+            ? z.infer<TQuery>
+            : undefined;
         }
 
         // Validate params
@@ -255,7 +259,9 @@ export function validate<
             return result;
           }
 
-          result.validatedParams = paramsResult.data as TParams extends ZodSchema ? z.infer<TParams> : undefined;
+          result.validatedParams = paramsResult.data as TParams extends ZodSchema
+            ? z.infer<TParams>
+            : undefined;
         }
 
         return result;

@@ -42,8 +42,7 @@ export const isStellarContractId = (val: string): boolean => {
 
 export const stellarPublicKeySchema = z
   .string({
-    error:
-      "Must be a valid Stellar public key (56 characters starting with G)",
+    error: "Must be a valid Stellar public key (56 characters starting with G)",
   })
   .refine(isStellarPublicKey, {
     message:
@@ -70,11 +69,9 @@ export const stellarContractIdSchema = z
       "Must be a valid Soroban contract ID (56 characters starting with C)",
   });
 
-export const urlSchema = z
-  .string({ error: "Must be a valid URL" })
-  .url({
-    message: "Must be a valid URL (e.g. https://... or http://...)",
-  });
+export const urlSchema = z.url({
+  error: "Must be a valid URL (e.g. https://... or http://...)",
+});
 
 export const portSchema = z
   .string()

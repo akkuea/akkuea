@@ -57,7 +57,6 @@ export const propertyInfoSchema = z.object({
   expectedYield: percentageSchema.optional(),
   images: z.array(z.url()).min(1, "At least one image required"),
   splatUrl: z
-    .string()
     .url()
     .optional()
     .describe("URL to 3D Gaussian Splatting file (.splat)"),

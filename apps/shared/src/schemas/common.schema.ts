@@ -21,7 +21,7 @@ export const positiveAmountSchema = z
 /**
  * Schema for non-negative decimal amounts (allows zero)
  */
-export const nonNegativeAmountSchema = z  
+export const nonNegativeAmountSchema = z
   .string()
   .regex(/^\d+(\.\d+)?$/, "Must be a valid number")
   .refine((val: string) => parseFloat(val) >= 0, {
@@ -31,7 +31,7 @@ export const nonNegativeAmountSchema = z
 /**
  * Schema for percentage values (0-100)
  */
-export const percentageSchema = z  
+export const percentageSchema = z
   .number()
   .min(0, { message: "Percentage cannot be negative" })
   .max(100, { message: "Percentage cannot exceed 100" });
@@ -45,7 +45,6 @@ export const basisPointsSchema = z.number().int().min(0).max(10000);
  * Schema for ISO date strings
  */
 export const isoDateSchema = z.iso.datetime();
-
 
 /**
  * Schema for Unix timestamps

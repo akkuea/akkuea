@@ -70,6 +70,7 @@ import {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 import { GameProperty, BuildingLevel } from "../../types/game.types";
+import { SKYSCRAPER_COST } from "@akkuea/shared";
 
 function makeProperty(overrides: Partial<GameProperty> = {}): GameProperty {
   return {
@@ -595,7 +596,7 @@ describe("usePropertyActions", () => {
   });
 
   describe("TC6 - improveProperty: success path", () => {
-    it("levels up from 1→2 (Commercial), doubles improveCost, and surfaces exact success message", async () => {
+    it("levels up from 1→2 (Commercial), sets improveCost to the Skyscraper upgrade cost, and surfaces exact success message", async () => {
       const level1Property: GameProperty = {
         ...baseProperty,
         owner: VIEWER_ADDRESS,
@@ -621,7 +622,7 @@ describe("usePropertyActions", () => {
       const optimisticProp = (onPropertyUpdate.mock as any)
         .calls[0][0] as GameProperty;
       expect(optimisticProp.buildingLevel).toBe(2);
-      expect(optimisticProp.improveCost).toBe(200);
+      expect(optimisticProp.improveCost).toBe(SKYSCRAPER_COST);
 
       expect(mockSignTransaction).toHaveBeenCalledWith(STUB_XDR, {
         networkPassphrase: NETWORK_PASSPHRASE,

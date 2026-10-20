@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { IMPROVEMENT_LEVELS, IMPROVEMENT_UPGRADE_COST } from "@akkuea/shared";
 import { GameProperty } from "../types/game.types";
 import { getWalletKit } from "@/lib/walletKit";
 import {
@@ -103,7 +104,10 @@ export const usePropertyActions = (
       return;
     }
     const nextLevel = (property.buildingLevel + 1) as 0 | 1 | 2 | 3;
-    const cost = property.improveCost || 100;
+    // Cost of the following upgrade (from nextLevel), per the game engine's
+    // constants; 0 once the property reaches Skyscraper.
+    const nextImproveCost =
+      IMPROVEMENT_UPGRADE_COST[IMPROVEMENT_LEVELS[nextLevel]] ?? 0;
 
     await handleAction(
       "Improve Property",
@@ -117,7 +121,7 @@ export const usePropertyActions = (
       () => ({
         ...property,
         buildingLevel: nextLevel,
-        improveCost: cost * 2,
+        improveCost: nextImproveCost,
       }),
       async () => {
         const xdr = await buildImprovePropertyXdr(viewerAddress!, property.id);

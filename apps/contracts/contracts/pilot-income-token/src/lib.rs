@@ -210,7 +210,7 @@ impl PilotIncomeToken {
         if from == to {
             panic_with_error!(&env, IncomeTokenError::SelfTransfer);
         }
- 
+
         let whitelist_address = Storage::whitelist(&env)
             .unwrap_or_else(|| panic_with_error!(&env, IncomeTokenError::NotInitialized));
         let whitelist = WhitelistClient::new(&env, &whitelist_address);

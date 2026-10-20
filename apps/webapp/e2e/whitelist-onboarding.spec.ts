@@ -109,4 +109,26 @@ test.describe("WhitelistOnboardingForm", () => {
       page.getByRole("heading", { name: "Review Pending" }),
     ).toBeVisible();
   });
+  test("back from review returns to the wallet step even when already connected", async ({
+    page,
+  }) => {
+    await mockConnectedWallet(page);
+    await mockWhitelistStatus(page, { status: "none" });
+
+    await page.goto("/en/pilot/onboarding");
+    await page.getByRole("button", { name: "Start Application" }).click();
+    await page.getByPlaceholder("John Doe").fill("Jane Tester");
+    await page.getByPlaceholder("Document Number").fill("P-00000000");
+    await page.getByRole("button", { name: "Continue" }).click();
+
+    await expect(page.getByRole("button", { name: "Submit Request" })).toBeVisible();
+    await page.getByRole("button", { name: "Back" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: "Connect Your Wallet" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Connect Wallet" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
+  });
+
 });

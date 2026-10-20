@@ -102,7 +102,7 @@ pub struct TokenConfig {
 - `save()`: Stores configuration
 - `load()`: Retrieves configuration
 - `is_initialized()`: Checks initialization status
-- `update_admin()`: Kept in sync with `RoleKey::Admin`; admin changes go through `AdminControl` (`transfer_admin_start` / `transfer_admin_accept` / `transfer_admin_cancel`)
+- Admin identity is not stored in `TokenConfig`; it lives solely in `RoleKey::Admin` and changes go through `AdminControl` (`transfer_admin_start` / `transfer_admin_accept` / `transfer_admin_cancel`)
 
 **Helper Functions**:
 
@@ -110,7 +110,7 @@ pub struct TokenConfig {
 - `get_property_counter()`: Get current property counter
 - `increment_property_counter()`: Generate next property ID
 
-> The on-chain admin identity has exactly one key: `RoleKey::Admin` in the access module, managed only through `AdminControl`. `StorageKey::Admin` and `LendingKey::Admin` are removed; any reader must go through `AdminControl` so the admin keys cannot diverge.
+> The on-chain admin identity has exactly one key: `RoleKey::Admin` in the access module, managed only through `AdminControl`. `StorageKey::Admin` and `LendingKey::Admin` are removed; any reader must go through `AdminControl` so the admin keys cannot diverge. `TokenConfig` no longer carries an `admin` field, so there is no second copy to drift out of sync.
 
 ## Usage Examples
 
@@ -159,7 +159,6 @@ let config = TokenConfig::new(
     String::from_str(&env, "PRPT"),
     String::from_str(&env, "Property Token"),
     7,
-    admin_address,
 );
 config.save(&env);
 ```

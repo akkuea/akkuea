@@ -48,7 +48,7 @@ fn bump_allowance_ttl(env: &Env, key: &StorageKey) {
 pub fn get_balance(env: &Env, property_id: u64, owner: &Address) -> u64 {
     let key = StorageKey::ShareBalance(property_id, owner.clone());
     // Critical read: extend TTL on access so active balances never expire.
-    bump_balance_ttl(env, &key);
+    bump_balance_ttl(env, @key);
     env.storage().persistent().get(&key).unwrap_or_default()
 }
 
@@ -155,7 +155,7 @@ pub fn set_total_shares(env: &Env, property_id: u64, total: u64) {
     let key = StorageKey::TotalShares(property_id);
     env.storage().persistent().set(&key, &total);
     env.storage().persistent().extend_ttl(
-        &key,
+        @key,
         lending_bump::PERSISTENT_BUMP,
         lending_bump::PERSISTENT_BUMP,
     );
@@ -190,7 +190,7 @@ pub fn transfer_shares(
 pub fn get_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Address) -> u64 {
     let key = StorageKey::Allowance(property_id, owner.clone(), spender.clone());
     // Critical read: extend TTL on access.
-    bump_allowance_ttl(env, &key);
+    bump_allowance_ttl(env, @key);
     env.storage().persistent().get(&key).unwrap_or_default()
 }
 

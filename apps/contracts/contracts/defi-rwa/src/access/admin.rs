@@ -129,24 +129,22 @@ impl AdminControl {
 
         match pending {
             Some(pending_admin) if pending_admin == new_admin.clone() => {
-                if let Some(old_admin) = Self::get_admin(env) {
-                    RoleStorage::revoke_role(env, &old_admin, &Role::Admin);
-                    AdminTransferAccepted {
-                        old_admin: old_admin.clone(),
-                        new_admin: new_admin.clone(),
-                    }
-                    .publish(env);
-                } else {
-                    AdminTransferAccepted {
-                        old_admin: new_admin.clone(),
-                        new_admin: new_admin.clone(),
-                    }
-                    .publish(env);
+                let old_admin = Self::get_admin(env);
+                if let Some(ref old_admin) = old_admin {
+                    RoleStorage::revoke_role(env, old_admin, &Role::Admin);
                 }
 
                 env.storage().instance().set(&RoleKey::Admin, new_admin);
                 RoleStorage::grant_role(env, new_admin, &Role::Admin);
                 env.storage().instance().remove(&RoleKey::PendingAdmin);
+
+                if let Some(old_admin) = old_admin {
+                    AdminTransferAccepted {
+                        old_admin,
+                        new_admin: new_admin.clone(),
+                    }
+                    .publish(env);
+                }
                 Ok(())
             }
             _ => Err(ContractError::NotPendingAdmin),

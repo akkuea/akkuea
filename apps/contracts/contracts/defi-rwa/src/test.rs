@@ -1,5 +1,6 @@
 use super::access::roles::{Role, RoleKey, RoleStorage};
 use super::access::{AdminControl, ContractError, PauseControl};
+use super::events::admin::AdminEvents;
 use super::events::{LendingEvents, PropertyEvents};
 use super::lending::PriceOracle;
 use super::storage;
@@ -126,6 +127,144 @@ fn setup_internal_with_admin() -> (Address, Env, Address) {
     let admin = Address::generate(&env);
     let contract_id = env.register(PropertyTokenContract, (&admin,));
     (contract_id, env, admin)
+}
+
+// ───────────────────────────────────────────────
+// Admin key unification / two-step transfer / events / TTL tests
+// ───────────────────────────────────────────────
+
+#[test]
+fn test_admin_initialization() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let stored = env.as_contract(&contract_id, || AdminControl::get_admin(&env));
+    assert_eq!(stored, Some(admin.clone()));
+    assert_eq!(stored.unwrap(), admin);
+}
+
+#[test]
+fn test_admin_keys_do_not_diverge() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let via_admin_control = env.as_contract(&contract_id, || AdminControl::get_admin(&env));
+    let via_role_key = env.as_contract(&contract_id, || {
+        env.storage().instance().get::<_, Address>(&RoleKey::Admin)
+    });
+    assert_eq!(via_admin_control, Some(admin.clone()));
+    assert_eq!(via_role_key, Some(admin.clone()));
+    assert_eq!(via_admin_control, via_role_key);
+}
+
+#[test]
+fn test_transfer_admin_two_step() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let new_admin = Address::generate(&env);
+
+    env.as_contract(&contract_id, || {
+        AdminControl::transfer_admin_start(&env, &admin, &new_admin).unwrap();
+        assert_eq!(AdminControl::get_pending_admin(&env), Some(new_admin.clone()));
+        assert_eq!(AdminControl::get_admin(&env), Some(admin.clone()));
+
+        AdminControl::transfer_admin_accept(&env, &new_admin).unwrap();
+        assert_eq!(AdminControl::get_admin(&env), Some(new_admin.clone()));
+        assert_eq!(AdminControl::get_pending_admin(&env), None);
+    });
+}
+
+#[test]
+fn test_transfer_admin_cancel() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let new_admin = Address::generate(&env);
+
+    env.as_contract(&contract_id, || {
+        AdminControl::transfer_admin_start(&env, &admin, &new_admin).unwrap();
+        AdminControl::transfer_admin_cancel(&env, &admin).unwrap();
+        assert_eq!(AdminControl::get_pending_admin(&env), None);
+        assert_eq!(AdminControl::get_admin(&env), Some(admin.clone()));
+    });
+}
+
+#[test]
+fn test_set_oracle_emits_event() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let oracle = Address::generate(&env);
+    env.as_contract(&contract_id, || {
+        AdminControl::set_oracle(&env, &admin, &oracle).unwrap();
+    });
+    let events = env.events().all();
+    assert!(!events.is_empty());
+}
+
+#[test]
+fn test_set_oracle_config_emits_event() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    env.as_contract(&contract_id, || {
+        AdminControl::set_oracle_config(&env, &admin, &100, &1_000_000).unwrap();
+    });
+    let events = env.events().all();
+    assert!(!events.is_empty());
+}
+
+#[test]
+fn test_set_oracle_config_negative_min_price_typed_error() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let result = env.as_contract(&contract_id, || {
+        AdminControl::set_oracle_config(&env, &admin, &-1, &1_000_000)
+    });
+    assert_eq!(result, Err(ContractError::InvalidAmount));
+}
+
+#[test]
+fn test_grant_and_revoke_emergency_role_events() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let member = Address::generate(&env);
+
+    env.as_contract(&contract_id, || {
+        AdminControl::grant_emergency_role(&env, &admin, &member).unwrap();
+    });
+    let grant_events = env.events().all();
+    assert!(!grant_events.is_empty());
+
+    env.as_contract(&contract_id, || {
+        AdminControl::revoke_emergency_role(&env, &admin, &member).unwrap();
+    });
+    let revoke_events = env.events().all();
+    assert!(!revoke_events.is_empty());
+}
+
+#[test]
+fn test_increase_and_decrease_allowance() {
+    let (contract_id, env, admin) = setup_internal_with_admin();
+    let owner = Address::generate(&env);
+    let spender = Address::generate(&env);
+
+    env.as_contract(&contract_id, || {
+        storage::shares::set_balance(&env, &owner, 1_000);
+        storage::shares::increase_allowance(&env, &owner, &spender, 100).unwrap();
+        assert_eq!(storage::shares::allowance(&env, &owner, &spender), 100);
+        storage::shares::increase_allowance(&env, &owner, &spender, 50).unwrap();
+        assert_eq!(storage::shares::allowance(&env, &owner, &spender), 150);
+        storage::shares::decrease_allowance(&env, &owner, &spender, 30).unwrap();
+        assert_eq!(storage::shares::allowance(&env, &owner, &spender), 120);
+    });
+    let _ = admin;
+}
+
+#[test]
+fn test_share_balance_and_allowance_ttl_extended() {
+    let (contract_id, env, _admin) = setup_internal_with_admin();
+    let owner = Address::generate(&env);
+    let spender = Address::generate(&env);
+
+    env.as_contract(&contract_id, || {
+        storage::shares::set_balance(&env, &owner, 1_000);
+        storage::shares::increase_allowance(&env, &owner, &spender, 100).unwrap();
+    });
+
+    let balance_key = storage::shares::balance_key(&env, &owner);
+    let allowance_key = storage::shares::allowance_key(&env, &owner, &spender);
+    let balance_ttl = env.storage().persistent().get_ttl(&balance_key);
+    let allowance_ttl = env.storage().persistent().get_ttl(&allowance_key);
+    assert!(balance_ttl > 0);
+    assert!(allowance_ttl > 0);
 }
 
 // Store and retrieve LendingPool

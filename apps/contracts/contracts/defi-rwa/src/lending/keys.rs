@@ -101,6 +101,6 @@ pub enum LendingKey {
 
 /// TTL bump amounts for lending storage
 pub mod lending_bump {
-    pub const INSTANCE_BUMP: u32 = 518400; // ~60 days
-    pub const PERSISTENT_BUMP: u32 = 2592000; // ~300 days
+    pub const INSTANCE_BUMP: u32 = 518400; // ~ 60 days
+    pub const PERSISTENT_BUMP: u32 = 2592000; // ~ 300 days
 }

@@ -79,13 +79,14 @@ impl RoleStorage {
                 .extend_ttl(&key, ROLE_TTL_THRESHOLD, ROLE_TTL_EXTEND);
             return;
         }
+        let count_key = RoleKey::RoleMemberCount(role.clone());
+        let count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
+        assert!(count < MAX_ROLE_MEMBERS, "role member bound exceeded");
         env.storage().persistent().set(&key, &true);
         env.storage()
             .persistent()
             .extend_ttl(&key, ROLE_TTL_THRESHOLD, ROLE_TTL_EXTEND);
 
-        let count_key = RoleKey::RoleMemberCount(role.clone());
-        let count: u32 = env.storage().persistent().get(&count_key).unwrap_or(0);
         let member_key = RoleKey::RoleMember(role.clone(), count);
         env.storage().persistent().set(&member_key, address);
         env.storage()

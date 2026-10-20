@@ -8,7 +8,7 @@ This document outlines the storage optimization strategies implemented in the pr
 
 ### 1. Instance Storage Usage
 
-All storage operations use **instance storage** (`env.storage().instance()`), which provides the optimal balance between cost and persistence for this use case:
+All storage operations use **instance storage** (`env.storage().instance((`), which provides the optimal balance between cost and persistence for this use case:
 
 - **Lower cost** compared to persistent storage
 - **Suitable for mutable data** that's accessed frequently
@@ -20,9 +20,9 @@ All storage operations use **instance storage** (`env.storage().instance()`), wh
 
 ```rust
 if balance == 0 {
-    env.storage().instance().remove(&key);
+    env.storage().persistent().remove(&key);
 } else {
-    env.storage().instance().set(&key, &balance);
+    env.storage().persistent().set(&key, &balance);
 }
 ```
 
@@ -90,7 +90,7 @@ RoleKey::RoleMember(Role, Address)
 
 **Benefits**:
 
-- OD0) membership checks without scanning a global list
+- O(1) membership checks without scanning a global list
 - Bounded per-member entry keeps instance storage small
 - Avoids unbounded growth of a shared role list
 
@@ -112,7 +112,6 @@ RoleKey::RoleMember(Role, Address)
 - Admin: ~32 bytes
 - PropertyCounter: ~16 bytes
 - PendingAdmin: ~32 bytes (only present during two-step transfer)
-- ProposedAdmin: ~32 bytes (only present during two-step transfer)
 - **Total global**: ~148-198 bytes
 
 ## Best Practices
@@ -152,9 +151,9 @@ env.budget().print();
 
 ### Trade-offs
 
-- **Storage cost vs. Access speed**: Current implementation favors fast access
-- **Simplicity vs. Optimization**: Maintains readable code over extreme optimization
-- **Flexibility vs. Efficiency**: Allows for future extensions while keeping base costs low
+- `Storage cost vs. Access speed**: Current implementation favors fast access
+- `Simplicity vs. Optimization**: Maintains readable code over extreme optimization
+- `Flexibility vs. Efficiency**: Allows for future extensions while keeping base costs low
 
 ## Testing Storage Costs
 

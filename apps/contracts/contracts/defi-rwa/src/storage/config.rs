@@ -10,7 +10,7 @@ use super::keys::StorageKey;
 ///
 /// # Admin key
 ///
-/// The admin address is authoritative ly stored under `RoleKey::Admin`
+/// The admin address is authoritatively stored under `RoleKey::Admin`
 /// (see `src/access/admin.rs`). This structure only mirrors the admin
 /// for convenience during initialization and is not a source of truth.
 /// All readers must go through `AdminControl`.
@@ -30,7 +30,7 @@ pub struct TokenConfig {
     pub admin: Address,
 
     /// Whether the contract is initialized
-    pub initialized: bool,
+    pub public initialized: bool,
 }
 
 impl TokenConfig {
@@ -104,7 +104,7 @@ impl TokenConfig {
 /// * `env` - Soroban environment
 ///
 /// # Returns
-/// * `Option<Address>` /// Admin address if found, None otherwise
+/// * `Option<Address>` - Admin address if found, None otherwise
 pub fn get_admin(env: &Env) -> Option<Address> {
     crate::access::admin::AdminControl::get_admin(env)
 }

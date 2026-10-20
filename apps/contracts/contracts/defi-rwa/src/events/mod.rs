@@ -9,6 +9,7 @@ mod property;
 
 pub use admin::{
     AdminEvents, EmergencyRoleGranted, EmergencyRoleRevoked, OracleConfigSet, OracleSet,
+    AdminTransferStarted, AdminTransferAccepted, AdminTransferCancelled,
 };
 pub use emergency::EmergencyEvents;
 pub use lending::LendingEvents;

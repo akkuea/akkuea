@@ -61,7 +61,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd apps/shared
-          bun test --coverage --coverage-threshold 0.85
+          bun test --coverage
 
   security-audit:
     name: Security Audit

@@ -111,11 +111,7 @@ describe('RiskMonitoringController', () => {
   });
 
   it('filters positions by risk level', async () => {
-    healthToReturn = [
-      health('critical', 'p1'),
-      health('warning', 'p2'),
-      health('healthy', 'p3'),
-    ];
+    healthToReturn = [health('critical', 'p1'), health('warning', 'p2'), health('healthy', 'p3')];
     const result = await RiskMonitoringController.getPositionsByRisk('warning');
     expect(result).toHaveLength(1);
     expect(result[0]?.positionId).toBe('p2');

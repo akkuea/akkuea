@@ -29,7 +29,7 @@ const DEFAULT_REMINDER_WINDOW_MS = 30 * 24 * 60 * 60 * 1_000; // 30 days
  * Periodically:
  *  1. Marks approved KYC records as `expired` when kycExpiresAt has passed.
  *  2. Sends a re-verification reminder to users whose KYC will expire within
- *     the configured reminder window (default 30 days).
+ *     the configured reminder window (default 30 days), once per expiry date.
  *
  * Disable via env: KYC_EXPIRY_JOB_ENABLED=false
  * Tune poll interval: KYC_EXPIRY_POLL_INTERVAL_MS=<ms>
@@ -113,17 +113,28 @@ export class KycExpiryJob {
       }
 
       // ── Step 2: send reminders for KYC expiring soon ──────────────────
+      // One reminder per user per expiry date: the claim is recorded before
+      // the notification is created, so a later tick, a restart, or a second
+      // instance skips the user until a re-approval sets a new expiry.
       const soonToExpireUsers = await kycRepository.findUsersExpiringWithin(
         this.config.reminderWindowMs,
       );
 
       for (const user of soonToExpireUsers) {
         try {
-          await this.config.notificationService.notifyKycExpiringSoon(
-            user.id,
-            user.kycExpiresAt,
-            'IN_APP',
-          );
+          const claimed = await kycRepository.claimKycReminder(user.id);
+          if (!claimed) continue;
+
+          try {
+            await this.config.notificationService.notifyKycExpiringSoon(
+              user.id,
+              user.kycExpiresAt,
+              'IN_APP',
+            );
+          } catch (err) {
+            await kycRepository.releaseKycReminder(user.id);
+            throw err;
+          }
           remindedCount++;
           logger.info('KYC expiry reminder sent', {
             operation: 'KYC_EXPIRY_REMINDER_SENT',

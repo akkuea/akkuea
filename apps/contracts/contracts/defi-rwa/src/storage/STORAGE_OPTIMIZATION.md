@@ -80,6 +80,20 @@ StorageKey::PropertyCounter
 - Prevents counter collisions
 - Minimal storage footprint
 
+### 7. Bounded Role Membership
+
+**Implementation**: Role membership is tracked per member with a bounded key, outside instance storage:
+
+```rust
+RoleKey::RoleMember(Role, Address)
+```
+
+**Benefits**:
+
+- OD0) membership checks without scanning a global list
+- Bounded per-member entry keeps instance storage small
+- Avoids unbounded growth of a shared role list
+
 ## Storage Size Estimates
 
 ### Per Property
@@ -97,6 +111,8 @@ StorageKey::PropertyCounter
 - TokenConfig: ~100-150 bytes
 - Admin: ~32 bytes
 - PropertyCounter: ~16 bytes
+- PendingAdmin: ~32 bytes (only present during two-step transfer)
+- ProposedAdmin: ~32 bytes (only present during two-step transfer)
 - **Total global**: ~148-198 bytes
 
 ## Best Practices

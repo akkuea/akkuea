@@ -56,15 +56,15 @@ impl StorageKey {
     pub fn as_symbol(&self) -> Symbol {
         match self {
             StorageKey::TokenConfig => Symbol::new(&soroban_sdk::Env::default(), "TknCfg"),
-            StorageKey::Property(_) => Symbol::new(&soroban_sdk::Env::default(), "Prop"),
-            StorageKey::ShareBalance(_, _) => Symbol::new(&soroban_sdk::Env::default(), "Share"),
-            StorageKey::TotalShares(_) => Symbol::new(&soroban_sdk::Env::default(), "TotShrs"),
-            StorageKey::PropertyCounter => Symbol::new(&soroban_sdk::Env::default(), "PropCnt"),
-            StorageKey::Allowance(_, _, _) => Symbol::new(&soroban_sdk::Env::default(), "Allow"),
+            StorageKey::Property(_) => Symbol::new(&soroban_sdk:Env::default(), "Prop"),
+            StorageKey::ShareBalance(_, _) => Symbol::new(&soroban_sdk:Env::default(), "Share"),
+            StorageKey::TotalShares(_) => Symbol::new(&soroban_sdk:Env::default(), "TotShrs"),
+            StorageKey::PropertyCounter => Symbol::new(&soroban_sdk:Env::default(), "PropCnt"),
+            StorageKey::Allowance(_, _, _) => Symbol::new(&soroban_sdk:Env::default(), "Allow"),
             StorageKey::AvailableShares(_) => {
                 Symbol::new(&soroban_sdk::Env::default(), "AvailShrs")
             }
-            StorageKey::PricePerShare(_) => Symbol::new(&soroban_sdk::Env::default(), "PriceShr"),
+            StorageKey::PricePerShare(_) => Symbol::new(&soroban_sdk:Env::default(), "PriceShr"),
             StorageKey::PropertyVerified(_) => Symbol::new(&soroban_sdk::Env::default(), "PropVer"),
         }
     }

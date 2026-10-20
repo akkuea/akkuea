@@ -102,7 +102,7 @@ pub struct TokenConfig {
 - `save()`: Stores configuration
 - `load()`: Retrieves configuration
 - `is_initialized()`: Checks initialization status
-- `update_admin()`: Updates admin address
+- `update_admin()`: Kept in sync with `RoleKey::Admin`; admin changes go through `AdminControl` (`transfer_admin_start` / `transfer_admin_accept` / `transfer_admin_cancel`)
 
 **Helper Functions**:
 
@@ -110,7 +110,7 @@ pub struct TokenConfig {
 - `get_property_counter()`: Get current property counter
 - `increment_property_counter()`: Generate next property ID
 
-> The on-chain admin identity is **not** stored here. It lives in the access module under `RoleKey::Admin` and is managed only through `AdminControl`.
+> The on-chain admin identity has exactly one key: `RoleKey::Admin` in the access module, managed only through `AdminControl`. `StorageKey::Admin` and `LendingKey::Admin` are removed; any reader must go through `AdminControl` so the admin keys cannot diverge.
 
 ## Usage Examples
 

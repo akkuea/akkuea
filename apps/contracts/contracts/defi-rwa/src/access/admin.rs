@@ -87,7 +87,6 @@ impl AdminControl {
 
     pub fn is_initialized(env: &Env) -> bool {
         env.storage().instance().has(&RoleKey::Admin)
-            || env.storage().instance().has(&RoleKey::PendingAdmin)
     }
 
     pub fn get_admin(env: &Env) -> Option<Address> {

@@ -7,6 +7,13 @@ use super::keys::StorageKey;
 /// This structure stores global configuration for the token, including
 /// metadata like symbol, name, and admin settings. Storage is optimized
 /// by using a single instance per contract.
+///
+/// # Admin key
+///
+/// The admin address is authoritative ly stored under `RoleKey::Admin`
+/// (see `src/access/admin.rs`). This structure only mirrors the admin
+/// for convenience during initialization and is not a source of truth.
+/// All readers must go through `AdminControl`.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TokenConfig {
@@ -89,14 +96,17 @@ impl TokenConfig {
 
 /// Gets the admin address from storage
 ///
+/// This is a convenience reader that delegates to the single canonical
+/// admin key managed by `AdminControl`. It must never divide from the
+/// admin stored by `AdminControl`.
+///
 /// # Arguments
 /// * `env` - Soroban environment
 ///
 /// # Returns
-/// * `Option<Address>` - Admin address if found, None otherwise
-#[allow(dead_code)]
-pub fn get_admin(env: &Env) -> Option<Address> {
-    TokenConfig::load(env).map(|config| config.admin)
+/// * `Option<Address>` /// Admin address if found, None otherwise
+pub fn get_admin(env: &Env) -> Option <Address> {
+    crate::access::admin::AdminControl::get_admin(env)
 }
 
 /// Gets the property counter for generating unique IDs
@@ -106,7 +116,6 @@ pub fn get_admin(env: &Env) -> Option<Address> {
 ///
 /// # Returns
 /// * `u64` - Current counter value (0 if not set)
-#[allow(dead_code)]
 pub fn get_property_counter(env: &Env) -> u64 {
     let key = StorageKey::PropertyCounter;
     env.storage().instance().get(&key).unwrap_or(0)
@@ -122,7 +131,6 @@ pub fn get_property_counter(env: &Env) -> u64 {
 ///
 /// # Storage Optimization
 /// Counter is stored separately for efficient ID generation
-#[allow(dead_code)]
 pub fn increment_property_counter(env: &Env) -> u64 {
     let current = get_property_counter(env);
     let next = current.checked_add(1).expect("Property counter overflow");

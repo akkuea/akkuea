@@ -19,6 +19,9 @@ export const users = pgTable('users', {
   kycStatus: kycStatusEnum('kyc_status').notNull().default('not_started'),
   kycTier: kycTierEnum('kyc_tier').notNull().default('none'),
   kycExpiresAt: timestamp('kyc_expires_at', { withTimezone: true }),
+  // The kycExpiresAt value the expiring-soon reminder was last sent for. Keyed
+  // by expiry so each approval cycle gets exactly one reminder.
+  kycReminderSentFor: timestamp('kyc_reminder_sent_for', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),

@@ -16,12 +16,7 @@ import { Button, Card, Input } from "@/components/ui";
 import { useGameWallet } from "@/components/auth/hooks";
 import { cn } from "@/lib/utils";
 import { staggerContainer, staggerItem } from "@/lib/animations";
-
-function sanitizeCallbackUrl(value: string | null): string {
-  if (!value) return "/dashboard";
-  if (value.startsWith("/")) return value;
-  return "/dashboard";
-}
+import { sanitizeCallbackUrl } from "@/lib/sanitizeCallbackUrl";
 
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());

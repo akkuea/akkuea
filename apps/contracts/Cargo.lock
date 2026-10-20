@@ -1278,6 +1278,7 @@ name = "pilot-income-token"
 version = "0.0.0"
 dependencies = [
  "pilot-whitelist",
+ "proptest",
  "soroban-sdk",
 ]
 

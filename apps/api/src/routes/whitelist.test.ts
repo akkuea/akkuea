@@ -106,7 +106,6 @@ describe('Whitelist API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-bypass-ratelimit': 'true',
         },
         body: JSON.stringify({
           walletAddress: mockWallet,
@@ -137,7 +136,6 @@ describe('Whitelist API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-bypass-ratelimit': 'true',
         },
         body: JSON.stringify({
           walletAddress: mockWallet,
@@ -207,7 +205,6 @@ describe('Whitelist API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-bypass-ratelimit': 'true',
         },
         body: JSON.stringify({
           walletAddress: resubmitWallet,
@@ -242,7 +239,6 @@ describe('Whitelist API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-bypass-ratelimit': 'true',
         },
         body: JSON.stringify({
           walletAddress: mockWallet,
@@ -268,7 +264,6 @@ describe('Whitelist API Routes', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-test-bypass-ratelimit': 'true',
         },
         body: JSON.stringify({
           walletAddress: mockWallet,

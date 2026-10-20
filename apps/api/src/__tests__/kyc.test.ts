@@ -23,6 +23,17 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
   let testUserId = VALID_UUID;
   let testToken = '';
 
+  /**
+   * The upload route is rate-limited per wallet and every router in the process
+   * shares one limiter, so each upload test signs in as its own wallet. That
+   * keeps one test's requests from spending another test's budget (the
+   * rate-limit test below needs a wallet of its own).
+   */
+  function uploadToken(): string {
+    const wallet = `G${crypto.randomUUID().replace(/-/g, '').toUpperCase().padEnd(55, '0')}`;
+    return jwt.sign({ id: testUserId, walletAddress: wallet }, JWT_SECRET);
+  }
+
   beforeAll(async () => {
     if (!skipIfNoDatabase) {
       const user = await userRepository.getOrCreateByWallet(TEST_WALLET);
@@ -93,8 +104,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-test-bypass-ratelimit': 'true',
-            Authorization: `Bearer ${testToken}`,
+            Authorization: `Bearer ${uploadToken()}`,
           },
           body: JSON.stringify({}),
         }),
@@ -112,7 +122,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const response = await app.handle(
         new Request('http://localhost/kyc/upload', {
           method: 'POST',
-          headers: { 'x-test-bypass-ratelimit': 'true', Authorization: `Bearer ${testToken}` },
+          headers: { Authorization: `Bearer ${uploadToken()}` },
           body: formData,
         }),
       );
@@ -130,7 +140,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const response = await app.handle(
         new Request('http://localhost/kyc/upload', {
           method: 'POST',
-          headers: { 'x-test-bypass-ratelimit': 'true', Authorization: `Bearer ${testToken}` },
+          headers: { Authorization: `Bearer ${uploadToken()}` },
           body: formData,
         }),
       );
@@ -155,7 +165,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const response = await app.handle(
         new Request('http://localhost/kyc/upload', {
           method: 'POST',
-          headers: { 'x-test-bypass-ratelimit': 'true', Authorization: `Bearer ${testToken}` },
+          headers: { Authorization: `Bearer ${uploadToken()}` },
           body: formData,
         }),
       );
@@ -178,7 +188,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const response = await app.handle(
         new Request('http://localhost/kyc/upload', {
           method: 'POST',
-          headers: { 'x-test-bypass-ratelimit': 'true', Authorization: `Bearer ${testToken}` },
+          headers: { Authorization: `Bearer ${uploadToken()}` },
           body: formData,
         }),
       );
@@ -198,7 +208,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const response = await app.handle(
         new Request('http://localhost/kyc/upload', {
           method: 'POST',
-          headers: { 'x-test-bypass-ratelimit': 'true', Authorization: `Bearer ${testToken}` },
+          headers: { Authorization: `Bearer ${uploadToken()}` },
           body: formData,
         }),
       );
@@ -217,7 +227,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const response = await app.handle(
         new Request('http://localhost/kyc/upload', {
           method: 'POST',
-          headers: { 'x-test-bypass-ratelimit': 'true', Authorization: `Bearer ${testToken}` },
+          headers: { Authorization: `Bearer ${uploadToken()}` },
           body: formData,
         }),
       );
@@ -299,7 +309,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const uploadRes = await app.handle(
         new Request('http://localhost/kyc/upload', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${testToken}` },
+          headers: { Authorization: `Bearer ${uploadToken()}` },
           body: formData,
         }),
       );
@@ -339,7 +349,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const uploadRes = await app.handle(
         new Request('http://localhost/kyc/upload', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${testToken}` },
+          headers: { Authorization: `Bearer ${uploadToken()}` },
           body: formData,
         }),
       );

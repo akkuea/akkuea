@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import {
   Building2,
   Calendar,
@@ -12,12 +11,10 @@ import {
 } from "lucide-react";
 import type { PropertyInfo } from "@akkuea/shared";
 import { Badge, Button, Card } from "@/components/ui";
+import { PropertyImage } from "./PropertyImage";
 import { PropertyViewer3DDynamic } from "./PropertyViewer3D.dynamic";
 import { formatCurrency } from "@/lib/utils";
-import {
-  getPropertyImage,
-  getPropertyTypeLabel,
-} from "@/components/marketplace/marketplace.utils";
+import { getPropertyTypeLabel } from "@/components/marketplace/marketplace.utils";
 
 interface PropertyDetailProps {
   property: PropertyInfo;
@@ -32,7 +29,6 @@ export function PropertyDetail({
 }: PropertyDetailProps) {
   const [viewer3DEnabled, setViewer3DEnabled] = useState(true);
 
-  const displayImage = getPropertyImage(property);
   const fundingPercentage = Math.round(
     ((property.totalShares - property.availableShares) / property.totalShares) *
       100,
@@ -58,8 +54,8 @@ export function PropertyDetail({
       {(!property.splatUrl || !viewer3DEnabled) && (
         <Card noPadding className="overflow-hidden">
           <div className="relative h-64 w-full">
-            <Image
-              src={displayImage}
+            <PropertyImage
+              property={property}
               alt={property.name}
               fill
               priority

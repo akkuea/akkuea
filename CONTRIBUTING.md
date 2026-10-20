@@ -407,27 +407,21 @@ Akkuea runs five GitHub Actions workflows on every pull request. **All five must
 
 ### Before opening your pull request
 
-Run every check locally to catch failures before CI does:
+Run this from the repository root:
 
 ```bash
-# Type checking
-bun run typecheck
-
-# Linting
-bun run lint
-
-# Tests
-bun run test
-
-# Full build
-bun run build
-
-# Smart contracts (from apps/contracts/)
-cargo fmt --check
-cargo clippy -- -D warnings
-cargo test
-cargo build --target wasm32-unknown-unknown --release
+make check
 ```
+
+It runs the same checks as the pull-request workflows for the parts of the repository your branch changes, and ends with a pass/fail summary. Fix everything it reports and run it again until it passes.
+
+- `make fix` applies the formatting fixes (Prettier per workspace, `cargo fmt`).
+- `make check-all` runs every check, whatever you changed.
+- The API database tests need Docker running. Playwright end-to-end tests run with `E2E=1 make check`.
+- If a tool is missing, `make check` tells you how to install it. Skipped checks still run in CI.
+- CI tests your branch merged into `develop`. Keep it current with `git fetch upstream && git rebase upstream/develop`.
+
+If you use an AI assistant, see [AGENTS.md](AGENTS.md).
 
 ### Investigating CI failures
 

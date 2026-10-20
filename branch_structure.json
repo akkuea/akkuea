@@ -1,0 +1,18 @@
+{
+  "default_branch": "develop",
+  "branches": [
+    "develop",
+    "fix/issue-1208-shared-validationservice-accepts-nan-amounts",
+    "origin"
+  ],
+  "parent": {
+    "develop": null,
+    "fix/issue-1208-shared-validationservice-accepts-nan-amounts": "develop",
+    "origin": "develop"
+  },
+  "order": [
+    "develop",
+    "fix/issue-1208-shared-validationservice-accepts-nan-amounts",
+    "origin"
+  ]
+}

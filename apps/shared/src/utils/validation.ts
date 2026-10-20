@@ -8,6 +8,44 @@ import type {
 import { StrKey } from "@stellar/stellar-sdk";
 
 export class ValidationService {
+  /**
+   * Finite-number guard used by every amount, price, share count and
+   * confidence check. `NaN` and `Infinity` compare false against every
+   * boundary (`NaN <= 0` is false, `Infinity <= 0` is false), so a plain
+   * comparison lets them through; the explicit check does not.
+   */
+  private static isFiniteNumber(value: unknown): value is number {
+    return typeof value === "number" && Number.isFinite(value);
+  }
+
+  /**
+   * A number, or a numeric string, that parses to a finite positive value.
+   * Amounts arrive as decimal strings (`"100.50"`), so the string branch is
+   * required; `"abc"` parses to NaN and is rejected.
+   */
+  private static isPositiveAmount(value: unknown): boolean {
+    if (typeof value === "number") {
+      return Number.isFinite(value) && value > 0;
+    }
+    if (typeof value === "string") {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) && parsed > 0;
+    }
+    return false;
+  }
+
+  /** Same as `isPositiveAmount`, but zero is allowed. */
+  private static isNonNegativeAmount(value: unknown): boolean {
+    if (typeof value === "number") {
+      return Number.isFinite(value) && value >= 0;
+    }
+    if (typeof value === "string") {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) && parsed >= 0;
+    }
+    return false;
+  }
+
   static validatePropertyInfo(property: Partial<PropertyInfo>): {
     isValid: boolean;
     errors: string[];
@@ -22,17 +60,21 @@ export class ValidationService {
       errors.push("Valid owner address is required");
     }
 
-    if (!property.totalShares || property.totalShares <= 0) {
+    if (
+      !this.isFiniteNumber(property.totalShares) ||
+      property.totalShares <= 0
+    ) {
       errors.push("Total shares must be greater than 0");
     }
 
-    if (!property.pricePerShare || parseFloat(property.pricePerShare) <= 0) {
+    if (!this.isPositiveAmount(property.pricePerShare)) {
       errors.push("Price per share must be greater than 0");
     }
 
     if (
       property.availableShares !== undefined &&
-      property.availableShares < 0
+      (!this.isFiniteNumber(property.availableShares) ||
+        property.availableShares < 0)
     ) {
       errors.push("Available shares cannot be negative");
     }
@@ -65,11 +107,11 @@ export class ValidationService {
       errors.push("Valid owner address is required");
     }
 
-    if (!ownership.shares || ownership.shares <= 0) {
+    if (!this.isFiniteNumber(ownership.shares) || ownership.shares <= 0) {
       errors.push("Number of shares must be greater than 0");
     }
 
-    if (!ownership.purchasePrice || parseFloat(ownership.purchasePrice) <= 0) {
+    if (!this.isPositiveAmount(ownership.purchasePrice)) {
       errors.push("Purchase price must be greater than 0");
     }
 
@@ -93,12 +135,13 @@ export class ValidationService {
       errors.push("Asset is required");
     }
 
-    if (!pool.assetAddress || !this.validateStellarAddress(pool.assetAddress)) {
+    if (!pool.assetAddress || !this.isValidAssetAddress(pool.assetAddress)) {
       errors.push("Valid asset address is required");
     }
 
     if (
       pool.collateralFactor === undefined ||
+      !this.isFiniteNumber(pool.collateralFactor) ||
       pool.collateralFactor < 0 ||
       pool.collateralFactor > 10000
     ) {
@@ -107,12 +150,15 @@ export class ValidationService {
 
     if (
       pool.totalDeposits !== undefined &&
-      parseFloat(pool.totalDeposits) < 0
+      !this.isNonNegativeAmount(pool.totalDeposits)
     ) {
       errors.push("Total deposits cannot be negative");
     }
 
-    if (pool.totalBorrows !== undefined && parseFloat(pool.totalBorrows) < 0) {
+    if (
+      pool.totalBorrows !== undefined &&
+      !this.isNonNegativeAmount(pool.totalBorrows)
+    ) {
       errors.push("Total borrows cannot be negative");
     }
 
@@ -153,7 +199,7 @@ export class ValidationService {
       errors.push("Valid transaction type is required");
     }
 
-    if (!tx.amount || parseFloat(tx.amount) <= 0) {
+    if (!this.isPositiveAmount(tx.amount)) {
       errors.push("Amount must be greater than 0");
     }
 
@@ -184,6 +230,21 @@ export class ValidationService {
     }
   }
 
+  /**
+   * Asset addresses may be either an account (native asset) or a Soroban
+   * contract (`C...`). `validateStellarAddress` stays account-only; this
+   * helper is the one used where a contract address is legitimate.
+   */
+  static isValidAssetAddress(address: string): boolean {
+    if (!address || address.length !== 56) return false;
+
+    if (address.startsWith("C")) {
+      return StrKey.isValidContract(address);
+    }
+
+    return this.validateStellarAddress(address);
+  }
+
   static validateEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -206,7 +267,7 @@ export class ValidationService {
       errors.push("Property ID is required");
     }
 
-    if (payload.price === undefined || payload.price <= 0) {
+    if (!this.isFiniteNumber(payload.price) || payload.price <= 0) {
       errors.push("Price must be greater than 0");
     } else if (payload.price < minPrice || payload.price > maxPrice) {
       errors.push(`Price must be between ${minPrice} and ${maxPrice}`);
@@ -226,6 +287,10 @@ export class ValidationService {
 
     if (!payload.timestamp) {
       errors.push("Timestamp is required");
+    } else if (Number.isNaN(new Date(payload.timestamp).getTime())) {
+      // An unparseable timestamp used to reach the age arithmetic, where
+      // NaN compares false against every bound and slipped through.
+      errors.push("Timestamp must be a valid ISO date");
     } else {
       const age = Date.now() - new Date(payload.timestamp).getTime();
       if (age > maxAgeMs) {
@@ -240,6 +305,7 @@ export class ValidationService {
 
     if (
       payload.confidence === undefined ||
+      !this.isFiniteNumber(payload.confidence) ||
       payload.confidence < 0 ||
       payload.confidence > 100
     ) {

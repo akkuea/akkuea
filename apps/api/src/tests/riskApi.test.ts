@@ -4,7 +4,9 @@ import { errorHandler } from '../middleware/errorHandler';
 import { riskMonitoringRoutes } from '../routes/riskMonitoring';
 import { lendingRoutes } from '../routes/lending';
 
-const INTERNAL_KEY = process.env.INTERNAL_OPERATIONS_KEY ?? 'test-internal-key';
+// The risk group shares the operations credential with the oracle write routes.
+process.env.OPERATIONS_BACKEND_CREDENTIAL ||= 'test-internal-key';
+const INTERNAL_KEY = process.env.OPERATIONS_BACKEND_CREDENTIAL;
 const AUTH_HEADERS = { 'x-internal-api-key': INTERNAL_KEY };
 
 // Risk monitoring routes - RiskMonitoringRepository is in-memory; LendingRepository falls back
@@ -39,6 +41,18 @@ describe('Risk Monitoring API', () => {
   test('Filter positions by risk level', async () => {
     const response = await app.handle(
       new Request('http://localhost/internal/risk/positions/risk/critical', {
+        headers: AUTH_HEADERS,
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(Array.isArray(data)).toBe(true);
+  });
+
+  test.each(['safe', 'warning', 'critical'])('Accepts the shared risk level %s', async (level) => {
+    const response = await app.handle(
+      new Request(`http://localhost/internal/risk/positions/risk/${level}`, {
         headers: AUTH_HEADERS,
       }),
     );

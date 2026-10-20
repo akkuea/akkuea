@@ -11,10 +11,6 @@ const challengeSchema = z.object({
     .regex(/^G[A-Z2-7]{55}$/),
 });
 
-// NOTE: the `validate()` plugin does not reliably apply a second route's
-// schema within the same Elysia instance (separate, out-of-scope bug; see
-// routes/notifications.ts for the same issue), so the `signature` bound
-// below is also enforced directly in AuthController.verifySession.
 const sessionSchema = z.object({
   stellarAddress: z
     .string()
@@ -30,23 +26,29 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';
 export const authRoutes = new Elysia({ prefix: '/auth' })
   .use(jwt({ name: 'jwt', secret: JWT_SECRET }))
   // POST /auth/challenge - Get a nonce to sign
-  .post('/challenge', async (ctx) => AuthController.getChallenge(ctx), {
-    body: challengeSchema,
-    beforeHandle: [rateLimit()],
-    detail: {
-      summary: 'Get authentication challenge',
-      description: 'Request a nonce to sign for Stellar wallet authentication',
-      tags: ['Auth'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ body: challengeSchema }))
+      .post('/challenge', async (ctx) => AuthController.getChallenge(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Get authentication challenge',
+          description: 'Request a nonce to sign for Stellar wallet authentication',
+          tags: ['Auth'],
+        },
+      }),
+  )
 
   // POST /auth/session - Verify signature and issue JWT
-  .post('/session', async (ctx) => AuthController.verifySession(ctx), {
-    body: sessionSchema,
-    beforeHandle: [rateLimit()],
-    detail: {
-      summary: 'Create a session',
-      description: 'Verify a signed challenge and issue a JWT session token',
-      tags: ['Auth'],
-    },
-  });
+  .group('', (app) =>
+    app
+      .use(validate({ body: sessionSchema }))
+      .post('/session', async (ctx) => AuthController.verifySession(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Create a session',
+          description: 'Verify a signed challenge and issue a JWT session token',
+          tags: ['Auth'],
+        },
+      }),
+  );

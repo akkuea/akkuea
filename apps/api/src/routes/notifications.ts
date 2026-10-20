@@ -8,10 +8,10 @@ const notificationQuerySchema = z.object({
   offset: z.string().optional(),
 });
 
-// NOTE: the `validate()` plugin currently has no effect on this route
-// because NotificationController.markMultipleAsRead reads the raw request
-// body itself instead of the validated body (separate, out-of-scope bug;
-// see the controller for the enforced cap in the meantime).
+// NOTE: NotificationController.markMultipleAsRead reads the raw request body
+// itself instead of the validated body (separate, out-of-scope bug; see the
+// controller for the enforced cap in the meantime). The schema still guards
+// the route: an invalid payload is rejected before the handler runs.
 const markMultipleAsReadSchema = z.object({
   notificationIds: z.array(z.string().uuid()).max(100),
 });
@@ -19,14 +19,17 @@ const markMultipleAsReadSchema = z.object({
 export const notificationRoutes = new Elysia({ prefix: '/notifications' })
   .use(authPlugin)
   // GET /notifications - Get user's notifications
-  .get('/', async (ctx) => NotificationController.getUserNotifications(ctx), {
-    beforeHandle: validate({ query: notificationQuerySchema }).beforeHandle,
-    detail: {
-      summary: 'List notifications',
-      description: 'Retrieve notifications for the authenticated user',
-      tags: ['Notifications'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ query: notificationQuerySchema }))
+      .get('/', async (ctx) => NotificationController.getUserNotifications(ctx), {
+        detail: {
+          summary: 'List notifications',
+          description: 'Retrieve notifications for the authenticated user',
+          tags: ['Notifications'],
+        },
+      }),
+  )
 
   // GET /notifications/unread-count - Get unread count
   .get('/unread-count', async (ctx) => NotificationController.getUnreadCount(ctx), {
@@ -38,34 +41,43 @@ export const notificationRoutes = new Elysia({ prefix: '/notifications' })
   })
 
   // GET /notifications/:id - Get a specific notification
-  .get('/:id', async (ctx) => NotificationController.getNotificationById(ctx), {
-    beforeHandle: validate({ params: uuidParamSchema }).beforeHandle,
-    detail: {
-      summary: 'Get notification',
-      description: 'Retrieve a specific notification by ID',
-      tags: ['Notifications'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ params: uuidParamSchema }))
+      .get('/:id', async (ctx) => NotificationController.getNotificationById(ctx), {
+        detail: {
+          summary: 'Get notification',
+          description: 'Retrieve a specific notification by ID',
+          tags: ['Notifications'],
+        },
+      }),
+  )
 
   // PATCH /notifications/:id/read - Mark as read
-  .patch('/:id/read', async (ctx) => NotificationController.markAsRead(ctx), {
-    beforeHandle: validate({ params: uuidParamSchema }).beforeHandle,
-    detail: {
-      summary: 'Mark as read',
-      description: 'Mark a specific notification as read',
-      tags: ['Notifications'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ params: uuidParamSchema }))
+      .patch('/:id/read', async (ctx) => NotificationController.markAsRead(ctx), {
+        detail: {
+          summary: 'Mark as read',
+          description: 'Mark a specific notification as read',
+          tags: ['Notifications'],
+        },
+      }),
+  )
 
   // POST /notifications/read-multiple - Mark multiple as read
-  .post('/read-multiple', async (ctx) => NotificationController.markMultipleAsRead(ctx), {
-    beforeHandle: validate({ body: markMultipleAsReadSchema }).beforeHandle,
-    detail: {
-      summary: 'Mark multiple as read',
-      description: 'Mark multiple notifications as read by their IDs',
-      tags: ['Notifications'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ body: markMultipleAsReadSchema }))
+      .post('/read-multiple', async (ctx) => NotificationController.markMultipleAsRead(ctx), {
+        detail: {
+          summary: 'Mark multiple as read',
+          description: 'Mark multiple notifications as read by their IDs',
+          tags: ['Notifications'],
+        },
+      }),
+  )
 
   // POST /notifications/read-all - Mark all as read
   .post('/read-all', async (ctx) => NotificationController.markAllAsRead(ctx), {
@@ -77,11 +89,14 @@ export const notificationRoutes = new Elysia({ prefix: '/notifications' })
   })
 
   // DELETE /notifications/:id - Delete notification
-  .delete('/:id', async (ctx) => NotificationController.deleteNotification(ctx), {
-    beforeHandle: validate({ params: uuidParamSchema }).beforeHandle,
-    detail: {
-      summary: 'Delete notification',
-      description: 'Delete a specific notification by ID',
-      tags: ['Notifications'],
-    },
-  });
+  .group('', (app) =>
+    app
+      .use(validate({ params: uuidParamSchema }))
+      .delete('/:id', async (ctx) => NotificationController.deleteNotification(ctx), {
+        detail: {
+          summary: 'Delete notification',
+          description: 'Delete a specific notification by ID',
+          tags: ['Notifications'],
+        },
+      }),
+  );

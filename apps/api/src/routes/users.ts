@@ -28,53 +28,70 @@ const authWalletSchema = z.object({
     .regex(/^G[A-Z2-7]{55}$/),
 });
 
+// Each route registers its own `validate()` inside a group, so the scoped
+// hook can only ever see the route written next to it. A plugin added with
+// `.use()` at instance level would stay in scope for every later sibling and
+// let the first schema reject the following routes.
 export const userRoutes = new Elysia({ prefix: '/users' })
   // authPlugin only derives getAuthenticatedUser(); it does not enforce
   // auth by itself, so applying it here lets /users/auth check for an
   // optional session without requiring one.
   .use(authPlugin)
   // POST /users - Create user
-  .post('/', async (ctx) => UserController.create(ctx), {
-    beforeHandle: validate({ body: createUserSchema }),
-    detail: {
-      summary: 'Create a user',
-      description: 'Create a new user account with a Stellar wallet address',
-      tags: ['Users'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ body: createUserSchema }))
+      .post('/', async (ctx) => UserController.create(ctx), {
+        detail: {
+          summary: 'Create a user',
+          description: 'Create a new user account with a Stellar wallet address',
+          tags: ['Users'],
+        },
+      }),
+  )
 
   // GET /users/:id - Get user by ID
-  .get('/:id', async (ctx) => UserController.getById(ctx), {
-    beforeHandle: validate({ params: uuidParamSchema }),
-    detail: {
-      summary: 'Get user by ID',
-      description: 'Retrieve a user by their UUID',
-      tags: ['Users'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ params: uuidParamSchema }))
+      .get('/:id', async (ctx) => UserController.getById(ctx), {
+        detail: {
+          summary: 'Get user by ID',
+          description: 'Retrieve a user by their UUID',
+          tags: ['Users'],
+        },
+      }),
+  )
 
   // GET /users/wallet/:address - Get user by wallet address
-  .get('/wallet/:address', async (ctx) => UserController.getByWallet(ctx), {
-    beforeHandle: validate({ params: walletParamSchema }),
-    detail: {
-      summary: 'Get user by wallet address',
-      description: 'Retrieve a user by their Stellar wallet address',
-      tags: ['Users'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ params: walletParamSchema }))
+      .get('/wallet/:address', async (ctx) => UserController.getByWallet(ctx), {
+        detail: {
+          summary: 'Get user by wallet address',
+          description: 'Retrieve a user by their Stellar wallet address',
+          tags: ['Users'],
+        },
+      }),
+  )
 
   // POST /users/auth - Look up a user by wallet, or create one if the
   // caller holds a valid session (Bearer JWT from /auth/session) for that
   // exact wallet. Returns the same public projection as GET /users/:id.
-  .post('/auth', async (ctx) => UserController.authenticateByWallet(ctx), {
-    beforeHandle: [validate({ body: authWalletSchema }), rateLimit()],
-    detail: {
-      summary: 'Authenticate by wallet',
-      description:
-        'Returns the public profile for an existing wallet. For a wallet with no account yet, creates one only if the caller has a valid session for that exact wallet.',
-      tags: ['Users'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ body: authWalletSchema }))
+      .post('/auth', async (ctx) => UserController.authenticateByWallet(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Authenticate by wallet',
+          description:
+            'Returns the public profile for an existing wallet. For a wallet with no account yet, creates one only if the caller has a valid session for that exact wallet.',
+          tags: ['Users'],
+        },
+      }),
+  )
 
   // Protected Routes
   // GET /users/me - Get current user profile
@@ -87,11 +104,14 @@ export const userRoutes = new Elysia({ prefix: '/users' })
   })
 
   // PATCH /me - Update current user profile
-  .patch('/me', async (ctx) => UserController.updateProfile(ctx), {
-    beforeHandle: validate({ body: updateUserSchema }),
-    detail: {
-      summary: 'Update current user profile',
-      description: 'Update the authenticated user profile information',
-      tags: ['Users'],
-    },
-  });
+  .group('', (app) =>
+    app
+      .use(validate({ body: updateUserSchema }))
+      .patch('/me', async (ctx) => UserController.updateProfile(ctx), {
+        detail: {
+          summary: 'Update current user profile',
+          description: 'Update the authenticated user profile information',
+          tags: ['Users'],
+        },
+      }),
+  );

@@ -79,135 +79,180 @@ const createPoolSchema = z.object({
   reserveFactor: z.coerce.number().int().nonnegative().optional(),
 });
 
+// Every route below registers its own `validate()` inside a group, so the
+// scoped hook only covers the route written next to it. Using `.use()` at
+// instance level would keep the first schema in scope for every later route
+// and reject valid requests.
 export const lendingRoutes = new Elysia({ prefix: '/lending' })
   // PUBLIC ROUTES
   // GET /pools - List pools with pagination and filters
-  .use(validate({ query: poolQuerySchema }))
-  .get('/pools', async (ctx) => LendingController.getPools(ctx), {
-    detail: {
-      summary: 'List lending pools',
-      description: 'Retrieve lending pools with pagination and optional filters',
-      tags: ['Lending'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ query: poolQuerySchema }))
+      .get('/pools', async (ctx) => LendingController.getPools(ctx), {
+        detail: {
+          summary: 'List lending pools',
+          description: 'Retrieve lending pools with pagination and optional filters',
+          tags: ['Lending'],
+        },
+      }),
+  )
 
   // GET /pools/:id - Get single pool
-  .use(validate({ params: poolIdParamSchema }))
-  .get('/pools/:id', async (ctx) => LendingController.getPool(ctx), {
-    detail: {
-      summary: 'Get lending pool',
-      description: 'Retrieve a single lending pool by its UUID',
-      tags: ['Lending'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema }))
+      .get('/pools/:id', async (ctx) => LendingController.getPool(ctx), {
+        detail: {
+          summary: 'Get lending pool',
+          description: 'Retrieve a single lending pool by its UUID',
+          tags: ['Lending'],
+        },
+      }),
+  )
 
   // GET /pools/:id/user/:address/deposits - Get user deposits
-  .use(validate({ params: poolUserParamsSchema }))
-  .get('/pools/:id/user/:address/deposits', async (ctx) => LendingController.getUserDeposits(ctx), {
-    detail: {
-      summary: 'Get user deposits',
-      description: 'Retrieve all deposits for a user in a specific lending pool',
-      tags: ['Lending'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolUserParamsSchema }))
+      .get(
+        '/pools/:id/user/:address/deposits',
+        async (ctx) => LendingController.getUserDeposits(ctx),
+        {
+          detail: {
+            summary: 'Get user deposits',
+            description: 'Retrieve all deposits for a user in a specific lending pool',
+            tags: ['Lending'],
+          },
+        },
+      ),
+  )
 
   // GET /pools/:id/user/:address/borrows - Get user borrows
-  .use(validate({ params: poolUserParamsSchema }))
-  .get('/pools/:id/user/:address/borrows', async (ctx) => LendingController.getUserBorrows(ctx), {
-    detail: {
-      summary: 'Get user borrows',
-      description: 'Retrieve all borrows for a user in a specific lending pool',
-      tags: ['Lending'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolUserParamsSchema }))
+      .get(
+        '/pools/:id/user/:address/borrows',
+        async (ctx) => LendingController.getUserBorrows(ctx),
+        {
+          detail: {
+            summary: 'Get user borrows',
+            description: 'Retrieve all borrows for a user in a specific lending pool',
+            tags: ['Lending'],
+          },
+        },
+      ),
+  )
 
   // GET /pools/:id/user/:address/summary - Get user position summary
-  .use(validate({ params: poolUserParamsSchema }))
-  .get(
-    '/pools/:id/user/:address/summary',
-    async (ctx) => LendingController.getUserPositionSummary(ctx),
-    {
-      detail: {
-        summary: 'Get user position summary',
-        description: 'Retrieve a summary of a user position in a specific lending pool',
-        tags: ['Lending'],
-      },
-    },
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolUserParamsSchema }))
+      .get(
+        '/pools/:id/user/:address/summary',
+        async (ctx) => LendingController.getUserPositionSummary(ctx),
+        {
+          detail: {
+            summary: 'Get user position summary',
+            description: 'Retrieve a summary of a user position in a specific lending pool',
+            tags: ['Lending'],
+          },
+        },
+      ),
   )
 
   // PROTECTED ROUTES
   .use(authPlugin)
 
   // POST /pools - Create pool (auth required)
-  .use(validate({ body: createPoolSchema }))
-  .post('/pools', async (ctx) => LendingController.createPool(ctx), {
-    beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
-    detail: {
-      summary: 'Create a lending pool',
-      description: 'Create a new lending pool (requires authentication)',
-      tags: ['Lending'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ body: createPoolSchema }))
+      .post('/pools', async (ctx) => LendingController.createPool(ctx), {
+        beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+        detail: {
+          summary: 'Create a lending pool',
+          description: 'Create a new lending pool (requires authentication)',
+          tags: ['Lending'],
+        },
+      }),
+  )
 
   // POST /pools/:id/deposit - Deposit into pool (auth required)
-  .use(validate({ body: depositSchema }))
-  .post('/pools/:id/deposit', async (ctx) => LendingController.deposit(ctx), {
-    beforeHandle: [rateLimit()],
-    detail: {
-      summary: 'Deposit into pool',
-      description: 'Deposit assets into a lending pool (requires authentication)',
-      tags: ['Lending'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ body: depositSchema }))
+      .post('/pools/:id/deposit', async (ctx) => LendingController.deposit(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Deposit into pool',
+          description: 'Deposit assets into a lending pool (requires authentication)',
+          tags: ['Lending'],
+        },
+      }),
+  )
 
   // POST /pools/:id/withdraw - Withdraw from pool (auth required)
-  .use(validate({ body: withdrawSchema }))
-  .post('/pools/:id/withdraw', async (ctx) => LendingController.withdraw(ctx), {
-    beforeHandle: [rateLimit()],
-    detail: {
-      summary: 'Withdraw from pool',
-      description: 'Withdraw assets from a lending pool (requires authentication)',
-      tags: ['Lending'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ body: withdrawSchema }))
+      .post('/pools/:id/withdraw', async (ctx) => LendingController.withdraw(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Withdraw from pool',
+          description: 'Withdraw assets from a lending pool (requires authentication)',
+          tags: ['Lending'],
+        },
+      }),
+  )
 
   // POST /pools/:id/borrow - Borrow from pool (auth required)
   .use(idempotency)
-  .use(validate({ body: borrowSchema }))
-  .post('/pools/:id/borrow', async (ctx) => LendingController.borrow(ctx), {
-    beforeHandle: [rateLimit()],
-    detail: {
-      summary: 'Borrow from pool',
-      description:
-        'Borrow assets from a lending pool by providing collateral (requires authentication)',
-      tags: ['Lending'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ body: borrowSchema }))
+      .post('/pools/:id/borrow', async (ctx) => LendingController.borrow(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Borrow from pool',
+          description:
+            'Borrow assets from a lending pool by providing collateral (requires authentication)',
+          tags: ['Lending'],
+        },
+      }),
+  )
 
   // POST /pools/:id/repay - Repay loan (auth required)
   .use(idempotency)
-  .use(validate({ body: repaySchema }))
-  .post('/pools/:id/repay', async (ctx) => LendingController.repay(ctx), {
-    beforeHandle: [rateLimit()],
-    detail: {
-      summary: 'Repay loan',
-      description: 'Repay a borrowed loan in a lending pool (requires authentication)',
-      tags: ['Lending'],
-    },
-  })
+  .group('', (app) =>
+    app
+      .use(validate({ body: repaySchema }))
+      .post('/pools/:id/repay', async (ctx) => LendingController.repay(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Repay loan',
+          description: 'Repay a borrowed loan in a lending pool (requires authentication)',
+          tags: ['Lending'],
+        },
+      }),
+  )
 
   // POST /pools/:id/positions/:borrowerId/liquidate - Execute liquidation (liquidator role required)
   .use(liquidatorAuth)
-  .use(validate({ params: liquidationParamsSchema }))
-  .post(
-    '/pools/:id/positions/:borrowerId/liquidate',
-    async (ctx) => LendingController.liquidate(ctx),
-    {
-      detail: {
-        summary: 'Liquidate position',
-        description:
-          'Execute liquidation on an undercollateralized position (requires liquidator role)',
-        tags: ['Lendin'],
-      },
-    },
+  .group('', (app) =>
+    app
+      .use(validate({ params: liquidationParamsSchema }))
+      .post(
+        '/pools/:id/positions/:borrowerId/liquidate',
+        async (ctx) => LendingController.liquidate(ctx),
+        {
+          detail: {
+            summary: 'Liquidate position',
+            description:
+              'Execute liquidation on an undercollateralized position (requires liquidator role)',
+            tags: ['Lending'],
+          },
+        },
+      ),
   );

@@ -1,5 +1,7 @@
 import { describe, it, expect } from "bun:test";
+import { NextRequest } from "next/server";
 import { buildContentSecurityPolicy } from "../lib/csp";
+import { middleware } from "../../middleware";
 
 /**
  * Security headers configuration test.
@@ -87,6 +89,17 @@ describe("Security Headers Configuration", () => {
 
       // style-src 'unsafe-inline' is documented for Next.js inline styles
       expect(csp).toContain("style-src 'self' https: 'unsafe-inline'");
+    });
+  });
+
+  describe("middleware CSP enforcement", () => {
+    it("middleware sets an enforcing CSP with a nonce", () => {
+      const res = middleware(new NextRequest("http://localhost:3000/en"));
+
+      const csp = res.headers.get("Content-Security-Policy");
+      expect(csp).toBeDefined();
+      expect(csp).toContain("frame-ancestors 'none'");
+      expect(csp).toMatch(/'nonce-[A-Za-z0-9+/=]+'/);
     });
   });
 

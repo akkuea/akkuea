@@ -401,12 +401,36 @@ export async function buildFaucetClaimXdr(
 
 // ── Balance fetching ────────────────────────────────────────────────────────────
 
+/** Number of decimals used by the LAND token contract. */
+export const LAND_DECIMALS = 7;
+
+/**
+ * Convert a raw LAND amount (i128 in 7-decimal base units) to a whole-LAND
+ * decimal string, using bigint arithmetic only so no precision is lost.
+ * Trailing fractional zeros are dropped: 10000000000 base units give "1000",
+ * 15000000 give "1.5".
+ */
+export function landUnitsToDecimal(raw: bigint): string {
+  const zero = BigInt(0);
+  const negative = raw < zero;
+  const abs = negative ? -raw : raw;
+  const scale = BigInt(10 ** LAND_DECIMALS);
+  const whole = (abs / scale).toString();
+  const fraction = (abs % scale)
+    .toString()
+    .padStart(LAND_DECIMALS, "0")
+    .replace(/0+$/, "");
+  const value = fraction ? `${whole}.${fraction}` : whole;
+  return negative ? `-${value}` : value;
+}
+
 /**
  * Fetch the LAND token balance for a given Stellar address via a Soroban
- * simulated call to `balance_of` on the LAND token contract.
+ * simulated call to `balance` on the LAND token contract.
  *
- * Returns the raw balance as a decimal string (7-decimal LAND units, i.e.
- * stroops). Throws if the simulation fails or no return value is returned.
+ * Returns the balance in whole LAND as a decimal string (already converted
+ * from the contract's 7-decimal base units, e.g. "1000" or "1.5").
+ * Throws if the simulation fails or no return value is returned.
  */
 export async function fetchLandBalance(address: string): Promise<string> {
   const server = getSorobanServer();
@@ -419,7 +443,7 @@ export async function fetchLandBalance(address: string): Promise<string> {
     networkPassphrase: NETWORK_PASSPHRASE,
   })
     .addOperation(
-      contract.call("balance_of", nativeToScVal(address, { type: "address" })),
+      contract.call("balance", nativeToScVal(address, { type: "address" })),
     )
     .setTimeout(30)
     .build();
@@ -437,11 +461,11 @@ export async function fetchLandBalance(address: string): Promise<string> {
   }
 
   if (!sim.result?.retval) {
-    throw new Error("No return value from balance_of");
+    throw new Error("No return value from balance");
   }
 
   if (sim.result.retval.type !== "scvI128") return "0";
-  return scValToNative(sim.result.retval).toString();
+  return landUnitsToDecimal(BigInt(scValToNative(sim.result.retval)));
 }
 
 // ── Transaction submission & polling ─────────────────────────────────────────

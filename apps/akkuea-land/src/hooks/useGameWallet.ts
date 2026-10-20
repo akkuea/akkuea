@@ -56,6 +56,7 @@ export function useGameWallet() {
     if (!wallet) return;
     setIsConnected(true);
     setAddress(wallet.address);
+    await fetchBalance(wallet.address);
   };
 
   const logout = () => {
@@ -67,18 +68,18 @@ export function useGameWallet() {
   };
 
   /**
-   * Fetch the LAND token balance for the connected wallet address.
-   * Stores the result in `balance` or sets `error` on failure.
+   * Fetch the on-chain LAND token balance for the connected wallet address
+   * (or `target`, used right after connecting before the store re-renders).
+   * Stores the balance in whole LAND in `balance` or sets `error` on failure.
    */
-  const fetchBalance = async () => {
+  const fetchBalance = async (target: string | null = address) => {
     setError(null);
-    if (!address) {
+    if (!target) {
       setBalance(null);
       return;
     }
     try {
-      const raw = await fetchLandBalance(address);
-      setBalance(raw);
+      setBalance(await fetchLandBalance(target));
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
@@ -87,9 +88,10 @@ export function useGameWallet() {
 
   /**
    * Sign a built XDR with the connected wallet, submit it to the Soroban RPC,
-   * and wait for on-chain confirmation. Throws on signing failure, submission
-   * error, on-chain failure, or when the transaction is not confirmed within
-   * the polling window (TxNotConfirmedError).
+   * and wait for on-chain confirmation, then refresh the LAND balance so the
+   * header reflects claims and purchases. Throws on signing failure,
+   * submission error, on-chain failure, or when the transaction is not
+   * confirmed within the polling window (TxNotConfirmedError).
    */
   const signAndSubmitTx = async (xdr: string): Promise<void> => {
     const kit = getWalletKit();
@@ -103,6 +105,7 @@ export function useGameWallet() {
 
     const txHash = await submitSorobanTx(signedTxXdr);
     assertTxConfirmed(await waitForSorobanTx(txHash), txHash);
+    await fetchBalance(address);
   };
 
   return {

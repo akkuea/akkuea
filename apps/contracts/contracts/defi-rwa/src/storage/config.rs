@@ -10,11 +10,17 @@ use super::keys::StorageKey;
 ///
 /// # Admin key
 ///
-/// The admin address is authoritatively stored under `RoleKey::Admin`
+/// The admin address is authoritatively stored under `storage::keys::RoleKey::Admin`
 /// (see `src/access/admin.rs`). This structure only mirrors the admin
 /// for convenience during initialization and is not a source of truth.
 /// All readers must go through `AdminControl`.
-#[contracttype]
+///
+/// # TTL
+///
+/// The configuration is stored in instance storage and is therefore
+/// reached by the contract instance TTL. The constant below documents
+/// the extended TTL expectation for this module.
+###[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TokenConfig {
     /// Token symbol (e.g., "PRPT")

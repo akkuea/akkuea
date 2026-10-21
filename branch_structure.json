@@ -1,0 +1,18 @@
+{
+  "default_branch": "develop",
+  "branches": [
+    "develop",
+    "fix/issue-1187-contracts-defi-rwa-fix-admin-key-aliasing-bound",
+    "origin"
+  ],
+  "parent": {
+    "develop": null,
+    "fix/issue-1187-contracts-defi-rwa-fix-admin-key-aliasing-bound": "develop",
+    "origin": "develop"
+  },
+  "order": [
+    "develop",
+    "fix/issue-1187-contracts-defi-rwa-fix-admin-key-aliasing-bound",
+    "origin"
+  ]
+}

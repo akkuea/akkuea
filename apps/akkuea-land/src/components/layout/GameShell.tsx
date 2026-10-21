@@ -6,6 +6,7 @@ import { Link, usePathname } from "@/i18n/routing";
 import { PilotCta } from "@/components/game/PilotCta";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
+import { useGameWallet } from "@/hooks/useGameWallet";
 
 const NAV_LINKS = [
   { href: "/map", labelKey: "map", icon: Map },
@@ -15,17 +16,14 @@ const NAV_LINKS = [
 
 interface GameShellProps {
   children: React.ReactNode;
-  /** Wallet address of the connected player, or null if disconnected */
-  walletAddress?: string | null;
-  /** LAND token balance */
-  landBalance?: string;
 }
 
-export function GameShell({
-  children,
-  walletAddress = null,
-  landBalance = "0",
-}: GameShellProps) {
+export function GameShell({ children }: GameShellProps) {
+  // Address and on-chain LAND balance (whole LAND) come from the wallet
+  // store, which refreshes the balance on connect and after each confirmed
+  // transaction.
+  const { address: walletAddress, balance } = useGameWallet();
+  const landBalance = balance ?? "0";
   const t = useTranslations("Nav");
   const tCommon = useTranslations("Common");
   const pathname = usePathname();

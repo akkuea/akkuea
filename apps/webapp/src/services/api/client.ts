@@ -295,11 +295,7 @@ export function createApiClient(config: ApiClientConfig) {
  * Get API base URL from environment variable
  * Next.js replaces NEXT_PUBLIC_* env vars at build time
  */
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore - process.env is available in Next.js runtime but TypeScript doesn't recognize it
-const API_BASE_URL =
-  (typeof process !== "undefined" && process.env?.NEXT_PUBLIC_API_URL) ||
-  "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 const getApiBaseUrl = (): string => {
   return API_BASE_URL;

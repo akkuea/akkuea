@@ -1,0 +1,18 @@
+{
+  "default_branch": "develop",
+  "branches": [
+    "develop",
+    "fix/issue-1159-ci-akkuea-land-has-no-ci-add-a-workflow-and-fix",
+    "origin"
+  ],
+  "parent": {
+    "develop": null,
+    "fix/issue-1159-ci-akkuea-land-has-no-ci-add-a-workflow-and-fix": "develop",
+    "origin": "develop"
+  },
+  "order": [
+    "develop",
+    "fix/issue-1159-ci-akkuea-land-has-no-ci-add-a-workflow-and-fix",
+    "origin"
+  ]
+}

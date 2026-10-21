@@ -6,9 +6,11 @@ use soroban_sdk::{contract, contractimpl, panic_with_error, Address, Env};
 mod errors;
 mod events;
 mod storage;
+mod ttl;
 
 pub use errors::WhitelistError;
 use storage::{DataKey, Storage};
+use ttl::{extend_instance, extend_persistent};
 
 #[contract]
 pub struct PilotWhitelist;
@@ -17,6 +19,7 @@ pub struct PilotWhitelist;
 impl PilotWhitelist {
     /// Initialize the whitelist with the admin address that can approve and revoke investors.
     pub fn initialize(env: Env, admin: Address) {
+        extend_instance(&env);
         if Storage::is_initialized(&env) {
             panic_with_error!(&env, WhitelistError::AlreadyInitialized);
         }
@@ -27,35 +30,36 @@ impl PilotWhitelist {
 
     /// Approve an investor address for pilot participation.
     pub fn approve(env: Env, admin: Address, address: Address) {
+        extend_instance(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
         Self::require_not_paused(&env);
 
-        env.storage()
-            .persistent()
-            .set(&DataKey::Approved(address.clone()), &true);
+        let key = DataKey::Approved(address.clone());
+        env.storage().persistent().set(&key, &true);
+        extend_persistent(&env, &key);
         events::emit_approved(&env, admin, address);
     }
 
     /// Revoke an investor address from pilot participation.
     pub fn revoke(env: Env, admin: Address, address: Address) {
+        extend_instance(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
         Self::require_not_paused(&env);
 
-        env.storage()
-            .persistent()
-            .set(&DataKey::Approved(address.clone()), &false);
+        let key = DataKey::Approved(address.clone());
+        env.storage().persistent().set(&key, &false);
+        extend_persistent(&env, &key);
         events::emit_revoked(&env, admin, address);
     }
 
     /// Return whether an address is approved for pilot participation.
     /// Read-only: keeps working while the contract is paused.
     pub fn is_approved(env: Env, address: Address) -> bool {
-        env.storage()
-            .persistent()
-            .get(&DataKey::Approved(address))
-            .unwrap_or(false)
+        let key = DataKey::Approved(address);
+        extend_persistent(&env, &key);
+        env.storage().persistent().get(&key).unwrap_or(false)
     }
 
     /// Return the configured whitelist admin.
@@ -73,6 +77,7 @@ impl PilotWhitelist {
     /// mistyped or unreachable new admin can never lock the contract out.
     /// Not blocked by `pause`: admin recovery must keep working while paused.
     pub fn transfer_admin_start(env: Env, caller: Address, new_admin: Address) {
+        extend_instance(&env);
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
@@ -85,6 +90,7 @@ impl PilotWhitelist {
     /// instant this call succeeds, since `require_admin` compares against the
     /// single stored admin address.
     pub fn transfer_admin_accept(env: Env, new_admin: Address) {
+        extend_instance(&env);
         new_admin.require_auth();
 
         let pending = Storage::pending_admin(&env);
@@ -103,6 +109,7 @@ impl PilotWhitelist {
     /// Cancel a pending admin transfer before it is accepted. Only the
     /// current admin can cancel.
     pub fn transfer_admin_cancel(env: Env, caller: Address) {
+        extend_instance(&env);
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
@@ -120,6 +127,7 @@ impl PilotWhitelist {
     /// Mirrors `pilot-payout-split`'s `pause`. Before this change, a wrongful
     /// approval or revocation had no on-chain circuit breaker.
     pub fn pause(env: Env, admin: Address) {
+        extend_instance(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
 
@@ -129,6 +137,7 @@ impl PilotWhitelist {
 
     /// Resume `approve` and `revoke`.
     pub fn unpause(env: Env, admin: Address) {
+        extend_instance(&env);
         admin.require_auth();
         Self::require_admin(&env, &admin);
 
@@ -465,5 +474,37 @@ mod tests {
         client.transfer_admin_accept(&new_admin);
 
         assert_eq!(client.admin(), new_admin);
+    }
+
+    #[test]
+    fn state_changing_entry_points_extend_ttls() {
+        use crate::ttl::TTL_EXTEND_TO;
+        use soroban_sdk::testutils::storage::{Instance as _, Persistent as _};
+        use soroban_sdk::testutils::Ledger as _;
+
+        let (env, admin, investor, client) = setup();
+        env.mock_all_auths();
+        client.initialize(&admin);
+        client.approve(&admin, &investor);
+
+        let contract_id = client.address.clone();
+
+        // Leave ~110k ledgers of TTL: still live, but below the threshold.
+        env.ledger()
+            .with_mut(|ledger| ledger.sequence_number += 3_000_000);
+
+        // A normal state-changing call must refresh both the instance and the
+        // allowlist entry it writes.
+        client.approve(&admin, &investor);
+
+        let approved_ttl = env.as_contract(&contract_id, || {
+            env.storage()
+                .persistent()
+                .get_ttl(&DataKey::Approved(investor.clone()))
+        });
+        let instance_ttl = env.as_contract(&contract_id, || env.storage().instance().get_ttl());
+
+        assert_eq!(approved_ttl, TTL_EXTEND_TO);
+        assert_eq!(instance_ttl, TTL_EXTEND_TO);
     }
 }

@@ -73,6 +73,7 @@ vi.mock("@/hooks/useGameWallet", () => ({
 }));
 
 import { ClaimPropertyStep } from "../ClaimPropertyStep";
+import { TxNotConfirmedError } from "@/lib/tx-confirmation";
 
 beforeEach(() => {
   cleanup();
@@ -135,6 +136,28 @@ describe("ClaimPropertyStep", () => {
     expect(mockSignAndSubmitTx).not.toHaveBeenCalledWith(
       "placeholder-starter-claim-xdr",
     );
+  });
+
+  it("stays on the step when the transaction is not confirmed", async () => {
+    mockSignAndSubmitTx.mockRejectedValueOnce(new TxNotConfirmedError("hash"));
+    const onComplete = vi.fn();
+
+    const view = renderWithIntl(
+      <ClaimPropertyStep onComplete={onComplete} onSkip={() => {}} />,
+    );
+
+    fireEvent.click(selectFirstClaimableTile(view));
+    fireEvent.click(view.getByRole("button", { name: /Claim Free Property/i }));
+
+    await waitFor(() => {
+      expect(mockSignAndSubmitTx).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(
+        view.getByRole("button", { name: /Claim Free Property/i }),
+      ).not.toBeNull();
+    });
+    expect(onComplete).not.toHaveBeenCalled();
   });
 
   it("does not attempt to claim when no wallet address is connected", () => {

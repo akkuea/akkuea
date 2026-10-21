@@ -25,13 +25,7 @@ import {
   ArrowUpRight,
   Home,
 } from "lucide-react";
-import {
-  EPOCH_LEDGERS,
-  BASE_RENTAL_RATE,
-  HOUSE_MULTIPLIER,
-  APARTMENT_MULTIPLIER,
-  SKYSCRAPER_MULTIPLIER,
-} from "@akkuea/shared";
+import { computeAccruedRent } from "@akkuea/shared";
 import { rpc as SorobanRpc } from "@stellar/stellar-sdk";
 import { GameProperty, BuildingLevel } from "@/types/game.types";
 import { connectWalletKit } from "@/lib/walletKit";
@@ -64,13 +58,6 @@ interface ClaimProgress {
 }
 
 // ─── Lookup tables ────────────────────────────────────────────────────────────
-
-const LEVEL_MULTIPLIER: Record<BuildingLevel, number> = {
-  0: 1,
-  1: HOUSE_MULTIPLIER,
-  2: APARTMENT_MULTIPLIER,
-  3: SKYSCRAPER_MULTIPLIER,
-};
 
 const LEVEL_LABEL_KEY: Record<
   BuildingLevel,
@@ -288,19 +275,17 @@ const MOCK_EVENTS: GameEventEntry[] = [
 // ─── Income helpers ────────────────────────────────────────────────────────────
 
 /**
- * Client-side accrual calculation matching the on-chain formula:
- *   claimable = floor((currentLedger − lastClaimedLedger) / EPOCH_LEDGERS)
- *               × BASE_RENTAL_RATE
- *               × rentalRateMultiplier
+ * Client-side accrual using the shared port of the game engine's
+ * calculate_accrued_income, so the dashboard shows what claim_rental pays.
  */
 function computeAccruedIncome(
   property: DashboardProperty,
   currentLedger: number,
 ): number {
-  const elapsed = currentLedger - property.lastClaimedLedger;
-  if (elapsed <= 0) return 0;
-  const epochs = Math.floor(elapsed / EPOCH_LEDGERS);
-  return epochs * BASE_RENTAL_RATE * LEVEL_MULTIPLIER[property.buildingLevel];
+  return computeAccruedRent(
+    currentLedger - property.lastClaimedLedger,
+    property.buildingLevel,
+  );
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

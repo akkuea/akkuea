@@ -22,7 +22,7 @@ The Akkuea API is built with the [Elysia](https://elysiajs.com) framework runnin
 
 - Type-safe request/response handling
 - Structured error handling with a consistent response shape
-- Built-in CORS for frontend integration
+- CORS restricted to an allowlist of frontend origins (`CORS_ALLOWED_ORIGINS`, see [environment variables](../deployment/environment-variables.md#cors))
 - Rate limiting
 - Health checks for monitoring
 
@@ -102,6 +102,8 @@ Some endpoints (e.g. property creation, tokenization) instead check an `x-user-a
 3. **Authorization errors** - insufficient permissions
 4. **Blockchain errors** - Stellar/Soroban transaction failures
 5. **Business logic errors** - invalid operations (insufficient shares, already tokenized, etc.)
+
+Only errors the API raises on purpose (its `ApiError` and `AppError` classes, the `@akkuea/shared` error classes, and request validation, parsing, and routing errors) return their own `error` code, `message`, and status. Any other failure, such as a database driver error, is logged in full on the server and returned to the client as a generic `500` with `"error": "INTERNAL_ERROR"` and `"message": "An unexpected error occurred"`, so internal details such as SQL text never reach the caller.
 
 ## Rate Limiting
 

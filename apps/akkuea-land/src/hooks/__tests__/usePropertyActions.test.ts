@@ -8,7 +8,7 @@
  *  3. The optimistic UI update is applied immediately and rolled back on error.
  */
 
-import { describe, it, expect, vi, beforeEach, mock, afterAll } from "bun:test";
+import { describe, it, expect, vi, beforeEach, afterEach, mock, afterAll } from "bun:test";
 
 // ── Shared mock data ─────────────────────────────────────────────────────────
 
@@ -76,6 +76,7 @@ import {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 import { GameProperty, BuildingLevel } from "../../types/game.types";
+import { SKYSCRAPER_COST } from "@akkuea/shared";
 
 function makeProperty(overrides: Partial<GameProperty> = {}): GameProperty {
   return {
@@ -292,29 +293,6 @@ globalThis.MutationObserver = dom.window.MutationObserver as any;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { act, cleanup, renderHook } from "@testing-library/react";
-
-// Preventive: hook doesn't import stellar-sdk today, but will when mockXdr stubs are replaced.
-mock.module("@stellar/stellar-sdk", () => ({
-  TransactionBuilder: class {
-    addOperation() {
-      return this;
-    }
-    setTimeout() {
-      return this;
-    }
-    build() {
-      return { toXDR: () => "mock-xdr-payload" };
-    }
-  },
-  Networks: { TESTNET: "Test SDF Network ; September 2015" },
-  SorobanRpc: { Server: class {} },
-  Operation: { invokeContractFunction: vi.fn() },
-  Asset: class {
-    static native() {
-      return new this();
-    }
-  },
-}));
 
 import { usePropertyActions } from "../usePropertyActions";
 
@@ -601,7 +579,7 @@ describe("usePropertyActions", () => {
   });
 
   describe("TC6 - improveProperty: success path", () => {
-    it("levels up from 1→2 (Commercial), doubles improveCost, and surfaces exact success message", async () => {
+    it("levels up from 1→2 (Commercial), sets improveCost to the Skyscraper upgrade cost, and surfaces exact success message", async () => {
       const level1Property: GameProperty = {
         ...baseProperty,
         owner: VIEWER_ADDRESS,
@@ -627,7 +605,7 @@ describe("usePropertyActions", () => {
       const optimisticProp = (onPropertyUpdate.mock as any)
         .calls[0][0] as GameProperty;
       expect(optimisticProp.buildingLevel).toBe(2);
-      expect(optimisticProp.improveCost).toBe(200);
+      expect(optimisticProp.improveCost).toBe(SKYSCRAPER_COST);
 
       expect(mockSignTransaction).toHaveBeenCalledWith(STUB_XDR, {
         networkPassphrase: NETWORK_PASSPHRASE,
@@ -875,6 +853,78 @@ describe("usePropertyActions", () => {
       expect(result.current.success).toBeNull();
       expect(result.current.error).toBeNull();
     });
+  });
+});
+
+describe("usePropertyActions - transaction not confirmed", () => {
+  const waitMock = waitForSorobanTx as ReturnType<typeof vi.fn>;
+  const listMock = buildListForSaleXdr as ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    cleanup();
+    mockSignTransaction.mockReset();
+    mockSignTransaction.mockResolvedValue({ signedTxXdr: "signed-mock-xdr" });
+    mockGetWalletKit.mockReset();
+    mockGetWalletKit.mockImplementation(() => ({
+      signTransaction: mockSignTransaction,
+    }));
+    (submitSorobanTx as ReturnType<typeof vi.fn>).mockResolvedValue(
+      MOCK_TX_HASH,
+    );
+    listMock.mockClear();
+    waitMock.mockReset();
+    waitMock.mockResolvedValue("pending");
+  });
+
+  afterEach(() => {
+    waitMock.mockReset();
+    waitMock.mockResolvedValue("success");
+  });
+
+  it("sets an error with the hash, no success, and rolls back the optimistic update", async () => {
+    const onPropertyUpdate = vi.fn();
+
+    const { result } = renderHook(() =>
+      usePropertyActions(baseProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+    );
+
+    await act(async () => {
+      await result.current.buyFromTreasury();
+    });
+
+    expect(result.current.error).toContain("not confirmed yet");
+    expect(result.current.error).toContain(MOCK_TX_HASH);
+    expect(result.current.success).toBeNull();
+    expect(result.current.pendingAction).toBeNull();
+
+    expect(onPropertyUpdate).toHaveBeenCalledTimes(2);
+    const rollbackArg = (onPropertyUpdate.mock as any)
+      .calls[1][0] as GameProperty;
+    expect(rollbackArg).toEqual(baseProperty);
+  });
+
+  it("listForSale never builds list when approve is not confirmed", async () => {
+    const onPropertyUpdate = vi.fn();
+    const ownedProperty: GameProperty = {
+      ...baseProperty,
+      owner: VIEWER_ADDRESS,
+    };
+
+    const { result } = renderHook(() =>
+      usePropertyActions(ownedProperty, onPropertyUpdate, VIEWER_ADDRESS, true),
+    );
+
+    await act(async () => {
+      await result.current.listForSale(250);
+    });
+
+    expect(buildApproveMarketplaceXdr).toHaveBeenCalled();
+    expect(listMock).not.toHaveBeenCalled();
+    expect(mockSignTransaction).toHaveBeenCalledTimes(1);
+    expect(result.current.error).toContain("not confirmed yet");
+    expect(result.current.success).toBeNull();
+    const rollbackArg = (onPropertyUpdate.mock as any).calls.at(-1)[0];
+    expect(rollbackArg).toEqual(ownedProperty);
   });
 });
 

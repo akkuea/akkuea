@@ -40,6 +40,7 @@ export function buildContentSecurityPolicy(nonce?: string): string {
     "https://auth.privy.io",
     "wss://auth.privy.io",
     "https://api.privy.io",
+    "https://sdk.api.pollar.xyz",
     // Stellar Wallets Kit discovery and signature requests
     "https://api.freighter.app",
   ];
@@ -53,6 +54,7 @@ export function buildContentSecurityPolicy(nonce?: string): string {
     "'self'",
     // Privy embedded wallet and login flows
     "https://auth.privy.io",
+    "https://sdk.api.pollar.xyz",
     // Stellar Wallets Kit
     "https://freighter.app",
   ];

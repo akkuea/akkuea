@@ -65,6 +65,20 @@ describe("Security Headers Configuration", () => {
       expect(csp).toContain("https://freighter.app");
     });
 
+    it("should include Pollar SDK endpoint in connect-src and frame-src", () => {
+      const csp = buildContentSecurityPolicy();
+
+      expect(csp).toContain("https://sdk.api.pollar.xyz");
+      // Verify it's in connect-src
+      const connectMatch = csp.match(/connect-src\s+([^;]+)/);
+      expect(connectMatch).toBeDefined();
+      expect(connectMatch?.[1]).toContain("https://sdk.api.pollar.xyz");
+      // Verify it's in frame-src
+      const frameMatch = csp.match(/frame-src\s+([^;]+)/);
+      expect(frameMatch).toBeDefined();
+      expect(frameMatch?.[1]).toContain("https://sdk.api.pollar.xyz");
+    });
+
     it("should include lending SSE URL when configured", () => {
       process.env.NEXT_PUBLIC_LENDING_SSE_URL =
         "https://api.example.com/sse/lending";

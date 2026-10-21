@@ -1,5 +1,6 @@
 use soroban_sdk::{contracttype, panic_with_error, Address, Env, String, Vec};
 
+use crate::ttl::extend_persistent;
 use crate::{Currency, EvidenceRecord, ExitRecord, PayoutError, SwapFailureRecord};
 
 #[contracttype]
@@ -61,46 +62,48 @@ impl Storage {
     /// holder's settlement outcome, so those facts are readable after the RPC
     /// event retention window without introducing any new ledger keys.
     pub fn evidence(env: &Env, cycle_id: &String) -> Option<EvidenceRecord> {
-        env.storage()
-            .persistent()
-            .get(&DataKey::Evidence(cycle_id.clone()))
+        let key = DataKey::Evidence(cycle_id.clone());
+        extend_persistent(env, &key);
+        env.storage().persistent().get(&key)
     }
 
     pub fn set_evidence(env: &Env, cycle_id: &String, record: &EvidenceRecord) {
-        env.storage()
-            .persistent()
-            .set(&DataKey::Evidence(cycle_id.clone()), record);
+        let key = DataKey::Evidence(cycle_id.clone());
+        env.storage().persistent().set(&key, record);
+        extend_persistent(env, &key);
     }
 
     /// Explicit settlement-currency preference of a single holder.
     /// Absence means USDC (the default), so existing holders are unaffected.
     pub fn currency_preference(env: &Env, holder: &Address) -> Option<Currency> {
-        env.storage()
-            .persistent()
-            .get(&DataKey::CurrencyPreference(holder.clone()))
+        let key = DataKey::CurrencyPreference(holder.clone());
+        extend_persistent(env, &key);
+        env.storage().persistent().get(&key)
     }
 
     pub fn set_currency_preference(env: &Env, holder: &Address, currency: &Currency) {
-        env.storage()
-            .persistent()
-            .set(&DataKey::CurrencyPreference(holder.clone()), currency);
+        let key = DataKey::CurrencyPreference(holder.clone());
+        env.storage().persistent().set(&key, currency);
+        extend_persistent(env, &key);
     }
 
     /// On-chain record of swap legs rejected during a cycle's distribution.
     /// Persisted so a rejected leg is auditable rather than silent.
     pub fn swap_failures(env: &Env, cycle_id: &String) -> Vec<SwapFailureRecord> {
+        let key = DataKey::SwapFailures(cycle_id.clone());
+        extend_persistent(env, &key);
         env.storage()
             .persistent()
-            .get(&DataKey::SwapFailures(cycle_id.clone()))
+            .get(&key)
             .unwrap_or_else(|| Vec::new(env))
     }
 
     pub fn push_swap_failure(env: &Env, cycle_id: &String, record: &SwapFailureRecord) {
         let mut failures = Self::swap_failures(env, cycle_id);
         failures.push_back(record.clone());
-        env.storage()
-            .persistent()
-            .set(&DataKey::SwapFailures(cycle_id.clone()), &failures);
+        let key = DataKey::SwapFailures(cycle_id.clone());
+        env.storage().persistent().set(&key, &failures);
+        extend_persistent(env, &key);
     }
 
     /// The terminal exit record, if the ally/property relationship has been
@@ -117,16 +120,15 @@ impl Storage {
 
     /// USDC currently reserved for a holder after a failed EURC swap leg.
     pub fn withheld_balance(env: &Env, holder: &Address) -> i128 {
-        env.storage()
-            .persistent()
-            .get(&DataKey::WithheldBalance(holder.clone()))
-            .unwrap_or(0)
+        let key = DataKey::WithheldBalance(holder.clone());
+        extend_persistent(env, &key);
+        env.storage().persistent().get(&key).unwrap_or(0)
     }
 
     pub fn set_withheld_balance(env: &Env, holder: &Address, amount: i128) {
-        env.storage()
-            .persistent()
-            .set(&DataKey::WithheldBalance(holder.clone()), &amount);
+        let key = DataKey::WithheldBalance(holder.clone());
+        env.storage().persistent().set(&key, &amount);
+        extend_persistent(env, &key);
     }
 
     /// Adds a cycle's withheld share to a holder's reserved balance.

@@ -77,8 +77,13 @@ Submitted    ally submitted, waiting on the operator
 UnderReview  operator opened the cycle
 Approved     operator approved, distribution can execute
 Rejected     operator rejected with a reason, ally may submit again
-Disputed     admin or operator flagged a problem, distribution blocked
+Disputed     admin or operator flagged a problem, distribution blocked until
+             the ally submits again and the operator approves
 ```
+
+The full transition table, with the exact error for every refused action, is
+in the module documentation at the top of
+`apps/contracts/contracts/pilot-payout-split/src/lib.rs`.
 
 Only an `Approved` cycle can be distributed. The co-signed `record_evidence`
 path lands directly on `Approved`, because both required signers authorized the
@@ -320,7 +325,11 @@ stellar contract invoke \
 
 A rejected cycle can be corrected and submitted again. The admin or the
 operator can also call `flag_dispute` with a reason, which blocks distribution
-and shows as `Disputed` in the investor timeline.
+and shows as `Disputed` in the investor timeline. A disputed cycle is resolved
+the same way as a rejected one: the ally calls `submit_evidence` again with the
+same `cycle_id`, which moves it back to `Submitted` and emits a `resubmit`
+event naming the cleared status, and the operator reviews it again. After
+`exit`, every one of these evidence calls is refused with `ContractExited`.
 
 ---
 

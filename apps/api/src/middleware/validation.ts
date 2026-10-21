@@ -31,10 +31,22 @@ function createValidationError(
   message: string;
   details: { source: string; errors: Record<string, string[]> };
 } {
+  success: false;
+  error: 'VALIDATION_ERROR';
+  code: 'VALIDATION_ERROR';
+  message: string;
+  statusCode: 400;
+  details: { source: 'body' | 'query' | 'params'; errors: Record<string, string[]> };
+} {
+  // Same envelope `handleError` returns for an ApiError, so a validation
+  // failure looks the same whether the schema rejected the request or a
+  // controller threw: `error` carries the code and `success` is false.
   return {
-    status: 400,
+    success: false,
+    error: 'VALIDATION_ERROR',
     code: 'VALIDATION_ERROR',
     message: `Invalid ${source} parameters`,
+    statusCode: 400,
     details: {
       source,
       errors: errors,
@@ -66,10 +78,12 @@ export function validateBody<T extends ZodSchema>(schema: T) {
         return {
           validatedBody: null as z.infer<T> | null,
           bodyValidationError: {
-            status: 400,
+            success: false,
+            error: 'INVALID_JSON',
             code: 'INVALID_JSON',
             message: 'Request body must be valid JSON',
-          } as const,
+            statusCode: 400,
+          },
         };
       }
     })
@@ -81,7 +95,7 @@ export function validateBody<T extends ZodSchema>(schema: T) {
       }: {
         bodyValidationError:
           | ReturnType<typeof createValidationError>
-          | { status: number; code: string; message: string }
+          | { success: false; error: string; code: string; message: string; statusCode: number }
           | null;
         set: { status?: number | string };
       }) => {
@@ -168,15 +182,28 @@ export function validateParams<T extends ZodSchema>(schema: T) {
 }
 
 /**
+ * Monotonic counter backing the per-call `seed`. Elysia deduplicates plugins
+ * by `name` + `seed`, so without a unique seed two `validate()` calls in the
+ * same instance collapse into one plugin and the first schema silently wins.
+ * A counter is unique per call, unlike a seed derived from schema key names,
+ * which collides for two different schemas that share the same keys.
+ */
+let validateSeq = 0;
+
+/**
  * Combined validation plugin for body, query, and params
  * Uses Elysia's derive pattern for type-safe validated data access
+ *
+ * Each call is its own plugin, and callers register it inside a group next to
+ * the single route it guards. A scoped hook added with `.use()` at instance
+ * level would otherwise apply to every route registered after it.
  */
 export function validate<
   TBody extends ZodSchema | undefined = undefined,
   TQuery extends ZodSchema | undefined = undefined,
   TParams extends ZodSchema | undefined = undefined,
 >(options: { body?: TBody; query?: TQuery; params?: TParams }) {
-  return new Elysia({ name: 'validate' })
+  return new Elysia({ name: 'validate', seed: ++validateSeq })
     .resolve(
       { as: 'scoped' },
       ({
@@ -194,7 +221,7 @@ export function validate<
           validatedParams: TParams extends ZodSchema ? z.infer<TParams> : undefined;
           validationError:
             | ReturnType<typeof createValidationError>
-            | { status: number; code: string; message: string }
+            | { success: false; error: string; code: string; message: string; statusCode: number }
             | null;
         } = {
           validatedBody: undefined as TBody extends ZodSchema ? z.infer<TBody> : undefined,
@@ -222,9 +249,11 @@ export function validate<
           } catch (e) {
             logger.error('Error parsing JSON body', e);
             result.validationError = {
-              status: 400,
+              success: false,
+              error: 'INVALID_JSON',
               code: 'INVALID_JSON',
               message: 'Request body must be valid JSON',
+              statusCode: 400,
             };
             return result;
           }
@@ -275,7 +304,7 @@ export function validate<
       }: {
         validationError:
           | ReturnType<typeof createValidationError>
-          | { status: number; code: string; message: string }
+          | { success: false; error: string; code: string; message: string; statusCode: number }
           | null;
         set: { status?: number | string };
       }) => {

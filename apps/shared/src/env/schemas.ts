@@ -159,6 +159,79 @@ export const propertyImageHostsSchema = z
     }
   });
 
+/**
+ * Browser origins the API accepts cross-origin requests from in development
+ * when `CORS_ALLOWED_ORIGINS` is unset: the webapp (`next dev` on 3000) and
+ * Akkuea Land (`next dev`, which takes 3002 under `bun run dev` because the
+ * webapp holds 3000 and the API 3001).
+ */
+export const DEFAULT_DEV_CORS_ALLOWED_ORIGINS: readonly string[] = [
+  "http://localhost:3000",
+  "http://localhost:3002",
+];
+
+/**
+ * True for an exact browser origin such as `https://app.example.com` or
+ * `http://localhost:3000`: an `http` or `https` scheme, a host, and an optional
+ * non-default port, written exactly as a browser sends it in the `Origin`
+ * header. Paths, trailing slashes, query strings, credentials, wildcards, and
+ * upper-case hosts are rejected.
+ */
+export const isExactOrigin = (val: string): boolean => {
+  if (typeof val !== "string" || val.includes("*")) return false;
+  try {
+    const url = new URL(val);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      url.origin === val
+    );
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Splits a comma-separated origin list, trimming entries and dropping empty
+ * ones. See docs/deployment/environment-variables.md.
+ */
+export function parseCorsAllowedOrigins(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+export const corsAllowedOriginsSchema = z
+  .string()
+  .optional()
+  .transform(parseCorsAllowedOrigins)
+  .superRefine((origins, ctx) => {
+    const invalid = origins.filter((origin) => !isExactOrigin(origin));
+    if (invalid.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `CORS_ALLOWED_ORIGINS must be a comma-separated list of exact origins (scheme, host, and optional port, such as https://app.example.com; no path, trailing slash, or wildcard). Invalid: ${invalid.join(", ")}`,
+      });
+    }
+  });
+
+/**
+ * The origins the API should allow, given the parsed `CORS_ALLOWED_ORIGINS`
+ * list and `NODE_ENV`. A configured list always wins. With no list,
+ * development (also the default when `NODE_ENV` is unset) falls back to the
+ * local frontends and every other environment allows no cross-origin requests.
+ */
+export function resolveCorsAllowedOrigins(
+  configured: readonly string[],
+  nodeEnv: string | undefined,
+): string[] {
+  if (configured.length > 0) return [...configured];
+  if ((nodeEnv ?? "development") === "development") {
+    return [...DEFAULT_DEV_CORS_ALLOWED_ORIGINS];
+  }
+  return [];
+}
+
 export const apiEnvSchema = z.object({
   DATABASE_URL: z
     .string({ error: "DATABASE_URL is required" })
@@ -199,6 +272,7 @@ export const apiEnvSchema = z.object({
   NOTIFICATION_REQUEST_TIMEOUT_MS: z.string().optional(),
   REDIS_URL: urlSchema.optional().or(z.literal("")),
   TRUSTED_PROXY_HOPS: trustedProxyHopsSchema,
+  CORS_ALLOWED_ORIGINS: corsAllowedOriginsSchema,
   STELLAR_NETWORK: z.enum(["testnet", "mainnet"]).optional().default("testnet"),
   STELLAR_HORIZON_URL: urlSchema,
   STELLAR_RPC_URL: urlSchema,

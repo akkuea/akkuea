@@ -70,9 +70,11 @@ after an explicit `unpause`.
 | `set_currency_preference`                     |                                              |
 
 Rejects with `PayoutError::ContractPaused` (error code 4). Note `flag_dispute`
-and `exit` are **not** pause-gated on `pilot-payout-split`; that is a
-pre-existing property of this contract, unrelated to this change, and out of
-scope here.
+and `exit` are **not** pause-gated on `pilot-payout-split`. For `flag_dispute`
+this is deliberate: a dispute can only stop money from moving, so the admin or
+operator can freeze a suspicious cycle during the incident, before anyone
+unpauses. Both still reject with `PayoutError::ContractExited` once the
+contract has been exited.
 
 **Not blocked on any of the three contracts:** `pause`, `unpause`,
 `transfer_admin_start`, `transfer_admin_accept`, `transfer_admin_cancel`.

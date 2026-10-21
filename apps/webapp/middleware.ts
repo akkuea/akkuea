@@ -5,7 +5,7 @@ import { routing } from "./src/i18n/routing";
 const intlMiddleware = createMiddleware(routing);
 
 const AUTH_COOKIE_NAME = "akkuea-authenticated";
-const PROTECTED_ROUTES = ["/dashboard", "/marketplace", "/map"];
+const PROTECTED_ROUTES = ["/dashboard", "/marketplace"];
 
 export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -24,7 +24,9 @@ export function middleware(request: NextRequest) {
   if (isProtected) {
     const hasAuthCookie = request.cookies.get(AUTH_COOKIE_NAME)?.value === "1";
     if (!hasAuthCookie) {
-      const callbackUrl = encodeURIComponent(`${pathname}${search}`);
+      // searchParams.set() encodes the value once; encoding it here too
+      // produced %252F... and the login page could not resolve the path.
+      const callbackUrl = `${pathname}${search}`;
       const loginUrl = request.nextUrl.clone();
 
       const localeMatch = pathname.match(

@@ -22,7 +22,7 @@ The Akkuea API is built with the [Elysia](https://elysiajs.com) framework runnin
 
 - Type-safe request/response handling
 - Structured error handling with a consistent response shape
-- Built-in CORS for frontend integration
+- CORS restricted to an allowlist of frontend origins (`CORS_ALLOWED_ORIGINS`, see [environment variables](../deployment/environment-variables.md#cors))
 - Rate limiting
 - Health checks for monitoring
 

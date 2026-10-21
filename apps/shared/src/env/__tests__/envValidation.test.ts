@@ -11,6 +11,11 @@ import {
   DEFAULT_PROPERTY_IMAGE_HOSTS,
   isBareHostname,
   parsePropertyImageHosts,
+  DEFAULT_DEV_CORS_ALLOWED_ORIGINS,
+  corsAllowedOriginsSchema,
+  isExactOrigin,
+  parseCorsAllowedOrigins,
+  resolveCorsAllowedOrigins,
 } from "../index";
 
 const sampleKeypair = Keypair.random();
@@ -181,6 +186,103 @@ describe("Environment Validation Module", () => {
           validateApiEnv({ ...VALID_API_ENV, TRUSTED_PROXY_HOPS: value }),
         ).toThrow(EnvValidationError);
       }
+    });
+
+    it("parses CORS_ALLOWED_ORIGINS to an empty list when unset", () => {
+      const parsed = validateApiEnv(VALID_API_ENV);
+      expect(parsed.CORS_ALLOWED_ORIGINS).toEqual([]);
+    });
+
+    it("accepts a valid CORS_ALLOWED_ORIGINS list", () => {
+      const parsed = validateApiEnv({
+        ...VALID_API_ENV,
+        CORS_ALLOWED_ORIGINS:
+          " https://app.akkuea.com, https://land.akkuea.com ,,http://localhost:3000",
+      });
+      expect(parsed.CORS_ALLOWED_ORIGINS).toEqual([
+        "https://app.akkuea.com",
+        "https://land.akkuea.com",
+        "http://localhost:3000",
+      ]);
+    });
+
+    it("rejects CORS_ALLOWED_ORIGINS entries that are not exact origins", () => {
+      for (const value of [
+        "https://app.akkuea.com/",
+        "https://app.akkuea.com/path",
+        "*",
+        "https://*.akkuea.com",
+        "app.akkuea.com",
+        "https://app.akkuea.com,ftp://files.akkuea.com",
+      ]) {
+        expect(() =>
+          validateApiEnv({ ...VALID_API_ENV, CORS_ALLOWED_ORIGINS: value }),
+        ).toThrow(EnvValidationError);
+      }
+    });
+  });
+
+  describe("CORS allowed origin helpers", () => {
+    it("accepts exact origins and rejects anything else", () => {
+      expect(isExactOrigin("https://app.akkuea.com")).toBe(true);
+      expect(isExactOrigin("http://localhost:3000")).toBe(true);
+      expect(isExactOrigin("https://app.akkuea.com:8443")).toBe(true);
+      expect(isExactOrigin("")).toBe(false);
+      expect(isExactOrigin("null")).toBe(false);
+      expect(isExactOrigin("app.akkuea.com")).toBe(false);
+      expect(isExactOrigin("https://app.akkuea.com/")).toBe(false);
+      expect(isExactOrigin("https://app.akkuea.com/path")).toBe(false);
+      expect(isExactOrigin("https://app.akkuea.com?x=1")).toBe(false);
+      expect(isExactOrigin("https://user:pass@app.akkuea.com")).toBe(false);
+      expect(isExactOrigin("https://app.akkuea.com:443")).toBe(false);
+      expect(isExactOrigin("https://App.Akkuea.com")).toBe(false);
+      expect(isExactOrigin("*")).toBe(false);
+      expect(isExactOrigin("https://*.akkuea.com")).toBe(false);
+      expect(isExactOrigin("ws://app.akkuea.com")).toBe(false);
+    });
+
+    it("splits and trims an origin list, dropping empty entries", () => {
+      expect(parseCorsAllowedOrigins(undefined)).toEqual([]);
+      expect(parseCorsAllowedOrigins("")).toEqual([]);
+      expect(parseCorsAllowedOrigins(" , ")).toEqual([]);
+      expect(
+        parseCorsAllowedOrigins(
+          " https://a.example.com ,https://b.example.com,",
+        ),
+      ).toEqual(["https://a.example.com", "https://b.example.com"]);
+    });
+
+    it("validates every entry through the schema", () => {
+      expect(corsAllowedOriginsSchema.parse(undefined)).toEqual([]);
+      expect(
+        corsAllowedOriginsSchema.safeParse("https://ok.example.com,bad")
+          .success,
+      ).toBe(false);
+    });
+
+    it("defaults to the local frontends in development only", () => {
+      expect(DEFAULT_DEV_CORS_ALLOWED_ORIGINS).toEqual([
+        "http://localhost:3000",
+        "http://localhost:3002",
+      ]);
+      expect(resolveCorsAllowedOrigins([], "development")).toEqual([
+        ...DEFAULT_DEV_CORS_ALLOWED_ORIGINS,
+      ]);
+      expect(resolveCorsAllowedOrigins([], undefined)).toEqual([
+        ...DEFAULT_DEV_CORS_ALLOWED_ORIGINS,
+      ]);
+      expect(resolveCorsAllowedOrigins([], "production")).toEqual([]);
+      expect(resolveCorsAllowedOrigins([], "test")).toEqual([]);
+    });
+
+    it("uses a configured list as-is in every environment", () => {
+      const configured = ["https://app.akkuea.com"];
+      expect(resolveCorsAllowedOrigins(configured, "production")).toEqual(
+        configured,
+      );
+      expect(resolveCorsAllowedOrigins(configured, "development")).toEqual(
+        configured,
+      );
     });
   });
 

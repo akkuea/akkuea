@@ -1,5 +1,4 @@
 import { Elysia } from 'elysia';
-import { cors } from '@elysiajs/cors';
 import { propertyRoutes } from './routes/properties';
 import { marketplaceRoutes } from './routes/marketplace';
 import { lendingRoutes } from './routes/lending';
@@ -14,6 +13,7 @@ import { ledgerRoutes } from './routes/ledger';
 import { treasuryRoutes } from './routes/treasury';
 import { errorHandler } from './middleware/errorHandler';
 import { requestLogger } from './middleware';
+import { createCorsPlugin, readCorsAllowedOrigins } from './middleware/cors';
 
 /**
  * Base Elysia app without swagger
@@ -21,7 +21,7 @@ import { requestLogger } from './middleware';
  */
 const app = new Elysia()
   .use(requestLogger)
-  .use(cors())
+  .use(createCorsPlugin(readCorsAllowedOrigins()))
   .use(errorHandler)
   .use(authRoutes)
   .use(propertyRoutes)

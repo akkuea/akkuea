@@ -176,4 +176,12 @@ impl PoolStorage {
         let key = LendingKey::PoolPaused(pool_id.clone());
         env.storage().instance().set(&key, &paused);
     }
+
+    /// Fail with the typed `ContractPaused` error if this pool is paused.
+    pub fn require_not_paused(env: &Env, pool_id: &String) -> Result<(), ContractError> {
+        if Self::is_paused(env, pool_id) {
+            return Err(ContractError::ContractPaused);
+        }
+        Ok(())
+    }
 }

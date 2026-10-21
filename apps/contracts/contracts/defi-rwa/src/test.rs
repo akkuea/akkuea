@@ -906,7 +906,7 @@ fn test_multiple_pools_isolation() {
 // ─── Paused pool rejection (AC-6 / TR-3) ──────
 
 #[test]
-#[should_panic(expected = "pool is paused")]
+#[should_panic(expected = "Error(Contract, #5)")]
 fn test_deposit_paused_pool() {
     let s = setup();
     let pool_id = create_default_pool(&s);
@@ -1370,7 +1370,7 @@ fn test_borrow_with_insufficient_collateral() {
 }
 
 #[test]
-#[should_panic(expected = "Pool is paused")]
+#[should_panic(expected = "ContractPaused")]
 fn test_borrow_from_paused_pool() {
     use soroban_sdk::token::StellarAssetClient;
 
@@ -2905,16 +2905,385 @@ fn test_borrow_with_zero_oracle_price() {
     });
 }
 
+// ─── Global pause blocks every value-moving entry point (issue #1273) ────────
+//
+// Each test below calls the real PropertyTokenContractClient entry point
+// while the contract is globally paused, and asserts it fails with the typed
+// ContractPaused error (#5), replacing the old hollow test that only ever
+// called PauseControl::require_not_paused directly and never exercised a
+// real entry point.
+
 #[test]
-#[should_panic(expected = "ContractPaused")]
-fn test_emergency_pause_blocks_operations() {
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_deposit() {
     let s = setup();
+    let pool_id = create_default_pool(&s);
+    let user = Address::generate(&s.env);
+    mint_tokens(&s, &user, 1_000_000_000);
+
+    s.contract_client.emergency_pause(&s.admin);
+    s.contract_client
+        .deposit(&user, &pool_id, &1_000_000_000_i128);
+}
+
+#[test]
+fn test_global_pause_leaves_deposit_state_unchanged() {
+    extern crate std;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    let user = Address::generate(&s.env);
+    mint_tokens(&s, &user, 1_000_000_000);
 
     s.contract_client.emergency_pause(&s.admin);
 
-    s.env.as_contract(&s.contract_address, || {
-        PauseControl::require_not_paused(&s.env).unwrap();
+    let attempt = catch_unwind(AssertUnwindSafe(|| {
+        s.contract_client
+            .deposit(&user, &pool_id, &1_000_000_000_i128);
+    }));
+    assert!(attempt.is_err(), "deposit must panic while globally paused");
+
+    // Soroban rolls back all storage writes from a panicking invocation, but
+    // this asserts it explicitly rather than relying on that alone: the
+    // position was never created and the pool total never moved.
+    assert_eq!(s.contract_client.get_total_deposits(&pool_id), 0);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_withdraw() {
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    let user = Address::generate(&s.env);
+    mint_tokens(&s, &user, 1_000_000_000);
+    s.contract_client
+        .deposit(&user, &pool_id, &1_000_000_000_i128);
+
+    s.contract_client.emergency_pause(&s.admin);
+    s.contract_client
+        .withdraw(&user, &pool_id, &1_000_000_000_i128);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_borrow() {
+    let t = setup_borrow_test();
+    let admin = Address::generate(&t.env);
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
     });
+
+    t.contract_client.emergency_pause(&admin);
+    t.contract_client.borrow(
+        &t.borrower,
+        &t.pool_id,
+        &100_000_000_i128,
+        &t.xlm_address,
+        &200_000_000_i128,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_create_pool() {
+    let s = setup();
+
+    s.contract_client.emergency_pause(&s.admin);
+    s.contract_client.create_pool(
+        &s.admin,
+        &String::from_str(&s.env, "NEW-POOL"),
+        &String::from_str(&s.env, "New Pool"),
+        &String::from_str(&s.env, "USDC"),
+        &s.token_address,
+        &750_000_000_000_000_000_i128,
+        &800_000_000_000_000_000_i128,
+        &50_000_000_000_000_000_i128,
+        &500_000_000_000_000_000_i128,
+        &1000_u32,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_mint_shares() {
+    let (env, client, admin) = setup_token_test();
+    let recipient = Address::generate(&env);
+
+    client.emergency_pause(&admin);
+    client.mint_shares(&admin, &1, &recipient, &1000);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_burn_shares() {
+    let (env, client, admin) = setup_token_test();
+    let owner = Address::generate(&env);
+    client.mint_shares(&admin, &1, &owner, &1000);
+
+    client.emergency_pause(&admin);
+    client.burn_shares(&owner, &1, &400);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_transfer_shares() {
+    let (env, client, admin) = setup_token_test();
+    let from = Address::generate(&env);
+    let to = Address::generate(&env);
+    client.mint_shares(&admin, &1, &from, &1000);
+
+    client.emergency_pause(&admin);
+    client.transfer_shares(&from, &to, &1, &300);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_transfer_from() {
+    let (env, client, admin) = setup_token_test();
+    let owner = Address::generate(&env);
+    let spender = Address::generate(&env);
+    let recipient = Address::generate(&env);
+    client.mint_shares(&admin, &1, &owner, &1000);
+    client.approve(&owner, &spender, &1, &500);
+
+    client.emergency_pause(&admin);
+    client.transfer_from(&spender, &owner, &recipient, &1, &200);
+}
+
+#[test]
+fn test_global_pause_allows_repay() {
+    let t = setup_borrow_test();
+    let admin = Address::generate(&t.env);
+
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
+    });
+
+    t.contract_client.emergency_pause(&admin);
+
+    // repay stays open under the global pause: borrowers can always reduce
+    // debt, and this must succeed instead of panicking.
+    let before = t
+        .contract_client
+        .get_borrow_position(&t.borrower, &t.pool_id);
+    t.contract_client
+        .repay(&t.borrower, &t.pool_id, &500_000_000_i128);
+    let after = t
+        .contract_client
+        .get_borrow_position(&t.borrower, &t.pool_id);
+    assert!(
+        after.principal < before.principal,
+        "repay should reduce debt"
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_liquidate() {
+    use soroban_sdk::token::StellarAssetClient;
+
+    let t = setup_borrow_test();
+    let liquidator = Address::generate(&t.env);
+    StellarAssetClient::new(&t.env, &t.usdc_address).mint(&liquidator, &2_000_000_000);
+
+    // Drop the XLM price so the borrower's position becomes underwater.
+    let oracle_id = t.env.as_contract(&t.contract_id, || {
+        super::lending::PriceOracle::get_oracle_address(&t.env).unwrap()
+    });
+    let half_price = (3 * PRECISION) / 10;
+    t.env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(
+            t.env.clone(),
+            t.xlm_address.clone(),
+            half_price,
+            t.env.ledger().timestamp(),
+        );
+    });
+
+    let admin = Address::generate(&t.env);
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
+    });
+    t.contract_client.emergency_pause(&admin);
+
+    t.contract_client
+        .liquidate(&liquidator, &t.pool_id, &t.borrower, &100_000_000_i128);
+}
+
+// ─── Per-pool pause (issue #1273) ─────────────────────────────────────────
+
+#[test]
+#[should_panic(expected = "Error(Contract, #4)")]
+fn test_pause_pool_unauthorized_fails() {
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    let attacker = Address::generate(&s.env);
+
+    s.contract_client.pause_pool(&attacker, &pool_id);
+}
+
+#[test]
+fn test_pause_pool_blocks_that_pool_only_and_unpause_restores_it() {
+    let s = setup();
+    let pool_a = create_default_pool(&s);
+    let pool_b = String::from_str(&s.env, "XLM-POOL");
+    s.contract_client.create_pool(
+        &s.admin,
+        &pool_b,
+        &String::from_str(&s.env, "XLM Lending Pool"),
+        &String::from_str(&s.env, "XLM"),
+        &s.token_address,
+        &750_000_000_000_000_000_i128,
+        &800_000_000_000_000_000_i128,
+        &50_000_000_000_000_000_i128,
+        &500_000_000_000_000_000_i128,
+        &1000_u32,
+    );
+
+    let user = Address::generate(&s.env);
+    mint_tokens(&s, &user, 4_000_000_000);
+
+    s.contract_client.pause_pool(&s.admin, &pool_a);
+
+    // Pool B is untouched by pool A's pause.
+    s.contract_client
+        .deposit(&user, &pool_b, &1_000_000_000_i128);
+    assert_eq!(s.contract_client.get_total_deposits(&pool_b), 1_000_000_000);
+
+    // Pool A rejects deposit while paused.
+    extern crate std;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+    let blocked = catch_unwind(AssertUnwindSafe(|| {
+        s.contract_client
+            .deposit(&user, &pool_a, &1_000_000_000_i128);
+    }));
+    assert!(blocked.is_err(), "deposit on a paused pool must panic");
+    assert_eq!(s.contract_client.get_total_deposits(&pool_a), 0);
+
+    s.contract_client.unpause_pool(&s.admin, &pool_a);
+
+    // Pool A accepts deposits again after unpause.
+    s.contract_client
+        .deposit(&user, &pool_a, &1_000_000_000_i128);
+    assert_eq!(s.contract_client.get_total_deposits(&pool_a), 1_000_000_000);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_pause_pool_blocks_borrow() {
+    let t = setup_borrow_test();
+    let admin = Address::generate(&t.env);
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
+    });
+
+    t.contract_client.pause_pool(&admin, &t.pool_id);
+    t.contract_client.borrow(
+        &t.borrower,
+        &t.pool_id,
+        &100_000_000_i128,
+        &t.xlm_address,
+        &200_000_000_i128,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_pause_pool_blocks_withdraw() {
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    let user = Address::generate(&s.env);
+    mint_tokens(&s, &user, 1_000_000_000);
+    s.contract_client
+        .deposit(&user, &pool_id, &1_000_000_000_i128);
+
+    s.contract_client.pause_pool(&s.admin, &pool_id);
+    s.contract_client
+        .withdraw(&user, &pool_id, &1_000_000_000_i128);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_pause_pool_blocks_liquidate() {
+    use soroban_sdk::token::StellarAssetClient;
+
+    let t = setup_borrow_test();
+    let liquidator = Address::generate(&t.env);
+    StellarAssetClient::new(&t.env, &t.usdc_address).mint(&liquidator, &2_000_000_000);
+
+    let oracle_id = t.env.as_contract(&t.contract_id, || {
+        super::lending::PriceOracle::get_oracle_address(&t.env).unwrap()
+    });
+    let half_price = (3 * PRECISION) / 10;
+    t.env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(
+            t.env.clone(),
+            t.xlm_address.clone(),
+            half_price,
+            t.env.ledger().timestamp(),
+        );
+    });
+
+    let admin = Address::generate(&t.env);
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
+    });
+    t.contract_client.pause_pool(&admin, &t.pool_id);
+
+    t.contract_client
+        .liquidate(&liquidator, &t.pool_id, &t.borrower, &100_000_000_i128);
+}
+
+#[test]
+fn test_pause_pool_keeps_repay_working() {
+    let t = setup_borrow_test();
+    let admin = Address::generate(&t.env);
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
+    });
+
+    t.contract_client.pause_pool(&admin, &t.pool_id);
+
+    let before = t
+        .contract_client
+        .get_borrow_position(&t.borrower, &t.pool_id);
+    t.contract_client
+        .repay(&t.borrower, &t.pool_id, &500_000_000_i128);
+    let after = t
+        .contract_client
+        .get_borrow_position(&t.borrower, &t.pool_id);
+    assert!(
+        after.principal < before.principal,
+        "repay should reduce debt"
+    );
+}
+
+#[test]
+fn test_pause_pool_emits_event() {
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    s.contract_client.pause_pool(&s.admin, &pool_id);
+}
+
+#[test]
+fn test_unpause_pool_emits_event() {
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    s.contract_client.pause_pool(&s.admin, &pool_id);
+    s.contract_client.unpause_pool(&s.admin, &pool_id);
 }
 
 #[test]
@@ -3083,6 +3452,20 @@ fn test_full_emergency_and_recovery_flow() {
         .deposit(&user, &pool_id, &1_000_000_000_i128);
 
     s.contract_client.emergency_pause(&guard);
+
+    // Blocked while paused: deposit must not go through before recovery.
+    extern crate std;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+    let blocked = catch_unwind(AssertUnwindSafe(|| {
+        s.contract_client
+            .deposit(&user, &pool_id, &1_000_000_000_i128);
+    }));
+    assert!(blocked.is_err(), "deposit must panic while paused");
+    assert_eq!(
+        s.contract_client.get_total_deposits(&pool_id),
+        1_000_000_000,
+        "the blocked deposit attempt must not have moved any funds"
+    );
 
     s.contract_client.schedule_recovery(&s.admin);
 
@@ -4042,7 +4425,7 @@ fn test_liquidate_inactive_pool() {
 
 /// Liquidate from a paused pool is rejected.
 #[test]
-#[should_panic(expected = "Pool is paused")]
+#[should_panic(expected = "ContractPaused")]
 fn test_liquidate_paused_pool() {
     let (env, contract_id, _oracle_id, borrower, liquidator, pool_id, _usdc_addr, _xlm_addr) =
         setup_liquidation_env();

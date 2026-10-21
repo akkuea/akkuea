@@ -71,7 +71,7 @@ jobs:
       - name: Run unit tests
         run: |
           cd apps/shared
-          bun test --coverage
+          bun test --coverage --coverage-reporter=lcov --coverage-reporter=text
 
   security-audit:
     name: Security Audit
@@ -80,6 +80,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2

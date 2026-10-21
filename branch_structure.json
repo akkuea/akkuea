@@ -1,0 +1,18 @@
+{
+  "default_branch": "develop",
+  "branches": [
+    "develop",
+    "fix/issue-1158-ci-run-the-shared-library-s-211-unit-tests-in",
+    "origin"
+  ],
+  "parent": {
+    "develop": null,
+    "fix/issue-1158-ci-run-the-shared-library-s-211-unit-tests-in": "develop",
+    "origin": "develop"
+  },
+  "order": [
+    "develop",
+    "fix/issue-1158-ci-run-the-shared-library-s-211-unit-tests-in",
+    "origin"
+  ]
+}

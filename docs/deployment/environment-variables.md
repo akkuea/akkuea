@@ -47,6 +47,22 @@ The limiter counts an in-memory sliding window per client unless `REDIS_URL` is 
 
 > **Deploying behind a proxy:** leaving `TRUSTED_PROXY_HOPS` at `0` means every request is keyed by the proxy's own address, so all clients share one bucket. Set it to the exact number of proxies you operate (load balancer, ingress, sidecar) and no more: every hop counted is a hop a client could otherwise spoof through.
 
+### CORS
+
+The API answers cross-origin browser requests only from the origins listed in `CORS_ALLOWED_ORIGINS` (`apps/api/src/middleware/cors.ts`). An allowed origin is echoed back in `Access-Control-Allow-Origin` with `Access-Control-Allow-Credentials: true`; any other origin receives no `Access-Control-Allow-Origin` header, so the browser blocks the response. The API never reflects arbitrary origins.
+
+| Variable               | Example Value                                    | Required                                       | Description                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------- | ------------------------------------------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CORS_ALLOWED_ORIGINS` | `https://app.akkuea.com,https://land.akkuea.com` | Yes (production, when a browser calls the API) | Comma-separated list of exact origins allowed to call the API from a browser. Entries are trimmed and empty entries dropped. Each entry must be an `http` or `https` origin written exactly as a browser sends it: scheme, lower-case host, and an optional non-default port, with no path, trailing slash, query, credentials, or wildcard. An invalid entry fails startup validation |
+
+Behavior when `CORS_ALLOWED_ORIGINS` is unset or empty:
+
+- **Development** (`NODE_ENV=development`, or `NODE_ENV` unset): the local frontends are allowed, `http://localhost:3000` (webapp) and `http://localhost:3002` (Akkuea Land, which `next dev` moves to 3002 under `bun run dev` because the webapp holds 3000 and the API 3001). If you start the frontends on other ports, set the variable explicitly.
+- **Production**: no cross-origin requests are allowed, and the API logs a warning at startup. Server-to-server callers (such as the webapp's operations proxy) do not send an `Origin` header and are not affected.
+- **Test**: no cross-origin requests are allowed.
+
+A configured list is used as-is in every environment; the development defaults are not added to it.
+
 ### Internal Security
 
 | Variable                         | Example Value                   | Required                          | Description                                                                                                                                                                               |

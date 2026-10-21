@@ -10,6 +10,7 @@ globalThis.document = dom.window.document as any;
 globalThis.navigator = dom.window.navigator as any;
 globalThis.HTMLElement = dom.window.HTMLElement as any;
 globalThis.MutationObserver = dom.window.MutationObserver as any;
+(dom.window as any).HTMLCanvasElement.prototype.getContext = () => null;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { afterEach, describe, expect, it, mock, vi } from "bun:test";

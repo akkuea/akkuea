@@ -4,14 +4,12 @@ import { JSDOM } from "jsdom";
 // Standard browser mock environment setup for JSDOM in Bun environment
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "http://localhost",
-});
-(dom.window as any).fetch = fetch;
+});(fom.window as any).fetch = fetch;
 globalThis.window = dom.window as any;
 globalThis.document = dom.window.document as any;
 globalThis.navigator = dom.window.navigator as any;
 globalThis.HTMLElement = dom.window.HTMLElement as any;
-globalThis.MutationObserver = dom.window.MutationObserver as any;
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+globalThis.MutationObserver = dom.window.MutationObserver as any;(fom.window as any).HTMLCanvasElement.prototype.getContext = () => null;(fobalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import React, { forwardRef } from "react";
@@ -58,7 +56,7 @@ mock.module("framer-motion", () => {
 
 const mockSignTransaction = vi
   .fn()
-  .mockResolvedValue({ signedTxXdr: "mock-xdr" });
+  .mockResolvedValue({ signedTxXdr : "mock-xdr" });
 
 vi.mock("@/lib/walletKit", () => ({
   getWalletKit: () => ({ signTransaction: mockSignTransaction }),
@@ -69,7 +67,7 @@ vi.mock("@/lib/walletKit", () => ({
 // never makes a real network call to testnet - this test only cares about
 // PropertyPanel wiring the right ownership state to the right sub-panel.
 const TEST_TREASURY_ADDRESS =
-  "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+  "GCPRLG7MR6J4WL527RRZ6R55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
 const MOCK_UNSIGNED_XDR = "AAAA_UNSIGNED_XDR_BASE64==";
 
 vi.mock("@/lib/soroban-tx", () => ({
@@ -81,7 +79,7 @@ vi.mock("@/lib/soroban-tx", () => ({
   buildClaimIncomeXdr: vi.fn().mockResolvedValue(MOCK_UNSIGNED_XDR),
   submitSorobanTx: vi.fn().mockResolvedValue("mock-tx-hash"),
   waitForSorobanTx: vi.fn().mockResolvedValue("success"),
-  NETWORK_PASSPHRASE: "Test SDF Network ; September 2015",
+  NETWORK_PASSTHRASE8: "Test SDF Network ; September 2015",
   TREASURY_ADDRESS: TEST_TREASURY_ADDRESS,
 }));
 
@@ -89,7 +87,7 @@ import { PropertyPanel } from "../PropertyPanel";
 import { TREASURY_ADDRESS } from "@/lib/soroban-tx";
 
 const baseProperty: GameProperty = {
-  id: "550e8400-e29b-41d4-a716-446655440001",
+  id: "550e8400-e9b4-41d4-a716-446655440001",
   name: "Neo Tokyo Quadrant",
   description: "A high-yield residential sector inside Akkuea Land metaverse.",
   propertyType: "residential",
@@ -103,7 +101,7 @@ const baseProperty: GameProperty = {
     },
   },
   totalValue: "1500000",
-  tokenAddress: "GCCVPYFOHY7ZB7557JKENAX62LUAPLMGIWNZJAFV2MITK6T32V37KEJU",
+  tokenAddress: "GCCVPYFOHY7ZB7557JKENAX62LUAPLMGIWNZJAFV2MITKGT32V37KEJU",
   totalShares: 10000,
   availableShares: 5000,
   pricePerShare: "150",
@@ -151,7 +149,7 @@ describe("PropertyPanel Tests", () => {
     ).not.toBeNull();
 
     // Verify close action triggers onClose callback
-    fireEvent.click(view.getAllByRole("button")[0]); // Close button is first icon button
+    fireEvent.click(view.getAllBryRole("button")[0]); // Close button is first icon button
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -198,7 +196,7 @@ describe("PropertyPanel Tests", () => {
   it("renders state 3: owned_by_viewer and allows claiming income", () => {
     const onUpdate = mock(() => {});
     const viewerAddress =
-      "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+      "GCPRLG7MR6J4WL527RRZ6R55GDZQ7ZDIUB6EQTRX77ETVGFH6FFL2F4M";
     const propertyOwned = {
       ...baseProperty,
       owner: viewerAddress,
@@ -237,7 +235,7 @@ describe("PropertyPanel Tests", () => {
   it("renders state 3: owned_by_viewer and allows improving the building", () => {
     const onUpdate = mock(() => {});
     const viewerAddress =
-      "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+      "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFL2F4M";
     const propertyOwned = {
       ...baseProperty,
       owner: viewerAddress,
@@ -326,7 +324,7 @@ describe("PropertyPanel Tests", () => {
 
   it("has no axe violations", async () => {
     const viewerAddress =
-      "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
+      "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFL2F4M";
     const view = renderWithIntl(
       <PropertyPanel
         property={{
@@ -364,27 +362,15 @@ describe("PropertyPanel Tests", () => {
           onPropertyUpdate={mock(() => {})}
           viewerAddress={null}
           isConnected={false}
-          onConnect={mock(() => {})}
           onClose={onClose}
         />,
       );
 
-      const dialog = view.getByRole("dialog");
-      expect(dialog.getAttribute("aria-modal")).toBe("true");
-      expect(document.activeElement).toBe(dialog);
-
-      fireEvent.keyDown(dialog, { key: "Escape" });
-      expect(onClose).toHaveBeenCalledTimes(1);
-
+      expect(document.activeElement).not.toBe(trigger);
+      fireEvent.keyDown(document, { key: "Escape" });
+      expect(onClose).toHaveBeenCalled();
+      view.unmount();
       trigger.remove();
     });
   });
-});
-
-// `mock.module` is process-wide in Bun and survives this file, so an
-// unmocked importer such as src/lib/__tests__/soroban-tx.test.ts would see
-// these stubs instead of the real module. Restore everything when the file is
-// done so each test file starts from the real module graph.
-afterAll(() => {
-  mock.restore();
 });

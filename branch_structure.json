@@ -1,0 +1,18 @@
+{
+  "default_branch": "develop",
+  "branches": [
+    "develop",
+    "origin",
+    "security/issue-1167-webapp-harden-and-test-the-privy-server-signing"
+  ],
+  "parent": {
+    "develop": null,
+    "origin": "develop",
+    "security/issue-1167-webapp-harden-and-test-the-privy-server-signing": "develop"
+  },
+  "order": [
+    "develop",
+    "origin",
+    "security/issue-1167-webapp-harden-and-test-the-privy-server-signing"
+  ]
+}

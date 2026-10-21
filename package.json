@@ -10,11 +10,11 @@
     "apps/akkuea-land"
   ],
   "scripts": {
-    "dev": "concurrently \"bun run dev:webapp\" \"bun run dev:api\" \"bun run dev:land\"",
+    "dev": "node api.js && concurrently \"bun run dev:webapp\" \"bun run dev:api\" \"bun run dev:land\"",
     "dev:webapp": "cd apps/webapp && bun run dev",
     "dev:api": "cd apps/api && bun run dev",
     "dev:land": "cd apps/akkuea-land && bun run dev",
-    "build": "concurrently \"bun run build:api\" \"bun run build:webapp\" \"bun run build:shared\" \"bun run build:land\"",
+    "build": "node api.js && concurrently \"bun run build:api\" \"bun run build:webapp\" \"bun run build:shared\" \"bun run build:land\"",
     "build:webapp": "cd apps/webapp && bun run build",
     "build:api": "cd apps/api && bun run build",
     "build:shared": "cd apps/shared && bun run build",

@@ -67,6 +67,7 @@ vi.mock("@/hooks/useGameWallet", () => ({
 }));
 
 import { ClaimLandStep } from "../ClaimLandStep";
+import { TxNotConfirmedError } from "@/lib/tx-confirmation";
 
 beforeEach(() => {
   cleanup();
@@ -131,6 +132,25 @@ describe("ClaimLandStep", () => {
     await waitFor(() => {
       expect(view.queryByText("Claim failed. Try again.")).not.toBeNull();
     });
+  });
+
+  it("stays on the step when the transaction is not confirmed", async () => {
+    mockSignAndSubmitTx.mockRejectedValueOnce(new TxNotConfirmedError("hash"));
+    const onNext = vi.fn();
+
+    const view = renderWithIntl(
+      <ClaimLandStep onNext={onNext} onSkip={() => {}} />,
+    );
+
+    fireEvent.click(view.getByRole("button", { name: /Claim 1,000 LAND/i }));
+
+    await waitFor(() => {
+      expect(view.queryByText("Claim failed. Try again.")).not.toBeNull();
+    });
+    expect(
+      view.queryByText("Transaction successfully recorded on-chain"),
+    ).toBeNull();
+    expect(onNext).not.toHaveBeenCalled();
   });
 
   it("does not attempt to claim when no wallet address is connected", async () => {

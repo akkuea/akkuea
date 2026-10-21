@@ -11,6 +11,7 @@
 mod access;
 pub mod events;
 mod lending;
+mod oracle_types;
 mod storage;
 
 // Public re-exports for consumers and tests
@@ -35,6 +36,9 @@ mod test;
 
 #[cfg(test)]
 mod reentrancy_tests;
+
+#[cfg(test)]
+mod budget_check;
 
 // ───────────────────────────────────────────────
 // Helper functions

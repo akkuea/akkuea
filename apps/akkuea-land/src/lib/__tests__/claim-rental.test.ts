@@ -40,6 +40,7 @@ import {
   waitForSorobanTx,
 } from "@/lib/soroban-tx";
 import { claimAllRentals, describeClaimError } from "@/lib/claim-rental";
+import { TxNotConfirmedError } from "@/lib/tx-confirmation";
 
 const buildMock = buildClaimIncomeXdr as ReturnType<typeof vi.fn>;
 const submitMock = submitSorobanTx as ReturnType<typeof vi.fn>;
@@ -208,6 +209,31 @@ describe("describeClaimError", () => {
   it("stringifies non-Error values", () => {
     expect(describeClaimError("plain string failure")).toBe(
       "plain string failure",
+    );
+  });
+});
+
+describe("claimAllRentals - transaction not confirmed", () => {
+  it("does not mark the property claimed and records a failure with the hash", async () => {
+    waitMock.mockResolvedValue("pending");
+    const onClaimed = vi.fn();
+
+    const { failures } = await claimAllRentals({
+      kit,
+      viewerAddress: VIEWER,
+      properties: [PROPERTIES[0]],
+      onClaimed,
+    });
+
+    expect(onClaimed).not.toHaveBeenCalled();
+    expect(failures).toEqual([
+      `${PROPERTIES[0].name} - not confirmed yet (transaction ${MOCK_TX_HASH})`,
+    ]);
+  });
+
+  it("describeClaimError maps TxNotConfirmedError to a not-confirmed reason", () => {
+    expect(describeClaimError(new TxNotConfirmedError(MOCK_TX_HASH))).toBe(
+      `not confirmed yet (transaction ${MOCK_TX_HASH})`,
     );
   });
 });

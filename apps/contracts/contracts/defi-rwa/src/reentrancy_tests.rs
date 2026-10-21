@@ -24,9 +24,8 @@
 //!    totals, balances) are internally consistent.
 
 use super::lending::PriceOracle;
+use super::oracle_types::{Asset, PriceData};
 use super::*;
-
-use sep_40_oracle::{Asset, PriceData};
 use soroban_sdk::{
     contract, contractimpl, testutils::Address as _, token::StellarAssetClient, Address, Env,
     String, Symbol,

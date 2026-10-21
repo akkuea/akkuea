@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { WalletType } from "@pollar/core";
 import { usePollar } from "@pollar/react";
+import { sanitizeCallbackUrl } from "@/lib/sanitizeCallbackUrl";
 
 type GameWalletNetwork = "testnet" | "mainnet";
 type GameWalletAuthStep =
@@ -33,12 +34,6 @@ const FRIENDLY_AUTH_ERRORS: Record<string, string> = {
   INVALID_EMAIL: "Enter a valid email address.",
   AUTH_CANCELLED: "Sign in was cancelled.",
 };
-
-function sanitizeCallbackUrl(value: string | null): string {
-  if (!value) return "/dashboard";
-  if (value.startsWith("/")) return value;
-  return "/dashboard";
-}
 
 function writeAuthCookie(isAuthenticated: boolean): void {
   if (typeof document === "undefined") return;

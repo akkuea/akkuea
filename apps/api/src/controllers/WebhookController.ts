@@ -6,9 +6,11 @@ export class WebhookController {
   async handleTransactionWebhook({
     body,
     headers,
+    rawBody,
   }: {
     body: WebhookPayload;
     headers: Record<string, string | undefined>;
+    rawBody: Uint8Array;
   }) {
     const signature = headers['x-webhook-signature'];
 
@@ -17,7 +19,7 @@ export class WebhookController {
       throw ApiError.badRequest('Missing webhook signature');
     }
 
-    const isValid = webhookService.validateSignature(JSON.stringify(body), signature);
+    const isValid = webhookService.validateSignature(rawBody, signature);
     if (!isValid) {
       logger.warn('Invalid webhook signature');
       throw ApiError.badRequest('Invalid webhook signature');

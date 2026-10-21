@@ -9,9 +9,15 @@ use soroban_sdk::{
 mod errors;
 mod events;
 mod storage;
+mod ttl;
 
 pub use errors::IncomeTokenError;
 use storage::{DataKey, Storage};
+use ttl::extend_instance;
+
+/// Maximum number of holders, matching `MAX_HOLDERS` in `pilot-payout-split`,
+/// whose distribution loop rejects any larger holder set.
+pub const MAX_HOLDERS: u32 = 10;
 
 #[contractclient(name = "WhitelistClient")]
 pub trait Whitelist {
@@ -50,6 +56,8 @@ impl PilotIncomeToken {
             panic_with_error!(&env, IncomeTokenError::AlreadyInitialized);
         }
 
+        extend_instance(&env);
+
         Storage::set_admin(&env, &admin);
         Storage::set_whitelist(&env, &whitelist);
         env.storage().instance().set(&DataKey::Name, &name);
@@ -69,6 +77,8 @@ impl PilotIncomeToken {
         admin.require_auth();
         Self::require_admin(&env, &admin);
         Self::require_not_paused(&env);
+
+        extend_instance(&env);
 
         if Storage::has_minted(&env) {
             panic_with_error!(&env, IncomeTokenError::AlreadyMinted);
@@ -90,6 +100,11 @@ impl PilotIncomeToken {
         let mut total_supply = 0i128;
 
         for i in 0..holders.len() {
+            // Unreachable: every index comes from `0..holders.len()`, and the
+            // length check above guarantees `amounts` has that same length, so
+            // neither lookup can fail. Kept typed rather than `unwrap`ped so a
+            // future refactor that breaks the invariant surfaces as
+            // `InternalInvariant` instead of a generic host trap.
             let holder = holders
                 .get(i)
                 .unwrap_or_else(|| panic_with_error!(&env, IncomeTokenError::InternalInvariant));
@@ -118,6 +133,10 @@ impl PilotIncomeToken {
             if !Self::contains_holder(&minted_holders, &holder) {
                 minted_holders.push_back(holder);
             }
+        }
+
+        if minted_holders.len() > MAX_HOLDERS {
+            panic_with_error!(&env, IncomeTokenError::TooManyHolders);
         }
 
         Storage::set_total_supply(&env, total_supply);
@@ -160,7 +179,8 @@ impl PilotIncomeToken {
         Storage::total_supply(&env)
     }
 
-    /// Return the fixed holder set used by payout distribution.
+    /// Return the holder set used by payout distribution: every address with a
+    /// positive balance, at most `MAX_HOLDERS` of them.
     pub fn holders(env: Env) -> Vec<Address> {
         Storage::holders(&env)
     }
@@ -172,6 +192,10 @@ impl PilotIncomeToken {
     }
 
     /// Admin-only correction transfer. Holders cannot transfer the token.
+    ///
+    /// Preserves `sum(balances) == total_supply`, which the payout split
+    /// relies on: the amount may not exceed the sender's balance, and a
+    /// self-transfer is rejected with `SelfTransfer`.
     pub fn transfer(env: Env, caller: Address, from: Address, to: Address, amount: i128) {
         caller.require_auth();
         Self::require_admin(&env, &caller);
@@ -179,6 +203,12 @@ impl PilotIncomeToken {
 
         if amount <= 0 {
             panic_with_error!(&env, IncomeTokenError::InvalidAmount);
+        }
+
+        extend_instance(&env);
+
+        if from == to {
+            panic_with_error!(&env, IncomeTokenError::SelfTransfer);
         }
 
         let whitelist_address = Storage::whitelist(&env)
@@ -209,6 +239,8 @@ impl PilotIncomeToken {
         admin.require_auth();
         Self::require_admin(&env, &admin);
         Self::require_not_paused(&env);
+
+        extend_instance(&env);
 
         if Storage::wound_down_record(&env).is_some() {
             panic_with_error!(&env, IncomeTokenError::AlreadyWoundDown);
@@ -244,6 +276,8 @@ impl PilotIncomeToken {
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
+        extend_instance(&env);
+
         Storage::set_pending_admin(&env, &new_admin);
         events::emit_admin_transfer_started(&env, caller, new_admin);
     }
@@ -254,6 +288,8 @@ impl PilotIncomeToken {
     /// single stored admin address.
     pub fn transfer_admin_accept(env: Env, new_admin: Address) {
         new_admin.require_auth();
+
+        extend_instance(&env);
 
         let pending = Storage::pending_admin(&env);
         if pending != Some(new_admin.clone()) {
@@ -274,6 +310,8 @@ impl PilotIncomeToken {
         caller.require_auth();
         Self::require_admin(&env, &caller);
 
+        extend_instance(&env);
+
         Storage::clear_pending_admin(&env);
         events::emit_admin_transfer_cancelled(&env, caller);
     }
@@ -293,6 +331,8 @@ impl PilotIncomeToken {
         admin.require_auth();
         Self::require_admin(&env, &admin);
 
+        extend_instance(&env);
+
         Storage::set_paused(&env, true);
         events::emit_paused(&env, admin);
     }
@@ -301,6 +341,8 @@ impl PilotIncomeToken {
     pub fn unpause(env: Env, admin: Address) {
         admin.require_auth();
         Self::require_admin(&env, &admin);
+
+        extend_instance(&env);
 
         Storage::set_paused(&env, false);
         events::emit_unpaused(&env, admin);
@@ -331,26 +373,37 @@ impl PilotIncomeToken {
 
     fn move_balance(env: &Env, from: Address, to: Address, amount: i128) {
         let from_balance = Storage::balance(env, &from);
-        let next_from = from_balance
-            .checked_sub(amount)
-            .unwrap_or_else(|| panic_with_error!(env, IncomeTokenError::InsufficientBalance));
+        // An explicit comparison, not `checked_sub`: on i128 the subtraction
+        // only fails at the type boundary and would otherwise go negative.
+        if amount > from_balance {
+            panic_with_error!(env, IncomeTokenError::InsufficientBalance);
+        }
+        let next_from = from_balance - amount;
         let to_balance = Storage::balance(env, &to);
         let next_to = to_balance
             .checked_add(amount)
             .unwrap_or_else(|| panic_with_error!(env, IncomeTokenError::BalanceOverflow));
 
+        // A sender emptied by the correction leaves the holder list, so a
+        // departing investor who is later revoked from the whitelist no longer
+        // blocks distribution, and the slot is free for the replacement.
+        let mut holders = Storage::holders(env);
+        if next_from == 0 {
+            if let Some(index) = holders.first_index_of(&from) {
+                holders.remove(index);
+            }
+        }
+        if !Self::contains_holder(&holders, &to) {
+            holders.push_back(to.clone());
+        }
+        if holders.len() > MAX_HOLDERS {
+            panic_with_error!(env, IncomeTokenError::TooManyHolders);
+        }
+
         Storage::set_balance(env, &from, next_from);
         Storage::set_balance(env, &to, next_to);
-        Self::upsert_holder(env, &to);
+        Storage::set_holders(env, &holders);
         events::emit_transfer(env, from, to, amount);
-    }
-
-    fn upsert_holder(env: &Env, holder: &Address) {
-        let mut holders = Storage::holders(env);
-        if !Self::contains_holder(&holders, holder) {
-            holders.push_back(holder.clone());
-            Storage::set_holders(env, &holders);
-        }
     }
 
     fn contains_holder(holders: &Vec<Address>, holder: &Address) -> bool {
@@ -381,6 +434,7 @@ mod tests {
         unapproved: Address,
         whitelist: PilotWhitelistClient<'static>,
         token: PilotIncomeTokenClient<'static>,
+        token_id: Address,
     }
 
     fn setup() -> Setup {
@@ -414,6 +468,7 @@ mod tests {
             unapproved,
             whitelist,
             token,
+            token_id,
         }
     }
 
@@ -604,6 +659,146 @@ mod tests {
         );
     }
 
+    /// Generate and approve `count` fresh holder addresses.
+    fn approved_addresses(s: &Setup, count: u32) -> Vec<Address> {
+        let mut addresses = Vec::new(&s.env);
+        for _ in 0..count {
+            let address = Address::generate(&s.env);
+            s.whitelist.approve(&s.whitelist_admin, &address);
+            addresses.push_back(address);
+        }
+        addresses
+    }
+
+    fn mint_ten_holders(s: &Setup) -> Vec<Address> {
+        let holders = approved_addresses(s, MAX_HOLDERS);
+        let mut amounts = Vec::new(&s.env);
+        for _ in 0..MAX_HOLDERS {
+            amounts.push_back(100i128);
+        }
+        s.token.mint_fixed_supply(&s.admin, &holders, &amounts);
+        holders
+    }
+
+    #[test]
+    fn transfer_of_the_full_balance_removes_the_sender_from_holders() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        let replacement = approved_addresses(&s, 1).get(0).unwrap();
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        s.token
+            .transfer(&s.admin, &s.holder_one, &replacement, &700);
+
+        assert_eq!(s.token.balance(&s.holder_one), 0);
+        assert_eq!(s.token.balance(&replacement), 700);
+        assert_eq!(
+            s.token.holders(),
+            vec![&s.env, s.holder_two.clone(), replacement]
+        );
+    }
+
+    #[test]
+    fn partial_transfer_keeps_the_sender_in_holders() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        s.token
+            .transfer(&s.admin, &s.holder_one, &s.holder_two, &699);
+
+        assert_eq!(
+            s.token.holders(),
+            vec![&s.env, s.holder_one.clone(), s.holder_two.clone()]
+        );
+    }
+
+    #[test]
+    fn mint_rejects_more_than_max_holders() {
+        let s = setup();
+        s.env.mock_all_auths();
+        let holders = approved_addresses(&s, MAX_HOLDERS + 1);
+        let mut amounts = Vec::new(&s.env);
+        for _ in 0..holders.len() {
+            amounts.push_back(100i128);
+        }
+
+        let res = s.token.try_mint_fixed_supply(&s.admin, &holders, &amounts);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::TooManyHolders as u32
+            )))
+        );
+        assert_eq!(s.token.total_supply(), 0);
+        assert_eq!(s.token.holders().len(), 0);
+    }
+
+    #[test]
+    fn mint_counts_a_repeated_holder_once_against_the_cap() {
+        let s = setup();
+        s.env.mock_all_auths();
+        let mut holders = approved_addresses(&s, MAX_HOLDERS);
+        holders.push_back(holders.get(0).unwrap());
+        let mut amounts = Vec::new(&s.env);
+        for _ in 0..holders.len() {
+            amounts.push_back(100i128);
+        }
+
+        s.token.mint_fixed_supply(&s.admin, &holders, &amounts);
+
+        assert_eq!(s.token.holders().len(), MAX_HOLDERS);
+        assert_eq!(s.token.balance(&holders.get(0).unwrap()), 200);
+    }
+
+    #[test]
+    fn transfer_that_would_add_an_eleventh_holder_is_rejected() {
+        let s = setup();
+        s.env.mock_all_auths();
+        let holders = mint_ten_holders(&s);
+        let newcomer = approved_addresses(&s, 1).get(0).unwrap();
+        let sender = holders.get(0).unwrap();
+
+        let res = s.token.try_transfer(&s.admin, &sender, &newcomer, &40);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::TooManyHolders as u32
+            )))
+        );
+        assert_eq!(s.token.balance(&sender), 100);
+        assert_eq!(s.token.balance(&newcomer), 0);
+        assert_eq!(s.token.holders(), holders);
+    }
+
+    #[test]
+    fn full_balance_transfer_to_a_new_address_keeps_ten_holders() {
+        let s = setup();
+        s.env.mock_all_auths();
+        let holders = mint_ten_holders(&s);
+        let newcomer = approved_addresses(&s, 1).get(0).unwrap();
+        let sender = holders.get(0).unwrap();
+
+        s.token.transfer(&s.admin, &sender, &newcomer, &100);
+
+        let after = s.token.holders();
+        assert_eq!(after.len(), MAX_HOLDERS);
+        assert!(!after.contains(&sender));
+        assert!(after.contains(&newcomer));
+    }
+
     #[test]
     fn wound_down_status_is_none_by_default() {
         let s = setup();
@@ -725,6 +920,257 @@ mod tests {
         let decoded_event: events::WoundDownRecordedEvent =
             TryFromVal::try_from_val(&s.env, &event_scval).expect("wound-down event must decode");
         assert_eq!(decoded_event, event);
+    }
+
+    // --- Typed error coverage ---
+
+    #[test]
+    fn uninitialized_contract_reports_not_initialized() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let admin = Address::generate(&env);
+        let id = env.register(PilotIncomeToken, ());
+        let token = PilotIncomeTokenClient::new(&env, &id);
+
+        // Read paths: the metadata entries have nothing stored to return yet.
+        assert_eq!(
+            token.try_name(),
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::NotInitialized as u32
+            )))
+        );
+        assert_eq!(
+            token.try_symbol(),
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::NotInitialized as u32
+            )))
+        );
+        assert_eq!(
+            token.try_decimals(),
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::NotInitialized as u32
+            )))
+        );
+        assert_eq!(
+            token.try_admin(),
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::NotInitialized as u32
+            )))
+        );
+
+        // State-changing path: `require_admin` resolves the stored admin before
+        // it can compare it, so an uninitialized contract reports
+        // NotInitialized rather than Unauthorized and stays paused-free.
+        assert_eq!(
+            token.try_pause(&admin),
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::NotInitialized as u32
+            )))
+        );
+        assert!(!token.is_paused());
+
+        // The remaining NotInitialized sites are defensive: `initialize`
+        // writes the admin and the whitelist address in the same call, and
+        // `transfer_admin_accept` can only reach its admin lookup with a
+        // pending admin stored, so neither can be reached with only one of the
+        // two addresses present.
+    }
+
+    #[test]
+    fn mint_rejects_empty_holder_set() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+
+        let res = s
+            .token
+            .try_mint_fixed_supply(&s.admin, &Vec::new(&s.env), &Vec::new(&s.env));
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::EmptyHolderSet as u32
+            )))
+        );
+        assert_eq!(s.token.total_supply(), 0);
+        assert_eq!(s.token.holders().len(), 0);
+    }
+
+    #[test]
+    fn mint_rejects_holder_balance_overflow() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+
+        // The same holder may appear twice in one call and each occurrence is
+        // credited in turn, so i128::MAX followed by 1 trips the per-holder
+        // guard even though the second amount is representable on its own.
+        let res = s.token.try_mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_one.clone()],
+            &vec![&s.env, i128::MAX, 1i128],
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::BalanceOverflow as u32
+            )))
+        );
+        // The rejected mint is atomic: no supply or holder was written.
+        assert_eq!(s.token.total_supply(), 0);
+        assert_eq!(s.token.holders().len(), 0);
+    }
+
+    #[test]
+    fn mint_rejects_supply_overflow() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+
+        // Minting accumulates the running total from zero and adds each
+        // approved amount, so the total is what overflows here, not any single
+        // holder's amount: i128::MAX + 1 exceeds the supply boundary while each
+        // individual balance stays representable.
+        let res = s.token.try_mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, i128::MAX, 1i128],
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::SupplyOverflow as u32
+            )))
+        );
+        // The rejected mint is atomic: no supply or holder was written.
+        assert_eq!(s.token.total_supply(), 0);
+        assert_eq!(s.token.holders().len(), 0);
+    }
+
+    #[test]
+    fn transfer_above_the_sender_balance_is_rejected() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        let res = s
+            .token
+            .try_transfer(&s.admin, &s.holder_one, &s.holder_two, &701);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::InsufficientBalance as u32
+            )))
+        );
+        assert_eq!(s.token.balance(&s.holder_one), 700);
+        assert_eq!(s.token.balance(&s.holder_two), 300);
+        assert_eq!(s.token.total_supply(), 1000);
+    }
+
+    #[test]
+    fn transfer_of_the_full_sender_balance_is_allowed() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        s.token
+            .transfer(&s.admin, &s.holder_one, &s.holder_two, &700);
+
+        assert_eq!(s.token.balance(&s.holder_one), 0);
+        assert_eq!(s.token.balance(&s.holder_two), 1000);
+    }
+
+    #[test]
+    fn transfer_from_an_address_without_balance_is_rejected() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone()],
+            &vec![&s.env, 700i128],
+        );
+
+        let res = s
+            .token
+            .try_transfer(&s.admin, &s.holder_two, &s.holder_one, &1);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::InsufficientBalance as u32
+            )))
+        );
+        assert_eq!(s.token.balance(&s.holder_two), 0);
+        assert_eq!(s.token.balance(&s.holder_one), 700);
+    }
+
+    #[test]
+    fn self_transfer_is_rejected() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        let res = s
+            .token
+            .try_transfer(&s.admin, &s.holder_one, &s.holder_one, &100);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::SelfTransfer as u32
+            )))
+        );
+        assert_eq!(s.token.balance(&s.holder_one), 700);
+        assert_eq!(s.token.total_supply(), 1000);
+    }
+
+    #[test]
+    fn transfer_that_overflows_the_recipient_balance_is_rejected() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        // A mint can never leave a balance at the i128 boundary, so the
+        // recipient side is pinned there through the contract's own storage.
+        s.env.as_contract(&s.token_id, || {
+            Storage::set_balance(&s.env, &s.holder_two, i128::MAX)
+        });
+
+        let res = s
+            .token
+            .try_transfer(&s.admin, &s.holder_one, &s.holder_two, &1);
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::BalanceOverflow as u32
+            )))
+        );
+        assert_eq!(s.token.balance(&s.holder_one), 700);
     }
 
     // --- Two-step admin transfer ---
@@ -939,4 +1385,47 @@ mod tests {
 
         assert_eq!(s.token.admin(), new_admin);
     }
+
+    #[test]
+    fn state_changing_entry_points_extend_ttls() {
+        use crate::ttl::TTL_EXTEND_TO;
+        use soroban_sdk::testutils::storage::{Instance as _, Persistent as _};
+        use soroban_sdk::testutils::Ledger as _;
+
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        s.token.mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 100i128, 200i128],
+        );
+
+        // Leave ~110k ledgers of TTL on the balance entry: still live, but
+        // below the refresh threshold.
+        s.env
+            .ledger()
+            .with_mut(|ledger| ledger.sequence_number += 3_000_000);
+
+        // A normal state-changing call must refresh the instance, and the read
+        // of the holder balance must refresh that persistent entry.
+        s.token.pause(&s.admin);
+        let _ = s.token.balance(&s.holder_one);
+
+        let balance_ttl = s.env.as_contract(&s.token_id, || {
+            s.env
+                .storage()
+                .persistent()
+                .get_ttl(&DataKey::Balance(s.holder_one.clone()))
+        });
+        let instance_ttl = s
+            .env
+            .as_contract(&s.token_id, || s.env.storage().instance().get_ttl());
+
+        assert_eq!(balance_ttl, TTL_EXTEND_TO);
+        assert_eq!(instance_ttl, TTL_EXTEND_TO);
+    }
 }
+
+#[cfg(test)]
+mod proptests;

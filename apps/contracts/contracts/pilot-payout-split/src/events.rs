@@ -2,7 +2,7 @@
 
 use soroban_sdk::{contracttype, symbol_short, Address, Env, String};
 
-use crate::{Currency, DistributionSummary};
+use crate::{Currency, DistributionSummary, EvidenceStatus};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -197,6 +197,39 @@ pub fn emit_evidence_submitted(
         EvidenceSubmittedEvent {
             ally,
             cycle_id,
+            total_income,
+            submitted_at,
+        },
+    );
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct EvidenceResubmittedEvent {
+    pub ally: Address,
+    pub cycle_id: String,
+    /// The status the resubmission replaced: `Rejected` or `Disputed`.
+    pub previous_status: EvidenceStatus,
+    pub total_income: i128,
+    pub submitted_at: u64,
+}
+
+/// Emitted alongside `submit` when the ally resubmits a rejected or disputed
+/// cycle under the same id, so the timeline shows which outcome was cleared.
+pub fn emit_evidence_resubmitted(
+    env: &Env,
+    ally: Address,
+    cycle_id: String,
+    previous_status: EvidenceStatus,
+    total_income: i128,
+    submitted_at: u64,
+) {
+    env.events().publish(
+        (symbol_short!("resubmit"), cycle_id.clone()),
+        EvidenceResubmittedEvent {
+            ally,
+            cycle_id,
+            previous_status,
             total_income,
             submitted_at,
         },

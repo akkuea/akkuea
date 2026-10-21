@@ -92,6 +92,76 @@ export const booleanSchema = z
     return undefined;
   });
 
+/**
+ * How many reverse proxies in front of the API are trusted to append to
+ * `x-forwarded-for`. `0` (the default) means no proxy is trusted and the client
+ * address is read from the socket only, so a client cannot choose its own
+ * rate-limit identity. See docs/deployment/environment-variables.md.
+ */
+export const trustedProxyHopsSchema = z
+  .string()
+  .optional()
+  .transform((val) =>
+    val === undefined || val.trim() === "" ? 0 : Number(val),
+  )
+  .refine((val) => Number.isInteger(val) && val >= 0 && val <= 10, {
+    message:
+      "TRUSTED_PROXY_HOPS must be an integer between 0 (no trusted proxy) and 10",
+  });
+
+/**
+ * Hosts `next/image` may load property images from when
+ * `NEXT_PUBLIC_PROPERTY_IMAGE_HOSTS` is unset or empty.
+ */
+export const DEFAULT_PROPERTY_IMAGE_HOSTS: readonly string[] = [
+  "images.unsplash.com",
+];
+
+const HOSTNAME_LABEL_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
+
+/**
+ * True for a bare hostname such as `cdn.example.com`: dot-separated labels of
+ * letters, digits, and inner hyphens, with no protocol, port, path, or spaces.
+ * Validated label by label so the pattern stays linear-time.
+ */
+export const isBareHostname = (val: string): boolean =>
+  typeof val === "string" &&
+  val.length > 0 &&
+  val.length <= 253 &&
+  val
+    .toLowerCase()
+    .split(".")
+    .every((label) => HOSTNAME_LABEL_PATTERN.test(label));
+
+/**
+ * Splits a comma-separated host list, trimming entries and dropping empty
+ * ones. Falls back to `DEFAULT_PROPERTY_IMAGE_HOSTS` when nothing remains.
+ * Shared by the env schema and `apps/webapp/next.config.ts` so both read the
+ * variable identically. See docs/deployment/environment-variables.md.
+ */
+export function parsePropertyImageHosts(value: string | undefined): string[] {
+  const hosts = (value ?? "")
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry) => entry.length > 0);
+
+  return hosts.length > 0 ? hosts : [...DEFAULT_PROPERTY_IMAGE_HOSTS];
+}
+
+export const propertyImageHostsSchema = z
+  .string()
+  .optional()
+  .transform(parsePropertyImageHosts)
+  .superRefine((hosts, ctx) => {
+    const invalid = hosts.filter((host) => !isBareHostname(host));
+    if (invalid.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `NEXT_PUBLIC_PROPERTY_IMAGE_HOSTS must be a comma-separated list of bare hostnames (no protocol, port, path, or spaces). Invalid: ${invalid.join(", ")}`,
+      });
+    }
+  });
+
 export const apiEnvSchema = z.object({
   DATABASE_URL: z
     .string({ required_error: "DATABASE_URL is required" })
@@ -131,6 +201,7 @@ export const apiEnvSchema = z.object({
   NOTIFICATION_POLL_INTERVAL_MS: z.string().optional(),
   NOTIFICATION_REQUEST_TIMEOUT_MS: z.string().optional(),
   REDIS_URL: urlSchema.optional().or(z.literal("")),
+  TRUSTED_PROXY_HOPS: trustedProxyHopsSchema,
   STELLAR_NETWORK: z.enum(["testnet", "mainnet"]).optional().default("testnet"),
   STELLAR_HORIZON_URL: urlSchema,
   STELLAR_RPC_URL: urlSchema,
@@ -159,6 +230,7 @@ export const webappEnvSchema = z.object({
   NEXT_PUBLIC_PRIVY_APP_ID: z.string().optional(),
   PRIVY_APP_SECRET: z.string().optional(),
   NEXT_PUBLIC_POLLAR_KEY: z.string().optional(),
+  NEXT_PUBLIC_PROPERTY_IMAGE_HOSTS: propertyImageHostsSchema,
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

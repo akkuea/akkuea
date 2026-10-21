@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useWallet } from "@/components/auth/hooks";
 import { apiClient } from "@/services/api/client";
+import { useAuthenticationStore } from "@/components/auth/store/data/slices/authentication.slice";
 
 const STEPS = [
   {
@@ -75,17 +76,19 @@ export function WhitelistOnboardingForm() {
     checkStatus();
   }, [isConnected, address]);
 
-  // Auto-advance to step 2 when wallet connects on step 1.
-  // Uses inline state setter to avoid adding handleNext to the deps array.
-  useEffect(() => {
-    if (isConnected && currentStep === 1) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCurrentStep((prev) => prev + 1);
+  const handleConnect = async () => {
+    await connect();
+    if (useAuthenticationStore.getState().isConnected) {
+      setCurrentStep(2);
     }
-  }, [isConnected, currentStep]);
+  };
 
   const handleNext = () => {
-    if (currentStep < STEPS.length - 1) setCurrentStep((prev) => prev + 1);
+    if (currentStep < STEPS.length - 1) {
+      // Skip the wallet step when a session already exists. Back from review
+      // still returns to the wallet step and stays there.
+      setCurrentStep((prev) => (prev === 0 && isConnected ? 2 : prev + 1));
+    }
   };
 
   const handleBack = () => {
@@ -278,7 +281,7 @@ export function WhitelistOnboardingForm() {
               whitelist application.
             </p>
             <Button
-              onClick={connect}
+              onClick={handleConnect}
               className="w-full sm:w-auto min-w-[200px]"
             >
               Connect Wallet

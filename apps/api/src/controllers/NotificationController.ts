@@ -10,6 +10,8 @@ type NotificationBody = {
   notificationIds?: string[];
 };
 
+const MAX_BULK_MARK_AS_READ_IDS = 100;
+
 export class NotificationController {
   private static notificationService = new NotificationService();
 
@@ -157,6 +159,14 @@ export class NotificationController {
 
     if (!body.notificationIds || !Array.isArray(body.notificationIds)) {
       throw new ApiError(400, 'VALIDATION_ERROR', 'notificationIds must be an array');
+    }
+
+    if (body.notificationIds.length > MAX_BULK_MARK_AS_READ_IDS) {
+      throw new ApiError(
+        400,
+        'VALIDATION_ERROR',
+        `notificationIds must contain at most ${MAX_BULK_MARK_AS_READ_IDS} ids`,
+      );
     }
 
     try {

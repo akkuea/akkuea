@@ -33,16 +33,62 @@ const mockUpdateUserKycStatus = mock(
 );
 const mockFindExpiredApprovedUsers = mock(async (): Promise<ExpiryRow[]> => []);
 const mockFindUsersExpiringWithin = mock(async (_ms: number): Promise<ExpiryRow[]> => []);
+const mockClaimKycReminder = mock(async (_id: string): Promise<boolean> => true);
+const mockReleaseKycReminder = mock(async (_id: string): Promise<void> => {});
 
 // Save originals so we can restore them after the suite finishes
 const originalUpdateUserKycStatus = kycRepository.updateUserKycStatus.bind(kycRepository);
 const originalFindExpiredApprovedUsers = kycRepository.findExpiredApprovedUsers.bind(kycRepository);
 const originalFindUsersExpiringWithin = kycRepository.findUsersExpiringWithin.bind(kycRepository);
+const originalClaimKycReminder = kycRepository.claimKycReminder.bind(kycRepository);
+const originalReleaseKycReminder = kycRepository.releaseKycReminder.bind(kycRepository);
 
 kycRepository.findExpiredApprovedUsers = mockFindExpiredApprovedUsers;
 kycRepository.findUsersExpiringWithin = mockFindUsersExpiringWithin;
 kycRepository.updateUserKycStatus =
   mockUpdateUserKycStatus as typeof kycRepository.updateUserKycStatus;
+kycRepository.claimKycReminder = mockClaimKycReminder;
+kycRepository.releaseKycReminder = mockReleaseKycReminder;
+
+// ── In-memory users table for multi-tick scenarios ───────────────────────────
+
+/**
+ * Mirrors the reminder-marker semantics of KYCRepository against an in-memory
+ * table: a user is a reminder candidate until the marker equals their current
+ * expiry, claiming sets it, and an approval with a new expiry clears it.
+ */
+function useInMemoryUsers(rows: { id: string; kycExpiresAt: Date }[]) {
+  const table = new Map(
+    rows.map((row) => [
+      row.id,
+      { kycExpiresAt: row.kycExpiresAt, reminderSentFor: null as Date | null },
+    ]),
+  );
+  const notReminded = (u: { kycExpiresAt: Date; reminderSentFor: Date | null }) =>
+    u.reminderSentFor?.getTime() !== u.kycExpiresAt.getTime();
+
+  mockFindUsersExpiringWithin.mockImplementation(async () =>
+    [...table.entries()]
+      .filter(([, u]) => notReminded(u))
+      .map(([id, u]) => ({ id, kycExpiresAt: u.kycExpiresAt })),
+  );
+  mockClaimKycReminder.mockImplementation(async (id: string) => {
+    const u = table.get(id);
+    if (!u || !notReminded(u)) return false;
+    u.reminderSentFor = u.kycExpiresAt;
+    return true;
+  });
+  mockReleaseKycReminder.mockImplementation(async (id: string) => {
+    const u = table.get(id);
+    if (u) u.reminderSentFor = null;
+  });
+
+  return {
+    reapprove(id: string, kycExpiresAt: Date) {
+      table.set(id, { kycExpiresAt, reminderSentFor: null });
+    },
+  };
+}
 
 // ── Mock NotificationService ──────────────────────────────────────────────────
 
@@ -77,17 +123,23 @@ describe('KycExpiryJob', () => {
     kycRepository.updateUserKycStatus = originalUpdateUserKycStatus;
     kycRepository.findExpiredApprovedUsers = originalFindExpiredApprovedUsers;
     kycRepository.findUsersExpiringWithin = originalFindUsersExpiringWithin;
+    kycRepository.claimKycReminder = originalClaimKycReminder;
+    kycRepository.releaseKycReminder = originalReleaseKycReminder;
   });
 
   beforeEach(() => {
     mockUpdateUserKycStatus.mockReset();
     mockFindExpiredApprovedUsers.mockReset();
     mockFindUsersExpiringWithin.mockReset();
+    mockClaimKycReminder.mockReset();
+    mockReleaseKycReminder.mockReset();
     mockNotifyKycExpired.mockReset();
     mockNotifyKycExpiringSoon.mockReset();
-    // Default: no users to process
+    // Default: no users to process, and every candidate is claimable
     mockFindExpiredApprovedUsers.mockImplementation(async () => []);
     mockFindUsersExpiringWithin.mockImplementation(async () => []);
+    mockClaimKycReminder.mockImplementation(async () => true);
+    mockReleaseKycReminder.mockImplementation(async () => {});
   });
 
   // ── Already-expired records ───────────────────────────────────────────────
@@ -186,6 +238,92 @@ describe('KycExpiryJob', () => {
       const result = await job.tick();
 
       expect(result.reminded).toBe(1);
+    });
+  });
+
+  // ── Reminder idempotency across ticks ─────────────────────────────────────
+
+  describe('reminder idempotency', () => {
+    it('sends exactly one reminder when tick() runs twice for the same user', async () => {
+      const expiresAt = daysFromNow(15);
+      useInMemoryUsers([{ id: 'user-twice', kycExpiresAt: expiresAt }]);
+
+      const job = createJob();
+      const first = await job.tick();
+      const second = await job.tick();
+
+      expect(first.reminded).toBe(1);
+      expect(second.reminded).toBe(0);
+      expect(mockNotifyKycExpiringSoon).toHaveBeenCalledTimes(1);
+      expect(mockNotifyKycExpiringSoon).toHaveBeenCalledWith('user-twice', expiresAt, 'IN_APP');
+    });
+
+    it('sends exactly one reminder across start(), stop(), start()', async () => {
+      useInMemoryUsers([{ id: 'user-restart', kycExpiresAt: daysFromNow(10) }]);
+
+      const job = createJob();
+      job.start();
+      await job.stop();
+      job.start();
+      await job.stop();
+
+      // A fresh instance, as after a deploy, must not resend either.
+      const redeployed = createJob();
+      redeployed.start();
+      await redeployed.stop();
+
+      expect(mockNotifyKycExpiringSoon).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips a user whose reminder another instance already claimed', async () => {
+      mockFindUsersExpiringWithin.mockImplementation(async () => [
+        { id: 'user-claimed-elsewhere', kycExpiresAt: daysFromNow(5) },
+      ]);
+      mockClaimKycReminder.mockImplementation(async () => false);
+
+      const result = await createJob().tick();
+
+      expect(result.reminded).toBe(0);
+      expect(mockNotifyKycExpiringSoon).not.toHaveBeenCalled();
+    });
+
+    it('sends a new reminder once after a re-approval with a new expiry', async () => {
+      const users = useInMemoryUsers([{ id: 'user-renewed', kycExpiresAt: daysFromNow(20) }]);
+      const job = createJob();
+
+      await job.tick();
+      await job.tick();
+      expect(mockNotifyKycExpiringSoon).toHaveBeenCalledTimes(1);
+
+      const renewedExpiry = daysFromNow(25);
+      users.reapprove('user-renewed', renewedExpiry);
+      await job.tick();
+      await job.tick();
+
+      expect(mockNotifyKycExpiringSoon).toHaveBeenCalledTimes(2);
+      expect(mockNotifyKycExpiringSoon).toHaveBeenLastCalledWith(
+        'user-renewed',
+        renewedExpiry,
+        'IN_APP',
+      );
+    });
+
+    it('releases the claim when the notification fails so the next tick retries', async () => {
+      useInMemoryUsers([{ id: 'user-retry', kycExpiresAt: daysFromNow(12) }]);
+      mockNotifyKycExpiringSoon.mockImplementationOnce(async () => {
+        throw new Error('Simulated notification insert failure');
+      });
+
+      const job = createJob();
+      const failed = await job.tick();
+      const retried = await job.tick();
+      const settled = await job.tick();
+
+      expect(failed.reminded).toBe(0);
+      expect(mockReleaseKycReminder).toHaveBeenCalledWith('user-retry');
+      expect(retried.reminded).toBe(1);
+      expect(settled.reminded).toBe(0);
+      expect(mockNotifyKycExpiringSoon).toHaveBeenCalledTimes(2);
     });
   });
 

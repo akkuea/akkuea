@@ -1,0 +1,18 @@
+{
+  "default_branch": "develop",
+  "branches": [
+    "develop",
+    "origin",
+    "security/issue-1164-webapp-upgrade-storybook-8-to-the-current-major"
+  ],
+  "parent": {
+    "develop": null,
+    "origin": "develop",
+    "security/issue-1164-webapp-upgrade-storybook-8-to-the-current-major": "develop"
+  },
+  "order": [
+    "develop",
+    "origin",
+    "security/issue-1164-webapp-upgrade-storybook-8-to-the-current-major"
+  ]
+}

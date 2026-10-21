@@ -103,6 +103,8 @@ Some endpoints (e.g. property creation, tokenization) instead check an `x-user-a
 4. **Blockchain errors** - Stellar/Soroban transaction failures
 5. **Business logic errors** - invalid operations (insufficient shares, already tokenized, etc.)
 
+Only errors the API raises on purpose (its `ApiError` and `AppError` classes, the `@akkuea/shared` error classes, and request validation, parsing, and routing errors) return their own `error` code, `message`, and status. Any other failure, such as a database driver error, is logged in full on the server and returned to the client as a generic `500` with `"error": "INTERNAL_ERROR"` and `"message": "An unexpected error occurred"`, so internal details such as SQL text never reach the caller.
+
 ## Rate Limiting
 
 Both `/auth/challenge` and `/auth/session` are explicitly rate-limited (10 requests / 60 seconds per client, see [`authentication.md`](authentication.md)). Rate limit headers are included on responses:

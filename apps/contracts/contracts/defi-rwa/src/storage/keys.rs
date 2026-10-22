@@ -47,6 +47,10 @@ pub enum StorageKey {
     /// Verified status for a property
     /// Key: PropertyVerified(property_id)
     PropertyVerified(u64),
+
+    /// Payment token accepted for a property listing
+    /// Key: PaymentToken(property_id)
+    PaymentToken(u64),
 }
 
 impl StorageKey {
@@ -66,6 +70,7 @@ impl StorageKey {
             }
             StorageKey::PricePerShare(_) => Symbol::new(&soroban_sdk::Env::default(), "PriceShr"),
             StorageKey::PropertyVerified(_) => Symbol::new(&soroban_sdk::Env::default(), "PropVer"),
+            StorageKey::PaymentToken(_) => Symbol::new(&soroban_sdk::Env::default(), "PayTokn"),
         }
     }
 }

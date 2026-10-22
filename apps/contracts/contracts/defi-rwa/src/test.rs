@@ -4959,3 +4959,125 @@ fn test_normal_price_is_still_accepted() {
     });
     assert!(result.is_ok());
 }
+
+
+// ───────────────────────────────────────────────
+// Buyer-signed share-purchase acceptance tests
+// ───────────────────────────────────────────────
+
+#[test]
+fn test_admin_listing_persists_sale_parameters() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let property_id = 4242_u64;
+    let price_per_share = 2_500_000_i128;
+    let shares_for_sale = 250_u64;
+
+    // The constructor's legacy admin key overlaps the role key in this
+    // contract, so explicitly initialise the role used by AdminControl.
+    s.env.as_contract(&s.contract_address, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        s.env.storage().instance().set(&RoleKey::Admin, &s.admin);
+        RoleStorage::grant_role(&s.env, &s.admin, &Role::Admin);
+    });
+
+    s.contract_client.list_property(
+        &s.admin,
+        &property_id,
+        &owner,
+        &price_per_share,
+        &shares_for_sale,
+        &s.token_address,
+    );
+
+    let (metadata, available, price, verified, payment_token, total_shares) =
+        s.env.as_contract(&s.contract_address, || {
+            (
+                storage::property::PropertyMetadata::load(&s.env, property_id).unwrap(),
+                storage::property::get_available_shares(&s.env, property_id),
+                storage::property::get_price_per_share(&s.env, property_id),
+                storage::property::is_verified(&s.env, property_id),
+                storage::property::get_payment_token(&s.env, property_id).unwrap(),
+                storage::shares::get_total_shares(&s.env, property_id),
+            )
+        });
+
+    assert_eq!(metadata.owner, owner);
+    assert!(metadata.is_active);
+    assert_eq!(available, shares_for_sale);
+    assert_eq!(price, price_per_share);
+    assert!(verified);
+    assert_eq!(payment_token, s.token_address);
+    assert_eq!(total_shares, 0);
+}
+
+#[test]
+fn test_non_admin_cannot_list_property() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let non_admin = Address::generate(&s.env);
+    let property_id = 4243_u64;
+
+    s.env.as_contract(&s.contract_address, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        s.env.storage().instance().set(&RoleKey::Admin, &s.admin);
+        RoleStorage::grant_role(&s.env, &s.admin, &Role::Admin);
+    });
+
+    let result = s.contract_client.try_list_property(
+        &non_admin,
+        &property_id,
+        &owner,
+        &1_000_000_i128,
+        &10_u64,
+        &s.token_address,
+    );
+    assert!(result.is_err(), "non-admin listing must be rejected");
+    assert!(
+        s.env.as_contract(&s.contract_address, || {
+            !storage::property::PropertyMetadata::exists(&s.env, property_id)
+        }),
+        "rejected listing must not persist property metadata"
+    );
+}
+
+#[test]
+fn test_purchase_rejects_unlisted_payment_token() {
+    let (contract_id, env, _owner, buyer, _payment_token, property_id) =
+        setup_purchase_test();
+    let wrong_token = Address::generate(&env);
+    let client = PropertyTokenContractClient::new(&env, &contract_id);
+
+    let result = client.try_purchase_shares(
+        &buyer,
+        &property_id,
+        &1_u64,
+        &wrong_token,
+    );
+    assert!(result.is_err(), "purchase must reject a token other than the listing token");
+}
+
+#[test]
+fn test_delisting_blocks_new_purchases_without_changing_inventory() {
+    let (contract_id, env, _owner, buyer, payment_token, property_id) =
+        setup_purchase_test();
+    let client = PropertyTokenContractClient::new(&env, &contract_id);
+
+    // The helper grants admin role to the address stored as the instance admin.
+    let admin = env.as_contract(&contract_id, || {
+        use super::access::roles::{RoleKey};
+        env.storage().instance().get::<RoleKey, Address>(&RoleKey::Admin).unwrap()
+    });
+    client.set_property_active(&admin, &property_id, &false);
+
+    let available_before = env.as_contract(&contract_id, || {
+        storage::property::get_available_shares(&env, property_id)
+    });
+    let result = client.try_purchase_shares(&buyer, &property_id, &1_u64, &payment_token);
+    assert!(result.is_err(), "delisted property must reject purchases");
+
+    let available_after = env.as_contract(&contract_id, || {
+        storage::property::get_available_shares(&env, property_id)
+    });
+    assert_eq!(available_after, available_before);
+}

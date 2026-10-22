@@ -428,9 +428,7 @@ export class StellarService {
     // invokeHostFunction operation always carries the xdr host function.
     const func = (operation as unknown as { func?: xdr.HostFunction }).func;
     if (!func || func.type !== 'hostFunctionTypeInvokeContract') {
-      throw ApiError.validation(
-        'A share purchase transaction must invoke a contract function',
-      );
+      throw ApiError.validation('A share purchase transaction must invoke a contract function');
     }
 
     const { contractAddress, functionName, args } = func.invokeContract;

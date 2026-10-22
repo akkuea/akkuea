@@ -726,4 +726,3 @@ describe.skipIf(skipIfNoDatabase)('PropertyController buy-shares prepare/confirm
     });
   });
 });
-

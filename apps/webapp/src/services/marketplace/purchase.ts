@@ -1,5 +1,9 @@
 import { API_ENDPOINTS } from "@akkuea/shared";
-import { Networks, TransactionBuilder, rpc as SorobanRpc } from "@stellar/stellar-sdk";
+import {
+  Networks,
+  TransactionBuilder,
+  rpc as SorobanRpc,
+} from "@stellar/stellar-sdk";
 
 /**
  * Submission layer for buyer-signed share purchases.

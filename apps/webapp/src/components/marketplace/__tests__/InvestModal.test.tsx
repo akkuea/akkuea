@@ -156,7 +156,8 @@ describe("InvestModal", () => {
         contractId: "CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4",
         sorobanPropertyId: "42",
         shares: 3,
-        paymentToken: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+        paymentToken:
+          "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
         totalAmount: "300.0000000",
       });
     });
@@ -290,7 +291,9 @@ describe("InvestModal", () => {
     );
     expect(onSuccess).toHaveBeenCalledTimes(1);
     // The success screen shows the real transaction hash.
-    expect(view.queryByText(new RegExp(TX_HASH.slice(0, 8), "i"))).not.toBeNull();
+    expect(
+      view.queryByText(new RegExp(TX_HASH.slice(0, 8), "i")),
+    ).not.toBeNull();
   });
 
   it("shows an error and never confirms when the wallet rejects the signature", async () => {
@@ -346,9 +349,7 @@ describe("InvestModal", () => {
     fireEvent.click(view.getByRole("button", { name: /Confirm Investment/i }));
 
     await waitFor(() => {
-      expect(
-        view.queryByText(/returned no transaction hash/i),
-      ).not.toBeNull();
+      expect(view.queryByText(/returned no transaction hash/i)).not.toBeNull();
     });
 
     expect(signTransactionMock).toHaveBeenCalledTimes(1);

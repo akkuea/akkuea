@@ -195,7 +195,8 @@ describe("Property API", () => {
         contractId: "CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4",
         sorobanPropertyId: "42",
         shares: 50,
-        paymentToken: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+        paymentToken:
+          "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
         totalAmount: "5000.0000000",
       };
 

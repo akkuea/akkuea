@@ -5081,3 +5081,36 @@ fn test_delisting_blocks_new_purchases_without_changing_inventory() {
     });
     assert_eq!(available_after, available_before);
 }
+
+
+#[test]
+fn test_purchase_increases_total_share_supply_exactly_once() {
+    let (contract_id, env, _owner, buyer, payment_token, property_id) =
+        setup_purchase_test();
+    let client = PropertyTokenContractClient::new(&env, &contract_id);
+
+    let (supply_before, buyer_balance_before, inventory_before) =
+        env.as_contract(&contract_id, || {
+            (
+                storage::shares::get_total_shares(&env, property_id),
+                storage::shares::get_balance(&env, property_id, &buyer),
+                storage::property::get_available_shares(&env, property_id),
+            )
+        });
+    let quantity = 37_u64;
+
+    client.purchase_shares(&buyer, &property_id, &quantity, &payment_token);
+
+    let (supply_after, buyer_balance_after, inventory_after) =
+        env.as_contract(&contract_id, || {
+            (
+                storage::shares::get_total_shares(&env, property_id),
+                storage::shares::get_balance(&env, property_id, &buyer),
+                storage::property::get_available_shares(&env, property_id),
+            )
+        });
+
+    assert_eq!(supply_after, supply_before + quantity);
+    assert_eq!(buyer_balance_after, buyer_balance_before + quantity);
+    assert_eq!(inventory_after, inventory_before - quantity);
+}

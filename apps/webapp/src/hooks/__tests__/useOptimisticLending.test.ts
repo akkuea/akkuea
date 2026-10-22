@@ -1,702 +1,594 @@
-import { describe, it, expect, beforeEach, afterAll, mock } from "bun:test";
+import "@/test/setup-dom";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+} from "bun:test";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+
 import type {
-  LendingPool,
-  DepositPosition,
   BorrowPosition,
+  DepositPosition,
+  LendingPool,
 } from "@akkuea/shared";
+
 import {
   VALID_STELLAR_ADDRESS,
-  createLendingPool,
-  createDepositPosition,
   createBorrowPosition,
+  createDepositPosition,
+  createLendingPool,
 } from "@akkuea/shared";
 import { lendingApi } from "@/services/api";
+import { useLendingPools, type UserPositions } from "../useLendingPools";
 
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
+/**
+ * These tests drive the real `useLendingPools` hook through `renderHook`.
+ * Only the three `lendingApi` reads the hook performs are replaced, so every
+ * optimistic, commit and rollback assertion runs against the shipped logic.
+ * Live updates are disabled so no polling timer or extra pool fetch runs.
+ */
 
-const mockPool = createLendingPool({
+const POOL_A = createLendingPool({
   name: "USDC Stable Pool",
   asset: "USDC",
   totalDeposits: "5000000",
   totalBorrows: "3600000",
   availableLiquidity: "1400000",
-  utilizationRate: 72,
-  supplyAPY: 5.2,
-  borrowAPY: 7.8,
 });
 
-const mockPool2 = createLendingPool({
+const POOL_B = createLendingPool({
   name: "XLM Native Pool",
   asset: "XLM",
   totalDeposits: "2000000",
   totalBorrows: "1300000",
   availableLiquidity: "700000",
-  utilizationRate: 65,
-  supplyAPY: 4.5,
-  borrowAPY: 6.5,
-  collateralFactor: 70,
 });
 
-// ---------------------------------------------------------------------------
-// Helpers to simulate optimistic update logic without React
-// These mirror the pure state-logic from useLendingPools so we can test the
-// optimistic / rollback behaviour without a full render.
-// ---------------------------------------------------------------------------
+const getPools = mock<() => Promise<LendingPool[]>>();
+const getUserDeposits =
+  mock<(poolId: string, address: string) => Promise<DepositPosition[]>>();
+const getUserBorrows =
+  mock<(poolId: string, address: string) => Promise<BorrowPosition[]>>();
 
-interface UserPositions {
-  deposits: DepositPosition[];
-  borrows: BorrowPosition[];
+const originalGetPools = lendingApi.getPools;
+const originalGetUserDeposits = lendingApi.getUserDeposits;
+const originalGetUserBorrows = lendingApi.getUserBorrows;
+
+/** Server-side positions per pool, read by the mocked position endpoints. */
+let serverPositions: Record<string, UserPositions> = {};
+
+function serverReturns(positions: Record<string, UserPositions>) {
+  serverPositions = positions;
 }
 
-function applyOptimisticDeposit(
-  positions: Record<string, UserPositions>,
-  poolId: string,
-  amount: number,
-  userAddress: string,
-): Record<string, UserPositions> {
-  const current = positions[poolId] ?? { deposits: [], borrows: [] };
-  const existingDeposit = current.deposits[0];
-  let newDeposits: DepositPosition[];
-  if (existingDeposit) {
-    newDeposits = [
-      {
-        ...existingDeposit,
-        amount: (parseFloat(existingDeposit.amount) + amount).toString(),
-        shares: (parseFloat(existingDeposit.shares) + amount).toString(),
-        accruedInterest: "0",
+function totalOf(values: string[]): number {
+  return values.reduce((sum, value) => sum + parseFloat(value), 0);
+}
+
+function deposited(positions: UserPositions | undefined): number {
+  return totalOf((positions?.deposits ?? []).map((d) => d.amount));
+}
+
+function depositInterest(positions: UserPositions | undefined): number {
+  return totalOf((positions?.deposits ?? []).map((d) => d.accruedInterest));
+}
+
+function borrowed(positions: UserPositions | undefined): number {
+  return totalOf((positions?.borrows ?? []).map((b) => b.principal));
+}
+
+function borrowInterest(positions: UserPositions | undefined): number {
+  return totalOf((positions?.borrows ?? []).map((b) => b.accruedInterest));
+}
+
+/** Renders the hook for a connected wallet and waits for the first load. */
+async function renderLoaded() {
+  const hook = renderHook(() =>
+    useLendingPools(VALID_STELLAR_ADDRESS, { enableLiveUpdates: false }),
+  );
+  await waitFor(() => {
+    expect(hook.result.current.isLoading).toBe(false);
+    expect(hook.result.current.pools).toHaveLength(2);
+  });
+  return hook;
+}
+
+function poolIn(pools: LendingPool[], id: string): LendingPool {
+  const pool = pools.find((p) => p.id === id);
+  if (!pool) throw new Error(`pool ${id} is not loaded`);
+  return pool;
+}
+
+beforeEach(() => {
+  getPools.mockReset();
+  getUserDeposits.mockReset();
+  getUserBorrows.mockReset();
+
+  getPools.mockImplementation(async () => [POOL_A, POOL_B]);
+  getUserDeposits.mockImplementation(
+    async (poolId) => serverPositions[poolId]?.deposits ?? [],
+  );
+  getUserBorrows.mockImplementation(
+    async (poolId) => serverPositions[poolId]?.borrows ?? [],
+  );
+  serverPositions = {};
+
+  lendingApi.getPools = getPools;
+  lendingApi.getUserDeposits = getUserDeposits;
+  lendingApi.getUserBorrows = getUserBorrows;
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+afterAll(() => {
+  lendingApi.getPools = originalGetPools;
+  lendingApi.getUserDeposits = originalGetUserDeposits;
+  lendingApi.getUserBorrows = originalGetUserBorrows;
+});
+
+describe("useLendingPools optimistic pool liquidity", () => {
+  it("supply of X raises availableLiquidity and totalDeposits by X", async () => {
+    const { result } = await renderLoaded();
+
+    act(() => {
+      result.current.applyOptimisticUpdate("supply", POOL_A.id, 5000, POOL_A);
+    });
+
+    const pool = poolIn(result.current.pools, POOL_A.id);
+    expect(pool.availableLiquidity).toBe("1405000");
+    expect(pool.totalDeposits).toBe("5005000");
+    expect(pool.totalBorrows).toBe(POOL_A.totalBorrows);
+  });
+
+  it("withdraw of X lowers availableLiquidity and totalDeposits by X", async () => {
+    serverReturns({
+      [POOL_A.id]: {
+        deposits: [
+          createDepositPosition({ poolId: POOL_A.id, amount: "9000" }),
+        ],
+        borrows: [],
       },
-    ];
-  } else {
-    newDeposits = [
-      createDepositPosition({
-        poolId,
-        depositor: userAddress,
-        amount: amount.toString(),
-        shares: amount.toString(),
-        accruedInterest: "0",
-      }),
-    ];
-  }
-  return {
-    ...positions,
-    [poolId]: { deposits: newDeposits, borrows: current.borrows },
-  };
-}
+    });
+    const { result } = await renderLoaded();
 
-function applyOptimisticBorrow(
-  positions: Record<string, UserPositions>,
-  poolId: string,
-  amount: number,
-  userAddress: string,
-  collateralAsset: string,
-): Record<string, UserPositions> {
-  const current = positions[poolId] ?? { deposits: [], borrows: [] };
-  const existingBorrow = current.borrows[0];
-  let newBorrows: BorrowPosition[];
-  if (existingBorrow) {
-    newBorrows = [
-      {
-        ...existingBorrow,
-        principal: (parseFloat(existingBorrow.principal) + amount).toString(),
-        accruedInterest: "0",
+    act(() => {
+      result.current.applyOptimisticUpdate("withdraw", POOL_A.id, 5000, POOL_A);
+    });
+
+    const pool = poolIn(result.current.pools, POOL_A.id);
+    expect(pool.availableLiquidity).toBe("1395000");
+    expect(pool.totalDeposits).toBe("4995000");
+    expect(pool.totalBorrows).toBe(POOL_A.totalBorrows);
+  });
+
+  it("borrow lowers availableLiquidity and raises totalBorrows", async () => {
+    const { result } = await renderLoaded();
+
+    act(() => {
+      result.current.applyOptimisticUpdate("borrow", POOL_A.id, 5000, POOL_A);
+    });
+
+    const pool = poolIn(result.current.pools, POOL_A.id);
+    expect(pool.availableLiquidity).toBe("1395000");
+    expect(pool.totalBorrows).toBe("3605000");
+    expect(pool.totalDeposits).toBe(POOL_A.totalDeposits);
+  });
+
+  it("repay raises availableLiquidity and lowers totalBorrows", async () => {
+    serverReturns({
+      [POOL_A.id]: {
+        deposits: [],
+        borrows: [
+          createBorrowPosition({ poolId: POOL_A.id, principal: "9000" }),
+        ],
       },
-    ];
-  } else {
-    newBorrows = [
-      createBorrowPosition({
-        poolId,
-        borrower: userAddress,
-        principal: amount.toString(),
-        accruedInterest: "0",
-        collateralAmount: amount.toString(),
-        collateralAsset,
-        healthFactor: 1.5,
-      }),
-    ];
-  }
-  return {
-    ...positions,
-    [poolId]: { deposits: current.deposits, borrows: newBorrows },
-  };
-}
+    });
+    const { result } = await renderLoaded();
 
-function applyOptimisticWithdraw(
-  positions: Record<string, UserPositions>,
-  poolId: string,
-  amount: number,
-): Record<string, UserPositions> {
-  const current = positions[poolId] ?? { deposits: [], borrows: [] };
-  const newDeposits = current.deposits
-    .map((d) => ({
-      ...d,
-      amount: (parseFloat(d.amount) - amount).toString(),
-      shares: (parseFloat(d.shares) - amount).toString(),
-    }))
-    .filter((d) => parseFloat(d.amount) > 0);
-  return {
-    ...positions,
-    [poolId]: { deposits: newDeposits, borrows: current.borrows },
-  };
-}
+    act(() => {
+      result.current.applyOptimisticUpdate("repay", POOL_A.id, 5000, POOL_A);
+    });
 
-function applyOptimisticRepay(
-  positions: Record<string, UserPositions>,
-  poolId: string,
-  amount: number,
-): Record<string, UserPositions> {
-  const current = positions[poolId] ?? { deposits: [], borrows: [] };
-  const newBorrows = current.borrows
-    .map((b) => ({
-      ...b,
-      principal: (parseFloat(b.principal) - amount).toString(),
-      accruedInterest: "0",
-    }))
-    .filter((b) => parseFloat(b.principal) > 0);
-  return {
-    ...positions,
-    [poolId]: { deposits: current.deposits, borrows: newBorrows },
-  };
-}
-
-function applyPoolLiquidityUpdate(
-  pools: LendingPool[],
-  poolId: string,
-  action: "supply" | "borrow" | "withdraw" | "repay",
-  amount: number,
-): LendingPool[] {
-  return pools.map((p) => {
-    if (p.id !== poolId) return p;
-    const liq = parseFloat(p.availableLiquidity);
-    const totalDep = parseFloat(p.totalDeposits);
-    const totalBor = parseFloat(p.totalBorrows);
-    switch (action) {
-      case "supply":
-        return {
-          ...p,
-          availableLiquidity: (liq - amount).toString(),
-          totalDeposits: (totalDep + amount).toString(),
-        };
-      case "borrow":
-        return {
-          ...p,
-          availableLiquidity: (liq - amount).toString(),
-          totalBorrows: (totalBor + amount).toString(),
-        };
-      case "withdraw":
-        return {
-          ...p,
-          availableLiquidity: (liq + amount).toString(),
-          totalDeposits: (totalDep - amount).toString(),
-        };
-      case "repay":
-        return {
-          ...p,
-          availableLiquidity: (liq + amount).toString(),
-          totalBorrows: (totalBor - amount).toString(),
-        };
-    }
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Mock lendingApi methods
-// ---------------------------------------------------------------------------
-
-const mockDeposit = mock(async () =>
-  createDepositPosition({ accruedInterest: "12.5" }),
-);
-const mockBorrow = mock(async () =>
-  createBorrowPosition({ principal: "5000", accruedInterest: "0" }),
-);
-const mockWithdraw = mock(async () =>
-  createDepositPosition({ amount: "500", shares: "500" }),
-);
-const mockRepay = mock(async () =>
-  createBorrowPosition({ principal: "4500", accruedInterest: "0" }),
-);
-
-const originalDeposit = lendingApi.deposit;
-const originalBorrow = lendingApi.borrow;
-const originalWithdraw = lendingApi.withdraw;
-const originalRepay = lendingApi.repay;
-
-describe("Optimistic UI for lending actions", () => {
-  beforeEach(() => {
-    lendingApi.deposit = mockDeposit;
-    lendingApi.borrow = mockBorrow;
-    lendingApi.withdraw = mockWithdraw;
-    lendingApi.repay = mockRepay;
-    mockDeposit.mockClear();
-    mockBorrow.mockClear();
-    mockWithdraw.mockClear();
-    mockRepay.mockClear();
+    const pool = poolIn(result.current.pools, POOL_A.id);
+    expect(pool.availableLiquidity).toBe("1405000");
+    expect(pool.totalBorrows).toBe("3595000");
+    expect(pool.totalDeposits).toBe(POOL_A.totalDeposits);
   });
 
-  afterAll(() => {
-    lendingApi.deposit = originalDeposit;
-    lendingApi.borrow = originalBorrow;
-    lendingApi.withdraw = originalWithdraw;
-    lendingApi.repay = originalRepay;
+  it("leaves every other pool untouched", async () => {
+    const { result } = await renderLoaded();
+
+    act(() => {
+      result.current.applyOptimisticUpdate("supply", POOL_A.id, 5000, POOL_A);
+    });
+
+    expect(poolIn(result.current.pools, POOL_B.id)).toEqual(POOL_B);
+  });
+});
+
+describe("useLendingPools optimistic positions", () => {
+  it("supply adds X to the total and keeps existing rows and their interest", async () => {
+    serverReturns({
+      [POOL_A.id]: {
+        deposits: [
+          createDepositPosition({
+            poolId: POOL_A.id,
+            amount: "200",
+            accruedInterest: "12.50",
+          }),
+          createDepositPosition({
+            poolId: POOL_A.id,
+            amount: "100",
+            accruedInterest: "5",
+          }),
+        ],
+        borrows: [],
+      },
+    });
+    const { result } = await renderLoaded();
+
+    act(() => {
+      result.current.applyOptimisticUpdate("supply", POOL_A.id, 50, POOL_A);
+    });
+
+    const positions = result.current.userPositions[POOL_A.id];
+    expect(positions.deposits).toHaveLength(3);
+    expect(deposited(positions)).toBe(350);
+    expect(depositInterest(positions)).toBe(17.5);
+    expect(positions.deposits[0].accruedInterest).toBe("12.50");
+    expect(positions.deposits[1].accruedInterest).toBe("5");
   });
 
-  // -----------------------------------------------------------------------
-  // Supply
-  // -----------------------------------------------------------------------
+  it("supply creates a position when the user had none", async () => {
+    const { result } = await renderLoaded();
 
-  describe("supply (deposit)", () => {
-    it("applies optimistic deposit immediately before API confirmation", () => {
-      const positionsBefore: Record<string, UserPositions> = {};
-      const amount = 5000;
-
-      const positionsAfter = applyOptimisticDeposit(
-        positionsBefore,
-        mockPool.id,
-        amount,
-        VALID_STELLAR_ADDRESS,
-      );
-
-      // Deposit should appear immediately
-      expect(positionsAfter[mockPool.id].deposits).toHaveLength(1);
-      expect(positionsAfter[mockPool.id].deposits[0].amount).toBe("5000");
-      expect(positionsAfter[mockPool.id].deposits[0].shares).toBe("5000");
+    act(() => {
+      result.current.applyOptimisticUpdate("supply", POOL_A.id, 5000, POOL_A);
     });
 
-    it("increments existing deposit when one already exists", () => {
-      const existingDeposit = createDepositPosition({
-        poolId: mockPool.id,
-        amount: "10000",
-        shares: "10000",
-      });
-      const positionsBefore: Record<string, UserPositions> = {
-        [mockPool.id]: { deposits: [existingDeposit], borrows: [] },
-      };
-
-      const positionsAfter = applyOptimisticDeposit(
-        positionsBefore,
-        mockPool.id,
-        5000,
-        VALID_STELLAR_ADDRESS,
-      );
-
-      expect(positionsAfter[mockPool.id].deposits[0].amount).toBe("15000");
-      expect(positionsAfter[mockPool.id].deposits[0].shares).toBe("15000");
-    });
-
-    it("rolls back deposit when API call fails", () => {
-      const positionsBefore: Record<string, UserPositions> = {};
-      const amount = 5000;
-
-      // Apply optimistic update
-      const positionsOptimistic = applyOptimisticDeposit(
-        positionsBefore,
-        mockPool.id,
-        amount,
-        VALID_STELLAR_ADDRESS,
-      );
-
-      expect(positionsOptimistic[mockPool.id].deposits).toHaveLength(1);
-
-      // Rollback = restore original state
-      const positionsRolledBack = positionsBefore;
-
-      expect(positionsRolledBack[mockPool.id]).toBeUndefined();
-    });
-
-    it("successful tx flow: optimistic update then reconcile", async () => {
-      const positionsBefore: Record<string, UserPositions> = {};
-      const amount = 5000;
-
-      // Step 1: Apply optimistic update (UI shows immediately)
-      const positionsOptimistic = applyOptimisticDeposit(
-        positionsBefore,
-        mockPool.id,
-        amount,
-        VALID_STELLAR_ADDRESS,
-      );
-      expect(positionsOptimistic[mockPool.id].deposits[0].amount).toBe("5000");
-
-      // Step 2: Submit transaction to API
-      const result = await lendingApi.deposit(mockPool.id, {
-        userAddress: VALID_STELLAR_ADDRESS,
-        amount,
-      });
-      expect(mockDeposit).toHaveBeenCalledTimes(1);
-      expect(result).toBeDefined();
-
-      // Step 3: Commit (refetch replaces optimistic with real data)
-      // In the real app, refetch() would reload from the API.
-      // The test verifies the API call succeeded.
-    });
-
-    it("failed tx flow: optimistic update then rollback", async () => {
-      mockDeposit.mockImplementationOnce(async () => {
-        throw new Error("Insufficient liquidity");
-      });
-
-      const positionsBefore: Record<string, UserPositions> = {};
-      const amount = 5000;
-
-      // Step 1: Apply optimistic update
-      const positionsOptimistic = applyOptimisticDeposit(
-        positionsBefore,
-        mockPool.id,
-        amount,
-        VALID_STELLAR_ADDRESS,
-      );
-      expect(positionsOptimistic[mockPool.id].deposits[0].amount).toBe("5000");
-
-      // Step 2: API call fails
-      let errorMessage: string | null = null;
-      try {
-        await lendingApi.deposit(mockPool.id, {
-          userAddress: VALID_STELLAR_ADDRESS,
-          amount,
-        });
-      } catch (err) {
-        errorMessage = err instanceof Error ? err.message : "Unknown";
-      }
-      expect(errorMessage).toBe("Insufficient liquidity");
-
-      // Step 3: Rollback - state reverts to before
-      const positionsRolledBack = positionsBefore;
-      expect(positionsRolledBack[mockPool.id]).toBeUndefined();
-    });
+    const [deposit] = result.current.userPositions[POOL_A.id].deposits;
+    expect(deposit.amount).toBe("5000");
+    expect(deposit.shares).toBe("5000");
+    expect(deposit.poolId).toBe(POOL_A.id);
+    expect(deposit.depositor).toBe(VALID_STELLAR_ADDRESS);
   });
 
-  // -----------------------------------------------------------------------
-  // Borrow
-  // -----------------------------------------------------------------------
+  it("withdraw of 100 from two rows totalling 300 leaves 200 and keeps interest", async () => {
+    serverReturns({
+      [POOL_A.id]: {
+        deposits: [
+          createDepositPosition({
+            poolId: POOL_A.id,
+            amount: "200",
+            shares: "200",
+            accruedInterest: "12.50",
+          }),
+          createDepositPosition({
+            poolId: POOL_A.id,
+            amount: "100",
+            shares: "100",
+            accruedInterest: "5",
+          }),
+        ],
+        borrows: [],
+      },
+    });
+    const { result } = await renderLoaded();
 
-  describe("borrow", () => {
-    it("applies optimistic borrow immediately", () => {
-      const positionsBefore: Record<string, UserPositions> = {};
-      const amount = 5000;
-
-      const positionsAfter = applyOptimisticBorrow(
-        positionsBefore,
-        mockPool.id,
-        amount,
-        VALID_STELLAR_ADDRESS,
-        mockPool.assetAddress,
-      );
-
-      expect(positionsAfter[mockPool.id].borrows).toHaveLength(1);
-      expect(positionsAfter[mockPool.id].borrows[0].principal).toBe("5000");
+    act(() => {
+      result.current.applyOptimisticUpdate("withdraw", POOL_A.id, 100, POOL_A);
     });
 
-    it("increments existing borrow when one already exists", () => {
-      const existingBorrow = createBorrowPosition({
-        poolId: mockPool.id,
-        principal: "3000",
-      });
-      const positionsBefore: Record<string, UserPositions> = {
-        [mockPool.id]: { deposits: [], borrows: [existingBorrow] },
-      };
-
-      const positionsAfter = applyOptimisticBorrow(
-        positionsBefore,
-        mockPool.id,
-        2000,
-        VALID_STELLAR_ADDRESS,
-        mockPool.assetAddress,
-      );
-
-      expect(positionsAfter[mockPool.id].borrows[0].principal).toBe("5000");
-    });
-
-    it("failed tx flow: optimistic borrow then rollback", async () => {
-      mockBorrow.mockImplementationOnce(async () => {
-        throw new Error("Collateral ratio too low");
-      });
-
-      const positionsBefore: Record<string, UserPositions> = {};
-      const amount = 5000;
-
-      const positionsOptimistic = applyOptimisticBorrow(
-        positionsBefore,
-        mockPool.id,
-        amount,
-        VALID_STELLAR_ADDRESS,
-        mockPool.assetAddress,
-      );
-      expect(positionsOptimistic[mockPool.id].borrows[0].principal).toBe(
-        "5000",
-      );
-
-      let errorMessage: string | null = null;
-      try {
-        await lendingApi.borrow(mockPool.id, {
-          userAddress: VALID_STELLAR_ADDRESS,
-          collateralAmount: amount,
-          collateralAsset: mockPool.assetAddress,
-          borrowAmount: amount,
-        });
-      } catch (err) {
-        errorMessage = err instanceof Error ? err.message : "Unknown";
-      }
-      expect(errorMessage).toBe("Collateral ratio too low");
-
-      // Rollback
-      const positionsRolledBack = positionsBefore;
-      expect(positionsRolledBack[mockPool.id]).toBeUndefined();
-    });
+    const positions = result.current.userPositions[POOL_A.id];
+    expect(deposited(positions)).toBe(200);
+    expect(depositInterest(positions)).toBe(17.5);
+    expect(positions.deposits).toHaveLength(2);
   });
 
-  // -----------------------------------------------------------------------
-  // Withdraw
-  // -----------------------------------------------------------------------
+  it("withdraw spanning rows drops a row only once nothing is left in it", async () => {
+    serverReturns({
+      [POOL_A.id]: {
+        deposits: [
+          createDepositPosition({
+            poolId: POOL_A.id,
+            amount: "200",
+            accruedInterest: "0",
+          }),
+          createDepositPosition({
+            poolId: POOL_A.id,
+            amount: "100",
+            accruedInterest: "5",
+          }),
+        ],
+        borrows: [],
+      },
+    });
+    const { result } = await renderLoaded();
 
-  describe("withdraw", () => {
-    it("reduces deposit optimistically", () => {
-      const existingDeposit = createDepositPosition({
-        poolId: mockPool.id,
-        amount: "10000",
-        shares: "10000",
-      });
-      const positionsBefore: Record<string, UserPositions> = {
-        [mockPool.id]: { deposits: [existingDeposit], borrows: [] },
-      };
-
-      const positionsAfter = applyOptimisticWithdraw(
-        positionsBefore,
-        mockPool.id,
-        3000,
-      );
-
-      expect(positionsAfter[mockPool.id].deposits[0].amount).toBe("7000");
+    act(() => {
+      result.current.applyOptimisticUpdate("withdraw", POOL_A.id, 250, POOL_A);
     });
 
-    it("removes deposit entirely when withdrawing full amount", () => {
-      const existingDeposit = createDepositPosition({
-        poolId: mockPool.id,
-        amount: "10000",
-        shares: "10000",
-      });
-      const positionsBefore: Record<string, UserPositions> = {
-        [mockPool.id]: { deposits: [existingDeposit], borrows: [] },
-      };
-
-      const positionsAfter = applyOptimisticWithdraw(
-        positionsBefore,
-        mockPool.id,
-        10000,
-      );
-
-      expect(positionsAfter[mockPool.id].deposits).toHaveLength(0);
-    });
-
-    it("failed tx flow: optimistic withdraw then rollback", async () => {
-      mockWithdraw.mockImplementationOnce(async () => {
-        throw new Error("Withdrawal exceeds balance");
-      });
-
-      const existingDeposit = createDepositPosition({
-        poolId: mockPool.id,
-        amount: "10000",
-        shares: "10000",
-      });
-      const positionsBefore: Record<string, UserPositions> = {
-        [mockPool.id]: { deposits: [existingDeposit], borrows: [] },
-      };
-
-      const positionsOptimistic = applyOptimisticWithdraw(
-        positionsBefore,
-        mockPool.id,
-        3000,
-      );
-      expect(positionsOptimistic[mockPool.id].deposits[0].amount).toBe("7000");
-
-      let errorMessage: string | null = null;
-      try {
-        await lendingApi.withdraw(mockPool.id, {
-          userAddress: VALID_STELLAR_ADDRESS,
-          amount: 3000,
-        });
-      } catch (err) {
-        errorMessage = err instanceof Error ? err.message : "Unknown";
-      }
-      expect(errorMessage).toBe("Withdrawal exceeds balance");
-
-      // Rollback - deposit is back to original 10000
-      expect(positionsBefore[mockPool.id].deposits[0].amount).toBe("10000");
-    });
+    const positions = result.current.userPositions[POOL_A.id];
+    expect(positions.deposits).toHaveLength(1);
+    expect(deposited(positions)).toBe(50);
+    expect(depositInterest(positions)).toBe(5);
   });
 
-  // -----------------------------------------------------------------------
-  // Repay
-  // -----------------------------------------------------------------------
+  it("borrow adds X to the total and keeps existing rows and their interest", async () => {
+    serverReturns({
+      [POOL_A.id]: {
+        deposits: [],
+        borrows: [
+          createBorrowPosition({
+            poolId: POOL_A.id,
+            principal: "3000",
+            accruedInterest: "8.25",
+          }),
+        ],
+      },
+    });
+    const { result } = await renderLoaded();
 
-  describe("repay", () => {
-    it("reduces borrow optimistically", () => {
-      const existingBorrow = createBorrowPosition({
-        poolId: mockPool.id,
-        principal: "10000",
-      });
-      const positionsBefore: Record<string, UserPositions> = {
-        [mockPool.id]: { deposits: [], borrows: [existingBorrow] },
-      };
-
-      const positionsAfter = applyOptimisticRepay(
-        positionsBefore,
-        mockPool.id,
-        5000,
-      );
-
-      expect(positionsAfter[mockPool.id].borrows[0].principal).toBe("5000");
+    act(() => {
+      result.current.applyOptimisticUpdate("borrow", POOL_A.id, 2000, POOL_A);
     });
 
-    it("removes borrow entirely when repaying full amount", () => {
-      const existingBorrow = createBorrowPosition({
-        poolId: mockPool.id,
-        principal: "10000",
-      });
-      const positionsBefore: Record<string, UserPositions> = {
-        [mockPool.id]: { deposits: [], borrows: [existingBorrow] },
-      };
-
-      const positionsAfter = applyOptimisticRepay(
-        positionsBefore,
-        mockPool.id,
-        10000,
-      );
-
-      expect(positionsAfter[mockPool.id].borrows).toHaveLength(0);
-    });
-
-    it("failed tx flow: optimistic repay then rollback", async () => {
-      mockRepay.mockImplementationOnce(async () => {
-        throw new Error("Repayment failed");
-      });
-
-      const existingBorrow = createBorrowPosition({
-        poolId: mockPool.id,
-        principal: "10000",
-      });
-      const positionsBefore: Record<string, UserPositions> = {
-        [mockPool.id]: { deposits: [], borrows: [existingBorrow] },
-      };
-
-      const positionsOptimistic = applyOptimisticRepay(
-        positionsBefore,
-        mockPool.id,
-        5000,
-      );
-      expect(positionsOptimistic[mockPool.id].borrows[0].principal).toBe(
-        "5000",
-      );
-
-      let errorMessage: string | null = null;
-      try {
-        await lendingApi.repay(mockPool.id, {
-          userAddress: VALID_STELLAR_ADDRESS,
-          amount: 5000,
-        });
-      } catch (err) {
-        errorMessage = err instanceof Error ? err.message : "Unknown";
-      }
-      expect(errorMessage).toBe("Repayment failed");
-
-      // Rollback - borrow is back to original 10000
-      expect(positionsBefore[mockPool.id].borrows[0].principal).toBe("10000");
-    });
+    const positions = result.current.userPositions[POOL_A.id];
+    expect(positions.borrows).toHaveLength(2);
+    expect(borrowed(positions)).toBe(5000);
+    expect(borrowInterest(positions)).toBe(8.25);
+    expect(positions.borrows[1].collateralAsset).toBe(POOL_A.assetAddress);
   });
 
-  // -----------------------------------------------------------------------
-  // Pool liquidity updates
-  // -----------------------------------------------------------------------
+  it("repay of 100 from two rows totalling 300 leaves 200 and keeps interest", async () => {
+    serverReturns({
+      [POOL_A.id]: {
+        deposits: [],
+        borrows: [
+          createBorrowPosition({
+            poolId: POOL_A.id,
+            principal: "200",
+            accruedInterest: "8.25",
+          }),
+          createBorrowPosition({
+            poolId: POOL_A.id,
+            principal: "100",
+            accruedInterest: "1.75",
+          }),
+        ],
+      },
+    });
+    const { result } = await renderLoaded();
 
-  describe("pool liquidity optimistic updates", () => {
-    it("supply decreases available liquidity and increases totalDeposits", () => {
-      const pools = applyPoolLiquidityUpdate(
-        [mockPool],
-        mockPool.id,
-        "supply",
-        5000,
-      );
-      const updated = pools[0];
-
-      expect(updated.availableLiquidity).toBe("1395000"); // 1400000 - 5000
-      expect(updated.totalDeposits).toBe("5005000"); // 5000000 + 5000
+    act(() => {
+      result.current.applyOptimisticUpdate("repay", POOL_A.id, 100, POOL_A);
     });
 
-    it("borrow decreases available liquidity and increases totalBorrows", () => {
-      const pools = applyPoolLiquidityUpdate(
-        [mockPool],
-        mockPool.id,
-        "borrow",
-        5000,
-      );
-      const updated = pools[0];
+    const positions = result.current.userPositions[POOL_A.id];
+    expect(borrowed(positions)).toBe(200);
+    expect(borrowInterest(positions)).toBe(10);
+    expect(positions.borrows).toHaveLength(2);
+  });
 
-      expect(updated.availableLiquidity).toBe("1395000");
-      expect(updated.totalBorrows).toBe("3605000");
+  it("repaying principal and interest in full removes the borrow rows", async () => {
+    serverReturns({
+      [POOL_A.id]: {
+        deposits: [],
+        borrows: [
+          createBorrowPosition({
+            poolId: POOL_A.id,
+            principal: "500",
+            accruedInterest: "8.25",
+          }),
+        ],
+      },
+    });
+    const { result } = await renderLoaded();
+
+    act(() => {
+      result.current.applyOptimisticUpdate("repay", POOL_A.id, 508.25, POOL_A);
     });
 
-    it("withdraw increases available liquidity and decreases totalDeposits", () => {
-      const pools = applyPoolLiquidityUpdate(
-        [mockPool],
-        mockPool.id,
+    expect(result.current.userPositions[POOL_A.id].borrows).toHaveLength(0);
+  });
+});
+
+describe("useLendingPools commit and rollback", () => {
+  it("rollback restores the pool's position and values from before the update", async () => {
+    const deposit = createDepositPosition({
+      poolId: POOL_A.id,
+      amount: "9000",
+    });
+    serverReturns({ [POOL_A.id]: { deposits: [deposit], borrows: [] } });
+    const { result } = await renderLoaded();
+    const positionsBefore = result.current.userPositions[POOL_A.id];
+
+    let snapshotId = "";
+    act(() => {
+      snapshotId = result.current.applyOptimisticUpdate(
         "withdraw",
+        POOL_A.id,
         5000,
+        POOL_A,
       );
-      const updated = pools[0];
+    });
+    expect(result.current.pendingPoolIds.has(POOL_A.id)).toBe(true);
 
-      expect(updated.availableLiquidity).toBe("1405000");
-      expect(updated.totalDeposits).toBe("4995000");
+    act(() => {
+      result.current.rollbackOptimisticUpdate(snapshotId);
     });
 
-    it("repay increases available liquidity and decreases totalBorrows", () => {
-      const pools = applyPoolLiquidityUpdate(
-        [mockPool],
-        mockPool.id,
-        "repay",
-        5000,
-      );
-      const updated = pools[0];
+    expect(result.current.userPositions[POOL_A.id]).toEqual(positionsBefore);
+    expect(poolIn(result.current.pools, POOL_A.id)).toEqual(POOL_A);
+    expect(result.current.pendingPoolIds.has(POOL_A.id)).toBe(false);
+  });
 
-      expect(updated.availableLiquidity).toBe("1405000");
-      expect(updated.totalBorrows).toBe("3595000");
-    });
+  it("rollback of a pool the user had no position in removes the optimistic entry", async () => {
+    const { result } = await renderLoaded();
 
-    it("does not modify other pools", () => {
-      const pools = applyPoolLiquidityUpdate(
-        [mockPool, mockPool2],
-        mockPool.id,
+    let snapshotId = "";
+    act(() => {
+      snapshotId = result.current.applyOptimisticUpdate(
         "supply",
+        POOL_A.id,
         5000,
+        POOL_A,
       );
+    });
+    act(() => {
+      result.current.rollbackOptimisticUpdate(snapshotId);
+    });
 
-      expect(pools[1].availableLiquidity).toBe(mockPool2.availableLiquidity);
-      expect(pools[1].totalDeposits).toBe(mockPool2.totalDeposits);
+    expect(result.current.userPositions[POOL_A.id]).toEqual({
+      deposits: [],
+      borrows: [],
     });
   });
 
-  // -----------------------------------------------------------------------
-  // Multi-pool scenarios
-  // -----------------------------------------------------------------------
+  it("rolling back A keeps B's optimistic position, pool values and pending state", async () => {
+    const { result } = await renderLoaded();
 
-  describe("multi-pool optimistic updates", () => {
-    it("tracks pending pool IDs correctly", () => {
-      let pendingPoolIds = new Set<string>();
-
-      // Apply update to pool 1
-      pendingPoolIds = new Set([...pendingPoolIds, mockPool.id]);
-      expect(pendingPoolIds.has(mockPool.id)).toBe(true);
-      expect(pendingPoolIds.has(mockPool2.id)).toBe(false);
-
-      // Apply update to pool 2
-      pendingPoolIds = new Set([...pendingPoolIds, mockPool2.id]);
-      expect(pendingPoolIds.has(mockPool.id)).toBe(true);
-      expect(pendingPoolIds.has(mockPool2.id)).toBe(true);
-
-      // Commit pool 1
-      pendingPoolIds = new Set(
-        [...pendingPoolIds].filter((id) => id !== mockPool.id),
+    let snapshotA = "";
+    act(() => {
+      snapshotA = result.current.applyOptimisticUpdate(
+        "supply",
+        POOL_A.id,
+        5000,
+        POOL_A,
       );
-      expect(pendingPoolIds.has(mockPool.id)).toBe(false);
-      expect(pendingPoolIds.has(mockPool2.id)).toBe(true);
     });
+    act(() => {
+      result.current.applyOptimisticUpdate("supply", POOL_B.id, 700, POOL_B);
+    });
+    const poolBOptimistic = poolIn(result.current.pools, POOL_B.id);
+    const positionsBOptimistic = result.current.userPositions[POOL_B.id];
+
+    act(() => {
+      result.current.rollbackOptimisticUpdate(snapshotA);
+    });
+
+    expect(poolIn(result.current.pools, POOL_A.id)).toEqual(POOL_A);
+    expect(deposited(result.current.userPositions[POOL_A.id])).toBe(0);
+    expect(poolIn(result.current.pools, POOL_B.id)).toEqual(poolBOptimistic);
+    expect(poolIn(result.current.pools, POOL_B.id).availableLiquidity).toBe(
+      "700700",
+    );
+    expect(result.current.userPositions[POOL_B.id]).toEqual(
+      positionsBOptimistic,
+    );
+    expect(deposited(result.current.userPositions[POOL_B.id])).toBe(700);
+    expect(result.current.pendingPoolIds.has(POOL_A.id)).toBe(false);
+    expect(result.current.pendingPoolIds.has(POOL_B.id)).toBe(true);
+  });
+
+  it("committing A keeps B pending and B's optimistic values through the refetch", async () => {
+    const { result } = await renderLoaded();
+
+    let snapshotA = "";
+    act(() => {
+      snapshotA = result.current.applyOptimisticUpdate(
+        "supply",
+        POOL_A.id,
+        5000,
+        POOL_A,
+      );
+    });
+    act(() => {
+      result.current.applyOptimisticUpdate("supply", POOL_B.id, 700, POOL_B);
+    });
+
+    // The API now reports A's confirmed deposit; B's tx is still in flight.
+    const confirmedA = { ...POOL_A, availableLiquidity: "1405000" };
+    getPools.mockImplementation(async () => [confirmedA, POOL_B]);
+    serverReturns({
+      [POOL_A.id]: {
+        deposits: [
+          createDepositPosition({ poolId: POOL_A.id, amount: "5000" }),
+        ],
+        borrows: [],
+      },
+    });
+    const callsBefore = getPools.mock.calls.length;
+
+    act(() => {
+      result.current.commitOptimisticUpdate(snapshotA);
+    });
+
+    expect(result.current.pendingPoolIds.has(POOL_A.id)).toBe(false);
+    expect(result.current.pendingPoolIds.has(POOL_B.id)).toBe(true);
+
+    await waitFor(() => {
+      expect(getPools.mock.calls.length).toBeGreaterThan(callsBefore);
+      expect(result.current.isLoading).toBe(false);
+      expect(
+        result.current.userPositions[POOL_A.id].deposits[0].id,
+      ).not.toMatch(/^optimistic-/);
+    });
+
+    expect(poolIn(result.current.pools, POOL_A.id)).toEqual(confirmedA);
+    expect(poolIn(result.current.pools, POOL_B.id).availableLiquidity).toBe(
+      "700700",
+    );
+    expect(deposited(result.current.userPositions[POOL_B.id])).toBe(700);
+    expect(result.current.pendingPoolIds.has(POOL_B.id)).toBe(true);
+  });
+
+  it("keeps a pool pending until its last outstanding snapshot settles", async () => {
+    const { result } = await renderLoaded();
+
+    let first = "";
+    let second = "";
+    act(() => {
+      first = result.current.applyOptimisticUpdate(
+        "supply",
+        POOL_A.id,
+        100,
+        POOL_A,
+      );
+    });
+    act(() => {
+      second = result.current.applyOptimisticUpdate(
+        "borrow",
+        POOL_A.id,
+        50,
+        POOL_A,
+      );
+    });
+
+    act(() => {
+      result.current.commitOptimisticUpdate(first);
+    });
+    expect(result.current.pendingPoolIds.has(POOL_A.id)).toBe(true);
+
+    act(() => {
+      result.current.commitOptimisticUpdate(second);
+    });
+    expect(result.current.pendingPoolIds.has(POOL_A.id)).toBe(false);
+  });
+
+  it("ignores commit and rollback for an unknown snapshot", async () => {
+    const { result } = await renderLoaded();
+
+    act(() => {
+      result.current.applyOptimisticUpdate("supply", POOL_A.id, 5000, POOL_A);
+    });
+    const callsBefore = getPools.mock.calls.length;
+    const poolsBefore = result.current.pools;
+
+    act(() => {
+      result.current.commitOptimisticUpdate("opt-unknown");
+      result.current.rollbackOptimisticUpdate("opt-unknown");
+    });
+
+    expect(result.current.pools).toBe(poolsBefore);
+    expect(result.current.pendingPoolIds.has(POOL_A.id)).toBe(true);
+    expect(getPools.mock.calls.length).toBe(callsBefore);
   });
 });

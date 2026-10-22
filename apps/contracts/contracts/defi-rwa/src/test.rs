@@ -5169,3 +5169,230 @@ fn test_purchase_increases_total_share_supply_exactly_once() {
     assert_eq!(buyer_balance_after, buyer_balance_before + quantity);
     assert_eq!(inventory_after, inventory_before - quantity);
 }
+
+
+// ───────────────────────────────────────────────
+// Listing storage TTL tests
+// ───────────────────────────────────────────────
+
+/// Every storage key `list_property` writes for a listing.
+fn listing_storage_keys(property_id: u64) -> [storage::keys::StorageKey; 5] {
+    [
+        storage::keys::StorageKey::Property(property_id),
+        storage::keys::StorageKey::AvailableShares(property_id),
+        storage::keys::StorageKey::PricePerShare(property_id),
+        storage::keys::StorageKey::PropertyVerified(property_id),
+        storage::keys::StorageKey::PaymentToken(property_id),
+    ]
+}
+
+fn persistent_ttl(env: &Env, contract: &Address, key: &storage::keys::StorageKey) -> u32 {
+    env.as_contract(contract, || env.storage().persistent().get_ttl(key))
+}
+
+/// A ledger sequence where a listing written at sequence 0 is inside the
+/// extension threshold (so any touch must re-arm it) but still well alive.
+fn listing_near_expiry_sequence() -> u32 {
+    use super::storage::property::property_bump::{PERSISTENT_BUMP, PERSISTENT_THRESHOLD};
+    PERSISTENT_BUMP - PERSISTENT_THRESHOLD + 10
+}
+
+/// Registers a property through the admin-only `list_property` entry point.
+fn setup_listed_property(property_id: u64) -> TestSetup<'static> {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+
+    s.env.as_contract(&s.contract_address, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        s.env.storage().instance().set(&RoleKey::Admin, &s.admin);
+        RoleStorage::grant_role(&s.env, &s.admin, &Role::Admin);
+    });
+
+    s.contract_client.list_property(
+        &s.admin,
+        &property_id,
+        &owner,
+        &2_500_000_i128,
+        &250_u64,
+        &s.token_address,
+    );
+    s
+}
+
+#[test]
+fn test_every_listing_key_is_persistent_and_absent_from_instance_storage() {
+    let property_id = 6101_u64;
+    let s = setup_listed_property(property_id);
+
+    for key in listing_storage_keys(property_id).iter() {
+        let (in_persistent, in_instance) = s.env.as_contract(&s.contract_address, || {
+            (
+                s.env.storage().persistent().has(key),
+                s.env.storage().instance().has(key),
+            )
+        });
+        assert!(in_persistent, "listing key {:?} must be persistent", key);
+        assert!(!in_instance, "listing key {:?} must not be in instance storage", key);
+    }
+}
+
+#[test]
+fn test_list_property_arms_full_ttl_window_on_every_listing_key() {
+    use super::storage::property::property_bump::PERSISTENT_BUMP;
+
+    let property_id = 6102_u64;
+    let s = setup_listed_property(property_id);
+
+    for key in listing_storage_keys(property_id).iter() {
+        let ttl = persistent_ttl(&s.env, &s.contract_address, key);
+        assert!(
+            ttl >= PERSISTENT_BUMP,
+            "listing key {:?} should get the full TTL window on write, got {}",
+            key,
+            ttl
+        );
+    }
+}
+
+#[test]
+fn test_each_listing_read_refreshes_only_its_own_key_near_expiry() {
+    use super::storage::property::property_bump::{PERSISTENT_BUMP, PERSISTENT_THRESHOLD};
+
+    let property_id = 6103_u64;
+    let s = setup_listed_property(property_id);
+    let keys = listing_storage_keys(property_id);
+
+    s.env.ledger().set_sequence_number(listing_near_expiry_sequence());
+
+    // Everything is inside the threshold but still alive.
+    for key in keys.iter() {
+        let ttl = persistent_ttl(&s.env, &s.contract_address, key);
+        assert!(ttl > 0, "listing key {:?} should still be live", key);
+        assert!(ttl < PERSISTENT_THRESHOLD, "listing key {:?} should be due a bump", key);
+    }
+
+    // After step N, keys 0..=N were re-armed and the rest are untouched.
+    let check = |step: usize| {
+        for (index, key) in keys.iter().enumerate() {
+            let ttl = persistent_ttl(&s.env, &s.contract_address, key);
+            if index <= step {
+                assert!(
+                    ttl >= PERSISTENT_BUMP,
+                    "key {:?} should have been refreshed by read step {}",
+                    key,
+                    step
+                );
+            } else {
+                assert!(
+                    ttl < PERSISTENT_THRESHOLD,
+                    "key {:?} must not be refreshed by read step {}",
+                    key,
+                    step
+                );
+            }
+        }
+    };
+
+    s.env.as_contract(&s.contract_address, || {
+        storage::property::PropertyMetadata::load(&s.env, property_id)
+    });
+    check(0);
+
+    s.env.as_contract(&s.contract_address, || {
+        storage::property::get_available_shares(&s.env, property_id)
+    });
+    check(1);
+
+    s.env.as_contract(&s.contract_address, || {
+        storage::property::get_price_per_share(&s.env, property_id)
+    });
+    check(2);
+
+    s.env.as_contract(&s.contract_address, || {
+        storage::property::is_verified(&s.env, property_id)
+    });
+    check(3);
+
+    s.env.as_contract(&s.contract_address, || {
+        storage::property::get_payment_token(&s.env, property_id)
+    });
+    check(4);
+}
+
+#[test]
+fn test_delisting_refreshes_property_metadata_ttl_near_expiry() {
+    use super::storage::property::property_bump::PERSISTENT_BUMP;
+
+    let property_id = 6104_u64;
+    let s = setup_listed_property(property_id);
+    let key = storage::keys::StorageKey::Property(property_id);
+
+    s.env.ledger().set_sequence_number(listing_near_expiry_sequence());
+    let ttl_before = persistent_ttl(&s.env, &s.contract_address, &key);
+
+    s.contract_client.set_property_active(&s.admin, &property_id, &false);
+
+    let ttl_after = persistent_ttl(&s.env, &s.contract_address, &key);
+    assert!(ttl_after > ttl_before, "delisting should re-arm the metadata TTL");
+    assert!(ttl_after >= PERSISTENT_BUMP);
+
+    let metadata = s.env.as_contract(&s.contract_address, || {
+        storage::property::PropertyMetadata::load(&s.env, property_id).unwrap()
+    });
+    assert!(!metadata.is_active, "delisting must persist the inactive flag");
+}
+
+#[test]
+fn test_purchase_extends_every_listing_key_ttl_near_expiry() {
+    use super::storage::property::property_bump::PERSISTENT_BUMP;
+
+    let (contract_id, env, _owner, buyer, payment_token, property_id) = setup_purchase_test();
+    let client = PropertyTokenContractClient::new(&env, &contract_id);
+    let keys = listing_storage_keys(property_id);
+
+    env.ledger().set_sequence_number(listing_near_expiry_sequence());
+    let mut ttls_before = [0_u32; 5];
+    for (index, key) in keys.iter().enumerate() {
+        ttls_before[index] = persistent_ttl(&env, &contract_id, key);
+    }
+
+    client.purchase_shares(&buyer, &property_id, &5_u64, &payment_token);
+
+    for (key, ttl_before) in keys.iter().zip(ttls_before.iter()) {
+        let ttl_after = persistent_ttl(&env, &contract_id, key);
+        assert!(
+            ttl_after > *ttl_before,
+            "purchase should re-arm the TTL of listing key {:?}",
+            key
+        );
+        assert!(ttl_after >= PERSISTENT_BUMP);
+    }
+}
+
+#[test]
+fn test_reading_unlisted_property_does_not_create_listing_entries() {
+    let s = setup();
+    let property_id = 6105_u64;
+
+    let (available, price, verified, payment_token) =
+        s.env.as_contract(&s.contract_address, || {
+            (
+                storage::property::get_available_shares(&s.env, property_id),
+                storage::property::get_price_per_share(&s.env, property_id),
+                storage::property::is_verified(&s.env, property_id),
+                storage::property::get_payment_token(&s.env, property_id),
+            )
+        });
+
+    assert_eq!(available, 0);
+    assert_eq!(price, 0);
+    assert!(!verified);
+    assert!(payment_token.is_none());
+
+    for key in listing_storage_keys(property_id).iter() {
+        let exists = s.env.as_contract(&s.contract_address, || {
+            s.env.storage().persistent().has(key)
+        });
+        assert!(!exists, "reading must not create listing key {:?}", key);
+    }
+}

@@ -129,6 +129,7 @@
     "supplyApy": "Supply APY",
     "healthFactor": "Health Factor",
     "noBorrows": "No borrows",
+    "healthFactorUnavailable": "Unavailable",
     "yourProperties": "Your Properties",
     "borrowed": "borrowed",
     "noPropertiesYet": "No properties in your portfolio yet.",

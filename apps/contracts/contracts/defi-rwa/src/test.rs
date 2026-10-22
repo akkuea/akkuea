@@ -5065,7 +5065,7 @@ fn test_delisting_blocks_new_purchases_without_changing_inventory() {
 
     // The helper grants admin role to the address stored as the instance admin.
     let admin = env.as_contract(&contract_id, || {
-        use super::access::roles::{RoleKey};
+        use super::access::roles::RoleKey;
         env.storage().instance().get::<RoleKey, Address>(&RoleKey::Admin).unwrap()
     });
     client.set_property_active(&admin, &property_id, &false);

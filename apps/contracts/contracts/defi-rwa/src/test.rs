@@ -5,7 +5,7 @@ use super::oracle_types::{Asset, PriceData};
 use super::storage;
 use super::*;
 use soroban_sdk::{
-    testutils::{Address as _, Ledger as _},
+    testutils::{storage::Persistent as _, Address as _, Ledger as _},
     token::{StellarAssetClient, TokenClient},
     Address, Env, String, Symbol,
 };
@@ -4961,7 +4961,6 @@ fn test_normal_price_is_still_accepted() {
     assert!(result.is_ok());
 }
 
-
 // ───────────────────────────────────────────────
 
 #[test]
@@ -4992,8 +4991,14 @@ fn test_property_listing_metadata_uses_persistent_storage_and_refreshes_ttl() {
             s.env.storage().instance().has(&key),
         )
     });
-    assert!(is_persistent, "listing metadata must use persistent storage");
-    assert!(!is_instance, "listing metadata must not use instance storage");
+    assert!(
+        is_persistent,
+        "listing metadata must use persistent storage"
+    );
+    assert!(
+        !is_instance,
+        "listing metadata must not use instance storage"
+    );
 
     // Move close to the original expiry while the entry is still alive. Loading
     // the listing must extend its TTL instead of leaving it near expiration.
@@ -5098,30 +5103,29 @@ fn test_non_admin_cannot_list_property() {
 
 #[test]
 fn test_purchase_rejects_unlisted_payment_token() {
-    let (contract_id, env, _owner, buyer, _payment_token, property_id) =
-        setup_purchase_test();
+    let (contract_id, env, _owner, buyer, _payment_token, property_id) = setup_purchase_test();
     let wrong_token = Address::generate(&env);
     let client = PropertyTokenContractClient::new(&env, &contract_id);
 
-    let result = client.try_purchase_shares(
-        &buyer,
-        &property_id,
-        &1_u64,
-        &wrong_token,
+    let result = client.try_purchase_shares(&buyer, &property_id, &1_u64, &wrong_token);
+    assert!(
+        result.is_err(),
+        "purchase must reject a token other than the listing token"
     );
-    assert!(result.is_err(), "purchase must reject a token other than the listing token");
 }
 
 #[test]
 fn test_delisting_blocks_new_purchases_without_changing_inventory() {
-    let (contract_id, env, _owner, buyer, payment_token, property_id) =
-        setup_purchase_test();
+    let (contract_id, env, _owner, buyer, payment_token, property_id) = setup_purchase_test();
     let client = PropertyTokenContractClient::new(&env, &contract_id);
 
     // The helper grants admin role to the address stored as the instance admin.
     let admin = env.as_contract(&contract_id, || {
         use super::access::roles::RoleKey;
-        env.storage().instance().get::<RoleKey, Address>(&RoleKey::Admin).unwrap()
+        env.storage()
+            .instance()
+            .get::<RoleKey, Address>(&RoleKey::Admin)
+            .unwrap()
     });
     client.set_property_active(&admin, &property_id, &false);
 
@@ -5137,11 +5141,9 @@ fn test_delisting_blocks_new_purchases_without_changing_inventory() {
     assert_eq!(available_after, available_before);
 }
 
-
 #[test]
 fn test_purchase_increases_total_share_supply_exactly_once() {
-    let (contract_id, env, _owner, buyer, payment_token, property_id) =
-        setup_purchase_test();
+    let (contract_id, env, _owner, buyer, payment_token, property_id) = setup_purchase_test();
     let client = PropertyTokenContractClient::new(&env, &contract_id);
 
     let (supply_before, buyer_balance_before, inventory_before) =
@@ -5169,7 +5171,6 @@ fn test_purchase_increases_total_share_supply_exactly_once() {
     assert_eq!(buyer_balance_after, buyer_balance_before + quantity);
     assert_eq!(inventory_after, inventory_before - quantity);
 }
-
 
 // ───────────────────────────────────────────────
 // Listing storage TTL tests
@@ -5232,7 +5233,11 @@ fn test_every_listing_key_is_persistent_and_absent_from_instance_storage() {
             )
         });
         assert!(in_persistent, "listing key {:?} must be persistent", key);
-        assert!(!in_instance, "listing key {:?} must not be in instance storage", key);
+        assert!(
+            !in_instance,
+            "listing key {:?} must not be in instance storage",
+            key
+        );
     }
 }
 
@@ -5262,13 +5267,19 @@ fn test_each_listing_read_refreshes_only_its_own_key_near_expiry() {
     let s = setup_listed_property(property_id);
     let keys = listing_storage_keys(property_id);
 
-    s.env.ledger().set_sequence_number(listing_near_expiry_sequence());
+    s.env
+        .ledger()
+        .set_sequence_number(listing_near_expiry_sequence());
 
     // Everything is inside the threshold but still alive.
     for key in keys.iter() {
         let ttl = persistent_ttl(&s.env, &s.contract_address, key);
         assert!(ttl > 0, "listing key {:?} should still be live", key);
-        assert!(ttl < PERSISTENT_THRESHOLD, "listing key {:?} should be due a bump", key);
+        assert!(
+            ttl < PERSISTENT_THRESHOLD,
+            "listing key {:?} should be due a bump",
+            key
+        );
     }
 
     // After step N, keys 0..=N were re-armed and the rest are untouched.
@@ -5327,19 +5338,28 @@ fn test_delisting_refreshes_property_metadata_ttl_near_expiry() {
     let s = setup_listed_property(property_id);
     let key = storage::keys::StorageKey::Property(property_id);
 
-    s.env.ledger().set_sequence_number(listing_near_expiry_sequence());
+    s.env
+        .ledger()
+        .set_sequence_number(listing_near_expiry_sequence());
     let ttl_before = persistent_ttl(&s.env, &s.contract_address, &key);
 
-    s.contract_client.set_property_active(&s.admin, &property_id, &false);
+    s.contract_client
+        .set_property_active(&s.admin, &property_id, &false);
 
     let ttl_after = persistent_ttl(&s.env, &s.contract_address, &key);
-    assert!(ttl_after > ttl_before, "delisting should re-arm the metadata TTL");
+    assert!(
+        ttl_after > ttl_before,
+        "delisting should re-arm the metadata TTL"
+    );
     assert!(ttl_after >= PERSISTENT_BUMP);
 
     let metadata = s.env.as_contract(&s.contract_address, || {
         storage::property::PropertyMetadata::load(&s.env, property_id).unwrap()
     });
-    assert!(!metadata.is_active, "delisting must persist the inactive flag");
+    assert!(
+        !metadata.is_active,
+        "delisting must persist the inactive flag"
+    );
 }
 
 #[test]
@@ -5350,7 +5370,8 @@ fn test_purchase_extends_every_listing_key_ttl_near_expiry() {
     let client = PropertyTokenContractClient::new(&env, &contract_id);
     let keys = listing_storage_keys(property_id);
 
-    env.ledger().set_sequence_number(listing_near_expiry_sequence());
+    env.ledger()
+        .set_sequence_number(listing_near_expiry_sequence());
     let mut ttls_before = [0_u32; 5];
     for (index, key) in keys.iter().enumerate() {
         ttls_before[index] = persistent_ttl(&env, &contract_id, key);

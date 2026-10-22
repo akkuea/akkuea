@@ -213,7 +213,7 @@ export const corsAllowedOriginsSchema = z
     if (invalid.length > 0) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: `CORS_ALLOWED_ORIGINS must be a comma-separated list of exact origins (scheme, host, and optional port, such as https://app.example.com; no path, trailing slash, or wildcard). Invalid: ${invalid.join(", ")}`,
+        message: `CORS_ALLOWED_ORIGINS must be a comma-separated list of exact origins (scheme, host, and optional port, such as https://app.akkuea.com; no path, trailing slash, or wildcard). Invalid: ${invalid.join(", ")}`,
       });
     }
   });
@@ -288,6 +288,7 @@ export const apiEnvSchema = z.object({
     .optional()
     .or(z.literal("")),
   DEFI_RWA_CONTRACT_ID: stellarContractIdSchema.optional().or(z.literal("")),
+  PAYMENT_TOKEN_CONTRACT_ID: stellarContractIdSchema.optional().or(z.literal("")),
 });
 
 export const webappEnvSchema = z.object({

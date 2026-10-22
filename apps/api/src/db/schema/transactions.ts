@@ -41,7 +41,9 @@ export const transactions = pgTable('transactions', {
   amount: decimal('amount', { precision: 20, scale: 7 }).notNull(),
   asset: varchar('asset', { length: 56 }).notNull(),
   status: transactionStatusEnum('status').notNull().default('pending'),
-  timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
+  timestamp: timestamp('timestamp', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   metadata: jsonb('metadata').$type<Record<string, unknown>>(),
 }, (t) => [index('transactions_hash_idx').on(t.hash)]);
 

@@ -1,4 +1,13 @@
-import { pgTable, uuid, varchar, decimal, timestamp, boolean, integer } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  decimal,
+  timestamp,
+  boolean,
+  integer,
+  index,
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from './users';
 
@@ -24,37 +33,49 @@ export const lendingPools = pgTable('lending_pools', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const depositPositions = pgTable('deposit_positions', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  poolId: uuid('pool_id')
-    .notNull()
-    .references(() => lendingPools.id),
-  depositorId: uuid('depositor_id')
-    .notNull()
-    .references(() => users.id),
-  amount: decimal('amount', { precision: 20, scale: 7 }).notNull(),
-  shares: decimal('shares', { precision: 20, scale: 7 }).notNull(),
-  depositedAt: timestamp('deposited_at', { withTimezone: true }).notNull().defaultNow(),
-  lastAccrualAt: timestamp('last_accrual_at', { withTimezone: true }).notNull().defaultNow(),
-  accruedInterest: decimal('accrued_interest', { precision: 20, scale: 7 }).notNull().default('0'),
-});
+export const depositPositions = pgTable(
+  'deposit_positions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    poolId: uuid('pool_id')
+      .notNull()
+      .references(() => lendingPools.id),
+    depositorId: uuid('depositor_id')
+      .notNull()
+      .references(() => users.id),
+    amount: decimal('amount', { precision: 20, scale: 7 }).notNull(),
+    shares: decimal('shares', { precision: 20, scale: 7 }).notNull(),
+    depositedAt: timestamp('deposited_at', { withTimezone: true }).notNull().defaultNow(),
+    lastAccrualAt: timestamp('last_accrual_at', { withTimezone: true }).notNull().defaultNow(),
+    accruedInterest: decimal('accrued_interest', { precision: 20, scale: 7 })
+      .notNull()
+      .default('0'),
+  },
+  (t) => [index('deposit_positions_pool_id_depositor_id_idx').on(t.poolId, t.depositorId)],
+);
 
-export const borrowPositions = pgTable('borrow_positions', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  poolId: uuid('pool_id')
-    .notNull()
-    .references(() => lendingPools.id),
-  borrowerId: uuid('borrower_id')
-    .notNull()
-    .references(() => users.id),
-  principal: decimal('principal', { precision: 20, scale: 7 }).notNull(),
-  accruedInterest: decimal('accrued_interest', { precision: 20, scale: 7 }).notNull().default('0'),
-  collateralAmount: decimal('collateral_amount', { precision: 20, scale: 7 }).notNull(),
-  collateralAsset: varchar('collateral_asset', { length: 56 }).notNull(),
-  healthFactor: decimal('health_factor', { precision: 10, scale: 4 }).notNull(),
-  borrowedAt: timestamp('borrowed_at', { withTimezone: true }).notNull().defaultNow(),
-  lastAccrualAt: timestamp('last_accrual_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const borrowPositions = pgTable(
+  'borrow_positions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    poolId: uuid('pool_id')
+      .notNull()
+      .references(() => lendingPools.id),
+    borrowerId: uuid('borrower_id')
+      .notNull()
+      .references(() => users.id),
+    principal: decimal('principal', { precision: 20, scale: 7 }).notNull(),
+    accruedInterest: decimal('accrued_interest', { precision: 20, scale: 7 })
+      .notNull()
+      .default('0'),
+    collateralAmount: decimal('collateral_amount', { precision: 20, scale: 7 }).notNull(),
+    collateralAsset: varchar('collateral_asset', { length: 56 }).notNull(),
+    healthFactor: decimal('health_factor', { precision: 10, scale: 4 }).notNull(),
+    borrowedAt: timestamp('borrowed_at', { withTimezone: true }).notNull().defaultNow(),
+    lastAccrualAt: timestamp('last_accrual_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index('borrow_positions_pool_id_borrower_id_idx').on(t.poolId, t.borrowerId)],
+);
 
 export const lendingPoolsRelations = relations(lendingPools, ({ many }) => ({
   depositPositions: many(depositPositions),

@@ -513,7 +513,9 @@ describe.skipIf(skipIfNoDatabase)('PropertyController buy-shares prepare/confirm
       const [ownership] = await db
         .select()
         .from(shareOwnerships)
-        .where(and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyerId)));
+        .where(
+          and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyerId)),
+        );
       expect(ownership).toBeDefined();
       expect(ownership!.shares).toBe(2);
       expect(parseFloat(ownership!.purchasePrice)).toBe(200); // 2 x 100.00
@@ -547,7 +549,9 @@ describe.skipIf(skipIfNoDatabase)('PropertyController buy-shares prepare/confirm
       const [ownership] = await db
         .select()
         .from(shareOwnerships)
-        .where(and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyerId)));
+        .where(
+          and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyerId)),
+        );
       expect(ownership!.shares).toBe(2);
       const rows = await db.select().from(transactions).where(eq(transactions.hash, TX_HASH));
       expect(rows.length).toBe(1);

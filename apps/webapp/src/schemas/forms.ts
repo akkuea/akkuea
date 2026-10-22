@@ -111,14 +111,25 @@ export const tokenizeSchema = tokenizeBaseSchema.superRefine(
 export type TokenizeFormValues = z.infer<typeof tokenizeSchema>;
 
 export function createLendingActionSchema(args: {
-  maxAmount: number;
+  /** Upper bound for the amount, or null when the action has no cap */
+  maxAmount: number | null;
   asset: string;
+  /** Shown when the amount is above `maxAmount` */
+  maxMessage?: string;
 }) {
+  const amount = positiveNumberString("Amount");
+  if (args.maxAmount === null) {
+    return z.object({
+      amount,
+      zkPrivacy: z.boolean().default(false),
+    });
+  }
+
   const max = Number.isFinite(args.maxAmount) ? args.maxAmount : 0;
   return z.object({
-    amount: positiveNumberString("Amount").refine(
+    amount: amount.refine(
       (v: string) => Number(v) <= max,
-      `Amount cannot exceed available ${args.asset}`,
+      args.maxMessage ?? `Amount cannot exceed available ${args.asset}`,
     ),
     zkPrivacy: z.boolean().default(false),
   });

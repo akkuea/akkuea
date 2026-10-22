@@ -14,6 +14,18 @@ export function formatCurrency(amount: number, currency = "USD"): string {
   }).format(amount);
 }
 
+/**
+ * Formats an amount in an on-chain asset, for example "500 XLM" or
+ * "1,250.5 USDC". Stellar assets have 7 decimal places, so no more are shown.
+ */
+export function formatAssetAmount(amount: number, asset: string): string {
+  const formatted = new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 7,
+  }).format(Number.isFinite(amount) ? amount : 0);
+  return `${formatted} ${asset}`;
+}
+
 export function formatPercentage(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
 }

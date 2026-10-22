@@ -4962,6 +4962,60 @@ fn test_normal_price_is_still_accepted() {
 
 
 // ───────────────────────────────────────────────
+
+#[test]
+fn test_property_listing_metadata_uses_persistent_storage_and_refreshes_ttl() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let property_id = 5252_u64;
+    let key = storage::keys::StorageKey::Property(property_id);
+
+    s.env.as_contract(&s.contract_address, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        s.env.storage().instance().set(&RoleKey::Admin, &s.admin);
+        RoleStorage::grant_role(&s.env, &s.admin, &Role::Admin);
+    });
+
+    s.contract_client.list_property(
+        &s.admin,
+        &property_id,
+        &owner,
+        &2_500_000_i128,
+        &250_u64,
+        &s.token_address,
+    );
+
+    let (is_persistent, is_instance) = s.env.as_contract(&s.contract_address, || {
+        (
+            s.env.storage().persistent().has(&key),
+            s.env.storage().instance().has(&key),
+        )
+    });
+    assert!(is_persistent, "listing metadata must use persistent storage");
+    assert!(!is_instance, "listing metadata must not use instance storage");
+
+    // Move close to the original expiry while the entry is still alive. Loading
+    // the listing must extend its TTL instead of leaving it near expiration.
+    s.env.ledger().set_sequence_number(518_300);
+    let ttl_before = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(ttl_before > 0, "listing metadata should still be live");
+
+    let loaded = s.env.as_contract(&s.contract_address, || {
+        storage::property::PropertyMetadata::load(&s.env, property_id)
+    });
+    assert!(loaded.is_some(), "listing metadata should remain readable");
+
+    let ttl_after = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(
+        ttl_after > ttl_before,
+        "reading listing metadata should refresh its persistent TTL"
+    );
+}
+
 // Buyer-signed share-purchase acceptance tests
 // ───────────────────────────────────────────────
 

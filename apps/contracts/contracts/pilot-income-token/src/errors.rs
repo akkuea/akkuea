@@ -26,4 +26,9 @@ pub enum IncomeTokenError {
     NotPendingAdmin = 15,
     /// A state-changing call was rejected because the contract is paused.
     ContractPaused = 16,
+    /// A correction transfer named the same address as sender and recipient.
+    SelfTransfer = 17,
+    /// A mint or correction transfer would leave more than `MAX_HOLDERS`
+    /// addresses holding a balance.
+    TooManyHolders = 18,
 }

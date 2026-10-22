@@ -2,7 +2,7 @@
  * useGameWallet - unit tests
  *
  * Verifies the 4 core behaviours:
- *   connect()      → sets wallet address in state
+ *   connect()      → sets wallet address in state and loads the on-chain balance
  *   disconnect()   → clears address and balance from state
  *   fetchBalance() success → updates balance in state
  *   fetchBalance() RPC error → sets error state without crashing
@@ -31,11 +31,13 @@ vi.mock("@/lib/walletKit", () => ({
 }));
 
 const mockFetchLandBalance = vi.fn();
+const mockSubmitSorobanTx = vi.fn();
+const mockWaitForSorobanTx = vi.fn();
 
 vi.mock("@/lib/soroban-tx", () => ({
   fetchLandBalance: mockFetchLandBalance,
-  submitSorobanTx: vi.fn(),
-  waitForSorobanTx: vi.fn(),
+  submitSorobanTx: mockSubmitSorobanTx,
+  waitForSorobanTx: mockWaitForSorobanTx,
   NETWORK_PASSPHRASE: "Test SDF Network ; September 2015",
 }));
 
@@ -76,6 +78,7 @@ describe("useGameWallet", () => {
       kit: {},
       address: CONNECTED_ADDRESS,
     });
+    mockFetchLandBalance.mockResolvedValue(MOCK_BALANCE);
 
     const { result } = renderHook(() => useGameWallet());
 
@@ -89,6 +92,60 @@ describe("useGameWallet", () => {
     expect(mockConnectWalletKit).toHaveBeenCalledTimes(1);
     expect(result.current.isConnected).toBe(true);
     expect(result.current.address).toBe(CONNECTED_ADDRESS);
+  });
+
+  it("connect() - fetches the on-chain balance once for the new address", async () => {
+    mockConnectWalletKit.mockResolvedValue({
+      kit: {},
+      address: CONNECTED_ADDRESS,
+    });
+    mockFetchLandBalance.mockResolvedValue(MOCK_BALANCE);
+
+    const { result } = renderHook(() => useGameWallet());
+
+    await act(async () => {
+      await result.current.login();
+    });
+
+    expect(mockFetchLandBalance).toHaveBeenCalledTimes(1);
+    expect(mockFetchLandBalance).toHaveBeenCalledWith(CONNECTED_ADDRESS);
+    expect(result.current.balance).toBe(MOCK_BALANCE);
+  });
+
+  it("connect() - does not fetch a balance when the picker is closed", async () => {
+    mockConnectWalletKit.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useGameWallet());
+
+    await act(async () => {
+      await result.current.login();
+    });
+
+    expect(mockFetchLandBalance).not.toHaveBeenCalled();
+    expect(result.current.balance).toBeNull();
+  });
+
+  it("signAndSubmitTx() - refreshes the balance after confirmation", async () => {
+    mockGetWalletKit.mockReturnValue({
+      signTransaction: vi.fn().mockResolvedValue({ signedTxXdr: "signed" }),
+    });
+    mockSubmitSorobanTx.mockResolvedValue("hash");
+    mockWaitForSorobanTx.mockResolvedValue("success");
+    mockFetchLandBalance.mockResolvedValue("2500");
+    useWalletStore.setState({
+      isConnected: true,
+      address: CONNECTED_ADDRESS,
+      balance: MOCK_BALANCE,
+    });
+
+    const { result } = renderHook(() => useGameWallet());
+
+    await act(async () => {
+      await result.current.signAndSubmitTx("unsigned");
+    });
+
+    expect(mockFetchLandBalance).toHaveBeenCalledWith(CONNECTED_ADDRESS);
+    expect(result.current.balance).toBe("2500");
   });
 
   it("disconnect() - clears address and balance from state", async () => {
@@ -148,5 +205,23 @@ describe("useGameWallet", () => {
 
     expect(result.current.balance).toBeNull();
     expect(result.current.error).toBe("Soroban RPC unavailable");
+  });
+
+  it("signAndSubmitTx() - rejects when the transaction is not confirmed", async () => {
+    mockGetWalletKit.mockReturnValue({
+      signTransaction: vi.fn().mockResolvedValue({ signedTxXdr: "signed" }),
+    });
+    mockSubmitSorobanTx.mockResolvedValue("tx-hash");
+    mockWaitForSorobanTx.mockResolvedValue("pending");
+    useWalletStore.setState({
+      isConnected: true,
+      address: CONNECTED_ADDRESS,
+    });
+
+    const { result } = renderHook(() => useGameWallet());
+
+    await expect(result.current.signAndSubmitTx("unsigned")).rejects.toThrow(
+      "not confirmed yet",
+    );
   });
 });

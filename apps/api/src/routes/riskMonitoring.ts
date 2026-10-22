@@ -71,4 +71,18 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
         tags: ['Risk Monitoring'],
       },
     },
+  )
+  .post(
+    '/notify',
+    async () => {
+      const positions = await RiskMonitoringController.notifyRiskTransitions();
+      return { success: true, data: { assessed: positions.length } };
+    },
+    {
+      detail: {
+        summary: 'Notify risk transitions',
+        description: 'Assess all positions and notify borrowers whose risk level changed',
+        tags: ['Risk Monitoring'],
+      },
+    },
   );

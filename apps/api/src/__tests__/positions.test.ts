@@ -44,6 +44,7 @@ const testUser: User = {
   updatedAt: new Date('2026-01-01T00:00:00.000Z'),
   lastLoginAt: null,
   kycExpiresAt: null,
+  kycReminderSentFor: null,
 };
 
 const testDeposit: DepositPosition = {
@@ -160,8 +161,11 @@ describe('Lending position routes', () => {
 
     expect(response.status).toBe(400);
     const body = (await response.json()) as ValidationResponse;
-    expect(body.error).toBe('INVALID_ADDRESS');
-    expect(body.message).toBe('Invalid Stellar address format');
+    // The params schema runs before the handler, so the address is rejected by
+    // the route validation rather than by the controller.
+    expect(body.error).toBe('VALIDATION_ERROR');
+    expect(body.details?.source).toBe('params');
+    expect(body.details?.errors?.address).toContain('Invalid Stellar address format');
   });
 
   it('exposes the summary endpoint and validates address params before hitting the database', async () => {
@@ -173,7 +177,8 @@ describe('Lending position routes', () => {
 
     expect(response.status).toBe(400);
     const body = (await response.json()) as ValidationResponse;
-    expect(body.error).toBe('INVALID_ADDRESS');
-    expect(body.message).toBe('Invalid Stellar address format');
+    expect(body.error).toBe('VALIDATION_ERROR');
+    expect(body.details?.source).toBe('params');
+    expect(body.details?.errors?.address).toContain('Invalid Stellar address format');
   });
 });

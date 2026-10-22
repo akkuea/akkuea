@@ -5,7 +5,7 @@ members = [
 ]
 
 [workspace.dependencies]
-soroban-sdk = { version = "25.3.0", features = ["alloc"] }
+soroban-sdk = { version = "26.1.1", features = ["alloc"] }
 
 [profile.release]
 opt-level = "z"

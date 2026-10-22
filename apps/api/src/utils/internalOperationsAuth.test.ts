@@ -30,4 +30,9 @@ describe('isInternalOperationsAuthorized', () => {
       false,
     );
   });
+
+  it('returns false when OPERATIONS_BACKEND_CREDENTIAL is empty, even for an empty header', () => {
+    process.env.OPERATIONS_BACKEND_CREDENTIAL = '';
+    expect(isInternalOperationsAuthorized({ 'x-internal-api-key': '' })).toBe(false);
+  });
 });

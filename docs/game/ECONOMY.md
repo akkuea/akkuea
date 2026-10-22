@@ -2,8 +2,10 @@
 
 > **Canonical source**: The numeric constants in this document are mirrored in
 > `apps/shared/src/types/game.ts` (TypeScript) and
-> `apps/contracts/src/constants.rs` (Rust). If the three disagree, the Rust
-> file governs because it is what is actually enforced on-chain.
+> `apps/contracts/contracts/game-engine/src/constants.rs` (Rust). If they
+> disagree, the Rust file governs because it is what is actually enforced
+> on-chain. `apps/shared/src/types/game.test.ts` fails when the TypeScript
+> values drift from the Rust ones.
 
 ---
 
@@ -25,9 +27,9 @@ This is the pilot's visual/educational companion, not a separate product - see [
 | Decimals         | 7 (Stellar standard)      |
 | Starting balance | **1 000 LAND** per wallet |
 
-Every wallet that interacts with the `PlayerRegistry` contract for the first
-time receives a one-time airdrop of **1 000 LAND**. Subsequent interactions do
-not trigger another airdrop.
+On testnet, every wallet can call the `faucet` function of the
+`game-land-token` contract once to receive **1 000 LAND**. A second call from
+the same wallet is rejected.
 
 ---
 
@@ -35,11 +37,11 @@ not trigger another airdrop.
 
 | Parameter    | Value                                                |
 | ------------ | ---------------------------------------------------- |
-| Epoch length | **17 280 ledgers** (~24 h at 5 s/ledger)             |
+| Epoch length | **100 ledgers** (about 8 minutes at 5 s/ledger)      |
 | Base rental  | **10 LAND per epoch** for an unimproved (EMPTY) plot |
 
-Ledger close time on Stellar is nominally 5 seconds.  
-17 280 ledgers × 5 s = 86 400 s = 24 hours.
+Ledger close time on Stellar is nominally 5 seconds, so 100 ledgers is
+about 500 seconds.
 
 ---
 
@@ -55,52 +57,56 @@ Upgrades are **one-directional**; there is no downgrade path.
 
 ### Cost & Multiplier Table
 
-| Level       | Label        | Upgrade cost | Rental multiplier | Effective rate   |
-| ----------- | ------------ | ------------ | ----------------- | ---------------- |
-| 0 (default) | `EMPTY`      | -            | **1×**            | 10 LAND / epoch  |
-| 1           | `HOUSE`      | 100 LAND     | **2×**            | 20 LAND / epoch  |
-| 2           | `APARTMENT`  | 300 LAND     | **5×**            | 50 LAND / epoch  |
-| 3           | `SKYSCRAPER` | 1 000 LAND   | **12×**           | 120 LAND / epoch |
+Multipliers are integer ratios `(numerator, denominator)`, as in the contract.
+
+| Level       | Label        | Upgrade cost | Rental multiplier | Effective rate  |
+| ----------- | ------------ | ------------ | ----------------- | --------------- |
+| 0 (default) | `EMPTY`      | -            | **1/1** (1x)      | 10 LAND / epoch |
+| 1           | `HOUSE`      | 200 LAND     | **3/2** (1.5x)    | 15 LAND / epoch |
+| 2           | `APARTMENT`  | 600 LAND     | **3/1** (3x)      | 30 LAND / epoch |
+| 3           | `SKYSCRAPER` | 1 800 LAND   | **6/1** (6x)      | 60 LAND / epoch |
+
+The contract names these levels vacant, residential, commercial and
+skyscraper.
 
 > **Upgrade cost semantics**: costs are charged for the _next_ upgrade step
 > only, not cumulatively from `EMPTY`.  
-> Example: upgrading `HOUSE → APARTMENT` costs **300 LAND**, not 400 LAND.
+> Example: upgrading `HOUSE` to `APARTMENT` costs **600 LAND**, not 800 LAND.
 
 ---
 
 ## Rent Calculation
 
-Claimable rent is computed on-chain at claim time:
+Claimable rent is computed on-chain at claim time
+(`calculate_accrued_income` in `game-engine/src/lib.rs`, ported to
+TypeScript as `computeAccruedRent` in `apps/shared/src/types/game.ts`):
 
 ```
-claimable = floor(
-  (currentLedger - lastClaimedLedger) / EPOCH_LEDGERS
-) × BASE_RENTAL_RATE × rentalRateMultiplier
+rate      = floor(BASE_RENTAL_RATE * numerator / denominator)
+claimable = rate * floor((currentLedger - lastClaimedLedger) / EPOCH_LEDGERS)
 ```
 
 Key behaviour:
 
 - Only **whole epochs** are paid; partial epochs do not earn rent.
 - Unclaimed epochs **accumulate indefinitely** - there is no expiry.
-- `lastClaimedLedger` is updated to the ledger at the start of the last fully
-  counted epoch (not to `currentLedger`), preserving fractional-epoch carry.
+- Claiming sets `lastClaimedLedger` to the current ledger, so the partial
+  epoch in progress at claim time is not carried over.
 
 ---
 
 ## Marketplace
 
-| Parameter          | Value                          |
-| ------------------ | ------------------------------ |
-| Minimum price      | **1 LAND**                     |
-| Marketplace fee    | **2 %** of sale price (burned) |
-| Fee representation | 200 basis points (BPS)         |
+| Parameter       | Value                                         |
+| --------------- | --------------------------------------------- |
+| Minimum price   | Any price **greater than zero**               |
+| Marketplace fee | **None**: the buyer pays the seller the price |
 
 When a sale settles:
 
-1. `price × 0.02` LAND is burned from circulation.
-2. `price × 0.98` LAND is transferred to the seller.
-3. Property ownership is transferred to the buyer.
-4. Any existing listing for that property is removed.
+1. The full `price` in LAND is transferred from the buyer to the seller.
+2. Property ownership is transferred to the buyer.
+3. The listing for that property is removed.
 
 ---
 
@@ -110,17 +116,17 @@ These constants are exported from `apps/shared/src/types/game.ts` for use in
 frontend code:
 
 ```ts
-STARTING_BALANCE = 1_000; // LAND tokens
-EPOCH_LEDGERS = 17_280; // ledgers per epoch
+STARTING_BALANCE = 1_000; // LAND tokens (testnet faucet grant)
+EPOCH_LEDGERS = 100; // ledgers per epoch (contract EPOCH_LENGTH)
 BASE_RENTAL_RATE = 10; // LAND per epoch (EMPTY plot)
-HOUSE_COST = 100; // LAND to upgrade EMPTY → HOUSE
-APARTMENT_COST = 300; // LAND to upgrade HOUSE → APARTMENT
-SKYSCRAPER_COST = 1_000; // LAND to upgrade APARTMENT → SKYSCRAPER
-HOUSE_MULTIPLIER = 2;
-APARTMENT_MULTIPLIER = 5;
-SKYSCRAPER_MULTIPLIER = 12;
-MARKETPLACE_FEE_BPS = 200; // 2 %
-MIN_LISTING_PRICE = 1; // LAND
+HOUSE_COST = 200; // LAND to upgrade EMPTY to HOUSE
+APARTMENT_COST = 600; // LAND to upgrade HOUSE to APARTMENT
+SKYSCRAPER_COST = 1_800; // LAND to upgrade APARTMENT to SKYSCRAPER
+EMPTY_MULTIPLIER = [1, 1];
+HOUSE_MULTIPLIER = [3, 2];
+APARTMENT_MULTIPLIER = [3, 1];
+SKYSCRAPER_MULTIPLIER = [6, 1];
+computeAccruedRent(elapsedLedgers, level); // whole LAND
 ```
 
 ---

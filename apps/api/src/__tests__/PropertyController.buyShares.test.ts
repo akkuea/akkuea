@@ -732,7 +732,6 @@ describe.skipIf(skipIfNoDatabase)('PropertyController buy-shares prepare/confirm
   });
 });
 
-
 describe('payment amount conversions', () => {
   it('converts a two-decimal share price to seven-decimal token units', () => {
     expect(pricePerShareToTokenUnits('125.50')).toBe(1_255_000_000n);

@@ -12,13 +12,60 @@ import type { PropertyInfo } from "@akkuea/shared";
 import { PROPERTY_IMAGE_PLACEHOLDER } from "@/components/marketplace/marketplace.utils";
 import { propertyApi } from "@/services/api/properties";
 
-const buySharesMock = mock(() =>
-  Promise.resolve({
-    transactionHash: "a".repeat(64),
-    newBalance: 12,
+const UNSIGNED_XDR = "AAAA-UNSIGNED-PURCHASE-XDR";
+const SIGNED_XDR = "AAAA-SIGNED-PURCHASE-XDR";
+const TX_HASH = "c".repeat(64);
+const BUYER = "GDB6EXAMPLEWALLETADDRESS1234567890123456789012345678901234";
+
+/** Records every step of the purchase flow, in the order it happened. */
+const flowOrder: string[] = [];
+
+const prepareBuySharesMock = mock(() => {
+  flowOrder.push("prepare");
+  return Promise.resolve({
+    xdr: UNSIGNED_XDR,
+    contractId: "CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4",
+    sorobanPropertyId: "42",
+    shares: 3,
+    paymentToken: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+    totalAmount: "300.0000000",
+  });
+});
+const confirmBuySharesMock = mock(() => {
+  flowOrder.push("confirm");
+  return Promise.resolve({ transactionHash: TX_HASH, newBalance: 12 });
+});
+const signTransactionMock = mock(() => {
+  flowOrder.push("sign");
+  return Promise.resolve(SIGNED_XDR);
+});
+const submitSignedPurchaseMock = mock(() => {
+  flowOrder.push("submit");
+  return Promise.resolve({ hash: TX_HASH });
+});
+
+const originalPrepareBuyShares = propertyApi.prepareBuyShares;
+const originalConfirmBuyShares = propertyApi.confirmBuyShares;
+
+mock.module("@/services/api/properties", () => ({
+  propertyApi: {
+    ...propertyApi,
+    prepareBuyShares: prepareBuySharesMock,
+    confirmBuyShares: confirmBuySharesMock,
+  },
+}));
+
+mock.module("@/services/marketplace/purchase", () => ({
+  purchaseNetworkPassphrase: () => "Test SDF Network ; September 2015",
+  submitSignedPurchase: submitSignedPurchaseMock,
+}));
+
+mock.module("@/components/auth/hooks", () => ({
+  useWallet: () => ({
+    network: "testnet" as const,
+    signTransaction: signTransactionMock,
   }),
-);
-const originalBuyShares = propertyApi.buyShares;
+}));
 
 mock.module("next/image", () => ({
   default: (props: ImgHTMLAttributes<HTMLImageElement>) => (
@@ -98,12 +145,41 @@ const property: PropertyInfo = {
 describe("InvestModal", () => {
   beforeEach(() => {
     cleanup();
-    propertyApi.buyShares = buySharesMock;
-    buySharesMock.mockClear();
+    flowOrder.length = 0;
+    // bun's mockClear keeps any mockImplementation a previous test installed,
+    // so the happy-path implementations are restored here before every test.
+    prepareBuySharesMock.mockReset();
+    prepareBuySharesMock.mockImplementation(() => {
+      flowOrder.push("prepare");
+      return Promise.resolve({
+        xdr: UNSIGNED_XDR,
+        contractId: "CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4",
+        sorobanPropertyId: "42",
+        shares: 3,
+        paymentToken: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+        totalAmount: "300.0000000",
+      });
+    });
+    confirmBuySharesMock.mockReset();
+    confirmBuySharesMock.mockImplementation(() => {
+      flowOrder.push("confirm");
+      return Promise.resolve({ transactionHash: TX_HASH, newBalance: 12 });
+    });
+    signTransactionMock.mockReset();
+    signTransactionMock.mockImplementation(() => {
+      flowOrder.push("sign");
+      return Promise.resolve(SIGNED_XDR);
+    });
+    submitSignedPurchaseMock.mockReset();
+    submitSignedPurchaseMock.mockImplementation(() => {
+      flowOrder.push("submit");
+      return Promise.resolve({ hash: TX_HASH });
+    });
   });
 
   afterAll(() => {
-    propertyApi.buyShares = originalBuyShares;
+    propertyApi.prepareBuyShares = originalPrepareBuyShares;
+    propertyApi.confirmBuyShares = originalConfirmBuyShares;
   });
 
   it("shows a connect wallet prompt when the user is disconnected", () => {
@@ -152,7 +228,7 @@ describe("InvestModal", () => {
         isOpen
         onClose={() => {}}
         isConnected
-        walletAddress="GDB6EXAMPLEWALLETADDRESS1234567890123456789012345678901234"
+        walletAddress={BUYER}
         onConnectWallet={() => Promise.resolve()}
       />,
     );
@@ -171,7 +247,7 @@ describe("InvestModal", () => {
     ).not.toBeNull();
   });
 
-  it("submits the investment transaction for a connected wallet", async () => {
+  it("prepares, signs, submits and confirms the purchase in order", async () => {
     const onSuccess = mock(() => {});
 
     const view = render(
@@ -180,7 +256,7 @@ describe("InvestModal", () => {
         isOpen
         onClose={() => {}}
         isConnected
-        walletAddress="GDB6EXAMPLEWALLETADDRESS1234567890123456789012345678901234"
+        walletAddress={BUYER}
         onConnectWallet={() => Promise.resolve()}
         onInvestmentSuccess={onSuccess}
       />,
@@ -192,13 +268,91 @@ describe("InvestModal", () => {
     fireEvent.click(view.getByRole("button", { name: /Confirm Investment/i }));
 
     await waitFor(() => {
-      expect(buySharesMock).toHaveBeenCalledWith(
-        property.id,
-        "GDB6EXAMPLEWALLETADDRESS1234567890123456789012345678901234",
-        3,
-      );
-      expect(onSuccess).toHaveBeenCalledTimes(1);
       expect(view.queryByText(/Transaction submitted/i)).not.toBeNull();
     });
+
+    expect(flowOrder).toEqual(["prepare", "sign", "submit", "confirm"]);
+    expect(prepareBuySharesMock).toHaveBeenCalledWith(property.id, BUYER, 3);
+    // The wallet signs the exact XDR the API prepared.
+    expect(signTransactionMock).toHaveBeenCalledWith(
+      UNSIGNED_XDR,
+      "Test SDF Network ; September 2015",
+    );
+    // Submission uses the signed XDR, and confirmation the resulting hash.
+    expect(submitSignedPurchaseMock).toHaveBeenCalledWith(
+      SIGNED_XDR,
+      "testnet",
+    );
+    expect(confirmBuySharesMock).toHaveBeenCalledWith(
+      property.id,
+      TX_HASH,
+      BUYER,
+    );
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    // The success screen shows the real transaction hash.
+    expect(view.queryByText(new RegExp(TX_HASH.slice(0, 8), "i"))).not.toBeNull();
+  });
+
+  it("shows an error and never confirms when the wallet rejects the signature", async () => {
+    signTransactionMock.mockImplementation(() => {
+      flowOrder.push("sign");
+      return Promise.reject(new Error("User rejected the transaction"));
+    });
+
+    const view = render(
+      <InvestModal
+        property={property}
+        isOpen
+        onClose={() => {}}
+        isConnected
+        walletAddress={BUYER}
+        onConnectWallet={() => Promise.resolve()}
+      />,
+    );
+
+    fireEvent.click(view.getByRole("button", { name: /Confirm Investment/i }));
+
+    await waitFor(() => {
+      expect(view.queryByText(/User rejected the transaction/i)).not.toBeNull();
+    });
+
+    expect(prepareBuySharesMock).toHaveBeenCalledTimes(1);
+    expect(submitSignedPurchaseMock).not.toHaveBeenCalled();
+    expect(confirmBuySharesMock).not.toHaveBeenCalled();
+    expect(view.queryByText(/Transaction submitted/i)).toBeNull();
+  });
+
+  it("shows an error and never confirms when submission returns no hash", async () => {
+    submitSignedPurchaseMock.mockImplementation(() => {
+      flowOrder.push("submit");
+      return Promise.reject(
+        new Error(
+          "The transaction was signed but the network returned no transaction hash, so it cannot be confirmed as submitted. Check the explorer before trying again.",
+        ),
+      );
+    });
+
+    const view = render(
+      <InvestModal
+        property={property}
+        isOpen
+        onClose={() => {}}
+        isConnected
+        walletAddress={BUYER}
+        onConnectWallet={() => Promise.resolve()}
+      />,
+    );
+
+    fireEvent.click(view.getByRole("button", { name: /Confirm Investment/i }));
+
+    await waitFor(() => {
+      expect(
+        view.queryByText(/returned no transaction hash/i),
+      ).not.toBeNull();
+    });
+
+    expect(signTransactionMock).toHaveBeenCalledTimes(1);
+    expect(confirmBuySharesMock).not.toHaveBeenCalled();
+    expect(view.queryByText(/Transaction submitted/i)).toBeNull();
   });
 });

@@ -32,6 +32,11 @@ import { kycRepository } from '../repositories/KYCRepository';
 import { db } from '../db';
 import { properties, shareOwnerships, transactions } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
+import {
+  formatTokenUnits,
+  pricePerShareToTokenUnits,
+  purchaseTotalToTokenUnits,
+} from '../utils/paymentAmount';
 
 const NETWORK_PASSPHRASE = Networks.TESTNET;
 const CONTRACT_ID = 'CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4';
@@ -724,5 +729,30 @@ describe.skipIf(skipIfNoDatabase)('PropertyController buy-shares prepare/confirm
       expect(ownerships.length).toBe(1);
       expect(ownerships[0]!.shares).toBe(8);
     });
+  });
+});
+
+
+describe('payment amount conversions', () => {
+  it('converts a two-decimal share price to seven-decimal token units', () => {
+    expect(pricePerShareToTokenUnits('125.50')).toBe(1_255_000_000n);
+    expect(pricePerShareToTokenUnits('0.01')).toBe(100_000n);
+  });
+
+  it('calculates the exact total token amount for a positive share quantity', () => {
+    expect(purchaseTotalToTokenUnits('125.50', 3)).toBe(3_765_000_000n);
+    expect(formatTokenUnits(purchaseTotalToTokenUnits('125.50', 3))).toBe('376.5000000');
+  });
+
+  it('rejects zero, negative, and fractional share quantities', () => {
+    expect(() => purchaseTotalToTokenUnits('100.00', 0)).toThrow(
+      'Shares must be a positive integer',
+    );
+    expect(() => purchaseTotalToTokenUnits('100.00', -1)).toThrow(
+      'Shares must be a positive integer',
+    );
+    expect(() => purchaseTotalToTokenUnits('100.00', 1.5)).toThrow(
+      'Shares must be a positive integer',
+    );
   });
 });

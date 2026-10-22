@@ -178,9 +178,7 @@ function fakeSuccessfulResponse(overrides: FakeResponseOverrides = {}) {
   } as unknown as Awaited<ReturnType<SorobanRpc.Server['getTransaction']>>;
 }
 
-function fakeRpcServer(
-  response: unknown,
-): InstanceType<typeof SorobanRpc.Server> {
+function fakeRpcServer(response: unknown): InstanceType<typeof SorobanRpc.Server> {
   return {
     getTransaction: async () => response,
   } as unknown as InstanceType<typeof SorobanRpc.Server>;
@@ -190,7 +188,9 @@ function makeService(response: unknown): StellarService {
   return new StellarService(undefined, NETWORK_PASSPHRASE, fakeRpcServer(response));
 }
 
-function sharePurchaseEvent(overrides: Partial<Parameters<typeof buildSharePurchaseEvent>[0]> = {}) {
+function sharePurchaseEvent(
+  overrides: Partial<Parameters<typeof buildSharePurchaseEvent>[0]> = {},
+) {
   return buildSharePurchaseEvent({
     contractId: CONTRACT_ID,
     propertyId: '42',
@@ -243,15 +243,13 @@ describe('StellarService.verifyPurchaseTransaction', () => {
 
   it('rejects a malformed hash', async () => {
     const service = makeService(fakeSuccessfulResponse());
-    await expect(service.verifyPurchaseTransaction('not-a-hash', CONTRACT_ID)).rejects.toMatchObject(
-      { statusCode: 400 },
-    );
+    await expect(
+      service.verifyPurchaseTransaction('not-a-hash', CONTRACT_ID),
+    ).rejects.toMatchObject({ statusCode: 400 });
   });
 
   it('rejects a transaction that is not found', async () => {
-    const service = makeService(
-      fakeSuccessfulResponse({ status: 'NOT_FOUND' }),
-    );
+    const service = makeService(fakeSuccessfulResponse({ status: 'NOT_FOUND' }));
     await expect(service.verifyPurchaseTransaction(TX_HASH, CONTRACT_ID)).rejects.toMatchObject({
       statusCode: 404,
     });
@@ -426,7 +424,10 @@ describe.skipIf(skipIfNoDatabase)('PropertyController buy-shares prepare/confirm
     (stellarService as any).verifyPurchaseTransaction = async () => verifiedPurchase();
 
     if (propertyId) {
-      return db.update(properties).set({ availableShares: 10 }).where(eq(properties.id, propertyId));
+      return db
+        .update(properties)
+        .set({ availableShares: 10 })
+        .where(eq(properties.id, propertyId));
     }
   });
 
@@ -436,9 +437,7 @@ describe.skipIf(skipIfNoDatabase)('PropertyController buy-shares prepare/confirm
     (stellarService as any).verifyPurchaseTransaction = originalVerifyPurchaseTransaction;
 
     if (propertyId) {
-      await db
-        .delete(shareOwnerships)
-        .where(eq(shareOwnerships.propertyId, propertyId));
+      await db.delete(shareOwnerships).where(eq(shareOwnerships.propertyId, propertyId));
       await db.delete(transactions).where(eq(transactions.fromUserId, buyerId));
       await db.delete(transactions).where(eq(transactions.fromUserId, secondBuyerId));
       await db.update(properties).set({ availableShares: 10 }).where(eq(properties.id, propertyId));
@@ -467,20 +466,30 @@ describe.skipIf(skipIfNoDatabase)('PropertyController buy-shares prepare/confirm
       const [ownership] = await db
         .select()
         .from(shareOwnerships)
-        .where(and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyerId)));
+        .where(
+          and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyerId)),
+        );
       expect(ownership).toBeUndefined();
     });
 
     it('rejects when inventory is insufficient', async () => {
       await expect(
-        PropertyController.prepareBuyShares(propertyId, { buyer: buyerAddress, shares: 11 }, buyerAddress),
+        PropertyController.prepareBuyShares(
+          propertyId,
+          { buyer: buyerAddress, shares: 11 },
+          buyerAddress,
+        ),
       ).rejects.toThrow(/enough shares/i);
       expect(mintCalled).toBe(false);
     });
 
     it('rejects when the authenticated wallet differs from the buyer', async () => {
       await expect(
-        PropertyController.prepareBuyShares(propertyId, { buyer: buyerAddress, shares: 2 }, secondBuyerAddress),
+        PropertyController.prepareBuyShares(
+          propertyId,
+          { buyer: buyerAddress, shares: 2 },
+          secondBuyerAddress,
+        ),
       ).rejects.toThrow(/does not match buyer/i);
       expect(mintCalled).toBe(false);
     });
@@ -693,11 +702,7 @@ describe.skipIf(skipIfNoDatabase)('PropertyController buy-shares prepare/confirm
 
       const results = await Promise.allSettled([
         PropertyController.confirmBuyShares(propertyId, { txHash: firstHash }, buyerAddress),
-        PropertyController.confirmBuyShares(
-          propertyId,
-          { txHash: secondHash },
-          secondBuyerAddress,
-        ),
+        PropertyController.confirmBuyShares(propertyId, { txHash: secondHash }, secondBuyerAddress),
       ]);
 
       const fulfilled = results.filter((r) => r.status === 'fulfilled');

@@ -1875,6 +1875,7 @@ fn setup_purchase_test() -> (Address, Env, Address, Address, Address, u64) {
         storage::property::set_price_per_share(&env, property_id, 1_000_000i128);
         // Set verified status
         storage::property::set_verified(&env, property_id, true);
+        storage::property::set_payment_token(&env, property_id, &payment_token);
     });
 
     (

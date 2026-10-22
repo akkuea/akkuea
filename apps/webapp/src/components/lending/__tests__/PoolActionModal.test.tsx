@@ -67,8 +67,8 @@ mock.module("framer-motion", () => {
 const { act, cleanup, fireEvent, render, waitFor } =
   await import("@testing-library/react");
 const { AUTO_CLOSE_DELAY_MS, PoolActionModal } =
-  await import("../components/lending/PoolActionModal");
-type PoolActionModalProps = import("../components/lending/PoolActionModal").PoolActionModalProps;
+  await import("../PoolActionModal");
+type PoolActionModalProps = import("../PoolActionModal").PoolActionModalProps;
 
 const WALLET = "GDB6EXAMPLEWALLETADDRESS1234567890123456789012345678901234";
 

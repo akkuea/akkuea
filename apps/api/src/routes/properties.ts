@@ -53,7 +53,9 @@ const buySharesSchema = z.object({
 
 // Confirm share purchase body schema
 const confirmBuySharesSchema = z.object({
-  txHash: z.string().regex(/^[0-9a-fA-F]{64}$/, 'Transaction hash must be a 64-character hex string'),
+  txHash: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/, 'Transaction hash must be a 64-character hex string'),
 });
 
 // GET /properties - list with filters

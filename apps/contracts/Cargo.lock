@@ -1599,6 +1599,7 @@ name = "rwa-defi-contract"
 version = "0.0.0"
 dependencies = [
  "itoa",
+ "proptest",
  "soroban-sdk",
 ]
 

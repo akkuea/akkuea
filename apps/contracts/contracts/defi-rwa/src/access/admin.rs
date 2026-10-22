@@ -43,6 +43,10 @@ pub enum ContractError {
     OraclePriceInFuture = 28,
     /// Buyer offered a payment token the listing does not accept
     PaymentTokenMismatch = 29,
+    /// A borrow position cannot mix collateral assets
+    CollateralAssetMismatch = 30,
+    /// The requested reserve withdrawal exceeds withdrawable reserves
+    InsufficientReserves = 31,
 }
 
 pub struct AdminControl;

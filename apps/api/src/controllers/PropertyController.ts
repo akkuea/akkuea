@@ -13,7 +13,11 @@ import { logger } from '../services/logger';
 import { db } from '../db';
 import { ApiError } from '../errors/ApiError';
 import { getPaymentTokenContractId } from '../config/contracts';
-import { formatTokenUnits, PRICE_PER_SHARE_DECIMALS, purchaseTotalToTokenUnits } from '../utils/paymentAmount';
+import {
+  formatTokenUnits,
+  PRICE_PER_SHARE_DECIMALS,
+  purchaseTotalToTokenUnits,
+} from '../utils/paymentAmount';
 import { tokenizationService, type TokenizationResponse } from '../services/TokenizationService';
 import { stellarService } from '../services/StellarService';
 import {
@@ -127,9 +131,9 @@ export interface UpdatePropertyInput {
   description?: string;
   propertyType?: 'residential' | 'commercial' | 'industrial' | 'land' | 'mixed';
   location?: {
-    address?: string;
-    city?: string;
-    country?: string;
+    address: string;
+    city: string;
+    country: string;
     postalCode?: string;
     coordinates?: { latitude: number; longitude: number };
   };
@@ -848,7 +852,10 @@ export class PropertyController {
         verified.sharePurchase.propertyId !== String(property.sorobanPropertyId)
       ) {
         throw new ValidationError('SharePurchase event does not match this property and buyer', [
-          { field: 'txHash', message: 'SharePurchase event does not match this property and buyer' },
+          {
+            field: 'txHash',
+            message: 'SharePurchase event does not match this property and buyer',
+          },
         ]);
       }
 
@@ -920,8 +927,7 @@ export class PropertyController {
                     parseDecimalStringToBigInt(
                       existingOwnership.purchasePrice,
                       PRICE_PER_SHARE_DECIMALS,
-                    ) +
-                      parseDecimalStringToBigInt(purchasePrice, PRICE_PER_SHARE_DECIMALS),
+                    ) + parseDecimalStringToBigInt(purchasePrice, PRICE_PER_SHARE_DECIMALS),
                     PRICE_PER_SHARE_DECIMALS,
                   ),
                 })
@@ -995,7 +1001,11 @@ export class PropertyController {
 
     const recordedPropertyId = (recorded?.metadata as { propertyId?: string } | null)?.propertyId;
     if (recordedPropertyId && recordedPropertyId !== propertyId) {
-      throw new ApiError(409, 'CONFLICT', 'Transaction hash was already recorded for another purchase');
+      throw new ApiError(
+        409,
+        'CONFLICT',
+        'Transaction hash was already recorded for another purchase',
+      );
     }
 
     const [ownership] = await db

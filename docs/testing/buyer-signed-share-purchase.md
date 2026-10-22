@@ -23,21 +23,7 @@ This runbook covers the end-to-end acceptance check for issue #1229. It is a pro
 
 ## Test record
 
-Fill this section with observed results from an actual testnet run before marking the issue's manual verification criterion complete.
-
-| Field | Observed value |
-| --- | --- |
-| Network | Pending testnet run |
-| Contract ID | Not recorded |
-| Property ID | Not recorded |
-| Buyer public address | Not recorded |
-| Payment token contract ID | Not recorded |
-| Share quantity and unit price | Not recorded |
-| Transaction hash / explorer link | Not recorded |
-| Before/after available inventory | Not recorded |
-| Before/after buyer share balance and total supply | Not recorded |
-| Before/after buyer/owner payment-token balances | Not recorded |
-| Rejection and duplicate-confirmation checks | Not run |
+Manual end-to-end verification on Stellar Testnet has not been completed. No transaction hash or before/after values are claimed. Record the results here after an actual testnet run before marking the issue's manual verification criterion complete.
 
 ## Evidence and safety
 

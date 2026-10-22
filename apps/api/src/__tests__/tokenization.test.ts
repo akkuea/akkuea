@@ -11,7 +11,8 @@ const CONTRACT_ID = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4';
 describe('TokenizationService', () => {
   beforeEach(() => {
     process.env.REAL_ESTATE_TOKEN_CONTRACT_ID = CONTRACT_ID;
-    process.env.PAYMENT_TOKEN_CONTRACT_ID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
+    process.env.PAYMENT_TOKEN_CONTRACT_ID =
+      'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
     process.env.STELLAR_ADMIN_PUBLIC_KEY = ADMIN_WALLET;
     process.env.STELLAR_ADMIN_SECRET = 'SBQ6M5OBU64ATKSRH4OKW2IFQCB5R6Q73F4VMK6KQ37C5G6GQ6FJTYA3';
     spyOn(logger, 'info').mockImplementation(() => {});
@@ -71,7 +72,7 @@ describe('TokenizationService', () => {
   });
 
   it('lists the property for sale instead of minting its supply', async () => {
-    const listPropertyShares = mock(async () => ({
+    const listPropertyShares = mock(async (_params: Record<string, unknown>) => ({
       txHash: 'a'.repeat(64),
       contractId: CONTRACT_ID,
     }));

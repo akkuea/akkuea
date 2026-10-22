@@ -767,22 +767,19 @@
           "name": "collateral_factor",
           "type": "numeric(5, 2)",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'0'"
+          "notNull": true
         },
         "liquidation_threshold": {
           "name": "liquidation_threshold",
           "type": "numeric(5, 2)",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'0'"
+          "notNull": true
         },
         "liquidation_penalty": {
           "name": "liquidation_penalty",
           "type": "numeric(5, 2)",
           "primaryKey": false,
-          "notNull": true,
-          "default": "'0'"
+          "notNull": true
         },
         "reserve_factor": {
           "name": "reserve_factor",

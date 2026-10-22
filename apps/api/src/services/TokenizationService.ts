@@ -1,6 +1,8 @@
 import { ApiError } from '../errors/ApiError';
 import { propertyRepository } from '../repositories/PropertyRepository';
 import { userRepository } from '../repositories/UserRepository';
+import { getPaymentTokenContractId } from '../config/contracts';
+import { pricePerShareToTokenUnits } from '../utils/paymentAmount';
 import { logger } from './logger';
 import { stellarService } from './StellarService';
 
@@ -73,14 +75,29 @@ export class TokenizationService {
 
     let txHash: string;
 
+    // Tokenization lists the property for sale instead of minting its supply:
+    // the contract records the price, the share inventory and the accepted
+    // payment token, and every share is minted when a buyer pays for it through
+    // `purchase_shares`. No supply exists before the first purchase.
+    const paymentToken = getPaymentTokenContractId();
+    if (!paymentToken) {
+      throw ApiError.badRequest(
+        'Payment token is not configured. Set PAYMENT_TOKEN_CONTRACT_ID or the network deployment artifact.',
+      );
+    }
+    this.dependencies.stellarService.assertValidContractId(paymentToken);
+    const pricePerShareUnits = pricePerShareToTokenUnits(property.pricePerShare);
+
     try {
-      const result = await this.dependencies.stellarService.mintPropertyShares({
+      const result = await this.dependencies.stellarService.listPropertyShares({
         contractId,
         adminPublicKey,
         adminSecret,
         sorobanPropertyId,
-        recipient: owner.walletAddress,
-        amount: property.totalShares,
+        owner: owner.walletAddress,
+        pricePerShareUnits,
+        sharesForSale: property.totalShares,
+        paymentToken,
       });
       txHash = result.txHash;
     } catch (error) {

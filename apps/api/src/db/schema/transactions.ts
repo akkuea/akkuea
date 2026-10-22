@@ -22,7 +22,9 @@ export const transactionStatusEnum = pgEnum('transaction_status', [
 export const transactions = pgTable('transactions', {
   id: uuid('id').primaryKey().defaultRandom(),
   type: transactionTypeEnum('type').notNull(),
-  hash: varchar('hash', { length: 64 }),
+  // Unique so the same on-chain transaction can only ever be recorded once:
+  // confirming a purchase twice hits the conflict and returns the first result.
+  hash: varchar('hash', { length: 64 }).unique(),
   fromUserId: uuid('from_user_id')
     .notNull()
     .references(() => users.id),

@@ -105,6 +105,7 @@ mock.module("@/hooks/useHealthFactor", () => ({
 }));
 
 mock.module("@/hooks/useLiveUpdates", () => ({
+  getTimeSinceUpdate: () => "Never",
   useLiveUpdates: () => ({ connectionStatus: "connected" }),
 }));
 

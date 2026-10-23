@@ -724,5 +724,54 @@ describe.skipIf(skipIfNoDatabase)('PropertyController buy-shares prepare/confirm
       expect(ownerships.length).toBe(1);
       expect(ownerships[0]!.shares).toBe(8);
     });
+
+    it('combines simultaneous purchases for the same buyer', async () => {
+      const firstHash = '3'.repeat(64);
+      const secondHash = '4'.repeat(64);
+
+      (stellarService as any).verifyPurchaseTransaction = async (txHash: string) =>
+        verifiedPurchase({
+          txHash,
+          sourceAccount: buyerAddress,
+          call: {
+            buyer: buyerAddress,
+            propertyId: BigInt(propertySorobanId),
+            amount: BigInt(2),
+            paymentToken: PAYMENT_TOKEN,
+          },
+          sharePurchase: {
+            propertyId: String(propertySorobanId),
+            buyer: buyerAddress,
+            shares: BigInt(2),
+            totalCost: BigInt(2_000_000_000),
+          },
+        });
+
+      const results = await Promise.allSettled([
+        PropertyController.confirmBuyShares(propertyId, { txHash: firstHash }, buyerAddress),
+        PropertyController.confirmBuyShares(propertyId, { txHash: secondHash }, buyerAddress),
+      ]);
+
+      expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(2);
+
+      const prop = await propertyRepository.findById(propertyId);
+      expect(prop!.availableShares).toBe(6);
+
+      const ownerships = await db
+        .select()
+        .from(shareOwnerships)
+        .where(
+          and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyerId)),
+        );
+      expect(ownerships).toHaveLength(1);
+      expect(ownerships[0]!.shares).toBe(4);
+      expect(parseFloat(ownerships[0]!.purchasePrice)).toBe(400);
+
+      const recordedTransactions = await db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.fromUserId, buyerId));
+      expect(recordedTransactions).toHaveLength(2);
+    });
   });
 });

@@ -42,8 +42,7 @@ export const isStellarContractId = (val: string): boolean => {
 
 export const stellarPublicKeySchema = z
   .string({
-    required_error:
-      "Must be a valid Stellar public key (56 characters starting with G)",
+    error: "Must be a valid Stellar public key (56 characters starting with G)",
   })
   .refine(isStellarPublicKey, {
     message:
@@ -52,7 +51,7 @@ export const stellarPublicKeySchema = z
 
 export const stellarSecretSeedSchema = z
   .string({
-    required_error:
+    error:
       "Must be a valid Stellar secret seed (56 characters starting with S)",
   })
   .refine(isStellarSecretSeed, {
@@ -62,7 +61,7 @@ export const stellarSecretSeedSchema = z
 
 export const stellarContractIdSchema = z
   .string({
-    required_error:
+    error:
       "Must be a valid Soroban contract ID (56 characters starting with C)",
   })
   .refine(isStellarContractId, {
@@ -70,11 +69,9 @@ export const stellarContractIdSchema = z
       "Must be a valid Soroban contract ID (56 characters starting with C)",
   });
 
-export const urlSchema = z
-  .string({ required_error: "Must be a valid URL" })
-  .url({
-    message: "Must be a valid URL (e.g. https://... or http://...)",
-  });
+export const urlSchema = z.url({
+  error: "Must be a valid URL (e.g. https://... or http://...)",
+});
 
 export const portSchema = z
   .string()
@@ -237,7 +234,7 @@ export function resolveCorsAllowedOrigins(
 
 export const apiEnvSchema = z.object({
   DATABASE_URL: z
-    .string({ required_error: "DATABASE_URL is required" })
+    .string({ error: "DATABASE_URL is required" })
     .min(1, "DATABASE_URL is required"),
   DATABASE_POOL_MAX: z
     .string()
@@ -250,20 +247,20 @@ export const apiEnvSchema = z.object({
     .default("development"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).optional(),
   WEBHOOK_SECRET: z
-    .string({ required_error: "WEBHOOK_SECRET is required" })
+    .string({ error: "WEBHOOK_SECRET is required" })
     .min(1, "WEBHOOK_SECRET is required"),
   OPERATIONS_BACKEND_CREDENTIAL: z
-    .string({ required_error: "OPERATIONS_BACKEND_CREDENTIAL is required" })
+    .string({ error: "OPERATIONS_BACKEND_CREDENTIAL is required" })
     .min(1, "OPERATIONS_BACKEND_CREDENTIAL is required"),
   OPERATIONS_ALLOWED_WALLETS: z.string().optional(),
   LIQUIDATOR_API_KEY: z
-    .string({ required_error: "LIQUIDATOR_API_KEY is required" })
+    .string({ error: "LIQUIDATOR_API_KEY is required" })
     .min(1, "LIQUIDATOR_API_KEY is required"),
   INTERNAL_API_KEY: z
-    .string({ required_error: "INTERNAL_API_KEY is required" })
+    .string({ error: "INTERNAL_API_KEY is required" })
     .min(1, "INTERNAL_API_KEY is required"),
   KYC_UPLOAD_DIR: z
-    .string({ required_error: "KYC_UPLOAD_DIR is required" })
+    .string({ error: "KYC_UPLOAD_DIR is required" })
     .min(1, "KYC_UPLOAD_DIR is required"),
   KYC_EXPIRY_JOB_ENABLED: booleanSchema,
   KYC_EXPIRY_POLL_INTERVAL_MS: z.string().optional(),
@@ -280,7 +277,7 @@ export const apiEnvSchema = z.object({
   STELLAR_HORIZON_URL: urlSchema,
   STELLAR_RPC_URL: urlSchema,
   STELLAR_NETWORK_PASSPHRASE: z
-    .string({ required_error: "STELLAR_NETWORK_PASSPHRASE is required" })
+    .string({ error: "STELLAR_NETWORK_PASSPHRASE is required" })
     .min(1, "STELLAR_NETWORK_PASSPHRASE is required"),
   STELLAR_ADMIN_PUBLIC_KEY: stellarPublicKeySchema,
   STELLAR_ADMIN_SECRET: stellarSecretSeedSchema,
@@ -294,10 +291,10 @@ export const webappEnvSchema = z.object({
   NEXT_PUBLIC_API_URL: urlSchema,
   API_URL: urlSchema,
   OPERATIONS_BACKEND_CREDENTIAL: z
-    .string({ required_error: "OPERATIONS_BACKEND_CREDENTIAL is required" })
+    .string({ error: "OPERATIONS_BACKEND_CREDENTIAL is required" })
     .min(1, "OPERATIONS_BACKEND_CREDENTIAL is required"),
   OPERATIONS_ALLOWED_WALLETS: z
-    .string({ required_error: "OPERATIONS_ALLOWED_WALLETS is required" })
+    .string({ error: "OPERATIONS_ALLOWED_WALLETS is required" })
     .min(1, "OPERATIONS_ALLOWED_WALLETS is required"),
   NEXT_PUBLIC_LENDING_SSE_URL: urlSchema.optional().or(z.literal("")),
   NEXT_PUBLIC_USE_MOCK: booleanSchema,

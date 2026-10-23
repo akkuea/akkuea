@@ -264,7 +264,7 @@ function readTrustedProxyHops(): number {
   if (!parsed.success) {
     throw new Error(
       `Invalid TRUSTED_PROXY_HOPS: ${
-        parsed.error.errors[0]?.message ?? 'expected a non-negative integer'
+        parsed.error.issues[0]?.message ?? 'expected a non-negative integer'
       }`,
     );
   }

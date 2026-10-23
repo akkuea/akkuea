@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { z, ZodSchema, ZodError } from 'zod';
+import { z, type ZodSchema, ZodError } from 'zod';
 import { logger } from '../services/logger';
 
 /**
@@ -44,7 +44,7 @@ function createValidationError(
     statusCode: 400,
     details: {
       source,
-      errors,
+      errors: errors,
     },
   };
 }
@@ -238,7 +238,9 @@ export function validate<
               return result;
             }
 
-            result.validatedBody = bodyResult.data;
+            result.validatedBody = bodyResult.data as TBody extends ZodSchema
+              ? z.infer<TBody>
+              : undefined;
           } catch (e) {
             logger.error('Error parsing JSON body', e);
             result.validationError = {
@@ -264,7 +266,9 @@ export function validate<
             return result;
           }
 
-          result.validatedQuery = queryResult.data;
+          result.validatedQuery = queryResult.data as TQuery extends ZodSchema
+            ? z.infer<TQuery>
+            : undefined;
         }
 
         // Validate params
@@ -279,7 +283,9 @@ export function validate<
             return result;
           }
 
-          result.validatedParams = paramsResult.data;
+          result.validatedParams = paramsResult.data as TParams extends ZodSchema
+            ? z.infer<TParams>
+            : undefined;
         }
 
         return result;
@@ -306,7 +312,7 @@ export function validate<
 }
 
 export const uuidParamSchema = z.object({
-  id: z.string().uuid('Invalid UUID format'),
+  id: z.uuid('Invalid UUID format'),
 });
 
 export const paginationQuerySchema = z.object({
@@ -320,6 +326,6 @@ export const paginationQuerySchema = z.object({
  * Schema for property shares owner param validation
  */
 export const ownerParamSchema = z.object({
-  id: z.string().uuid('Invalid UUID format'),
+  id: z.uuid('Invalid UUID format'),
   owner: z.string().min(1, 'Owner address is required'),
 });

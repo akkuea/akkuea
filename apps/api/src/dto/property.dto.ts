@@ -2,6 +2,12 @@ import { z } from 'zod';
 import type { PropertyInfo } from '@akkuea/shared';
 import { stellarAddressSchema, positiveAmountSchema, propertyLocationSchema } from '@akkuea/shared';
 
+const propertyDocumentSchema = z.object({
+  title: z.string().min(1),
+  url: z.url(),
+  type: z.enum(['deed', 'appraisal', 'inspection', 'other']),
+});
+
 /**
  * DTO for creating a new property
  */
@@ -9,17 +15,9 @@ export const CreatePropertyDto = z.object({
   owner: stellarAddressSchema,
   totalShares: z.number().int().positive(),
   valuePerShare: positiveAmountSchema,
-  metadata: z.record(z.string()),
+  metadata: z.record(z.string(), z.string()),
   location: propertyLocationSchema.optional(),
-  documents: z
-    .array(
-      z.object({
-        title: z.string().min(1),
-        url: z.string().url(),
-        type: z.enum(['deed', 'appraisal', 'inspection', 'other']),
-      }),
-    )
-    .optional(),
+  documents: z.array(propertyDocumentSchema).optional(),
 });
 
 /**
@@ -30,17 +28,9 @@ export const UpdatePropertyDto = z.object({
   totalShares: z.number().int().positive().optional(),
   availableShares: z.number().int().min(0).optional(),
   valuePerShare: positiveAmountSchema.optional(),
-  metadata: z.record(z.string()).optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
   location: propertyLocationSchema.optional(),
-  documents: z
-    .array(
-      z.object({
-        title: z.string().min(1),
-        url: z.string().url(),
-        type: z.enum(['deed', 'appraisal', 'inspection', 'other']),
-      }),
-    )
-    .optional(),
+  documents: z.array(propertyDocumentSchema).optional(),
 });
 
 /**
@@ -87,7 +77,7 @@ export function validateCreateProperty(data: unknown): { valid: boolean; errors:
   }
   return {
     valid: false,
-    errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+    errors: result.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`),
   };
 }
 
@@ -101,7 +91,7 @@ export function validateUpdateProperty(data: unknown): { valid: boolean; errors:
   }
   return {
     valid: false,
-    errors: result.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`),
+    errors: result.error.issues.map((e) => `${e.path.join('.')}: ${e.message}`),
   };
 }
 

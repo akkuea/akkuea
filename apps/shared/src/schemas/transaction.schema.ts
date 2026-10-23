@@ -35,7 +35,7 @@ export const transactionStatusSchema = z.enum([
  * Schema for Transaction
  */
 export const transactionSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   type: transactionTypeSchema,
   hash: transactionHashSchema.optional(),
   from: stellarAddressSchema,
@@ -75,7 +75,9 @@ export const transactionQueryParamsSchema = z
     cursor: z.string().optional(),
     limit: z.number().int().min(1).max(100).default(20),
   })
-  .merge(transactionFilterSchema);
+  // .merge() is deprecated in zod 4; extending from the other schema's shape is
+  // the supported form and keeps the merged keys' refinements intact.
+  .extend(transactionFilterSchema.shape);
 
 /**
  * Paginated transaction list response

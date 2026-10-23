@@ -1,1 +1,0 @@
-ALTER TABLE "transactions" ADD CONSTRAINT "transactions_hash_unique" UNIQUE("hash");

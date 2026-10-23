@@ -277,7 +277,7 @@ export class StellarService {
     this.assertValidContractId(params.contractId);
     this.assertValidAddress(params.adminPublicKey);
     this.assertValidAddress(params.owner);
-    this.assertValidAddress(params.paymentToken);
+    this.assertValidContractId(params.paymentToken);
 
     if (params.pricePerShareUnits <= BigInt(0)) {
       throw ApiError.badRequest('Price per share must be greater than zero');
@@ -320,7 +320,7 @@ export class StellarService {
   ): Promise<{ xdr: string; contractId: string }> {
     this.assertValidContractId(params.contractId);
     this.assertValidAddress(params.buyer);
-    this.assertValidAddress(params.paymentToken);
+    this.assertValidContractId(params.paymentToken);
 
     if (!Number.isInteger(params.shares) || params.shares <= 0) {
       throw ApiError.badRequest('Shares must be a positive integer');

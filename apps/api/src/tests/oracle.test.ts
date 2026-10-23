@@ -1,8 +1,17 @@
 import { describe, test, expect, spyOn, mock, beforeEach, afterEach } from 'bun:test';
+import { Elysia } from 'elysia';
 import { OracleService } from '../services/OracleService';
+import { ValuationController } from '../controllers/ValuationController';
 import { ValuationRepository } from '../repositories/ValuationRepository';
 import type { RealEstateValuationPayload, ValuationRecord } from '@akkuea/shared';
 import { ValidationService } from '@akkuea/shared';
+import { oracleRoutes } from '../routes/oracle';
+import { errorHandler } from '../middleware/errorHandler';
+
+// The oracle write routes share the operations credential, read from the API
+// environment as `OPERATIONS_BACKEND_CREDENTIAL` and sent as `x-internal-api-key`.
+process.env.OPERATIONS_BACKEND_CREDENTIAL ||= 'test-internal-key';
+const AUTH_HEADER = { 'x-internal-api-key': process.env.OPERATIONS_BACKEND_CREDENTIAL };
 
 // In-memory store used by the spies below.
 // Using spyOn instead of mock.module so the mock is properly scoped to this file
@@ -299,5 +308,153 @@ describe('OracleService.submitManualOverride', () => {
     expect(record.status).toBe('active');
     expect(record.methodology).toBe('manual');
     expect(record.id).toBeTruthy();
+  });
+});
+
+describe('Oracle routes', () => {
+  const app = new Elysia().use(errorHandler).use(oracleRoutes);
+
+  test('POST /oracle/valuations returns 401 without credential', async () => {
+    const response = await app.handle(
+      new Request('http://localhost/oracle/valuations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(makePayload()),
+      }),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  test('POST -/oracle/valuations/:propertyId/manual-review returns 401 without credential', async () => {
+    const response = await app.handle(
+      new Request('http://localhost/oracle/valuations/prop-1/manual-review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: 'val-1', reason: 'suspicious' }),
+      }),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  test('POST /oracle/valuations/manual-override returns 401 without credential', async () => {
+    const response = await app.handle(
+      new Request('http://localhost/oracle/valuations/manual-override', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...makePayload(), overrideReason: 'manual' }),
+      }),
+    );
+    expect(response.status).toBe(401);
+  });
+
+  test('POST -/oracle/valuations returns 400 for invalid payload with credential', async () => {
+    const response = await app.handle(
+      new Request('http://localhost/oracle/valuations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', ...AUTH_HEADER },
+        body: JSON.stringify({ price: -1 }),
+      }),
+    );
+    expect(response.status).toBe(400);
+  });
+
+  test('GET /oracle/valuations/:propertyId/history with limit=abc does not return 5xx', async () => {
+    const response = await app.handle(
+      new Request('http://localhost/oracle/valuations/prop-1/history?limit=abc'),
+    );
+    expect(response.status).toBeLessThan(500);
+  });
+
+  test('GET /oracle/valuations/:propertyId/history with limit=-5 does not return 5xx', async () => {
+    const response = await app.handle(
+      new Request('http://localhost/oracle/valuations/prop-1/history?limit=-5'),
+    );
+    expect(response.status).toBeLessThan(500);
+  });
+
+  describe('with a valid operations credential', () => {
+    test('POST /oracle/valuations is accepted', async () => {
+      spyOn(ValuationController, 'ingestValuation').mockImplementation(async (payload) => ({
+        success: true,
+        record: {
+          ...payload,
+          id: 'val-1',
+          status: 'active',
+          receivedAt: new Date(),
+        },
+        warnings: [],
+      }));
+
+      const response = await app.handle(
+        new Request('http://localhost/oracle/valuations', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...AUTH_HEADER },
+          body: JSON.stringify(makePayload()),
+        }),
+      );
+
+      expect(response.status).not.toBe(401);
+      expect(response.status).not.toBe(400);
+      expect(response.status).toBeLessThan(500);
+    });
+
+    test('POST /oracle/valuations/:propertyId/manual-review is accepted', async () => {
+      spyOn(ValuationController, 'flagForManualReview').mockImplementation(
+        async (id, propertyId, reason) => ({
+          success: true,
+          record: {
+            ...makePayload({ propertyId }),
+            id,
+            status: 'manual_review',
+            rejectionReason: reason,
+            receivedAt: new Date(),
+          },
+        }),
+      );
+
+      const response = await app.handle(
+        new Request('http://localhost/oracle/valuations/prop-1/manual-review', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...AUTH_HEADER },
+          body: JSON.stringify({ id: 'val-1', reason: 'suspicious' }),
+        }),
+      );
+
+      expect(response.status).not.toBe(401);
+      expect(response.status).not.toBe(400);
+      expect(response.status).toBeLessThan(500);
+    });
+
+    test('POST /oracle/valuations/manual-override is accepted', async () => {
+      spyOn(ValuationController, 'submitManualOverride').mockImplementation(async (payload) => ({
+        success: true,
+        record: {
+          ...payload,
+          id: 'val-override',
+          methodology: 'manual',
+          status: 'active',
+          receivedAt: new Date(),
+        },
+      }));
+
+      const response = await app.handle(
+        new Request('http://localhost/oracle/valuations/manual-override', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...AUTH_HEADER },
+          body: JSON.stringify({ ...makePayload(), overrideReason: 'manual appraisal' }),
+        }),
+      );
+
+      expect(response.status).not.toBe(401);
+      expect(response.status).not.toBe(400);
+      expect(response.status).toBeLessThan(500);
+    });
+
+    test('GET routes stay public', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/oracle/valuations/prop-1/history'),
+      );
+      expect(response.status).not.toBe(401);
+    });
   });
 });

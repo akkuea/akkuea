@@ -72,6 +72,8 @@ A configured list is used as-is in every environment; the development defaults a
 | `OPERATIONS_BACKEND_CREDENTIAL`  | `generate-a-long-random-secret` | Yes                               | Shared secret between the API server and the Next.js operations dashboard proxy. Both sides must have the same value. Generate with: `openssl rand -hex 32`                               |
 | `OPERATIONS_ALLOWED_WALLETS`     | `GXXX...,GYYY...`               | Yes (production)                  | Comma-separated list of Stellar public keys permitted to call admin operations endpoints. Acts as a server-side allowlist                                                                 |
 
+The oracle valuation write routes (`POST /oracle/valuations`, `POST /oracle/valuations/:propertyId/manual-review`, `POST /oracle/valuations/manual-override`) and the whole `/internal/risk` group reuse `OPERATIONS_BACKEND_CREDENTIAL`, sent in the `x-internal-api-key` header like the other internal operations routes. There is no separate oracle credential.
+
 Transaction webhooks are signed as the lowercase or uppercase 64-character hexadecimal HMAC-SHA256 digest of the exact raw HTTP request body bytes, using `WEBHOOK_SECRET` as the key. Send that hex string in `X-Webhook-Signature`; do not parse or re-serialize the JSON before signing. If `timestamp` is present, deliveries more than five minutes old or more than five minutes in the future are rejected by default. The exact cutoff is accepted, and `WEBHOOK_TIMESTAMP_TOLERANCE_MS` configures the window. For compatibility, an omitted timestamp is not freshness-checked.
 
 ### KYC / Document Storage

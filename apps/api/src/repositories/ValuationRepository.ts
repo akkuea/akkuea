@@ -3,6 +3,18 @@ import type { ValuationRecord } from '@akkuea/shared';
 import { db } from '../db';
 import { valuations } from '../db/schema/valuations';
 
+const MIN_HISTORY_LIMIT = 1;
+const MAX_HISTORY_LIMIT = 500;
+const DEFAULT_HISTORY_LIMIT = 50;
+
+function normalizeLimit(limit?: number): number {
+  if (limit === undefined || !Number.isFinite(limit)) return DEFAULT_HISTORY_LIMIT;
+  const integer = Math.trunc(limit);
+  if (integer < MIN_HISTORY_LIMIT) return MIN_HISTORY_LIMIT;
+  if (integer > MAX_HISTORY_LIMIT) return MAX_HISTORY_LIMIT;
+  return integer;
+}
+
 function toRecord(row: typeof valuations.$inferSelect): ValuationRecord {
   return {
     id: row.id,
@@ -63,12 +75,13 @@ export class ValuationRepository {
   }
 
   static async findHistory(propertyId: string, limit?: number): Promise<ValuationRecord[]> {
-    const query = db
+    const normalizedLimit = normalizeLimit(limit);
+    const rows = await db
       .select()
       .from(valuations)
       .where(eq(valuations.propertyId, propertyId))
-      .orderBy(desc(valuations.timestamp));
-    const rows = limit ? await query.limit(limit) : await query;
+      .orderBy(desc(valuations.timestamp))
+      .limit(normalizedLimit);
     return rows.map(toRecord);
   }
 

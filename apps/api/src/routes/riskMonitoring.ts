@@ -1,7 +1,26 @@
 import { Elysia, t } from 'elysia';
+import type { RiskLevel } from '@akkuea/shared';
 import { RiskMonitoringController } from '../controllers/RiskMonitoringController';
+import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
+
+// Mirrors RiskLevel in apps/shared/src/types/risk.ts; the service only knows
+// these three severities, so anything else must be rejected before it reaches it.
+const RISK_LEVELS = ['safe', 'warning', 'critical'] as const satisfies readonly RiskLevel[];
+
+function requireInternalCredential({
+  headers,
+  set,
+}: {
+  headers: Record<string, string | undefined>;
+  set: { status?: number | string };
+}) {
+  if (isInternalOperationsAuthorized(headers)) return;
+  set.status = 401;
+  return { error: 'Unauthorized' };
+}
 
 export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
+  .onBeforeHandle(requireInternalCredential)
   .get('/positions', () => RiskMonitoringController.assessAllPositions(), {
     detail: {
       summary: 'Assess all positions',
@@ -14,7 +33,7 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
     ({ params: { level } }) => RiskMonitoringController.getPositionsByRisk(level),
     {
       params: t.Object({
-        level: t.String(),
+        level: t.Union(RISK_LEVELS.map((level) => t.Literal(level))),
       }),
       detail: {
         summary: 'Get positions by risk level',

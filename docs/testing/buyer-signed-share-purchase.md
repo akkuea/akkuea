@@ -1,6 +1,6 @@
 # Buyer-signed share purchase: testnet verification
 
-This runbook covers the end-to-end acceptance check for issue #1229. A manual run on 2026-10-23 is recorded below with the real transaction hashes and observed balances; the steps remain the procedure for repeating it against the deployed testnet contracts.
+This runbook covers the end-to-end acceptance check for issue #1229. A manual run on 2026-10-23, covering the contract, the HTTP API, and the database, is recorded below with the real transaction hashes and observed values; the steps remain the procedure for repeating it against the deployed testnet contracts.
 
 ## Prerequisites
 
@@ -23,53 +23,77 @@ This runbook covers the end-to-end acceptance check for issue #1229. A manual ru
 
 ## Test record
 
-Manual end-to-end verification on Stellar Testnet, run on 2026-10-23 against a fresh deployment of the contract built from commit `da17a2c` (`stellar contract build`, 52 KB WASM, protocol 29) and a test TUSDC asset. Addresses and hashes below are public testnet data; no secret key is recorded.
+Manual end-to-end verification on Stellar Testnet, run on 2026-10-23 against a fresh deployment of the contract built from commit `da17a2c` (`stellar contract build`, 52 KB WASM, protocol 29) and a test TUSDC asset. The API ran from branch commit `0ab6542` against a local PostgreSQL 18 database with all migrations applied. Addresses and hashes below are public testnet data; no secret key is recorded.
 
 ### Deployment and accounts
 
-| Item                   | Value                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------- |
-| `defi-rwa` contract    | `CDNQZYEBVU5DBFWNOGYGT6GOHCFDMSQV3P2BOJVZ35FK5JC5ESSJVKXH`                   |
-| Payment token (SAC)    | `CDI2SW7WZCG5N6IG4PJWAQ7WFQURNPZLNTEVV3KND747DJX64RJBUIKE`                   |
-| Payment asset          | `TUSDC:GATCB5NOXVD3ITSDWOEBAEWVL4U2VPCLG5KKMYJE5PDOZGLS6MUVKJCE`, 7 decimals |
-| Admin account          | `GDKCB4UB2I3BRZS3T2CZN4PE6IZFSN76YGYDPA6EMEZFZRLVBGBXCRY5`                   |
-| Property owner account | `GB3J2HCJSCTYJR4QDMNXY5EMCNUILCU7FLG4EGYIAJIW3M2Y2PFBQJXR`                   |
-| Buyer account          | `GDRBPRHZ7BHWPXGQRQBVI7SQ5T6IOJMDO6YNR435RVK65UKAQ5HCWVYS`                   |
-| Soroban property ID    | `1229`                                                                       |
+| Item                | Value                                                                        |
+| ------------------- | ---------------------------------------------------------------------------- |
+| `defi-rwa` contract | `CAPSXSXFLHGMUN66QE7CFD6R2B3FUQC72VD4O4ZUMQPEG744QZNMXGPC`                   |
+| Payment token (SAC) | `CAEMSWSATEIUO5KTDR5NVF5NYBFJH76BNVKD7456NZTOWDJASZEEA6CK`                   |
+| Payment asset       | `TUSDC:GBFE5Y5CJSFVRHN5MXGJWQWVSVQKQE5COR7C5NQ4SBXVWSYSOYYE4HDR`, 7 decimals |
+| Admin account       | `GDDAJMZZVD46UI27YFN6C3F32WL7P2VT5NI5QWRPIBHSBVPP6K3JBOQ3`                   |
+| Property owner      | `GCQUVMBEQKX4AYY6RCZYJTTYSTHK5QIG4ZCM6O3Q5O5GWO6GXSQJ5VQS`                   |
+| Buyer account       | `GDDN3PAPDHQVGMEXM4FTAI3S5XTCRGTLGLMADZ6LBZO6PJ6HNDUVQZZS`                   |
+| Soroban property ID | `1231`                                                                       |
+| API property ID     | `00d9e6fb-5825-4627-98be-108c3df661bb`                                       |
 
-Deployment transaction: [`48a65094...`](https://stellar.expert/explorer/testnet/tx/48a6509411dbda785140352848a0413d87a9ecb95f61a096bfbe6050354fca04), ledger 5348776.
+Deployment transaction: [`1613d7c6...`](https://stellar.expert/explorer/testnet/tx/1613d7c69909055ce7f3e09a6839c8d89967a100adb53b1a80e1a0c1fda97f82), ledger 5349236.
+
+The API database row for this property was seeded to match the on-chain listing: same contract, Soroban property ID, owner, price, and inventory. The buyer and owner user rows were seeded with `kyc_status = approved`, which the prepare endpoint requires.
 
 ### 1. Tokenize and list
 
-Admin-signed `list_property(admin, 1229, owner, 10000000, 100, CDI2...UIKE)`.
+Admin-signed `list_property(admin, 1231, owner, 10000000, 100, CAEMSW...A6CK)`.
 
-- Transaction: [`461ffbf5...`](https://stellar.expert/explorer/testnet/tx/461ffbf5d7b7cd02ad820afa24010a64cb1ad7012bab8b44cddedaef181a28f0), ledger 5348798.
-- Event: `PropertyRegistered`, `property_id: "1229"`, `total_shares: "100"`, `price_per_share: "10000000"`.
+- Transaction: [`465d75fd...`](https://stellar.expert/explorer/testnet/tx/465d75fdccdf0c0ba4c57f51530efe352407558f21f6de7aeb3ece4543f5f614), ledger 5349255.
+- Event: `PropertyRegistered`, `property_id: "1231"`, `total_shares: "100"`, `price_per_share: "10000000"`.
 - Read back before the purchase: available shares 100, total share supply 0, buyer share balance 0, price per share 10,000,000 units (1.0000000 TUSDC).
+- A listing attempt from the buyer account (property 1232) was rejected during simulation with contract error 1 (`NotAdmin`).
 
-### 2. Prepare
+### 2. Authenticate the buyer
 
-`StellarService.preparePurchaseShares`, the code behind `POST /properties/:id/buy-shares/prepare`, built a simulated, unsigned `purchase_shares` transaction for 5 shares with the buyer as source and the listing's payment token as the token argument. The API did not sign it.
+`POST /auth/challenge` returned a nonce for the buyer address, and `POST /auth/session` accepted the buyer signature over that nonce and returned a JWT for API user `6695ccb4-6b96-4a9d-a893-6166192460a1`. The API was started with `STELLAR_NETWORK=testnet`, the deployed contract ID, and `PAYMENT_TOKEN_CONTRACT_ID` set to the SAC above.
 
-Note: the first attempt failed inside the service because the payment token was validated as an account address (`G...`) instead of a contract address (`C...`). The validation now checks the payment token as a contract ID, and the prepare above ran after that fix.
+### 3. Prepare over HTTP
 
-### 3. Sign and submit
+`POST /properties/00d9e6fb-5825-4627-98be-108c3df661bb/buy-shares/prepare` with the buyer JWT and `{ "buyer": "GDDN...QZZS", "shares": 5 }` returned `200` with:
 
-The unsigned XDR was signed with the buyer testnet keypair, standing in for the connected wallet, and submitted to Soroban RPC.
+- `contractId`: `CAPSXSXFLHGMUN66QE7CFD6R2B3FUQC72VD4O4ZUMQPEG744QZNMXGPC`
+- `sorobanPropertyId`: `1231`, `shares`: `5`
+- `paymentToken`: `CAEMSWSATEIUO5KTDR5NVF5NYBFJH76BNVKD7456NZTOWDJASZEEA6CK`
+- `totalAmount`: `5.0000000`
+- `xdr`: 2,184 characters
 
-- Transaction: [`d65d68b7...`](https://stellar.expert/explorer/testnet/tx/d65d68b72d86f6bf28b2d41c13b8a626c9cde2c22d06dfc5f15c4ec3d98658f7)
-- Source account: buyer. Status: `SUCCESS`. Ledger 5348856, 2026-10-23 15:04:27 UTC.
-- Invocation: `purchase_shares(buyer, 1229u64, 5u64, CDI2...UIKE)`.
+Decoding the XDR showed one operation, `purchase_shares`, sourced by the buyer. The API did not sign it.
 
-### 4. Confirm
+Note: the first run on 2026-10-23 exposed that the payment token was validated as an account address (`G...`), which rejects a valid SAC contract ID (`C...`). The validation now checks the payment token as a contract ID, and this prepare ran after that fix.
 
-`StellarService.verifyPurchaseTransaction`, the verification used by `POST /properties/:id/buy-shares/confirm`, returned:
+### 4. Sign and submit
 
-- `sourceAccount`: buyer.
-- `call`: buyer, property `1229`, amount `5`, payment token `CDI2...UIKE`.
-- `sharePurchase`: property `1229`, buyer, shares `5`, total cost `50000000`.
+The buyer signed the prepared XDR with the buyer testnet keypair, standing in for the connected wallet, and submitted it to Soroban RPC.
 
-### 5. State and payment
+- Transaction: [`9b7a8ef5...`](https://stellar.expert/explorer/testnet/tx/9b7a8ef517d8eaa54bf6dd15a95f00b0918af917ba9328fbfc0d67900e4f5048)
+- Source account: buyer. Status: `SUCCESS`. Ledger 5349322, 2026-10-23 15:43:17 UTC.
+- Invocation: `purchase_shares(buyer, 1231u64, 5u64, CAEMSW...A6CK)`.
+
+### 5. Confirm over HTTP and record
+
+`POST /properties/00d9e6fb-5825-4627-98be-108c3df661bb/buy-shares/confirm` with the buyer JWT and `{ "txHash": "9b7a8ef5..." }` verified the transaction on-chain and recorded it:
+
+- One `transactions` row: type `buy_shares`, hash `9b7a8ef5...`, amount `5.0000000`, asset `CAEMSW...A6CK`, status `confirmed`, metadata `{ propertyId, shares: 5 }`.
+- `properties.available_shares` moved from 100 to 95.
+- One `share_ownerships` row for the buyer: 5 shares, `purchase_price` 5.00.
+
+The controller checked the transaction source and buyer, the property ID, the share count, and that the `SharePurchase` event total cost matched the property price before writing anything.
+
+### 6. Duplicate confirmation and other wallet
+
+- Confirming the same hash twice more with the buyer JWT returned `200` with `{ "transactionHash": "9b7a8ef5...", "newBalance": 5 }` both times.
+- After both repeats, the database still had one hashed transaction row, 95 available shares, and a 5 share ownership. Nothing was counted twice.
+- Confirming the same hash with the owner JWT returned `403` with `The transaction was not signed by the authenticated buyer`, and did not change the database.
+
+### 7. State and payment
 
 | Value               | Before                         | After                       |
 | ------------------- | ------------------------------ | --------------------------- |
@@ -79,24 +103,23 @@ The unsigned XDR was signed with the buyer testnet keypair, standing in for the 
 | Buyer TUSDC balance | 10,000,000,000 (1,000.0000000) | 9,950,000,000 (995.0000000) |
 | Owner TUSDC balance | 0                              | 50,000,000 (5.0000000)      |
 
-The purchase transferred 50,000,000 units (5.0000000 TUSDC) from the buyer to the owner. Horizon effects for the transaction: [`account_debited` buyer, 5.0000000 TUSDC](https://horizon-testnet.stellar.org/transactions/d65d68b72d86f6bf28b2d41c13b8a626c9cde2c22d06dfc5f15c4ec3d98658f7/effects) and `account_credited` owner, 5.0000000 TUSDC.
+The purchase transferred 50,000,000 units (5.0000000 TUSDC) from the buyer to the owner. Horizon effects for the transaction: [`account_debited` buyer, 5.0000000 TUSDC](https://horizon-testnet.stellar.org/transactions/9b7a8ef517d8eaa54bf6dd15a95f00b0918af917ba9328fbfc0d67900e4f5048/effects) and `account_credited` owner, 5.0000000 TUSDC.
 
-Stellar Expert event view for the payment token: [transfer event, buyer to owner, 50000000](https://stellar.expert/explorer/testnet/contract/CDI2SW7WZCG5N6IG4PJWAQ7WFQURNPZLNTEVV3KND747DJX64RJBUIKE?filter=events).
+Stellar Expert event view for the payment token: [transfer event, buyer to owner, 50000000](https://stellar.expert/explorer/testnet/contract/CAEMSWSATEIUO5KTDR5NVF5NYBFJH76BNVKD7456NZTOWDJASZEEA6CK?filter=events).
 
-### 6. Rejection paths
+### 8. Rejection paths
 
 Each attempt was simulated and rejected before submission; none changed contract or token state.
 
 | Attempt                                                               | Result                                                          |
 | --------------------------------------------------------------------- | --------------------------------------------------------------- |
-| `list_property` signed by the buyer (non-admin), property 1230        | Contract error 1 (`NotAdmin`)                                   |
+| `list_property` signed by the buyer (non-admin), property 1232        | Contract error 1 (`NotAdmin`)                                   |
 | `purchase_shares` with the native XLM SAC instead of the listed token | Contract error 29 (`PaymentTokenMismatch`)                      |
 | `purchase_shares` for 101 shares when 95 were available               | Rejected by the `Insufficient shares available` guard (VM trap) |
 
-### 7. Not covered by this run
+### 9. Not covered by this run
 
-- The HTTP layer and database writes. This environment had no PostgreSQL or Docker, so prepare and confirm were exercised through `StellarService` directly rather than over HTTP. The `transactions` row, the unique hash guard for a repeated confirmation, the database inventory decrement, and the rejection of a transaction signed by another wallet still need a run against the API with its database.
-- The webapp checks in step 8: wallet connection, displayed total, and refresh after confirmation.
+- The webapp checks in step 8: wallet connection through a browser extension, the displayed total, and refresh after confirmation. The HTTP auth, prepare, and confirm calls were exercised directly, and the buyer testnet keypair signed the XDR instead of a browser wallet.
 - The delisted property case, which needs `set_property_active`.
 
 ## Evidence and safety

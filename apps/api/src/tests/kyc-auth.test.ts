@@ -17,8 +17,7 @@ describe('KYC document route authorization', () => {
   let upload: ReturnType<typeof spyOn>;
   let verify: ReturnType<typeof spyOn>;
 
-  const tokenFor = (id: string) =>
-    jwt.sign({ id, walletAddress: `wallet-${id}` }, JWT_SECRET);
+  const tokenFor = (id: string) => jwt.sign({ id, walletAddress: `wallet-${id}` }, JWT_SECRET);
   const auth = (id = USER_A) => ({ Authorization: `Bearer ${tokenFor(id)}` });
 
   beforeEach(() => {
@@ -51,9 +50,7 @@ describe('KYC document route authorization', () => {
   });
 
   test('requires authentication for status and checks ownership before reading', async () => {
-    const unauthenticated = await app.handle(
-      new Request(`http://localhost/kyc/status/${USER_A}`),
-    );
+    const unauthenticated = await app.handle(new Request(`http://localhost/kyc/status/${USER_A}`));
     expect(unauthenticated.status).toBe(401);
     expect(getStatus).not.toHaveBeenCalled();
 
@@ -103,9 +100,7 @@ describe('KYC document route authorization', () => {
   });
 
   test('only serves a file to its owner or an internal operator', async () => {
-    const unauthenticated = await app.handle(
-      new Request('http://localhost/kyc/file/doc-1'),
-    );
+    const unauthenticated = await app.handle(new Request('http://localhost/kyc/file/doc-1'));
     expect(unauthenticated.status).toBe(401);
     expect(getFile).not.toHaveBeenCalled();
 

@@ -4,6 +4,8 @@
 # Reviewed: 2026-10-20 against the bun.lock regenerated for this PR after upgrading
 # nanoid to ^5.1.16, postcss to ^8.5.18 and ws to ^8.21.0. Everything else that the
 # previous list carried is no longer reported by `bun audit --audit-level=low`.
+# Note: the contracts `security-audit` job (cargo-audit / cargo-deny) is a separate
+# ecosystem and does not read this file; its exceptions live in apps/contracts/deny.toml.
 # Follow-up: dependency upgrade track.
 
 GHSA-vfj7-8cjw-p6xm  # braces (high) - stack-exhaustion DoS via deeply nested patterns - no patched release yet (3.0.3 is the latest), transitive via micromatch > braces in webapp, land and shared; track upgrade

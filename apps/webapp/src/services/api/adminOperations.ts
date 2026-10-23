@@ -53,10 +53,7 @@ export interface OperationalPropertyDetail extends PropertyInfo {
   };
 }
 
-async function adminFetch<T>(
-  path: string,
-  init?: RequestInit,
-): Promise<T> {
+async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `/api/admin/operations/${path.replace(/^\//, "")}`;
   const sessionToken = getStoredSessionToken();
   const res = await fetch(url, {
@@ -84,13 +81,17 @@ async function adminFetch<T>(
 }
 
 export function getStoredSessionToken(): string | null {
-  return typeof window === "undefined" ? null : localStorage.getItem("auth_token");
+  return typeof window === "undefined"
+    ? null
+    : localStorage.getItem("auth_token");
 }
 
 export const adminOperationsApi = {
-  async listQueue(
-    params: { queue: OperationsQueue; page?: number; limit?: number },
-  ): Promise<
+  async listQueue(params: {
+    queue: OperationsQueue;
+    page?: number;
+    limit?: number;
+  }): Promise<
     PaginatedResponse<OperationalPropertyListItem> & { success: boolean }
   > {
     const search = new URLSearchParams();
@@ -130,8 +131,10 @@ export interface WhitelistRequest {
 }
 
 export const whitelistOperationsApi = {
-  async getPendingWhitelist(
-  ): Promise<{ success: boolean; data: WhitelistRequest[] }> {
+  async getPendingWhitelist(): Promise<{
+    success: boolean;
+    data: WhitelistRequest[];
+  }> {
     return adminFetch(`pilot/whitelist/pending`);
   },
 

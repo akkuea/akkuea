@@ -91,7 +91,9 @@ export function AuditLogViewer({
         {
           headers: {
             "Content-Type": "application/json",
-            ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+            ...(sessionToken
+              ? { Authorization: `Bearer ${sessionToken}` }
+              : {}),
           },
         },
       );

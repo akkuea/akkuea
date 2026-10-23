@@ -127,24 +127,21 @@ export function PropertyOperationsWorkspace({
     return () => clearTimeout(timer);
   }, [loadList]);
 
-  const loadDetail = useCallback(
-    async (id: string) => {
-      setDetailLoading(true);
-      setDetailError(null);
-      try {
+  const loadDetail = useCallback(async (id: string) => {
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
       const res = await adminOperationsApi.getProperty(id);
-        setDetail(res.data);
-      } catch (e) {
-        setDetailError(
-          e instanceof Error ? e.message : "Failed to load property",
-        );
-        setDetail(null);
-      } finally {
-        setDetailLoading(false);
-      }
-    },
-    [],
-  );
+      setDetail(res.data);
+    } catch (e) {
+      setDetailError(
+        e instanceof Error ? e.message : "Failed to load property",
+      );
+      setDetail(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -161,13 +158,10 @@ export function PropertyOperationsWorkspace({
     if (!confirmAction || !selectedId || !operatorWallet) return;
     setSubmitting(true);
     try {
-      const res = await adminOperationsApi.reviewProperty(
-        selectedId,
-        {
-          action: confirmAction,
-          note: note.trim() || undefined,
-        },
-      );
+      const res = await adminOperationsApi.reviewProperty(selectedId, {
+        action: confirmAction,
+        note: note.trim() || undefined,
+      });
       setDetail(res.data);
       setConfirmAction(null);
       setNote("");

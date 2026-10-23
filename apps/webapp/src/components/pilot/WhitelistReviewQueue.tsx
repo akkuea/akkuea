@@ -30,8 +30,7 @@ export function WhitelistReviewQueue() {
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res =
-        await whitelistOperationsApi.getPendingWhitelist();
+      const res = await whitelistOperationsApi.getPendingWhitelist();
       setRequests(res.data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to fetch requests");
@@ -58,13 +57,10 @@ export function WhitelistReviewQueue() {
     setIsReviewing(true);
     setReviewError(null);
     try {
-      await whitelistOperationsApi.reviewWhitelistRequest(
-        selectedRequest.id,
-        {
-          action,
-          reason: action === "reject" ? rejectionReason : undefined,
-        },
-      );
+      await whitelistOperationsApi.reviewWhitelistRequest(selectedRequest.id, {
+        action,
+        reason: action === "reject" ? rejectionReason : undefined,
+      });
 
       // Refresh list
       setSelectedRequest(null);

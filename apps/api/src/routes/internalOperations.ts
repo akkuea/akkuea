@@ -117,10 +117,10 @@ const reviewPropertyRoute = new Elysia()
             message: 'Verified operator identity is required',
           };
         }
-        const data = await OperationalPropertyController.applyReviewAction(
-          validatedParams!.id,
-          { ...validatedBody!, actorWallet },
-        );
+        const data = await OperationalPropertyController.applyReviewAction(validatedParams!.id, {
+          ...validatedBody!,
+          actorWallet,
+        });
         return { success: true, data };
       } catch (error) {
         const errorResponse = handleError(error);

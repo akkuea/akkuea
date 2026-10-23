@@ -25,15 +25,18 @@ describe('internal property operations audit actor', () => {
 
   test('uses the trusted proxy identity and ignores any actor in the request body', async () => {
     const response = await app.handle(
-      new Request('http://localhost/internal/operations/properties/00000000-0000-0000-0000-000000000001/review', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-internal-api-key': 'internal-secret',
-          'x-operator-wallet': operatorWallet,
+      new Request(
+        'http://localhost/internal/operations/properties/00000000-0000-0000-0000-000000000001/review',
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-internal-api-key': 'internal-secret',
+            'x-operator-wallet': operatorWallet,
+          },
+          body: JSON.stringify({ action: 'approve', actorWallet: 'Gclient-controlled' }),
         },
-        body: JSON.stringify({ action: 'approve', actorWallet: 'Gclient-controlled' }),
-      }),
+      ),
     );
 
     expect(response.status).toBe(200);
@@ -42,14 +45,17 @@ describe('internal property operations audit actor', () => {
 
   test('requires the trusted actor header for review actions', async () => {
     const response = await app.handle(
-      new Request('http://localhost/internal/operations/properties/00000000-0000-0000-0000-000000000001/review', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-internal-api-key': 'internal-secret',
+      new Request(
+        'http://localhost/internal/operations/properties/00000000-0000-0000-0000-000000000001/review',
+        {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-internal-api-key': 'internal-secret',
+          },
+          body: JSON.stringify({ action: 'approve' }),
         },
-        body: JSON.stringify({ action: 'approve' }),
-      }),
+      ),
     );
 
     expect(response.status).toBe(401);

@@ -1,5 +1,4 @@
 {
-  "id": "8a417c8e-c69d-4b7e-9bf4-fd9753c81405",
   "id": "7461db64-58c6-4ce3-afa9-366e6306add8",
   "prevId": "1fd30615-c85c-4dda-bda0-9c8dc2931fd4",
   "version": "7",
@@ -69,7 +68,6 @@
           "notNull": false
         }
       },
-      "indexes": {},
       "indexes": {
         "kyc_documents_user_id_idx": {
           "name": "kyc_documents_user_id_idx",
@@ -348,7 +346,6 @@
           "notNull": true
         }
       },
-      "indexes": {},
       "indexes": {
         "properties_owner_id_idx": {
           "name": "properties_owner_id_idx",
@@ -621,7 +618,6 @@
           "default": "now()"
         }
       },
-      "indexes": {},
       "indexes": {
         "borrow_positions_pool_id_borrower_id_idx": {
           "name": "borrow_positions_pool_id_borrower_id_idx",
@@ -736,7 +732,6 @@
           "default": "'0'"
         }
       },
-      "indexes": {},
       "indexes": {
         "deposit_positions_pool_id_depositor_id_idx": {
           "name": "deposit_positions_pool_id_depositor_id_idx",
@@ -990,7 +985,6 @@
           "notNull": false
         }
       },
-      "indexes": {},
       "indexes": {
         "transactions_hash_idx": {
           "name": "transactions_hash_idx",
@@ -1037,15 +1031,6 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "transactions_hash_unique": {
-          "name": "transactions_hash_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "hash"
-          ]
-        }
-      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -1192,7 +1177,6 @@
           "default": "now()"
         }
       },
-      "indexes": {},
       "indexes": {
         "idx_notifications_user_id": {
           "name": "idx_notifications_user_id",

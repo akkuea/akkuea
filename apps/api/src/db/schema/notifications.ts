@@ -60,6 +60,10 @@ export const notifications = pgTable(
     retryCount: varchar('retry_count', { length: 3 }).notNull().default('0'),
     maxRetries: varchar('max_retries', { length: 3 }).notNull().default('3'),
     nextRetryAt: timestamp('next_retry_at', { withTimezone: true }),
+    // Set when a worker claims the row for delivery and cleared when the attempt
+    // settles. A claim older than the worker's stale timeout means that worker
+    // died mid-delivery, so the row becomes claimable again.
+    claimedAt: timestamp('claimed_at', { withTimezone: true }),
     isRead: boolean('is_read').notNull().default(false),
     readAt: timestamp('read_at', { withTimezone: true }),
     metadata: text('metadata'), // JSON string for additional data

@@ -17,7 +17,7 @@ import { parsePropertyImageHosts, API_ENDPOINTS } from "@akkuea/shared";
  * style-src includes 'unsafe-inline' to support Next.js inline component styles
  * and Tailwind CSS. This is a documented exception for Next.js framework requirements.
  */
-export function buildContentSecurityPolicy(nonce?: string): string {
+export function buildContentSecurityPolicy(nonce?: string, isHttps = true): string {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
   const lendingSseUrl = process.env.NEXT_PUBLIC_LENDING_SSE_URL || "";
   const network =
@@ -92,6 +92,6 @@ export function buildContentSecurityPolicy(nonce?: string): string {
     `script-src ${scriptSources.join(" ")}`,
     // Next.js inline component styles and Tailwind CSS require 'unsafe-inline'
     "style-src 'self' https: 'unsafe-inline'",
-    "upgrade-insecure-requests",
+    ...(isHttps ? ["upgrade-insecure-requests"] : []),
   ].join("; ");
 }

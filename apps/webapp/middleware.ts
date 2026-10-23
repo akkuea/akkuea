@@ -47,8 +47,13 @@ export function middleware(request: NextRequest) {
   crypto.getRandomValues(nonceBuffer);
   const nonce = Buffer.from(nonceBuffer).toString("base64");
 
+  // Detect if the request arrived over HTTPS (or is being proxied from HTTPS)
+  const isHttps =
+    request.nextUrl.protocol === "https:" ||
+    request.headers.get("x-forwarded-proto") === "https";
+
   // Build CSP with nonce and set it on the request so Next.js can stamp it on inline scripts.
-  const cspValue = buildContentSecurityPolicy(nonce);
+  const cspValue = buildContentSecurityPolicy(nonce, isHttps);
   const cspHeaderName = process.env.CSP_REPORT_ONLY === "true"
     ? "Content-Security-Policy-Report-Only"
     : "Content-Security-Policy";

@@ -104,6 +104,18 @@ describe("Security Headers Configuration", () => {
       // style-src 'unsafe-inline' is documented for Next.js inline styles
       expect(csp).toContain("style-src 'self' https: 'unsafe-inline'");
     });
+
+    it("should include upgrade-insecure-requests for HTTPS", () => {
+      const csp = buildContentSecurityPolicy(undefined, true);
+
+      expect(csp).toContain("upgrade-insecure-requests");
+    });
+
+    it("should not include upgrade-insecure-requests for HTTP", () => {
+      const csp = buildContentSecurityPolicy(undefined, false);
+
+      expect(csp).not.toContain("upgrade-insecure-requests");
+    });
   });
 
   describe("middleware CSP enforcement", () => {

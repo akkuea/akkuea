@@ -1,6 +1,5 @@
 {
   "id": "f2f4d3a1-8c72-4b90-a5e6-12c9d4b7a301",
-  "id": "950535e9-3213-4cb8-af21-0abfa7ef0b11",
   "prevId": "7461db64-58c6-4ce3-afa9-366e6306add8",
   "version": "7",
   "dialect": "postgresql",
@@ -998,7 +997,6 @@
             }
           ],
           "isUnique": true,
-          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1141,12 +1139,6 @@
         },
         "next_retry_at": {
           "name": "next_retry_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "claimed_at": {
-          "name": "claimed_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
@@ -2263,5 +2255,4 @@
     "schemas": {},
     "tables": {}
   }
-}
 }

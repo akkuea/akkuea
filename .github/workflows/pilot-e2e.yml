@@ -22,8 +22,6 @@ on:
 permissions:
   contents: read
 
-env:
-
 jobs:
   pilot-e2e:
     name: Run pilot lifecycle suite on testnet

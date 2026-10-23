@@ -47,14 +47,33 @@ The limiter counts an in-memory sliding window per client unless `REDIS_URL` is 
 
 > **Deploying behind a proxy:** leaving `TRUSTED_PROXY_HOPS` at `0` means every request is keyed by the proxy's own address, so all clients share one bucket. Set it to the exact number of proxies you operate (load balancer, ingress, sidecar) and no more: every hop counted is a hop a client could otherwise spoof through.
 
+### CORS
+
+The API answers cross-origin browser requests only from the origins listed in `CORS_ALLOWED_ORIGINS` (`apps/api/src/middleware/cors.ts`). An allowed origin is echoed back in `Access-Control-Allow-Origin` with `Access-Control-Allow-Credentials: true`; any other origin receives no `Access-Control-Allow-Origin` header, so the browser blocks the response. The API never reflects arbitrary origins.
+
+| Variable               | Example Value                                    | Required                                       | Description                                                                                                                                                                                                                                                                                                                                                                            |
+| ---------------------- | ------------------------------------------------ | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CORS_ALLOWED_ORIGINS` | `https://app.akkuea.com,https://land.akkuea.com` | Yes (production, when a browser calls the API) | Comma-separated list of exact origins allowed to call the API from a browser. Entries are trimmed and empty entries dropped. Each entry must be an `http` or `https` origin written exactly as a browser sends it: scheme, lower-case host, and an optional non-default port, with no path, trailing slash, query, credentials, or wildcard. An invalid entry fails startup validation |
+
+Behavior when `CORS_ALLOWED_ORIGINS` is unset or empty:
+
+- **Development** (`NODE_ENV=development`, or `NODE_ENV` unset): the local frontends are allowed, `http://localhost:3000` (webapp) and `http://localhost:3002` (Akkuea Land, which `next dev` moves to 3002 under `bun run dev` because the webapp holds 3000 and the API 3001). If you start the frontends on other ports, set the variable explicitly.
+- **Production**: no cross-origin requests are allowed, and the API logs a warning at startup. Server-to-server callers (such as the webapp's operations proxy) do not send an `Origin` header and are not affected.
+- **Test**: no cross-origin requests are allowed.
+
+A configured list is used as-is in every environment; the development defaults are not added to it.
+
 ### Internal Security
 
-| Variable                        | Example Value                   | Required         | Description                                                                                                                                                 |
-| ------------------------------- | ------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WEBHOOK_SECRET`                | `your_webhook_secret_here`      | Yes              | Secret used to sign and verify incoming webhook payloads. Must be a random string of at least 32 characters                                                 |
-| `OPERATIONS_BACKEND_CREDENTIAL` | `generate-a-long-random-secret` | Yes              | Shared secret between the API server and the Next.js operations dashboard proxy. Both sides must have the same value. Generate with: `openssl rand -hex 32` |
-| `OPERATIONS_ALLOWED_WALLETS`    | `GXXX...,GYYY...`               | Yes (production) | Comma-separated list of Stellar public keys permitted to call admin operations endpoints. The server derives the wallet from a valid API session; `*` is rejected in production. |
-| `OPERATIONS_ALLOW_WILDCARD_IN_DEVELOPMENT` | `false` | No | Set to `true` only for local development to allow `OPERATIONS_ALLOWED_WALLETS=*`. This has no effect when `NODE_ENV=production`. |
+| Variable                                   | Example Value                   | Required                          | Description                                                                                                                                                                               |
+| ------------------------------------------ | ------------------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WEBHOOK_SECRET`                           | `your_webhook_secret_here`      | Yes                               | Secret used to sign and verify incoming webhook payloads. Must be a random string of at least 32 characters                                                                               |
+| `WEBHOOK_TIMESTAMP_TOLERANCE_MS`           | `300000`                        | No (default: `300000`, 5 minutes) | Maximum age or future offset accepted for a signed webhook timestamp. The boundary is inclusive. When a payload includes `timestamp`, it must parse as a date and fall within this window |
+| `OPERATIONS_BACKEND_CREDENTIAL`            | `generate-a-long-random-secret` | Yes                               | Shared secret between the API server and the Next.js operations dashboard proxy. Both sides must have the same value. Generate with: `openssl rand -hex 32`                               |
+| `OPERATIONS_ALLOWED_WALLETS`               | `GXXX...,GYYY...`               | Yes (production)                  | Comma-separated list of Stellar public keys permitted to call admin operations endpoints. Acts as a server-side allowlist                                                                 |
+| `OPERATIONS_ALLOW_WILDCARD_IN_DEVELOPMENT` | `false`                         | No                                | Set to `true` only for local development to allow `OPERATIONS_ALLOWED_WALLETS=*`. This has no effect when `NODE_ENV=production`.                                                          |
+
+Transaction webhooks are signed as the lowercase or uppercase 64-character hexadecimal HMAC-SHA256 digest of the exact raw HTTP request body bytes, using `WEBHOOK_SECRET` as the key. Send that hex string in `X-Webhook-Signature`; do not parse or re-serialize the JSON before signing. If `timestamp` is present, deliveries more than five minutes old or more than five minutes in the future are rejected by default. The exact cutoff is accepted, and `WEBHOOK_TIMESTAMP_TOLERANCE_MS` configures the window. For compatibility, an omitted timestamp is not freshness-checked.
 
 ### KYC / Document Storage
 
@@ -70,7 +89,7 @@ The KYC expiry job runs in the background to mark expired KYC records and send r
 | ------------------------------- | ------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `KYC_EXPIRY_JOB_ENABLED`        | `true`        | No (default: `true`) | Set to `false` to disable the KYC expiry background job entirely (e.g. in test environments)                                                        |
 | `KYC_EXPIRY_POLL_INTERVAL_MS`   | `86400000`    | No (default: 24h)    | How often the job runs, in milliseconds. Default is `86400000` (24 hours). Set lower in staging to test expiry behaviour without waiting a full day |
-| `KYC_EXPIRY_REMINDER_WINDOW_MS` | `2592000000`  | No (default: 30d)    | How far in advance to send the expiry reminder notification, in milliseconds. Default is `2592000000` (30 days)                                     |
+| `KYC_EXPIRY_REMINDER_WINDOW_MS` | `2592000000`  | No (default: 30d)    | How far in advance to send the expiry reminder notification, in milliseconds. Default is `2592000000` (30 days). Sent once per user per expiry date |
 
 ### Pilot Ally Reporting Escalation Job
 

@@ -10,7 +10,6 @@ crate-type = ["lib", "cdylib"]
 doctest = false
 
 [dependencies]
-sep-40-oracle = "1.4.0"
 soroban-sdk = { workspace = true }
 itoa = "1.0"
 

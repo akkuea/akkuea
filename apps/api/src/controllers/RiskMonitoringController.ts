@@ -9,7 +9,10 @@ import { ApiError } from '../errors/ApiError';
 export class RiskMonitoringController {
   private static service = new RiskMonitoringService();
   private static notificationService = new NotificationService();
+  // Last risk level we notified about, per position. Used to notify only on transitions.
+  private static lastNotifiedLevel = new Map<string, string>();
 
+  /** Read-only: assesses positions. Sends NO notifications. */
   static async assessAllPositions(): Promise<PositionHealth[]> {
     let positions: BorrowPosition[];
     try {
@@ -20,22 +23,33 @@ export class RiskMonitoringController {
     }
 
     const collateralPrices = await this.getCollateralPrices(positions);
-    const healthResults = await this.service.assessPositions(positions, collateralPrices);
+    return await this.service.assessPositions(positions, collateralPrices);
+  }
+
+  /** Used by the monitoring job / POST route. Notifies borrowers only on risk-level transitions. */
+  static async notifyRiskTransitions(): Promise<PositionHealth[]> {
+    const healthResults = await this.assessAllPositions();
 
     for (const health of healthResults) {
-      const userId = this.extractUserIdFromPositionId(health.positionId);
-      if (userId) {
-        if (health.riskLevel === 'critical') {
-          await this.notificationService.notifyLiquidationRisk(userId, health.positionId, 'IN_APP');
-        } else if (health.riskLevel === 'warning') {
-          await this.notificationService.notifyRiskWarning(
-            userId,
-            health.positionId,
-            'warning',
-            'IN_APP',
-          );
-        }
+      const previous = this.lastNotifiedLevel.get(health.positionId);
+      if (previous === health.riskLevel) continue;
+
+      if (health.riskLevel === 'critical') {
+        await this.notificationService.notifyLiquidationRisk(
+          health.borrower,
+          health.positionId,
+          'IN_APP',
+        );
+      } else if (health.riskLevel === 'warning') {
+        await this.notificationService.notifyRiskWarning(
+          health.borrower,
+          health.positionId,
+          'warning',
+          'IN_APP',
+        );
       }
+
+      this.lastNotifiedLevel.set(health.positionId, health.riskLevel);
     }
 
     return healthResults;
@@ -93,10 +107,5 @@ export class RiskMonitoringController {
     }
 
     return prices;
-  }
-
-  private static extractUserIdFromPositionId(positionId: string): string | null {
-    const parts = positionId.split('-');
-    return parts.length > 1 ? (parts[1] ?? null) : null;
   }
 }

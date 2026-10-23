@@ -352,14 +352,18 @@ export default function DashboardPage() {
                             hfColor,
                           )}
                         >
-                          {hfStatus === "none"
+                          {error || hfStatus === "none"
                             ? "-"
                             : isFinite(healthFactor)
                               ? healthFactor.toFixed(2)
                               : "∞"}
                         </p>
                         <p className="text-xs text-neutral-500 mt-1 capitalize">
-                          {hfStatus === "none" ? t("noBorrows") : hfStatus}
+                          {error
+                            ? t("healthFactorUnavailable")
+                            : hfStatus === "none"
+                              ? t("noBorrows")
+                              : hfStatus}
                         </p>
                       </div>
                       <div className={cn("p-2 rounded-lg border", hfBg)}>

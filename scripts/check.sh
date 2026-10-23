@@ -121,7 +121,7 @@ touched() {
 ROOT_DEPS='^(package\.json|bun\.lock)$'
 SHARED_PATHS="^apps/shared/|$ROOT_DEPS|^\.github/workflows/shared-ci\.yml$"
 API_PATHS="^apps/api/|$ROOT_DEPS|^\.github/workflows/api-ci\.yml$"
-WEBAPP_PATHS="^apps/webapp/|$ROOT_DEPS|^\.github/workflows/(webapp-ci|vercel-preview)\.yml$"
+WEBAPP_PATHS="^apps/webapp/|$ROOT_DEPS|^\.github/workflows/webapp-ci\.yml$"
 MONOREPO_PATHS="^(apps|docs|scripts|\.github)/|$ROOT_DEPS"
 CONTRACTS_PATHS='^apps/contracts/|^\.github/workflows/contracts-ci\.yml$'
 
@@ -260,7 +260,7 @@ if touched "$API_PATHS" && need bun "https://bun.sh" "api"; then
 fi
 
 # ---------------------------------------------------------------------------
-# WebApp - Quality and Security CI (webapp-ci.yml) and Preview CI Checks (vercel-preview.yml)
+# WebApp - Quality and Security CI (webapp-ci.yml)
 
 if touched "$WEBAPP_PATHS" && need bun "https://bun.sh" "webapp"; then
   build_shared

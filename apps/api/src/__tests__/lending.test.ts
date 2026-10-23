@@ -171,7 +171,9 @@ describe('Lending Routes', () => {
 
   describe('GET /lending/pools/:id', () => {
     it('should return pool when id is provided', async () => {
-      const response = await app.handle(new Request('http://localhost/lending/pools/test-pool-id'));
+      const response = await app.handle(
+        new Request(`http://localhost/lending/pools/${VALID_UUID}`),
+      );
       expect([200, 404, 500]).toContain(response.status);
     });
   });
@@ -298,7 +300,9 @@ describe('Lending Routes', () => {
       );
       expect(response.status).toBe(400);
       const body = await response.json();
-      expect(body.error).toBe('INVALID_ADDRESS');
+      expect(body.error).toBe('VALIDATION_ERROR');
+      expect(body.details.source).toBe('params');
+      expect(body.details.errors.address).toContain('Invalid Stellar address format');
     });
   });
 });

@@ -114,11 +114,13 @@ POST /kyc/upload
 Content-Type: multipart/form-data
 
 Fields:
-  userId       string   User UUID
+  userId       string   Optional. If provided, must match the caller's user ID (403 otherwise)
   documentType string   One of: passport, id_card, national_id, drivers_license,
                                  proof_of_address, bank_statement, tax_document, other
   file         File     PDF, PNG, or JPEG (size limit enforced by StorageService)
 ```
+
+Authorization: requires a valid session. The upload owner is taken from the token, not from the form.
 
 Behavior:
 
@@ -233,7 +235,12 @@ Source: `KYCController.ts:196-210`
 
 ### Gap 1: verifyDocument authentication (CLOSED)
 
-`POST /kyc/verify/:documentId` in `routes/kyc.ts` enforces admin authentication. Requests must supply valid admin credentials matching `INTERNAL_API_KEY` (via `internal-api-key` or `x-internal-api-key` header) or `OPERATIONS_BACKEND_CREDENTIAL` (via `x-internal-api-key` header checked by `isInternalOperationsAuthorized`). Unauthenticated or invalid requests receive HTTP 401/403 errors.
+`POST /kyc/verify/:documentId` in `routes/kyc.ts` enforces admin authentication. Requests must supply valid admin credentials matching `INTERNAL_API_KEY` or `OPERATIONS_BACKEND_CREDENTIAL` via the `x-internal-api-key` header only, compared in constant time by `isInternalOperationsAuthorized`. Unauthenticated or invalid requests receive HTTP 401/403 errors.
+
+Authorization rules for the other KYC routes:
+
+- `POST /kyc/upload`, `GET /kyc/status/:userId`, and `GET /kyc/documents/:userId` require a valid session.
+- `GET /kyc/file/:documentId` is limited to the document owner or the internal operations credential.
 
 ### Gap 2: buyShares KYC enforcement (CLOSED)
 

@@ -3,6 +3,7 @@ import { KYCController } from '../controllers/KYCController';
 import { ApiError } from '../errors/ApiError';
 import { rateLimit, walletKeyGenerator, authPlugin } from '../middleware';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
+import { safeEqual } from '../utils/safeEqual';
 
 const DOCUMENT_TYPES = [
   'passport',
@@ -33,13 +34,22 @@ function handleKycError(error: unknown, set: SetStatus) {
   if (error instanceof ApiError || isApiErrorLike(error)) {
     const err = error as { statusCode: number; code: string; message: string };
     set.status = err.statusCode;
+    if (err.statusCode >= 500) {
+      console.error('KYC request failed', error);
+      return {
+        success: false,
+        error: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred',
+      };
+    }
     return { success: false, error: err.code, message: err.message };
   }
   set.status = 500;
+  console.error('KYC request failed', error);
   return {
     success: false,
     error: 'INTERNAL_ERROR',
-    message: error instanceof Error ? error.message : 'An unexpected error occurred',
+    message: 'An unexpected error occurred',
   };
 }
 
@@ -50,11 +60,9 @@ const userScoped = new Elysia()
     '/status/:userId',
     async ({ params: { userId }, set, getAuthenticatedUser }) => {
       try {
-        const status = await KYCController.getKYCStatus(userId);
-
         const { id } = await getAuthenticatedUser();
         if (id !== userId) throw new ApiError(403, 'FORBIDDEN', 'Access denied');
-        return status;
+        return await KYCController.getKYCStatus(userId);
       } catch (error) {
         return handleKycError(error, set);
       }
@@ -119,8 +127,9 @@ const jwtScoped = new Elysia()
   .use(authPlugin)
   .post(
     '/upload',
-    async ({ body, request, set }) => {
+    async ({ body, request, set, getAuthenticatedUser }) => {
       try {
+        const { id: authenticatedUserId } = await getAuthenticatedUser();
         const contentType = request.headers.get('content-type') ?? '';
         if (!contentType.includes('multipart/form-data')) {
           set.status = 400;
@@ -133,12 +142,14 @@ const jwtScoped = new Elysia()
 
         const formData = body as Record<string, unknown>;
         const file = formData.file;
-        const userId = formData.userId;
+        const requestedUserId = formData.userId;
         const documentType = formData.documentType;
 
-        if (!userId || typeof userId !== 'string') {
-          set.status = 400;
-          return { success: false, error: 'BAD_REQUEST', message: 'userId is required' };
+        if (
+          requestedUserId !== undefined &&
+          (typeof requestedUserId !== 'string' || requestedUserId !== authenticatedUserId)
+        ) {
+          throw new ApiError(403, 'FORBIDDEN', 'Access denied');
         }
         if (!documentType || typeof documentType !== 'string') {
           set.status = 400;
@@ -160,7 +171,7 @@ const jwtScoped = new Elysia()
         }
 
         const fileItem = file as File;
-        const result = await KYCController.uploadDocument(userId, documentType, {
+        const result = await KYCController.uploadDocument(authenticatedUserId, documentType, {
           name: fileItem.name,
           type: fileItem.type,
           size: fileItem.size,
@@ -184,8 +195,16 @@ const jwtScoped = new Elysia()
   )
   .get(
     '/file/:documentId',
-    async ({ params: { documentId }, set }) => {
+    async ({ params: { documentId }, set, getAuthenticatedUser, headers }) => {
       try {
+        const operatorAuthorized = isInternalOperationsAuthorized(
+          headers as Record<string, string | undefined>,
+        );
+        if (!operatorAuthorized) {
+          const { id } = await getAuthenticatedUser();
+          const ownerId = await KYCController.getDocumentOwnerId(documentId);
+          if (ownerId !== id) throw new ApiError(403, 'FORBIDDEN', 'Access denied');
+        }
         const { buffer, contentType, fileName } = await KYCController.getDocumentFile(documentId);
         set.headers['Content-Type'] = contentType;
         set.headers['Content-Disposition'] = `inline; filename="${fileName}"`;
@@ -222,13 +241,12 @@ const internalScoped = new Elysia().post(
         throw new ApiError(401, 'UNAUTHORIZED', 'Internal key required');
       }
 
-      const key =
-        headers['internal-api-key'] || headers['x-internal-api-key'] || headers['internal_api_key'];
+      const key = headers['x-internal-api-key'];
       const expected = process.env.INTERNAL_API_KEY;
       const isOpsAuthorized = isInternalOperationsAuthorized(
         headers as Record<string, string | undefined>,
       );
-      const isApiKeyAuthorized = Boolean(expected && key === expected);
+      const isApiKeyAuthorized = safeEqual(key, expected);
 
       if (!expected && !process.env.OPERATIONS_BACKEND_CREDENTIAL) {
         console.error(

@@ -7,7 +7,7 @@ use super::*;
 use soroban_sdk::{
     testutils::{storage::Persistent as _, Address as _, Ledger as _},
     token::{StellarAssetClient, TokenClient},
-    Address, Env, String, Symbol,
+    Address, Env, Error, String, Symbol,
 };
 
 use crate::{
@@ -5108,8 +5108,11 @@ fn test_purchase_rejects_unlisted_payment_token() {
     let client = PropertyTokenContractClient::new(&env, &contract_id);
 
     let result = client.try_purchase_shares(&buyer, &property_id, &1_u64, &wrong_token);
-    assert!(
-        result.is_err(),
+    assert_eq!(
+        result,
+        Err(Ok(Error::from_contract_error(
+            ContractError::PaymentTokenMismatch as u32
+        ))),
         "purchase must reject a token other than the listing token"
     );
 }

@@ -26,11 +26,6 @@ function createValidationError(
   errors: Record<string, string[]>,
   source: 'body' | 'query' | 'params',
 ): {
-  status: number;
-  code: string;
-  message: string;
-  details: { source: string; errors: Record<string, string[]> };
-} {
   success: false;
   error: 'VALIDATION_ERROR';
   code: 'VALIDATION_ERROR';

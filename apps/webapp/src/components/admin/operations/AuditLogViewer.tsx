@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { Button, Card, Badge } from "@/components/ui";
 import { cn, truncateAddress } from "@/lib/utils";
 import { pageTransition } from "@/lib/animations";
+import { getStoredSessionToken } from "@/services/api/adminOperations";
 
 export interface AuditLogEntry {
   id: string;
@@ -84,12 +85,15 @@ export function AuditLogViewer({
       if (debouncedStartDate) searchParams.set("startDate", debouncedStartDate);
       if (debouncedEndDate) searchParams.set("endDate", debouncedEndDate);
 
+      const sessionToken = getStoredSessionToken();
       const res = await fetch(
-        `/api/v1/admin/audit-log?${searchParams.toString()}`,
+        `/api/admin/operations/audit-log?${searchParams.toString()}`,
         {
           headers: {
             "Content-Type": "application/json",
-            "x-operator-wallet": operatorWallet,
+            ...(sessionToken
+              ? { Authorization: `Bearer ${sessionToken}` }
+              : {}),
           },
         },
       );

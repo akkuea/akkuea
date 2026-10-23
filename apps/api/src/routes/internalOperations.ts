@@ -14,6 +14,7 @@ import {
 import { WhitelistController } from '../controllers/WhitelistController';
 import { handleError } from '../utils/errors';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
+import { auditService } from '../services/AuditService';
 
 const listQuerySchema = paginationQuerySchema.extend({
   queue: z.enum(['pending', 'approved', 'rejected', 'hold', 'changes', 'all']).optional(),
@@ -22,7 +23,15 @@ const listQuerySchema = paginationQuerySchema.extend({
 const reviewBodySchema = z.object({
   action: z.enum(['approve', 'reject', 'request_changes', 'hold']),
   note: z.string().max(2000).optional(),
-  actorWallet: z.string().min(50).max(64),
+});
+
+const auditQuerySchema = z.object({
+  actor: z.string().min(1).max(56).optional(),
+  actionType: z.string().min(1).max(100).optional(),
+  startDate: z.string().datetime({ offset: true }).optional(),
+  endDate: z.string().datetime({ offset: true }).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
 // `as: 'scoped'` is required: a default-scope (`'local'`) hook only applies
@@ -102,12 +111,21 @@ const reviewPropertyRoute = new Elysia()
   .use(validateBody(reviewBodySchema))
   .post(
     '/properties/:id/review',
-    async ({ validatedParams, validatedBody, set }) => {
+    async ({ validatedParams, validatedBody, headers, set }) => {
       try {
-        const data = await OperationalPropertyController.applyReviewAction(
-          validatedParams!.id,
-          validatedBody!,
-        );
+        const actorWallet = headers['x-operator-wallet'];
+        if (!actorWallet || !/^G[A-Z2-7]{55}$/.test(actorWallet)) {
+          set.status = 401;
+          return {
+            success: false,
+            error: 'UNAUTHORIZED',
+            message: 'Verified operator identity is required',
+          };
+        }
+        const data = await OperationalPropertyController.applyReviewAction(validatedParams!.id, {
+          ...validatedBody!,
+          actorWallet,
+        });
         return { success: true, data };
       } catch (error) {
         const errorResponse = handleError(error);
@@ -148,8 +166,30 @@ const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
     },
   });
 
+const auditOperationsRoute = new Elysia()
+  .use(internalKeyAuth)
+  .use(validateQuery(auditQuerySchema))
+  .get('/audit-log', async ({ validatedQuery, set }) => {
+    try {
+      const result = await auditService.getAuditLogs({
+        actor: validatedQuery!.actor,
+        action: validatedQuery!.actionType,
+        startDate: validatedQuery!.startDate,
+        endDate: validatedQuery!.endDate,
+        page: validatedQuery!.page,
+        limit: validatedQuery!.limit,
+      });
+      return { success: true, ...result };
+    } catch (error) {
+      const errorResponse = handleError(error);
+      set.status = errorResponse.statusCode;
+      return errorResponse;
+    }
+  });
+
 export const internalOperationsRoutes = new Elysia({ prefix: '/internal/operations' })
   .use(listPropertiesRoute)
   .use(getPropertyOperationsRoute)
   .use(reviewPropertyRoute)
+  .use(auditOperationsRoute)
   .use(whitelistOperationsRoute);

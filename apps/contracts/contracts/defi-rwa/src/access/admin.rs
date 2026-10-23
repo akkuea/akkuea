@@ -41,6 +41,8 @@ pub enum ContractError {
     PriceScalingOverflow = 27,
     /// Oracle price timestamp is too far in the future
     OraclePriceInFuture = 28,
+    /// Buyer offered a payment token the listing does not accept
+    PaymentTokenMismatch = 29,
 }
 
 pub struct AdminControl;

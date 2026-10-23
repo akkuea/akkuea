@@ -113,6 +113,13 @@
       "when": 1792736195817,
       "tag": "0015_unique_transactions_hash",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792769118657,
+      "tag": "0016_unique_share_ownership",
+      "breakpoints": true
     }
   ]
 }

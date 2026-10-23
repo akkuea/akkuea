@@ -74,6 +74,15 @@ const repaySchema = z.object({
   amount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
 });
 
+const chainOnlyResponse = ({ set }: { set: { status?: number } }) => {
+  set.status = 410;
+  return {
+    success: false,
+    error: 'CHAIN_CONFIRMATION_REQUIRED',
+    message: 'This endpoint no longer mutates balances directly. Use the prepare/confirm flow and submit a confirmed Soroban transaction.',
+  };
+};
+
 const createPoolSchema = z.object({
   name: z.string().min(1).max(255),
   asset: z.string().min(1).max(20),
@@ -188,7 +197,7 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
   .group('', (app) =>
     app
       .use(validate({ body: depositSchema }))
-      .post('/pools/:id/deposit', async (ctx) => LendingController.deposit(ctx), {
+      .post('/pools/:id/deposit', chainOnlyResponse, {
         beforeHandle: [rateLimit()],
         detail: {
           summary: 'Deposit into pool',
@@ -202,7 +211,7 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
   .group('', (app) =>
     app
       .use(validate({ body: withdrawSchema }))
-      .post('/pools/:id/withdraw', async (ctx) => LendingController.withdraw(ctx), {
+      .post('/pools/:id/withdraw', chainOnlyResponse, {
         beforeHandle: [rateLimit()],
         detail: {
           summary: 'Withdraw from pool',
@@ -217,7 +226,7 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
   .group('', (app) =>
     app
       .use(validate({ body: borrowSchema }))
-      .post('/pools/:id/borrow', async (ctx) => LendingController.borrow(ctx), {
+      .post('/pools/:id/borrow', chainOnlyResponse, {
         beforeHandle: [rateLimit()],
         detail: {
           summary: 'Borrow from pool',
@@ -233,7 +242,7 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
   .group('', (app) =>
     app
       .use(validate({ body: repaySchema }))
-      .post('/pools/:id/repay', async (ctx) => LendingController.repay(ctx), {
+      .post('/pools/:id/repay', chainOnlyResponse, {
         beforeHandle: [rateLimit()],
         detail: {
           summary: 'Repay loan',

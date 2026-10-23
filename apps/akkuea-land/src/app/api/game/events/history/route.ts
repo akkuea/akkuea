@@ -12,13 +12,13 @@ export function GET(req: NextRequest): NextResponse {
 
   const player = searchParams.get("player") ?? undefined;
   const cursor = searchParams.get("cursor") ?? undefined;
-  const limitParam = parseInt(
-    searchParams.get("limit") ?? String(DEFAULT_LIMIT),
-    10,
-  );
-  const limit = Number.isFinite(limitParam)
-    ? Math.min(Math.max(1, limitParam), MAX_LIMIT)
-    : DEFAULT_LIMIT;
+  const limitRaw = searchParams.get("limit");
+  const limitParam =
+    limitRaw === null ? DEFAULT_LIMIT : Number(limitRaw);
+  const limit =
+    Number.isInteger(limitParam) && limitParam > 0
+      ? Math.min(limitParam, MAX_LIMIT)
+      : DEFAULT_LIMIT;
 
   const result = queryHistory({ player, limit, cursor });
 

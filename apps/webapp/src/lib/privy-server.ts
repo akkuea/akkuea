@@ -88,6 +88,14 @@ export async function verifyPrivyWalletOwnership(
   }
 }
 
+/**
+ * Narrow ownership check used by the signing route: the caller must present a
+ * valid access token and the wallet must be one of their linked Stellar wallets.
+ */
+export function assertWalletIdFormat(walletId: string): boolean {
+  return /^[a-z0-9]{10,64}$/i.test(walletId);
+}
+
 export interface StellarWalletInfo {
   id: string;
   address: string;

@@ -83,4 +83,12 @@ describe("verifyPrivyWalletOwnership", () => {
       verifyPrivyWalletOwnership("valid-token", "wallet-abc", "GABC"),
     ).rejects.toThrow("Privy credentials not configured on the server.");
   });
+
+  test("rejects when the address does not match the wallet", async () => {
+    const { verifyPrivyWalletOwnership } = await import("../privy-server");
+
+    await expect(
+      verifyPrivyWalletOwnership("valid-token", "wallet-abc", "GOTHER"),
+    ).rejects.toThrow("Wallet does not belong to authenticated user.");
+  });
 });

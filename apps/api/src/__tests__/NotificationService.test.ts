@@ -129,6 +129,23 @@ describe('NotificationService', () => {
         } as unknown as Notification),
       ),
 
+      recordFailure: mock(() =>
+        Promise.resolve({
+          id: 'notification-1',
+          deliveryStatus: 'FAILED',
+          retryCount: '1',
+        } as unknown as Notification),
+      ),
+
+      markDelivered: mock(() =>
+        Promise.resolve({
+          id: 'notification-1',
+          deliveryStatus: 'DELIVERED',
+        } as unknown as Notification),
+      ),
+
+      claimDeliveryBatch: mock(() => Promise.resolve([])),
+
       findPendingDelivery: mock(() => Promise.resolve([])),
 
       findReadyForRetry: mock(() => Promise.resolve([])),
@@ -265,9 +282,30 @@ describe('NotificationService', () => {
 
   describe('markAsFailed', () => {
     it('should mark notification as failed and schedule retry', async () => {
-      await notificationService.markAsFailed('notification-1', 'Failed to send');
+      const result = await notificationService.markAsFailed('notification-1', 'Failed to send');
 
-      expect(mockRepository.updateDeliveryStatus).toHaveBeenCalled();
+      expect(result?.deliveryStatus).toBe('FAILED');
+      expect(mockRepository.recordFailure).toHaveBeenCalled();
+    });
+  });
+
+  describe('markAsDelivered', () => {
+    it('marks the notification delivered through the guarded update', async () => {
+      const result = await notificationService.markAsDelivered('notification-1');
+
+      expect(result?.deliveryStatus).toBe('DELIVERED');
+      expect(mockRepository.markDelivered).toHaveBeenCalledWith('notification-1');
+    });
+  });
+
+  describe('claimDeliveryBatch', () => {
+    it('passes the batch size and stale timeout to the repository claim', async () => {
+      await notificationService.claimDeliveryBatch({ limit: 25, staleAfterMs: 60_000 });
+
+      expect(mockRepository.claimDeliveryBatch).toHaveBeenCalledWith({
+        limit: 25,
+        staleAfterMs: 60_000,
+      });
     });
   });
 

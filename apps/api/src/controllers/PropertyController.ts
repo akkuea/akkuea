@@ -909,42 +909,25 @@ export class PropertyController {
           ]);
         }
 
-        const [existingOwnership] = await tx
-          .select()
-          .from(shareOwnerships)
-          .where(
-            and(eq(shareOwnerships.propertyId, property.id), eq(shareOwnerships.ownerId, buyer.id)),
-          )
-          .limit(1);
-
-        const ownership = existingOwnership
-          ? (
-              await tx
-                .update(shareOwnerships)
-                .set({
-                  shares: existingOwnership.shares + sharesToRecord,
-                  purchasePrice: formatBigIntAsDecimalString(
-                    parseDecimalStringToBigInt(
-                      existingOwnership.purchasePrice,
-                      PRICE_PER_SHARE_DECIMALS,
-                    ) + parseDecimalStringToBigInt(purchasePrice, PRICE_PER_SHARE_DECIMALS),
-                    PRICE_PER_SHARE_DECIMALS,
-                  ),
-                })
-                .where(eq(shareOwnerships.id, existingOwnership.id))
-                .returning()
-            )[0]
-          : (
-              await tx
-                .insert(shareOwnerships)
-                .values({
-                  propertyId: property.id,
-                  ownerId: buyer.id,
-                  shares: sharesToRecord,
-                  purchasePrice,
-                })
-                .returning()
-            )[0];
+        // The unique property/buyer index makes this an atomic ownership upsert.
+        // PostgreSQL increments the current row values, so concurrent purchases
+        // cannot overwrite each other's share or purchase-price totals.
+        const [ownership] = await tx
+          .insert(shareOwnerships)
+          .values({
+            propertyId: property.id,
+            ownerId: buyer.id,
+            shares: sharesToRecord,
+            purchasePrice,
+          })
+          .onConflictDoUpdate({
+            target: [shareOwnerships.propertyId, shareOwnerships.ownerId],
+            set: {
+              shares: sql`${shareOwnerships.shares} + ${sharesToRecord}`,
+              purchasePrice: sql`${shareOwnerships.purchasePrice} + ${purchasePrice}`,
+            },
+          })
+          .returning();
 
         if (!ownership) {
           throw new Error('Failed to persist share ownership');

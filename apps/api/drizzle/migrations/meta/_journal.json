@@ -119,8 +119,13 @@
       "version": "7",
       "when": 1792769118657,
       "tag": "0016_unique_share_ownership",
-      "when": 1792727625250,
-      "tag": "0015_notification_claiming",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1792785924870,
+      "tag": "0017_notification_claiming",
       "breakpoints": true
     }
   ]

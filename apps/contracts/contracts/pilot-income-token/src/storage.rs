@@ -1,5 +1,6 @@
 use soroban_sdk::{contracttype, Address, Env, Vec};
 
+use crate::ttl::extend_persistent;
 use crate::WoundDownRecord;
 
 #[contracttype]
@@ -43,16 +44,17 @@ impl Storage {
     }
 
     pub fn balance(env: &Env, owner: &Address) -> i128 {
-        env.storage()
-            .persistent()
-            .get(&DataKey::Balance(owner.clone()))
-            .unwrap_or(0)
+        let key = DataKey::Balance(owner.clone());
+        // `extend_persistent` is a no-op for a missing key, so a holder with no
+        // entry yet is read (as 0) without trying to extend it.
+        extend_persistent(env, &key);
+        env.storage().persistent().get(&key).unwrap_or(0)
     }
 
     pub fn set_balance(env: &Env, owner: &Address, amount: i128) {
-        env.storage()
-            .persistent()
-            .set(&DataKey::Balance(owner.clone()), &amount);
+        let key = DataKey::Balance(owner.clone());
+        env.storage().persistent().set(&key, &amount);
+        extend_persistent(env, &key);
     }
 
     pub fn total_supply(env: &Env) -> i128 {

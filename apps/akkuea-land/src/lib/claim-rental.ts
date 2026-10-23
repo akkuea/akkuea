@@ -15,6 +15,7 @@ import {
   waitForSorobanTx,
   NETWORK_PASSPHRASE,
 } from "@/lib/soroban-tx";
+import { assertTxConfirmed, TxNotConfirmedError } from "@/lib/tx-confirmation";
 
 /** Minimal wallet-kit surface needed to sign (matches @creit.tech/stellar-wallets-kit). */
 export interface ClaimSigner {
@@ -49,6 +50,10 @@ export interface ClaimAllResult {
  * Game engine error codes: NotOwner=2, NothingToClaim=4, InsufficientBalance=5.
  */
 export function describeClaimError(err: unknown): string {
+  if (err instanceof TxNotConfirmedError) {
+    return `not confirmed yet (transaction ${err.hash})`;
+  }
+
   const message = err instanceof Error ? err.message : String(err);
 
   // Checked before the generic wallet-rejection pattern: node rejections
@@ -100,7 +105,7 @@ export async function claimAllRentals(
       });
 
       const txHash = await submitSorobanTx(signedTxXdr);
-      await waitForSorobanTx(txHash);
+      assertTxConfirmed(await waitForSorobanTx(txHash), txHash);
 
       onClaimed?.(prop.id);
     } catch (err) {

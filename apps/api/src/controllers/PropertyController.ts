@@ -4,6 +4,7 @@ import {
   NotFoundError,
   AuthenticationError,
   AuthorizationError,
+  ConflictError,
   parseDecimalStringToBigInt,
   formatBigIntAsDecimalString,
 } from '@akkuea/shared';
@@ -28,9 +29,56 @@ import {
   type PropertyDocument,
 } from '../db/schema';
 import { cacheService } from '../services/CacheService';
+import { auditService } from '../services/AuditService';
+import { MARKETPLACE_CACHE_PREFIX } from './MarketplaceController';
 
 const PROPERTIES_CACHE_TTL = 30; // seconds
 const PROPERTIES_CACHE_PREFIX = 'properties:list:';
+
+// Invalidated together: a review-state change on update, or a delete, can
+// change which properties the marketplace should list, not just the
+// properties list itself.
+async function invalidatePropertyCaches(): Promise<void> {
+  await Promise.all([
+    cacheService.invalidate(`${PROPERTIES_CACHE_PREFIX}*`),
+    cacheService.invalidate(`${MARKETPLACE_CACHE_PREFIX}*`),
+  ]);
+}
+
+/**
+ * Fields that affect what a listing promises buyers (price, value, location,
+ * type, images). Editing one of these on an already-approved property must
+ * not silently keep it approved and listed.
+ */
+function touchesMaterialField(data: UpdatePropertyInput): boolean {
+  return (
+    data.pricePerShare !== undefined ||
+    data.totalValue !== undefined ||
+    data.location !== undefined ||
+    data.propertyType !== undefined ||
+    data.images !== undefined
+  );
+}
+
+function touchesPriceOrValue(data: UpdatePropertyInput): boolean {
+  return data.pricePerShare !== undefined || data.totalValue !== undefined;
+}
+
+function isTokenized(property: Property): boolean {
+  return Boolean(property.tokenAddress) || property.sorobanPropertyId !== null;
+}
+
+function reviewAuditSnapshot(property: Property): Record<string, unknown> {
+  return {
+    reviewStatus: property.reviewStatus,
+    verified: property.verified,
+    pricePerShare: property.pricePerShare,
+    totalValue: property.totalValue,
+    location: property.location,
+    propertyType: property.propertyType,
+    images: property.images,
+  };
+}
 
 /**
  * DTO for creating a property
@@ -407,6 +455,18 @@ export class PropertyController {
         throw new AuthorizationError('You do not have permission to update this property');
       }
 
+      // A tokenized property, or one with holders, already has investors
+      // relying on the price and value they bought at; let other fields
+      // (name, description, non-material edits) through but not these two.
+      if (
+        touchesPriceOrValue(data) &&
+        (isTokenized(property) || (await propertyRepository.hasShareHolders(id)))
+      ) {
+        throw new ConflictError(
+          'Cannot change pricePerShare or totalValue on a tokenized property or one with share holders',
+        );
+      }
+
       // Build update data
       const updateData: Partial<NewProperty> = {};
       if (data.name !== undefined) updateData.name = data.name;
@@ -417,6 +477,17 @@ export class PropertyController {
       if (data.pricePerShare !== undefined) updateData.pricePerShare = data.pricePerShare; // Already a string
       if (data.images !== undefined) updateData.images = data.images;
 
+      // An owner editing a material field of an already-approved listing
+      // demotes it back to pending_review rather than rejecting the edit
+      // outright: it reuses the existing operator review queue instead of
+      // a new terminal state, and still lets the owner fix a mistake
+      // (e.g. a typo in the price) without being stuck.
+      const wasApproved = property.reviewStatus === 'approved';
+      if (wasApproved && touchesMaterialField(data)) {
+        updateData.reviewStatus = 'pending_review';
+        updateData.verified = false;
+      }
+
       const updatedProperty = await propertyRepository.update(id, updateData);
 
       if (!updatedProperty) {
@@ -425,7 +496,18 @@ export class PropertyController {
 
       const propertyInfo = await mapPropertyToPropertyInfo(updatedProperty, userAddress);
 
-      await cacheService.invalidate(`${PROPERTIES_CACHE_PREFIX}*`);
+      if (wasApproved) {
+        await auditService.logAction({
+          actor: userAddress,
+          action: 'property.owner_update',
+          entityType: 'property',
+          entityId: id,
+          beforeValue: reviewAuditSnapshot(property),
+          afterValue: reviewAuditSnapshot(updatedProperty),
+        });
+      }
+
+      await invalidatePropertyCaches();
 
       logger.info('Property updated successfully', {
         operation: 'UPDATE',
@@ -481,6 +563,13 @@ export class PropertyController {
         throw new AuthorizationError('You do not have permission to delete this property');
       }
 
+      // Deleting a tokenized property, or one with holders, would either
+      // orphan the on-chain token or hit the share_ownerships foreign key
+      // (which has no cascade) and surface as an unhandled 500.
+      if (isTokenized(property) || (await propertyRepository.hasShareHolders(id))) {
+        throw new ConflictError('Cannot delete a tokenized property or one with share holders');
+      }
+
       // Delete property
       const deleted = await propertyRepository.delete(id);
 
@@ -488,7 +577,7 @@ export class PropertyController {
         throw new Error('Failed to delete property');
       }
 
-      await cacheService.invalidate(`${PROPERTIES_CACHE_PREFIX}*`);
+      await invalidatePropertyCaches();
 
       logger.info('Property deleted successfully', {
         operation: 'DELETE',

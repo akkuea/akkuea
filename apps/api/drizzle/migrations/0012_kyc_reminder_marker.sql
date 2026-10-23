@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "kyc_reminder_sent_for" timestamp with time zone;

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, pgEnum, text } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, pgEnum, text, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const kycStatusEnum = pgEnum('kyc_status', [
@@ -19,6 +19,9 @@ export const users = pgTable('users', {
   kycStatus: kycStatusEnum('kyc_status').notNull().default('not_started'),
   kycTier: kycTierEnum('kyc_tier').notNull().default('none'),
   kycExpiresAt: timestamp('kyc_expires_at', { withTimezone: true }),
+  // The kycExpiresAt value the expiring-soon reminder was last sent for. Keyed
+  // by expiry so each approval cycle gets exactly one reminder.
+  kycReminderSentFor: timestamp('kyc_reminder_sent_for', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
@@ -39,19 +42,26 @@ export const kycDocumentStatusEnum = pgEnum('kyc_document_status', [
   'rejected',
 ]);
 
-export const kycDocuments = pgTable('kyc_documents', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  type: kycDocumentTypeEnum('type').notNull(),
-  fileName: varchar('file_name', { length: 255 }).notNull(),
-  fileUrl: text('file_url').notNull(),
-  status: kycDocumentStatusEnum('status').notNull().default('pending'),
-  rejectionReason: text('rejection_reason'),
-  uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
-  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
-});
+export const kycDocuments = pgTable(
+  'kyc_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: kycDocumentTypeEnum('type').notNull(),
+    fileName: varchar('file_name', { length: 255 }).notNull(),
+    fileUrl: text('file_url').notNull(),
+    status: kycDocumentStatusEnum('status').notNull().default('pending'),
+    rejectionReason: text('rejection_reason'),
+    uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('kyc_documents_user_id_idx').on(t.userId),
+    index('kyc_documents_user_id_type_idx').on(t.userId, t.type),
+  ],
+);
 
 export const usersRelations = relations(users, ({ many }) => ({
   kycDocuments: many(kycDocuments),

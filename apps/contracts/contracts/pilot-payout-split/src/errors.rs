@@ -56,4 +56,7 @@ pub enum PayoutError {
     /// balance was already claimed: this contract never releases the same
     /// reservable unit twice.
     NothingToClaim = 30,
+    /// The income-token balances sum to more than its total supply, so the
+    /// pro-rata split would pay out more than the cycle's holder pool.
+    HolderBalancesExceedSupply = 31,
 }

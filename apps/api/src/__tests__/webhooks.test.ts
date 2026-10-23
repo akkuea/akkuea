@@ -15,9 +15,9 @@ const skipIfNoDatabase = !process.env.DATABASE_URL;
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET || 'default-secret-for-dev';
 const TEST_TRANSACTION_HASH = 'e'.repeat(64);
 
-function generateSignature(payload: WebhookPayload): string {
+function generateSignature(payload: string | Uint8Array): string {
   const hmac = createHmac('sha256', WEBHOOK_SECRET);
-  return hmac.update(JSON.stringify(payload)).digest('hex');
+  return hmac.update(payload).digest('hex');
 }
 
 describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
@@ -68,17 +68,18 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
       const payload: WebhookPayload = {
         transactionHash: TEST_TRANSACTION_HASH,
         status: 'confirmed',
+        timestamp: new Date().toISOString(),
       };
-      const signature = generateSignature(payload);
+      const rawBody = JSON.stringify(payload);
 
       const response = await (app as Elysia).handle(
         new Request('http://localhost/webhooks/transactions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-webhook-signature': signature,
+            'x-webhook-signature': generateSignature(rawBody),
           },
-          body: JSON.stringify(payload),
+          body: rawBody,
         }),
       );
 
@@ -95,10 +96,52 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
         .where(eq(transactions.id, testTx.id));
     });
 
+    it('should accept a pretty-printed body signed as sent', async () => {
+      const rawBody = JSON.stringify(
+        {
+          transactionHash: TEST_TRANSACTION_HASH,
+          status: 'confirmed',
+          timestamp: new Date().toISOString(),
+        },
+        null,
+        2,
+      );
+      const response = await postRawBody(rawBody);
+
+      expect(response.status).toBe(200);
+      await resetTestTransaction();
+    });
+
+    it('should accept alternate JSON key order signed as sent', async () => {
+      const rawBody = JSON.stringify({
+        timestamp: new Date().toISOString(),
+        status: 'confirmed',
+        transactionHash: TEST_TRANSACTION_HASH,
+      });
+      const response = await postRawBody(rawBody);
+
+      expect(response.status).toBe(200);
+      await resetTestTransaction();
+    });
+
+    it('should accept extra untyped fields signed as sent', async () => {
+      const rawBody = JSON.stringify({
+        transactionHash: TEST_TRANSACTION_HASH,
+        status: 'confirmed',
+        timestamp: new Date().toISOString(),
+        deliveryMetadata: { attempt: 2 },
+      });
+      const response = await postRawBody(rawBody);
+
+      expect(response.status).toBe(200);
+      await resetTestTransaction();
+    });
+
     it('should return 400 for invalid signature', async () => {
       const payload: WebhookPayload = {
         transactionHash: TEST_TRANSACTION_HASH,
         status: 'confirmed',
+        timestamp: new Date().toISOString(),
       };
 
       const response = await (app as Elysia).handle(
@@ -115,6 +158,22 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
       expect(response.status).toBe(400);
     });
 
+    it('should reject a signature for a different body preimage', async () => {
+      const signedBody = JSON.stringify({
+        transactionHash: TEST_TRANSACTION_HASH,
+        status: 'failed',
+        timestamp: new Date().toISOString(),
+      });
+      const sentBody = JSON.stringify({
+        transactionHash: TEST_TRANSACTION_HASH,
+        status: 'confirmed',
+        timestamp: new Date().toISOString(),
+      });
+      const response = await postRawBody(sentBody, generateSignature(signedBody));
+
+      expect(response.status).toBe(400);
+    });
+
     it('should return 409 for duplicate delivery (already confirmed)', async () => {
       // First confirm it
       await db
@@ -125,42 +184,99 @@ describe.skipIf(skipIfNoDatabase)('Webhook Routes Integration Tests', () => {
       const payload: WebhookPayload = {
         transactionHash: TEST_TRANSACTION_HASH,
         status: 'confirmed',
+        timestamp: new Date().toISOString(),
       };
-      const signature = generateSignature(payload);
+      const rawBody = JSON.stringify(payload);
 
       const response = await (app as Elysia).handle(
         new Request('http://localhost/webhooks/transactions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-webhook-signature': signature,
+            'x-webhook-signature': generateSignature(rawBody),
           },
-          body: JSON.stringify(payload),
+          body: rawBody,
         }),
       );
 
       expect(response.status).toBe(409);
     });
 
+    it('should reject transitions between terminal statuses without changing the record', async () => {
+      for (const [currentStatus, requestedStatus] of [
+        ['confirmed', 'failed'],
+        ['failed', 'confirmed'],
+      ] as const) {
+        await db
+          .update(transactions)
+          .set({ status: currentStatus })
+          .where(eq(transactions.id, testTx.id));
+
+        const rawBody = JSON.stringify({
+          transactionHash: TEST_TRANSACTION_HASH,
+          status: requestedStatus,
+          timestamp: new Date().toISOString(),
+        });
+        const response = await postRawBody(rawBody);
+
+        expect(response.status).toBe(409);
+        const records = await db.select().from(transactions).where(eq(transactions.id, testTx.id));
+        expect(records[0]?.status).toBe(currentStatus);
+      }
+
+      await resetTestTransaction();
+    });
+
+    it('should reject stale timestamped deliveries', async () => {
+      const rawBody = JSON.stringify({
+        transactionHash: TEST_TRANSACTION_HASH,
+        status: 'confirmed',
+        timestamp: new Date(Date.now() - 5 * 60 * 1000 - 1).toISOString(),
+      });
+      const response = await postRawBody(rawBody);
+
+      expect(response.status).toBe(400);
+      const records = await db.select().from(transactions).where(eq(transactions.id, testTx.id));
+      expect(records[0]?.status).toBe('pending');
+    });
+
     it('should return 404 for unknown transaction hash', async () => {
       const payload: WebhookPayload = {
         transactionHash: 'b'.repeat(64),
         status: 'confirmed',
+        timestamp: new Date().toISOString(),
       };
-      const signature = generateSignature(payload);
+      const rawBody = JSON.stringify(payload);
 
       const response = await (app as Elysia).handle(
         new Request('http://localhost/webhooks/transactions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-webhook-signature': signature,
+            'x-webhook-signature': generateSignature(rawBody),
           },
-          body: JSON.stringify(payload),
+          body: rawBody,
         }),
       );
 
       expect(response.status).toBe(404);
     });
   });
+
+  async function postRawBody(rawBody: string, signature = generateSignature(rawBody)) {
+    return (app as Elysia).handle(
+      new Request('http://localhost/webhooks/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-webhook-signature': signature,
+        },
+        body: rawBody,
+      }),
+    );
+  }
+
+  async function resetTestTransaction() {
+    await db.update(transactions).set({ status: 'pending' }).where(eq(transactions.id, testTx.id));
+  }
 });

@@ -25,7 +25,7 @@ export type OptimisticAction = "supply" | "borrow" | "withdraw" | "repay";
 export interface UseLendingPoolsReturn {
   /** All available lending pools from the API */
   pools: LendingPool[];
-  /** Map of poolId → user's deposit + borrow positions in that pool */
+  /** Map of poolId to the user's deposit + borrow positions in that pool */
   userPositions: Record<string, UserPositions>;
   /** True while the initial pools fetch or position fetch is in-flight */
   isLoading: boolean;
@@ -51,10 +51,22 @@ export interface UseLendingPoolsReturn {
   ) => string;
   /** Mark an optimistic snapshot as confirmed - the next refetch will reconcile */
   commitOptimisticUpdate: (snapshotId: string) => void;
-  /** Revert all changes from an optimistic snapshot */
+  /** Revert the changes one optimistic snapshot made to its own pool */
   rollbackOptimisticUpdate: (snapshotId: string) => void;
   /** Set of pool IDs that currently have a pending (uncommitted) optimistic update */
   pendingPoolIds: Set<string>;
+}
+
+/**
+ * The state of a single pool captured right before an optimistic update, so a
+ * rollback can restore that pool without touching any other pool.
+ */
+interface OptimisticSnapshot {
+  poolId: string;
+  /** The pool's position entry before the update; undefined if it had none */
+  positionBefore: UserPositions | undefined;
+  /** The pool's row in `pools` before the update; undefined if it was not loaded */
+  poolBefore: LendingPool | undefined;
 }
 
 const SSE_ENDPOINT =
@@ -62,7 +74,253 @@ const SSE_ENDPOINT =
     ? process.env?.NEXT_PUBLIC_LENDING_SSE_URL
     : undefined;
 
+/** Stellar assets use 7 decimal places; rounding to that hides float noise. */
+const AMOUNT_DECIMALS = 7;
+
 let snapshotCounter = 0;
+
+function toNumber(value: string): number {
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function toAmount(value: number): string {
+  return Number(value.toFixed(AMOUNT_DECIMALS)).toString();
+}
+
+function isZero(value: number): boolean {
+  return Number(value.toFixed(AMOUNT_DECIMALS)) <= 0;
+}
+
+interface Balance {
+  principal: number;
+  interest: number;
+}
+
+/**
+ * Deducts `amount` from a list of balances as one aggregate position: the
+ * principal of every row is used up first, in row order, and accrued interest
+ * is only touched once all principal is gone. The total therefore drops by
+ * exactly `amount` (capped at the total), however many rows there are.
+ */
+function deductFromBalances(balances: Balance[], amount: number): Balance[] {
+  let remaining = amount;
+  const afterPrincipal = balances.map((balance) => {
+    const taken = Math.min(remaining, balance.principal);
+    remaining -= taken;
+    return { ...balance, principal: balance.principal - taken };
+  });
+  return afterPrincipal.map((balance) => {
+    const taken = Math.min(remaining, balance.interest);
+    remaining -= taken;
+    return { ...balance, interest: balance.interest - taken };
+  });
+}
+
+function withdrawFromDeposits(
+  deposits: DepositPosition[],
+  amount: number,
+): DepositPosition[] {
+  const next = deductFromBalances(
+    deposits.map((d) => ({
+      principal: toNumber(d.amount),
+      interest: toNumber(d.accruedInterest),
+    })),
+    amount,
+  );
+
+  return deposits.flatMap((deposit, i) => {
+    const { principal, interest } = next[i];
+    const oldPrincipal = toNumber(deposit.amount);
+    const oldInterest = toNumber(deposit.accruedInterest);
+    if (principal === oldPrincipal && interest === oldInterest) {
+      return [deposit];
+    }
+    if (isZero(principal) && isZero(interest)) {
+      return [];
+    }
+    // Shares shrink in proportion to the principal that was withdrawn.
+    const shares =
+      oldPrincipal > 0
+        ? toNumber(deposit.shares) * (principal / oldPrincipal)
+        : toNumber(deposit.shares);
+    return [
+      {
+        ...deposit,
+        amount: toAmount(principal),
+        shares: toAmount(shares),
+        accruedInterest:
+          interest === oldInterest
+            ? deposit.accruedInterest
+            : toAmount(interest),
+      },
+    ];
+  });
+}
+
+function repayBorrows(
+  borrows: BorrowPosition[],
+  amount: number,
+): BorrowPosition[] {
+  const next = deductFromBalances(
+    borrows.map((b) => ({
+      principal: toNumber(b.principal),
+      interest: toNumber(b.accruedInterest),
+    })),
+    amount,
+  );
+
+  return borrows.flatMap((borrow, i) => {
+    const { principal, interest } = next[i];
+    const oldPrincipal = toNumber(borrow.principal);
+    const oldInterest = toNumber(borrow.accruedInterest);
+    if (principal === oldPrincipal && interest === oldInterest) {
+      return [borrow];
+    }
+    if (isZero(principal) && isZero(interest)) {
+      return [];
+    }
+    return [
+      {
+        ...borrow,
+        principal: toAmount(principal),
+        accruedInterest:
+          interest === oldInterest
+            ? borrow.accruedInterest
+            : toAmount(interest),
+      },
+    ];
+  });
+}
+
+function applyActionToPosition(
+  current: UserPositions,
+  action: OptimisticAction,
+  poolId: string,
+  amount: number,
+  pool: LendingPool,
+  userAddress: string,
+  snapshotId: string,
+): UserPositions {
+  const now = new Date().toISOString();
+
+  switch (action) {
+    case "supply":
+      // A new row keeps every existing row and its accrued interest intact;
+      // the page sums all rows, so the aggregate grows by exactly `amount`.
+      return {
+        ...current,
+        deposits: [
+          ...current.deposits,
+          {
+            id: `optimistic-deposit-${snapshotId}`,
+            poolId,
+            depositor: userAddress,
+            amount: toAmount(amount),
+            shares: toAmount(amount),
+            depositedAt: now,
+            lastAccrualAt: now,
+            accruedInterest: "0",
+          },
+        ],
+      };
+    case "borrow":
+      return {
+        ...current,
+        borrows: [
+          ...current.borrows,
+          {
+            id: `optimistic-borrow-${snapshotId}`,
+            poolId,
+            borrower: userAddress,
+            principal: toAmount(amount),
+            accruedInterest: "0",
+            collateralAmount: toAmount(amount),
+            collateralAsset: pool.assetAddress,
+            healthFactor: 1.5,
+            borrowedAt: now,
+            lastAccrualAt: now,
+          },
+        ],
+      };
+    case "withdraw":
+      return {
+        ...current,
+        deposits: withdrawFromDeposits(current.deposits, amount),
+      };
+    case "repay":
+      return { ...current, borrows: repayBorrows(current.borrows, amount) };
+  }
+}
+
+function applyActionToPool(
+  pool: LendingPool,
+  action: OptimisticAction,
+  amount: number,
+): LendingPool {
+  const liquidity = toNumber(pool.availableLiquidity);
+  const totalDeposits = toNumber(pool.totalDeposits);
+  const totalBorrows = toNumber(pool.totalBorrows);
+
+  switch (action) {
+    case "supply":
+      return {
+        ...pool,
+        availableLiquidity: toAmount(liquidity + amount),
+        totalDeposits: toAmount(totalDeposits + amount),
+      };
+    case "withdraw":
+      return {
+        ...pool,
+        availableLiquidity: toAmount(liquidity - amount),
+        totalDeposits: toAmount(totalDeposits - amount),
+      };
+    case "borrow":
+      return {
+        ...pool,
+        availableLiquidity: toAmount(liquidity - amount),
+        totalBorrows: toAmount(totalBorrows + amount),
+      };
+    case "repay":
+      return {
+        ...pool,
+        availableLiquidity: toAmount(liquidity + amount),
+        totalBorrows: toAmount(totalBorrows - amount),
+      };
+  }
+}
+
+/**
+ * Replaces `current` with `incoming`, except for pools that still have a
+ * pending optimistic update: those keep their current (optimistic) values
+ * until the update is committed or rolled back.
+ */
+function mergePools(
+  current: LendingPool[],
+  incoming: LendingPool[],
+  pending: Set<string>,
+): LendingPool[] {
+  if (pending.size === 0) return incoming;
+  const currentById = new Map(current.map((p) => [p.id, p]));
+  return incoming.map((p) =>
+    pending.has(p.id) ? (currentById.get(p.id) ?? p) : p,
+  );
+}
+
+function mergePositions(
+  current: Record<string, UserPositions>,
+  incoming: Record<string, UserPositions>,
+  pending: Set<string>,
+): Record<string, UserPositions> {
+  if (pending.size === 0) return incoming;
+  const merged = { ...incoming };
+  for (const poolId of pending) {
+    if (current[poolId]) {
+      merged[poolId] = current[poolId];
+    }
+  }
+  return merged;
+}
 
 /**
  * Fetches all lending pools and the current user's positions in each pool.
@@ -89,17 +347,24 @@ export function useLendingPools(
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
   const [pendingPoolIds, setPendingPoolIds] = useState<Set<string>>(new Set());
 
-  // Snapshot storage: maps snapshotId → { positionsBefore, poolsBefore, poolIds }
-  const snapshotsRef = useRef<
-    Map<
-      string,
-      {
-        positionsBefore: Record<string, UserPositions>;
-        poolsBefore: LendingPool[];
-        poolIds: Set<string>;
-      }
-    >
-  >(new Map());
+  /** Outstanding optimistic snapshots, keyed by snapshot ID */
+  const snapshotsRef = useRef<Map<string, OptimisticSnapshot>>(new Map());
+
+  /** The pool IDs that still have at least one outstanding snapshot */
+  const getPendingPoolIds = useCallback(
+    () =>
+      new Set(
+        Array.from(
+          snapshotsRef.current.values(),
+          (snapshot) => snapshot.poolId,
+        ),
+      ),
+    [],
+  );
+
+  const syncPendingPoolIds = useCallback(() => {
+    setPendingPoolIds(getPendingPoolIds());
+  }, [getPendingPoolIds]);
 
   /** Expose a refetch handle so consuming components can trigger a reload */
   const refetch = useCallback(() => {
@@ -115,189 +380,78 @@ export function useLendingPools(
     ): string => {
       const snapshotId = `opt-${++snapshotCounter}`;
 
-      // Store current state for rollback
-      const snapshot = {
-        positionsBefore: userPositions,
-        poolsBefore: pools,
-        poolIds: new Set([poolId]),
-      };
-      snapshotsRef.current.set(snapshotId, snapshot);
-
-      // Apply optimistic position changes
-      setUserPositions((prev) => {
-        const current = prev[poolId] ?? { deposits: [], borrows: [] };
-        let newDeposits = [...current.deposits];
-        let newBorrows = [...current.borrows];
-
-        switch (action) {
-          case "supply": {
-            const existingDeposit = newDeposits[0];
-            if (existingDeposit) {
-              newDeposits = [
-                {
-                  ...existingDeposit,
-                  amount: (
-                    parseFloat(existingDeposit.amount) + amount
-                  ).toString(),
-                  shares: (
-                    parseFloat(existingDeposit.shares) + amount
-                  ).toString(),
-                  accruedInterest: "0",
-                },
-              ];
-            } else {
-              newDeposits = [
-                {
-                  id: `opt-deposit-${snapshotCounter}`,
-                  poolId,
-                  depositor: userAddress ?? "",
-                  amount: amount.toString(),
-                  shares: amount.toString(),
-                  depositedAt: new Date().toISOString(),
-                  lastAccrualAt: new Date().toISOString(),
-                  accruedInterest: "0",
-                },
-              ];
-            }
-            break;
-          }
-          case "borrow": {
-            const existingBorrow = newBorrows[0];
-            if (existingBorrow) {
-              newBorrows = [
-                {
-                  ...existingBorrow,
-                  principal: (
-                    parseFloat(existingBorrow.principal) + amount
-                  ).toString(),
-                  accruedInterest: "0",
-                },
-              ];
-            } else {
-              newBorrows = [
-                {
-                  id: `opt-borrow-${snapshotCounter}`,
-                  poolId,
-                  borrower: userAddress ?? "",
-                  principal: amount.toString(),
-                  accruedInterest: "0",
-                  collateralAmount: amount.toString(),
-                  collateralAsset: pool.assetAddress,
-                  healthFactor: 1.5,
-                  borrowedAt: new Date().toISOString(),
-                  lastAccrualAt: new Date().toISOString(),
-                },
-              ];
-            }
-            break;
-          }
-          case "withdraw": {
-            newDeposits = newDeposits
-              .map((d) => ({
-                ...d,
-                amount: (parseFloat(d.amount) - amount).toString(),
-                shares: (parseFloat(d.shares) - amount).toString(),
-              }))
-              .filter((d) => parseFloat(d.amount) > 0);
-            break;
-          }
-          case "repay": {
-            newBorrows = newBorrows
-              .map((b) => ({
-                ...b,
-                principal: (parseFloat(b.principal) - amount).toString(),
-                accruedInterest: "0",
-              }))
-              .filter((b) => parseFloat(b.principal) > 0);
-            break;
-          }
-        }
-
-        return {
-          ...prev,
-          [poolId]: { deposits: newDeposits, borrows: newBorrows },
-        };
+      // Capture only this pool's state, so a rollback cannot touch other pools.
+      snapshotsRef.current.set(snapshotId, {
+        poolId,
+        positionBefore: userPositions[poolId],
+        poolBefore: pools.find((p) => p.id === poolId),
       });
 
-      // Apply optimistic pool-level changes (liquidity / totals)
-      setPools((prev) =>
-        prev.map((p) => {
-          if (p.id !== poolId) return p;
-          const liq = parseFloat(p.availableLiquidity);
-          const totalDep = parseFloat(p.totalDeposits);
-          const totalBor = parseFloat(p.totalBorrows);
+      setUserPositions((prev) => ({
+        ...prev,
+        [poolId]: applyActionToPosition(
+          prev[poolId] ?? { deposits: [], borrows: [] },
+          action,
+          poolId,
+          amount,
+          pool,
+          userAddress ?? "",
+          snapshotId,
+        ),
+      }));
 
-          switch (action) {
-            case "supply":
-              return {
-                ...p,
-                availableLiquidity: (liq - amount).toString(),
-                totalDeposits: (totalDep + amount).toString(),
-              };
-            case "borrow":
-              return {
-                ...p,
-                availableLiquidity: (liq - amount).toString(),
-                totalBorrows: (totalBor + amount).toString(),
-              };
-            case "withdraw":
-              return {
-                ...p,
-                availableLiquidity: (liq + amount).toString(),
-                totalDeposits: (totalDep - amount).toString(),
-              };
-            case "repay":
-              return {
-                ...p,
-                availableLiquidity: (liq + amount).toString(),
-                totalBorrows: (totalBor - amount).toString(),
-              };
-          }
-        }),
+      setPools((prev) =>
+        prev.map((p) =>
+          p.id === poolId ? applyActionToPool(p, action, amount) : p,
+        ),
       );
 
-      // Track this pool as pending
-      setPendingPoolIds((prev) => {
-        const next = new Set(prev);
-        next.add(poolId);
-        return next;
-      });
+      syncPendingPoolIds();
 
       return snapshotId;
     },
-    [userPositions, pools, userAddress],
+    [userPositions, pools, userAddress, syncPendingPoolIds],
   );
 
-  const commitOptimisticUpdate = useCallback((snapshotId: string) => {
-    snapshotsRef.current.delete(snapshotId);
-    setPendingPoolIds((prev) => {
-      const next = new Set(prev);
-      // We can't know which poolIds belong to this snapshot after commit,
-      // but the refetch that follows will clear them all anyway.
-      // Clear all pending IDs since the refetch will reconcile.
-      next.clear();
-      return next;
-    });
-    // Trigger a refetch so the real data replaces the optimistic snapshot
-    setFetchKey((k) => k + 1);
-  }, []);
+  const commitOptimisticUpdate = useCallback(
+    (snapshotId: string) => {
+      if (!snapshotsRef.current.delete(snapshotId)) return;
+      // Only this snapshot's pool leaves the pending set; other pools with a
+      // transaction still in flight stay pending.
+      syncPendingPoolIds();
+      // Refetch so real data replaces the optimistic values for this pool.
+      setFetchKey((k) => k + 1);
+    },
+    [syncPendingPoolIds],
+  );
 
-  const rollbackOptimisticUpdate = useCallback((snapshotId: string) => {
-    const snapshot = snapshotsRef.current.get(snapshotId);
-    if (!snapshot) return;
+  const rollbackOptimisticUpdate = useCallback(
+    (snapshotId: string) => {
+      const snapshot = snapshotsRef.current.get(snapshotId);
+      if (!snapshot) return;
+      snapshotsRef.current.delete(snapshotId);
 
-    // Restore the state captured before the optimistic update
-    setUserPositions(snapshot.positionsBefore);
-    setPools(snapshot.poolsBefore);
-    setPendingPoolIds((prev) => {
-      const next = new Set(prev);
-      for (const id of snapshot.poolIds) {
-        next.delete(id);
+      const { poolId, positionBefore, poolBefore } = snapshot;
+
+      // Restore only this pool's entries; every other pool is left as it is.
+      setUserPositions((prev) => {
+        const next = { ...prev };
+        if (positionBefore) {
+          next[poolId] = positionBefore;
+        } else {
+          delete next[poolId];
+        }
+        return next;
+      });
+
+      if (poolBefore) {
+        setPools((prev) => prev.map((p) => (p.id === poolId ? poolBefore : p)));
       }
-      return next;
-    });
-    snapshotsRef.current.delete(snapshotId);
-  }, []);
+
+      syncPendingPoolIds();
+    },
+    [syncPendingPoolIds],
+  );
 
   const fetchPoolsOnly = useCallback(async () => {
     const fetchedPools = await lendingApi.getPools();
@@ -311,7 +465,8 @@ export function useLendingPools(
       pollingInterval,
       enabled: enableLiveUpdates && !isLoading,
       onUpdate: (updatedPools) => {
-        setPools(updatedPools);
+        const pending = getPendingPoolIds();
+        setPools((prev) => mergePools(prev, updatedPools, pending));
         setLastUpdatedAt(new Date());
       },
     },
@@ -328,7 +483,8 @@ export function useLendingPools(
         // 1. Fetch all pools
         const fetchedPools = await lendingApi.getPools();
         if (cancelled) return;
-        setPools(fetchedPools);
+        const pendingAfterPools = getPendingPoolIds();
+        setPools((prev) => mergePools(prev, fetchedPools, pendingAfterPools));
         setLastUpdatedAt(new Date());
 
         // 2. If a wallet is connected, fetch user positions for every pool
@@ -348,7 +504,11 @@ export function useLendingPools(
           );
 
           if (cancelled) return;
-          setUserPositions(Object.fromEntries(positionEntries));
+          const fetchedPositions = Object.fromEntries(positionEntries);
+          const pendingAfterPositions = getPendingPoolIds();
+          setUserPositions((prev) =>
+            mergePositions(prev, fetchedPositions, pendingAfterPositions),
+          );
         } else {
           setUserPositions({});
         }
@@ -374,7 +534,7 @@ export function useLendingPools(
       clearTimeout(timer);
       cancelled = true;
     };
-  }, [userAddress, fetchKey]);
+  }, [userAddress, fetchKey, getPendingPoolIds]);
 
   const refetchWithLive = useCallback(() => {
     refetch();

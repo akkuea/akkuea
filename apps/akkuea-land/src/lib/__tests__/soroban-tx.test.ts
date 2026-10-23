@@ -12,7 +12,13 @@
  * contracts recorded in game-contracts.testnet.json.
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect, vi, afterEach } from "bun:test";
+import {
+  Account,
+  Keypair,
+  nativeToScVal,
+  type Transaction,
+} from "@stellar/stellar-sdk";
 import gameContractsTestnet from "@akkuea/shared/game-contracts.testnet.json";
 import defiRwaContractsTestnet from "@akkuea/shared/contracts.testnet.json";
 import {
@@ -25,6 +31,13 @@ import {
   buildApproveMarketplaceXdr,
   buildFaucetClaimXdr,
 } from "@/lib/soroban-tx";
+
+// Other test files replace "@/lib/soroban-tx" with vi.mock, and Bun shares
+// module mocks across files in one run. A query-suffixed specifier loads a
+// separate, unmocked instance so the balance tests always hit the real code.
+const UNMOCKED_SOROBAN_TX = "../soroban-tx?unmocked";
+const { fetchLandBalance, getSorobanServer, landUnitsToDecimal } =
+  (await import(UNMOCKED_SOROBAN_TX)) as typeof import("@/lib/soroban-tx");
 
 describe("soroban-tx - game contract ID resolution", () => {
   it("PROPERTY_NFT_CONTRACT_ID defaults to the deployed GAME_PROPERTY_NFT contract", () => {
@@ -94,5 +107,72 @@ describe("soroban-tx - new real-contract builders exist", () => {
 
   it("exports buildApproveMarketplaceXdr for the list-for-sale approval step", () => {
     expect(typeof buildApproveMarketplaceXdr).toBe("function");
+  });
+});
+
+describe("soroban-tx - landUnitsToDecimal", () => {
+  it("converts 7-decimal base units to whole LAND", () => {
+    expect(landUnitsToDecimal(BigInt("10000000000"))).toBe("1000");
+    expect(landUnitsToDecimal(BigInt("15000000"))).toBe("1.5");
+    expect(landUnitsToDecimal(BigInt("0"))).toBe("0");
+  });
+
+  it("keeps full precision for the smallest unit and large balances", () => {
+    expect(landUnitsToDecimal(BigInt("1"))).toBe("0.0000001");
+    expect(landUnitsToDecimal(BigInt("123456789012345678901234567"))).toBe(
+      "12345678901234567890.1234567",
+    );
+  });
+});
+
+describe("soroban-tx - fetchLandBalance", () => {
+  const address = Keypair.random().publicKey();
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function mockServer(simulation: unknown) {
+    const server = getSorobanServer();
+    vi.spyOn(server, "getAccount").mockResolvedValue(new Account(address, "1"));
+    return vi
+      .spyOn(server, "simulateTransaction")
+      .mockResolvedValue(simulation as never);
+  }
+
+  function simulatedFunctionName(call: unknown[]): string {
+    const tx = call[0] as Transaction;
+    const op = tx.operations[0] as unknown as {
+      func: { invokeContract: { functionName: { toString(): string } } };
+    };
+    return op.func.invokeContract.functionName.toString();
+  }
+
+  it("simulates the token's balance function and returns whole LAND", async () => {
+    const simulate = mockServer({
+      result: {
+        retval: nativeToScVal(BigInt("10000000000"), { type: "i128" }),
+      },
+    });
+
+    await expect(fetchLandBalance(address)).resolves.toBe("1000");
+    expect(simulate).toHaveBeenCalledTimes(1);
+    expect(simulatedFunctionName(simulate.mock.calls[0])).toBe("balance");
+  });
+
+  it("returns fractional balances without float rounding", async () => {
+    mockServer({
+      result: { retval: nativeToScVal(BigInt("15000000"), { type: "i128" }) },
+    });
+
+    await expect(fetchLandBalance(address)).resolves.toBe("1.5");
+  });
+
+  it("throws when the simulation fails", async () => {
+    mockServer({ error: "HostError: missing function" });
+
+    await expect(fetchLandBalance(address)).rejects.toThrow(
+      "LAND balance check failed",
+    );
   });
 });

@@ -6,7 +6,5 @@ import { safeEqual } from './safeEqual';
 export function isInternalOperationsAuthorized(
   headers: Record<string, string | undefined>,
 ): boolean {
-  const expected = process.env.OPERATIONS_BACKEND_CREDENTIAL;
-  const key = headers['x-internal-api-key'];
-  return safeEqual(key, expected);
+  return safeEqual(headers['x-internal-api-key'], process.env.OPERATIONS_BACKEND_CREDENTIAL);
 }

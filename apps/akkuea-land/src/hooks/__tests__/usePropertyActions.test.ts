@@ -9,11 +9,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "bun:test";
+import gameContractsTestnet from "@akkuea/shared/game-contracts.testnet.json";
 
 // ── Shared mock data ─────────────────────────────────────────────────────────
 
 const VIEWER = "GCPRLG7MR6J4WL527RRZ6S55GDZQ7ZDIUB6EQTRX77ETVGFH6FFM2F4M";
-const TREASURY = "GABC1234EFGH5678IJKL9012MNOP3456QRST7890UVWX1234YZ56";
+const TREASURY = gameContractsTestnet.deployedBy;
 const MOCK_UNSIGNED_XDR = "AAAA_UNSIGNED_XDR_BASE64==";
 const MOCK_SIGNED_XDR = "AAAA_SIGNED_XDR_BASE64==";
 const MOCK_TX_HASH =

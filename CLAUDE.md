@@ -94,7 +94,7 @@ Every GitHub Actions workflow that runs on a pull request must pass, no exceptio
 make check
 ```
 
-It runs, locally, the same checks the pull-request workflows run for the parts of the repository you changed: style rules, shell lint, shared, API (including the database tests when Docker is running), webapp, cross-workspace integration, and contracts. `make fix` applies the formatting fixes (Prettier per workspace, `cargo fmt`). `make check-all` runs everything. Then follow the pre-push checklist in [`AGENTS.md`](AGENTS.md).
+It runs, locally, the same checks the pull-request workflows run for the parts of the repository you changed: style rules, shell lint, shared, API (including the database tests when Docker is running), webapp, akkuea-land, cross-workspace integration, and contracts. `make fix` applies the formatting fixes (Prettier per workspace, `cargo fmt`). `make check-all` runs everything. Then follow the pre-push checklist in [`AGENTS.md`](AGENTS.md).
 
 After `make fix`, check that `git diff` only covers files this change actually touches. Unrelated reformatting must not be swept into the same commit.
 

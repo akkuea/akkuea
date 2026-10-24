@@ -85,8 +85,15 @@ vi.mock("@/lib/soroban-tx", () => ({
   TREASURY_ADDRESS: TEST_TREASURY_ADDRESS,
 }));
 
-import { PropertyPanel } from "../PropertyPanel";
 import { TREASURY_ADDRESS } from "@/lib/soroban-tx";
+
+// CityMap.test.tsx replaces "../PropertyPanel" with mock.module, and Bun
+// shares module mocks across files in one run. A query-suffixed specifier
+// loads a separate, unmocked instance of PropertyPanel.
+const UNMOCKED_PROPERTY_PANEL = "../PropertyPanel?unmocked";
+const { PropertyPanel } = (await import(
+  UNMOCKED_PROPERTY_PANEL
+)) as typeof import("../PropertyPanel");
 
 const baseProperty: GameProperty = {
   id: "550e8400-e29b-41d4-a716-446655440001",

@@ -16,7 +16,7 @@ mod storage;
 
 // Public re-exports for consumers and tests
 pub use lending::{
-    events::{DepositEvent, PoolCreatedEvent, WithdrawEvent},
+    events::{DepositEvent, PoolCreatedEvent, ReservesWithdrawnEvent, WithdrawEvent},
     lending_bump, BorrowPosition, DepositPosition, InterestRateModel, InterestStorage, LendingKey,
     LendingPool, OraclePriceSnapshot, PoolStorage, PositionStorage, PRECISION, SECONDS_PER_YEAR,
 };
@@ -39,6 +39,9 @@ mod reentrancy_tests;
 
 #[cfg(test)]
 mod budget_check;
+
+#[cfg(test)]
+mod lending_accounting_tests;
 
 // ───────────────────────────────────────────────
 // Helper functions
@@ -101,48 +104,68 @@ fn accrue_interest_internal(env: &Env, pool_id: &String) -> Result<(), ContractE
         .ok_or(ContractError::BalanceOverflow)?;
     let total_deposits = PoolStorage::get_total_deposits(env, pool_id);
     let total_borrows = PoolStorage::get_total_borrows(env, pool_id);
+    let reserves = PoolStorage::get_reserves(env, pool_id);
 
-    if total_deposits == 0 {
+    if total_borrows == 0 {
         InterestStorage::set_last_accrual(env, pool_id, now);
         return Ok(());
     }
 
-    let utilization = PoolStorage::calculate_utilization(total_deposits, total_borrows)?;
+    let total_assets = total_deposits
+        .checked_add(reserves)
+        .ok_or(ContractError::BalanceOverflow)?;
+    let utilization = PoolStorage::calculate_utilization(total_assets, total_borrows)?;
     let model = InterestStorage::get_model(env, pool_id);
     let borrow_rate = model.calculate_borrow_rate(utilization)?;
-
-    // Update interest index
     let current_index = InterestStorage::get_interest_index(env, pool_id);
     let new_index = InterestStorage::calculate_new_index(current_index, borrow_rate, time_elapsed)?;
-    InterestStorage::set_interest_index(env, pool_id, new_index);
+    let debt_delta = new_index
+        .checked_sub(current_index)
+        .ok_or(ContractError::BalanceOverflow)?;
+    let debt_product = total_borrows
+        .checked_mul(debt_delta)
+        .ok_or(ContractError::BalanceOverflow)?;
+    let interest_income = debt_product
+        .checked_add(
+            current_index
+                .checked_sub(1)
+                .ok_or(ContractError::BalanceOverflow)?,
+        )
+        .and_then(|value| value.checked_div(current_index))
+        .ok_or(ContractError::BalanceOverflow)?;
+    let total_borrows_new = total_borrows
+        .checked_add(interest_income)
+        .ok_or(ContractError::BalanceOverflow)?;
 
-    // Calculate and add reserve income
-    if total_borrows > 0 {
-        let pool = PoolStorage::get(env, pool_id).expect("pool must exist");
-        let reserve_factor_precision = (pool.reserve_factor as i128)
-            .checked_mul(PRECISION)
-            .and_then(|value| value.checked_div(10_000))
-            .ok_or(ContractError::BalanceOverflow)?;
-        let delta = new_index
-            .checked_sub(current_index)
-            .ok_or(ContractError::BalanceOverflow)?;
-        let product = total_borrows
-            .checked_mul(delta)
-            .ok_or(ContractError::BalanceOverflow)?;
-        let interest_income = product
-            .checked_div(current_index)
-            .ok_or(ContractError::BalanceOverflow)?;
-        let reserve_income = interest_income
-            .checked_mul(reserve_factor_precision)
-            .and_then(|value| value.checked_div(PRECISION))
-            .ok_or(ContractError::BalanceOverflow)?;
-        let total_borrows_new = total_borrows
-            .checked_add(interest_income)
-            .ok_or(ContractError::BalanceOverflow)?;
-        PoolStorage::set_total_borrows(env, pool_id, total_borrows_new);
-        if reserve_income > 0 {
-            PoolStorage::add_reserves(env, pool_id, reserve_income)?;
-        }
+    let pool = PoolStorage::get(env, pool_id).expect("pool must exist");
+    let reserve_factor = (pool.reserve_factor as i128)
+        .checked_mul(PRECISION)
+        .and_then(|value| value.checked_div(10_000))
+        .ok_or(ContractError::BalanceOverflow)?;
+    let supply_rate = model.calculate_supply_rate(borrow_rate, utilization, reserve_factor)?;
+    let current_supply_index = InterestStorage::get_supply_index(env, pool_id);
+    let new_supply_index =
+        InterestStorage::calculate_new_index(current_supply_index, supply_rate, time_elapsed)?;
+    let supply_delta = new_supply_index
+        .checked_sub(current_supply_index)
+        .ok_or(ContractError::BalanceOverflow)?;
+    let supply_income = total_deposits
+        .checked_mul(supply_delta)
+        .and_then(|value| value.checked_div(current_supply_index))
+        .ok_or(ContractError::BalanceOverflow)?;
+    let reserve_income = interest_income
+        .checked_sub(supply_income)
+        .ok_or(ContractError::BalanceOverflow)?;
+    let total_deposits_new = total_deposits
+        .checked_add(supply_income)
+        .ok_or(ContractError::BalanceOverflow)?;
+
+    InterestStorage::set_interest_index(env, pool_id, new_index);
+    InterestStorage::set_supply_index(env, pool_id, new_supply_index);
+    PoolStorage::set_total_borrows(env, pool_id, total_borrows_new);
+    PoolStorage::set_total_deposits(env, pool_id, total_deposits_new);
+    if reserve_income > 0 {
+        PoolStorage::add_reserves(env, pool_id, reserve_income)?;
     }
 
     InterestStorage::set_last_accrual(env, pool_id, now);
@@ -394,6 +417,9 @@ impl PropertyTokenContract {
         if PoolStorage::exists(&env, &pool_id) {
             panic!("pool already exists");
         }
+        if reserve_factor > 10_000 {
+            panic!("reserve factor cannot exceed 10000 basis points");
+        }
 
         let pool = LendingPool {
             id: pool_id.clone(),
@@ -415,10 +441,12 @@ impl PropertyTokenContract {
         let model = InterestRateModel::default();
         InterestStorage::set_model(&env, &pool_id, &model);
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
+        InterestStorage::set_supply_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PoolStorage::set_total_deposits(&env, &pool_id, 0);
         PoolStorage::set_total_borrows(&env, &pool_id, 0);
+        PoolStorage::set_reserves(&env, &pool_id, 0);
 
         lending_events::emit_pool_created(&env, &admin, &pool_id);
     }
@@ -446,29 +474,17 @@ impl PropertyTokenContract {
         let token_client = token::Client::new(&env, &pool.asset_address);
         token_client.transfer(&depositor, &env.current_contract_address(), &amount);
 
-        let current_index = InterestStorage::get_interest_index(&env, &pool_id);
+        let current_index = InterestStorage::get_supply_index(&env, &pool_id);
 
         match PositionStorage::get_deposit(&env, &depositor, &pool_id) {
             Some(mut existing) => {
-                let total_amount = existing
-                    .amount
+                let current_amount = PositionStorage::calculate_deposit_balance(&env, &existing)?;
+                let total_amount = current_amount
                     .checked_add(amount)
-                    .ok_or(ContractError::BalanceOverflow)?;
-                let amount1 = existing
-                    .amount
-                    .checked_mul(existing.index_at_deposit)
-                    .ok_or(ContractError::BalanceOverflow)?;
-                let amount2 = amount
-                    .checked_mul(current_index)
-                    .ok_or(ContractError::BalanceOverflow)?;
-                let sum = amount1
-                    .checked_add(amount2)
-                    .ok_or(ContractError::BalanceOverflow)?;
-                existing.index_at_deposit = sum
-                    .checked_div(total_amount)
                     .ok_or(ContractError::BalanceOverflow)?;
                 existing.amount = total_amount;
                 existing.shares = total_amount;
+                existing.index_at_deposit = current_index;
                 PositionStorage::set_deposit(&env, &existing);
             }
             None => {
@@ -519,11 +535,7 @@ impl PropertyTokenContract {
         accrue_interest_internal(&env, &pool_id)?;
         let position =
             PositionStorage::get_deposit(&env, &depositor, &pool_id).expect("no deposit position");
-        let accrued = PositionStorage::calculate_deposit_interest(&env, &position)?;
-        let total_available = position
-            .amount
-            .checked_add(accrued)
-            .ok_or(ContractError::BalanceOverflow)?;
+        let total_available = PositionStorage::calculate_deposit_balance(&env, &position)?;
 
         if amount > total_available {
             panic!("insufficient balance");
@@ -548,7 +560,7 @@ impl PropertyTokenContract {
                 .checked_sub(amount)
                 .ok_or(ContractError::BalanceOverflow)?;
             updated.shares = updated.amount;
-            updated.index_at_deposit = InterestStorage::get_interest_index(&env, &pool_id);
+            updated.index_at_deposit = InterestStorage::get_supply_index(&env, &pool_id);
             PositionStorage::set_deposit(&env, &updated);
         }
 
@@ -592,9 +604,31 @@ impl PropertyTokenContract {
         if current_index == 0 {
             panic!("Interest index is zero - invariant violation");
         }
+        if amount <= 0 || collateral_amount <= 0 {
+            panic!("amount and collateral must be positive");
+        }
+        let existing = PositionStorage::get_borrow(&env, &borrower, &pool_id);
+        if let Some(existing_position) = &existing {
+            if existing_position.collateral_asset != collateral_asset {
+                panic_with_error!(&env, ContractError::CollateralAssetMismatch);
+            }
+        }
+        let current_debt = match &existing {
+            Some(position) => PositionStorage::calculate_current_debt(&env, position)?,
+            None => 0,
+        };
+        let combined_debt = current_debt
+            .checked_add(amount)
+            .ok_or(ContractError::BalanceOverflow)?;
+        let combined_collateral = existing
+            .as_ref()
+            .map(|position| position.collateral_amount)
+            .unwrap_or(0)
+            .checked_add(collateral_amount)
+            .ok_or(ContractError::BalanceOverflow)?;
         let collateral_price = PriceOracle::get_price(&env, &collateral_asset);
         let collateral_value = collateral_price
-            .checked_mul(collateral_amount)
+            .checked_mul(combined_collateral)
             .and_then(|value| value.checked_div(PRECISION))
             .ok_or(ContractError::BalanceOverflow)?;
 
@@ -603,14 +637,13 @@ impl PropertyTokenContract {
             .checked_mul(pool.collateral_factor)
             .and_then(|value| value.checked_div(PRECISION))
             .ok_or(ContractError::BalanceOverflow)?;
-        if amount > max_borrow {
+        if combined_debt > max_borrow {
             panic!("Borrow exceeds collateral factor limit");
         }
 
-        let debt_value = amount;
         let health_factor = PositionStorage::calculate_health_factor(
             collateral_value,
-            debt_value,
+            combined_debt,
             pool.liquidation_threshold,
         )?;
         let min_health_factor = 15_i128
@@ -633,11 +666,14 @@ impl PropertyTokenContract {
         let position = BorrowPosition {
             pool_id: pool_id.clone(),
             borrower: borrower.clone(),
-            principal: amount,
+            principal: combined_debt,
             index_at_borrow: current_index,
-            collateral_amount,
+            collateral_amount: combined_collateral,
             collateral_asset: collateral_asset.clone(),
-            borrowed_at: env.ledger().timestamp(),
+            borrowed_at: existing
+                .as_ref()
+                .map(|position| position.borrowed_at)
+                .unwrap_or(env.ledger().timestamp()),
         };
 
         PositionStorage::set_borrow(&env, &position);
@@ -957,6 +993,46 @@ impl PropertyTokenContract {
         Ok(())
     }
 
+    pub fn withdraw_reserves(
+        env: Env,
+        caller: Address,
+        pool_id: String,
+        to: Address,
+        amount: i128,
+    ) -> Result<(), ContractError> {
+        require_admin(&env, &caller);
+        if amount <= 0 {
+            panic!("amount must be positive");
+        }
+        let pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
+        accrue_interest_internal(&env, &pool_id)?;
+
+        let reserves = PoolStorage::get_reserves(&env, &pool_id);
+        let deposits = PoolStorage::get_total_deposits(&env, &pool_id);
+        let token_client = token::Client::new(&env, &pool.asset_address);
+        let cash = token_client.balance(&env.current_contract_address());
+        let withdrawable_cash = if cash > deposits {
+            cash.checked_sub(deposits)
+                .ok_or(ContractError::BalanceOverflow)?
+        } else {
+            0
+        };
+        if amount > reserves || amount > withdrawable_cash {
+            panic_with_error!(&env, ContractError::InsufficientReserves);
+        }
+
+        PoolStorage::set_reserves(
+            &env,
+            &pool_id,
+            reserves
+                .checked_sub(amount)
+                .ok_or(ContractError::BalanceOverflow)?,
+        );
+        token_client.transfer(&env.current_contract_address(), &to, &amount);
+        lending_events::emit_reserves_withdrawn(&env, &caller, &pool_id, &to, amount);
+        Ok(())
+    }
+
     pub fn set_oracle(env: Env, oracle_address: Address, caller: Address) {
         caller.require_auth();
         AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
@@ -1006,6 +1082,15 @@ impl PropertyTokenContract {
     }
     pub fn get_total_borrows(env: Env, pool_id: String) -> i128 {
         PoolStorage::get_total_borrows(&env, &pool_id)
+    }
+    pub fn get_reserves(env: Env, pool_id: String) -> i128 {
+        PoolStorage::get_reserves(&env, &pool_id)
+    }
+    pub fn get_available_liquidity(env: Env, pool_id: String) -> i128 {
+        let deposits = PoolStorage::get_total_deposits(&env, &pool_id);
+        let borrows = PoolStorage::get_total_borrows(&env, &pool_id);
+        PoolStorage::calculate_available_liquidity(deposits, borrows)
+            .expect("available liquidity arithmetic overflow")
     }
     pub fn get_user_borrows(env: Env, user: Address) -> Vec<String> {
         PositionStorage::get_user_borrows(&env, &user)

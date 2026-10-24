@@ -229,9 +229,7 @@ fn test_borrow_state_updated_before_interactions() {
 }
 
 /// Simulate a "double borrow" attempt - a second borrow call with the
-/// same borrower/pool overwrites the position but the pool total borrows
-/// should reflect both operations consistently (no double-counting or
-/// state corruption).
+/// same borrower and pool adds to the existing position and pool total.
 #[test]
 fn test_borrow_double_call_does_not_corrupt_state() {
     let t = setup_reentrancy_env();
@@ -250,8 +248,7 @@ fn test_borrow_double_call_does_not_corrupt_state() {
     let total_borrows_after_first = t.client.get_total_borrows(&t.pool_id);
     assert_eq!(total_borrows_after_first, borrow_amount);
 
-    // Second borrow with same params - this overwrites the position
-    // but should not double-count or corrupt pool totals in an unsafe way
+    // A second borrow adds both its debt and collateral to the position.
     t.client.borrow(
         &t.borrower,
         &t.pool_id,
@@ -268,11 +265,17 @@ fn test_borrow_double_call_does_not_corrupt_state() {
         "State corruption: total borrows inconsistent after double borrow"
     );
 
-    // The position should reflect the SECOND borrow (overwrite)
+    // The position should preserve the debt and collateral from both borrows.
     let position = t.client.get_borrow_position(&t.borrower, &t.pool_id);
     assert_eq!(
-        position.principal, borrow_amount,
-        "Position should reflect the latest borrow"
+        position.principal,
+        borrow_amount * 2,
+        "Position should include both borrows"
+    );
+    assert_eq!(
+        position.collateral_amount,
+        collateral_amount * 2,
+        "Position should include collateral from both borrows"
     );
 }
 

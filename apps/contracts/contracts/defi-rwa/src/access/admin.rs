@@ -41,6 +41,10 @@ pub enum ContractError {
     PriceScalingOverflow = 27,
     /// Oracle price timestamp is too far in the future
     OraclePriceInFuture = 28,
+    /// A borrow position cannot mix collateral assets
+    CollateralAssetMismatch = 29,
+    /// The requested reserve withdrawal exceeds withdrawable reserves
+    InsufficientReserves = 30,
     /// Buyer offered a payment token the listing does not accept
     PaymentTokenMismatch = 29,
 }

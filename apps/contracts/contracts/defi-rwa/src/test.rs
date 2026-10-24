@@ -284,7 +284,7 @@ fn test_create_pool_duplicate() {
 }
 
 #[test]
-#[should_panic(expected = "only admin")]
+#[should_panic(expected = "Error(Contract, #1)")]
 fn test_create_pool_unauthorized() {
     let s = setup();
     let non_admin = Address::generate(&s.env);
@@ -3915,10 +3915,7 @@ fn test_liquidate_double_attempt_panics() {
 
     // Get the admin address to set close factor later
     let admin = env.as_contract(&contract_id, || {
-        env.storage()
-            .instance()
-            .get::<_, Address>(&LendingKey::Admin)
-            .expect("admin not set")
+        AdminControl::get_admin(&env).expect("admin not set")
     });
 
     let borrower_xlm_before = xlm_token.balance(&borrower);
@@ -4017,10 +4014,7 @@ fn test_liquidate_excess_collateral_returned() {
 
     // Get the admin address to set close factor
     let admin = env.as_contract(&contract_id, || {
-        env.storage()
-            .instance()
-            .get::<_, Address>(&LendingKey::Admin)
-            .expect("admin not set")
+        AdminControl::get_admin(&env).expect("admin not set")
     });
 
     let borrower_xlm_before = xlm_token.balance(&borrower);
@@ -4264,10 +4258,7 @@ fn test_set_close_factor_as_admin() {
     // Get admin address - the setup registers with a generated admin
     // We need to read the stored admin to call set_close_factor
     let admin = env.as_contract(&contract_id, || {
-        env.storage()
-            .instance()
-            .get::<_, Address>(&LendingKey::Admin)
-            .expect("admin not set")
+        AdminControl::get_admin(&env).expect("admin not set")
     });
 
     let pool_before = env.as_contract(&contract_id, || {
@@ -4295,7 +4286,7 @@ fn test_set_close_factor_as_admin() {
 
 /// Non-admin cannot update the close factor.
 #[test]
-#[should_panic(expected = "only admin")]
+#[should_panic(expected = "Error(Contract, #1)")]
 fn test_set_close_factor_unauthorized() {
     let (env, contract_id, _oracle_id, _borrower, liquidator, pool_id, _usdc_addr, _xlm_addr) =
         setup_liquidation_env();
@@ -4648,7 +4639,7 @@ fn test_set_close_factor_negative_value() {
     // Get the admin (who registered the contract) by using the constructor's admin
     let admin = env.as_contract(&contract_id, || {
         // derive admin from stored admin
-        get_lending_admin(&env)
+        AdminControl::get_admin(&env).expect("admin not set")
     });
 
     // Admin tries to set negative close factor - should panic
@@ -5418,5 +5409,231 @@ fn test_reading_unlisted_property_does_not_create_listing_entries() {
             s.env.storage().persistent().has(key)
         });
         assert!(!exists, "reading must not create listing key {:?}", key);
+    }
+}
+
+// ───────────────────────────────────────────────
+// Issue #1291: Admin key unification, persistent role storage,
+// admin transfer entrypoints, allowance race mitigation, and share TTLs
+// ───────────────────────────────────────────────
+
+#[test]
+fn test_constructor_initializes_admin_control_and_role_without_aliasing() {
+    let s = setup();
+
+    assert_eq!(s.contract_client.get_admin(), s.admin);
+    assert_eq!(s.contract_client.get_pending_admin(), None);
+
+    let has_admin_role = s.env.as_contract(&s.contract_address, || {
+        super::access::roles::RoleStorage::has_role(
+            &s.env,
+            &s.admin,
+            &super::access::roles::Role::Admin,
+        )
+    });
+    assert!(
+        has_admin_role,
+        "constructor must grant Role::Admin to initial admin"
+    );
+}
+
+#[test]
+fn test_two_step_admin_transfer_entrypoints_and_cancel() {
+    let s = setup();
+    let candidate = Address::generate(&s.env);
+    let final_admin = Address::generate(&s.env);
+
+    // Start and cancel transfer
+    s.contract_client.transfer_admin_start(&s.admin, &candidate);
+    assert_eq!(
+        s.contract_client.get_pending_admin(),
+        Some(candidate.clone())
+    );
+
+    s.contract_client.transfer_admin_cancel(&s.admin);
+    assert_eq!(s.contract_client.get_pending_admin(), None);
+
+    // Start and accept transfer
+    s.contract_client
+        .transfer_admin_start(&s.admin, &final_admin);
+    assert_eq!(
+        s.contract_client.get_pending_admin(),
+        Some(final_admin.clone())
+    );
+
+    s.contract_client.transfer_admin_accept(&final_admin);
+    assert_eq!(s.contract_client.get_admin(), final_admin);
+    assert_eq!(s.contract_client.get_pending_admin(), None);
+
+    let (old_has_role, new_has_role) = s.env.as_contract(&s.contract_address, || {
+        (
+            super::access::roles::RoleStorage::has_role(
+                &s.env,
+                &s.admin,
+                &super::access::roles::Role::Admin,
+            ),
+            super::access::roles::RoleStorage::has_role(
+                &s.env,
+                &final_admin,
+                &super::access::roles::Role::Admin,
+            ),
+        )
+    });
+    assert!(
+        !old_has_role,
+        "previous admin must have Role::Admin revoked"
+    );
+    assert!(new_has_role, "new admin must have Role::Admin granted");
+}
+
+#[test]
+fn test_role_grants_use_persistent_storage_and_extend_ttl() {
+    use super::access::roles::{Role, RoleKey, RoleStorage};
+    use super::storage::property::property_bump::{PERSISTENT_BUMP, PERSISTENT_THRESHOLD};
+
+    let s = setup();
+    let guard = Address::generate(&s.env);
+    let key = RoleKey::HasRole(guard.clone(), Role::EmergencyGuard);
+
+    s.contract_client.grant_emergency_role(&s.admin, &guard);
+
+    let (in_persistent, in_instance, ttl_initial) = s.env.as_contract(&s.contract_address, || {
+        (
+            s.env.storage().persistent().has(&key),
+            s.env.storage().instance().has(&key),
+            s.env.storage().persistent().get_ttl(&key),
+        )
+    });
+    assert!(
+        in_persistent,
+        "HasRole must be stored in persistent storage"
+    );
+    assert!(
+        !in_instance,
+        "HasRole must not bloat instance storage on grant"
+    );
+    assert!(ttl_initial >= PERSISTENT_BUMP);
+
+    s.env
+        .ledger()
+        .set_sequence_number(listing_near_expiry_sequence());
+    let ttl_before = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(ttl_before < PERSISTENT_THRESHOLD);
+
+    let has = s.env.as_contract(&s.contract_address, || {
+        RoleStorage::has_role(&s.env, &guard, &Role::EmergencyGuard)
+    });
+    assert!(has);
+
+    let ttl_after = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(ttl_after >= PERSISTENT_BUMP);
+
+    s.contract_client.revoke_emergency_role(&s.admin, &guard);
+    let exists_after_revoke = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().has(&key)
+    });
+    assert!(!exists_after_revoke);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #24)")]
+fn test_set_oracle_config_rejects_negative_min_price() {
+    let s = setup();
+    s.contract_client
+        .set_oracle_config(&s.admin, &3600_u64, &(-1_i128));
+}
+
+#[test]
+fn test_allowance_race_mitigation_entrypoints() {
+    let (env, client, admin) = setup_token_test();
+    let owner = Address::generate(&env);
+    let spender = Address::generate(&env);
+    let property_id = 1_u64;
+
+    client.mint_shares(&admin, &property_id, &owner, &1_000_u64);
+    client.approve(&owner, &spender, &property_id, &100_u64);
+    assert_eq!(client.get_allowance(&property_id, &owner, &spender), 100);
+
+    // Atomic increase and decrease
+    let after_inc = client.increase_allowance(&owner, &spender, &property_id, &50_u64);
+    assert_eq!(after_inc, 150);
+    assert_eq!(client.get_allowance(&property_id, &owner, &spender), 150);
+
+    let after_dec = client.decrease_allowance(&owner, &spender, &property_id, &30_u64);
+    assert_eq!(after_dec, 120);
+    assert_eq!(client.get_allowance(&property_id, &owner, &spender), 120);
+
+    // Compare-and-set succeeds when expected_current matches
+    client.approve_if_current(&owner, &spender, &property_id, &120_u64, &200_u64);
+    assert_eq!(client.get_allowance(&property_id, &owner, &spender), 200);
+
+    // Compare-and-set fails with InsufficientAllowance when expected_current is stale
+    let stale_res =
+        client.try_approve_if_current(&owner, &spender, &property_id, &120_u64, &50_u64);
+    assert_eq!(
+        stale_res,
+        Err(Ok(Error::from_contract_error(
+            ContractError::InsufficientAllowance as u32
+        )))
+    );
+    assert_eq!(client.get_allowance(&property_id, &owner, &spender), 200);
+}
+
+#[test]
+fn test_share_balance_total_shares_and_allowance_extend_persistent_ttl() {
+    use super::storage::property::property_bump::{PERSISTENT_BUMP, PERSISTENT_THRESHOLD};
+
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let spender = Address::generate(&s.env);
+    let property_id = 7701_u64;
+
+    s.contract_client
+        .mint_shares(&s.admin, &property_id, &owner, &500_u64);
+    s.contract_client
+        .approve(&owner, &spender, &property_id, &200_u64);
+
+    let balance_key = storage::keys::StorageKey::ShareBalance(property_id, owner.clone());
+    let total_key = storage::keys::StorageKey::TotalShares(property_id);
+    let allowance_key =
+        storage::keys::StorageKey::Allowance(property_id, owner.clone(), spender.clone());
+
+    for key in [&balance_key, &total_key, &allowance_key] {
+        let ttl = persistent_ttl(&s.env, &s.contract_address, key);
+        assert!(
+            ttl >= PERSISTENT_BUMP,
+            "write must extend persistent TTL on {:?}",
+            key
+        );
+    }
+
+    s.env
+        .ledger()
+        .set_sequence_number(listing_near_expiry_sequence());
+
+    for key in [&balance_key, &total_key, &allowance_key] {
+        let ttl = persistent_ttl(&s.env, &s.contract_address, key);
+        assert!(ttl < PERSISTENT_THRESHOLD);
+    }
+
+    assert_eq!(s.contract_client.get_balance(&property_id, &owner), 500);
+    assert_eq!(s.contract_client.get_total_shares(&property_id), 500);
+    assert_eq!(
+        s.contract_client
+            .get_allowance(&property_id, &owner, &spender),
+        200
+    );
+
+    for key in [&balance_key, &total_key, &allowance_key] {
+        let ttl = persistent_ttl(&s.env, &s.contract_address, key);
+        assert!(
+            ttl >= PERSISTENT_BUMP,
+            "read near expiry must refresh persistent TTL on {:?}",
+            key
+        );
     }
 }

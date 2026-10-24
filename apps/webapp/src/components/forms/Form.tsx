@@ -1,34 +1,51 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import type { DefaultValues } from "react-hook-form";
-import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
+import type { DefaultValues, FieldValues } from "react-hook-form";
+import {
+  FormProvider,
+  useForm,
+  type Resolver,
+  type UseFormReturn,
+} from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 
-export type FormRenderProps<TSchema extends z.ZodTypeAny> = UseFormReturn<
-  z.infer<TSchema>
-> & {
-  formError: string | null;
-  formSuccess: string | null;
-  setFormError: React.Dispatch<React.SetStateAction<string | null>>;
-  setFormSuccess: React.Dispatch<React.SetStateAction<string | null>>;
-};
+export type FormRenderProps<TValues extends FieldValues> =
+  UseFormReturn<TValues> & {
+    formError: string | null;
+    formSuccess: string | null;
+    setFormError: React.Dispatch<React.SetStateAction<string | null>>;
+    setFormSuccess: React.Dispatch<React.SetStateAction<string | null>>;
+  };
 
-export interface FormProps<TSchema extends z.ZodTypeAny> {
-  schema: TSchema;
-  defaultValues?: DefaultValues<z.infer<TSchema>>;
-  onSubmit: (values: z.infer<TSchema>) => void | Promise<void>;
+/**
+ * Generic over the parsed *value* type rather than the schema type.
+ *
+ * With `@hookform/resolvers` v5 the resolver is typed from the schema's own
+ * input/output pair; a `TSchema extends z.ZodType` parameter leaves that pair
+ * unresolved (`output<TSchema>` never narrows to `FieldValues`), which is what
+ * produced the `unknown is not assignable to FieldValues` errors. Binding the
+ * schema as `z.ZodType<TValues, TValues>` pins both sides to the same concrete
+ * record and the resolver, `useForm<TValues>` and the render props all agree.
+ */
+export interface FormProps<TValues extends FieldValues> {
+  // Input is `FieldValues` rather than `TValues` because a schema with defaults
+  // or transforms accepts a looser shape than it returns (e.g. an optional field
+  // with `.default()`); pinning both sides rejects those schemas.
+  schema: z.ZodType<TValues, FieldValues>;
+  defaultValues?: DefaultValues<TValues>;
+  onSubmit: (values: TValues) => void | Promise<void>;
   children:
-    React.ReactNode | ((methods: FormRenderProps<TSchema>) => React.ReactNode);
+    React.ReactNode | ((methods: FormRenderProps<TValues>) => React.ReactNode);
   className?: string;
   id?: string;
   successMessage?: string;
   showFeedback?: boolean;
 }
 
-export function Form<TSchema extends z.ZodTypeAny>({
+export function Form<TValues extends FieldValues>({
   schema,
   defaultValues,
   onSubmit,
@@ -37,9 +54,11 @@ export function Form<TSchema extends z.ZodTypeAny>({
   id,
   successMessage,
   showFeedback = true,
-}: FormProps<TSchema>) {
-  const methods = useForm<z.infer<TSchema>>({
-    resolver: zodResolver(schema),
+}: FormProps<TValues>) {
+  const methods = useForm<TValues>({
+    // The resolver is typed from the schema's own input pair, which we widened
+    // to FieldValues above; the parsed output is still exactly TValues.
+    resolver: zodResolver(schema) as Resolver<TValues>,
     defaultValues,
     mode: "onBlur",
     reValidateMode: "onBlur",
@@ -50,7 +69,7 @@ export function Form<TSchema extends z.ZodTypeAny>({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
-  const handleValidSubmit = async (values: z.infer<TSchema>) => {
+  const handleValidSubmit = async (values: TValues) => {
     setFormError(null);
     setFormSuccess(null);
     try {
@@ -67,7 +86,7 @@ export function Form<TSchema extends z.ZodTypeAny>({
     }
   };
 
-  const renderProps: FormRenderProps<TSchema> = useMemo(
+  const renderProps: FormRenderProps<TValues> = useMemo(
     () => ({
       ...methods,
       formError,

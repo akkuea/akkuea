@@ -44,7 +44,7 @@ pub struct PilotIncomeToken;
 #[contractimpl]
 impl PilotIncomeToken {
     /// Initialize token metadata and the whitelist contract used for mint gating.
-    pub fn initialize(
+    pub fn __constructor(
         env: Env,
         admin: Address,
         whitelist: Address,
@@ -52,10 +52,6 @@ impl PilotIncomeToken {
         symbol: String,
         decimals: u32,
     ) {
-        if Storage::is_initialized(&env) {
-            panic_with_error!(&env, IncomeTokenError::AlreadyInitialized);
-        }
-
         extend_instance(&env);
 
         Storage::set_admin(&env, &admin);
@@ -445,19 +441,20 @@ mod tests {
         let holder_two = Address::generate(&env);
         let unapproved = Address::generate(&env);
 
-        let whitelist_id = env.register(PilotWhitelist, ());
+        let whitelist_id = env.register(PilotWhitelist, (&whitelist_admin,));
         let whitelist = PilotWhitelistClient::new(&env, &whitelist_id);
-        whitelist.initialize(&whitelist_admin);
 
-        let token_id = env.register(PilotIncomeToken, ());
-        let token = PilotIncomeTokenClient::new(&env, &token_id);
-        token.initialize(
-            &admin,
-            &whitelist_id,
-            &String::from_str(&env, "Akkuea Pilot Income"),
-            &String::from_str(&env, "AKIN"),
-            &7,
+        let token_id = env.register(
+            PilotIncomeToken,
+            (
+                &admin,
+                &whitelist_id,
+                String::from_str(&env, "Akkuea Pilot Income"),
+                String::from_str(&env, "AKIN"),
+                7u32,
+            ),
         );
+        let token = PilotIncomeTokenClient::new(&env, &token_id);
 
         Setup {
             env,
@@ -478,7 +475,7 @@ mod tests {
     }
 
     #[test]
-    fn initialize_sets_metadata() {
+    fn constructor_sets_metadata() {
         let s = setup();
 
         assert_eq!(
@@ -923,58 +920,6 @@ mod tests {
     }
 
     // --- Typed error coverage ---
-
-    #[test]
-    fn uninitialized_contract_reports_not_initialized() {
-        let env = Env::default();
-        env.mock_all_auths();
-        let admin = Address::generate(&env);
-        let id = env.register(PilotIncomeToken, ());
-        let token = PilotIncomeTokenClient::new(&env, &id);
-
-        // Read paths: the metadata entries have nothing stored to return yet.
-        assert_eq!(
-            token.try_name(),
-            Err(Ok(Error::from_contract_error(
-                IncomeTokenError::NotInitialized as u32
-            )))
-        );
-        assert_eq!(
-            token.try_symbol(),
-            Err(Ok(Error::from_contract_error(
-                IncomeTokenError::NotInitialized as u32
-            )))
-        );
-        assert_eq!(
-            token.try_decimals(),
-            Err(Ok(Error::from_contract_error(
-                IncomeTokenError::NotInitialized as u32
-            )))
-        );
-        assert_eq!(
-            token.try_admin(),
-            Err(Ok(Error::from_contract_error(
-                IncomeTokenError::NotInitialized as u32
-            )))
-        );
-
-        // State-changing path: `require_admin` resolves the stored admin before
-        // it can compare it, so an uninitialized contract reports
-        // NotInitialized rather than Unauthorized and stays paused-free.
-        assert_eq!(
-            token.try_pause(&admin),
-            Err(Ok(Error::from_contract_error(
-                IncomeTokenError::NotInitialized as u32
-            )))
-        );
-        assert!(!token.is_paused());
-
-        // The remaining NotInitialized sites are defensive: `initialize`
-        // writes the admin and the whitelist address in the same call, and
-        // `transfer_admin_accept` can only reach its admin lookup with a
-        // pending admin stored, so neither can be reached with only one of the
-        // two addresses present.
-    }
 
     #[test]
     fn mint_rejects_empty_holder_set() {

@@ -38,10 +38,6 @@ pub enum DataKey {
 pub struct Storage;
 
 impl Storage {
-    pub fn is_initialized(env: &Env) -> bool {
-        env.storage().instance().has(&DataKey::Admin)
-    }
-
     pub fn set_address(env: &Env, key: &DataKey, address: &Address) {
         env.storage().instance().set(key, address);
     }

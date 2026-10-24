@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { z, type ZodSchema, ZodError } from 'zod';
+import { z, type ZodType, ZodError } from 'zod';
 import { logger } from '../services/logger';
 
 /**
@@ -52,7 +52,7 @@ function createValidationError(
 /**
  * Body validation plugin using Elysia's derive pattern
  */
-export function validateBody<T extends ZodSchema>(schema: T) {
+export function validateBody<T extends ZodType>(schema: T) {
   return new Elysia({ name: 'validate-body' })
     .resolve({ as: 'scoped' }, ({ body }: { body: unknown }) => {
       try {
@@ -105,7 +105,7 @@ export function validateBody<T extends ZodSchema>(schema: T) {
 /**
  * Query validation plugin using Elysia's derive pattern
  */
-export function validateQuery<T extends ZodSchema>(schema: T) {
+export function validateQuery<T extends ZodType>(schema: T) {
   return new Elysia({ name: 'validate-query' })
     .resolve({ as: 'scoped' }, ({ query }: { query: Record<string, string | undefined> }) => {
       const result = schema.safeParse(query);
@@ -142,7 +142,7 @@ export function validateQuery<T extends ZodSchema>(schema: T) {
 /**
  * Path params validation plugin using Elysia's derive pattern
  */
-export function validateParams<T extends ZodSchema>(schema: T) {
+export function validateParams<T extends ZodType>(schema: T) {
   return new Elysia({ name: 'validate-params' })
     .resolve({ as: 'scoped' }, ({ params }: { params: Record<string, string | undefined> }) => {
       const result = schema.safeParse(params);
@@ -194,9 +194,9 @@ let validateSeq = 0;
  * level would otherwise apply to every route registered after it.
  */
 export function validate<
-  TBody extends ZodSchema | undefined = undefined,
-  TQuery extends ZodSchema | undefined = undefined,
-  TParams extends ZodSchema | undefined = undefined,
+  TBody extends ZodType | undefined = undefined,
+  TQuery extends ZodType | undefined = undefined,
+  TParams extends ZodType | undefined = undefined,
 >(options: { body?: TBody; query?: TQuery; params?: TParams }) {
   return new Elysia({ name: 'validate', seed: ++validateSeq })
     .resolve(
@@ -211,17 +211,17 @@ export function validate<
         params: Record<string, string | undefined>;
       }) => {
         const result: {
-          validatedBody: TBody extends ZodSchema ? z.infer<TBody> : undefined;
-          validatedQuery: TQuery extends ZodSchema ? z.infer<TQuery> : undefined;
-          validatedParams: TParams extends ZodSchema ? z.infer<TParams> : undefined;
+          validatedBody: TBody extends ZodType ? z.infer<TBody> : undefined;
+          validatedQuery: TQuery extends ZodType ? z.infer<TQuery> : undefined;
+          validatedParams: TParams extends ZodType ? z.infer<TParams> : undefined;
           validationError:
             | ReturnType<typeof createValidationError>
             | { success: false; error: string; code: string; message: string; statusCode: number }
             | null;
         } = {
-          validatedBody: undefined as TBody extends ZodSchema ? z.infer<TBody> : undefined,
-          validatedQuery: undefined as TQuery extends ZodSchema ? z.infer<TQuery> : undefined,
-          validatedParams: undefined as TParams extends ZodSchema ? z.infer<TParams> : undefined,
+          validatedBody: undefined as TBody extends ZodType ? z.infer<TBody> : undefined,
+          validatedQuery: undefined as TQuery extends ZodType ? z.infer<TQuery> : undefined,
+          validatedParams: undefined as TParams extends ZodType ? z.infer<TParams> : undefined,
           validationError: null,
         };
 
@@ -238,7 +238,7 @@ export function validate<
               return result;
             }
 
-            result.validatedBody = bodyResult.data as TBody extends ZodSchema
+            result.validatedBody = bodyResult.data as TBody extends ZodType
               ? z.infer<TBody>
               : undefined;
           } catch (e) {
@@ -266,7 +266,7 @@ export function validate<
             return result;
           }
 
-          result.validatedQuery = queryResult.data as TQuery extends ZodSchema
+          result.validatedQuery = queryResult.data as TQuery extends ZodType
             ? z.infer<TQuery>
             : undefined;
         }
@@ -283,7 +283,7 @@ export function validate<
             return result;
           }
 
-          result.validatedParams = paramsResult.data as TParams extends ZodSchema
+          result.validatedParams = paramsResult.data as TParams extends ZodType
             ? z.infer<TParams>
             : undefined;
         }

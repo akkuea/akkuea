@@ -6,5 +6,4 @@
 # previous list carried is no longer reported by `bun audit --audit-level=low`.
 # Follow-up: dependency upgrade track.
 
-GHSA-5p2g-fcmc-qvqq  # image-size (high) - JXL and HEIF parsers allow denial of service through infinite loops - no patched release for 1.x, transitive via @storybook/nextjs in webapp; track upgrade
-GHSA-w3rx-r6r6-pgpr  # image-size (high) - ICNS parser allows denial of service through an infinite loop - no patched release for 1.x, transitive via @storybook/nextjs in webapp; track upgrade
+GHSA-vfj7-8cjw-p6xm  # braces (high) - stack-exhaustion DoS via deeply nested patterns - no patched release yet (3.0.3 is the latest), transitive via micromatch > braces in webapp, land and shared; track upgrade

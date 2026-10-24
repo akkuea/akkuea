@@ -36,19 +36,20 @@ proptest! {
         let admin = Address::generate(&env);
         let whitelist_admin = Address::generate(&env);
 
-        let whitelist_id = env.register(PilotWhitelist, ());
+        let whitelist_id = env.register(PilotWhitelist, (&whitelist_admin,));
         let whitelist = PilotWhitelistClient::new(&env, &whitelist_id);
-        whitelist.initialize(&whitelist_admin);
 
-        let token_id = env.register(PilotIncomeToken, ());
-        let token = PilotIncomeTokenClient::new(&env, &token_id);
-        token.initialize(
-            &admin,
-            &whitelist_id,
-            &String::from_str(&env, "Akkuea Pilot Income"),
-            &String::from_str(&env, "AKIN"),
-            &7,
+        let token_id = env.register(
+            PilotIncomeToken,
+            (
+                &admin,
+                &whitelist_id,
+                String::from_str(&env, "Akkuea Pilot Income"),
+                String::from_str(&env, "AKIN"),
+                7u32,
+            ),
         );
+        let token = PilotIncomeTokenClient::new(&env, &token_id);
 
         let mut pool: std::vec::Vec<Address> = std::vec::Vec::new();
         for _ in 0..POOL_SIZE {

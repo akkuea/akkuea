@@ -18,12 +18,8 @@ pub struct PilotWhitelist;
 #[contractimpl]
 impl PilotWhitelist {
     /// Initialize the whitelist with the admin address that can approve and revoke investors.
-    pub fn initialize(env: Env, admin: Address) {
+    pub fn __constructor(env: Env, admin: Address) {
         extend_instance(&env);
-        if Storage::is_initialized(&env) {
-            panic_with_error!(&env, WhitelistError::AlreadyInitialized);
-        }
-
         Storage::set_admin(&env, &admin);
         events::emit_initialized(&env, admin);
     }
@@ -174,16 +170,14 @@ mod tests {
         let env = Env::default();
         let admin = Address::generate(&env);
         let investor = Address::generate(&env);
-        let id = env.register(PilotWhitelist, ());
+        let id = env.register(PilotWhitelist, (&admin,));
         let client = PilotWhitelistClient::new(&env, &id);
         (env, admin, investor, client)
     }
 
     #[test]
-    fn initialize_sets_admin() {
+    fn constructor_sets_admin() {
         let (_, admin, _, client) = setup();
-
-        client.initialize(&admin);
 
         assert_eq!(client.admin(), admin);
     }
@@ -192,7 +186,6 @@ mod tests {
     fn approve_and_revoke_update_public_status() {
         let (env, admin, investor, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
 
         client.approve(&admin, &investor);
         assert!(client.is_approved(&investor));
@@ -203,61 +196,15 @@ mod tests {
 
     #[test]
     fn unapproved_address_defaults_to_false() {
-        let (_, admin, investor, client) = setup();
-        client.initialize(&admin);
+        let (_, _, investor, client) = setup();
 
-        assert!(!client.is_approved(&investor));
-    }
-
-    #[test]
-    fn initialize_twice_fails() {
-        let (_, admin, _, client) = setup();
-        client.initialize(&admin);
-
-        let res = client.try_initialize(&admin);
-
-        assert_eq!(
-            res,
-            Err(Ok(Error::from_contract_error(
-                WhitelistError::AlreadyInitialized as u32
-            )))
-        );
-    }
-
-    #[test]
-    fn uninitialized_contract_reports_not_initialized() {
-        let env = Env::default();
-        env.mock_all_auths();
-        let admin = Address::generate(&env);
-        let investor = Address::generate(&env);
-        let id = env.register(PilotWhitelist, ());
-        let client = PilotWhitelistClient::new(&env, &id);
-
-        // Read path: nothing has been stored for `admin` to return yet.
-        assert_eq!(
-            client.try_admin(),
-            Err(Ok(Error::from_contract_error(
-                WhitelistError::NotInitialized as u32
-            )))
-        );
-
-        // Admin-gated path: `require_admin` resolves the stored admin before it
-        // can compare it, so an uninitialized contract reports NotInitialized
-        // rather than Unauthorized, and writes no approval.
-        assert_eq!(
-            client.try_approve(&admin, &investor),
-            Err(Ok(Error::from_contract_error(
-                WhitelistError::NotInitialized as u32
-            )))
-        );
         assert!(!client.is_approved(&investor));
     }
 
     #[test]
     fn non_admin_cannot_approve() {
-        let (env, admin, investor, client) = setup();
+        let (env, _, investor, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         let attacker = Address::generate(&env);
 
         let res = client.try_approve(&attacker, &investor);
@@ -274,7 +221,6 @@ mod tests {
     fn non_admin_cannot_revoke() {
         let (env, admin, investor, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         client.approve(&admin, &investor);
         let attacker = Address::generate(&env);
 
@@ -294,7 +240,6 @@ mod tests {
     fn admin_transfer_happy_path() {
         let (env, admin, _, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         let new_admin = Address::generate(&env);
 
         client.transfer_admin_start(&admin, &new_admin);
@@ -311,7 +256,6 @@ mod tests {
     fn admin_transfer_cancel_before_accept() {
         let (env, admin, _, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         let new_admin = Address::generate(&env);
 
         client.transfer_admin_start(&admin, &new_admin);
@@ -333,7 +277,6 @@ mod tests {
     fn admin_transfer_accept_by_wrong_address_fails() {
         let (env, admin, investor, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         let new_admin = Address::generate(&env);
 
         client.transfer_admin_start(&admin, &new_admin);
@@ -351,9 +294,8 @@ mod tests {
 
     #[test]
     fn admin_transfer_start_by_non_admin_fails() {
-        let (env, admin, _, client) = setup();
+        let (env, _, _, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         let attacker = Address::generate(&env);
         let new_admin = Address::generate(&env);
 
@@ -372,7 +314,6 @@ mod tests {
     fn old_admin_loses_all_privileges_after_accept() {
         let (env, admin, investor, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         let new_admin = Address::generate(&env);
 
         client.transfer_admin_start(&admin, &new_admin);
@@ -397,7 +338,6 @@ mod tests {
     fn pause_blocks_approve_and_revoke() {
         let (env, admin, investor, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
 
         client.pause(&admin);
         assert!(client.is_paused());
@@ -423,7 +363,6 @@ mod tests {
     fn read_only_calls_work_while_paused() {
         let (env, admin, investor, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         client.approve(&admin, &investor);
 
         client.pause(&admin);
@@ -436,7 +375,6 @@ mod tests {
     fn unpause_restores_approve_and_revoke() {
         let (env, admin, investor, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
 
         client.pause(&admin);
         client.unpause(&admin);
@@ -448,9 +386,8 @@ mod tests {
 
     #[test]
     fn non_admin_cannot_pause_or_unpause() {
-        let (env, admin, _, client) = setup();
+        let (env, _, _, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         let attacker = Address::generate(&env);
 
         let res = client.try_pause(&attacker);
@@ -466,7 +403,6 @@ mod tests {
     fn admin_transfer_still_works_while_paused() {
         let (env, admin, _, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         let new_admin = Address::generate(&env);
 
         client.pause(&admin);
@@ -484,7 +420,6 @@ mod tests {
 
         let (env, admin, investor, client) = setup();
         env.mock_all_auths();
-        client.initialize(&admin);
         client.approve(&admin, &investor);
 
         let contract_id = client.address.clone();

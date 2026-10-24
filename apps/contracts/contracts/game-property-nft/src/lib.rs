@@ -38,11 +38,12 @@ pub struct GamePropertyNft;
 #[contractimpl]
 impl GamePropertyNft {
     /// Mint all 400 tiles to `treasury` logically.
-    pub fn initialize(env: Env, treasury: Address, game_engine: Address) {
+    pub fn __constructor(env: Env, treasury: Address, game_engine: Address) {
         let ownable = Ownable::new(symbol_short!("prop_nft"));
-        if ownable.initialize(&env, &treasury).is_err() {
-            panic_with_error!(&env, NftError::AlreadyInitialized);
-        }
+        // safe: __constructor runs once on a fresh contract instance, so the owner key is never already set
+        ownable
+            .initialize(&env, &treasury)
+            .expect("fresh contract owner");
 
         env.storage()
             .instance()

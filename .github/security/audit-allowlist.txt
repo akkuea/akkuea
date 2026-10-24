@@ -4,6 +4,8 @@
 # Reviewed: 2026-10-20 against the bun.lock regenerated for this PR after upgrading
 # nanoid to ^5.1.16, postcss to ^8.5.18 and ws to ^8.21.0. Everything else that the
 # previous list carried is no longer reported by `bun audit --audit-level=low`.
+# Note: the contracts `security-audit` job (cargo-audit / cargo-deny) is a separate
+# ecosystem and does not read this file; its exceptions live in apps/contracts/deny.toml.
 # Follow-up: dependency upgrade track.
 
 GHSA-5p2g-fcmc-qvqq  # image-size (high) - JXL and HEIF parsers allow denial of service through infinite loops - no patched release for 1.x, transitive via @storybook/nextjs in webapp; track upgrade

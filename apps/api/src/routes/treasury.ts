@@ -104,7 +104,12 @@ const treasuryHistoryRoute = new Elysia().use(validateQuery(historyQuerySchema))
  * Admin guard for treasury movements, using the same internal API key as the
  * other privileged defi-rwa operations.
  */
+// `as: 'scoped'` is required: a default-scope (`'local'`) hook only applies
+// to routes defined directly on this instance, not to the routes of whoever
+// calls `.use(treasuryAdminAuth)`, so without it deposit/withdraw run with
+// no authentication at all.
 const treasuryAdminAuth = new Elysia({ name: 'treasury-admin-auth' }).onBeforeHandle(
+  { as: 'scoped' },
   ({ headers, set }) => {
     if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
       set.status = 403;

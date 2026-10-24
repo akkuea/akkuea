@@ -5,9 +5,9 @@ use super::oracle_types::{Asset, PriceData};
 use super::storage;
 use super::*;
 use soroban_sdk::{
-    testutils::{Address as _, Ledger as _},
+    testutils::{storage::Persistent as _, Address as _, Ledger as _},
     token::{StellarAssetClient, TokenClient},
-    Address, Env, String, Symbol,
+    Address, Env, Error, String, Symbol,
 };
 
 use crate::{
@@ -906,7 +906,7 @@ fn test_multiple_pools_isolation() {
 // ─── Paused pool rejection (AC-6 / TR-3) ──────
 
 #[test]
-#[should_panic(expected = "pool is paused")]
+#[should_panic(expected = "Error(Contract, #5)")]
 fn test_deposit_paused_pool() {
     let s = setup();
     let pool_id = create_default_pool(&s);
@@ -1370,7 +1370,7 @@ fn test_borrow_with_insufficient_collateral() {
 }
 
 #[test]
-#[should_panic(expected = "Pool is paused")]
+#[should_panic(expected = "ContractPaused")]
 fn test_borrow_from_paused_pool() {
     use soroban_sdk::token::StellarAssetClient;
 
@@ -1875,6 +1875,7 @@ fn setup_purchase_test() -> (Address, Env, Address, Address, Address, u64) {
         storage::property::set_price_per_share(&env, property_id, 1_000_000i128);
         // Set verified status
         storage::property::set_verified(&env, property_id, true);
+        storage::property::set_payment_token(&env, property_id, &payment_token);
     });
 
     (
@@ -2905,16 +2906,385 @@ fn test_borrow_with_zero_oracle_price() {
     });
 }
 
+// ─── Global pause blocks every value-moving entry point (issue #1273) ────────
+//
+// Each test below calls the real PropertyTokenContractClient entry point
+// while the contract is globally paused, and asserts it fails with the typed
+// ContractPaused error (#5), replacing the old hollow test that only ever
+// called PauseControl::require_not_paused directly and never exercised a
+// real entry point.
+
 #[test]
-#[should_panic(expected = "ContractPaused")]
-fn test_emergency_pause_blocks_operations() {
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_deposit() {
     let s = setup();
+    let pool_id = create_default_pool(&s);
+    let user = Address::generate(&s.env);
+    mint_tokens(&s, &user, 1_000_000_000);
+
+    s.contract_client.emergency_pause(&s.admin);
+    s.contract_client
+        .deposit(&user, &pool_id, &1_000_000_000_i128);
+}
+
+#[test]
+fn test_global_pause_leaves_deposit_state_unchanged() {
+    extern crate std;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    let user = Address::generate(&s.env);
+    mint_tokens(&s, &user, 1_000_000_000);
 
     s.contract_client.emergency_pause(&s.admin);
 
-    s.env.as_contract(&s.contract_address, || {
-        PauseControl::require_not_paused(&s.env).unwrap();
+    let attempt = catch_unwind(AssertUnwindSafe(|| {
+        s.contract_client
+            .deposit(&user, &pool_id, &1_000_000_000_i128);
+    }));
+    assert!(attempt.is_err(), "deposit must panic while globally paused");
+
+    // Soroban rolls back all storage writes from a panicking invocation, but
+    // this asserts it explicitly rather than relying on that alone: the
+    // position was never created and the pool total never moved.
+    assert_eq!(s.contract_client.get_total_deposits(&pool_id), 0);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_withdraw() {
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    let user = Address::generate(&s.env);
+    mint_tokens(&s, &user, 1_000_000_000);
+    s.contract_client
+        .deposit(&user, &pool_id, &1_000_000_000_i128);
+
+    s.contract_client.emergency_pause(&s.admin);
+    s.contract_client
+        .withdraw(&user, &pool_id, &1_000_000_000_i128);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_borrow() {
+    let t = setup_borrow_test();
+    let admin = Address::generate(&t.env);
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
     });
+
+    t.contract_client.emergency_pause(&admin);
+    t.contract_client.borrow(
+        &t.borrower,
+        &t.pool_id,
+        &100_000_000_i128,
+        &t.xlm_address,
+        &200_000_000_i128,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_create_pool() {
+    let s = setup();
+
+    s.contract_client.emergency_pause(&s.admin);
+    s.contract_client.create_pool(
+        &s.admin,
+        &String::from_str(&s.env, "NEW-POOL"),
+        &String::from_str(&s.env, "New Pool"),
+        &String::from_str(&s.env, "USDC"),
+        &s.token_address,
+        &750_000_000_000_000_000_i128,
+        &800_000_000_000_000_000_i128,
+        &50_000_000_000_000_000_i128,
+        &500_000_000_000_000_000_i128,
+        &1000_u32,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_mint_shares() {
+    let (env, client, admin) = setup_token_test();
+    let recipient = Address::generate(&env);
+
+    client.emergency_pause(&admin);
+    client.mint_shares(&admin, &1, &recipient, &1000);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_burn_shares() {
+    let (env, client, admin) = setup_token_test();
+    let owner = Address::generate(&env);
+    client.mint_shares(&admin, &1, &owner, &1000);
+
+    client.emergency_pause(&admin);
+    client.burn_shares(&owner, &1, &400);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_transfer_shares() {
+    let (env, client, admin) = setup_token_test();
+    let from = Address::generate(&env);
+    let to = Address::generate(&env);
+    client.mint_shares(&admin, &1, &from, &1000);
+
+    client.emergency_pause(&admin);
+    client.transfer_shares(&from, &to, &1, &300);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_transfer_from() {
+    let (env, client, admin) = setup_token_test();
+    let owner = Address::generate(&env);
+    let spender = Address::generate(&env);
+    let recipient = Address::generate(&env);
+    client.mint_shares(&admin, &1, &owner, &1000);
+    client.approve(&owner, &spender, &1, &500);
+
+    client.emergency_pause(&admin);
+    client.transfer_from(&spender, &owner, &recipient, &1, &200);
+}
+
+#[test]
+fn test_global_pause_allows_repay() {
+    let t = setup_borrow_test();
+    let admin = Address::generate(&t.env);
+
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
+    });
+
+    t.contract_client.emergency_pause(&admin);
+
+    // repay stays open under the global pause: borrowers can always reduce
+    // debt, and this must succeed instead of panicking.
+    let before = t
+        .contract_client
+        .get_borrow_position(&t.borrower, &t.pool_id);
+    t.contract_client
+        .repay(&t.borrower, &t.pool_id, &500_000_000_i128);
+    let after = t
+        .contract_client
+        .get_borrow_position(&t.borrower, &t.pool_id);
+    assert!(
+        after.principal < before.principal,
+        "repay should reduce debt"
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_global_pause_blocks_liquidate() {
+    use soroban_sdk::token::StellarAssetClient;
+
+    let t = setup_borrow_test();
+    let liquidator = Address::generate(&t.env);
+    StellarAssetClient::new(&t.env, &t.usdc_address).mint(&liquidator, &2_000_000_000);
+
+    // Drop the XLM price so the borrower's position becomes underwater.
+    let oracle_id = t.env.as_contract(&t.contract_id, || {
+        super::lending::PriceOracle::get_oracle_address(&t.env).unwrap()
+    });
+    let half_price = (3 * PRECISION) / 10;
+    t.env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(
+            t.env.clone(),
+            t.xlm_address.clone(),
+            half_price,
+            t.env.ledger().timestamp(),
+        );
+    });
+
+    let admin = Address::generate(&t.env);
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
+    });
+    t.contract_client.emergency_pause(&admin);
+
+    t.contract_client
+        .liquidate(&liquidator, &t.pool_id, &t.borrower, &100_000_000_i128);
+}
+
+// ─── Per-pool pause (issue #1273) ─────────────────────────────────────────
+
+#[test]
+#[should_panic(expected = "Error(Contract, #4)")]
+fn test_pause_pool_unauthorized_fails() {
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    let attacker = Address::generate(&s.env);
+
+    s.contract_client.pause_pool(&attacker, &pool_id);
+}
+
+#[test]
+fn test_pause_pool_blocks_that_pool_only_and_unpause_restores_it() {
+    let s = setup();
+    let pool_a = create_default_pool(&s);
+    let pool_b = String::from_str(&s.env, "XLM-POOL");
+    s.contract_client.create_pool(
+        &s.admin,
+        &pool_b,
+        &String::from_str(&s.env, "XLM Lending Pool"),
+        &String::from_str(&s.env, "XLM"),
+        &s.token_address,
+        &750_000_000_000_000_000_i128,
+        &800_000_000_000_000_000_i128,
+        &50_000_000_000_000_000_i128,
+        &500_000_000_000_000_000_i128,
+        &1000_u32,
+    );
+
+    let user = Address::generate(&s.env);
+    mint_tokens(&s, &user, 4_000_000_000);
+
+    s.contract_client.pause_pool(&s.admin, &pool_a);
+
+    // Pool B is untouched by pool A's pause.
+    s.contract_client
+        .deposit(&user, &pool_b, &1_000_000_000_i128);
+    assert_eq!(s.contract_client.get_total_deposits(&pool_b), 1_000_000_000);
+
+    // Pool A rejects deposit while paused.
+    extern crate std;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+    let blocked = catch_unwind(AssertUnwindSafe(|| {
+        s.contract_client
+            .deposit(&user, &pool_a, &1_000_000_000_i128);
+    }));
+    assert!(blocked.is_err(), "deposit on a paused pool must panic");
+    assert_eq!(s.contract_client.get_total_deposits(&pool_a), 0);
+
+    s.contract_client.unpause_pool(&s.admin, &pool_a);
+
+    // Pool A accepts deposits again after unpause.
+    s.contract_client
+        .deposit(&user, &pool_a, &1_000_000_000_i128);
+    assert_eq!(s.contract_client.get_total_deposits(&pool_a), 1_000_000_000);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_pause_pool_blocks_borrow() {
+    let t = setup_borrow_test();
+    let admin = Address::generate(&t.env);
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
+    });
+
+    t.contract_client.pause_pool(&admin, &t.pool_id);
+    t.contract_client.borrow(
+        &t.borrower,
+        &t.pool_id,
+        &100_000_000_i128,
+        &t.xlm_address,
+        &200_000_000_i128,
+    );
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_pause_pool_blocks_withdraw() {
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    let user = Address::generate(&s.env);
+    mint_tokens(&s, &user, 1_000_000_000);
+    s.contract_client
+        .deposit(&user, &pool_id, &1_000_000_000_i128);
+
+    s.contract_client.pause_pool(&s.admin, &pool_id);
+    s.contract_client
+        .withdraw(&user, &pool_id, &1_000_000_000_i128);
+}
+
+#[test]
+#[should_panic(expected = "Error(Contract, #5)")]
+fn test_pause_pool_blocks_liquidate() {
+    use soroban_sdk::token::StellarAssetClient;
+
+    let t = setup_borrow_test();
+    let liquidator = Address::generate(&t.env);
+    StellarAssetClient::new(&t.env, &t.usdc_address).mint(&liquidator, &2_000_000_000);
+
+    let oracle_id = t.env.as_contract(&t.contract_id, || {
+        super::lending::PriceOracle::get_oracle_address(&t.env).unwrap()
+    });
+    let half_price = (3 * PRECISION) / 10;
+    t.env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(
+            t.env.clone(),
+            t.xlm_address.clone(),
+            half_price,
+            t.env.ledger().timestamp(),
+        );
+    });
+
+    let admin = Address::generate(&t.env);
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
+    });
+    t.contract_client.pause_pool(&admin, &t.pool_id);
+
+    t.contract_client
+        .liquidate(&liquidator, &t.pool_id, &t.borrower, &100_000_000_i128);
+}
+
+#[test]
+fn test_pause_pool_keeps_repay_working() {
+    let t = setup_borrow_test();
+    let admin = Address::generate(&t.env);
+    t.env.as_contract(&t.contract_id, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        t.env.storage().instance().set(&RoleKey::Admin, &admin);
+        RoleStorage::grant_role(&t.env, &admin, &Role::Admin);
+    });
+
+    t.contract_client.pause_pool(&admin, &t.pool_id);
+
+    let before = t
+        .contract_client
+        .get_borrow_position(&t.borrower, &t.pool_id);
+    t.contract_client
+        .repay(&t.borrower, &t.pool_id, &500_000_000_i128);
+    let after = t
+        .contract_client
+        .get_borrow_position(&t.borrower, &t.pool_id);
+    assert!(
+        after.principal < before.principal,
+        "repay should reduce debt"
+    );
+}
+
+#[test]
+fn test_pause_pool_emits_event() {
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    s.contract_client.pause_pool(&s.admin, &pool_id);
+}
+
+#[test]
+fn test_unpause_pool_emits_event() {
+    let s = setup();
+    let pool_id = create_default_pool(&s);
+    s.contract_client.pause_pool(&s.admin, &pool_id);
+    s.contract_client.unpause_pool(&s.admin, &pool_id);
 }
 
 #[test]
@@ -3083,6 +3453,20 @@ fn test_full_emergency_and_recovery_flow() {
         .deposit(&user, &pool_id, &1_000_000_000_i128);
 
     s.contract_client.emergency_pause(&guard);
+
+    // Blocked while paused: deposit must not go through before recovery.
+    extern crate std;
+    use std::panic::{catch_unwind, AssertUnwindSafe};
+    let blocked = catch_unwind(AssertUnwindSafe(|| {
+        s.contract_client
+            .deposit(&user, &pool_id, &1_000_000_000_i128);
+    }));
+    assert!(blocked.is_err(), "deposit must panic while paused");
+    assert_eq!(
+        s.contract_client.get_total_deposits(&pool_id),
+        1_000_000_000,
+        "the blocked deposit attempt must not have moved any funds"
+    );
 
     s.contract_client.schedule_recovery(&s.admin);
 
@@ -4042,7 +4426,7 @@ fn test_liquidate_inactive_pool() {
 
 /// Liquidate from a paused pool is rejected.
 #[test]
-#[should_panic(expected = "Pool is paused")]
+#[should_panic(expected = "ContractPaused")]
 fn test_liquidate_paused_pool() {
     let (env, contract_id, _oracle_id, borrower, liquidator, pool_id, _usdc_addr, _xlm_addr) =
         setup_liquidation_env();
@@ -4575,4 +4959,464 @@ fn test_normal_price_is_still_accepted() {
         PropertyTokenContract::accrue_interest(env.clone(), pool_id.clone())
     });
     assert!(result.is_ok());
+}
+
+// ───────────────────────────────────────────────
+
+#[test]
+fn test_property_listing_metadata_uses_persistent_storage_and_refreshes_ttl() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let property_id = 5252_u64;
+    let key = storage::keys::StorageKey::Property(property_id);
+
+    s.env.as_contract(&s.contract_address, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        s.env.storage().instance().set(&RoleKey::Admin, &s.admin);
+        RoleStorage::grant_role(&s.env, &s.admin, &Role::Admin);
+    });
+
+    s.contract_client.list_property(
+        &s.admin,
+        &property_id,
+        &owner,
+        &2_500_000_i128,
+        &250_u64,
+        &s.token_address,
+    );
+
+    let (is_persistent, is_instance) = s.env.as_contract(&s.contract_address, || {
+        (
+            s.env.storage().persistent().has(&key),
+            s.env.storage().instance().has(&key),
+        )
+    });
+    assert!(
+        is_persistent,
+        "listing metadata must use persistent storage"
+    );
+    assert!(
+        !is_instance,
+        "listing metadata must not use instance storage"
+    );
+
+    // Move close to the original expiry while the entry is still alive. Loading
+    // the listing must extend its TTL instead of leaving it near expiration.
+    s.env.ledger().set_sequence_number(518_300);
+    let ttl_before = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(ttl_before > 0, "listing metadata should still be live");
+
+    let loaded = s.env.as_contract(&s.contract_address, || {
+        storage::property::PropertyMetadata::load(&s.env, property_id)
+    });
+    assert!(loaded.is_some(), "listing metadata should remain readable");
+
+    let ttl_after = s.env.as_contract(&s.contract_address, || {
+        s.env.storage().persistent().get_ttl(&key)
+    });
+    assert!(
+        ttl_after > ttl_before,
+        "reading listing metadata should refresh its persistent TTL"
+    );
+}
+
+// Buyer-signed share-purchase acceptance tests
+// ───────────────────────────────────────────────
+
+#[test]
+fn test_admin_listing_persists_sale_parameters() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let property_id = 4242_u64;
+    let price_per_share = 2_500_000_i128;
+    let shares_for_sale = 250_u64;
+
+    // The constructor's legacy admin key overlaps the role key in this
+    // contract, so explicitly initialise the role used by AdminControl.
+    s.env.as_contract(&s.contract_address, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        s.env.storage().instance().set(&RoleKey::Admin, &s.admin);
+        RoleStorage::grant_role(&s.env, &s.admin, &Role::Admin);
+    });
+
+    s.contract_client.list_property(
+        &s.admin,
+        &property_id,
+        &owner,
+        &price_per_share,
+        &shares_for_sale,
+        &s.token_address,
+    );
+
+    let (metadata, available, price, verified, payment_token, total_shares) =
+        s.env.as_contract(&s.contract_address, || {
+            (
+                storage::property::PropertyMetadata::load(&s.env, property_id).unwrap(),
+                storage::property::get_available_shares(&s.env, property_id),
+                storage::property::get_price_per_share(&s.env, property_id),
+                storage::property::is_verified(&s.env, property_id),
+                storage::property::get_payment_token(&s.env, property_id).unwrap(),
+                storage::shares::get_total_shares(&s.env, property_id),
+            )
+        });
+
+    assert_eq!(metadata.owner, owner);
+    assert!(metadata.is_active);
+    assert_eq!(available, shares_for_sale);
+    assert_eq!(price, price_per_share);
+    assert!(verified);
+    assert_eq!(payment_token, s.token_address);
+    assert_eq!(total_shares, 0);
+}
+
+#[test]
+fn test_non_admin_cannot_list_property() {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+    let non_admin = Address::generate(&s.env);
+    let property_id = 4243_u64;
+
+    s.env.as_contract(&s.contract_address, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        s.env.storage().instance().set(&RoleKey::Admin, &s.admin);
+        RoleStorage::grant_role(&s.env, &s.admin, &Role::Admin);
+    });
+
+    let result = s.contract_client.try_list_property(
+        &non_admin,
+        &property_id,
+        &owner,
+        &1_000_000_i128,
+        &10_u64,
+        &s.token_address,
+    );
+    assert!(result.is_err(), "non-admin listing must be rejected");
+    assert!(
+        s.env.as_contract(&s.contract_address, || {
+            !storage::property::PropertyMetadata::exists(&s.env, property_id)
+        }),
+        "rejected listing must not persist property metadata"
+    );
+}
+
+#[test]
+fn test_purchase_rejects_unlisted_payment_token() {
+    let (contract_id, env, _owner, buyer, _payment_token, property_id) = setup_purchase_test();
+    let wrong_token = Address::generate(&env);
+    let client = PropertyTokenContractClient::new(&env, &contract_id);
+
+    let result = client.try_purchase_shares(&buyer, &property_id, &1_u64, &wrong_token);
+    assert_eq!(
+        result,
+        Err(Ok(Error::from_contract_error(
+            ContractError::PaymentTokenMismatch as u32
+        ))),
+        "purchase must reject a token other than the listing token"
+    );
+}
+
+#[test]
+fn test_delisting_blocks_new_purchases_without_changing_inventory() {
+    let (contract_id, env, _owner, buyer, payment_token, property_id) = setup_purchase_test();
+    let client = PropertyTokenContractClient::new(&env, &contract_id);
+
+    // The helper grants admin role to the address stored as the instance admin.
+    let admin = env.as_contract(&contract_id, || {
+        use super::access::roles::RoleKey;
+        env.storage()
+            .instance()
+            .get::<RoleKey, Address>(&RoleKey::Admin)
+            .unwrap()
+    });
+    client.set_property_active(&admin, &property_id, &false);
+
+    let available_before = env.as_contract(&contract_id, || {
+        storage::property::get_available_shares(&env, property_id)
+    });
+    let result = client.try_purchase_shares(&buyer, &property_id, &1_u64, &payment_token);
+    assert!(result.is_err(), "delisted property must reject purchases");
+
+    let available_after = env.as_contract(&contract_id, || {
+        storage::property::get_available_shares(&env, property_id)
+    });
+    assert_eq!(available_after, available_before);
+}
+
+#[test]
+fn test_purchase_increases_total_share_supply_exactly_once() {
+    let (contract_id, env, _owner, buyer, payment_token, property_id) = setup_purchase_test();
+    let client = PropertyTokenContractClient::new(&env, &contract_id);
+
+    let (supply_before, buyer_balance_before, inventory_before) =
+        env.as_contract(&contract_id, || {
+            (
+                storage::shares::get_total_shares(&env, property_id),
+                storage::shares::get_balance(&env, property_id, &buyer),
+                storage::property::get_available_shares(&env, property_id),
+            )
+        });
+    let quantity = 37_u64;
+
+    client.purchase_shares(&buyer, &property_id, &quantity, &payment_token);
+
+    let (supply_after, buyer_balance_after, inventory_after) =
+        env.as_contract(&contract_id, || {
+            (
+                storage::shares::get_total_shares(&env, property_id),
+                storage::shares::get_balance(&env, property_id, &buyer),
+                storage::property::get_available_shares(&env, property_id),
+            )
+        });
+
+    assert_eq!(supply_after, supply_before + quantity);
+    assert_eq!(buyer_balance_after, buyer_balance_before + quantity);
+    assert_eq!(inventory_after, inventory_before - quantity);
+}
+
+// ───────────────────────────────────────────────
+// Listing storage TTL tests
+// ───────────────────────────────────────────────
+
+/// Every storage key `list_property` writes for a listing.
+fn listing_storage_keys(property_id: u64) -> [storage::keys::StorageKey; 5] {
+    [
+        storage::keys::StorageKey::Property(property_id),
+        storage::keys::StorageKey::AvailableShares(property_id),
+        storage::keys::StorageKey::PricePerShare(property_id),
+        storage::keys::StorageKey::PropertyVerified(property_id),
+        storage::keys::StorageKey::PaymentToken(property_id),
+    ]
+}
+
+fn persistent_ttl(env: &Env, contract: &Address, key: &storage::keys::StorageKey) -> u32 {
+    env.as_contract(contract, || env.storage().persistent().get_ttl(key))
+}
+
+/// A ledger sequence where a listing written at sequence 0 is inside the
+/// extension threshold (so any touch must re-arm it) but still well alive.
+fn listing_near_expiry_sequence() -> u32 {
+    use super::storage::property::property_bump::{PERSISTENT_BUMP, PERSISTENT_THRESHOLD};
+    PERSISTENT_BUMP - PERSISTENT_THRESHOLD + 10
+}
+
+/// Registers a property through the admin-only `list_property` entry point.
+fn setup_listed_property(property_id: u64) -> TestSetup<'static> {
+    let s = setup();
+    let owner = Address::generate(&s.env);
+
+    s.env.as_contract(&s.contract_address, || {
+        use super::access::roles::{Role, RoleKey, RoleStorage};
+        s.env.storage().instance().set(&RoleKey::Admin, &s.admin);
+        RoleStorage::grant_role(&s.env, &s.admin, &Role::Admin);
+    });
+
+    s.contract_client.list_property(
+        &s.admin,
+        &property_id,
+        &owner,
+        &2_500_000_i128,
+        &250_u64,
+        &s.token_address,
+    );
+    s
+}
+
+#[test]
+fn test_every_listing_key_is_persistent_and_absent_from_instance_storage() {
+    let property_id = 6101_u64;
+    let s = setup_listed_property(property_id);
+
+    for key in listing_storage_keys(property_id).iter() {
+        let (in_persistent, in_instance) = s.env.as_contract(&s.contract_address, || {
+            (
+                s.env.storage().persistent().has(key),
+                s.env.storage().instance().has(key),
+            )
+        });
+        assert!(in_persistent, "listing key {:?} must be persistent", key);
+        assert!(
+            !in_instance,
+            "listing key {:?} must not be in instance storage",
+            key
+        );
+    }
+}
+
+#[test]
+fn test_list_property_arms_full_ttl_window_on_every_listing_key() {
+    use super::storage::property::property_bump::PERSISTENT_BUMP;
+
+    let property_id = 6102_u64;
+    let s = setup_listed_property(property_id);
+
+    for key in listing_storage_keys(property_id).iter() {
+        let ttl = persistent_ttl(&s.env, &s.contract_address, key);
+        assert!(
+            ttl >= PERSISTENT_BUMP,
+            "listing key {:?} should get the full TTL window on write, got {}",
+            key,
+            ttl
+        );
+    }
+}
+
+#[test]
+fn test_each_listing_read_refreshes_only_its_own_key_near_expiry() {
+    use super::storage::property::property_bump::{PERSISTENT_BUMP, PERSISTENT_THRESHOLD};
+
+    let property_id = 6103_u64;
+    let s = setup_listed_property(property_id);
+    let keys = listing_storage_keys(property_id);
+
+    s.env
+        .ledger()
+        .set_sequence_number(listing_near_expiry_sequence());
+
+    // Everything is inside the threshold but still alive.
+    for key in keys.iter() {
+        let ttl = persistent_ttl(&s.env, &s.contract_address, key);
+        assert!(ttl > 0, "listing key {:?} should still be live", key);
+        assert!(
+            ttl < PERSISTENT_THRESHOLD,
+            "listing key {:?} should be due a bump",
+            key
+        );
+    }
+
+    // After step N, keys 0..=N were re-armed and the rest are untouched.
+    let check = |step: usize| {
+        for (index, key) in keys.iter().enumerate() {
+            let ttl = persistent_ttl(&s.env, &s.contract_address, key);
+            if index <= step {
+                assert!(
+                    ttl >= PERSISTENT_BUMP,
+                    "key {:?} should have been refreshed by read step {}",
+                    key,
+                    step
+                );
+            } else {
+                assert!(
+                    ttl < PERSISTENT_THRESHOLD,
+                    "key {:?} must not be refreshed by read step {}",
+                    key,
+                    step
+                );
+            }
+        }
+    };
+
+    s.env.as_contract(&s.contract_address, || {
+        storage::property::PropertyMetadata::load(&s.env, property_id)
+    });
+    check(0);
+
+    s.env.as_contract(&s.contract_address, || {
+        storage::property::get_available_shares(&s.env, property_id)
+    });
+    check(1);
+
+    s.env.as_contract(&s.contract_address, || {
+        storage::property::get_price_per_share(&s.env, property_id)
+    });
+    check(2);
+
+    s.env.as_contract(&s.contract_address, || {
+        storage::property::is_verified(&s.env, property_id)
+    });
+    check(3);
+
+    s.env.as_contract(&s.contract_address, || {
+        storage::property::get_payment_token(&s.env, property_id)
+    });
+    check(4);
+}
+
+#[test]
+fn test_delisting_refreshes_property_metadata_ttl_near_expiry() {
+    use super::storage::property::property_bump::PERSISTENT_BUMP;
+
+    let property_id = 6104_u64;
+    let s = setup_listed_property(property_id);
+    let key = storage::keys::StorageKey::Property(property_id);
+
+    s.env
+        .ledger()
+        .set_sequence_number(listing_near_expiry_sequence());
+    let ttl_before = persistent_ttl(&s.env, &s.contract_address, &key);
+
+    s.contract_client
+        .set_property_active(&s.admin, &property_id, &false);
+
+    let ttl_after = persistent_ttl(&s.env, &s.contract_address, &key);
+    assert!(
+        ttl_after > ttl_before,
+        "delisting should re-arm the metadata TTL"
+    );
+    assert!(ttl_after >= PERSISTENT_BUMP);
+
+    let metadata = s.env.as_contract(&s.contract_address, || {
+        storage::property::PropertyMetadata::load(&s.env, property_id).unwrap()
+    });
+    assert!(
+        !metadata.is_active,
+        "delisting must persist the inactive flag"
+    );
+}
+
+#[test]
+fn test_purchase_extends_every_listing_key_ttl_near_expiry() {
+    use super::storage::property::property_bump::PERSISTENT_BUMP;
+
+    let (contract_id, env, _owner, buyer, payment_token, property_id) = setup_purchase_test();
+    let client = PropertyTokenContractClient::new(&env, &contract_id);
+    let keys = listing_storage_keys(property_id);
+
+    env.ledger()
+        .set_sequence_number(listing_near_expiry_sequence());
+    let mut ttls_before = [0_u32; 5];
+    for (index, key) in keys.iter().enumerate() {
+        ttls_before[index] = persistent_ttl(&env, &contract_id, key);
+    }
+
+    client.purchase_shares(&buyer, &property_id, &5_u64, &payment_token);
+
+    for (key, ttl_before) in keys.iter().zip(ttls_before.iter()) {
+        let ttl_after = persistent_ttl(&env, &contract_id, key);
+        assert!(
+            ttl_after > *ttl_before,
+            "purchase should re-arm the TTL of listing key {:?}",
+            key
+        );
+        assert!(ttl_after >= PERSISTENT_BUMP);
+    }
+}
+
+#[test]
+fn test_reading_unlisted_property_does_not_create_listing_entries() {
+    let s = setup();
+    let property_id = 6105_u64;
+
+    let (available, price, verified, payment_token) =
+        s.env.as_contract(&s.contract_address, || {
+            (
+                storage::property::get_available_shares(&s.env, property_id),
+                storage::property::get_price_per_share(&s.env, property_id),
+                storage::property::is_verified(&s.env, property_id),
+                storage::property::get_payment_token(&s.env, property_id),
+            )
+        });
+
+    assert_eq!(available, 0);
+    assert_eq!(price, 0);
+    assert!(!verified);
+    assert!(payment_token.is_none());
+
+    for key in listing_storage_keys(property_id).iter() {
+        let exists = s.env.as_contract(&s.contract_address, || {
+            s.env.storage().persistent().has(key)
+        });
+        assert!(!exists, "reading must not create listing key {:?}", key);
+    }
 }

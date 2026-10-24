@@ -785,9 +785,7 @@ export default function LendingPage() {
                                   onClick={() => openPoolAction(pool, "supply")}
                                   aria-label={`Supply to ${pool.name}`}
                                   disabled={
-                                    pool.isPaused ||
-                                    available <= 0 ||
-                                    pendingPoolIds.has(pool.id)
+                                    pool.isPaused || pendingPoolIds.has(pool.id)
                                   }
                                 >
                                   Supply
@@ -900,6 +898,8 @@ export default function LendingPage() {
         isOpen={!!selectedPool}
         onClose={() => setSelectedPool(null)}
         userAddress={address}
+        userDeposit={selectedPool ? poolUserDeposit(selectedPool.id) : 0}
+        userDebt={selectedPool ? poolUserBorrow(selectedPool.id) : 0}
         onSuccess={() => {
           refetch();
           void refreshBalance();

@@ -45,6 +45,8 @@ pub enum ContractError {
     CollateralAssetMismatch = 29,
     /// The requested reserve withdrawal exceeds withdrawable reserves
     InsufficientReserves = 30,
+    /// Buyer offered a payment token the listing does not accept
+    PaymentTokenMismatch = 29,
 }
 
 pub struct AdminControl;

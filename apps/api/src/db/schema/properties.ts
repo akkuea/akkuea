@@ -10,6 +10,8 @@ import {
   boolean,
   jsonb,
   bigint,
+  index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from './users';
@@ -30,35 +32,39 @@ export const propertyReviewStatusEnum = pgEnum('property_review_status', [
   'on_hold',
 ]);
 
-export const properties = pgTable('properties', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 255 }).notNull(),
-  description: text('description').notNull(),
-  propertyType: propertyTypeEnum('property_type').notNull(),
-  location: jsonb('location').notNull().$type<{
-    address: string;
-    city: string;
-    country: string;
-    postalCode?: string;
-    coordinates?: { latitude: number; longitude: number };
-  }>(),
-  totalValue: decimal('total_value', { precision: 20, scale: 2 }).notNull(),
-  tokenAddress: varchar('token_address', { length: 56 }),
-  sorobanPropertyId: bigint('soroban_property_id', { mode: 'number' }).unique(),
-  totalShares: integer('total_shares').notNull(),
-  availableShares: integer('available_shares').notNull(),
-  pricePerShare: decimal('price_per_share', { precision: 20, scale: 2 }).notNull(),
-  images: jsonb('images').notNull().$type<string[]>(),
-  verified: boolean('verified').notNull().default(false),
-  reviewStatus: propertyReviewStatusEnum('review_status').notNull().default('pending_review'),
-  lastReviewNote: text('last_review_note'),
-  lastReviewedAt: timestamp('last_reviewed_at', { withTimezone: true }),
-  lastReviewerWallet: varchar('last_reviewer_wallet', { length: 56 }),
-  listedAt: timestamp('listed_at', { withTimezone: true }).notNull().defaultNow(),
-  ownerId: uuid('owner_id')
-    .notNull()
-    .references(() => users.id),
-});
+export const properties = pgTable(
+  'properties',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: varchar('name', { length: 255 }).notNull(),
+    description: text('description').notNull(),
+    propertyType: propertyTypeEnum('property_type').notNull(),
+    location: jsonb('location').notNull().$type<{
+      address: string;
+      city: string;
+      country: string;
+      postalCode?: string;
+      coordinates?: { latitude: number; longitude: number };
+    }>(),
+    totalValue: decimal('total_value', { precision: 20, scale: 2 }).notNull(),
+    tokenAddress: varchar('token_address', { length: 56 }),
+    sorobanPropertyId: bigint('soroban_property_id', { mode: 'number' }).unique(),
+    totalShares: integer('total_shares').notNull(),
+    availableShares: integer('available_shares').notNull(),
+    pricePerShare: decimal('price_per_share', { precision: 20, scale: 2 }).notNull(),
+    images: jsonb('images').notNull().$type<string[]>(),
+    verified: boolean('verified').notNull().default(false),
+    reviewStatus: propertyReviewStatusEnum('review_status').notNull().default('pending_review'),
+    lastReviewNote: text('last_review_note'),
+    lastReviewedAt: timestamp('last_reviewed_at', { withTimezone: true }),
+    lastReviewerWallet: varchar('last_reviewer_wallet', { length: 56 }),
+    listedAt: timestamp('listed_at', { withTimezone: true }).notNull().defaultNow(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id),
+  },
+  (t) => [index('properties_owner_id_idx').on(t.ownerId)],
+);
 
 export const propertyDocumentTypeEnum = pgEnum('property_document_type', [
   'deed',
@@ -80,19 +86,23 @@ export const propertyDocuments = pgTable('property_documents', {
   verified: boolean('verified').notNull().default(false),
 });
 
-export const shareOwnerships = pgTable('share_ownerships', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  propertyId: uuid('property_id')
-    .notNull()
-    .references(() => properties.id),
-  ownerId: uuid('owner_id')
-    .notNull()
-    .references(() => users.id),
-  shares: integer('shares').notNull(),
-  purchasePrice: decimal('purchase_price', { precision: 20, scale: 2 }).notNull(),
-  purchasedAt: timestamp('purchased_at', { withTimezone: true }).notNull().defaultNow(),
-  lastDividendClaimed: timestamp('last_dividend_claimed', { withTimezone: true }),
-});
+export const shareOwnerships = pgTable(
+  'share_ownerships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    propertyId: uuid('property_id')
+      .notNull()
+      .references(() => properties.id),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id),
+    shares: integer('shares').notNull(),
+    purchasePrice: decimal('purchase_price', { precision: 20, scale: 2 }).notNull(),
+    purchasedAt: timestamp('purchased_at', { withTimezone: true }).notNull().defaultNow(),
+    lastDividendClaimed: timestamp('last_dividend_claimed', { withTimezone: true }),
+  },
+  (t) => [uniqueIndex('share_ownerships_property_owner_unique').on(t.propertyId, t.ownerId)],
+);
 
 export const propertiesRelations = relations(properties, ({ one, many }) => ({
   owner: one(users, {

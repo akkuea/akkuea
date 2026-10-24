@@ -197,6 +197,7 @@ impl PropertyTokenContract {
     ) {
         admin.require_auth();
         AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
+        PauseControl::require_not_paused(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
 
         if amount == 0 {
             panic!("Amount must be greater than zero");
@@ -214,6 +215,7 @@ impl PropertyTokenContract {
 
     pub fn burn_shares(env: Env, owner: Address, property_id: u64, amount: u64) {
         owner.require_auth();
+        PauseControl::require_not_paused(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
         if amount == 0 {
             panic!("Amount must be greater than zero");
         }
@@ -231,6 +233,7 @@ impl PropertyTokenContract {
 
     pub fn transfer_shares(env: Env, from: Address, to: Address, property_id: u64, amount: u64) {
         from.require_auth();
+        PauseControl::require_not_paused(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
         if amount == 0 {
             panic!("Amount must be greater than zero");
         }
@@ -255,6 +258,7 @@ impl PropertyTokenContract {
         amount: u64,
     ) {
         spender.require_auth();
+        PauseControl::require_not_paused(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
         if amount == 0 {
             panic!("Amount must be greater than zero");
         }
@@ -267,7 +271,79 @@ impl PropertyTokenContract {
         PropertyEvents::share_transfer(&env, prop_str, from, to, amount as i128);
     }
 
-    // ─── Property Purchases ─────────────────────
+    // ─── Property Listing & Purchases ──────────
+
+    /// List a property for sale and open it for `purchase_shares`.
+    ///
+    /// Stores the property metadata, marks it verified, and records the sale
+    /// parameters (price per share, shares for sale and the accepted payment
+    /// token) in persistent storage. Display metadata such as the name lives in
+    /// the API database; the chain keeps only the minimal fields this contract
+    /// needs, keyed by `property_id`.
+    pub fn list_property(
+        env: Env,
+        admin: Address,
+        property_id: u64,
+        owner: Address,
+        price_per_share: i128,
+        shares_for_sale: u64,
+        payment_token: Address,
+    ) {
+        admin.require_auth();
+        AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
+
+        if price_per_share <= 0 {
+            panic!("Price per share must be positive");
+        }
+        if shares_for_sale == 0 {
+            panic!("Shares for sale must be greater than zero");
+        }
+        if storage::property::PropertyMetadata::exists(&env, property_id) {
+            panic!("Property already listed");
+        }
+
+        let valuation = price_per_share
+            .checked_mul(shares_for_sale as i128)
+            .expect("Property valuation overflow");
+        let property_id_str = u64_to_string(&env, property_id);
+        let metadata = storage::property::PropertyMetadata::new(
+            property_id,
+            owner.clone(),
+            u64_to_string(&env, property_id),
+            String::from_str(&env, ""),
+            String::from_str(&env, ""),
+            valuation,
+            shares_for_sale,
+            env.ledger().timestamp(),
+        );
+        metadata.save(&env);
+
+        storage::property::set_verified(&env, property_id, true);
+        storage::property::set_price_per_share(&env, property_id, price_per_share);
+        storage::property::set_available_shares(&env, property_id, shares_for_sale);
+        storage::property::set_payment_token(&env, property_id, &payment_token);
+
+        PropertyEvents::property_registered(
+            &env,
+            property_id_str,
+            owner,
+            metadata.name,
+            shares_for_sale as i128,
+            price_per_share,
+        );
+    }
+
+    /// Pause or delist a property (active = false), or put it back on sale
+    /// (active = true). Admin-only. Delisting stops `purchase_shares` without
+    /// touching shares already sold.
+    pub fn set_property_active(env: Env, admin: Address, property_id: u64, active: bool) {
+        admin.require_auth();
+        AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
+
+        let mut metadata = storage::property::PropertyMetadata::load(&env, property_id)
+            .unwrap_or_else(|| panic!("Property not found"));
+        metadata.set_active(&env, active);
+    }
 
     pub fn purchase_shares(
         env: Env,
@@ -287,9 +363,17 @@ impl PropertyTokenContract {
         if !storage::property::is_verified(&env, property_id) {
             panic!("Property is not verified");
         }
+        if !property.is_active {
+            panic!("Property is not active");
+        }
         let available_shares = storage::property::get_available_shares(&env, property_id);
         if amount > available_shares {
             panic!("Insufficient shares available");
+        }
+        let stored_payment_token = storage::property::get_payment_token(&env, property_id)
+            .unwrap_or_else(|| panic!("Property payment token not set"));
+        if payment_token != stored_payment_token {
+            panic_with_error!(&env, ContractError::PaymentTokenMismatch);
         }
 
         let price_per_share = storage::property::get_price_per_share(&env, property_id);
@@ -297,11 +381,15 @@ impl PropertyTokenContract {
             .checked_mul(price_per_share)
             .expect("Cost calculation overflow");
 
-        let token_client = token::Client::new(&env, &payment_token);
+        let token_client = token::Client::new(&env, &stored_payment_token);
         token_client.transfer(&buyer, &property.owner, &total_cost);
 
         storage::shares::increase_balance(&env, property_id, &buyer, amount)
             .unwrap_or_else(|e| panic_with_error!(&env, e));
+        // Purchases mint, so total_shares always equals the sum of balances.
+        let total = storage::shares::get_total_shares(&env, property_id);
+        let new_total = total.checked_add(amount).expect("Total shares overflow");
+        storage::shares::set_total_shares(&env, property_id, new_total);
         storage::property::decrease_available_shares(&env, property_id, amount);
 
         let mut buffer = itoa::Buffer::new();
@@ -325,6 +413,7 @@ impl PropertyTokenContract {
         reserve_factor: u32,
     ) {
         require_admin(&env, &admin);
+        PauseControl::require_not_paused(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
         if PoolStorage::exists(&env, &pool_id) {
             panic!("pool already exists");
         }
@@ -371,6 +460,7 @@ impl PropertyTokenContract {
         amount: i128,
     ) -> Result<(), ContractError> {
         depositor.require_auth();
+        PauseControl::require_not_paused(&env)?;
         if amount <= 0 {
             panic!("amount must be positive");
         }
@@ -378,9 +468,7 @@ impl PropertyTokenContract {
         if !pool.is_active {
             panic!("pool is not active");
         }
-        if PoolStorage::is_paused(&env, &pool_id) {
-            panic!("pool is paused");
-        }
+        PoolStorage::require_not_paused(&env, &pool_id)?;
 
         accrue_interest_internal(&env, &pool_id)?;
         let token_client = token::Client::new(&env, &pool.asset_address);
@@ -431,10 +519,18 @@ impl PropertyTokenContract {
         amount: i128,
     ) -> Result<(), ContractError> {
         depositor.require_auth();
+        PauseControl::require_not_paused(&env)?;
         if amount <= 0 {
             panic!("amount must be positive");
         }
         let pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
+        // Policy: a pool pause halts that pool's activity the same way the global
+        // pause halts the protocol, with the single carve-out being repay (see
+        // repay() below). Withdraw is not special-cased open under a pool pause:
+        // if the pool was paused because its own accounting or price feed is
+        // suspect, letting depositors withdraw against that same bad state is
+        // exactly the kind of risk-increasing action a pause is meant to stop.
+        PoolStorage::require_not_paused(&env, &pool_id)?;
 
         accrue_interest_internal(&env, &pool_id)?;
         let position =
@@ -488,13 +584,12 @@ impl PropertyTokenContract {
         collateral_amount: i128,
     ) -> Result<BorrowPosition, ContractError> {
         borrower.require_auth();
+        PauseControl::require_not_paused(&env)?;
         let pool = PoolStorage::get(&env, &pool_id).expect("Pool not found");
         if !pool.is_active {
             panic!("Pool is not active");
         }
-        if PoolStorage::is_paused(&env, &pool_id) {
-            panic!("Pool is paused");
-        }
+        PoolStorage::require_not_paused(&env, &pool_id)?;
 
         accrue_interest_internal(&env, &pool_id)?;
 
@@ -626,6 +721,7 @@ impl PropertyTokenContract {
         debt_to_cover: i128,
     ) -> Result<BorrowPosition, ContractError> {
         liquidator.require_auth();
+        PauseControl::require_not_paused(&env)?;
         if debt_to_cover <= 0 {
             panic!("debt to cover must be positive");
         }
@@ -634,9 +730,7 @@ impl PropertyTokenContract {
         if !pool.is_active {
             panic!("Pool is not active");
         }
-        if PoolStorage::is_paused(&env, &pool_id) {
-            panic!("Pool is paused");
-        }
+        PoolStorage::require_not_paused(&env, &pool_id)?;
 
         accrue_interest_internal(&env, &pool_id)?;
 
@@ -800,9 +894,12 @@ impl PropertyTokenContract {
         if !pool.is_active {
             panic!("Pool is not active");
         }
-        if PoolStorage::is_paused(&env, &pool_id) {
-            panic!("Pool is paused");
-        }
+        // Deliberately not gated by either the global or the per-pool pause:
+        // repay only reduces the caller's own debt, so blocking it would trap
+        // borrowers under an accruing balance, and could force a liquidation
+        // the moment the pause lifts. See PauseControl/PoolStorage pause checks
+        // on deposit/withdraw/borrow/liquidate for the operations a pause does
+        // block.
 
         accrue_interest_internal(&env, &pool_id)?;
 
@@ -1043,6 +1140,27 @@ impl PropertyTokenContract {
             .unwrap_or_else(|e| panic_with_error!(&env, e));
         PauseControl::pause(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
         EmergencyEvents::emergency_paused(&env, caller);
+    }
+
+    /// Pause a single lending pool, independent of the global emergency pause.
+    /// Gated the same way as `emergency_pause`: admin, `Pauser`, or `EmergencyGuard`.
+    pub fn pause_pool(env: Env, caller: Address, pool_id: String) {
+        caller.require_auth();
+        PauseControl::require_can_pause(&env, &caller)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+        PoolStorage::get(&env, &pool_id).expect("pool not found");
+        PoolStorage::set_paused(&env, &pool_id, true);
+        LendingEvents::pool_pause_toggled(&env, pool_id, true, caller);
+    }
+
+    /// Unpause a single lending pool previously paused with `pause_pool`.
+    pub fn unpause_pool(env: Env, caller: Address, pool_id: String) {
+        caller.require_auth();
+        PauseControl::require_can_pause(&env, &caller)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+        PoolStorage::get(&env, &pool_id).expect("pool not found");
+        PoolStorage::set_paused(&env, &pool_id, false);
+        LendingEvents::pool_pause_toggled(&env, pool_id, false, caller);
     }
 
     pub fn schedule_recovery(env: Env, caller: Address) {

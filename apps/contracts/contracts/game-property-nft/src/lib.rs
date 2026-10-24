@@ -66,7 +66,12 @@ impl GamePropertyNft {
         bump_owner_index(&env, &treasury);
     }
 
-    /// Transfer property
+    /// Transfer property.
+    ///
+    /// Design: reset on transfer. Rent accrued by the previous owner that has
+    /// not been claimed is forfeited; the tile's `last_claimed_ledger` is
+    /// checkpointed to the current ledger so the new owner only earns rent from
+    /// the moment they receive it. `level` is preserved.
     pub fn transfer(env: Env, from: Address, to: Address, property_id: u32) {
         from.require_auth();
 
@@ -88,7 +93,7 @@ impl GamePropertyNft {
 
         let owner_comp: PropertyOwner = world
             .get_typed(&env, property_id)
-            .unwrap_or(PropertyOwner { address: treasury });
+            .unwrap_or(PropertyOwner { address: treasury.clone() });
 
         if owner_comp.address != from {
             panic_with_error!(&env, NftError::NotOwner);
@@ -101,6 +106,8 @@ impl GamePropertyNft {
                 address: to.clone(),
             },
         );
+
+        checkpoint_meta(&env, &mut world, &treasury, property_id);
 
         let mut approves = get_approvals(&env);
         approves.remove(property_id);
@@ -148,7 +155,9 @@ impl GamePropertyNft {
         events::emit_approve(&env, owner, spender, property_id);
     }
 
-    /// Transfer from approved spender
+    /// Transfer from approved spender.
+    ///
+    /// Same reset-on-transfer semantics as `transfer`.
     pub fn transfer_from(env: Env, spender: Address, from: Address, to: Address, property_id: u32) {
         spender.require_auth();
 
@@ -170,7 +179,7 @@ impl GamePropertyNft {
 
         let owner_comp: PropertyOwner = world
             .get_typed(&env, property_id)
-            .unwrap_or(PropertyOwner { address: treasury });
+            .unwrap_or(PropertyOwner { address: treasury.clone() });
 
         if owner_comp.address != from {
             panic_with_error!(&env, NftError::NotOwner);
@@ -189,6 +198,8 @@ impl GamePropertyNft {
                 address: to.clone(),
             },
         );
+
+        checkpoint_meta(&env, &mut world, &treasury, property_id);
 
         let mut approves = approves;
         approves.remove(property_id);
@@ -359,11 +370,21 @@ impl GamePropertyNft {
             panic_with_error!(&env, NftError::Unauthorized);
         }
 
+        if property_id >= TOTAL_TILES {
+            panic_with_error!(&env, NftError::InvalidProperty);
+        }
+
+        let init_ledger = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("init_ledg"))
+            .unwrap_or(0u64);
+
         let mut world = load_world(&env);
 
         let mut meta: PropertyMeta = world.get_typed(&env, property_id).unwrap_or(PropertyMeta {
             level: 0,
-            last_claimed_ledger: 0,
+            last_claimed_ledger: init_ledger,
             approved_spender: 0,
         });
 
@@ -392,23 +413,32 @@ impl GamePropertyNft {
 
         let ownable = Ownable::new(symbol_short!("prop_nft"));
         if ownable.require_owner(&env, &admin).is_err() {
-            panic_with_error!(&env, NftError::Unauthorized);
-        }
-
-        let pausable = Pausable::new(symbol_short!("prop_nft"));
-        if pausable.unpause(&env, &admin).is_err() {
-            panic_with_error!(&env, NftError::Unauthorized);
+            panic_with_error!(&env, NftError::Unauthorized)
         }
     }
 }
 
-// ================= Helpers =================
+/// Checkpoint a tile's rent clock to the current ledger on ownership change,
+/// preserving its improvement level. Unclaimed rent accrued by the previous
+/// owner is forfeited (reset-on-transfer design).
+fn checkpoint_meta(env: &Env, world: &mut SimpleWorld, treasury: &Address, property_id: u32) {
+    let _ = treasury;
+    let init_ledger = env
+        .storage()
+        .instance()
+        .get(&symbol_short!("init_ledg"))
+        .unwrap_or(0u64);
+    let current = env.ledger().sequence() as u64;
 
-fn load_world(env: &Env) -> SimpleWorld {
-    SimpleWorld::new(env)
+    let mut meta: PropertyMeta = world.get_typed(env, property_id).unwrap_or(PropertyMeta {
+        level: 0,
+        last_claimed_ledger: init_ledger,
+        approved_spender: 0,
+    });
+
+    meta.last_claimed_ledger = current;
+    world.set_typed(env, property_id, &meta);
 }
-
-fn save_world(_env: &Env, _world: &SimpleWorld) {}
 
 fn get_approvals(env: &Env) -> Map<u32, Address> {
     env.storage()
@@ -417,18 +447,21 @@ fn get_approvals(env: &Env) -> Map<u32, Address> {
         .unwrap_or_else(|| Map::new(env))
 }
 
-fn save_approvals(env: &Env, approvals: &Map<u32, Address>) {
-    let key = symbol_short!("approves");
-    env.storage().persistent().set(&key, approvals);
-    bump_persistent(env, &key);
-}
-
-fn bump_persistent(env: &Env, key: &Symbol) {
-    env.storage().persistent().extend_ttl(key, 518_400, 518_400);
-}
-
-fn bump_owner_index(env: &Env, owner: &Address) {
+fn save_approvals(env: &Env, approves: &Map<u32, Address>) {
     env.storage()
         .persistent()
-        .extend_ttl(&(symbol_short!("oidx"), owner), 518_400, 518_400);
+        .set(&symbol_short!("approves"), approves);
 }
+
+fn load_world(env: &Env) -> SimpleWorld {
+    env.storage()
+        .persistent()
+        .get(&symbol_short!("world"))
+        .unwrap_or_else(|| SimpleWorld::new(env))
+}
+
+fn save_world(env: &Env, world: &SimpleWorld) {
+    env.storage().persistent().set(&symbol_short!("world"), world);
+}
+
+fn bump_owner_index(_env: &Env, _owner: &Address) {}

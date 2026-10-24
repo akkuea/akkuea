@@ -70,7 +70,6 @@ feature-depth = 1
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
 ignore = [
-    { id = "RUSTSEC-2024-0388", reason = "derivative is a transitive dependency via arkworks - waiting for upstream fix" },
     { id = "RUSTSEC-2024-0436", reason = "paste is a transitive dependency via arkworks - waiting for upstream fix" },
 ]
 # If this is true, then cargo deny will use the git executable to fetch advisory database.

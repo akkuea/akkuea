@@ -24,13 +24,13 @@ mock.module("@akkuea/shared", () => ({
 
 // Mock next/server for test environment
 class MockNextRequest extends Request {
-  constructor(input: any, init?: any) {
+  constructor(input: RequestInfo | URL, init?: RequestInit) {
     super(input, init);
   }
 }
 
 class MockNextResponse extends Response {
-  static json(data: any, init?: ResponseInit) {
+  static json(data: unknown, init?: ResponseInit) {
     return new Response(JSON.stringify(data), {
       ...init,
       headers: {
@@ -56,9 +56,9 @@ mock.module("@/lib/privy-server", () => ({
 }));
 
 function makeRequest(
-  body: any,
+  body: unknown,
   headers: Record<string, string> = { authorization: "Bearer valid-token" },
-): any {
+): Request {
   return new MockNextRequest("http://localhost:3000/api/privy/sign", {
     method: "POST",
     headers: {
@@ -118,7 +118,7 @@ describe("POST /api/privy/sign", () => {
         ),
       ),
     );
-    globalThis.fetch = fetchMock as any;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
   });
 
   afterEach(() => {
@@ -137,7 +137,7 @@ describe("POST /api/privy/sign", () => {
       networkPassphrase: Networks.TESTNET,
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBe("Privy credentials not configured on the server.");
@@ -156,7 +156,7 @@ describe("POST /api/privy/sign", () => {
       {}, // no auth header
     );
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error).toBe("Missing Privy access token.");
@@ -167,7 +167,7 @@ describe("POST /api/privy/sign", () => {
     const { POST } = await import("../sign/route");
     const req = makeRequest("invalid json{");
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Invalid request body.");
@@ -183,7 +183,7 @@ describe("POST /api/privy/sign", () => {
       networkPassphrase: Networks.TESTNET,
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Invalid request body.");
@@ -199,7 +199,7 @@ describe("POST /api/privy/sign", () => {
       networkPassphrase: Networks.PUBLIC, // Mismatched passphrase (app is on TESTNET)
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe("Invalid network passphrase.");
@@ -219,7 +219,7 @@ describe("POST /api/privy/sign", () => {
       networkPassphrase: Networks.TESTNET,
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(403);
     const body = await res.json();
     expect(body.error).toBe("Unauthorized.");
@@ -238,7 +238,7 @@ describe("POST /api/privy/sign", () => {
       networkPassphrase: Networks.TESTNET,
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe(
@@ -273,7 +273,7 @@ describe("POST /api/privy/sign", () => {
       networkPassphrase: Networks.TESTNET,
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe(
@@ -290,7 +290,7 @@ describe("POST /api/privy/sign", () => {
         }),
       ),
     );
-    globalThis.fetch = fetchMock as any;
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     const { POST } = await import("../sign/route");
     const req = makeRequest({
@@ -300,7 +300,7 @@ describe("POST /api/privy/sign", () => {
       networkPassphrase: Networks.TESTNET,
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(502);
     const body = await res.json();
     expect(body.error).toBe("Privy signing request failed.");
@@ -317,14 +317,14 @@ describe("POST /api/privy/sign", () => {
       networkPassphrase: Networks.TESTNET,
     });
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.signedXdr).toBeDefined();
 
     const signedTx = new Transaction(body.signedXdr, Networks.TESTNET);
     expect(signedTx.signatures.length).toBe(1);
-    expect(Buffer.from((signedTx.signatures[0].hint as any).value)).toEqual(
+    expect(Buffer.from(signedTx.signatures[0].hint.toXDR())).toEqual(
       Buffer.from(keypair.signatureHint()),
     );
   });

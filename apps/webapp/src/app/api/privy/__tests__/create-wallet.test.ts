@@ -3,13 +3,13 @@ import { PRIVY_APP_CREDENTIAL_ENV, PRIVY_APP_ID_ENV } from "@/lib/privy-env";
 
 // Mock next/server for test environment
 class MockNextRequest extends Request {
-  constructor(input: any, init?: any) {
+  constructor(input: RequestInfo | URL, init?: RequestInit) {
     super(input, init);
   }
 }
 
 class MockNextResponse extends Response {
-  static json(data: any, init?: ResponseInit) {
+  static json(data: unknown, init?: ResponseInit) {
     return new Response(JSON.stringify(data), {
       ...init,
       headers: {
@@ -58,7 +58,7 @@ mock.module("@/lib/privy-server", () => ({
 
 function makeRequest(
   headers: Record<string, string> = { authorization: "Bearer valid-token" },
-): any {
+): Request {
   return new MockNextRequest("http://localhost:3000/api/privy/create-wallet", {
     method: "POST",
     headers,

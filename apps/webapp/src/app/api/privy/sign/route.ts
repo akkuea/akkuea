@@ -196,7 +196,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let data: any;
+  let data: unknown;
   try {
     data = await privyRes.json();
   } catch (jsonErr) {
@@ -207,7 +207,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const sigHex: string = data?.data?.signature;
+  const sigHex: string | undefined = (
+    data as { data?: { signature?: string } } | null
+  )?.data?.signature;
   if (!sigHex) {
     console.error("[privy/sign] Privy returned no signature in response data");
     return NextResponse.json(

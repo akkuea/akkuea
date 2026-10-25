@@ -43,7 +43,6 @@ const VALID_API_ENV = {
   STELLAR_ADMIN_PUBLIC_KEY: VALID_PUBLIC_KEY,
   STELLAR_ADMIN_SECRET: VALID_SECRET_KEY,
   REAL_ESTATE_TOKEN_CONTRACT_ID: VALID_CONTRACT_ID,
-  PAYMENT_TOKEN_CONTRACT_ID: VALID_CONTRACT_ID,
 };
 
 const VALID_WEBAPP_ENV = {
@@ -124,21 +123,6 @@ describe("Environment Validation Module", () => {
       } catch (err) {
         const error = err as EnvValidationError;
         expect(error.message).toContain("STELLAR_ADMIN_SECRET");
-      }
-    });
-
-    it("fails when PAYMENT_TOKEN_CONTRACT_ID is malformed", () => {
-      const invalidEnv = {
-        ...VALID_API_ENV,
-        PAYMENT_TOKEN_CONTRACT_ID: "NOT_A_CONTRACT_ID",
-      };
-
-      expect(() => validateApiEnv(invalidEnv)).toThrow(EnvValidationError);
-      try {
-        validateApiEnv(invalidEnv);
-      } catch (err) {
-        const error = err as EnvValidationError;
-        expect(error.message).toContain("PAYMENT_TOKEN_CONTRACT_ID");
       }
     });
 

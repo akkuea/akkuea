@@ -12,7 +12,7 @@ import { cacheService } from '../services/CacheService';
 import type { PaginatedResponse } from './PropertyController';
 
 const MARKETPLACE_CACHE_TTL = 30;
-export const MARKETPLACE_CACHE_PREFIX = 'marketplace:list:';
+const MARKETPLACE_CACHE_PREFIX = 'marketplace:list:';
 
 /**
  * Maps a PropertyListRow to a PropertyInfo response.

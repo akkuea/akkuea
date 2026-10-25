@@ -35,19 +35,15 @@ const mockGetAll = mock<() => Promise<PropertiesResponse>>(() =>
     pagination: { page: 1, limit: 100, total: 0, totalPages: 0 },
   }),
 );
-const mockPrepareBuyShares = mock(() =>
+const mockBuyShares = mock(() =>
   Promise.resolve({
-    xdr: "AAAA-UNSIGNED-XDR",
-    contractId: "CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4",
-    sorobanPropertyId: "42",
-    shares: 8,
-    paymentToken: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
-    totalAmount: "800.0000000",
+    transactionHash: "b".repeat(64),
+    newBalance: 8,
   }),
 );
 const connectMock = mock(() => Promise.resolve());
 const originalGetAll = propertyApi.getAll;
-const originalPrepareBuyShares = propertyApi.prepareBuyShares;
+const originalBuyShares = propertyApi.buyShares;
 
 mock.module("next/image", () => ({
   default: ({
@@ -173,7 +169,7 @@ describe("MarketplacePage", () => {
   beforeEach(() => {
     cleanup();
     propertyApi.getAll = mockGetAll;
-    propertyApi.prepareBuyShares = mockPrepareBuyShares;
+    propertyApi.buyShares = mockBuyShares;
     mockGetAll.mockReset();
     mockGetAll.mockImplementation(() =>
       Promise.resolve({
@@ -181,13 +177,13 @@ describe("MarketplacePage", () => {
         pagination: { page: 1, limit: 100, total: 1, totalPages: 1 },
       }),
     );
-    mockPrepareBuyShares.mockClear();
+    mockBuyShares.mockClear();
     connectMock.mockClear();
   });
 
   afterAll(() => {
     propertyApi.getAll = originalGetAll;
-    propertyApi.prepareBuyShares = originalPrepareBuyShares;
+    propertyApi.buyShares = originalBuyShares;
   });
 
   it("renders loading skeletons before showing properties", async () => {

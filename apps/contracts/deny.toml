@@ -73,7 +73,6 @@ ignore = [
     { id = "RUSTSEC-2024-0388", reason = "derivative is a transitive dependency via arkworks - waiting for upstream fix" },
     { id = "RUSTSEC-2024-0436", reason = "paste is a transitive dependency via arkworks - waiting for upstream fix" },
     { id = "RUSTSEC-2022-0054", reason = "transitive dependency via cougr-core; tracked upstream, no maintained replacement in this stack yet" },
-    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5.5 is pulled by Soroban SDK 26.1.1 host dependencies; the advisory is fixed only in 0.7.6+, which requires an upstream Soroban SDK update" },
 ]
 # If this is true, then cargo deny will use the git executable to fetch advisory database.
 # If this is false, then it uses a built-in git library.

@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import { WhitelistController } from '../controllers/WhitelistController';
 import { handleError } from '../utils/errors';
 import { validateQuery } from '../middleware/validation';

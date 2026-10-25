@@ -3,7 +3,6 @@ import { db } from '../db';
 import {
   properties,
   propertyDocuments,
-  shareOwnerships,
   users,
   type Property,
   type NewProperty,
@@ -380,20 +379,6 @@ export class PropertyRepository extends BaseRepository<typeof properties, Proper
     }
 
     return conditions;
-  }
-
-  /**
-   * True if any investor holds shares of this property. Used to block
-   * edits/deletes that would otherwise change terms investors already
-   * bought under, or hit the (non-cascading) share_ownerships foreign key.
-   */
-  async hasShareHolders(propertyId: string): Promise<boolean> {
-    const [row] = await db
-      .select({ id: shareOwnerships.id })
-      .from(shareOwnerships)
-      .where(eq(shareOwnerships.propertyId, propertyId))
-      .limit(1);
-    return row !== undefined;
   }
 }
 

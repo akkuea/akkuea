@@ -4,20 +4,12 @@ import {
   NotFoundError,
   AuthenticationError,
   AuthorizationError,
-  ConflictError,
   parseDecimalStringToBigInt,
   formatBigIntAsDecimalString,
 } from '@akkuea/shared';
-import { and, eq, gte, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { logger } from '../services/logger';
 import { db } from '../db';
-import { ApiError } from '../errors/ApiError';
-import { getPaymentTokenContractId } from '../config/contracts';
-import {
-  formatTokenUnits,
-  PRICE_PER_SHARE_DECIMALS,
-  purchaseTotalToTokenUnits,
-} from '../utils/paymentAmount';
 import { tokenizationService, type TokenizationResponse } from '../services/TokenizationService';
 import { stellarService } from '../services/StellarService';
 import {
@@ -36,56 +28,9 @@ import {
   type PropertyDocument,
 } from '../db/schema';
 import { cacheService } from '../services/CacheService';
-import { auditService } from '../services/AuditService';
-import { MARKETPLACE_CACHE_PREFIX } from './MarketplaceController';
 
 const PROPERTIES_CACHE_TTL = 30; // seconds
 const PROPERTIES_CACHE_PREFIX = 'properties:list:';
-
-// Invalidated together: a review-state change on update, or a delete, can
-// change which properties the marketplace should list, not just the
-// properties list itself.
-async function invalidatePropertyCaches(): Promise<void> {
-  await Promise.all([
-    cacheService.invalidate(`${PROPERTIES_CACHE_PREFIX}*`),
-    cacheService.invalidate(`${MARKETPLACE_CACHE_PREFIX}*`),
-  ]);
-}
-
-/**
- * Fields that affect what a listing promises buyers (price, value, location,
- * type, images). Editing one of these on an already-approved property must
- * not silently keep it approved and listed.
- */
-function touchesMaterialField(data: UpdatePropertyInput): boolean {
-  return (
-    data.pricePerShare !== undefined ||
-    data.totalValue !== undefined ||
-    data.location !== undefined ||
-    data.propertyType !== undefined ||
-    data.images !== undefined
-  );
-}
-
-function touchesPriceOrValue(data: UpdatePropertyInput): boolean {
-  return data.pricePerShare !== undefined || data.totalValue !== undefined;
-}
-
-function isTokenized(property: Property): boolean {
-  return Boolean(property.tokenAddress) || property.sorobanPropertyId !== null;
-}
-
-function reviewAuditSnapshot(property: Property): Record<string, unknown> {
-  return {
-    reviewStatus: property.reviewStatus,
-    verified: property.verified,
-    pricePerShare: property.pricePerShare,
-    totalValue: property.totalValue,
-    location: property.location,
-    propertyType: property.propertyType,
-    images: property.images,
-  };
-}
 
 /**
  * DTO for creating a property
@@ -105,22 +50,6 @@ export interface CreatePropertyInput {
   totalShares: number;
   pricePerShare: string; // Decimal as string for precision
   images: string[];
-}
-
-/**
- * Unsigned `purchase_shares` transaction the buyer must sign and submit.
- */
-export interface PrepareBuySharesResponse {
-  /** Simulated, unsigned XDR with the buyer as its source. */
-  xdr: string;
-  /** Tokenization contract the transaction invokes. */
-  contractId: string;
-  sorobanPropertyId: string;
-  shares: number;
-  /** Payment token the buyer pays with, in its contract address form. */
-  paymentToken: string;
-  /** Total price in payment token units (7 decimals) as a decimal string. */
-  totalAmount: string;
 }
 
 /**
@@ -478,18 +407,6 @@ export class PropertyController {
         throw new AuthorizationError('You do not have permission to update this property');
       }
 
-      // A tokenized property, or one with holders, already has investors
-      // relying on the price and value they bought at; let other fields
-      // (name, description, non-material edits) through but not these two.
-      if (
-        touchesPriceOrValue(data) &&
-        (isTokenized(property) || (await propertyRepository.hasShareHolders(id)))
-      ) {
-        throw new ConflictError(
-          'Cannot change pricePerShare or totalValue on a tokenized property or one with share holders',
-        );
-      }
-
       // Build update data
       const updateData: Partial<NewProperty> = {};
       if (data.name !== undefined) updateData.name = data.name;
@@ -500,17 +417,6 @@ export class PropertyController {
       if (data.pricePerShare !== undefined) updateData.pricePerShare = data.pricePerShare; // Already a string
       if (data.images !== undefined) updateData.images = data.images;
 
-      // An owner editing a material field of an already-approved listing
-      // demotes it back to pending_review rather than rejecting the edit
-      // outright: it reuses the existing operator review queue instead of
-      // a new terminal state, and still lets the owner fix a mistake
-      // (e.g. a typo in the price) without being stuck.
-      const wasApproved = property.reviewStatus === 'approved';
-      if (wasApproved && touchesMaterialField(data)) {
-        updateData.reviewStatus = 'pending_review';
-        updateData.verified = false;
-      }
-
       const updatedProperty = await propertyRepository.update(id, updateData);
 
       if (!updatedProperty) {
@@ -519,18 +425,7 @@ export class PropertyController {
 
       const propertyInfo = await mapPropertyToPropertyInfo(updatedProperty, userAddress);
 
-      if (wasApproved) {
-        await auditService.logAction({
-          actor: userAddress,
-          action: 'property.owner_update',
-          entityType: 'property',
-          entityId: id,
-          beforeValue: reviewAuditSnapshot(property),
-          afterValue: reviewAuditSnapshot(updatedProperty),
-        });
-      }
-
-      await invalidatePropertyCaches();
+      await cacheService.invalidate(`${PROPERTIES_CACHE_PREFIX}*`);
 
       logger.info('Property updated successfully', {
         operation: 'UPDATE',
@@ -586,13 +481,6 @@ export class PropertyController {
         throw new AuthorizationError('You do not have permission to delete this property');
       }
 
-      // Deleting a tokenized property, or one with holders, would either
-      // orphan the on-chain token or hit the share_ownerships foreign key
-      // (which has no cascade) and surface as an unhandled 500.
-      if (isTokenized(property) || (await propertyRepository.hasShareHolders(id))) {
-        throw new ConflictError('Cannot delete a tokenized property or one with share holders');
-      }
-
       // Delete property
       const deleted = await propertyRepository.delete(id);
 
@@ -600,7 +488,7 @@ export class PropertyController {
         throw new Error('Failed to delete property');
       }
 
-      await invalidatePropertyCaches();
+      await cacheService.invalidate(`${PROPERTIES_CACHE_PREFIX}*`);
 
       logger.info('Property deleted successfully', {
         operation: 'DELETE',
@@ -634,16 +522,14 @@ export class PropertyController {
   }
 
   /**
-   * Step 1 of buying shares: validate the buyer, the inventory and KYC, then
-   * return an unsigned `purchase_shares` transaction with the buyer as its
-   * source. The buyer signs it with their wallet and submits it themselves;
-   * this method signs nothing and mints nothing.
+   * Buy shares of a property
+   * Note: This feature is planned for Cycle 2
    */
-  static async prepareBuyShares(
+  static async buyShares(
     id: string,
     data: { buyer: string; shares: number },
     authenticatedAddress: string,
-  ): Promise<PrepareBuySharesResponse> {
+  ): Promise<{ transactionHash: string; newBalance: number }> {
     const startTime = Date.now();
 
     if (!id) {
@@ -666,8 +552,8 @@ export class PropertyController {
       ]);
     }
 
-    logger.info('Share purchase preparation attempted', {
-      operation: 'BUY_SHARES_PREPARE',
+    logger.info('Share purchase attempted', {
+      operation: 'BUY_SHARES',
       entity: 'property',
       entityId: id,
       userId: data.buyer,
@@ -690,7 +576,7 @@ export class PropertyController {
         throw new ValidationError('Property must be tokenized before shares can be purchased', [
           {
             field: 'id',
-            message: 'Property must be tokenized on-chain before shares can be purchased',
+            message: 'Property must be tokenized on-chain before buyShares can execute',
           },
         ]);
       }
@@ -701,6 +587,7 @@ export class PropertyController {
       }
 
       const buyer = await userRepository.getOrCreateByWallet(data.buyer);
+
       if (buyer.kycStatus !== 'approved') {
         const msg =
           buyer.kycStatus === 'expired'
@@ -708,35 +595,89 @@ export class PropertyController {
             : 'KYC verification must be approved before purchasing shares';
         throw new AuthorizationError(msg);
       }
-
-      const paymentToken = getPaymentTokenContractId();
-      if (!paymentToken) {
-        throw ApiError.internal(
-          'Payment token is not configured. Set PAYMENT_TOKEN_CONTRACT_ID or the network deployment artifact.',
-        );
-      }
-
-      const { xdr, contractId } = await stellarService.preparePurchaseShares({
+      const pricePerShareBig = parseDecimalStringToBigInt(property.pricePerShare, 2);
+      const totalPurchasePriceBig = pricePerShareBig * BigInt(data.shares);
+      const totalPurchasePrice = formatBigIntAsDecimalString(totalPurchasePriceBig, 2);
+      const { adminPublicKey, adminSecret } = stellarService.getMintingConfig();
+      const { txHash: transactionHash } = await stellarService.mintPropertyShares({
         contractId: property.tokenAddress,
-        buyer: data.buyer,
+        adminPublicKey,
+        adminSecret,
         sorobanPropertyId: property.sorobanPropertyId,
-        shares: data.shares,
-        paymentToken,
+        recipient: data.buyer,
+        amount: data.shares,
       });
 
-      const response: PrepareBuySharesResponse = {
-        xdr,
-        contractId,
-        sorobanPropertyId: String(property.sorobanPropertyId),
-        shares: data.shares,
-        paymentToken,
-        totalAmount: formatTokenUnits(
-          purchaseTotalToTokenUnits(property.pricePerShare, data.shares),
-        ),
-      };
+      const propertyId = property.id;
+      const propertyOwnerId = property.ownerId;
+      const propertyTokenAddress = property.tokenAddress;
+      const propertyAvailableShares = property.availableShares;
 
-      logger.info('Share purchase transaction prepared', {
-        operation: 'BUY_SHARES_PREPARE',
+      const result = await db.transaction(async (tx) => {
+        const [existingOwnership] = await tx
+          .select()
+          .from(shareOwnerships)
+          .where(
+            and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyer.id)),
+          )
+          .limit(1);
+
+        const [updatedProperty] = await tx
+          .update(properties)
+          .set({ availableShares: propertyAvailableShares - data.shares })
+          .where(eq(properties.id, propertyId))
+          .returning();
+
+        if (!updatedProperty) {
+          throw new Error('Failed to update available shares');
+        }
+
+        const [ownership] = existingOwnership
+          ? await tx
+              .update(shareOwnerships)
+              .set({
+                shares: existingOwnership.shares + data.shares,
+                purchasePrice: formatBigIntAsDecimalString(
+                  parseDecimalStringToBigInt(existingOwnership.purchasePrice, 2) +
+                    parseDecimalStringToBigInt(totalPurchasePrice, 2),
+                  2,
+                ),
+              })
+              .where(eq(shareOwnerships.id, existingOwnership.id))
+              .returning()
+          : (await tx.insert(shareOwnerships).values({
+              propertyId: propertyId,
+              ownerId: buyer.id,
+              shares: data.shares,
+              purchasePrice: totalPurchasePrice,
+            }),
+            [{ shares: data.shares }]);
+
+        if (!ownership) {
+          throw new Error('Failed to persist share ownership');
+        }
+
+        await tx.insert(transactions).values({
+          type: 'buy_shares',
+          hash: transactionHash,
+          fromUserId: buyer.id,
+          toUserId: propertyOwnerId,
+          amount: totalPurchasePrice,
+          asset: propertyTokenAddress ?? 'USDC',
+          status: 'confirmed',
+          metadata: {
+            propertyId: propertyId,
+            shares: data.shares,
+          },
+        });
+
+        return {
+          newBalance: ownership.shares,
+        };
+      });
+
+      logger.info('Share purchase completed successfully', {
+        operation: 'BUY_SHARES',
         entity: 'property',
         entityId: id,
         userId: data.buyer,
@@ -744,263 +685,21 @@ export class PropertyController {
         duration: Date.now() - startTime,
       });
 
-      return response;
-    } catch (error) {
-      logger.error('Failed to prepare share purchase', {
-        error,
-        operation: 'BUY_SHARES_PREPARE',
-        entity: 'property',
-        entityId: id,
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Step 2 of buying shares: verify a buyer-signed, buyer-submitted
-   * `purchase_shares` transaction on-chain, and only then record it. Nothing
-   * is written unless the transaction succeeded on the configured contract,
-   * came from the authenticated buyer, bought this property, and emitted a
-   * matching `SharePurchase` event. Confirming an already recorded hash
-   * returns the recorded result instead of counting the purchase twice.
-   */
-  static async confirmBuyShares(
-    id: string,
-    data: { txHash: string },
-    authenticatedAddress: string,
-  ): Promise<{ transactionHash: string; newBalance: number }> {
-    const startTime = Date.now();
-
-    if (!id) {
-      throw new ValidationError('Property ID is required', [
-        { field: 'id', message: 'Property ID is required' },
-      ]);
-    }
-
-    if (!authenticatedAddress) {
-      throw new AuthenticationError('Buyer wallet address is required for authentication');
-    }
-
-    if (!/^[0-9a-fA-F]{64}$/.test(data.txHash ?? '')) {
-      throw new ValidationError('Transaction hash must be a 64-character hex string', [
-        { field: 'txHash', message: 'Transaction hash must be a 64-character hex string' },
-      ]);
-    }
-
-    logger.info('Share purchase confirmation attempted', {
-      operation: 'BUY_SHARES_CONFIRM',
-      entity: 'property',
-      entityId: id,
-      userId: authenticatedAddress,
-    });
-
-    try {
-      const property = await propertyRepository.findById(id);
-      if (!property) {
-        throw new NotFoundError('Property', id);
-      }
-
-      if (!property.tokenAddress || property.sorobanPropertyId === null) {
-        throw new ValidationError('Property must be tokenized before shares can be purchased', [
-          {
-            field: 'id',
-            message: 'Property must be tokenized on-chain before shares can be purchased',
-          },
-        ]);
-      }
-
-      const verified = await stellarService.verifyPurchaseTransaction(
-        data.txHash,
-        property.tokenAddress,
-      );
-
-      if (
-        verified.sourceAccount !== authenticatedAddress ||
-        verified.call.buyer !== authenticatedAddress
-      ) {
-        throw new AuthorizationError('The transaction was not signed by the authenticated buyer');
-      }
-
-      if (verified.call.propertyId !== BigInt(property.sorobanPropertyId)) {
-        throw new ValidationError('Transaction purchases shares of a different property', [
-          { field: 'txHash', message: 'Transaction purchases shares of a different property' },
-        ]);
-      }
-
-      const shares = verified.sharePurchase.shares;
-      if (shares <= BigInt(0) || verified.call.amount !== shares) {
-        throw new ValidationError('Transaction amount does not match the SharePurchase event', [
-          { field: 'txHash', message: 'Transaction amount does not match the SharePurchase event' },
-        ]);
-      }
-
-      const expectedCost = purchaseTotalToTokenUnits(property.pricePerShare, Number(shares));
-      if (verified.sharePurchase.totalCost !== expectedCost) {
-        throw new ValidationError(
-          'SharePurchase event total cost does not match the property price',
-          [
-            {
-              field: 'txHash',
-              message: 'SharePurchase event total cost does not match the property price',
-            },
-          ],
-        );
-      }
-
-      if (
-        verified.sharePurchase.buyer !== authenticatedAddress ||
-        verified.sharePurchase.propertyId !== String(property.sorobanPropertyId)
-      ) {
-        throw new ValidationError('SharePurchase event does not match this property and buyer', [
-          {
-            field: 'txHash',
-            message: 'SharePurchase event does not match this property and buyer',
-          },
-        ]);
-      }
-
-      const sharesToRecord = Number(shares);
-      const buyer = await userRepository.getOrCreateByWallet(authenticatedAddress);
-      const paidAmount = formatTokenUnits(verified.sharePurchase.totalCost);
-      const purchasePrice = formatBigIntAsDecimalString(
-        parseDecimalStringToBigInt(property.pricePerShare, PRICE_PER_SHARE_DECIMALS) * shares,
-        PRICE_PER_SHARE_DECIMALS,
-      );
-
-      const result = await db.transaction(async (tx) => {
-        // The unique constraint on transactions.hash is the serialization
-        // point: the first confirmation of a hash inserts the row, later ones
-        // observe the conflict and leave the inventory untouched.
-        const [inserted] = await tx
-          .insert(transactions)
-          .values({
-            type: 'buy_shares',
-            hash: verified.txHash,
-            fromUserId: buyer.id,
-            toUserId: property.ownerId,
-            amount: paidAmount,
-            asset: verified.call.paymentToken,
-            status: 'confirmed',
-            metadata: {
-              propertyId: property.id,
-              shares: sharesToRecord,
-            },
-          })
-          .onConflictDoNothing({ target: transactions.hash })
-          .returning({ id: transactions.id });
-
-        if (!inserted) {
-          return { recorded: false as const, newBalance: 0 };
-        }
-
-        // Conditional decrement: never oversell, even when the inventory check
-        // at prepare time raced with another purchase.
-        const [updatedProperty] = await tx
-          .update(properties)
-          .set({ availableShares: sql`${properties.availableShares} - ${sharesToRecord}` })
-          .where(
-            and(eq(properties.id, property.id), gte(properties.availableShares, sharesToRecord)),
-          )
-          .returning({ id: properties.id });
-
-        if (!updatedProperty) {
-          throw new ValidationError('Not enough shares available', [
-            { field: 'shares', message: 'Requested shares exceed available inventory' },
-          ]);
-        }
-
-        // The unique property/buyer index makes this an atomic ownership upsert.
-        // PostgreSQL increments the current row values, so concurrent purchases
-        // cannot overwrite each other's share or purchase-price totals.
-        const [ownership] = await tx
-          .insert(shareOwnerships)
-          .values({
-            propertyId: property.id,
-            ownerId: buyer.id,
-            shares: sharesToRecord,
-            purchasePrice,
-          })
-          .onConflictDoUpdate({
-            target: [shareOwnerships.propertyId, shareOwnerships.ownerId],
-            set: {
-              shares: sql`${shareOwnerships.shares} + ${sharesToRecord}`,
-              purchasePrice: sql`${shareOwnerships.purchasePrice} + ${purchasePrice}`,
-            },
-          })
-          .returning();
-
-        if (!ownership) {
-          throw new Error('Failed to persist share ownership');
-        }
-
-        return { recorded: true as const, newBalance: ownership.shares };
-      });
-
-      if (!result.recorded) {
-        return this.readRecordedPurchase(data.txHash, property.id, buyer.id);
-      }
-
       await cacheService.invalidate(`${PROPERTIES_CACHE_PREFIX}*`);
 
-      logger.info('Share purchase confirmed', {
-        operation: 'BUY_SHARES_CONFIRM',
-        entity: 'property',
-        entityId: id,
-        userId: authenticatedAddress,
-        shares: sharesToRecord,
-        duration: Date.now() - startTime,
-      });
-
       return {
-        transactionHash: verified.txHash,
+        transactionHash,
         newBalance: result.newBalance,
       };
     } catch (error) {
-      logger.error('Failed to confirm share purchase', {
+      logger.error('Failed to purchase shares', {
         error,
-        operation: 'BUY_SHARES_CONFIRM',
+        operation: 'BUY_SHARES',
         entity: 'property',
         entityId: id,
       });
       throw error;
     }
-  }
-
-  /**
-   * Returns the result already recorded for a transaction hash, so confirming
-   * the same hash twice yields the same answer without counting the purchase
-   * again.
-   */
-  private static async readRecordedPurchase(
-    txHash: string,
-    propertyId: string,
-    buyerId: string,
-  ): Promise<{ transactionHash: string; newBalance: number }> {
-    const [recorded] = await db
-      .select()
-      .from(transactions)
-      .where(eq(transactions.hash, txHash))
-      .limit(1);
-
-    const recordedPropertyId = (recorded?.metadata as { propertyId?: string } | null)?.propertyId;
-    if (recordedPropertyId && recordedPropertyId !== propertyId) {
-      throw new ApiError(
-        409,
-        'CONFLICT',
-        'Transaction hash was already recorded for another purchase',
-      );
-    }
-
-    const [ownership] = await db
-      .select()
-      .from(shareOwnerships)
-      .where(and(eq(shareOwnerships.propertyId, propertyId), eq(shareOwnerships.ownerId, buyerId)))
-      .limit(1);
-
-    return {
-      transactionHash: txHash,
-      newBalance: ownership?.shares ?? 0,
-    };
   }
 
   /**

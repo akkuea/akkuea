@@ -80,13 +80,13 @@ export const tokenizeSchema = tokenizeBaseSchema.superRefine(
     const nowYear = new Date().getFullYear();
     if (!Number.isFinite(year) || !Number.isInteger(year)) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Year built must be a whole number",
         path: ["yearBuilt"],
       });
     } else if (year < 1800 || year > nowYear) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: `Year built must be between 1800 and ${nowYear}`,
         path: ["yearBuilt"],
       });
@@ -100,7 +100,7 @@ export const tokenizeSchema = tokenizeBaseSchema.superRefine(
       minInvestment > totalTokens
     ) {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Minimum investment cannot exceed total tokens",
         path: ["minInvestment"],
       });

@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 import { CycleStatusBadge } from "./CycleStatusBadge";
 
 const meta: Meta<typeof CycleStatusBadge> = {

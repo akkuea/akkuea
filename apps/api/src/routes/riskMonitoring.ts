@@ -25,11 +25,7 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
     ({ params: { level } }) => RiskMonitoringController.getPositionsByRisk(level),
     {
       params: t.Object({
-        level: t.Union([
-          t.Literal('safe'),
-          t.Literal('warning'),
-          t.Literal('critical'),
-        ]),
+        level: t.Union([t.Literal('safe'), t.Literal('warning'), t.Literal('critical')]),
       }),
       detail: {
         summary: 'Get positions by risk level',

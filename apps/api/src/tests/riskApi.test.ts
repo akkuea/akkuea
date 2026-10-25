@@ -15,9 +15,7 @@ describe('Risk Monitoring API', () => {
   const authHeaders = { 'x-internal-api-key': TEST_OPS_KEY };
 
   test('Returns 401 when internal operations credential is missing', async () => {
-    const response = await app.handle(
-      new Request('http://localhost/internal/risk/positions'),
-    );
+    const response = await app.handle(new Request('http://localhost/internal/risk/positions'));
     expect(response.status).toBe(401);
   });
 

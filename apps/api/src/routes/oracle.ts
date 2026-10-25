@@ -120,10 +120,7 @@ export const oracleRoutes = new Elysia({ prefix: '/oracle' })
   .get(
     '/valuations/:propertyId/history',
     ({ params: { propertyId }, query }) =>
-      ValuationController.getValuationHistory(
-        propertyId,
-        clampValuationHistoryLimit(query.limit),
-      ),
+      ValuationController.getValuationHistory(propertyId, clampValuationHistoryLimit(query.limit)),
     {
       params: t.Object({
         propertyId: t.String({ minLength: 1 }),

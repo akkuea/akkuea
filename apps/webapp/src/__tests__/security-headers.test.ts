@@ -65,6 +65,21 @@ describe("Security Headers Configuration", () => {
       expect(csp).toContain("https://freighter.app");
     });
 
+    it("should include Privy RPC and WalletConnect endpoints for login and connect", () => {
+      const csp = buildContentSecurityPolicy("nonce");
+
+      // Privy RPC provider
+      expect(csp).toContain("https://*.rpc.privy.systems");
+      // WalletConnect relays and explorer (external wallet connections via Privy)
+      expect(csp).toContain("wss://relay.walletconnect.com");
+      expect(csp).toContain("wss://relay.walletconnect.org");
+      expect(csp).toContain("https://explorer-api.walletconnect.com");
+      // WalletConnect verify iframes
+      const frameMatch = csp.match(/frame-src\s+([^;]+)/);
+      expect(frameMatch?.[1]).toContain("https://verify.walletconnect.com");
+      expect(frameMatch?.[1]).toContain("https://verify.walletconnect.org");
+    });
+
     it("should include Pollar SDK endpoint in connect-src and frame-src", () => {
       const csp = buildContentSecurityPolicy();
 

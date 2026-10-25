@@ -43,6 +43,11 @@ export function buildContentSecurityPolicy(
     "https://auth.privy.io",
     "wss://auth.privy.io",
     "https://api.privy.io",
+    "https://*.rpc.privy.systems",
+    // WalletConnect (used by Privy for external wallet connections)
+    "wss://relay.walletconnect.com",
+    "wss://relay.walletconnect.org",
+    "https://explorer-api.walletconnect.com",
     "https://sdk.api.pollar.xyz",
     // Stellar Wallets Kit discovery and signature requests
     "https://api.freighter.app",
@@ -57,6 +62,9 @@ export function buildContentSecurityPolicy(
     "'self'",
     // Privy embedded wallet and login flows
     "https://auth.privy.io",
+    // WalletConnect verify iframes (Privy external wallet flows)
+    "https://verify.walletconnect.com",
+    "https://verify.walletconnect.org",
     "https://sdk.api.pollar.xyz",
     // Stellar Wallets Kit
     "https://freighter.app",

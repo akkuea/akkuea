@@ -68,6 +68,7 @@ export default defineConfig({
           API_URL: "http://localhost:3101",
           OPERATIONS_BACKEND_CREDENTIAL: "e2e-test-credential",
           OPERATIONS_ALLOWED_WALLETS: "*",
+          OPERATIONS_ALLOW_WILDCARD_IN_DEVELOPMENT: "true",
           NEXT_PUBLIC_USE_MOCK: "false",
           SKIP_ENV_VALIDATION: "true",
         },

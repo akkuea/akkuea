@@ -12,12 +12,12 @@ const createUserSchema = z.object({
     .string()
     .length(56)
     .regex(/^G[A-Z2-7]{55}$/),
-  email: z.string().email().optional(),
+  email: z.email().optional(),
   displayName: z.string().min(2).max(50).optional(),
 });
 
 const updateUserSchema = z.object({
-  email: z.string().email().optional(),
+  email: z.email().optional(),
   displayName: z.string().min(2).max(50).optional(),
 });
 

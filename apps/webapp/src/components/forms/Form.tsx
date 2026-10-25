@@ -1,34 +1,39 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import type { DefaultValues } from "react-hook-form";
+import type { DefaultValues, FieldValues } from "react-hook-form";
 import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 
-export type FormRenderProps<TSchema extends z.ZodTypeAny> = UseFormReturn<
-  z.infer<TSchema>
-> & {
+export type FormRenderProps<
+  TInput extends FieldValues,
+  TOutput extends FieldValues,
+> = UseFormReturn<TInput, unknown, TOutput> & {
   formError: string | null;
   formSuccess: string | null;
   setFormError: React.Dispatch<React.SetStateAction<string | null>>;
   setFormSuccess: React.Dispatch<React.SetStateAction<string | null>>;
 };
 
-export interface FormProps<TSchema extends z.ZodTypeAny> {
-  schema: TSchema;
-  defaultValues?: DefaultValues<z.infer<TSchema>>;
-  onSubmit: (values: z.infer<TSchema>) => void | Promise<void>;
+export interface FormProps<
+  TInput extends FieldValues,
+  TOutput extends FieldValues,
+> {
+  schema: z.ZodType<TOutput, TInput>;
+  defaultValues?: DefaultValues<TInput>;
+  onSubmit: (values: TOutput) => void | Promise<void>;
   children:
-    React.ReactNode | ((methods: FormRenderProps<TSchema>) => React.ReactNode);
+    | React.ReactNode
+    | ((methods: FormRenderProps<TInput, TOutput>) => React.ReactNode);
   className?: string;
   id?: string;
   successMessage?: string;
   showFeedback?: boolean;
 }
 
-export function Form<TSchema extends z.ZodTypeAny>({
+export function Form<TInput extends FieldValues, TOutput extends FieldValues>({
   schema,
   defaultValues,
   onSubmit,
@@ -37,8 +42,8 @@ export function Form<TSchema extends z.ZodTypeAny>({
   id,
   successMessage,
   showFeedback = true,
-}: FormProps<TSchema>) {
-  const methods = useForm<z.infer<TSchema>>({
+}: FormProps<TInput, TOutput>) {
+  const methods = useForm<TInput, unknown, TOutput>({
     resolver: zodResolver(schema),
     defaultValues,
     mode: "onBlur",
@@ -50,7 +55,7 @@ export function Form<TSchema extends z.ZodTypeAny>({
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
 
-  const handleValidSubmit = async (values: z.infer<TSchema>) => {
+  const handleValidSubmit = async (values: TOutput) => {
     setFormError(null);
     setFormSuccess(null);
     try {
@@ -67,7 +72,7 @@ export function Form<TSchema extends z.ZodTypeAny>({
     }
   };
 
-  const renderProps: FormRenderProps<TSchema> = useMemo(
+  const renderProps: FormRenderProps<TInput, TOutput> = useMemo(
     () => ({
       ...methods,
       formError,

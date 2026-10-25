@@ -13,7 +13,7 @@ const notificationQuerySchema = z.object({
 // controller for the enforced cap in the meantime). The schema still guards
 // the route: an invalid payload is rejected before the handler runs.
 const markMultipleAsReadSchema = z.object({
-  notificationIds: z.array(z.string().uuid()).max(100),
+  notificationIds: z.array(z.uuid()).max(100),
 });
 
 export const notificationRoutes = new Elysia({ prefix: '/notifications' })

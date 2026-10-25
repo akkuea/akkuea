@@ -17,7 +17,7 @@ export function readCorsAllowedOrigins(
   if (!parsed.success) {
     throw new Error(
       `Invalid CORS_ALLOWED_ORIGINS: ${
-        parsed.error.errors[0]?.message ?? 'expected a comma-separated list of origins'
+        parsed.error.issues[0]?.message ?? 'expected a comma-separated list of origins'
       }`,
     );
   }

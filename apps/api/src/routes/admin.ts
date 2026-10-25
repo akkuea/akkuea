@@ -8,8 +8,8 @@ import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth'
 const auditLogQuerySchema = z.object({
   actor: z.string().min(1).max(56).optional(),
   action: z.string().min(1).max(100).optional(),
-  startDate: z.string().datetime({ offset: true }).optional(),
-  endDate: z.string().datetime({ offset: true }).optional(),
+  startDate: z.iso.datetime({ offset: true }).optional(),
+  endDate: z.iso.datetime({ offset: true }).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });

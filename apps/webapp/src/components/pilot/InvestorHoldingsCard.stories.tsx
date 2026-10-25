@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 import { InvestorHoldingsCard } from "./InvestorHoldingsCard";
 import { SAMPLE_NOW, sampleHoldings } from "./fixtures";
 

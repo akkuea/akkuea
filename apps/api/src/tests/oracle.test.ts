@@ -301,3 +301,172 @@ describe('OracleService.submitManualOverride', () => {
     expect(record.id).toBeTruthy();
   });
 });
+
+
+import { oracleRoutes, clampValuationHistoryLimit } from '../routes/oracle';
+import { errorHandler } from '../middleware/errorHandler';
+import { Elysia } from 'elysia';
+
+describe('Oracle HTTP Routes Auth & Validation', () => {
+  const TEST_KEY = 'test-ops-secret';
+  const app = new Elysia().use(errorHandler).use(oracleRoutes);
+
+  beforeEach(() => {
+    process.env.OPERATIONS_BACKEND_CREDENTIAL = TEST_KEY;
+  });
+
+  describe('clampValuationHistoryLimit helper', () => {
+    test('defaults to 50 for missing, negative, or non-numeric values', () => {
+      expect(clampValuationHistoryLimit(undefined)).toBe(50);
+      expect(clampValuationHistoryLimit(null)).toBe(50);
+      expect(clampValuationHistoryLimit('abc')).toBe(50);
+      expect(clampValuationHistoryLimit(-5)).toBe(50);
+      expect(clampValuationHistoryLimit(0)).toBe(50);
+    });
+
+    test('caps at 500 for large values', () => {
+      expect(clampValuationHistoryLimit(1000)).toBe(500);
+      expect(clampValuationHistoryLimit('9999')).toBe(500);
+    });
+
+    test('preserves valid limits between 1 and 500', () => {
+      expect(clampValuationHistoryLimit(25)).toBe(25);
+      expect(clampValuationHistoryLimit('100')).toBe(100);
+    });
+  });
+
+  describe('POST /oracle/valuations', () => {
+    test('returns 401 when credential is missing', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/oracle/valuations', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(makePayload()),
+        }),
+      );
+      expect(res.status).toBe(401);
+    });
+
+    test('returns 400 when payload is invalid (missing propertyId or negative price)', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/oracle/valuations', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-internal-api-key': TEST_KEY,
+          },
+          body: JSON.stringify({ price: -10 }),
+        }),
+      );
+      expect([400, 422]).toContain(res.status);
+    });
+
+    test('succeeds with 200 when credential and payload are valid', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/oracle/valuations', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-internal-api-key': TEST_KEY,
+          },
+          body: JSON.stringify(makePayload()),
+        }),
+      );
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('POST /oracle/valuations/:propertyId/manual-review', () => {
+    test('returns 401 when credential is missing', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/oracle/valuations/prop-1/manual-review', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: 'val-1', reason: 'Review required' }),
+        }),
+      );
+      expect(res.status).toBe(401);
+    });
+
+    test('succeeds with 200 when credential is valid', async () => {
+      const payload = makePayload();
+      const { record } = await OracleService.ingestValuation(payload);
+
+      const res = await app.handle(
+        new Request(`http://localhost/oracle/valuations/${payload.propertyId}/manual-review`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-internal-api-key': TEST_KEY,
+          },
+          body: JSON.stringify({ id: record.id, reason: 'Review required' }),
+        }),
+      );
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('POST /oracle/valuations/manual-override', () => {
+    test('returns 401 when credential is missing', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/oracle/valuations/manual-override', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ ...makePayload(), overrideReason: 'Manual fix' }),
+        }),
+      );
+      expect(res.status).toBe(401);
+    });
+
+    test('returns 400 when overrideReason is missing', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/oracle/valuations/manual-override', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-internal-api-key': TEST_KEY,
+          },
+          body: JSON.stringify(makePayload()),
+        }),
+      );
+      expect([400, 422]).toContain(res.status);
+    });
+
+    test('succeeds with 200 when credential and body are valid', async () => {
+      const res = await app.handle(
+        new Request('http://localhost/oracle/valuations/manual-override', {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-internal-api-key': TEST_KEY,
+          },
+          body: JSON.stringify({ ...makePayload(), overrideReason: 'Manual fix' }),
+        }),
+      );
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('GET /oracle/valuations/:propertyId/history', () => {
+    test('handles limit=abc or limit=-5 gracefully without producing unbounded queries', async () => {
+      const payload = makePayload();
+      await OracleService.ingestValuation(payload);
+
+      const resAbc = await app.handle(
+        new Request(`http://localhost/oracle/valuations/${payload.propertyId}/history?limit=abc`),
+      );
+      expect(resAbc.status).toBe(200);
+      const dataAbc = (await resAbc.json()) as { success: boolean; history: unknown[] };
+      expect(dataAbc.success).toBe(true);
+      expect(Array.isArray(dataAbc.history)).toBe(true);
+
+      const resNeg = await app.handle(
+        new Request(`http://localhost/oracle/valuations/${payload.propertyId}/history?limit=-5`),
+      );
+      expect(resNeg.status).toBe(200);
+      const dataNeg = (await resNeg.json()) as { success: boolean; history: unknown[] };
+      expect(dataNeg.success).toBe(true);
+      expect(Array.isArray(dataNeg.history)).toBe(true);
+    });
+  });
+});

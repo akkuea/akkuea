@@ -1,7 +1,18 @@
 import { Elysia, t } from 'elysia';
 import { RiskMonitoringController } from '../controllers/RiskMonitoringController';
+import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
 
 export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
+  .onBeforeHandle(({ headers, set }) => {
+    if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
+      set.status = 401;
+      return {
+        success: false,
+        error: 'UNAUTHORIZED',
+        message: 'Unauthorized: internal operations credential required',
+      };
+    }
+  })
   .get('/positions', () => RiskMonitoringController.assessAllPositions(), {
     detail: {
       summary: 'Assess all positions',
@@ -14,7 +25,11 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
     ({ params: { level } }) => RiskMonitoringController.getPositionsByRisk(level),
     {
       params: t.Object({
-        level: t.String(),
+        level: t.Union([
+          t.Literal('safe'),
+          t.Literal('warning'),
+          t.Literal('critical'),
+        ]),
       }),
       detail: {
         summary: 'Get positions by risk level',
@@ -28,7 +43,7 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
     ({ params: { positionId } }) => RiskMonitoringController.getLiquidationReadiness(positionId),
     {
       params: t.Object({
-        positionId: t.String(),
+        positionId: t.String({ minLength: 1 }),
       }),
       detail: {
         summary: 'Get liquidation readiness',
@@ -57,13 +72,19 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
     ({ params: { positionId }, query }) =>
       RiskMonitoringController.getCollateralRatioHistory(
         positionId,
-        query.startDate as string | undefined,
-        query.endDate as string | undefined,
+        query?.startDate,
+        query?.endDate,
       ),
     {
       params: t.Object({
-        positionId: t.String(),
+        positionId: t.String({ minLength: 1 }),
       }),
+      query: t.Optional(
+        t.Object({
+          startDate: t.Optional(t.String()),
+          endDate: t.Optional(t.String()),
+        }),
+      ),
       detail: {
         summary: 'Get collateral ratio history',
         description:

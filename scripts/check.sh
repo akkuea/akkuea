@@ -122,6 +122,7 @@ ROOT_DEPS='^(package\.json|bun\.lock)$'
 SHARED_PATHS="^apps/shared/|$ROOT_DEPS|^\.github/workflows/shared-ci\.yml$"
 API_PATHS="^apps/api/|$ROOT_DEPS|^\.github/workflows/api-ci\.yml$"
 WEBAPP_PATHS="^apps/webapp/|$ROOT_DEPS|^\.github/workflows/webapp-ci\.yml$"
+LAND_PATHS="^apps/akkuea-land/|$ROOT_DEPS|^\.github/workflows/land-ci\.yml$"
 MONOREPO_PATHS="^(apps|docs|scripts|\.github)/|$ROOT_DEPS"
 CONTRACTS_PATHS='^apps/contracts/|^\.github/workflows/contracts-ci\.yml$'
 
@@ -133,6 +134,7 @@ if [ "$MODE" = "fix" ]; then
     run apps/api "prettier (api)" bunx prettier --write "src/**/*.{ts,json}"
     run apps/shared "prettier (shared)" bunx prettier --write .
     run apps/webapp "prettier (webapp)" bunx prettier --write "src/**/*.{ts,tsx,js,jsx,json,css}"
+    run apps/akkuea-land "prettier (akkuea-land)" bunx prettier --write "src/**/*.{ts,tsx,js,jsx,json,css}"
   fi
   run apps/contracts "cargo fmt (contracts)" cargo fmt --all
   echo
@@ -202,10 +204,13 @@ if touched "$MONOREPO_PATHS" && need bun "https://bun.sh" "monorepo: TypeScript 
   build_shared
   run apps/api "monorepo: api imports shared" bun -e "const shared = await import('../shared/dist/index.js'); console.log(typeof shared.ValidationService);"
   run . "monorepo: webapp imports shared" bun -e "await import('./apps/shared/dist/index.js');"
+  run . "monorepo: akkuea-land imports shared" bun -e "await import('./apps/shared/dist/index.js');"
   run apps/api "monorepo: api types against shared" bunx tsc --noEmit --skipLibCheck
   run apps/webapp "monorepo: webapp types against shared" bunx tsc --noEmit --skipLibCheck
+  run apps/akkuea-land "monorepo: akkuea-land types against shared" bunx tsc --noEmit --skipLibCheck
   # Performance Benchmark job: full production builds.
   once webapp-build apps/webapp "webapp: production build" env SKIP_ENV_VALIDATION=true bun run build
+  once land-build apps/akkuea-land "akkuea-land: production build" env SKIP_ENV_VALIDATION=true bun run build
   once api-build apps/api "api: build" bun run build
   run . "monorepo: dependency audit" bash .github/scripts/dependency-audit.sh .
 fi
@@ -280,6 +285,23 @@ if touched "$WEBAPP_PATHS" && need bun "https://bun.sh" "webapp"; then
   else
     SKIPPED+=("webapp: Playwright end-to-end tests (run with E2E=1 make check)")
   fi
+fi
+
+# ---------------------------------------------------------------------------
+# Akkuea Land - Quality and Security CI (land-ci.yml)
+
+if touched "$LAND_PATHS" && need bun "https://bun.sh" "akkuea-land"; then
+  build_shared
+  run apps/akkuea-land "akkuea-land: type check" env SKIP_ENV_VALIDATION=true bun run type-check
+  run apps/akkuea-land "akkuea-land: lint" bun run lint
+  run apps/akkuea-land "akkuea-land: format check" bunx prettier --check "src/**/*.{ts,tsx,js,jsx,json,css}"
+  once land-build apps/akkuea-land "akkuea-land: production build" env SKIP_ENV_VALIDATION=true bun run build
+  run apps/akkuea-land "akkuea-land: tests" env SKIP_ENV_VALIDATION=true bun test --isolate
+  run apps/akkuea-land "akkuea-land: no secret-like names in src/ or public/" bash -c '
+    if grep -r -E "(API_KEY|SECRET|PASSWORD|PRIVATE_KEY)" src/ public/ --exclude-dir=node_modules --exclude-dir=.next; then
+      echo "CI rejects these names in apps/akkuea-land. Rename them or move the values to the API."
+      exit 1
+    fi'
 fi
 
 # ---------------------------------------------------------------------------

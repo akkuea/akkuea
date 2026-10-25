@@ -21,7 +21,11 @@ import {
 } from "@stellar/stellar-sdk";
 import gameContractsTestnet from "@akkuea/shared/game-contracts.testnet.json";
 import defiRwaContractsTestnet from "@akkuea/shared/contracts.testnet.json";
-import {
+// Other test files replace "@/lib/soroban-tx" with vi.mock, and Bun shares
+// module mocks across files in one run. A query-suffixed specifier loads a
+// separate, unmocked instance so all tests here always hit the real code.
+const UNMOCKED_SOROBAN_TX = "../soroban-tx?unmocked";
+const {
   PROPERTY_NFT_CONTRACT_ID,
   GAME_ENGINE_CONTRACT_ID,
   MARKETPLACE_CONTRACT_ID,
@@ -30,14 +34,10 @@ import {
   propertyIdToU32,
   buildApproveMarketplaceXdr,
   buildFaucetClaimXdr,
-} from "@/lib/soroban-tx";
-
-// Other test files replace "@/lib/soroban-tx" with vi.mock, and Bun shares
-// module mocks across files in one run. A query-suffixed specifier loads a
-// separate, unmocked instance so the balance tests always hit the real code.
-const UNMOCKED_SOROBAN_TX = "../soroban-tx?unmocked";
-const { fetchLandBalance, getSorobanServer, landUnitsToDecimal } =
-  (await import(UNMOCKED_SOROBAN_TX)) as typeof import("@/lib/soroban-tx");
+  fetchLandBalance,
+  getSorobanServer,
+  landUnitsToDecimal,
+} = (await import(UNMOCKED_SOROBAN_TX)) as typeof import("@/lib/soroban-tx");
 
 describe("soroban-tx - game contract ID resolution", () => {
   it("PROPERTY_NFT_CONTRACT_ID defaults to the deployed GAME_PROPERTY_NFT contract", () => {

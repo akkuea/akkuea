@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { jwt } from '@elysiajs/jwt';
 import { validate, rateLimit } from '../middleware';
 import { AuthController } from '../controllers/AuthController';

@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { z, ZodSchema, ZodError } from 'zod';
+import { z, ZodSchema, ZodError } from 'zod/v3';
 import { logger } from '../services/logger';
 
 /**

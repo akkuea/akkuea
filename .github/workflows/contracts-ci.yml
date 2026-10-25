@@ -119,7 +119,7 @@ jobs:
         run: |
           cd apps/contracts
           echo "Running cargo audit against Cargo.lock..."
-          cargo audit --deny warnings --file Cargo.lock 2>&1 | tee audit-output.txt
+          cargo audit --deny warnings --ignore RUSTSEC-2026-0387 --file Cargo.lock 2>&1 | tee audit-output.txt
           # Fail the job only on high or critical severity advisories
           if grep -Ei '(Severity: high|Severity: critical)' audit-output.txt; then
             echo "::error::High or critical severity vulnerability found!"

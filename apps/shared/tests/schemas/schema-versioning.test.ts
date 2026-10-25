@@ -11,7 +11,7 @@ import {
   type SchemaDiff,
 } from "../../src/utils/schema-versioning";
 import { propertyInfoSchema, lendingPoolSchema } from "../../src/schemas";
-import { z } from "zod";
+import { z } from "zod/v3";
 
 // ---------------------------------------------------------------------------
 // Baseline snapshots – committed alongside the code so CI can detect

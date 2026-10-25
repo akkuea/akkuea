@@ -1,4 +1,4 @@
-import { z, type RefinementCtx } from "zod";
+import { z, type RefinementCtx } from "zod/v3";
 import { positiveAmountSchema } from "@akkuea/shared";
 
 const nonEmpty = (label: string) => z.string().min(1, `${label} is required`);

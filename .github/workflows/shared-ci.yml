@@ -34,16 +34,6 @@ jobs:
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
-      - name: Cache Bun dependencies
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: |
-            ~/.bun/install/cache
-            node_modules/.cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('**/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
       - name: Install dependencies
         run: |
           bun install --frozen-lockfile
@@ -67,6 +57,16 @@ jobs:
         run: |
           cd apps/shared
           bun run build
+
+      - name: Run unit tests
+        run: |
+          cd apps/shared
+          # bun enforces coverageThreshold per file, so the aggregate floor is checked here.
+          # Baseline when added: 84.89% functions, 92.89% lines (All files row).
+          set -o pipefail
+          bun test --coverage 2>&1 | tee test-output.txt
+          awk -F'|' '/All files/ { gsub(/ /, "", $2); gsub(/ /, "", $3); if ($2 + 0 < 84 || $3 + 0 < 92) { printf "Coverage below threshold: functions %s%% (min 84), lines %s%% (min 92)
+", $2, $3; exit 1 } }' test-output.txt
 
   security-audit:
     name: Security Audit

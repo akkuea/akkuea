@@ -64,28 +64,6 @@ fn u64_to_string(env: &Env, mut val: u64) -> String {
 // Internal Lending Helpers
 // ───────────────────────────────────────────────
 
-fn get_lending_admin(env: &Env) -> Address {
-    env.storage()
-        .instance()
-        .get(&LendingKey::Admin)
-        .expect("admin not set")
-}
-
-fn set_lending_admin(env: &Env, admin: &Address) {
-    env.storage().instance().set(&LendingKey::Admin, admin);
-    env.storage()
-        .instance()
-        .extend_ttl(lending_bump::INSTANCE_BUMP, lending_bump::INSTANCE_BUMP);
-}
-
-fn require_admin(env: &Env, caller: &Address) {
-    caller.require_auth();
-    let admin = get_lending_admin(env);
-    if *caller != admin {
-        panic!("only admin");
-    }
-}
-
 /// Accrue interest for a pool – updates the global interest index, reserves,
 /// and last-accrual timestamp. Safe to call multiple times in the same ledger.
 fn accrue_interest_internal(env: &Env, pool_id: &String) -> Result<(), ContractError> {
@@ -160,7 +138,10 @@ pub struct PropertyTokenContract;
 impl PropertyTokenContract {
     // ─── Constructor ───────────────────────────
     pub fn __constructor(env: Env, admin: Address) {
-        set_lending_admin(&env, &admin);
+        AdminControl::initialize(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
+        env.storage()
+            .instance()
+            .extend_ttl(lending_bump::INSTANCE_BUMP, lending_bump::INSTANCE_BUMP);
     }
 
     // ─── Share Management (Admin) ──────────────
@@ -221,9 +202,63 @@ impl PropertyTokenContract {
         PropertyEvents::share_transfer(&env, prop_str, from, to, amount as i128);
     }
 
+    /// Set the allowance for `spender` on `owner`'s shares in `property_id`.
+    ///
+    /// Note: Directly overwriting a non-zero allowance is susceptible to the
+    /// ERC-20 approve front-running race condition. When modifying an existing
+    /// non-zero allowance, prefer [`Self::approve_if_current`],
+    /// [`Self::increase_allowance`], or [`Self::decrease_allowance`].
     pub fn approve(env: Env, owner: Address, spender: Address, property_id: u64, amount: u64) {
         owner.require_auth();
         set_allowance(&env, property_id, &owner, &spender, amount);
+    }
+
+    /// Atomically update `spender`'s allowance only if the current allowance equals
+    /// `expected_current`, preventing the approve front-running race condition.
+    pub fn approve_if_current(
+        env: Env,
+        owner: Address,
+        spender: Address,
+        property_id: u64,
+        expected_current: u64,
+        new_amount: u64,
+    ) {
+        owner.require_auth();
+        approve_allowance_if_current(
+            &env,
+            property_id,
+            &owner,
+            &spender,
+            expected_current,
+            new_amount,
+        )
+        .unwrap_or_else(|e| panic_with_error!(&env, e));
+    }
+
+    /// Atomically increase `spender`'s allowance by `added_value`.
+    pub fn increase_allowance(
+        env: Env,
+        owner: Address,
+        spender: Address,
+        property_id: u64,
+        added_value: u64,
+    ) -> u64 {
+        owner.require_auth();
+        increase_allowance(&env, property_id, &owner, &spender, added_value)
+            .unwrap_or_else(|e| panic_with_error!(&env, e))
+    }
+
+    /// Atomically decrease `spender`'s allowance by `subtracted_value`.
+    pub fn decrease_allowance(
+        env: Env,
+        owner: Address,
+        spender: Address,
+        property_id: u64,
+        subtracted_value: u64,
+    ) -> u64 {
+        owner.require_auth();
+        decrease_allowance(&env, property_id, &owner, &spender, subtracted_value)
+            .unwrap_or_else(|e| panic_with_error!(&env, e))
     }
 
     pub fn transfer_from(
@@ -389,7 +424,8 @@ impl PropertyTokenContract {
         close_factor: i128,
         reserve_factor: u32,
     ) {
-        require_admin(&env, &admin);
+        admin.require_auth();
+        AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
         PauseControl::require_not_paused(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
         if PoolStorage::exists(&env, &pool_id) {
             panic!("pool already exists");
@@ -932,7 +968,8 @@ impl PropertyTokenContract {
     /// * `new_close_factor` – New close factor in PRECISION units (e.g., 50% = 500_000_000_000_000_000).
     /// * `caller`           – Must be the contract admin.
     pub fn set_close_factor(env: Env, caller: Address, pool_id: String, new_close_factor: i128) {
-        require_admin(&env, &caller);
+        caller.require_auth();
+        AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
         if new_close_factor <= 0 || new_close_factor > PRECISION {
             panic!("close factor must be between 0 and 1.0 (PRECISION)");
         }
@@ -961,6 +998,7 @@ impl PropertyTokenContract {
         caller.require_auth();
         AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
         PriceOracle::set_oracle_address(&env, &oracle_address);
+        EmergencyEvents::oracle_updated(&env, caller, oracle_address);
     }
 
     /// Configure oracle guardrail parameters.
@@ -970,10 +1008,19 @@ impl PropertyTokenContract {
     pub fn set_oracle_config(env: Env, caller: Address, max_age: u64, min_price: i128) {
         caller.require_auth();
         AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
+        if min_price < 0 {
+            panic_with_error!(&env, ContractError::InvalidPrice);
+        }
         if max_age > 0 {
             PriceOracle::set_max_age(&env, max_age);
         }
         PriceOracle::set_min_price(&env, min_price);
+        EmergencyEvents::oracle_config_updated(
+            &env,
+            caller,
+            PriceOracle::get_max_age(&env),
+            min_price,
+        );
     }
 
     // ─── Query Views ────────────────────────────
@@ -1100,11 +1147,45 @@ impl PropertyTokenContract {
         admin.require_auth();
         AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
         RoleStorage::grant_role(&env, &target, &Role::EmergencyGuard);
+        EmergencyEvents::emergency_role_granted(&env, admin, target);
     }
 
     pub fn revoke_emergency_role(env: Env, admin: Address, target: Address) {
         admin.require_auth();
         AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
         RoleStorage::revoke_role(&env, &target, &Role::EmergencyGuard);
+        EmergencyEvents::emergency_role_revoked(&env, admin, target);
+    }
+
+    // ─── Admin Management (Two-Step Transfer) ──
+
+    pub fn get_admin(env: Env) -> Address {
+        AdminControl::get_admin(&env).expect("admin not set")
+    }
+
+    pub fn get_pending_admin(env: Env) -> Option<Address> {
+        AdminControl::get_pending_admin(&env)
+    }
+
+    pub fn transfer_admin_start(env: Env, caller: Address, new_admin: Address) {
+        caller.require_auth();
+        AdminControl::transfer_admin_start(&env, &caller, &new_admin)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+        EmergencyEvents::admin_transfer_started(&env, caller, new_admin);
+    }
+
+    pub fn transfer_admin_accept(env: Env, new_admin: Address) {
+        new_admin.require_auth();
+        let old_admin = AdminControl::get_admin(&env);
+        AdminControl::transfer_admin_accept(&env, &new_admin)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+        EmergencyEvents::admin_transfer_accepted(&env, old_admin, new_admin);
+    }
+
+    pub fn transfer_admin_cancel(env: Env, caller: Address) {
+        caller.require_auth();
+        AdminControl::transfer_admin_cancel(&env, &caller)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+        EmergencyEvents::admin_transfer_cancelled(&env, caller);
     }
 }

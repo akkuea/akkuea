@@ -120,10 +120,17 @@ export async function POST(req: NextRequest) {
     await verifyPrivyWalletOwnership(accessToken, walletId, address);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unauthorized";
-    console.error("[privy/sign] Wallet ownership verification failed:", message);
+    console.error(
+      "[privy/sign] Wallet ownership verification failed:",
+      message,
+    );
     const isConfig = message.includes("not configured");
     return NextResponse.json(
-      { error: isConfig ? "Privy credentials not configured on the server." : "Unauthorized." },
+      {
+        error: isConfig
+          ? "Privy credentials not configured on the server."
+          : "Unauthorized.",
+      },
       { status: isConfig ? 500 : 403 },
     );
   }

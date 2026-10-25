@@ -1,4 +1,5 @@
 import { describe, expect, test, mock, beforeEach, afterEach } from "bun:test";
+import type { NextRequest } from "next/server";
 import {
   Keypair,
   TransactionBuilder,
@@ -208,7 +209,9 @@ describe("POST /api/privy/sign", () => {
 
   test("rejects with 403 when user does not own wallet", async () => {
     mockVerifyOwnership.mockImplementationOnce(() =>
-      Promise.reject(new Error("Wallet does not belong to authenticated user.")),
+      Promise.reject(
+        new Error("Wallet does not belong to authenticated user."),
+      ),
     );
 
     const { POST } = await import("../sign/route");

@@ -1,4 +1,5 @@
 import { describe, expect, test, mock, beforeEach } from "bun:test";
+import type { NextRequest } from "next/server";
 import { PRIVY_APP_CREDENTIAL_ENV, PRIVY_APP_ID_ENV } from "@/lib/privy-env";
 
 // Mock next/server for test environment
@@ -80,7 +81,7 @@ describe("POST /api/privy/create-wallet", () => {
     const { POST } = await import("../create-wallet/route");
     const req = makeRequest();
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(500);
     const body = await res.json();
     expect(body.error).toBe("Privy credentials not configured on the server.");
@@ -90,7 +91,7 @@ describe("POST /api/privy/create-wallet", () => {
     const { POST } = await import("../create-wallet/route");
     const req = makeRequest({});
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error).toBe("Missing Privy access token.");
@@ -104,7 +105,7 @@ describe("POST /api/privy/create-wallet", () => {
     const { POST } = await import("../create-wallet/route");
     const req = makeRequest();
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(401);
     const body = await res.json();
     expect(body.error).toBe("Invalid or missing access token.");
@@ -113,14 +114,16 @@ describe("POST /api/privy/create-wallet", () => {
   test("does not leak raw exception text on wallet creation failure", async () => {
     mockEnsureStellarWallet.mockImplementationOnce(() =>
       Promise.reject(
-        new Error("Database connection timed out at postgres://internal-db:5432"),
+        new Error(
+          "Database connection timed out at postgres://internal-db:5432",
+        ),
       ),
     );
 
     const { POST } = await import("../create-wallet/route");
     const req = makeRequest();
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(502);
     const body = await res.json();
     expect(body.error).toBe("Failed to create wallet.");
@@ -132,7 +135,7 @@ describe("POST /api/privy/create-wallet", () => {
     const { POST } = await import("../create-wallet/route");
     const req = makeRequest();
 
-    const res = await POST(req);
+    const res = await POST(req as unknown as NextRequest);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.id).toBe("wallet-abc");

@@ -288,6 +288,9 @@ export const apiEnvSchema = z.object({
     .optional()
     .or(z.literal("")),
   DEFI_RWA_CONTRACT_ID: stellarContractIdSchema.optional().or(z.literal("")),
+  PAYMENT_TOKEN_CONTRACT_ID: stellarContractIdSchema
+    .optional()
+    .or(z.literal("")),
 });
 
 export const webappEnvSchema = z.object({

@@ -65,7 +65,7 @@ describe.skipIf(skipIfNoDatabase)('Audit Log Integration', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'internal-api-key': INTERNAL_KEY,
+            'x-internal-api-key': INTERNAL_KEY,
           },
           body: JSON.stringify({ verified: true, actorWallet: TEST_WALLET }),
         }),
@@ -100,7 +100,7 @@ describe.skipIf(skipIfNoDatabase)('Audit Log Integration', () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'internal-api-key': INTERNAL_KEY,
+            'x-internal-api-key': INTERNAL_KEY,
           },
           body: JSON.stringify({
             verified: false,

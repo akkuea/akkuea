@@ -44,9 +44,13 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
   describe('GET /kyc/status/:userId', () => {
     it.skipIf(skipIfNoDatabase)('returns 404 for non-existent user (authorized)', async () => {
       const app = createApp();
+      const matchingToken = jwt.sign(
+        { id: NON_EXISTENT_USER_ID, walletAddress: 'GOTHER' },
+        JWT_SECRET,
+      );
       const response = await app.handle(
         new Request(`http://localhost/kyc/status/${NON_EXISTENT_USER_ID}`, {
-          headers: { Authorization: `Bearer ${testToken}` },
+          headers: { Authorization: `Bearer ${matchingToken}` },
         }),
       );
       expect(response.status).toBe(404);
@@ -287,7 +291,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const response = await app.handle(
         new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'internal-api-key': INTERNAL_KEY },
+          headers: { 'Content-Type': 'application/json', 'x-internal-api-key': INTERNAL_KEY },
           body: JSON.stringify({ verified: true }),
         }),
       );
@@ -324,7 +328,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const response = await app.handle(
         new Request(`http://localhost/kyc/verify/${documentId}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'internal-api-key': INTERNAL_KEY },
+          headers: { 'Content-Type': 'application/json', 'x-internal-api-key': INTERNAL_KEY },
           body: JSON.stringify({ verified: true }),
         }),
       );
@@ -361,7 +365,7 @@ describe.skipIf(skipIfNoDatabase)('KYC Routes', () => {
       const response = await app.handle(
         new Request(`http://localhost/kyc/verify/${documentId}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'internal-api-key': INTERNAL_KEY },
+          headers: { 'Content-Type': 'application/json', 'x-internal-api-key': INTERNAL_KEY },
           body: JSON.stringify({ verified: false, notes: 'Document expired' }),
         }),
       );
@@ -426,7 +430,7 @@ describe('KYC Verify Endpoint Auth Rules (Unit Tests)', () => {
     const response = await app.handle(
       new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'internal-api-key': 'invalid-key' },
+        headers: { 'Content-Type': 'application/json', 'x-internal-api-key': 'invalid-key' },
         body: JSON.stringify({ verified: true }),
       }),
     );
@@ -451,7 +455,7 @@ describe('KYC Verify Endpoint Auth Rules (Unit Tests)', () => {
     const response = await app.handle(
       new Request(`http://localhost/kyc/verify/${NON_EXISTENT_DOC_ID}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'internal-api-key': INTERNAL_KEY },
+        headers: { 'Content-Type': 'application/json', 'x-internal-api-key': INTERNAL_KEY },
         body: JSON.stringify({ verified: true }),
       }),
     );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "./src/i18n/routing";
+import { buildContentSecurityPolicy } from "./src/lib/csp";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -40,7 +41,33 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  return intlMiddleware(request);
+  // Generate a CSP nonce for inline script protection.
+  // Uses crypto.randomUUID() and encodes as base64 per OWASP recommendations.
+  const nonceBuffer = new Uint8Array(16);
+  crypto.getRandomValues(nonceBuffer);
+  const nonce = Buffer.from(nonceBuffer).toString("base64");
+
+  // Detect if the request arrived over HTTPS (or is being proxied from HTTPS)
+  const isHttps =
+    request.nextUrl.protocol === "https:" ||
+    request.headers.get("x-forwarded-proto") === "https";
+
+  // Build CSP with nonce and set it on the request so Next.js can stamp it on inline scripts.
+  const cspValue = buildContentSecurityPolicy(nonce, isHttps);
+  const cspHeaderName = process.env.CSP_REPORT_ONLY === "true"
+    ? "Content-Security-Policy-Report-Only"
+    : "Content-Security-Policy";
+
+  // Set nonce on request headers so Next.js middleware can access it
+  request.headers.set("x-nonce", nonce);
+  request.headers.set(cspHeaderName, cspValue);
+
+  const response = intlMiddleware(request);
+
+  // Forward CSP header to response
+  response.headers.set(cspHeaderName, cspValue);
+
+  return response;
 }
 
 export const config = {

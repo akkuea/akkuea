@@ -308,6 +308,11 @@ export const webappEnvSchema = z.object({
   PRIVY_APP_SECRET: z.string().optional(),
   NEXT_PUBLIC_POLLAR_KEY: z.string().optional(),
   NEXT_PUBLIC_PROPERTY_IMAGE_HOSTS: propertyImageHostsSchema,
+  NEXT_PUBLIC_STELLAR_NETWORK: z
+    .enum(["testnet", "mainnet"])
+    .optional()
+    .default("testnet"),
+  NEXT_PUBLIC_SOROBAN_RPC_URL: urlSchema.optional().or(z.literal("")),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

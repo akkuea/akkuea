@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from "react";
 import type { DefaultValues } from "react-hook-form";
 import { FormProvider, useForm, type UseFormReturn } from "react-hook-form";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
 

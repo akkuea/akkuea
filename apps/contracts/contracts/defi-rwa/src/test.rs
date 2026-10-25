@@ -5103,6 +5103,10 @@ fn test_non_admin_cannot_list_property() {
 
 #[test]
 fn test_purchase_rejects_unlisted_payment_token() {
+    assert_eq!(ContractError::PaymentTokenMismatch as u32, 29);
+    assert_eq!(ContractError::CollateralAssetMismatch as u32, 30);
+    assert_eq!(ContractError::InsufficientReserves as u32, 31);
+
     let (contract_id, env, _owner, buyer, _payment_token, property_id) = setup_purchase_test();
     let wrong_token = Address::generate(&env);
     let client = PropertyTokenContractClient::new(&env, &contract_id);

@@ -1,5 +1,5 @@
 import { Elysia, t } from 'elysia';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { validateBody, validateQuery } from '../middleware/validation';
 import { treasuryController, type TreasuryMovementBody } from '../controllers/TreasuryController';
 import { TREASURY_VENUE_IDS } from '../config/treasury';

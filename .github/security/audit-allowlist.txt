@@ -1,13 +1,5 @@
 # Known high/critical dependency findings allowlisted for CI.
 # Format: GHSA-ID  # package - reason / follow-up
 # New advisories not listed here MUST fail the audit step.
-# Reviewed: 2026-10-20 against the bun.lock regenerated for this PR after upgrading
-# nanoid to ^5.1.16, postcss to ^8.5.18 and ws to ^8.21.0. Everything else that the
-# previous list carried is no longer reported by `bun audit --audit-level=low`.
-# 2026-10-24: added GHSA-mrhx-c7xc-m3w5 (zod). Patched only in zod 4.6.6, and zod 3 is
-# still used directly and by privy, scalar, reown and eslint-plugin-react-hooks.
-# Follow-up: dependency upgrade track.
-
-GHSA-5p2g-fcmc-qvqq  # image-size (high) - JXL and HEIF parsers allow denial of service through infinite loops - no patched release for 1.x, transitive via @storybook/nextjs in webapp; track upgrade
-GHSA-mrhx-c7xc-m3w5  # zod (high) - can exhaust memory while validating oversized constrained collections - patched only in 4.6.6; zod 3 is direct in api, shared, webapp and land and transitive via privy, scalar, reown and eslint-plugin-react-hooks; remove once the zod 4 migration (#1290) and those dependencies move off zod 3
-GHSA-w3rx-r6r6-pgpr  # image-size (high) - ICNS parser allows denial of service through an infinite loop - no patched release for 1.x, transitive via @storybook/nextjs in webapp; track upgrade
+# This file is intentionally empty because the current bun audit run no longer reports
+# any unpatched high or critical advisories relevant to the repo.

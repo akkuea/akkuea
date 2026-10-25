@@ -63,6 +63,8 @@
     "webpack-dev-middleware": "^7.4.6",
     "nanoid": "^5.1.16",
     "postcss": "^8.5.18",
-    "ws": "^8.21.0"
+    "image-size": "^2.0.4",
+    "ws": "^8.21.0",
+    "zod": "^4.6.7"
   }
 }

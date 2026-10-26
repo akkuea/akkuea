@@ -127,6 +127,13 @@
       "when": 1792785924870,
       "tag": "0017_notification_claiming",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1792986350046,
+      "tag": "0018_lending_contract_pool_id",
+      "breakpoints": true
     }
   ]
 }

@@ -12,7 +12,8 @@ function jsonError(status: number, error: string, message: string) {
 }
 
 function isAllowedOperator(wallet: string): boolean {
-  const allowed = (process.env.OPERATIONS_ALLOWED_WALLETS ?? "").split(",")
+  const allowed = (process.env.OPERATIONS_ALLOWED_WALLETS ?? "")
+    .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
   if (allowed.includes("*")) {
@@ -66,7 +67,11 @@ async function proxy(
     return jsonError(401, "UNAUTHORIZED", "A valid API session is required");
   }
   if (!isAllowedOperator(wallet)) {
-    return jsonError(403, "FORBIDDEN", "You are not authorized to access operations tools");
+    return jsonError(
+      403,
+      "FORBIDDEN",
+      "You are not authorized to access operations tools",
+    );
   }
   if (!operationsBackendCredential) {
     return jsonError(503, "NOT_CONFIGURED", "Operations API is not configured");
@@ -99,7 +104,8 @@ async function proxy(
   return new NextResponse(text, {
     status: response.status,
     headers: {
-      "content-type": response.headers.get("content-type") ?? "application/json",
+      "content-type":
+        response.headers.get("content-type") ?? "application/json",
     },
   });
 }

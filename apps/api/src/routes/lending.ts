@@ -7,11 +7,21 @@ import {
   rateLimit,
   walletKeyGenerator,
   authPlugin,
-  idempotency,
 } from '../middleware';
 import { LendingController } from '../controllers/LendingController';
 import { positionService } from '../services/PositionService';
 import { isLiquidatorAuthorized } from '../utils/liquidatorAuth';
+import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
+import {
+  CreatePoolDto,
+  DepositDto,
+  WithdrawDto,
+  BorrowDto,
+  RepayDto,
+  ConfirmLendingDto,
+  PrepareLiquidationDto,
+  ConfirmLiquidationDto,
+} from '../dto/lending.dto';
 
 const poolQuerySchema = paginationQuerySchema.extend({
   asset: z.string().optional(),
@@ -56,42 +66,48 @@ const liquidatorAuth = new Elysia({ name: 'liquidator-auth' }).onBeforeHandle(
   },
 );
 
-const depositSchema = z.object({
-  amount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
-});
+// Pool creation calls the contract with the admin key, so it is an operator
+// action. Registered inside the create-pool group only.
+const operatorAuth = new Elysia({ name: 'lending-operator-auth' }).onBeforeHandle(
+  { as: 'scoped' },
+  ({ headers, set }) => {
+    if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
+      set.status = 403;
+      return {
+        success: false,
+        error: 'FORBIDDEN',
+        message: 'Operator access required',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  },
+);
 
-const withdrawSchema = z.object({
-  amount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
-});
-
-const borrowSchema = z.object({
-  borrowAmount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
-  collateralAmount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
-  collateralAsset: stellarAddressSchema,
-});
-
-const repaySchema = z.object({
-  amount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
-});
-
-const chainOnlyResponse = ({ set }: { set: { status?: number } }) => {
-  set.status = 410;
+/** Body of the 410 the retired database-only write routes return. */
+function retiredWriteRoute(action: string) {
   return {
     success: false,
-    error: 'CHAIN_CONFIRMATION_REQUIRED',
-    message: 'This endpoint no longer mutates balances directly. Use the prepare/confirm flow and submit a confirmed Soroban transaction.',
+    error: 'GONE',
+    message: `POST /lending/pools/:id/${action} no longer changes balances. Use POST /lending/pools/:id/${action}/prepare, sign and submit the transaction, then POST /lending/pools/:id/${action}/confirm with its hash.`,
+    timestamp: new Date().toISOString(),
   };
-};
+}
 
-const createPoolSchema = z.object({
-  name: z.string().min(1).max(255),
-  asset: z.string().min(1).max(20),
-  assetAddress: stellarAddressSchema,
-  collateralFactor: z.string().regex(/^\d+(\.\d+)?$/),
-  liquidationThreshold: z.string().regex(/^\d+(\.\d+)?$/),
-  liquidationPenalty: z.string().regex(/^\d+(\.\d+)?$/),
-  reserveFactor: z.coerce.number().int().nonnegative().optional(),
-});
+function prepareDetail(action: string) {
+  return {
+    summary: `Prepare a ${action}`,
+    description: `Returns a simulated, unsigned defi-rwa ${action} transaction with the authenticated wallet as source (requires authentication)`,
+    tags: ['Lending'],
+  };
+}
+
+function confirmDetail(action: string) {
+  return {
+    summary: `Confirm a ${action}`,
+    description: `Verifies a submitted ${action} transaction on Soroban RPC and records the position and pool totals read back from the contract (requires authentication)`,
+    tags: ['Lending'],
+  };
+}
 
 // Every route below registers its own `validate()` inside a group, so the
 // scoped hook only covers the route written next to it. Using `.use()` at
@@ -179,92 +195,179 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
   // PROTECTED ROUTES
   .use(authPlugin)
 
-  // POST /pools - Create pool (auth required)
+  // POST /pools - Create pool on-chain and record it (operator only)
   .group('', (app) =>
     app
-      .use(validate({ body: createPoolSchema }))
+      .use(operatorAuth)
+      .use(validate({ body: CreatePoolDto }))
       .post('/pools', async (ctx) => LendingController.createPool(ctx), {
-        beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+        beforeHandle: [rateLimit()],
         detail: {
           summary: 'Create a lending pool',
-          description: 'Create a new lending pool (requires authentication)',
-          tags: ['Lending'],
-        },
-      }),
-  )
-
-  // POST /pools/:id/deposit - Deposit into pool (auth required)
-  .group('', (app) =>
-    app
-      .use(validate({ body: depositSchema }))
-      .post('/pools/:id/deposit', chainOnlyResponse, {
-        beforeHandle: [rateLimit()],
-        detail: {
-          summary: 'Deposit into pool',
-          description: 'Deposit assets into a lending pool (requires authentication)',
-          tags: ['Lending'],
-        },
-      }),
-  )
-
-  // POST /pools/:id/withdraw - Withdraw from pool (auth required)
-  .group('', (app) =>
-    app
-      .use(validate({ body: withdrawSchema }))
-      .post('/pools/:id/withdraw', chainOnlyResponse, {
-        beforeHandle: [rateLimit()],
-        detail: {
-          summary: 'Withdraw from pool',
-          description: 'Withdraw assets from a lending pool (requires authentication)',
-          tags: ['Lending'],
-        },
-      }),
-  )
-
-  // POST /pools/:id/borrow - Borrow from pool (auth required)
-  .use(idempotency)
-  .group('', (app) =>
-    app
-      .use(validate({ body: borrowSchema }))
-      .post('/pools/:id/borrow', chainOnlyResponse, {
-        beforeHandle: [rateLimit()],
-        detail: {
-          summary: 'Borrow from pool',
           description:
-            'Borrow assets from a lending pool by providing collateral (requires authentication)',
+            'Create a lending pool on the defi-rwa contract with the admin key, then record it with its contract pool id (requires the internal operations key)',
           tags: ['Lending'],
         },
       }),
   )
 
-  // POST /pools/:id/repay - Repay loan (auth required)
-  .use(idempotency)
-  .group('', (app) =>
-    app
-      .use(validate({ body: repaySchema }))
-      .post('/pools/:id/repay', chainOnlyResponse, {
-        beforeHandle: [rateLimit()],
-        detail: {
-          summary: 'Repay loan',
-          description: 'Repay a borrowed loan in a lending pool (requires authentication)',
-          tags: ['Lending'],
-        },
-      }),
-  )
+  // POST /pools/:id/{deposit,withdraw,borrow,repay} - retired. These used to
+  // change balances in Postgres without any on-chain transaction; they now
+  // answer 410 and point at the prepare/confirm routes below.
+  .post('/pools/:id/deposit', ({ set }) => {
+    set.status = 410;
+    return retiredWriteRoute('deposit');
+  })
+  .post('/pools/:id/withdraw', ({ set }) => {
+    set.status = 410;
+    return retiredWriteRoute('withdraw');
+  })
+  .post('/pools/:id/borrow', ({ set }) => {
+    set.status = 410;
+    return retiredWriteRoute('borrow');
+  })
+  .post('/pools/:id/repay', ({ set }) => {
+    set.status = 410;
+    return retiredWriteRoute('repay');
+  })
 
-  // POST /pools/:id/positions/:borrowerId/liquidate - Execute liquidation (liquidator role required)
-  .use(liquidatorAuth)
+  // POST /pools/:id/deposit/prepare and /confirm
   .group('', (app) =>
     app
-      .use(validate({ params: liquidationParamsSchema }))
+      .use(validate({ params: poolIdParamSchema, body: DepositDto }))
       .post(
-        '/pools/:id/positions/:borrowerId/liquidate',
-        async (ctx) => LendingController.liquidate(ctx),
+        '/pools/:id/deposit/prepare',
+        async (ctx) => LendingController.prepareAction('deposit', ctx),
+        {
+          beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+          detail: prepareDetail('deposit'),
+        },
+      ),
+  )
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema, body: ConfirmLendingDto }))
+      .post(
+        '/pools/:id/deposit/confirm',
+        async (ctx) => LendingController.confirmAction('deposit', ctx),
+        {
+          beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+          detail: confirmDetail('deposit'),
+        },
+      ),
+  )
+
+  // POST /pools/:id/withdraw/prepare and /confirm
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema, body: WithdrawDto }))
+      .post(
+        '/pools/:id/withdraw/prepare',
+        async (ctx) => LendingController.prepareAction('withdraw', ctx),
+        {
+          beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+          detail: prepareDetail('withdraw'),
+        },
+      ),
+  )
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema, body: ConfirmLendingDto }))
+      .post(
+        '/pools/:id/withdraw/confirm',
+        async (ctx) => LendingController.confirmAction('withdraw', ctx),
+        {
+          beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+          detail: confirmDetail('withdraw'),
+        },
+      ),
+  )
+
+  // POST /pools/:id/borrow/prepare and /confirm
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema, body: BorrowDto }))
+      .post(
+        '/pools/:id/borrow/prepare',
+        async (ctx) => LendingController.prepareAction('borrow', ctx),
+        {
+          beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+          detail: prepareDetail('borrow'),
+        },
+      ),
+  )
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema, body: ConfirmLendingDto }))
+      .post(
+        '/pools/:id/borrow/confirm',
+        async (ctx) => LendingController.confirmAction('borrow', ctx),
+        {
+          beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+          detail: confirmDetail('borrow'),
+        },
+      ),
+  )
+
+  // POST /pools/:id/repay/prepare and /confirm
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema, body: RepayDto }))
+      .post(
+        '/pools/:id/repay/prepare',
+        async (ctx) => LendingController.prepareAction('repay', ctx),
+        {
+          beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+          detail: prepareDetail('repay'),
+        },
+      ),
+  )
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema, body: ConfirmLendingDto }))
+      .post(
+        '/pools/:id/repay/confirm',
+        async (ctx) => LendingController.confirmAction('repay', ctx),
+        {
+          beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
+          detail: confirmDetail('repay'),
+        },
+      ),
+  )
+
+  // POST /pools/:id/positions/:borrowerId/liquidate/{prepare,confirm} (liquidator role required)
+  .use(liquidatorAuth)
+  .post('/pools/:id/positions/:borrowerId/liquidate', ({ set }) => {
+    set.status = 410;
+    return retiredWriteRoute('positions/:borrowerId/liquidate');
+  })
+  .group('', (app) =>
+    app
+      .use(validate({ params: liquidationParamsSchema, body: PrepareLiquidationDto }))
+      .post(
+        '/pools/:id/positions/:borrowerId/liquidate/prepare',
+        async (ctx) => LendingController.prepareLiquidation(ctx),
         {
           detail: {
-            summary: 'Liquidate position',
+            summary: 'Prepare a liquidation',
             description:
-              'Execute liquidation on an undercollateralized position (requires liquidator role)',
+              'Returns an unsigned liquidate(liquidator, pool, borrower, debt_to_cover) transaction for the liquidator to sign (requires liquidator role)',
+            tags: ['Lending'],
+          },
+        },
+      ),
+  )
+  .group('', (app) =>
+    app
+      .use(validate({ params: liquidationParamsSchema, body: ConfirmLiquidationDto }))
+      .post(
+        '/pools/:id/positions/:borrowerId/liquidate/confirm',
+        async (ctx) => LendingController.confirmLiquidation(ctx),
+        {
+          detail: {
+            summary: 'Confirm a liquidation',
+            description:
+              'Verifies a liquidator-signed liquidate transaction on-chain and refreshes the position from the contract (requires liquidator role)',
             tags: ['Lending'],
           },
         },

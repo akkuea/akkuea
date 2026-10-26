@@ -18,7 +18,7 @@ Turn the pilot whitelist's identity data into something an operator can actually
 **Requirements and context**
 
 - `apps/api/src/services/StorageService.ts`: class at line 29, local base directory at line 34, and methods `store` (115), `readByRelativePath` (147), `deleteByRelativePath` (166), and `getBaseDir` (182). The only caller is `apps/api/src/controllers/KYCController.ts`. Magic-byte validation is covered by `apps/api/src/__tests__/StorageService.magicbytes.test.ts` and must be kept.
-- `apps/api/src/db/schema/pilotWhitelist.ts`: `pilot_whitelist_requests` has plain `varchar` `full_name` and `id_reference`, and no attachment column. Migrations live in `apps/api/src/db/migrations/` (latest `004_create_notification_dlq.sql`). Follow the existing numbering.
+- `apps/api/src/db/schema/pilotWhitelist.ts`: `pilot_whitelist_requests` has plain `varchar` `full_name` and `id_reference`, and no attachment column. Migrations live in `apps/api/drizzle/migrations/` (latest `0014_dizzy_hydra.sql`). Follow the existing numbering.
 - `apps/api/src/services/WhitelistService.ts`: `approveRequest` (line 11) and `rejectRequest` (line 51). The request path goes through `WhitelistController` and `routes/whitelist.ts` (Elysia, with C7-005's `rateLimit` middleware at line 6).
 - `apps/webapp/src/components/pilot/WhitelistOnboardingForm.tsx:41-45`: form state with `fullName`, `idType`, and `idReference`. `WhitelistReviewQueue.tsx` is the operator surface.
 - Scheduled job pattern: `apps/api/src/workers/kycExpiryJob.ts` (class at line 38, self-scheduling via `scheduleNext` at line 154).

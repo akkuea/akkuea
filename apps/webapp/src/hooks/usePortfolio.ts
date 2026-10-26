@@ -65,9 +65,12 @@ export function usePortfolio(userAddress?: string | null): UsePortfolioReturn {
         setBorrows([]);
         setDeposits([]);
         setSummary(EMPTY_SUMMARY);
+        setIsLoading(false);
+        setError(null);
       }, 0);
       return () => clearTimeout(timer);
     }
+    const address: string = userAddress;
 
     let cancelled = false;
 
@@ -76,51 +79,37 @@ export function usePortfolio(userAddress?: string | null): UsePortfolioReturn {
       setError(null);
 
       try {
-        // Fetch portfolio index, all properties, and lending pools in parallel
-        const [portfolioIndex, allProperties, pools] = await Promise.all([
-          userApi.getPortfolio(userAddress!).catch(() => ({
-            properties: [],
-            deposits: [],
-            borrows: [],
-          })),
-          propertyApi.getAll({ limit: 100 }).catch(() => ({ data: [] })),
-          lendingApi.getPools().catch(() => []),
+        const [portfolioIndex, pools] = await Promise.all([
+          userApi.getPortfolio(address),
+          lendingApi.getPools(),
         ]);
 
         if (cancelled) return;
 
-        // Build a map for quick lookup
-        const propertyMap = new Map(allProperties.data.map((p) => [p.id, p]));
-
-        // Resolve portfolio properties with estimated values
-        const portfolioProperties: PortfolioProperty[] =
-          portfolioIndex.properties
-            .map(({ propertyId, shares }) => {
-              const property = propertyMap.get(propertyId);
-              if (!property) return null;
-              const pricePerShare = parseFloat(property.pricePerShare);
-              const estimatedValue = shares * pricePerShare;
-              return { property, shares, estimatedValue, yieldRate: 0 };
-            })
-            .filter((p): p is PortfolioProperty => p !== null);
-
-        // Fetch user positions across all pools
-        const positionResults = await Promise.all(
-          pools.map(async (pool) => {
-            const [userDeposits, userBorrows] = await Promise.all([
-              lendingApi
-                .getUserDeposits(pool.id, userAddress!)
-                .catch(() => [] as DepositPosition[]),
-              lendingApi
-                .getUserBorrows(pool.id, userAddress!)
-                .catch(() => [] as BorrowPosition[]),
-            ]);
-            return { pool, userDeposits, userBorrows };
-          }),
-        );
+        const [properties, positionResults] = await Promise.all([
+          Promise.all(
+            portfolioIndex.properties.map(({ propertyId, shares }) =>
+              propertyApi.getById(propertyId).then((property) => {
+                const pricePerShare = parseFloat(property.pricePerShare);
+                const estimatedValue = shares * pricePerShare;
+                return { property, shares, estimatedValue, yieldRate: 0 };
+              }),
+            ),
+          ),
+          Promise.all(
+            pools.map(async (pool) => {
+              const [userDeposits, userBorrows] = await Promise.all([
+                lendingApi.getUserDeposits(pool.id, address),
+                lendingApi.getUserBorrows(pool.id, address),
+              ]);
+              return { pool, userDeposits, userBorrows };
+            }),
+          ),
+        ]);
 
         if (cancelled) return;
 
+        const portfolioProperties: PortfolioProperty[] = properties;
         const allBorrows = positionResults.flatMap((r) => r.userBorrows);
         const allDeposits = positionResults.flatMap((r) => r.userDeposits);
 
@@ -183,11 +172,8 @@ export function usePortfolio(userAddress?: string | null): UsePortfolioReturn {
       }
     }
 
-    const timer = setTimeout(() => {
-      void load();
-    }, 0);
+    void load();
     return () => {
-      clearTimeout(timer);
       cancelled = true;
     };
   }, [userAddress, fetchKey]);

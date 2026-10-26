@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, pgEnum, text } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, timestamp, pgEnum, text, index } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const kycStatusEnum = pgEnum('kyc_status', [
@@ -42,19 +42,26 @@ export const kycDocumentStatusEnum = pgEnum('kyc_document_status', [
   'rejected',
 ]);
 
-export const kycDocuments = pgTable('kyc_documents', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  type: kycDocumentTypeEnum('type').notNull(),
-  fileName: varchar('file_name', { length: 255 }).notNull(),
-  fileUrl: text('file_url').notNull(),
-  status: kycDocumentStatusEnum('status').notNull().default('pending'),
-  rejectionReason: text('rejection_reason'),
-  uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
-  reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
-});
+export const kycDocuments = pgTable(
+  'kyc_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: kycDocumentTypeEnum('type').notNull(),
+    fileName: varchar('file_name', { length: 255 }).notNull(),
+    fileUrl: text('file_url').notNull(),
+    status: kycDocumentStatusEnum('status').notNull().default('pending'),
+    rejectionReason: text('rejection_reason'),
+    uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow(),
+    reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('kyc_documents_user_id_idx').on(t.userId),
+    index('kyc_documents_user_id_type_idx').on(t.userId, t.type),
+  ],
+);
 
 export const usersRelations = relations(users, ({ many }) => ({
   kycDocuments: many(kycDocuments),

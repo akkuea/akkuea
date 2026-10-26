@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Shield,
@@ -18,7 +18,7 @@ import {
   type LendingActionFormValues,
 } from "@/schemas/forms";
 import { lendingApi } from "@/services/api";
-import { formatCurrency } from "@/lib/utils";
+import { formatAssetAmount } from "@/lib/utils";
 import type { OptimisticAction } from "@/hooks/useLendingPools";
 
 export type PoolAction = "supply" | "borrow" | "withdraw" | "repay";
@@ -30,6 +30,10 @@ export interface PoolActionModalProps {
   onClose: () => void;
   /** Connected wallet address - required for real TX submission */
   userAddress?: string | null;
+  /** The user's deposit in this pool, in the pool's asset; caps withdraw */
+  userDeposit?: number;
+  /** The user's debt in this pool (principal plus accrued interest); caps repay */
+  userDebt?: number;
   /** Callback fired after a successful transaction so the parent can refetch */
   onSuccess?: () => void;
   /** Apply an optimistic update to the UI before on-chain confirmation */
@@ -45,11 +49,26 @@ export interface PoolActionModalProps {
   rollbackOptimisticUpdate?: (snapshotId: string) => void;
 }
 
+/** How long the success view stays up before the modal closes itself */
+export const AUTO_CLOSE_DELAY_MS = 2500;
+
+/** Stellar assets use 7 decimal places */
+const AMOUNT_DECIMALS = 7;
+
 /** Present a valid 64-hex-char Stellar-style tx hash in a shortened form */
 function shortenTxHash(hash: string): string {
   if (hash.length <= 16) return hash;
   return `${hash.slice(0, 8)}...${hash.slice(-8)}`;
 }
+
+/**
+ * What caps the amount of an action:
+ * - `userDeposit`: what the user has supplied to the pool
+ * - `userDebt`: what the user owes the pool, principal plus accrued interest
+ * - `poolLiquidity`: what the pool can lend out right now
+ * - `none`: no upper bound (a deposit can always grow the pool)
+ */
+type ActionLimit = "userDeposit" | "userDebt" | "poolLiquidity" | "none";
 
 const ACTION_CONFIG: Record<
   PoolAction,
@@ -58,7 +77,9 @@ const ACTION_CONFIG: Record<
     description: string;
     buttonText: string;
     apyKey: "supplyAPY" | "borrowAPY";
-    maxKey: "availableLiquidity" | "none";
+    limit: ActionLimit;
+    /** Validation message when the amount is above the limit */
+    limitMessage: (formattedLimit: string) => string;
   }
 > = {
   supply: {
@@ -66,30 +87,60 @@ const ACTION_CONFIG: Record<
     description: "Earn interest by supplying liquidity",
     buttonText: "Supply",
     apyKey: "supplyAPY",
-    maxKey: "availableLiquidity",
+    limit: "none",
+    limitMessage: () => "",
   },
   borrow: {
     title: "Borrow from Pool",
     description: "Borrow against your collateral",
     buttonText: "Borrow",
     apyKey: "borrowAPY",
-    maxKey: "availableLiquidity",
+    limit: "poolLiquidity",
+    limitMessage: (limit) =>
+      `Amount cannot exceed the pool's available liquidity of ${limit}`,
   },
   withdraw: {
     title: "Withdraw",
     description: "Withdraw your deposited funds",
     buttonText: "Withdraw",
     apyKey: "supplyAPY",
-    maxKey: "availableLiquidity",
+    limit: "userDeposit",
+    limitMessage: (limit) => `Amount cannot exceed your deposit of ${limit}`,
   },
   repay: {
     title: "Repay Loan",
     description: "Repay your outstanding loan",
     buttonText: "Repay",
     apyKey: "borrowAPY",
-    maxKey: "availableLiquidity",
+    limit: "userDebt",
+    limitMessage: (limit) => `Amount cannot exceed your debt of ${limit}`,
   },
 };
+
+function toLimit(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  // Rounding hides float noise from summing rows, e.g. 0.7 + 0.1.
+  return Number(value.toFixed(AMOUNT_DECIMALS));
+}
+
+/** The largest amount the action accepts, or null when it has no cap. */
+export function getActionLimit(
+  action: PoolAction,
+  pool: LendingPool,
+  userDeposit = 0,
+  userDebt = 0,
+): number | null {
+  switch (ACTION_CONFIG[action].limit) {
+    case "userDeposit":
+      return toLimit(userDeposit);
+    case "userDebt":
+      return toLimit(userDebt);
+    case "poolLiquidity":
+      return toLimit(parseFloat(pool.availableLiquidity));
+    case "none":
+      return null;
+  }
+}
 
 /**
  * PoolActionModal
@@ -105,6 +156,8 @@ export function PoolActionModal({
   isOpen,
   onClose,
   userAddress,
+  userDeposit = 0,
+  userDebt = 0,
   onSuccess,
   applyOptimisticUpdate,
   commitOptimisticUpdate,
@@ -113,6 +166,39 @@ export function PoolActionModal({
   const [txHash, setTxHash] = useState<string | null>(null);
   const [pendingTx, setPendingTx] = useState(false);
   const [txError, setTxError] = useState<string | null>(null);
+
+  /** The pending auto-close after a success, so it can be cancelled */
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Bumped every time the modal closes. A transaction that settles after its
+   * modal was closed sees a different session and does not schedule a close,
+   * which would otherwise close whatever modal is open by then.
+   */
+  const sessionRef = useRef(0);
+
+  const clearAutoClose = useCallback(() => {
+    if (autoCloseTimerRef.current !== null) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+  }, []);
+
+  // Cancel the auto-close when the parent closes the modal, and on unmount.
+  useEffect(() => {
+    if (!isOpen) {
+      clearAutoClose();
+      sessionRef.current += 1;
+    }
+  }, [isOpen, clearAutoClose]);
+
+  useEffect(
+    () => () => {
+      clearAutoClose();
+      sessionRef.current += 1;
+    },
+    [clearAutoClose],
+  );
+
   const successMessage = useMemo(() => {
     switch (action) {
       case "supply":
@@ -130,8 +216,19 @@ export function PoolActionModal({
 
   const cfg = ACTION_CONFIG[action];
   const apy = pool[cfg.apyKey];
-  const maxAmount = parseFloat(pool.availableLiquidity);
+  const maxAmount = getActionLimit(action, pool, userDeposit, userDebt);
+  const formattedLimit =
+    maxAmount === null ? null : formatAssetAmount(maxAmount, pool.asset);
   const canSubmit = Boolean(userAddress);
+
+  const handleClose = () => {
+    clearAutoClose();
+    sessionRef.current += 1;
+    setTxHash(null);
+    setTxError(null);
+    setPendingTx(false);
+    onClose();
+  };
 
   const handleSubmit = async (values: LendingActionFormValues) => {
     if (!userAddress) {
@@ -141,6 +238,7 @@ export function PoolActionModal({
     }
 
     const amount = parseFloat(values.amount);
+    const session = sessionRef.current;
     let snapshotId: string | null = null;
 
     try {
@@ -179,22 +277,28 @@ export function PoolActionModal({
       if (snapshotId && commitOptimisticUpdate) {
         commitOptimisticUpdate(snapshotId);
       }
-
-      setTxHash(`submitted-${Date.now()}`);
       onSuccess?.();
 
+      // The modal was closed while the transaction was in flight: leave
+      // whatever is open now alone.
+      if (session !== sessionRef.current) return;
+
+      setTxHash(`submitted-${Date.now()}`);
+
       // Auto-close after showing the hash
-      setTimeout(() => {
-        setTxHash(null);
-        setPendingTx(false);
-        onClose();
-      }, 2500);
+      clearAutoClose();
+      autoCloseTimerRef.current = setTimeout(() => {
+        autoCloseTimerRef.current = null;
+        handleClose();
+      }, AUTO_CLOSE_DELAY_MS);
     } catch (err) {
       // 4. Transaction failed - rollback the optimistic update so the UI
       //    reverts to the previous state.
       if (snapshotId && rollbackOptimisticUpdate) {
         rollbackOptimisticUpdate(snapshotId);
       }
+
+      if (session !== sessionRef.current) return;
 
       const message =
         err instanceof Error ? err.message : "Transaction failed.";
@@ -206,12 +310,7 @@ export function PoolActionModal({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={() => {
-        setTxHash(null);
-        setTxError(null);
-        setPendingTx(false);
-        onClose();
-      }}
+      onClose={handleClose}
       title={cfg.title}
       description={cfg.description}
     >
@@ -287,6 +386,10 @@ export function PoolActionModal({
           schema={createLendingActionSchema({
             maxAmount,
             asset: pool.asset,
+            maxMessage:
+              formattedLimit === null
+                ? undefined
+                : cfg.limitMessage(formattedLimit),
           })}
           defaultValues={{ amount: "", zkPrivacy: false }}
           successMessage={successMessage}
@@ -335,7 +438,11 @@ export function PoolActionModal({
                   type="number"
                   placeholder="0.00"
                   leftIcon={<Coins className="w-4 h-4" aria-hidden="true" />}
-                  hint={`Available: ${formatCurrency(maxAmount)}`}
+                  hint={
+                    formattedLimit === null
+                      ? undefined
+                      : `Available: ${formattedLimit}`
+                  }
                   disabled={formState.isSubmitting}
                   aria-label={`Enter amount in ${pool.asset}`}
                 />

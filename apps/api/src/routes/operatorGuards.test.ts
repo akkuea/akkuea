@@ -115,6 +115,7 @@ type GuardedRoute = {
   body?: string;
   headerName: string;
   validKey: string;
+  extraHeaders?: Record<string, string>;
   controllerMock: ReturnType<typeof mock>;
 };
 
@@ -142,6 +143,7 @@ const guardedRoutes: GuardedRoute[] = [
     body: reviewBody,
     headerName: 'x-internal-api-key',
     validKey: 'test-ops-secret',
+    extraHeaders: { 'x-operator-wallet': `G${'A'.repeat(55)}` },
     controllerMock: applyReviewActionMock,
   },
   {
@@ -215,7 +217,7 @@ describe('Operator, treasury and liquidator guards actually apply', () => {
         const response = await testApp.handle(
           new Request(`http://localhost${route.path}`, {
             method: route.method,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...route.extraHeaders },
             body: route.body,
           }),
         );
@@ -228,7 +230,11 @@ describe('Operator, treasury and liquidator guards actually apply', () => {
         const response = await testApp.handle(
           new Request(`http://localhost${route.path}`, {
             method: route.method,
-            headers: { 'Content-Type': 'application/json', [route.headerName]: 'wrong-key' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...route.extraHeaders,
+              [route.headerName]: 'wrong-key',
+            },
             body: route.body,
           }),
         );
@@ -243,6 +249,7 @@ describe('Operator, treasury and liquidator guards actually apply', () => {
             method: route.method,
             headers: {
               'Content-Type': 'application/json',
+              ...route.extraHeaders,
               [route.headerName]: route.validKey,
             },
             body: route.body,

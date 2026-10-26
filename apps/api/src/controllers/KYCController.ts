@@ -88,7 +88,8 @@ export class KYCController {
       return { status, kycExpiresAt, documents };
     } catch (e) {
       if (e instanceof ApiError) throw e;
-      throw ApiError.internal(e instanceof Error ? e.message : 'Failed to fetch KYC status');
+      console.error('Failed to fetch KYC status', e);
+      throw ApiError.internal('Failed to fetch KYC status');
     }
   }
 
@@ -158,7 +159,8 @@ export class KYCController {
       };
     } catch (e) {
       if (e instanceof ApiError) throw e;
-      throw ApiError.internal(e instanceof Error ? e.message : 'Failed to upload document');
+      console.error('Failed to upload KYC document', e);
+      throw ApiError.internal('Failed to upload document');
     }
   }
 
@@ -261,7 +263,8 @@ export class KYCController {
       return { success: true };
     } catch (e) {
       if (e instanceof ApiError) throw e;
-      throw ApiError.internal(e instanceof Error ? e.message : 'Failed to verify document');
+      console.error('Failed to verify KYC document', e);
+      throw ApiError.internal('Failed to verify document');
     }
   }
 
@@ -277,7 +280,8 @@ export class KYCController {
       return docs.map((d) => toKycDocumentForResponse(d));
     } catch (e) {
       if (e instanceof ApiError) throw e;
-      throw ApiError.internal(e instanceof Error ? e.message : 'Failed to fetch user documents');
+      console.error('Failed to fetch user KYC documents', e);
+      throw ApiError.internal('Failed to fetch user documents');
     }
   }
 
@@ -301,7 +305,14 @@ export class KYCController {
       return { buffer, contentType, fileName: doc.fileName };
     } catch (e) {
       if (e instanceof ApiError) throw e;
-      throw ApiError.internal(e instanceof Error ? e.message : 'Failed to get document file');
+      console.error('Failed to get KYC document file', e);
+      throw ApiError.internal('Failed to get document file');
     }
+  }
+
+  static async getDocumentOwnerId(documentId: string): Promise<string> {
+    const doc = await kycRepository.findById(documentId);
+    if (!doc) throw ApiError.notFound('Document not found');
+    return doc.userId;
   }
 }

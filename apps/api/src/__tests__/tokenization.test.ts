@@ -11,6 +11,8 @@ const CONTRACT_ID = 'CAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABSC4';
 describe('TokenizationService', () => {
   beforeEach(() => {
     process.env.REAL_ESTATE_TOKEN_CONTRACT_ID = CONTRACT_ID;
+    process.env.PAYMENT_TOKEN_CONTRACT_ID =
+      'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
     process.env.STELLAR_ADMIN_PUBLIC_KEY = ADMIN_WALLET;
     process.env.STELLAR_ADMIN_SECRET = 'SBQ6M5OBU64ATKSRH4OKW2IFQCB5R6Q73F4VMK6KQ37C5G6GQ6FJTYA3';
     spyOn(logger, 'info').mockImplementation(() => {});
@@ -27,6 +29,7 @@ describe('TokenizationService', () => {
           tokenAddress: null,
           sorobanPropertyId: null,
           totalShares: 1000,
+          pricePerShare: '100.00',
         })),
         allocateSorobanPropertyId: mock(async () => 42),
         setTokenizationResult: mock(async () => ({
@@ -48,7 +51,8 @@ describe('TokenizationService', () => {
           adminPublicKey: ADMIN_WALLET,
           adminSecret: process.env.STELLAR_ADMIN_SECRET!,
         })),
-        mintPropertyShares: mock(async () => ({
+        assertValidContractId: mock(() => {}),
+        listPropertyShares: mock(async () => ({
           txHash: 'a'.repeat(64),
           contractId: CONTRACT_ID,
         })),
@@ -64,6 +68,63 @@ describe('TokenizationService', () => {
       tokenAddress: CONTRACT_ID,
       totalShares: 1000,
       owner: OWNER_WALLET,
+    });
+  });
+
+  it('lists the property for sale instead of minting its supply', async () => {
+    const listPropertyShares = mock(async (_params: Record<string, unknown>) => ({
+      txHash: 'a'.repeat(64),
+      contractId: CONTRACT_ID,
+    }));
+    const service = new TokenizationService({
+      propertyRepository: {
+        findById: mock(async () => ({
+          id: PROPERTY_ID,
+          ownerId: 'owner-id',
+          verified: true,
+          tokenAddress: null,
+          sorobanPropertyId: null,
+          totalShares: 1000,
+          pricePerShare: '125.50',
+        })),
+        allocateSorobanPropertyId: mock(async () => 42),
+        setTokenizationResult: mock(async () => ({
+          id: PROPERTY_ID,
+          tokenAddress: CONTRACT_ID,
+          sorobanPropertyId: 42,
+          totalShares: 1000,
+        })),
+      },
+      userRepository: {
+        findById: mock(async () => ({
+          id: 'owner-id',
+          walletAddress: OWNER_WALLET,
+        })),
+      },
+      stellarService: {
+        getMintingConfig: mock(() => ({
+          contractId: CONTRACT_ID,
+          adminPublicKey: ADMIN_WALLET,
+          adminSecret: process.env.STELLAR_ADMIN_SECRET!,
+        })),
+        assertValidContractId: mock(() => {}),
+        listPropertyShares,
+        mintPropertyShares: mock(async () => {
+          throw new Error('mintPropertyShares must not be used by tokenization');
+        }),
+      },
+    } as never);
+
+    await service.tokenizeProperty(PROPERTY_ID, OWNER_WALLET);
+
+    expect(listPropertyShares).toHaveBeenCalledTimes(1);
+    expect(listPropertyShares.mock.calls[0]?.[0]).toMatchObject({
+      contractId: CONTRACT_ID,
+      owner: OWNER_WALLET,
+      sharesForSale: 1000,
+      paymentToken: process.env.PAYMENT_TOKEN_CONTRACT_ID,
+      // 125.50 at 7 decimals
+      pricePerShareUnits: BigInt('1255000000'),
     });
   });
 
@@ -160,6 +221,7 @@ describe('TokenizationService', () => {
           tokenAddress: null,
           sorobanPropertyId: null,
           totalShares: 1000,
+          pricePerShare: '100.00',
         })),
         allocateSorobanPropertyId: mock(async () => 42),
         setTokenizationResult,
@@ -176,7 +238,8 @@ describe('TokenizationService', () => {
           adminPublicKey: ADMIN_WALLET,
           adminSecret: process.env.STELLAR_ADMIN_SECRET!,
         })),
-        mintPropertyShares: mock(async () => {
+        assertValidContractId: mock(() => {}),
+        listPropertyShares: mock(async () => {
           throw new Error('submission failed');
         }),
       },

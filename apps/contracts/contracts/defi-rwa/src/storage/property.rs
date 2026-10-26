@@ -163,6 +163,17 @@ impl PropertyMetadata {
     }
 }
 
+/// Extends the TTL of a persistent key. Listing data must survive ledger
+/// expiry, so every read and write re-arms the same TTL window that
+/// `PropertyMetadata` uses.
+fn extend_persistent_ttl(env: &Env, key: &StorageKey) {
+    env.storage().persistent().extend_ttl(
+        key,
+        property_bump::PERSISTENT_THRESHOLD,
+        property_bump::PERSISTENT_BUMP,
+    );
+}
+
 /// Gets the available shares for a property
 ///
 /// # Arguments
@@ -173,7 +184,11 @@ impl PropertyMetadata {
 /// * `u64` - Number of available shares (0 if not set)
 pub fn get_available_shares(env: &Env, property_id: u64) -> u64 {
     let key = StorageKey::AvailableShares(property_id);
-    env.storage().instance().get(&key).unwrap_or(0)
+    let value: Option<u64> = env.storage().persistent().get(&key);
+    if value.is_some() {
+        extend_persistent_ttl(env, &key);
+    }
+    value.unwrap_or(0)
 }
 
 /// Sets the available shares for a property
@@ -184,7 +199,8 @@ pub fn get_available_shares(env: &Env, property_id: u64) -> u64 {
 /// * `available` - Number of available shares
 pub fn set_available_shares(env: &Env, property_id: u64, available: u64) {
     let key = StorageKey::AvailableShares(property_id);
-    env.storage().instance().set(&key, &available);
+    env.storage().persistent().set(&key, &available);
+    extend_persistent_ttl(env, &key);
 }
 
 /// Decreases available shares for a property
@@ -214,7 +230,11 @@ pub fn decrease_available_shares(env: &Env, property_id: u64, amount: u64) {
 /// * `i128` - Price per share (0 if not set)
 pub fn get_price_per_share(env: &Env, property_id: u64) -> i128 {
     let key = StorageKey::PricePerShare(property_id);
-    env.storage().instance().get(&key).unwrap_or(0)
+    let value: Option<i128> = env.storage().persistent().get(&key);
+    if value.is_some() {
+        extend_persistent_ttl(env, &key);
+    }
+    value.unwrap_or(0)
 }
 
 /// Sets the price per share for a property
@@ -228,7 +248,8 @@ pub fn set_price_per_share(env: &Env, property_id: u64, price: i128) {
         panic!("Price per share must be positive");
     }
     let key = StorageKey::PricePerShare(property_id);
-    env.storage().instance().set(&key, &price);
+    env.storage().persistent().set(&key, &price);
+    extend_persistent_ttl(env, &key);
 }
 
 /// Checks if a property is verified
@@ -241,7 +262,11 @@ pub fn set_price_per_share(env: &Env, property_id: u64, price: i128) {
 /// * `bool` - True if verified, false otherwise
 pub fn is_verified(env: &Env, property_id: u64) -> bool {
     let key = StorageKey::PropertyVerified(property_id);
-    env.storage().instance().get(&key).unwrap_or(false)
+    let value: Option<bool> = env.storage().persistent().get(&key);
+    if value.is_some() {
+        extend_persistent_ttl(env, &key);
+    }
+    value.unwrap_or(false)
 }
 
 /// Sets the verified status for a property
@@ -252,5 +277,35 @@ pub fn is_verified(env: &Env, property_id: u64) -> bool {
 /// * `verified` - Verified status
 pub fn set_verified(env: &Env, property_id: u64, verified: bool) {
     let key = StorageKey::PropertyVerified(property_id);
-    env.storage().instance().set(&key, &verified);
+    env.storage().persistent().set(&key, &verified);
+    extend_persistent_ttl(env, &key);
+}
+
+/// Gets the payment token accepted for a property listing
+///
+/// # Arguments
+/// * `env` - Soroban environment
+/// * `property_id` - ID of the property
+///
+/// # Returns
+/// * `Option<Address>` - Accepted payment token, None if the property was never listed
+pub fn get_payment_token(env: &Env, property_id: u64) -> Option<Address> {
+    let key = StorageKey::PaymentToken(property_id);
+    let value: Option<Address> = env.storage().persistent().get(&key);
+    if value.is_some() {
+        extend_persistent_ttl(env, &key);
+    }
+    value
+}
+
+/// Sets the payment token accepted for a property listing
+///
+/// # Arguments
+/// * `env` - Soroban environment
+/// * `property_id` - ID of the property
+/// * `payment_token` - Address of the token buyers must pay with
+pub fn set_payment_token(env: &Env, property_id: u64, payment_token: &Address) {
+    let key = StorageKey::PaymentToken(property_id);
+    env.storage().persistent().set(&key, payment_token);
+    extend_persistent_ttl(env, &key);
 }

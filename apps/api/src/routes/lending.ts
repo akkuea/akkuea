@@ -37,7 +37,12 @@ const liquidationParamsSchema = z.object({
   borrowerId: z.string().uuid('Invalid borrower UUID format'),
 });
 
+// `as: 'scoped'` is required: a default-scope (`'local'`) hook only applies
+// to routes defined directly on this instance, not to the routes of whoever
+// calls `.use(liquidatorAuth)` (here, lendingRoutes' liquidate group below),
+// so without it the liquidate endpoint runs with no authentication at all.
 const liquidatorAuth = new Elysia({ name: 'liquidator-auth' }).onBeforeHandle(
+  { as: 'scoped' },
   ({ headers, set }) => {
     if (!isLiquidatorAuthorized(headers as Record<string, string | undefined>)) {
       set.status = 403;

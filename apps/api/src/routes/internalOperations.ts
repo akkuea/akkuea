@@ -25,7 +25,12 @@ const reviewBodySchema = z.object({
   actorWallet: z.string().min(50).max(64),
 });
 
+// `as: 'scoped'` is required: a default-scope (`'local'`) hook only applies
+// to routes defined directly on this instance, not to the routes of whoever
+// calls `.use(internalKeyAuth)`, so without it every route below runs with
+// no authentication at all.
 export const internalKeyAuth = new Elysia({ name: 'internal-operations-auth' }).onBeforeHandle(
+  { as: 'scoped' },
   ({ headers, set }) => {
     if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
       set.status = 403;

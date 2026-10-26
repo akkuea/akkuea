@@ -10,6 +10,8 @@ export interface NotificationWorkerConfig {
   fetchImpl?: typeof fetch;
   retryBaseDelayMs?: number;
   maxRetryDelayMs?: number;
+  batchSize?: number;
+  claimTimeoutMs?: number;
 }
 
 interface ResolvedConfig {
@@ -20,12 +22,21 @@ interface ResolvedConfig {
   fetchImpl: typeof fetch;
   retryBaseDelayMs: number;
   maxRetryDelayMs: number;
+  batchSize: number;
+  claimTimeoutMs: number;
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 5_000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 10_000;
 const DEFAULT_RETRY_BASE_DELAY_MS = 60_000;
 const DEFAULT_MAX_RETRY_DELAY_MS = 60 * 60 * 1_000;
+const DEFAULT_BATCH_SIZE = 100;
+const CLAIM_TIMEOUT_MARGIN_MS = 5_000;
+
+function positiveFromEnv(name: string): number | undefined {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
 
 export class NotificationWorker {
   private readonly service: NotificationService;
@@ -34,21 +45,27 @@ export class NotificationWorker {
   private running = false;
   private processing = false;
 
+  private warnedMissingWebhook = false;
+
   constructor(service: NotificationService, config?: NotificationWorkerConfig) {
     this.service = service;
     const envPoll = Number(process.env.NOTIFICATION_POLL_INTERVAL_MS);
     const envTimeout = Number(process.env.NOTIFICATION_REQUEST_TIMEOUT_MS);
     const envBase = Number(process.env.NOTIFICATION_RETRY_BASE_DELAY_MS);
     const envMax = Number(process.env.NOTIFICATION_MAX_RETRY_DELAY_MS);
+    const requestTimeoutMs =
+      config?.requestTimeoutMs ??
+      (Number.isFinite(envTimeout) && envTimeout > 0 ? envTimeout : DEFAULT_REQUEST_TIMEOUT_MS);
+    const batchSize = Math.floor(
+      config?.batchSize ?? positiveFromEnv('NOTIFICATION_BATCH_SIZE') ?? DEFAULT_BATCH_SIZE,
+    );
     this.config = {
       pollIntervalMs:
         config?.pollIntervalMs ??
         (Number.isFinite(envPoll) && envPoll > 0 ? envPoll : DEFAULT_POLL_INTERVAL_MS),
       webhookUrl: config?.webhookUrl ?? process.env.NOTIFICATION_WEBHOOK_URL,
       webhookSecret: config?.webhookSecret ?? process.env.NOTIFICATION_WEBHOOK_SECRET,
-      requestTimeoutMs:
-        config?.requestTimeoutMs ??
-        (Number.isFinite(envTimeout) && envTimeout > 0 ? envTimeout : DEFAULT_REQUEST_TIMEOUT_MS),
+      requestTimeoutMs,
       fetchImpl: config?.fetchImpl ?? fetch,
       retryBaseDelayMs:
         config?.retryBaseDelayMs ??
@@ -56,6 +73,11 @@ export class NotificationWorker {
       maxRetryDelayMs:
         config?.maxRetryDelayMs ??
         (Number.isFinite(envMax) && envMax > 0 ? envMax : DEFAULT_MAX_RETRY_DELAY_MS),
+      batchSize: batchSize > 0 ? batchSize : DEFAULT_BATCH_SIZE,
+      claimTimeoutMs:
+        config?.claimTimeoutMs ??
+        positiveFromEnv('NOTIFICATION_CLAIM_TIMEOUT_MS') ??
+        batchSize * requestTimeoutMs + CLAIM_TIMEOUT_MARGIN_MS,
     };
   }
 
@@ -65,6 +87,8 @@ export class NotificationWorker {
     logger.info('Notification worker started', {
       operation: 'NOTIFICATION_WORKER_START',
       pollIntervalMs: this.config.pollIntervalMs,
+      batchSize: this.config.batchSize,
+      claimTimeoutMs: this.config.claimTimeoutMs,
       webhookConfigured: Boolean(this.config.webhookUrl),
     });
     this.scheduleNext();
@@ -86,23 +110,33 @@ export class NotificationWorker {
     return this.running;
   }
 
+  /**
+   * Claims one bounded batch of due notifications and delivers it. The claim
+   * is atomic across processes, so several API instances can run this worker
+   * at the same time without delivering a notification twice.
+   */
   async tick(): Promise<void> {
     if (this.processing) return;
     this.processing = true;
     try {
-      const [pending, readyForRetry] = await Promise.all([
-        this.service.getPendingNotifications(),
-        this.service.getNotificationsReadyForRetry(),
-      ]);
+      // Without a webhook nothing can be delivered, so leave the rows unclaimed
+      // for an instance that has one configured.
+      if (!this.config.webhookUrl) {
+        if (!this.warnedMissingWebhook) {
+          this.warnedMissingWebhook = true;
+          logger.warn('No NOTIFICATION_WEBHOOK_URL configured, skipping dispatch', {
+            operation: 'NOTIFICATION_DISPATCH_SKIPPED',
+          });
+        }
+        return;
+      }
 
-      const seen = new Set<string>();
-      const queue = [...pending, ...readyForRetry].filter((n) => {
-        if (seen.has(n.id)) return false;
-        seen.add(n.id);
-        return true;
+      const batch = await this.service.claimDeliveryBatch({
+        limit: this.config.batchSize,
+        staleAfterMs: this.config.claimTimeoutMs,
       });
 
-      for (const notification of queue) {
+      for (const notification of batch) {
         await this.dispatch(notification);
       }
     } catch (error) {
@@ -132,13 +166,8 @@ export class NotificationWorker {
   }
 
   private async dispatch(notification: Notification): Promise<void> {
-    if (!this.config.webhookUrl) {
-      logger.warn('No NOTIFICATION_WEBHOOK_URL configured, skipping dispatch', {
-        operation: 'NOTIFICATION_DISPATCH_SKIPPED',
-        notificationId: notification.id,
-      });
-      return;
-    }
+    const webhookUrl = this.config.webhookUrl;
+    if (!webhookUrl) return;
 
     const payload = {
       id: notification.id,
@@ -157,11 +186,13 @@ export class NotificationWorker {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.config.requestTimeoutMs);
 
+    // `notification` comes from this worker's claim, so its retry count is the
+    // current value and no other worker is attempting the same row.
     const attemptNumber = parseInt(notification.retryCount) + 1;
     const backoffDelay = this.computeBackoffDelay(attemptNumber);
 
     try {
-      const response = await this.config.fetchImpl(this.config.webhookUrl, {
+      const response = await this.config.fetchImpl(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

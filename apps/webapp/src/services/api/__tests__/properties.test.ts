@@ -188,10 +188,49 @@ describe("Property API", () => {
     });
   });
 
-  describe("buyShares", () => {
-    it("buys property shares", async () => {
+  describe("prepareBuyShares", () => {
+    it("returns an unsigned purchase transaction", async () => {
       const mockResponse = {
-        transactionHash: "0xdef789abc012",
+        xdr: "AAAA-UNSIGNED-XDR",
+        contractId: "CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4",
+        sorobanPropertyId: "42",
+        shares: 50,
+        paymentToken:
+          "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+        totalAmount: "5000.0000000",
+      };
+
+      const { fetchMock, calls } = setupMockFetch({
+        status: 200,
+        body: mockResponse,
+      });
+      global.fetch = fetchMock;
+
+      const result = await propertyApi.prepareBuyShares(
+        VALID_UUID,
+        VALID_STELLAR_ADDRESS,
+        50,
+      );
+
+      expect(result).toEqual(mockResponse);
+      expect(calls[0].url).toBe(
+        "http://localhost:3001/properties/550e8400-e29b-41d4-a716-446655440000/buy-shares/prepare",
+      );
+      expect(calls[0].options.method).toBe("POST");
+      expect(JSON.parse(calls[0].options.body as string)).toEqual({
+        buyer: VALID_STELLAR_ADDRESS,
+        shares: 50,
+      });
+      expect(new Headers(calls[0].options.headers).get("x-user-address")).toBe(
+        VALID_STELLAR_ADDRESS,
+      );
+    });
+  });
+
+  describe("confirmBuyShares", () => {
+    it("confirms a submitted purchase transaction", async () => {
+      const mockResponse = {
+        transactionHash: "b".repeat(64),
         newBalance: 50,
       };
 
@@ -201,20 +240,19 @@ describe("Property API", () => {
       });
       global.fetch = fetchMock;
 
-      const result = await propertyApi.buyShares(
+      const result = await propertyApi.confirmBuyShares(
         VALID_UUID,
+        "b".repeat(64),
         VALID_STELLAR_ADDRESS,
-        50,
       );
 
       expect(result).toEqual(mockResponse);
       expect(calls[0].url).toBe(
-        "http://localhost:3001/properties/550e8400-e29b-41d4-a716-446655440000/buy-shares",
+        "http://localhost:3001/properties/550e8400-e29b-41d4-a716-446655440000/buy-shares/confirm",
       );
       expect(calls[0].options.method).toBe("POST");
       expect(JSON.parse(calls[0].options.body as string)).toEqual({
-        buyer: VALID_STELLAR_ADDRESS,
-        shares: 50,
+        txHash: "b".repeat(64),
       });
       expect(new Headers(calls[0].options.headers).get("x-user-address")).toBe(
         VALID_STELLAR_ADDRESS,

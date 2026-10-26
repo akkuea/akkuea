@@ -11,6 +11,7 @@ import {
   jsonb,
   bigint,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from './users';
@@ -85,19 +86,23 @@ export const propertyDocuments = pgTable('property_documents', {
   verified: boolean('verified').notNull().default(false),
 });
 
-export const shareOwnerships = pgTable('share_ownerships', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  propertyId: uuid('property_id')
-    .notNull()
-    .references(() => properties.id),
-  ownerId: uuid('owner_id')
-    .notNull()
-    .references(() => users.id),
-  shares: integer('shares').notNull(),
-  purchasePrice: decimal('purchase_price', { precision: 20, scale: 2 }).notNull(),
-  purchasedAt: timestamp('purchased_at', { withTimezone: true }).notNull().defaultNow(),
-  lastDividendClaimed: timestamp('last_dividend_claimed', { withTimezone: true }),
-});
+export const shareOwnerships = pgTable(
+  'share_ownerships',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    propertyId: uuid('property_id')
+      .notNull()
+      .references(() => properties.id),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id),
+    shares: integer('shares').notNull(),
+    purchasePrice: decimal('purchase_price', { precision: 20, scale: 2 }).notNull(),
+    purchasedAt: timestamp('purchased_at', { withTimezone: true }).notNull().defaultNow(),
+    lastDividendClaimed: timestamp('last_dividend_claimed', { withTimezone: true }),
+  },
+  (t) => [uniqueIndex('share_ownerships_property_owner_unique').on(t.propertyId, t.ownerId)],
+);
 
 export const propertiesRelations = relations(properties, ({ one, many }) => ({
   owner: one(users, {

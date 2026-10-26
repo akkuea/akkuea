@@ -45,7 +45,13 @@ mock.module('../controllers/TreasuryController', () => ({
   },
 }));
 
-const lendingLiquidateMock = mock(async () => new Response(JSON.stringify({ success: true })));
+const lendingPrepareLiquidationMock = mock(
+  async () => new Response(JSON.stringify({ success: true })),
+);
+const lendingConfirmLiquidationMock = mock(
+  async () => new Response(JSON.stringify({ success: true })),
+);
+const lendingCreatePoolMock = mock(async () => new Response(JSON.stringify({ data: {} })));
 
 mock.module('../controllers/LendingController', () => ({
   LendingController: {
@@ -54,12 +60,11 @@ mock.module('../controllers/LendingController', () => ({
     getUserDeposits: mock(async () => new Response(JSON.stringify({ data: [] }))),
     getUserBorrows: mock(async () => new Response(JSON.stringify({ data: [] }))),
     getUserPositionSummary: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    createPool: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    deposit: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    withdraw: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    borrow: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    repay: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    liquidate: lendingLiquidateMock,
+    createPool: lendingCreatePoolMock,
+    prepareAction: mock(async () => new Response(JSON.stringify({ data: {} }))),
+    confirmAction: mock(async () => new Response(JSON.stringify({ data: {} }))),
+    prepareLiquidation: lendingPrepareLiquidationMock,
+    confirmLiquidation: lendingConfirmLiquidationMock,
   },
 }));
 
@@ -80,7 +85,9 @@ function allControllerMocks() {
     whitelistReviewMock,
     treasuryDepositMock,
     treasuryWithdrawMock,
-    lendingLiquidateMock,
+    lendingCreatePoolMock,
+    lendingPrepareLiquidationMock,
+    lendingConfirmLiquidationMock,
   ];
 }
 
@@ -91,6 +98,15 @@ beforeEach(() => {
 const reviewBody = JSON.stringify({ action: 'approve', actorWallet: 'G'.repeat(56) });
 const whitelistReviewBody = JSON.stringify({ action: 'approve' });
 const treasuryMovementBody = JSON.stringify({ venue: 'defindex-blend', amount: 100 });
+const createPoolBody = JSON.stringify({
+  name: 'USDC Pool',
+  asset: 'USDC',
+  assetAddress: 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA',
+  collateralFactor: '0.75',
+  liquidationThreshold: '0.80',
+  liquidationPenalty: '0.05',
+});
+const liquidator = 'GCO5CVUVFNX4KZQMYCALTJ5QSG6USOVLFQ74AQCCX7TGJKBNZ33KC5ZC';
 
 type GuardedRoute = {
   name: string;
@@ -163,6 +179,33 @@ const guardedRoutes: GuardedRoute[] = [
     validKey: 'test-ops-secret',
     controllerMock: treasuryWithdrawMock,
   },
+  {
+    name: 'POST /lending/pools',
+    path: '/lending/pools',
+    method: 'POST',
+    body: createPoolBody,
+    headerName: 'x-internal-api-key',
+    validKey: 'test-ops-secret',
+    controllerMock: lendingCreatePoolMock,
+  },
+  {
+    name: 'POST /lending/pools/:id/positions/:borrowerId/liquidate/prepare',
+    path: `/lending/pools/${VALID_UUID}/positions/${VALID_UUID}/liquidate/prepare`,
+    method: 'POST',
+    body: JSON.stringify({ liquidator, debtToCover: '10' }),
+    headerName: 'x-api-key',
+    validKey: 'test-liquidator-secret',
+    controllerMock: lendingPrepareLiquidationMock,
+  },
+  {
+    name: 'POST /lending/pools/:id/positions/:borrowerId/liquidate/confirm',
+    path: `/lending/pools/${VALID_UUID}/positions/${VALID_UUID}/liquidate/confirm`,
+    method: 'POST',
+    body: JSON.stringify({ liquidator, txHash: 'a'.repeat(64) }),
+    headerName: 'x-api-key',
+    validKey: 'test-liquidator-secret',
+    controllerMock: lendingConfirmLiquidationMock,
+  },
 ];
 
 describe('Operator, treasury and liquidator guards actually apply', () => {
@@ -212,7 +255,7 @@ describe('Operator, treasury and liquidator guards actually apply', () => {
     });
   }
 
-  describe('POST /lending/pools/:id/positions/:borrowerId/liquidate', () => {
+  describe('POST /lending/pools/:id/positions/:borrowerId/liquidate (retired)', () => {
     const path = `/lending/pools/${VALID_UUID}/positions/${VALID_UUID}/liquidate`;
 
     it('returns 403, not 500, when no key is sent', async () => {
@@ -221,22 +264,9 @@ describe('Operator, treasury and liquidator guards actually apply', () => {
       );
 
       expect(response.status).toBe(403);
-      expect(lendingLiquidateMock).not.toHaveBeenCalled();
     });
 
-    it('returns 403, not 500, when the key is wrong', async () => {
-      const response = await testApp.handle(
-        new Request(`http://localhost${path}`, {
-          method: 'POST',
-          headers: { 'x-api-key': 'wrong-key' },
-        }),
-      );
-
-      expect(response.status).toBe(403);
-      expect(lendingLiquidateMock).not.toHaveBeenCalled();
-    });
-
-    it('reaches the controller when the key is correct', async () => {
+    it('returns 410 with the key and never reaches a controller', async () => {
       const response = await testApp.handle(
         new Request(`http://localhost${path}`, {
           method: 'POST',
@@ -244,8 +274,9 @@ describe('Operator, treasury and liquidator guards actually apply', () => {
         }),
       );
 
-      expect(response.status).not.toBe(403);
-      expect(lendingLiquidateMock).toHaveBeenCalled();
+      expect(response.status).toBe(410);
+      expect(lendingPrepareLiquidationMock).not.toHaveBeenCalled();
+      expect(lendingConfirmLiquidationMock).not.toHaveBeenCalled();
     });
   });
 

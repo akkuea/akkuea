@@ -1,32 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
 
-/** Shared secret with the API for the internal operations routes (set in deployment env). */
-const operationsBackendCredential =
-  process.env.OPERATIONS_BACKEND_CREDENTIAL ?? "";
 const API_BASE =
   process.env.API_URL ??
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:3001";
 
-function parseAllowlist(): string[] | "wildcard" {
-  const raw = process.env.OPERATIONS_ALLOWED_WALLETS ?? "";
-  const parts = raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (parts.includes("*")) return "wildcard";
-  return parts;
+type VerifiedUser = { walletAddress?: unknown };
+
+function jsonError(status: number, error: string, message: string) {
+  return NextResponse.json({ success: false, error, message }, { status });
 }
 
-function isOperatorAllowed(wallet: string | null): boolean {
-  const mode = parseAllowlist();
-  if (mode === "wildcard") {
-    return Boolean(wallet && wallet.length >= 50);
+function isAllowedOperator(wallet: string): boolean {
+  const allowed = (process.env.OPERATIONS_ALLOWED_WALLETS ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (allowed.includes("*")) {
+    const developmentWildcard =
+      process.env.NODE_ENV !== "production" &&
+      process.env.OPERATIONS_ALLOW_WILDCARD_IN_DEVELOPMENT === "true";
+    return developmentWildcard && /^G[A-Z2-7]{55}$/.test(wallet);
   }
-  if (mode.length === 0) {
-    return false;
+  return allowed.includes(wallet);
+}
+
+function validPath(segments: string[], rawPathname: string): boolean {
+  if (/%2f|%5c/i.test(rawPathname) || segments.length === 0) return false;
+  return segments.every((segment) => /^[A-Za-z0-9_-]+$/.test(segment));
+}
+
+async function verifySession(authorization: string): Promise<string | null> {
+  try {
+    const profileUrl = `${API_BASE.replace(/\/+$/, "")}/users/me`;
+    const response = await fetch(profileUrl, {
+      method: "GET",
+      headers: { Authorization: authorization },
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    const user = (await response.json()) as VerifiedUser;
+    return typeof user.walletAddress === "string" ? user.walletAddress : null;
+  } catch {
+    return null;
   }
-  return Boolean(wallet && mode.includes(wallet));
 }
 
 async function proxy(
@@ -34,40 +51,47 @@ async function proxy(
   segments: string[],
   method: string,
 ): Promise<NextResponse> {
+  const operationsBackendCredential =
+    process.env.OPERATIONS_BACKEND_CREDENTIAL ?? "";
+  const rawPathname = new URL(req.url).pathname;
+  if (!validPath(segments, rawPathname)) {
+    return jsonError(400, "BAD_REQUEST", "Invalid operations path");
+  }
+
+  const authorization = req.headers.get("authorization");
+  if (!authorization?.startsWith("Bearer ")) {
+    return jsonError(401, "UNAUTHORIZED", "A valid API session is required");
+  }
+  const wallet = await verifySession(authorization);
+  if (!wallet) {
+    return jsonError(401, "UNAUTHORIZED", "A valid API session is required");
+  }
+  if (!isAllowedOperator(wallet)) {
+    return jsonError(
+      403,
+      "FORBIDDEN",
+      "You are not authorized to access operations tools",
+    );
+  }
   if (!operationsBackendCredential) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "NOT_CONFIGURED",
-        message: "Operations API is not configured on this deployment",
-      },
-      { status: 503 },
-    );
+    return jsonError(503, "NOT_CONFIGURED", "Operations API is not configured");
   }
 
-  const wallet = req.headers.get("x-operator-wallet");
-  if (!isOperatorAllowed(wallet)) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "FORBIDDEN",
-        message: "You are not authorized to access operations tools",
-      },
-      { status: 403 },
-    );
+  const base = new URL(API_BASE);
+  const basePath = `${base.pathname.replace(/\/+$/, "")}/internal/operations/`;
+  const targetUrl = new URL(base);
+  targetUrl.pathname = `${basePath}${segments.join("/")}`;
+  targetUrl.search = new URL(req.url).search;
+  if (!targetUrl.pathname.startsWith(basePath)) {
+    return jsonError(400, "BAD_REQUEST", "Invalid operations path");
   }
 
-  const path = segments.join("/");
-  const targetUrl = new URL(`${API_BASE}/internal/operations/${path}`);
-  const incomingUrl = new URL(req.url);
-  targetUrl.search = incomingUrl.search;
-
-  const headers = new Headers();
-  headers.set("x-internal-api-key", operationsBackendCredential);
+  const headers = new Headers({
+    "x-internal-api-key": operationsBackendCredential,
+    "x-operator-wallet": wallet,
+  });
   const contentType = req.headers.get("content-type");
-  if (contentType) {
-    headers.set("content-type", contentType);
-  }
+  if (contentType) headers.set("content-type", contentType);
 
   const init: RequestInit = { method, headers };
   if (method !== "GET" && method !== "HEAD") {
@@ -75,12 +99,13 @@ async function proxy(
     if (body) init.body = body;
   }
 
-  const res = await fetch(targetUrl.toString(), init);
-  const text = await res.text();
+  const response = await fetch(targetUrl.toString(), init);
+  const text = await response.text();
   return new NextResponse(text, {
-    status: res.status,
+    status: response.status,
     headers: {
-      "content-type": res.headers.get("content-type") ?? "application/json",
+      "content-type":
+        response.headers.get("content-type") ?? "application/json",
     },
   });
 }

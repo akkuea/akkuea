@@ -41,6 +41,7 @@ export async function mockConnectedWallet(
           version: 2,
         }),
       );
+      window.localStorage.setItem("auth_token", "e2e-api-session-token");
     },
     { key: WALLET_STORAGE_KEY, addr: address },
   );

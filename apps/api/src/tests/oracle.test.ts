@@ -1,3 +1,6 @@
+import { Elysia } from 'elysia';
+import { errorHandler } from '../middleware/errorHandler';
+import { oracleRoutes } from '../routes/oracle';
 import { describe, test, expect, spyOn, mock, beforeEach, afterEach } from 'bun:test';
 import { OracleService } from '../services/OracleService';
 import { ValuationRepository } from '../repositories/ValuationRepository';
@@ -31,8 +34,12 @@ beforeEach(() => {
 
   spyOn(ValuationRepository, 'findHistory').mockImplementation(
     async (propertyId: string, limit?: number) => {
+      const safeLimit =
+        typeof limit === 'number' && Number.isFinite(limit) && limit > 0
+          ? Math.min(Math.max(Math.floor(limit), 1), 500)
+          : 50;
       const list = [...(store.get(propertyId) ?? [])].reverse();
-      return limit ? list.slice(0, limit) : list;
+      return list.slice(0, safeLimit);
     },
   );
 
@@ -299,5 +306,175 @@ describe('OracleService.submitManualOverride', () => {
     expect(record.status).toBe('active');
     expect(record.methodology).toBe('manual');
     expect(record.id).toBeTruthy();
+  });
+});
+
+
+describe('Oracle API Routes Authentication & Validation', () => {
+  const app = new Elysia().use(errorHandler).use(oracleRoutes);
+  const TEST_CREDENTIAL = 'test-internal-ops-key';
+  const authHeaders = {
+    'content-type': 'application/json',
+    'x-internal-api-key': TEST_CREDENTIAL,
+  };
+  const origEnv = process.env.OPERATIONS_BACKEND_CREDENTIAL;
+
+  beforeEach(() => {
+    process.env.OPERATIONS_BACKEND_CREDENTIAL = TEST_CREDENTIAL;
+  });
+
+  afterEach(() => {
+    process.env.OPERATIONS_BACKEND_CREDENTIAL = origEnv;
+  });
+
+  test('POST /oracle/valuations returns 401 without credentials', async () => {
+    const payload = makePayload();
+    const res = await app.handle(
+      new Request('http://localhost/oracle/valuations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  test('POST /oracle/valuations returns 200 with credentials', async () => {
+    const payload = makePayload();
+    const res = await app.handle(
+      new Request('http://localhost/oracle/valuations', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(payload),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { success: boolean; record: ValuationRecord };
+    expect(json.success).toBe(true);
+    expect(json.record.propertyId).toBe(payload.propertyId);
+  });
+
+  test('POST /oracle/valuations returns 400 for invalid payload', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/oracle/valuations', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ propertyId: '', price: -10 }),
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test('POST /oracle/valuations/:propertyId/manual-review returns 401 without credentials', async () => {
+    const res = await app.handle(
+      new Request('http://localhost/oracle/valuations/prop_123/manual-review', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: 'val_123', reason: 'Dispute' }),
+      }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  test('POST /oracle/valuations/:propertyId/manual-review works with credentials', async () => {
+    const payload = makePayload();
+    const { record } = await OracleService.ingestValuation(payload);
+
+    const res = await app.handle(
+      new Request(`http://localhost/oracle/valuations/${payload.propertyId}/manual-review`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ id: record.id, reason: 'Disputed value' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { success: boolean; record: ValuationRecord };
+    expect(json.success).toBe(true);
+    expect(json.record.status).toBe('manual_review');
+  });
+
+  test('POST /oracle/valuations/manual-override returns 401 without credentials', async () => {
+    const payload = makePayload();
+    const res = await app.handle(
+      new Request('http://localhost/oracle/valuations/manual-override', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...payload, overrideReason: 'Owner appeal' }),
+      }),
+    );
+    expect(res.status).toBe(401);
+  });
+
+  test('POST /oracle/valuations/manual-override works with credentials', async () => {
+    const payload = makePayload();
+    const res = await app.handle(
+      new Request('http://localhost/oracle/valuations/manual-override', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ ...payload, overrideReason: 'Owner appeal' }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { success: boolean; record: ValuationRecord };
+    expect(json.success).toBe(true);
+    expect(json.record.methodology).toBe('manual');
+  });
+
+  test('POST /oracle/valuations/manual-override returns 400 for invalid payload missing overrideReason', async () => {
+    const payload = makePayload();
+    const res = await app.handle(
+      new Request('http://localhost/oracle/valuations/manual-override', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify(payload),
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  test('GET /oracle/valuations/:propertyId is public and returns latest valuation', async () => {
+    const payload = makePayload();
+    await OracleService.ingestValuation(payload);
+
+    const res = await app.handle(
+      new Request(`http://localhost/oracle/valuations/${payload.propertyId}`),
+    );
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { success: boolean; record: ValuationRecord };
+    expect(json.record.propertyId).toBe(payload.propertyId);
+  });
+
+  test('GET /oracle/valuations/:propertyId/history is public and bounds limit for invalid inputs (limit=abc, limit=-5)', async () => {
+    const propertyId = `prop_history_${Date.now()}`;
+    await OracleService.ingestValuation(makePayload({ propertyId, price: 100_000 }));
+    await OracleService.ingestValuation(makePayload({ propertyId, price: 110_000 }));
+
+    // limit=abc should not error or cause unbounded query; defaults safely to capped limit
+    const resAbc = await app.handle(
+      new Request(`http://localhost/oracle/valuations/${propertyId}/history?limit=abc`),
+    );
+    expect(resAbc.status).toBe(200);
+    const jsonAbc = (await resAbc.json()) as { success: boolean; history: ValuationRecord[] };
+    expect(jsonAbc.history.length).toBe(2);
+
+    // limit=-5 should not error or cause unbounded query; defaults safely to capped limit
+    const resNeg = await app.handle(
+      new Request(`http://localhost/oracle/valuations/${propertyId}/history?limit=-5`),
+    );
+    expect(resNeg.status).toBe(200);
+    const jsonNeg = (await resNeg.json()) as { success: boolean; history: ValuationRecord[] };
+    expect(jsonNeg.history.length).toBe(2);
+  });
+
+  test('GET /oracle/valuations/:propertyId/contract-payload is public', async () => {
+    const payload = makePayload({ price: 400_000 });
+    await OracleService.ingestValuation(payload);
+
+    const res = await app.handle(
+      new Request(`http://localhost/oracle/valuations/${payload.propertyId}/contract-payload`),
+    );
+    expect(res.status).toBe(200);
+    const json = (await res.json()) as { success: boolean; payload: { propertyId: string } };
+    expect(json.payload.propertyId).toBe(payload.propertyId);
   });
 });

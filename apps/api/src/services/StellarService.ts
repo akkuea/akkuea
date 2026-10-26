@@ -1,6 +1,5 @@
 import {
   Account,
-  Address,
   Contract,
   Horizon,
   Keypair,
@@ -10,8 +9,6 @@ import {
   TransactionBuilder,
   xdr,
   nativeToScVal,
-  rpc as SorobanRpc,
-  scValToNative,
 } from '@stellar/stellar-sdk';
 import {
   createNodeContractSigner,
@@ -40,85 +37,20 @@ export interface MintSharesResult {
   contractId: string;
 }
 
-export interface ListPropertySharesParams {
-  contractId: string;
-  adminPublicKey: string;
-  adminSecret: string;
-  sorobanPropertyId: number;
-  owner: string;
-  /** Price per share in payment token units (7 decimals). */
-  pricePerShareUnits: bigint;
-  sharesForSale: number;
-  /** Address of the token buyers must pay with (the configured payment token). */
-  paymentToken: string;
-}
-
-export interface PreparePurchaseSharesParams {
-  contractId: string;
-  buyer: string;
-  sorobanPropertyId: number;
-  shares: number;
-  paymentToken: string;
-}
-
-/** The `SharePurchase` event the contract emits on a successful purchase. */
-export interface SharePurchaseEvent {
-  propertyId: string;
-  buyer: string;
-  shares: bigint;
-  totalCost: bigint;
-}
-
-/** Everything confirmed about a submitted `purchase_shares` transaction. */
-export interface VerifiedPurchaseTransaction {
-  txHash: string;
-  /** Source account of the transaction, which must be the buyer. */
-  sourceAccount: string;
-  contractId: string;
-  functionName: string;
-  call: {
-    buyer: string;
-    propertyId: bigint;
-    amount: bigint;
-    paymentToken: string;
-  };
-  sharePurchase: SharePurchaseEvent;
-}
-
-/** Event name that identifies the `SharePurchase` event (snake_case topic 0). */
-const SHARE_PURCHASE_EVENT = 'share_purchase';
-
-/** Contract events as parsed by the Soroban RPC client from `getTransaction`. */
-type RpcContractEvent =
-  SorobanRpc.Api.GetSuccessfulTransactionResponse['events']['contractEventsXdr'][number][number];
-
 export class StellarService {
   private readonly server: Horizon.Server;
   private readonly networkPassphrase: string;
   private readonly sorobanRpcUrl: string;
-  private sorobanRpcServer: InstanceType<typeof SorobanRpc.Server> | null = null;
 
   constructor(
     server?: Horizon.Server,
     networkPassphrase: string = process.env.STELLAR_NETWORK_PASSPHRASE || Networks.TESTNET,
-    sorobanRpcServer?: InstanceType<typeof SorobanRpc.Server>,
   ) {
     const horizonUrl = process.env.STELLAR_HORIZON_URL || 'https://horizon-testnet.stellar.org';
     this.sorobanRpcUrl = process.env.STELLAR_RPC_URL || 'https://soroban-testnet.stellar.org';
 
     this.server = server ?? new Horizon.Server(horizonUrl);
     this.networkPassphrase = networkPassphrase;
-    this.sorobanRpcServer = sorobanRpcServer ?? null;
-  }
-
-  /** Lazily built Soroban RPC client, used to verify submitted purchases. */
-  private getSorobanRpcServer(): InstanceType<typeof SorobanRpc.Server> {
-    if (!this.sorobanRpcServer) {
-      this.sorobanRpcServer = new SorobanRpc.Server(this.sorobanRpcUrl, {
-        allowHttp: this.sorobanRpcUrl.startsWith('http://'),
-      });
-    }
-    return this.sorobanRpcServer;
   }
 
   getMintingConfig(): { contractId: string; adminPublicKey: string; adminSecret: string } {
@@ -265,302 +197,6 @@ export class StellarService {
         error instanceof Error ? error.message : 'Failed to prepare Soroban transaction',
       );
     }
-  }
-
-  /**
-   * Lists a property for sale on-chain with an admin-signed `list_property`
-   * call. This replaces the old "mint the full supply to the owner" step: the
-   * contract records the price, the share inventory and the accepted payment
-   * token, and buyers pay for their shares through `purchase_shares`.
-   */
-  async listPropertyShares(params: ListPropertySharesParams): Promise<MintSharesResult> {
-    this.assertValidContractId(params.contractId);
-    this.assertValidAddress(params.adminPublicKey);
-    this.assertValidAddress(params.owner);
-    this.assertValidContractId(params.paymentToken);
-
-    if (params.pricePerShareUnits <= BigInt(0)) {
-      throw ApiError.badRequest('Price per share must be greater than zero');
-    }
-    if (!Number.isInteger(params.sharesForSale) || params.sharesForSale <= 0) {
-      throw ApiError.badRequest('Shares for sale must be a positive integer');
-    }
-
-    try {
-      const txHash = await this.callAndSubmitContract(
-        params.contractId,
-        'list_property',
-        [
-          nativeToScVal(params.adminPublicKey, { type: 'address' }),
-          nativeToScVal(BigInt(params.sorobanPropertyId), { type: 'u64' }),
-          nativeToScVal(params.owner, { type: 'address' }),
-          nativeToScVal(params.pricePerShareUnits, { type: 'i128' }),
-          nativeToScVal(BigInt(params.sharesForSale), { type: 'u64' }),
-          nativeToScVal(params.paymentToken, { type: 'address' }),
-        ],
-        params.adminSecret,
-        params.adminPublicKey,
-      );
-
-      return { txHash, contractId: params.contractId };
-    } catch (error) {
-      throw ApiError.internal(
-        this.describeError(error, 'Failed to list the property for sale on-chain'),
-      );
-    }
-  }
-
-  /**
-   * Builds a simulated, unsigned `purchase_shares` transaction with the buyer
-   * as its source. The buyer signs it with their wallet and submits it; the API
-   * never signs purchases itself.
-   */
-  async preparePurchaseShares(
-    params: PreparePurchaseSharesParams,
-  ): Promise<{ xdr: string; contractId: string }> {
-    this.assertValidContractId(params.contractId);
-    this.assertValidAddress(params.buyer);
-    this.assertValidContractId(params.paymentToken);
-
-    if (!Number.isInteger(params.shares) || params.shares <= 0) {
-      throw ApiError.badRequest('Shares must be a positive integer');
-    }
-
-    try {
-      const unsignedXdr = await this.callContract(
-        params.contractId,
-        'purchase_shares',
-        [
-          params.buyer,
-          BigInt(params.sorobanPropertyId),
-          BigInt(params.shares),
-          params.paymentToken,
-        ],
-        params.buyer,
-      );
-
-      return { xdr: unsignedXdr, contractId: params.contractId };
-    } catch (error) {
-      throw ApiError.badRequest(
-        this.describeError(error, 'Failed to prepare the purchase transaction'),
-      );
-    }
-  }
-
-  /**
-   * Loads a submitted transaction from Soroban RPC and verifies everything the
-   * API can check structurally: it exists, it succeeded, it is not a fee bump,
-   * it invokes `purchase_shares` on the expected contract with well-formed
-   * arguments, and it emitted a `SharePurchase` event. Checks that need the
-   * database or the authenticated caller (right buyer, right property, right
-   * amount) belong to the controller, which compares against this result.
-   */
-  async verifyPurchaseTransaction(
-    txHash: string,
-    expectedContractId: string,
-  ): Promise<VerifiedPurchaseTransaction> {
-    if (!/^[0-9a-fA-F]{64}$/.test(txHash)) {
-      throw ApiError.badRequest('Transaction hash must be a 64-character hex string');
-    }
-    this.assertValidContractId(expectedContractId);
-
-    const response = await this.getSorobanRpcServer().getTransaction(txHash);
-    if (response.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND) {
-      throw ApiError.notFound(`Transaction ${txHash} was not found on Soroban RPC`);
-    }
-    if (response.status !== SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
-      throw ApiError.validation(`Transaction ${txHash} did not succeed on-chain`);
-    }
-    if (response.feeBump) {
-      throw ApiError.validation(
-        `Transaction ${txHash} is a fee bump; only single transactions can be confirmed`,
-      );
-    }
-
-    const { sourceAccount, call } = this.parsePurchaseCall(
-      response.envelopeXdr,
-      expectedContractId,
-    );
-    const sharePurchase = this.parseSharePurchaseEvent(
-      this.extractContractEvents(response),
-      expectedContractId,
-    );
-    if (!sharePurchase) {
-      throw ApiError.validation(
-        `Transaction ${txHash} emitted no SharePurchase event for contract ${expectedContractId}`,
-      );
-    }
-
-    return {
-      txHash: response.txHash,
-      sourceAccount,
-      contractId: expectedContractId,
-      functionName: 'purchase_shares',
-      call,
-      sharePurchase,
-    };
-  }
-
-  /**
-   * Decodes the single `purchase_shares` invocation a confirmed transaction
-   * must contain. Anything else (no invoke operation, several operations, a
-   * different contract or function, malformed arguments) is rejected.
-   */
-  private parsePurchaseCall(
-    envelope: xdr.TransactionEnvelope,
-    expectedContractId: string,
-  ): { sourceAccount: string; call: VerifiedPurchaseTransaction['call'] } {
-    const transaction = new Transaction(envelope, this.networkPassphrase);
-    if (transaction.operations.length !== 1) {
-      throw ApiError.validation(
-        'A share purchase transaction must contain exactly one contract invocation',
-      );
-    }
-
-    const [operation] = transaction.operations;
-    if (operation?.type !== 'invokeHostFunction') {
-      throw ApiError.validation(
-        'A share purchase transaction must invoke the tokenization contract',
-      );
-    }
-
-    // The SDK types the parsed operation record loosely; at runtime an
-    // invokeHostFunction operation always carries the xdr host function.
-    const func = (operation as unknown as { func?: xdr.HostFunction }).func;
-    if (!func || func.type !== 'hostFunctionTypeInvokeContract') {
-      throw ApiError.validation('A share purchase transaction must invoke a contract function');
-    }
-
-    const { contractAddress, functionName, args } = func.invokeContract;
-    const contractId = Address.fromScAddress(contractAddress).toString();
-    if (contractId !== expectedContractId) {
-      throw ApiError.validation(
-        `Transaction invokes contract ${contractId}, expected ${expectedContractId}`,
-      );
-    }
-    if (functionName.toString() !== 'purchase_shares') {
-      throw ApiError.validation(
-        `Transaction calls ${functionName.toString()}, expected purchase_shares`,
-      );
-    }
-    if (args.length !== 4) {
-      throw ApiError.validation('purchase_shares must be called with exactly four arguments');
-    }
-    const [buyerArg, propertyIdArg, amountArg, paymentTokenArg] = args;
-    if (!buyerArg || !propertyIdArg || !amountArg || !paymentTokenArg) {
-      throw ApiError.validation('purchase_shares arguments are malformed');
-    }
-
-    return {
-      sourceAccount: transaction.source,
-      call: {
-        buyer: this.asNativeAddress(buyerArg),
-        propertyId: this.asNativeBigInt(propertyIdArg),
-        amount: this.asNativeBigInt(amountArg),
-        paymentToken: this.asNativeAddress(paymentTokenArg),
-      },
-    };
-  }
-
-  /**
-   * Picks the `SharePurchase` event out of a transaction's contract events,
-   * decoded into the fields the controller verifies against the database.
-   */
-  private parseSharePurchaseEvent(
-    events: RpcContractEvent[],
-    expectedContractId: string,
-  ): SharePurchaseEvent | null {
-    for (const event of events) {
-      const eventContractId = event.contractId
-        ? Address.contract(event.contractId.toBytes()).toString()
-        : null;
-      if (eventContractId !== expectedContractId) {
-        continue;
-      }
-      if (event.body.type !== 'v0') {
-        continue;
-      }
-      const [topic] = event.body.v0.topics;
-      if (topic?.type !== 'scvSymbol' || topic.value !== SHARE_PURCHASE_EVENT) {
-        continue;
-      }
-      if (event.body.v0.data.type !== 'scvMap') {
-        continue;
-      }
-
-      const data = scValToNative(event.body.v0.data) as Record<string, unknown>;
-      return {
-        propertyId: String(data.property_id),
-        buyer: String(data.buyer),
-        shares: this.asEventAmount(data.shares),
-        totalCost: this.asEventAmount(data.total_cost),
-      };
-    }
-
-    return null;
-  }
-
-  /** Contract events of a successful transaction, from RPC or its meta. */
-  private extractContractEvents(
-    response: SorobanRpc.Api.GetSuccessfulTransactionResponse,
-  ): RpcContractEvent[] {
-    const fromRpc = (response.events?.contractEventsXdr ?? []).flat();
-    if (fromRpc.length > 0) {
-      return fromRpc;
-    }
-
-    // Older RPC servers do not return `events`; fall back to the meta so
-    // confirmation still works against them.
-    const meta = response.resultMetaXdr;
-    if (meta.type === 'v3' && meta.v3.sorobanMeta) {
-      return [...meta.v3.sorobanMeta.events];
-    }
-    if (meta.type === 'v4') {
-      return meta.v4.events.map((event) => event.event);
-    }
-    return [];
-  }
-
-  private asNativeAddress(value: xdr.ScVal): string {
-    if (value.type !== 'scvAddress') {
-      throw ApiError.validation('Expected a Stellar address argument');
-    }
-    return Address.fromScAddress(value.address).toString();
-  }
-
-  private asNativeBigInt(value: xdr.ScVal): bigint {
-    const native = scValToNative(value);
-    if (typeof native === 'bigint') {
-      return native;
-    }
-    if (typeof native === 'number' && Number.isInteger(native)) {
-      return BigInt(native);
-    }
-    throw ApiError.validation('Expected an integer argument');
-  }
-
-  private asEventAmount(value: unknown): bigint {
-    if (typeof value === 'bigint') {
-      return value;
-    }
-    if (typeof value === 'number' && Number.isInteger(value)) {
-      return BigInt(value);
-    }
-    if (typeof value === 'string' && /^-?\d+$/.test(value)) {
-      return BigInt(value);
-    }
-    throw ApiError.validation('SharePurchase event is missing an integer amount');
-  }
-
-  /** Prefers the underlying cause's message over the generic wrapper. */
-  private describeError(error: unknown, fallback: string): string {
-    if (error instanceof Error) {
-      if (error.cause instanceof Error) {
-        return `${fallback}: ${error.cause.message}`;
-      }
-      return error.message;
-    }
-    return fallback;
   }
 
   async submitWhitelistApprove(

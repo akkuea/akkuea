@@ -1,7 +1,4 @@
-import {
-  NotificationRepository,
-  type ClaimDeliveryBatchOptions,
-} from '../repositories/NotificationRepository';
+import { NotificationRepository } from '../repositories/NotificationRepository';
 import { NotificationDlqRepository } from '../repositories/NotificationDlqRepository';
 import { logger } from './logger';
 import type {
@@ -171,51 +168,31 @@ export class NotificationService {
   }
 
   /**
-   * Atomically claim up to `limit` notifications that are due for delivery
-   * (PENDING, or FAILED with a due retry). Concurrent callers, including other
-   * API instances, never receive the same row; a claim older than
-   * `staleAfterMs` is treated as abandoned and the row can be claimed again.
-   */
-  async claimDeliveryBatch(options: ClaimDeliveryBatchOptions): Promise<Notification[]> {
-    return this.repository.claimDeliveryBatch(options);
-  }
-
-  /**
-   * Mark notification as delivered. A notification that is already DELIVERED
-   * or BOUNCED is left unchanged and `undefined` is returned.
+   * Mark notification as delivered
    */
   async markAsDelivered(notificationId: string): Promise<Notification | undefined> {
-    return this.repository.markDelivered(notificationId);
+    return this.repository.updateDeliveryStatus(notificationId, 'DELIVERED', {
+      deliveredAt: new Date(),
+    });
   }
 
-  /**
-   * Record a failed delivery attempt. The retry count is incremented in a
-   * single SQL statement, so concurrent calls never lose an attempt; the row
-   * becomes BOUNCED once it reaches its maximum retries, and only the call that
-   * makes that transition writes the dead-letter entry, so a notification gets
-   * at most one DLQ row. A notification that is already DELIVERED or BOUNCED
-   * is left unchanged and `undefined` is returned.
-   *
-   * @param nextRetryDelayMs Delay before the next attempt. When omitted it is
-   *   computed from the incremented retry count with this service's backoff
-   *   settings.
-   */
   async markAsFailed(
     notificationId: string,
     reason: string,
     nextRetryDelayMs?: number,
   ): Promise<Notification | undefined> {
-    const updated = await this.repository.recordFailure(notificationId, {
-      reason,
-      nextRetryDelayMs,
-      retryBaseDelayMs: this.deliveryConfig.retryDelayMs,
-      maxRetryDelayMs: this.deliveryConfig.maxRetryDelayMs,
-    });
-    if (!updated) return undefined;
+    const notification = await this.repository.findById(notificationId);
+    if (!notification) return undefined;
 
-    if (updated.deliveryStatus === 'BOUNCED') {
+    const retryCount = parseInt(notification.retryCount) + 1;
+    const maxRetries = parseInt(notification.maxRetries);
+
+    if (retryCount >= maxRetries) {
       try {
-        await this.dlqRepository.createFromNotification(updated, reason);
+        await this.dlqRepository.createFromNotification(
+          { ...notification, retryCount: retryCount.toString(), failureReason: reason },
+          reason,
+        );
       } catch (err) {
         logger.warn('Failed to insert DLQ entry', {
           operation: 'DLQ_WRITE_FAILED',
@@ -223,9 +200,25 @@ export class NotificationService {
           error: err instanceof Error ? err.message : String(err),
         });
       }
+
+      return this.repository.updateDeliveryStatus(notificationId, 'BOUNCED', {
+        failureReason: reason,
+        retryCount,
+      });
     }
 
-    return updated;
+    const delayMs =
+      nextRetryDelayMs ??
+      Math.min(
+        this.deliveryConfig.retryDelayMs * Math.pow(2, retryCount - 1),
+        this.deliveryConfig.maxRetryDelayMs,
+      );
+    const nextRetryAt = new Date(Date.now() + delayMs);
+    return this.repository.updateDeliveryStatus(notificationId, 'FAILED', {
+      failureReason: reason,
+      retryCount,
+      nextRetryAt,
+    });
   }
 
   /**

@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import { validateQuery } from '../middleware/validation';
 import { auditService } from '../services/AuditService';
 import { handleError } from '../utils/errors';

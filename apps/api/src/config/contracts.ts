@@ -49,19 +49,6 @@ export function getDefiRwaContractId(): string {
   return CONTRACT_IDS.DEFI_LENDING[resolveNetworkKey()] ?? '';
 }
 
-/**
- * Payment token accepted for property share purchases (env override → shared
- * deployment artifact). Share purchases are paid in this token on-chain, so the
- * API must agree with the address the contract was listed with.
- */
-export function getPaymentTokenContractId(): string {
-  const fromEnv = process.env.PAYMENT_TOKEN_CONTRACT_ID?.trim();
-  if (fromEnv) {
-    return fromEnv;
-  }
-  return CONTRACT_IDS.USDC_TOKEN[resolveNetworkKey()] ?? '';
-}
-
 /** Pilot Whitelist contract ID (env override → shared deployment artifact). */
 export function getPilotWhitelistContractId(): string {
   const fromEnv = process.env.WHITELIST_CONTRACT_ID?.trim();

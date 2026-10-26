@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import {
   validateBody,
   validateQuery,
@@ -49,13 +49,6 @@ const updatePropertySchema = createPropertySchema.partial();
 const buySharesSchema = z.object({
   buyer: z.string().min(1, 'Buyer address is required'),
   shares: z.number().int().positive(),
-});
-
-// Confirm share purchase body schema
-const confirmBuySharesSchema = z.object({
-  txHash: z
-    .string()
-    .regex(/^[0-9a-fA-F]{64}$/, 'Transaction hash must be a 64-character hex string'),
 });
 
 // GET /properties - list with filters
@@ -220,14 +213,14 @@ const tokenizePropertyRoute = new Elysia()
     },
   );
 
-// POST /properties/:id/buy-shares/prepare - unsigned purchase for the buyer to sign
-const prepareBuySharesRoute = new Elysia()
+// POST /properties/:id/buy-shares - buy property shares
+const buySharesRoute = new Elysia()
   .use(authPlugin)
   .use(idempotency)
   .use(validateParams(uuidParamSchema))
   .use(validateBody(buySharesSchema))
   .post(
-    '/:id/buy-shares/prepare',
+    '/:id/buy-shares',
     async ({ validatedParams, validatedBody, set, getAuthenticatedUser }) => {
       try {
         const { walletAddress: userAddress } = await getAuthenticatedUser();
@@ -235,7 +228,7 @@ const prepareBuySharesRoute = new Elysia()
           throw new UnauthorizedError('User address is required for authentication');
         }
 
-        return await PropertyController.prepareBuyShares(
+        return await PropertyController.buyShares(
           validatedParams!.id,
           {
             buyer: validatedBody!.buyer,
@@ -252,45 +245,8 @@ const prepareBuySharesRoute = new Elysia()
     {
       beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
       detail: {
-        summary: 'Prepare a share purchase',
-        description:
-          'Returns an unsigned purchase_shares transaction for the buyer to sign and submit themselves (requires authentication)',
-        tags: ['Properties'],
-      },
-    },
-  );
-
-// POST /properties/:id/buy-shares/confirm - verify a submitted purchase and record it
-const confirmBuySharesRoute = new Elysia()
-  .use(authPlugin)
-  .use(validateParams(uuidParamSchema))
-  .use(validateBody(confirmBuySharesSchema))
-  .post(
-    '/:id/buy-shares/confirm',
-    async ({ validatedParams, validatedBody, set, getAuthenticatedUser }) => {
-      try {
-        const { walletAddress: userAddress } = await getAuthenticatedUser();
-        if (!userAddress) {
-          throw new UnauthorizedError('User address is required for authentication');
-        }
-
-        return await PropertyController.confirmBuyShares(
-          validatedParams!.id,
-          { txHash: validatedBody!.txHash },
-          userAddress,
-        );
-      } catch (error) {
-        const errorResponse = handleError(error);
-        set.status = errorResponse.statusCode;
-        return errorResponse;
-      }
-    },
-    {
-      beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
-      detail: {
-        summary: 'Confirm a share purchase',
-        description:
-          'Verifies a buyer-signed purchase_shares transaction on-chain and records it (requires authentication)',
+        summary: 'Buy property shares',
+        description: 'Purchase shares in a tokenized property (requires authentication)',
         tags: ['Properties'],
       },
     },
@@ -325,6 +281,5 @@ export const propertyRoutes = new Elysia({ prefix: '/properties' })
   .use(updatePropertyRoute)
   .use(deletePropertyRoute)
   .use(tokenizePropertyRoute)
-  .use(prepareBuySharesRoute)
-  .use(confirmBuySharesRoute)
+  .use(buySharesRoute)
   .use(getUserSharesRoute);

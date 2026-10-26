@@ -1,5 +1,5 @@
 import { Elysia } from 'elysia';
-import { z } from 'zod/v3';
+import { z } from 'zod';
 import { validate, uuidParamSchema, authPlugin } from '../middleware';
 import { NotificationController } from '../controllers/NotificationController';
 

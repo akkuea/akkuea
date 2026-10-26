@@ -1,4 +1,4 @@
-import { z } from "zod/v3";
+import { z } from "zod";
 import { StrKey } from "@stellar/stellar-sdk";
 
 export const isStellarPublicKey = (val: string): boolean => {
@@ -288,9 +288,6 @@ export const apiEnvSchema = z.object({
     .optional()
     .or(z.literal("")),
   DEFI_RWA_CONTRACT_ID: stellarContractIdSchema.optional().or(z.literal("")),
-  PAYMENT_TOKEN_CONTRACT_ID: stellarContractIdSchema
-    .optional()
-    .or(z.literal("")),
 });
 
 export const webappEnvSchema = z.object({

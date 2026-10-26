@@ -50,7 +50,7 @@
   },
   "dependencies": {
     "@stellar/stellar-sdk": "^17.0.1",
-    "zod": "^4.6.7"
+    "zod": "^3.25.76"
   },
   "resolutions": {
     "stellar-base": "12.1.1"

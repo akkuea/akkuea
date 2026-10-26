@@ -6,7 +6,6 @@ import type { Notification } from '../db/schema';
 type MockedService = {
   getPendingNotifications: ReturnType<typeof mock>;
   getNotificationsReadyForRetry: ReturnType<typeof mock>;
-  claimDeliveryBatch: ReturnType<typeof mock>;
   markAsDelivered: ReturnType<typeof mock>;
   markAsFailed: ReturnType<typeof mock>;
 };
@@ -39,22 +38,13 @@ function sampleNotification(overrides: Partial<Notification> = {}): Notification
 }
 
 function makeService(overrides: Partial<MockedService> = {}): MockedService {
-  const service: MockedService = {
+  return {
     getPendingNotifications: mock(() => Promise.resolve([])),
     getNotificationsReadyForRetry: mock(() => Promise.resolve([])),
-    // The worker claims its batch in one call; here the claim hands back
-    // whatever the pending and retry-ready mocks return, in that order.
-    claimDeliveryBatch: mock(async () => {
-      const [pending, retry] = await Promise.all([
-        service.getPendingNotifications(),
-        service.getNotificationsReadyForRetry(),
-      ]);
-      return [...(pending as Notification[]), ...(retry as Notification[])];
-    }),
     markAsDelivered: mock(() => Promise.resolve(undefined)),
     markAsFailed: mock(() => Promise.resolve(undefined)),
+    ...overrides,
   };
-  return Object.assign(service, overrides);
 }
 
 describe('NotificationWorker', () => {

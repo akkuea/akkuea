@@ -281,10 +281,10 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
     });
   });
 
-  describe('POST /properties/:id/buy-shares/prepare', () => {
+  describe('POST /properties/:id/buy-shares', () => {
     it('should return 400 for invalid UUID', async () => {
       const response = await app.handle(
-        new Request('http://localhost/properties/invalid-id/buy-shares/prepare', {
+        new Request('http://localhost/properties/invalid-id/buy-shares', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -300,7 +300,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
 
     it('should return 400 when buyer is missing', async () => {
       const response = await app.handle(
-        new Request(`http://localhost/properties/${VALID_UUID}/buy-shares/prepare`, {
+        new Request(`http://localhost/properties/${VALID_UUID}/buy-shares`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -317,7 +317,7 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
 
     it('should return 400 when shares is invalid (zero)', async () => {
       const response = await app.handle(
-        new Request(`http://localhost/properties/${VALID_UUID}/buy-shares/prepare`, {
+        new Request(`http://localhost/properties/${VALID_UUID}/buy-shares`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -331,69 +331,15 @@ describe.skipIf(skipIfNoDatabase)('Property Routes Integration Tests', () => {
       expect(body.code).toBe('VALIDATION_ERROR');
     });
 
-    it('should process preparation when validation passes', async () => {
+    it('should process share purchase when valid', async () => {
       const response = await app.handle(
-        new Request(`http://localhost/properties/${VALID_UUID}/buy-shares/prepare`, {
+        new Request(`http://localhost/properties/${VALID_UUID}/buy-shares`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${testToken}`,
           },
-          body: JSON.stringify({ buyer: TEST_WALLET, shares: 10 }),
-        }),
-      );
-
-      // Validation should pass - controller handles business logic
-      const body = await response.json();
-      if (response.status === 400) {
-        expect(body.code).not.toBe('VALIDATION_ERROR');
-      }
-    });
-  });
-
-  describe('POST /properties/:id/buy-shares/confirm', () => {
-    it('should return 400 for invalid UUID', async () => {
-      const response = await app.handle(
-        new Request('http://localhost/properties/invalid-id/buy-shares/confirm', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ txHash: 'a'.repeat(64) }),
-        }),
-      );
-
-      expect(response.status).toBe(400);
-      const body = await response.json();
-      expect(body.code).toBe('VALIDATION_ERROR');
-    });
-
-    it('should return 400 when txHash is not a 64-character hex string', async () => {
-      const response = await app.handle(
-        new Request(`http://localhost/properties/${VALID_UUID}/buy-shares/confirm`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${testToken}`,
-          },
-          body: JSON.stringify({ txHash: 'not-a-hash' }),
-        }),
-      );
-
-      expect(response.status).toBe(400);
-      const body = await response.json();
-      expect(body.code).toBe('VALIDATION_ERROR');
-    });
-
-    it('should process confirmation when validation passes', async () => {
-      const response = await app.handle(
-        new Request(`http://localhost/properties/${VALID_UUID}/buy-shares/confirm`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${testToken}`,
-          },
-          body: JSON.stringify({ txHash: 'b'.repeat(64) }),
+          body: JSON.stringify({ buyer: 'buyer-address', shares: 10 }),
         }),
       );
 

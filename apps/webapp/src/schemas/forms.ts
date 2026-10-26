@@ -1,4 +1,4 @@
-import { z, type RefinementCtx } from "zod/v3";
+import { z, type RefinementCtx } from "zod";
 import { positiveAmountSchema } from "@akkuea/shared";
 
 const nonEmpty = (label: string) => z.string().min(1, `${label} is required`);
@@ -111,25 +111,14 @@ export const tokenizeSchema = tokenizeBaseSchema.superRefine(
 export type TokenizeFormValues = z.infer<typeof tokenizeSchema>;
 
 export function createLendingActionSchema(args: {
-  /** Upper bound for the amount, or null when the action has no cap */
-  maxAmount: number | null;
+  maxAmount: number;
   asset: string;
-  /** Shown when the amount is above `maxAmount` */
-  maxMessage?: string;
 }) {
-  const amount = positiveNumberString("Amount");
-  if (args.maxAmount === null) {
-    return z.object({
-      amount,
-      zkPrivacy: z.boolean().default(false),
-    });
-  }
-
   const max = Number.isFinite(args.maxAmount) ? args.maxAmount : 0;
   return z.object({
-    amount: amount.refine(
+    amount: positiveNumberString("Amount").refine(
       (v: string) => Number(v) <= max,
-      args.maxMessage ?? `Amount cannot exceed available ${args.asset}`,
+      `Amount cannot exceed available ${args.asset}`,
     ),
     zkPrivacy: z.boolean().default(false),
   });

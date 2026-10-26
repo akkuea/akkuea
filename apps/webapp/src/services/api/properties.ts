@@ -22,18 +22,6 @@ export interface CreatePropertyPayload {
 }
 
 /**
- * Unsigned `purchase_shares` transaction returned by buy-shares/prepare
- */
-export interface PrepareBuySharesResponse {
-  xdr: string;
-  contractId: string;
-  sorobanPropertyId: string;
-  shares: number;
-  paymentToken: string;
-  totalAmount: string;
-}
-
-/**
  * Property filter options
  */
 export interface PropertyFilters {
@@ -98,42 +86,19 @@ export const propertyApi = {
   },
 
   /**
-   * Step 1 of buying shares: get an unsigned `purchase_shares` transaction
-   * (buyer as source) to sign with the connected wallet and submit.
+   * Buy property shares
    */
-  async prepareBuyShares(
+  async buyShares(
     id: string,
     buyer: string,
     shares: number,
-  ): Promise<PrepareBuySharesResponse> {
-    const response = await apiClient.post<PrepareBuySharesResponse>(
-      `/properties/${id}/buy-shares/prepare`,
-      { buyer, shares },
-      {
-        headers: {
-          "x-user-address": buyer,
-        },
-      },
-    );
-    return response.data;
-  },
-
-  /**
-   * Step 2 of buying shares: have the API verify a submitted transaction
-   * on-chain and record the purchase. Confirming the same hash twice returns
-   * the same result without counting the purchase again.
-   */
-  async confirmBuyShares(
-    id: string,
-    txHash: string,
-    buyer: string,
   ): Promise<{ transactionHash: string; newBalance: number }> {
     const response = await apiClient.post<{
       transactionHash: string;
       newBalance: number;
     }>(
-      `/properties/${id}/buy-shares/confirm`,
-      { txHash },
+      `/properties/${id}/buy-shares`,
+      { buyer, shares },
       {
         headers: {
           "x-user-address": buyer,

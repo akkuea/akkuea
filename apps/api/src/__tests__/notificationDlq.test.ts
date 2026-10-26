@@ -71,28 +71,18 @@ function sampleDlqEntry(overrides: Partial<NotificationDlqEntry> = {}): Notifica
 type MinimalService = {
   getPendingNotifications: ReturnType<typeof mock>;
   getNotificationsReadyForRetry: ReturnType<typeof mock>;
-  claimDeliveryBatch: ReturnType<typeof mock>;
   markAsDelivered: ReturnType<typeof mock>;
   markAsFailed: ReturnType<typeof mock>;
 };
 
 function makeMinimalService(overrides: Partial<MinimalService> = {}): MinimalService {
-  const service: MinimalService = {
+  return {
     getPendingNotifications: mock(() => Promise.resolve([])),
     getNotificationsReadyForRetry: mock(() => Promise.resolve([])),
-    // The worker claims its batch in one call; here the claim hands back
-    // whatever the pending and retry-ready mocks return, in that order.
-    claimDeliveryBatch: mock(async () => {
-      const [pending, retry] = await Promise.all([
-        service.getPendingNotifications(),
-        service.getNotificationsReadyForRetry(),
-      ]);
-      return [...(pending as Notification[]), ...(retry as Notification[])];
-    }),
     markAsDelivered: mock(() => Promise.resolve(undefined)),
     markAsFailed: mock(() => Promise.resolve(undefined)),
+    ...overrides,
   };
-  return Object.assign(service, overrides);
 }
 
 // ─── 1. computeBackoffDelay (via the worker's public tick) ────────────────────
@@ -187,61 +177,49 @@ describe('NotificationWorker – exponential back-off', () => {
 });
 
 // ─── 2. NotificationService – DLQ promotion ───────────────────────────────────
-//
-// markAsFailed records the attempt through one atomic repository call
-// (recordFailure) and decides on the DLQ from the row that call returns. The
-// SQL itself (atomic increment, BOUNCED transition, backoff) is exercised
-// against a real database in notificationClaiming.test.ts.
-
-type RecordFailureCall = [
-  string,
-  { reason: string; nextRetryDelayMs?: number; retryBaseDelayMs: number; maxRetryDelayMs: number },
-];
-
-function recordFailureCalls(recordFailure: ReturnType<typeof mock>): RecordFailureCall[] {
-  return (recordFailure as unknown as { mock: { calls: RecordFailureCall[] } }).mock.calls;
-}
 
 describe('NotificationService.markAsFailed – DLQ promotion', () => {
   it('inserts a DLQ entry and marks the notification BOUNCED when retries are exhausted', async () => {
-    const bounced = sampleNotification({
-      retryCount: '3',
-      maxRetries: '3',
-      deliveryStatus: 'BOUNCED',
-    });
+    const notification = sampleNotification({ retryCount: '2', maxRetries: '3' });
 
-    const recordFailure = mock(() => Promise.resolve(bounced));
+    const findById = mock(() => Promise.resolve(notification));
+    const updateDeliveryStatus = mock(() =>
+      Promise.resolve({ ...notification, deliveryStatus: 'BOUNCED' } as Notification),
+    );
     const createFromNotification = mock(() => Promise.resolve(sampleDlqEntry()));
 
-    const notifRepo = { recordFailure } as unknown as NotificationRepository;
-    const dlqRepo = { createFromNotification } as unknown as NotificationDlqRepository;
+    const notifRepo = {
+      findById,
+      updateDeliveryStatus,
+    } as unknown as NotificationRepository;
+
+    const dlqRepo = {
+      createFromNotification,
+    } as unknown as NotificationDlqRepository;
 
     const service = new NotificationService(
       notifRepo,
       { maxRetries: 3, retryDelayMs: 1_000 },
       dlqRepo,
     );
-    const result = await service.markAsFailed('n-1', 'Webhook responded with 500');
+    await service.markAsFailed('n-1', 'Webhook responded with 500');
 
-    // DLQ must be written, from the row the atomic update returned
+    // DLQ must be written
     expect(createFromNotification).toHaveBeenCalledTimes(1);
-    expect(createFromNotification).toHaveBeenCalledWith(bounced, 'Webhook responded with 500');
     // Status must be BOUNCED so the notification is excluded from retry polling
-    expect(result?.deliveryStatus).toBe('BOUNCED');
-    expect(recordFailureCalls(recordFailure)[0]![0]).toBe('n-1');
+    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]!;
+    expect(statusCall[1]).toBe('BOUNCED');
   });
 
   it('does not insert a DLQ entry when retries remain', async () => {
-    const failed = sampleNotification({
-      retryCount: '1',
-      maxRetries: '3',
-      deliveryStatus: 'FAILED',
-    });
+    const notification = sampleNotification({ retryCount: '0', maxRetries: '3' });
 
-    const recordFailure = mock(() => Promise.resolve(failed));
+    const findById = mock(() => Promise.resolve(notification));
+    const updateDeliveryStatus = mock(() => Promise.resolve({ ...notification } as Notification));
     const createFromNotification = mock(() => Promise.resolve(sampleDlqEntry()));
 
-    const notifRepo = { recordFailure } as unknown as NotificationRepository;
+    const notifRepo = { findById, updateDeliveryStatus } as unknown as NotificationRepository;
     const dlqRepo = { createFromNotification } as unknown as NotificationDlqRepository;
 
     const service = new NotificationService(
@@ -249,47 +227,49 @@ describe('NotificationService.markAsFailed – DLQ promotion', () => {
       { maxRetries: 3, retryDelayMs: 1_000 },
       dlqRepo,
     );
-    const result = await service.markAsFailed('n-1', 'Webhook responded with 503');
+    await service.markAsFailed('n-1', 'Webhook responded with 503');
 
     expect(createFromNotification).not.toHaveBeenCalled();
-    expect(result?.deliveryStatus).toBe('FAILED');
+    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]!;
+    expect(statusCall[1]).toBe('FAILED');
   });
 
-  it('forwards an explicit retry delay and its backoff settings to the atomic update', async () => {
+  it('applies exponential back-off when scheduling the next retry', async () => {
     const BASE = 10_000;
-    const recordFailure = mock(() =>
-      Promise.resolve(sampleNotification({ deliveryStatus: 'FAILED' })),
-    );
-    const notifRepo = { recordFailure } as unknown as NotificationRepository;
+    const notification = sampleNotification({ retryCount: '1', maxRetries: '5' }); // attempt 2
+
+    const findById = mock(() => Promise.resolve(notification));
+    const updateDeliveryStatus = mock(() => Promise.resolve({ ...notification } as Notification));
+    const notifRepo = { findById, updateDeliveryStatus } as unknown as NotificationRepository;
     const dlqRepo = { createFromNotification: mock() } as unknown as NotificationDlqRepository;
 
     const service = new NotificationService(
       notifRepo,
-      { maxRetries: 5, retryDelayMs: BASE, maxRetryDelayMs: 120_000 },
+      { maxRetries: 5, retryDelayMs: BASE },
       dlqRepo,
     );
     // Supply explicit delay (as the worker would) so the service honours it
     const explicitDelay = 20_000;
     await service.markAsFailed('n-1', 'error', explicitDelay);
 
-    const [, options] = recordFailureCalls(recordFailure)[0]!;
-    expect(options.reason).toBe('error');
-    expect(options.nextRetryDelayMs).toBe(explicitDelay);
-    expect(options.retryBaseDelayMs).toBe(BASE);
-    expect(options.maxRetryDelayMs).toBe(120_000);
+    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]!;
+    const data = statusCall[2] as { nextRetryAt: Date };
+    // nextRetryAt should be approximately now + explicitDelay
+    const diff = data.nextRetryAt.getTime() - Date.now();
+    expect(diff).toBeGreaterThan(explicitDelay - 500);
+    expect(diff).toBeLessThan(explicitDelay + 500);
   });
 
   it('is non-fatal when the DLQ write fails', async () => {
-    const bounced = sampleNotification({
-      retryCount: '3',
-      maxRetries: '3',
-      deliveryStatus: 'BOUNCED',
-    });
+    const notification = sampleNotification({ retryCount: '2', maxRetries: '3' });
 
-    const recordFailure = mock(() => Promise.resolve(bounced));
+    const findById = mock(() => Promise.resolve(notification));
+    const updateDeliveryStatus = mock(() => Promise.resolve({ ...notification } as Notification));
     const createFromNotification = mock(() => Promise.reject(new Error('DB down')));
 
-    const notifRepo = { recordFailure } as unknown as NotificationRepository;
+    const notifRepo = { findById, updateDeliveryStatus } as unknown as NotificationRepository;
     const dlqRepo = { createFromNotification } as unknown as NotificationDlqRepository;
 
     const service = new NotificationService(
@@ -299,29 +279,11 @@ describe('NotificationService.markAsFailed – DLQ promotion', () => {
     );
 
     // Must not throw even though the DLQ write rejected
-    const result = await service.markAsFailed('n-1', 'webhook error');
-    expect(result).toBeDefined();
-    // Status is still BOUNCED
-    expect(result?.deliveryStatus).toBe('BOUNCED');
-  });
-
-  it('writes no DLQ entry when the notification was already DELIVERED or BOUNCED', async () => {
-    // recordFailure returns nothing when the row is already terminal, e.g. a
-    // concurrent call bounced it first.
-    const recordFailure = mock(() => Promise.resolve(undefined));
-    const createFromNotification = mock(() => Promise.resolve(sampleDlqEntry()));
-
-    const notifRepo = { recordFailure } as unknown as NotificationRepository;
-    const dlqRepo = { createFromNotification } as unknown as NotificationDlqRepository;
-
-    const service = new NotificationService(
-      notifRepo,
-      { maxRetries: 3, retryDelayMs: 1_000 },
-      dlqRepo,
-    );
-
-    expect(await service.markAsFailed('n-1', 'late failure')).toBeUndefined();
-    expect(createFromNotification).not.toHaveBeenCalled();
+    await expect(service.markAsFailed('n-1', 'webhook error')).resolves.toBeDefined();
+    // Status should still be updated to BOUNCED
+    const statusCall = (updateDeliveryStatus as unknown as { mock: { calls: unknown[][] } }).mock
+      .calls[0]!;
+    expect(statusCall[1]).toBe('BOUNCED');
   });
 });
 

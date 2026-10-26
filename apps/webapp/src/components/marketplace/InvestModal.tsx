@@ -19,6 +19,10 @@ import {
 import { useWallet } from "@/components/auth/hooks";
 import { PropertyImage } from "@/components/property/PropertyImage";
 import { propertyApi } from "@/services/api/properties";
+import {
+  purchaseNetworkPassphrase,
+  submitSignedPurchase,
+} from "@/services/marketplace/purchase";
 import { getPropertyTypeLabel } from "./marketplace.utils";
 
 export interface InvestModalProps {
@@ -48,7 +52,7 @@ export function InvestModal({
   onConnectWallet,
   onInvestmentSuccess,
 }: InvestModalProps) {
-  const { network } = useWallet();
+  const { network, signTransaction } = useWallet();
   const [tokens, setTokens] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<"usdc" | "fiat">("usdc");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -94,12 +98,33 @@ export function InvestModal({
     setError(null);
 
     try {
-      const result = await propertyApi.buyShares(
+      // 1. The API prepares an unsigned `purchase_shares` transaction with the
+      //    buyer as source. Payment is signed by the buyer, so no key material
+      //    and no signed payload crosses the API boundary.
+      const prepared = await propertyApi.prepareBuyShares(
         property.id,
         walletAddress,
         tokens,
       );
-      setTxHash(result.transactionHash);
+
+      // 2. Sign with the connected wallet. A rejected signature throws here,
+      //    so confirm is never called without a signed transaction.
+      const signedXdr = await signTransaction(
+        prepared.xdr,
+        purchaseNetworkPassphrase(network),
+      );
+
+      // 3. Submit to Soroban RPC directly. This throws when submission fails
+      //    or the network returns no hash, instead of confirming a transaction
+      //    that was never submitted.
+      const { hash } = await submitSignedPurchase(signedXdr, network);
+
+      // 4. The API re-loads the transaction from Soroban RPC, verifies the
+      //    contract, function, buyer, amount and SharePurchase event, and only
+      //    then records the purchase.
+      await propertyApi.confirmBuyShares(property.id, hash, walletAddress);
+
+      setTxHash(hash);
       onInvestmentSuccess?.();
     } catch (submissionError) {
       setError(

@@ -84,8 +84,13 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   let poolId: string;
 
   // StellarService originals (restored after each test)
-  let originalMintPropertyShares: any;
+  let originalListPropertyShares: any;
+  let originalPreparePurchaseShares: any;
+  let originalVerifyPurchaseTransaction: any;
   let originalGetMintingConfig: any;
+
+  /** Payment token used by the shared purchase stubs (7-decimal USDC units). */
+  const PAYMENT_TOKEN_ID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
 
   /**
    * Build a minimal auth context compatible with LendingController's
@@ -162,7 +167,9 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   // Per-test stub setup / teardown for StellarService
   // -----------------------------------------------------------------------
   beforeEach(() => {
-    originalMintPropertyShares = stellarService.mintPropertyShares;
+    originalListPropertyShares = stellarService.listPropertyShares;
+    originalPreparePurchaseShares = stellarService.preparePurchaseShares;
+    originalVerifyPurchaseTransaction = stellarService.verifyPurchaseTransaction;
     originalGetMintingConfig = stellarService.getMintingConfig;
 
     // Default minting config stub (shared by all tests)
@@ -174,7 +181,9 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   });
 
   afterEach(() => {
-    (stellarService as any).mintPropertyShares = originalMintPropertyShares;
+    (stellarService as any).listPropertyShares = originalListPropertyShares;
+    (stellarService as any).preparePurchaseShares = originalPreparePurchaseShares;
+    (stellarService as any).verifyPurchaseTransaction = originalVerifyPurchaseTransaction;
     (stellarService as any).getMintingConfig = originalGetMintingConfig;
   });
 
@@ -215,10 +224,11 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   // =======================================================================
   describe('Step 1: Tokenize property', () => {
     it('tokenizes the property and persists contract address + sorobanPropertyId', async () => {
-      (stellarService as any).mintPropertyShares = async () => ({
-        txHash: TOKENIZE_TX_HASH,
-        contractId: MOCK_CONTRACT_ID,
-      });
+      let capturedListParams: any = {};
+      (stellarService as any).listPropertyShares = async (params: any) => {
+        capturedListParams = params;
+        return { txHash: TOKENIZE_TX_HASH, contractId: MOCK_CONTRACT_ID };
+      };
 
       const result = await PropertyController.tokenizeProperty(propertyId, {}, OWNER_ADDRESS);
 
@@ -227,6 +237,20 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
       expect(result.tokenAddress).toBe(MOCK_CONTRACT_ID);
       expect(result.totalShares).toBe(100);
       expect(result.owner).toBe(OWNER_ADDRESS);
+
+      // The property is listed for sale on-chain instead of having its supply
+      // minted to the owner: price, inventory and payment token are recorded.
+      expect(capturedListParams).toMatchObject({
+        contractId: MOCK_CONTRACT_ID,
+        adminPublicKey: MOCK_ADMIN_PUBLIC_KEY,
+        adminSecret: MOCK_ADMIN_SECRET,
+        owner: OWNER_ADDRESS,
+        sharesForSale: 100,
+        paymentToken: PAYMENT_TOKEN_ID,
+        // 50.00 at 7 decimals
+        pricePerShareUnits: BigInt('500000000'),
+      });
+      expect(capturedListParams.sorobanPropertyId).toBeGreaterThan(0);
 
       // Verify DB: property now has tokenAddress and sorobanPropertyId set
       const prop = await propertyRepository.findById(propertyId);
@@ -246,22 +270,26 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   });
 
   // =======================================================================
-  // STEP 2 - Buy Shares (KYC gating)
+  // STEP 2 - Prepare Share Purchase (KYC gating)
   // =======================================================================
-  describe('Step 2: Buy shares - KYC not approved', () => {
-    it('rejects share purchase when buyer KYC is not approved', async () => {
+  describe('Step 2: Prepare share purchase - KYC not approved', () => {
+    it('rejects the purchase when buyer KYC is not approved', async () => {
       // buyerNoKyc has kycStatus = 'not_started'
-      (stellarService as any).mintPropertyShares = async () => {
+      let prepareCalled = false;
+      (stellarService as any).preparePurchaseShares = async () => {
+        prepareCalled = true;
         throw new Error('should not be called - KYC gate should fire first');
       };
 
       await expect(
-        PropertyController.buyShares(
+        PropertyController.prepareBuyShares(
           propertyId,
           { buyer: BUYER_ADDRESS_NO_KYC, shares: 5 },
           BUYER_ADDRESS_NO_KYC,
         ),
       ).rejects.toThrow('KYC verification must be approved before purchasing shares');
+
+      expect(prepareCalled).toBe(false);
 
       // DB: no share ownership record created
       const [ownership] = await db
@@ -282,35 +310,72 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   });
 
   // =======================================================================
-  // STEP 3 - Buy Shares (happy path - KYC approved)
+  // STEP 3 - Buy Shares (buyer-signed, paid, then confirmed on-chain)
   // =======================================================================
   describe('Step 3: Buy shares - KYC approved', () => {
-    it('mints shares for a KYC-approved buyer and updates DB state', async () => {
-      let capturedMintParams: any = {};
-
-      (stellarService as any).mintPropertyShares = async (params: any) => {
-        capturedMintParams = params;
-        return { txHash: BUY_SHARES_TX_HASH, contractId: MOCK_CONTRACT_ID };
+    it('prepares an unsigned purchase transaction for the buyer', async () => {
+      let capturedPrepareParams: any = {};
+      (stellarService as any).preparePurchaseShares = async (params: any) => {
+        capturedPrepareParams = params;
+        return { xdr: 'AAAA-UNSIGNED-XDR', contractId: MOCK_CONTRACT_ID };
       };
 
-      const result = await PropertyController.buyShares(
+      const result = await PropertyController.prepareBuyShares(
         propertyId,
         { buyer: BUYER_ADDRESS_KYC_OK, shares: 10 },
         BUYER_ADDRESS_KYC_OK,
       );
 
+      expect(result.xdr).toBe('AAAA-UNSIGNED-XDR');
+      expect(result.contractId).toBe(MOCK_CONTRACT_ID);
+      expect(result.sorobanPropertyId).toBe(String(sorobanPropertyId));
+      expect(result.shares).toBe(10);
+      expect(result.paymentToken).toBe(PAYMENT_TOKEN_ID);
+      // 10 shares at 50.00, expressed in 7-decimal payment token units
+      expect(result.totalAmount).toBe('500.0000000');
+
+      expect(capturedPrepareParams).toMatchObject({
+        contractId: MOCK_CONTRACT_ID,
+        buyer: BUYER_ADDRESS_KYC_OK,
+        sorobanPropertyId,
+        shares: 10,
+        paymentToken: PAYMENT_TOKEN_ID,
+      });
+
+      // Nothing is recorded until the transaction is confirmed on-chain
+      const prop = await propertyRepository.findById(propertyId);
+      expect(prop!.availableShares).toBe(100);
+    });
+
+    it('records a verified purchase and updates DB state', async () => {
+      (stellarService as any).verifyPurchaseTransaction = async () => ({
+        txHash: BUY_SHARES_TX_HASH,
+        sourceAccount: BUYER_ADDRESS_KYC_OK,
+        contractId: MOCK_CONTRACT_ID,
+        functionName: 'purchase_shares',
+        call: {
+          buyer: BUYER_ADDRESS_KYC_OK,
+          propertyId: BigInt(sorobanPropertyId),
+          amount: BigInt(10),
+          paymentToken: PAYMENT_TOKEN_ID,
+        },
+        sharePurchase: {
+          propertyId: String(sorobanPropertyId),
+          buyer: BUYER_ADDRESS_KYC_OK,
+          shares: BigInt(10),
+          // 10 shares at 50.00 in 7-decimal units
+          totalCost: BigInt('5000000000'),
+        },
+      });
+
+      const result = await PropertyController.confirmBuyShares(
+        propertyId,
+        { txHash: BUY_SHARES_TX_HASH },
+        BUYER_ADDRESS_KYC_OK,
+      );
+
       expect(result.transactionHash).toBe(BUY_SHARES_TX_HASH);
       expect(result.newBalance).toBe(10);
-
-      // On-chain mint called with correct params
-      expect(capturedMintParams).toMatchObject({
-        contractId: MOCK_CONTRACT_ID,
-        adminPublicKey: MOCK_ADMIN_PUBLIC_KEY,
-        adminSecret: MOCK_ADMIN_SECRET,
-        sorobanPropertyId,
-        recipient: BUYER_ADDRESS_KYC_OK,
-        amount: 10,
-      });
 
       // DB: available shares decremented
       const prop = await propertyRepository.findById(propertyId);
@@ -330,7 +395,7 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
       expect(ownership!.shares).toBe(10);
       expect(parseFloat(ownership!.purchasePrice)).toBe(500); // 10 × 50.00
 
-      // DB: confirmed transaction record
+      // DB: confirmed transaction record with the real paid amount and asset
       const [tx] = await db
         .select()
         .from(transactions)
@@ -338,20 +403,21 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
       expect(tx).toBeDefined();
       expect(tx!.status).toBe('confirmed');
       expect(parseFloat(tx!.amount)).toBe(500);
+      expect(tx!.asset).toBe(PAYMENT_TOKEN_ID);
     });
 
-    it('does not persist changes when Soroban submission fails', async () => {
-      (stellarService as any).mintPropertyShares = async () => {
-        throw new Error('Soroban submission failed');
+    it('does not persist changes when on-chain verification fails', async () => {
+      (stellarService as any).verifyPurchaseTransaction = async () => {
+        throw new Error('Transaction did not succeed on-chain');
       };
 
       await expect(
-        PropertyController.buyShares(
+        PropertyController.confirmBuyShares(
           propertyId,
-          { buyer: BUYER_ADDRESS_KYC_OK, shares: 5 },
+          { txHash: 'c'.repeat(64) },
           BUYER_ADDRESS_KYC_OK,
         ),
-      ).rejects.toThrow('Soroban submission failed');
+      ).rejects.toThrow('Transaction did not succeed on-chain');
 
       // DB: available shares still 90 - unchanged from the previous test's purchase
       const prop = await propertyRepository.findById(propertyId);

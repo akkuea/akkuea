@@ -6,7 +6,7 @@ import {
   timestamp,
   pgEnum,
   jsonb,
-  index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from './users';
@@ -44,7 +44,7 @@ export const transactions = pgTable(
     timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
     metadata: jsonb('metadata').$type<Record<string, unknown>>(),
   },
-  (t) => [index('transactions_hash_idx').on(t.hash)],
+  (t) => [uniqueIndex('transactions_hash_idx').on(t.hash)],
 );
 
 export const transactionsRelations = relations(transactions, ({ one }) => ({

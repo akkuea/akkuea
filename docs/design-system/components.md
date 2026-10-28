@@ -1,6 +1,6 @@
 # Components
 
-Source: `apps/webapp/src/components/ui/`. Every component has a co-located `*.stories.tsx` - browse them live with `bun run storybook` (from `apps/webapp`; also exposed at the root via `bun run storybook` / `bun run build-storybook`).
+Source: `apps/webapp/src/components/ui/`. Every component has a co-located `*.stories.tsx` - browse them live with `bun run storybook` (from `apps/webapp`; also exposed at the root via `bun run storybook` / `bun run build-storybook`). The Storybook setup is on the current major (Storybook 9); `bun run build-storybook` must succeed before a component change is merged.
 
 ## Inventory
 

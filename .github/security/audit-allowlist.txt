@@ -4,6 +4,8 @@
 # Reviewed: 2026-10-20 against the bun.lock regenerated for this PR after upgrading
 # nanoid to ^5.1.16, postcss to ^8.5.18 and ws to ^8.21.0. Everything else that the
 # previous list carried is no longer reported by `bun audit --audit-level=low`.
+# Note: the contracts `security-audit` job (cargo-audit / cargo-deny) is a separate
+# ecosystem and does not read this file; its exceptions live in apps/contracts/deny.toml.
 # 2026-10-24: added GHSA-mrhx-c7xc-m3w5 (zod). Patched only in zod 4.6.6, and zod 3 is
 # still used directly and by privy, scalar, reown and eslint-plugin-react-hooks.
 # Follow-up: dependency upgrade track.

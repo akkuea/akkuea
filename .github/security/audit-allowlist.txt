@@ -7,7 +7,10 @@
 # 2026-10-24: added GHSA-mrhx-c7xc-m3w5 (zod). Patched only in zod 4.6.6, and zod 3 is
 # still used directly and by privy, scalar, reown and eslint-plugin-react-hooks.
 # Follow-up: dependency upgrade track.
+# 2026-10-29: added GHSA-qr28-fpjm-wq7f (decode-uri-component). Fixed only in ESM-only 0.5.1,
+# unreachable from query-string 7 under walletconnect 2.21. Follow-up: Privy 3 upgrade.
 
 GHSA-5p2g-fcmc-qvqq  # image-size (high) - JXL and HEIF parsers allow denial of service through infinite loops - no patched release for 1.x, transitive via @storybook/nextjs in webapp; track upgrade
 GHSA-mrhx-c7xc-m3w5  # zod (high) - can exhaust memory while validating oversized constrained collections - patched only in 4.6.6; zod 3 is direct in api, shared, webapp and land and transitive via privy, scalar, reown and eslint-plugin-react-hooks; remove once the zod 4 migration (#1290) and those dependencies move off zod 3
 GHSA-w3rx-r6r6-pgpr  # image-size (high) - ICNS parser allows denial of service through an infinite loop - no patched release for 1.x, transitive via @storybook/nextjs in webapp; track upgrade
+GHSA-qr28-fpjm-wq7f  # decode-uri-component (high) - quadratic DoS decoding percent-encoded runs - patched only in ESM-only 0.5.1; transitive via @privy-io/react-auth 2 -> @walletconnect/utils 2.21 -> query-string 7.1.3 (CJS require, override breaks it); remove with the Privy 3 upgrade

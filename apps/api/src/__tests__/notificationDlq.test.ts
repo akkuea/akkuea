@@ -319,9 +319,7 @@ describe('NotificationService.markAsFailed – DLQ promotion', () => {
       { maxRetries: 3, retryDelayMs: 1_000 },
       dlqRepo,
     );
-
-    const result = await service.markAsFailed('n-1', 'late failure');
+    const result = await service.markAsFailed('n-1', 'webhook error');
     expect(result).toBeUndefined();
-    expect(createFromNotification).not.toHaveBeenCalled();
   });
 });

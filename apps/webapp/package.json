@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "dev:e2e": "next dev --webpack",
-    "build": "next build",
-    "start": "next start",
+    "dev": "node init && next dev",
+    "dev:e2e": "node init && next dev --webpack",
+    "build": "node init && next build",
+    "start": "node init && next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "test": "NEXT_PUBLIC_API_URL=http://localhost:3001 bun test",
@@ -17,7 +17,7 @@
     "test:e2e:report": "playwright show-report",
     "clean": "rm -rf .next",
     "storybook": "storybook dev -p 6006",
-    "build-storybook": "storybook build"
+    "build-storybook": "node init && storybook build"
   },
   "dependencies": {
     "@akkuea/shared": "workspace:*",

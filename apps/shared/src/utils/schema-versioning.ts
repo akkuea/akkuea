@@ -51,59 +51,68 @@ export interface SchemaDiff {
 // Zod unwrapping helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Strip away Zod wrapper types (Optional, Nullable, Default, Effects, Branded,
- * Pipeline, Lazy, Readonly) to reach the *inner* schema that carries the
- * structural information.
- *
- * IMPORTANT: `current` is always initialised from a concrete schema argument,
- * and the while-loop body only assigns from known `_def` properties.  The
- * `else` branch explicitly breaks, so `current` can never be `undefined` when
- * we return.  This satisfies `noUncheckedIndexedAccess`-adjacent narrowing.
- */
-export function unwrapZodSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
-  let current: z.ZodTypeAny = schema;
+/** Loose view of a Zod 4 schema definition (`schema.def`). */
+interface ZodDefView {
+  type: string;
+  innerType?: z.ZodType;
+  in?: z.ZodType;
+  out?: z.ZodType;
+  getter?: () => z.ZodType;
+  element?: z.ZodType;
+  options?: readonly z.ZodType[];
+  shape?: Record<string, z.ZodType>;
+}
 
-  // eslint-disable-next-line no-constant-condition
+function defOf(schema: z.ZodType): ZodDefView {
+  return schema.def as unknown as ZodDefView;
+}
+
+/** Legacy-style label for a schema, e.g. "ZodString" or "ZodObject". */
+function typeLabel(schema: z.ZodType): string {
+  const type = defOf(schema).type;
+  return `Zod${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+}
+
+/**
+ * Strip away Zod wrapper types (Optional, Nullable, Default, Readonly, Catch,
+ * Pipe, Lazy) to reach the *inner* schema that carries the structural
+ * information.
+ *
+ * Refinements no longer wrap a schema in Zod 4, so there is no separate
+ * "effects" layer to unwrap. The loop terminates because every branch either
+ * reassigns `current` or breaks.
+ */
+export function unwrapZodSchema(schema: z.ZodType): z.ZodType {
+  let current: z.ZodType = schema;
+
   while (true) {
-    // ---- Wrappers that have .innerType ----
-    if (current instanceof z.ZodOptional || current instanceof z.ZodNullable) {
-      current = (current as z.ZodOptional<z.ZodTypeAny>)._def.innerType;
-    } else if (current instanceof z.ZodDefault) {
-      current = (current as z.ZodDefault<z.ZodTypeAny>)._def.innerType;
-    } else if (current instanceof z.ZodEffects) {
-      current = (current as z.ZodEffects<z.ZodTypeAny>)._def.schema;
-    }
-    // ---- Pipeline ----
-    else if (current instanceof z.ZodPipeline) {
-      // Prefer the *output* type as it represents the validated shape.
-      current = (current as z.ZodPipeline<z.ZodTypeAny, z.ZodTypeAny>)._def.out;
-    }
-    // ---- Branded ----
-    else if (current instanceof z.ZodBranded) {
-      current = (current as z.ZodBranded<z.ZodTypeAny, string>)._def.type;
-    }
-    // ---- Readonly ----
-    else if (current instanceof z.ZodReadonly) {
-      current = (current as z.ZodReadonly<z.ZodTypeAny>)._def.innerType;
-    }
-    // ---- Lazy (resolve once) ----
-    else if (current instanceof z.ZodLazy) {
-      const resolved: z.ZodTypeAny = (
-        current as z.ZodLazy<z.ZodTypeAny>
-      )._def.getter();
+    const def = defOf(current);
+
+    if (
+      (def.type === "optional" ||
+        def.type === "nullable" ||
+        def.type === "default" ||
+        def.type === "prefault" ||
+        def.type === "nonoptional" ||
+        def.type === "readonly" ||
+        def.type === "catch") &&
+      def.innerType
+    ) {
+      current = def.innerType;
+    } else if (def.type === "pipe" && def.in && def.out) {
+      // Prefer the *output* side as it represents the validated shape, unless
+      // it is a bare transform (what `.transform()` produces).
+      current = defOf(def.out).type === "transform" ? def.in : def.out;
+    } else if (def.type === "lazy" && def.getter) {
+      const resolved = def.getter();
       // Guard against accidental infinite loops.
       if (resolved === current) break;
       current = resolved;
-    }
-    // ---- Base case – nothing left to unwrap ----
-    else {
+    } else {
       break;
     }
   }
 
-  // `current` is guaranteed to be defined because we started with a concrete
-  // schema and every branch either reassigns or breaks.
   return current;
 }
 
@@ -114,52 +123,39 @@ export function unwrapZodSchema(schema: z.ZodTypeAny): z.ZodTypeAny {
 /**
  * Walk a (possibly wrapped) Zod schema and produce a {@link FieldDefinition}.
  */
-export function extractFieldDefinition(schema: z.ZodTypeAny): FieldDefinition {
+export function extractFieldDefinition(schema: z.ZodType): FieldDefinition {
   const inner = unwrapZodSchema(schema);
+  const outerType = defOf(schema).type;
   const required =
-    !(schema instanceof z.ZodOptional) &&
-    !(schema instanceof z.ZodNullable) &&
-    !(schema instanceof z.ZodDefault);
+    outerType !== "optional" &&
+    outerType !== "nullable" &&
+    outerType !== "default";
 
   const base: FieldDefinition = {
-    type: (inner._def as z.ZodTypeDef & { typeName: string }).typeName,
+    type: typeLabel(inner),
     required,
-    description:
-      "description" in inner
-        ? (inner.description as string | undefined)
-        : undefined,
+    description: inner.description,
   };
 
+  const def = defOf(inner);
+
   // ---- Object ----
-  if (inner instanceof z.ZodObject) {
-    const shape = inner._def.shape() as Record<string, z.ZodTypeAny>;
+  if (def.type === "object" && def.shape) {
     const fields: Record<string, FieldDefinition> = {};
-    for (const key of Object.keys(shape)) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const fieldSchema: z.ZodTypeAny | undefined = shape[key];
-      if (fieldSchema) {
-        fields[key] = extractFieldDefinition(fieldSchema);
-      }
+    for (const [key, fieldSchema] of Object.entries(def.shape)) {
+      fields[key] = extractFieldDefinition(fieldSchema);
     }
     base.fields = fields;
   }
 
   // ---- Array ----
-  if (inner instanceof z.ZodArray) {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const elementSchema: z.ZodTypeAny = inner._def.type;
-    base.element = extractFieldDefinition(elementSchema);
+  if (def.type === "array" && def.element) {
+    base.element = extractFieldDefinition(def.element);
   }
 
   // ---- Union / DiscriminatedUnion ----
-  if (inner instanceof z.ZodUnion || inner instanceof z.ZodDiscriminatedUnion) {
-    const options: FieldDefinition[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const opts: readonly z.ZodTypeAny[] = inner._def.options;
-    for (const opt of opts) {
-      options.push(extractFieldDefinition(opt));
-    }
-    base.options = options;
+  if (def.type === "union" && def.options) {
+    base.options = def.options.map((opt) => extractFieldDefinition(opt));
   }
 
   return base;
@@ -172,16 +168,10 @@ export function captureSchemaSnapshot(
   name: string,
   schema: z.ZodObject<z.ZodRawShape>,
 ): SchemaSnapshot {
-  const shape = schema._def.shape() as Record<string, z.ZodTypeAny>;
   const fields: Record<string, FieldDefinition> = {};
 
-  for (const key of Object.keys(shape)) {
-    // With noUncheckedIndexedAccess, bracket access on Record<K,V> returns
-    // V | undefined – guard that explicitly.
-    const fieldSchema: z.ZodTypeAny | undefined = shape[key];
-    if (fieldSchema) {
-      fields[key] = extractFieldDefinition(fieldSchema);
-    }
+  for (const [key, fieldSchema] of Object.entries(schema.shape)) {
+    fields[key] = extractFieldDefinition(fieldSchema as z.ZodType);
   }
 
   return {

@@ -396,7 +396,7 @@ export function PoolActionModal({
           onSubmit={handleSubmit}
         >
           {({ watch, setValue, formState }) => {
-            const zkPrivacy = watch("zkPrivacy");
+            const zkPrivacy = watch("zkPrivacy") ?? false;
             return (
               <div className="space-y-6">
                 {/* Pool identity banner */}

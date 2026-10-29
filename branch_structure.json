@@ -1,0 +1,18 @@
+{
+  "default_branch": "develop",
+  "branches": [
+    "develop",
+    "origin",
+    "security/issue-1157-ci-make-the-contracts-security-audit-job-fast"
+  ],
+  "parent": {
+    "develop": null,
+    "origin": "develop",
+    "security/issue-1157-ci-make-the-contracts-security-audit-job-fast": "develop"
+  },
+  "order": [
+    "develop",
+    "origin",
+    "security/issue-1157-ci-make-the-contracts-security-audit-job-fast"
+  ]
+}

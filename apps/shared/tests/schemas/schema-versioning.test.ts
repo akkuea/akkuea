@@ -56,8 +56,10 @@ describe("unwrapZodSchema", () => {
     expect(inner instanceof z.ZodString).toBe(true);
   });
 
-  it("unwraps ZodEffects to the inner type", () => {
-    const schema = z.string().refine(() => true);
+  it("unwraps a transform to the underlying schema", () => {
+    // v4 replaced ZodEffects with ZodPipe; .transform() wraps the source schema,
+    // and unwrapZodSchema falls back to the pipe's input side.
+    const schema = z.string().transform((s) => s);
     const inner = unwrapZodSchema(schema);
     expect(inner instanceof z.ZodString).toBe(true);
   });

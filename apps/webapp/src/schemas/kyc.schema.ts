@@ -3,7 +3,7 @@ import { z } from "zod";
 export const kycSchema = z.object({
   fullName: z.string().min(3, "Full name must be at least 3 characters"),
 
-  email: z.string().email("Invalid email address"),
+  email: z.email("Invalid email address"),
 
   date_of_birth: z.string().min(1, "Date of birth is required"),
 

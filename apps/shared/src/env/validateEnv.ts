@@ -26,13 +26,13 @@ export class EnvValidationError extends Error {
   }
 }
 
-export function validateEnv<Output, Def extends z.ZodTypeDef, Input>(
-  schema: z.ZodType<Output, Def, Input>,
+export function validateEnv<Schema extends z.ZodType>(
+  schema: Schema,
   env: Record<string, string | undefined> = process.env,
   scope: string = "Application",
-): Output {
+): z.output<Schema> {
   if (env.SKIP_ENV_VALIDATION === "true" || env.SKIP_ENV_VALIDATION === "1") {
-    return env as unknown as Output;
+    return env as unknown as z.output<Schema>;
   }
 
   const result = schema.safeParse(env);
@@ -40,7 +40,7 @@ export function validateEnv<Output, Def extends z.ZodTypeDef, Input>(
   if (!result.success) {
     const issues: string[] = [];
 
-    for (const error of result.error.errors) {
+    for (const error of result.error.issues) {
       const path = error.path.join(".") || "environment";
       issues.push(`${path}: ${error.message}`);
     }

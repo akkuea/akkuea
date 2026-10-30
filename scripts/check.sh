@@ -308,7 +308,7 @@ if touched "$CONTRACTS_PATHS" && need cargo "https://rustup.rs" "contracts"; the
   fi
   if cargo audit --version >/dev/null 2>&1; then
     run apps/contracts "contracts: cargo audit (high and critical)" bash -c '
-      out="$(cargo audit --deny warnings --ignore RUSTSEC-2024-0436 --ignore RUSTSEC-2026-0387 --file Cargo.lock 2>&1)"
+      out="$(cargo audit --deny warnings --file Cargo.lock 2>&1)"
       echo "$out"
       if echo "$out" | grep -Eqi "Severity: (high|critical)"; then exit 1; fi'
   else

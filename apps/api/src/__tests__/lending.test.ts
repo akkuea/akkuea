@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
+import { describe, expect, it, beforeAll } from 'bun:test';
 import { Elysia } from 'elysia';
 import { lendingRoutes } from '../routes/lending';
 import { errorHandler } from '../middleware/errorHandler';
@@ -6,6 +6,16 @@ import { CreatePoolDto, DepositDto, WithdrawDto, BorrowDto, RepayDto } from '../
 import jwt from 'jsonwebtoken';
 import { VALID_STELLAR_ADDRESS, VALID_UUID } from '@akkuea/shared';
 const TEST_WALLET = 'GCO5CVUVFNX4KZQMYCALTJ5QSG6USOVLFQ74AQCCX7TGJKBNZ33KC5ZC'; // Unique wallet for lending tests
+const TOKEN_CONTRACT = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
+const OPS_KEY = 'lending-test-ops-key';
+process.env.OPERATIONS_BACKEND_CREDENTIAL = process.env.OPERATIONS_BACKEND_CREDENTIAL || OPS_KEY;
+
+function userToken(): string {
+  return jwt.sign(
+    { id: VALID_UUID, walletAddress: VALID_STELLAR_ADDRESS },
+    process.env.JWT_SECRET || 'super-secret-default-key-for-dev',
+  );
+}
 
 describe('Lending DTO Validation', () => {
   describe('CreatePoolDto', () => {
@@ -13,13 +23,28 @@ describe('Lending DTO Validation', () => {
       const result = CreatePoolDto.safeParse({
         name: 'USDC Lending Pool',
         asset: 'USDC',
-        assetAddress: VALID_STELLAR_ADDRESS,
+        assetAddress: TOKEN_CONTRACT,
         collateralFactor: '0.75',
         liquidationThreshold: '0.80',
         liquidationPenalty: '0.05',
         reserveFactor: 1000,
       });
       expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.closeFactor).toBe('0.5');
+      }
+    });
+
+    it('should reject an account address as the pool asset', () => {
+      const result = CreatePoolDto.safeParse({
+        name: 'USDC Lending Pool',
+        asset: 'USDC',
+        assetAddress: VALID_STELLAR_ADDRESS,
+        collateralFactor: '0.75',
+        liquidationThreshold: '0.80',
+        liquidationPenalty: '0.05',
+      });
+      expect(result.success).toBe(false);
     });
 
     it('should reject missing name', () => {
@@ -73,9 +98,18 @@ describe('Lending DTO Validation', () => {
       const result = BorrowDto.safeParse({
         borrowAmount: '1000',
         collateralAmount: '1500',
-        collateralAsset: VALID_STELLAR_ADDRESS,
+        collateralAsset: TOKEN_CONTRACT,
       });
       expect(result.success).toBe(true);
+    });
+
+    it('should reject an account address as collateral asset', () => {
+      const result = BorrowDto.safeParse({
+        borrowAmount: '1000',
+        collateralAmount: '1500',
+        collateralAsset: VALID_STELLAR_ADDRESS,
+      });
+      expect(result.success).toBe(false);
     });
 
     it('should reject missing collateral asset', () => {
@@ -125,40 +159,50 @@ describe('Lending Routes', () => {
     });
   });
 
-  describe('POST /lending/pools (auth)', () => {
-    it('should return 401 without Authorization header', async () => {
+  describe('POST /lending/pools (operator only)', () => {
+    const poolBody = JSON.stringify({
+      name: 'Test Pool',
+      asset: 'USDC',
+      assetAddress: TOKEN_CONTRACT,
+      collateralFactor: '0.75',
+      liquidationThreshold: '0.80',
+      liquidationPenalty: '0.05',
+    });
+
+    it('should return 403 without the operator key', async () => {
       const response = await app.handle(
         new Request('http://localhost/lending/pools', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: 'Test Pool',
-            asset: 'USDC',
-            assetAddress: TEST_WALLET,
-            collateralFactor: '0.75',
-            liquidationThreshold: '0.80',
-            liquidationPenalty: '0.05',
-          }),
+          body: poolBody,
         }),
       );
-      expect(response.status).toBe(401);
-      const body = await response.json();
-      expect(body.error).toBe('UNAUTHORIZED');
+      expect(response.status).toBe(403);
     });
 
-    it('should reject invalid body with validation error', async () => {
-      // Mock valid token for validation test
-      const validToken = jwt.sign(
-        { id: VALID_UUID, walletAddress: VALID_STELLAR_ADDRESS },
-        process.env.JWT_SECRET || 'super-secret-default-key-for-dev',
-      );
-
+    it('should return 403 for an authenticated normal user', async () => {
       const response = await app.handle(
         new Request('http://localhost/lending/pools', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${validToken}`,
+            Authorization: `Bearer ${userToken()}`,
+          },
+          body: poolBody,
+        }),
+      );
+      expect(response.status).toBe(403);
+      const body = await response.json();
+      expect(body.error).toBe('FORBIDDEN');
+    });
+
+    it('should reject an invalid body from an operator with a validation error', async () => {
+      const response = await app.handle(
+        new Request('http://localhost/lending/pools', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-api-key': process.env.OPERATIONS_BACKEND_CREDENTIAL!,
           },
           body: JSON.stringify({ name: '' }),
         }),
@@ -178,30 +222,59 @@ describe('Lending Routes', () => {
     });
   });
 
-  describe('POST /lending/pools/:id/deposit (auth + validation)', () => {
-    it('should return 401 without auth', async () => {
-      const response = await app.handle(
-        new Request(`http://localhost/lending/pools/${VALID_UUID}/deposit`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: '100' }),
-        }),
-      );
-      expect(response.status).toBe(401);
-    });
+  describe('retired database-only write routes', () => {
+    for (const action of ['deposit', 'withdraw', 'borrow', 'repay']) {
+      it(`POST /lending/pools/:id/${action} answers 410 and points at prepare/confirm`, async () => {
+        const response = await app.handle(
+          new Request(`http://localhost/lending/pools/${VALID_UUID}/${action}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${userToken()}`,
+            },
+            body: JSON.stringify({ amount: '100' }),
+          }),
+        );
+        expect(response.status).toBe(410);
+        const body = await response.json();
+        expect(body.error).toBe('GONE');
+        expect(body.message).toContain(`/${action}/prepare`);
+      });
+    }
+  });
 
-    it('should reject invalid amount', async () => {
-      const validToken = jwt.sign(
-        { id: VALID_UUID, walletAddress: VALID_STELLAR_ADDRESS },
-        process.env.JWT_SECRET || 'super-secret-default-key-for-dev',
-      );
+  describe('prepare and confirm routes (auth + validation)', () => {
+    for (const action of ['deposit', 'withdraw', 'repay']) {
+      it(`POST /lending/pools/:id/${action}/prepare requires authentication`, async () => {
+        const response = await app.handle(
+          new Request(`http://localhost/lending/pools/${VALID_UUID}/${action}/prepare`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: '100' }),
+          }),
+        );
+        expect(response.status).toBe(401);
+      });
 
+      it(`POST /lending/pools/:id/${action}/confirm requires authentication`, async () => {
+        const response = await app.handle(
+          new Request(`http://localhost/lending/pools/${VALID_UUID}/${action}/confirm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ txHash: 'a'.repeat(64) }),
+          }),
+        );
+        expect(response.status).toBe(401);
+      });
+    }
+
+    it('rejects a zero deposit amount', async () => {
       const response = await app.handle(
-        new Request(`http://localhost/lending/pools/${VALID_UUID}/deposit`, {
+        new Request(`http://localhost/lending/pools/${VALID_UUID}/deposit/prepare`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${validToken}`,
+            Authorization: `Bearer ${userToken()}`,
           },
           body: JSON.stringify({ amount: '0' }),
         }),
@@ -210,68 +283,35 @@ describe('Lending Routes', () => {
       const body = await response.json();
       expect(body.error).toBe('VALIDATION_ERROR');
     });
-  });
 
-  describe('POST /lending/pools/:id/withdraw (auth)', () => {
-    it('should return 401 without auth', async () => {
+    it('rejects a borrow without collateral', async () => {
       const response = await app.handle(
-        new Request(`http://localhost/lending/pools/${VALID_UUID}/withdraw`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: '50' }),
-        }),
-      );
-      expect(response.status).toBe(401);
-    });
-  });
-
-  describe('POST /lending/pools/:id/borrow (auth + validation)', () => {
-    it('should return 401 without auth', async () => {
-      const response = await app.handle(
-        new Request(`http://localhost/lending/pools/${VALID_UUID}/borrow`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            borrowAmount: '1000',
-            collateralAmount: '1500',
-            collateralAsset: TEST_WALLET,
-          }),
-        }),
-      );
-      expect(response.status).toBe(401);
-    });
-
-    it('should reject invalid body', async () => {
-      const validToken = jwt.sign(
-        { id: VALID_UUID, walletAddress: VALID_STELLAR_ADDRESS },
-        process.env.JWT_SECRET || 'super-secret-default-key-for-dev',
-      );
-      const response = await app.handle(
-        new Request(`http://localhost/lending/pools/${VALID_UUID}/borrow`, {
+        new Request(`http://localhost/lending/pools/${VALID_UUID}/borrow/prepare`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${validToken}`,
+            Authorization: `Bearer ${userToken()}`,
           },
-          body: JSON.stringify({ borrowAmount: '0' }),
+          body: JSON.stringify({ borrowAmount: '10' }),
+        }),
+      );
+      expect(response.status).toBe(400);
+    });
+
+    it('rejects a malformed transaction hash on confirm', async () => {
+      const response = await app.handle(
+        new Request(`http://localhost/lending/pools/${VALID_UUID}/borrow/confirm`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${userToken()}`,
+          },
+          body: JSON.stringify({ txHash: 'not-a-hash' }),
         }),
       );
       expect(response.status).toBe(400);
       const body = await response.json();
       expect(body.error).toBe('VALIDATION_ERROR');
-    });
-  });
-
-  describe('POST /lending/pools/:id/repay (auth)', () => {
-    it('should return 401 without auth', async () => {
-      const response = await app.handle(
-        new Request(`http://localhost/lending/pools/${VALID_UUID}/repay`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount: '100' }),
-        }),
-      );
-      expect(response.status).toBe(401);
     });
   });
 
@@ -304,200 +344,5 @@ describe('Lending Routes', () => {
       expect(body.details.source).toBe('params');
       expect(body.details.errors.address).toContain('Invalid Stellar address format');
     });
-  });
-});
-
-describe.skipIf(!process.env.DATABASE_URL)('Lending Integration Tests (DB required)', () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let app: any;
-  let testUserId: string;
-  let testPoolId: string;
-  let testToken: string;
-
-  beforeAll(async () => {
-    app = new Elysia().use(errorHandler).use(lendingRoutes);
-
-    // Create or get a test user via the users route so deposit/borrow can find them
-    const { userRepository } = await import('../repositories/UserRepository');
-    const user = await userRepository.getOrCreateByWallet(TEST_WALLET);
-    testUserId = user.id;
-
-    testToken = jwt.sign(
-      { id: testUserId, walletAddress: VALID_STELLAR_ADDRESS },
-      process.env.JWT_SECRET || 'super-secret-default-key-for-dev',
-    );
-  });
-
-  afterAll(async () => {
-    // Clean up test data in correct order (FK constraints)
-    const { db } = await import('../db');
-    const { depositPositions, borrowPositions, lendingPools } = await import('../db/schema');
-    const { users } = await import('../db/schema');
-    const { eq } = await import('drizzle-orm');
-
-    if (testPoolId) {
-      await db.delete(depositPositions).where(eq(depositPositions.poolId, testPoolId));
-      await db.delete(borrowPositions).where(eq(borrowPositions.poolId, testPoolId));
-      await db.delete(lendingPools).where(eq(lendingPools.id, testPoolId));
-    }
-    if (testUserId) {
-      await db.delete(users).where(eq(users.id, testUserId));
-    }
-  });
-
-  it('should return paginated pools from database', async () => {
-    const response = await app.handle(new Request('http://localhost/lending/pools?page=1&limit=5'));
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.data).toBeDefined();
-    expect(body.pagination).toBeDefined();
-    expect(body.pagination.page).toBe(1);
-    expect(body.pagination.limit).toBe(5);
-    expect(typeof body.pagination.total).toBe('number');
-    expect(typeof body.pagination.totalPages).toBe('number');
-  });
-
-  it('should return 404 for non-existent pool', async () => {
-    const response = await app.handle(new Request(`http://localhost/lending/pools/${VALID_UUID}`));
-    expect(response.status).toBe(404);
-  });
-
-  it('should create pool with valid data and auth', async () => {
-    const response = await app.handle(
-      new Request('http://localhost/lending/pools', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${testToken}`,
-        },
-        body: JSON.stringify({
-          name: 'Integration Test Pool',
-          asset: 'USDC',
-          assetAddress: TEST_WALLET,
-          collateralFactor: '0.75',
-          liquidationThreshold: '0.80',
-          liquidationPenalty: '0.05',
-          reserveFactor: 1000,
-        }),
-      }),
-    );
-    expect(response.status).toBe(201);
-    const body = await response.json();
-    expect(body.id).toBeDefined();
-    expect(body.name).toBe('Integration Test Pool');
-    expect(body.asset).toBe('USDC');
-    expect(body.isActive).toBe(true);
-    testPoolId = body.id;
-  });
-
-  it('should get pool by ID', async () => {
-    const response = await app.handle(new Request(`http://localhost/lending/pools/${testPoolId}`));
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.id).toBe(testPoolId);
-    expect(body.name).toBe('Integration Test Pool');
-  });
-
-  it('should deposit and update pool balance', async () => {
-    const response = await app.handle(
-      new Request(`http://localhost/lending/pools/${testPoolId}/deposit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${testToken}`,
-        },
-        body: JSON.stringify({ amount: '1000' }),
-      }),
-    );
-    if (response.status !== 200) {
-      console.error('LENDING DEPOSIT FAIL:', response.status, await response.text());
-    }
-    expect(response.status).toBe(200);
-    const position = await response.json();
-    expect(position.poolId).toBe(testPoolId);
-    expect(position.depositorId).toBe(testUserId);
-    expect(parseFloat(position.amount)).toBe(1000);
-
-    // Verify pool balance updated
-    const poolRes = await app.handle(new Request(`http://localhost/lending/pools/${testPoolId}`));
-    const pool = await poolRes.json();
-    expect(parseFloat(pool.totalDeposits)).toBe(1000);
-    expect(parseFloat(pool.availableLiquidity)).toBe(1000);
-  });
-
-  it('should borrow and update pool balance', async () => {
-    const response = await app.handle(
-      new Request(`http://localhost/lending/pools/${testPoolId}/borrow`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${testToken}`,
-        },
-        body: JSON.stringify({
-          borrowAmount: '300',
-          collateralAmount: '500',
-          collateralAsset: VALID_STELLAR_ADDRESS,
-        }),
-      }),
-    );
-    if (response.status !== 200) {
-      console.error('LENDING BORROW FAIL:', response.status, await response.text());
-    }
-    expect(response.status).toBe(200);
-    const position = await response.json();
-    expect(position.poolId).toBe(testPoolId);
-    expect(position.borrowerId).toBe(testUserId);
-    expect(parseFloat(position.principal)).toBe(300);
-    expect(parseFloat(position.collateralAmount)).toBe(500);
-
-    // Verify pool balance updated
-    const poolRes = await app.handle(new Request(`http://localhost/lending/pools/${testPoolId}`));
-    const pool = await poolRes.json();
-    expect(parseFloat(pool.totalBorrows)).toBe(300);
-    expect(parseFloat(pool.availableLiquidity)).toBe(700);
-  });
-
-  it('should repay and reduce borrow position', async () => {
-    const response = await app.handle(
-      new Request(`http://localhost/lending/pools/${testPoolId}/repay`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${testToken}`,
-        },
-        body: JSON.stringify({ amount: '100' }),
-      }),
-    );
-    if (response.status !== 200) {
-      console.error('LENDING REPAY FAIL:', response.status, await response.json());
-    }
-    expect(response.status).toBe(200);
-    const position = await response.json();
-    expect(parseFloat(position.principal)).toBeCloseTo(200);
-
-    // Verify pool balance updated
-    const poolRes = await app.handle(new Request(`http://localhost/lending/pools/${testPoolId}`));
-    const pool = await poolRes.json();
-    expect(parseFloat(pool.totalBorrows)).toBeCloseTo(200);
-    expect(parseFloat(pool.availableLiquidity)).toBe(800);
-  });
-
-  it('should return position summary for a seeded user', async () => {
-    const response = await app.handle(
-      new Request(`http://localhost/lending/pools/${testPoolId}/user/${TEST_WALLET}/summary`),
-    );
-    if (response.status !== 200) {
-      console.error('LENDING SUMMARY FAIL:', response.status, await response.text());
-    }
-    expect(response.status).toBe(200);
-    const summary = await response.json();
-    expect(summary.poolId).toBe(testPoolId);
-    expect(summary.userId).toBe(testUserId);
-    expect(summary.walletAddress).toBe(TEST_WALLET);
-    expect(summary.depositCount).toBeGreaterThan(0);
-    expect(summary.borrowCount).toBeGreaterThan(0);
-    expect(parseFloat(summary.totalDeposits)).toBeGreaterThan(0);
-    expect(parseFloat(summary.totalBorrows)).toBeGreaterThan(0);
-    expect(parseFloat(summary.netWorth)).toBeGreaterThan(0);
   });
 });

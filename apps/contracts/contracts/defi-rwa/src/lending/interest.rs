@@ -147,6 +147,23 @@ impl InterestStorage {
         );
     }
 
+    /// Get accumulated depositor supply index
+    pub fn get_supply_index(env: &Env, pool_id: &String) -> i128 {
+        let key = LendingKey::PoolSupplyIndex(pool_id.clone());
+        env.storage().persistent().get(&key).unwrap_or(PRECISION)
+    }
+
+    /// Set accumulated depositor supply index
+    pub fn set_supply_index(env: &Env, pool_id: &String, index: i128) {
+        let key = LendingKey::PoolSupplyIndex(pool_id.clone());
+        env.storage().persistent().set(&key, &index);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
+    }
+
     /// Get last accrual timestamp
     pub fn get_last_accrual(env: &Env, pool_id: &String) -> u64 {
         let key = LendingKey::PoolLastAccrual(pool_id.clone());

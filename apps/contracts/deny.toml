@@ -70,7 +70,7 @@ feature-depth = 1
 # A list of advisory IDs to ignore. Note that ignored advisories will still
 # output a note when they are encountered.
 ignore = [
-    { id = "RUSTSEC-2026-0387", reason = "temporary exception for the crypto-bigint 0.5.5 dependency required by Soroban SDK 26.1.1; remove when the Soroban host updates elliptic-curve to a fixed crypto-bigint release" },
+    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5.5 via soroban-env-host -> k256/p256 0.13 -> elliptic-curve 0.13; host and test builds only, not in the wasm32v1-none contract build; no fix upstream (soroban-env-host 30.0.0 still requires p256 ^0.13); remove when soroban-env-host moves to elliptic-curve 0.14" },
     { id = "RUSTSEC-2024-0388", reason = "derivative is a transitive dependency via arkworks - waiting for upstream fix" },
     { id = "RUSTSEC-2024-0436", reason = "paste is a transitive dependency via arkworks - waiting for upstream fix" },
     { id = "RUSTSEC-2022-0054", reason = "transitive dependency via cougr-core; tracked upstream, no maintained replacement in this stack yet" },

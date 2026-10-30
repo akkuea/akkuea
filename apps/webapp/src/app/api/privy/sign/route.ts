@@ -1,7 +1,46 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Transaction, Keypair, xdr } from "@stellar/stellar-sdk";
+import { Transaction, Keypair, xdr, StrKey } from "@stellar/stellar-sdk";
+import { z } from "zod";
 import { verifyPrivyWalletOwnership } from "@/lib/privy-server";
 import { PRIVY_APP_CREDENTIAL_ENV, PRIVY_APP_ID_ENV } from "@/lib/privy-env";
+import { pilotNetworkPassphrase } from "@/services/pilot/config";
+
+const isStellarPublicKey = (val: string): boolean => {
+  try {
+    return (
+      typeof val === "string" &&
+      val.startsWith("G") &&
+      val.length === 56 &&
+      StrKey.isValidEd25519PublicKey(val)
+    );
+  } catch {
+    return false;
+  }
+};
+
+const PRIVY_WALLET_ID_REGEX = /^[a-zA-Z0-9_\-:]+$/;
+const BASE64_REGEX = /^[A-Za-z0-9+/]+={0,2}$/;
+
+const signBodySchema = z.object({
+  walletId: z
+    .string({ required_error: "walletId is required" })
+    .min(1, "walletId is required")
+    .max(128, "walletId is too long")
+    .regex(PRIVY_WALLET_ID_REGEX, "Invalid walletId format"),
+  address: z
+    .string({ required_error: "address is required" })
+    .length(56, "address must be exactly 56 characters")
+    .refine(isStellarPublicKey, "Invalid Stellar public key"),
+  txXdr: z
+    .string({ required_error: "txXdr is required" })
+    .min(1, "txXdr is required")
+    .max(65536, "txXdr exceeds maximum allowed size")
+    .regex(BASE64_REGEX, "Invalid txXdr base64 format"),
+  networkPassphrase: z
+    .string({ required_error: "networkPassphrase is required" })
+    .min(1, "networkPassphrase is required")
+    .max(256, "networkPassphrase is too long"),
+});
 
 /**
  * POST /api/privy/sign
@@ -17,12 +56,15 @@ import { PRIVY_APP_CREDENTIAL_ENV, PRIVY_APP_ID_ENV } from "@/lib/privy-env";
  *   Authorization: Bearer <privy_access_token>
  *
  * Flow:
- *   1. Verify the caller owns the wallet via Privy access token
- *   2. Deserialize the XDR into a Transaction
- *   3. Hash it with the network passphrase (32-byte Ed25519 signing payload)
- *   4. POST the hash to Privy's raw_sign API
- *   5. Attach the returned signature to the transaction
- *   6. Return the signed XDR
+ *   1. Verify server credentials and authorization header.
+ *   2. Validate request body with Zod schema.
+ *   3. Enforce networkPassphrase matches the configured app network.
+ *   4. Verify the caller owns the wallet via Privy access token.
+ *   5. Deserialize the XDR into a Transaction and verify source account matches address.
+ *   6. Hash the transaction with network passphrase.
+ *   7. POST the hash to Privy's raw_sign API.
+ *   8. Attach the returned signature to the transaction.
+ *   9. Return the signed XDR.
  */
 export async function POST(req: NextRequest) {
   const appId = process.env[PRIVY_APP_ID_ENV];
@@ -44,17 +86,18 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  let walletId: string;
-  let address: string;
-  let txXdr: string;
-  let networkPassphrase: string;
-
+  let parsedBody: z.infer<typeof signBodySchema>;
   try {
-    const body = await req.json();
-    walletId = body.walletId;
-    address = body.address;
-    txXdr = body.txXdr;
-    networkPassphrase = body.networkPassphrase;
+    const rawBody = await req.json();
+    const result = signBodySchema.safeParse(rawBody);
+    if (!result.success) {
+      console.error("[privy/sign] Validation error:", result.error.issues);
+      return NextResponse.json(
+        { error: "Invalid request body." },
+        { status: 400 },
+      );
+    }
+    parsedBody = result.data;
   } catch {
     return NextResponse.json(
       { error: "Invalid request body." },
@@ -62,11 +105,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  if (!walletId || !address || !txXdr || !networkPassphrase) {
+  const { walletId, address, txXdr, networkPassphrase } = parsedBody;
+
+  // Enforce configured application network
+  const configuredNetworkPassphrase = pilotNetworkPassphrase();
+  if (networkPassphrase !== configuredNetworkPassphrase) {
     return NextResponse.json(
-      {
-        error: "walletId, address, txXdr, and networkPassphrase are required.",
-      },
+      { error: "Invalid network passphrase." },
       { status: 400 },
     );
   }
@@ -75,18 +120,47 @@ export async function POST(req: NextRequest) {
     await verifyPrivyWalletOwnership(accessToken, walletId, address);
   } catch (e) {
     const message = e instanceof Error ? e.message : "Unauthorized";
-    const status = message.includes("not configured") ? 500 : 403;
-    return NextResponse.json({ error: message }, { status });
+    console.error(
+      "[privy/sign] Wallet ownership verification failed:",
+      message,
+    );
+    const isConfig = message.includes("not configured");
+    return NextResponse.json(
+      {
+        error: isConfig
+          ? "Privy credentials not configured on the server."
+          : "Unauthorized.",
+      },
+      { status: isConfig ? 500 : 403 },
+    );
   }
 
   let tx: Transaction;
   try {
     tx = new Transaction(txXdr, networkPassphrase);
   } catch (e) {
+    console.error("[privy/sign] Invalid transaction XDR:", e);
     return NextResponse.json(
-      {
-        error: `Invalid transaction XDR: ${e instanceof Error ? e.message : e}`,
-      },
+      { error: "Invalid transaction XDR." },
+      { status: 400 },
+    );
+  }
+
+  // Check transaction source account
+  if (tx.source !== address) {
+    return NextResponse.json(
+      { error: "Transaction source account does not match wallet address." },
+      { status: 400 },
+    );
+  }
+
+  // Check operation source accounts
+  const hasInvalidOpSource = tx.operations.some(
+    (op) => op.source && op.source !== address,
+  );
+  if (hasInvalidOpSource) {
+    return NextResponse.json(
+      { error: "Operation source account does not match wallet address." },
       { status: 400 },
     );
   }
@@ -98,35 +172,56 @@ export async function POST(req: NextRequest) {
     "base64",
   );
 
-  const privyRes = await fetch(
-    `https://api.privy.io/v1/wallets/${walletId}/raw_sign`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${credentials}`,
-        "Content-Type": "application/json",
-        "privy-app-id": appId,
+  let privyRes: Response;
+  try {
+    privyRes = await fetch(
+      `https://api.privy.io/v1/wallets/${encodeURIComponent(walletId)}/raw_sign`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${credentials}`,
+          "Content-Type": "application/json",
+          "privy-app-id": appId,
+        },
+        body: JSON.stringify({ params: { hash: hashHex } }),
       },
-      body: JSON.stringify({ params: { hash: hashHex } }),
-    },
-  );
+    );
+  } catch (fetchErr) {
+    console.error("[privy/sign] Privy fetch failed:", fetchErr);
+    return NextResponse.json(
+      { error: "Privy signing request failed." },
+      { status: 502 },
+    );
+  }
 
   if (!privyRes.ok) {
     const errorText = await privyRes.text();
     console.error("[privy/sign] Privy API error:", privyRes.status, errorText);
     return NextResponse.json(
-      { error: `Privy signing failed: ${privyRes.status}` },
-      { status: privyRes.status },
+      { error: "Privy signing request failed." },
+      { status: privyRes.status >= 500 ? 502 : privyRes.status },
     );
   }
 
-  const data = await privyRes.json();
-  const sigHex: string = data?.data?.signature;
+  let data: unknown;
+  try {
+    data = await privyRes.json();
+  } catch (jsonErr) {
+    console.error("[privy/sign] Failed to parse Privy response JSON:", jsonErr);
+    return NextResponse.json(
+      { error: "Privy returned invalid response." },
+      { status: 502 },
+    );
+  }
 
+  const sigHex: string | undefined = (
+    data as { data?: { signature?: string } } | null
+  )?.data?.signature;
   if (!sigHex) {
+    console.error("[privy/sign] Privy returned no signature in response data");
     return NextResponse.json(
       { error: "Privy returned no signature." },
-      { status: 500 },
+      { status: 502 },
     );
   }
 

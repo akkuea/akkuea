@@ -1,6 +1,6 @@
 use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
-use super::interest::{InterestStorage, PRECISION};
+use super::interest::InterestStorage;
 use super::keys::{lending_bump, LendingKey};
 use crate::access::ContractError;
 
@@ -14,9 +14,9 @@ pub struct DepositPosition {
     pub depositor: Address,
     /// Deposit amount in underlying tokens
     pub amount: i128,
-    /// Share of pool (for interest calculation)
+    /// Compatibility mirror of the deposit's indexed principal amount
     pub shares: i128,
-    /// Interest index at deposit time
+    /// Supply index at the position's last balance update
     pub index_at_deposit: i128,
     /// Timestamp of deposit
     pub deposited_at: u64,
@@ -137,23 +137,43 @@ impl PositionStorage {
         env: &Env,
         position: &DepositPosition,
     ) -> Result<i128, ContractError> {
-        let current_index = InterestStorage::get_interest_index(env, &position.pool_id);
+        let balance = Self::calculate_deposit_balance(env, position)?;
+        balance
+            .checked_sub(position.amount)
+            .ok_or(ContractError::BalanceOverflow)
+    }
+
+    /// Calculate the current depositor claim, rounding down in the pool's favor.
+    pub fn calculate_deposit_balance(
+        env: &Env,
+        position: &DepositPosition,
+    ) -> Result<i128, ContractError> {
+        let current_index = InterestStorage::get_supply_index(env, &position.pool_id);
         if position.index_at_deposit == 0 || current_index <= position.index_at_deposit {
-            return Ok(0);
+            return Ok(position.amount);
         }
 
-        // interest = amount * (current_index / deposit_index - 1)
-        let index_ratio = current_index
-            .checked_mul(PRECISION)
-            .and_then(|value| value.checked_div(position.index_at_deposit))
-            .ok_or(ContractError::BalanceOverflow)?;
-        let accrued_ratio = index_ratio
-            .checked_sub(PRECISION)
-            .ok_or(ContractError::BalanceOverflow)?;
         position
             .amount
-            .checked_mul(accrued_ratio)
-            .and_then(|value| value.checked_div(PRECISION))
+            .checked_mul(current_index)
+            .and_then(|value| value.checked_div(position.index_at_deposit))
+            .ok_or(ContractError::BalanceOverflow)
+    }
+
+    /// Divide and round up, used when debt is charged to a borrower.
+    fn checked_div_ceil(value: i128, divisor: i128) -> Result<i128, ContractError> {
+        if divisor <= 0 || value < 0 {
+            return Err(ContractError::BalanceOverflow);
+        }
+        let adjusted = value
+            .checked_add(
+                divisor
+                    .checked_sub(1)
+                    .ok_or(ContractError::BalanceOverflow)?,
+            )
+            .ok_or(ContractError::BalanceOverflow)?;
+        adjusted
+            .checked_div(divisor)
             .ok_or(ContractError::BalanceOverflow)
     }
 
@@ -315,11 +335,11 @@ impl PositionStorage {
         }
 
         // debt = principal * current_index / borrow_index
-        position
+        let product = position
             .principal
             .checked_mul(current_index)
-            .and_then(|value| value.checked_div(position.index_at_borrow))
-            .ok_or(ContractError::BalanceOverflow)
+            .ok_or(ContractError::BalanceOverflow)?;
+        Self::checked_div_ceil(product, position.index_at_borrow)
     }
 
     /// Calculate health factor for position

@@ -26,6 +26,16 @@ pub struct PoolCreatedEvent {
     pub pool_id: String,
 }
 
+/// Reserve withdrawal event data
+#[contracttype]
+#[derive(Clone, Debug)]
+pub struct ReservesWithdrawnEvent {
+    pub caller: Address,
+    pub pool_id: String,
+    pub recipient: Address,
+    pub amount: i128,
+}
+
 /// Emit a deposit event
 pub fn emit_deposit(env: &Env, depositor: &Address, pool_id: &String, amount: i128) {
     let event = DepositEvent {
@@ -56,4 +66,22 @@ pub fn emit_pool_created(env: &Env, admin: &Address, pool_id: &String) {
     };
     env.events()
         .publish((soroban_sdk::symbol_short!("pool_new"),), event);
+}
+
+/// Emit a reserve withdrawal event
+pub fn emit_reserves_withdrawn(
+    env: &Env,
+    caller: &Address,
+    pool_id: &String,
+    recipient: &Address,
+    amount: i128,
+) {
+    let event = ReservesWithdrawnEvent {
+        caller: caller.clone(),
+        pool_id: pool_id.clone(),
+        recipient: recipient.clone(),
+        amount,
+    };
+    env.events()
+        .publish((soroban_sdk::symbol_short!("res_wd"),), event);
 }

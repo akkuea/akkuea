@@ -110,14 +110,24 @@ impl PoolStorage {
         env.storage().persistent().get(&key).unwrap_or(0)
     }
 
+    /// Set pool reserves
+    pub fn set_reserves(env: &Env, pool_id: &String, amount: i128) {
+        let key = LendingKey::PoolReserves(pool_id.clone());
+        env.storage().persistent().set(&key, &amount);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
+    }
+
     /// Add to pool reserves
     pub fn add_reserves(env: &Env, pool_id: &String, amount: i128) -> Result<(), ContractError> {
         let current = Self::get_reserves(env, pool_id);
         let updated = current
             .checked_add(amount)
             .ok_or(ContractError::BalanceOverflow)?;
-        let key = LendingKey::PoolReserves(pool_id.clone());
-        env.storage().persistent().set(&key, &updated);
+        Self::set_reserves(env, pool_id, updated);
         Ok(())
     }
 

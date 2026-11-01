@@ -96,6 +96,10 @@ pub enum LendingKey {
     /// Last validated oracle price snapshot (price + timestamp) for an asset
     /// Storage: Persistent
     LastOraclePrice(Address),
+
+    /// Pool's accumulated depositor supply index
+    /// Storage: Persistent
+    PoolSupplyIndex(String),
 }
 
 /// TTL bump amounts for lending storage

@@ -1,6 +1,7 @@
 "use client";
 
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 
 export function StatsSkeleton() {
   return (
@@ -21,6 +22,29 @@ export function StatsSkeleton() {
         </div>
       ))}
     </div>
+  );
+}
+
+export function PortfolioChartSkeleton() {
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <CardTitle>Portfolio Performance</CardTitle>
+          <div
+            className="flex items-center gap-1 p-0.5 rounded-lg bg-[#1a1a1a] border border-[#262626]"
+            aria-hidden="true"
+          >
+            <Skeleton className="h-6 w-8" />
+            <Skeleton className="h-6 w-8" />
+            <Skeleton className="h-6 w-8" />
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <Skeleton variant="rectangular" className="w-full h-64 rounded-lg" />
+      </CardContent>
+    </Card>
   );
 }
 

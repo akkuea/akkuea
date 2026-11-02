@@ -124,7 +124,9 @@ mock.module("recharts", () => {
     XAxis: () => null,
     YAxis: () => null,
     CartesianGrid: () => null,
-    Tooltip: () => null,
+    Tooltip: ({ content }: { content?: ReactNode }) => (
+      <div data-testid="recharts-tooltip">{content}</div>
+    ),
     Legend: () => null,
   };
 });

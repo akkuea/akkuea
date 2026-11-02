@@ -10,6 +10,7 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
+  type TooltipContentProps,
 } from "recharts";
 import { AlertCircle, RefreshCw, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
@@ -110,18 +111,9 @@ function ChartEmpty() {
 // Recharts custom tooltip
 // ---------------------------------------------------------------------------
 
-interface TooltipPayloadEntry {
-  name: string;
-  value: number;
-  color: string;
-  dataKey: string;
-}
-
-interface CustomTooltipProps {
-  active?: boolean;
-  payload?: TooltipPayloadEntry[];
-  label?: string;
-}
+type CustomTooltipProps = Partial<
+  Pick<TooltipContentProps, "active" | "payload" | "label">
+>;
 
 function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!active || !payload?.length) return null;
@@ -129,20 +121,25 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   return (
     <div className="rounded-lg border border-[#262626] bg-[#111111] p-3 shadow-xl text-xs space-y-1.5">
       <p className="text-neutral-400 font-medium">{label}</p>
-      {payload.map((entry) => (
-        <div key={entry.dataKey} className="flex items-center gap-2">
-          <span
-            className="w-2 h-2 rounded-full shrink-0"
-            style={{ background: entry.color }}
-          />
-          <span className="text-neutral-400">{entry.name}:</span>
-          <span className="font-mono font-medium text-white">
-            {entry.dataKey === "holdingsValue"
-              ? formatUSD(entry.value)
-              : formatRatio(entry.value)}
-          </span>
-        </div>
-      ))}
+      {payload.map((entry, index) => {
+        if (typeof entry.value !== "number") return null;
+
+        const dataKey = String(entry.dataKey ?? entry.name ?? index);
+        return (
+          <div key={dataKey} className="flex items-center gap-2">
+            <span
+              className="w-2 h-2 rounded-full shrink-0"
+              style={{ background: entry.color ?? entry.fill ?? "#737373" }}
+            />
+            <span className="text-neutral-400">{entry.name}:</span>
+            <span className="font-mono font-medium text-white">
+              {dataKey === "holdingsValue"
+                ? formatUSD(entry.value)
+                : formatRatio(entry.value)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

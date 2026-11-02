@@ -6,7 +6,7 @@
  *  1. Happy path: property tokenized → buyer KYC approved → shares purchased →
  *     deposit made into lending pool → shares used as collateral to borrow
  *  2. Error path: KYC not approved - buyer cannot purchase shares
- *  3. Error path: Insufficient liquidity - borrow amount exceeds pool's available liquidity
+ *  3. Error path: Insufficient liquidity - the contract simulation rejects the borrow
  *
  * Pattern: follows PropertyController.buyShares.test.ts conventions:
  *   - describe.skipIf(skipIfNoDatabase) guards all DB-requiring tests
@@ -51,16 +51,16 @@ const BUYER_ADDRESS_KYC_OK = 'GBUYERKYC2ETESTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 const BUYER_ADDRESS_NO_KYC = 'GNOKYCBUYR2ETESTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; // 56
 const DEPOSITOR_ADDRESS = 'GDEPOSI2ETESTFLOWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; // 56
 
-/**
- * Valid 56-char G… Stellar address used as a stand-in for the collateral asset address.
- * (BorrowDto requires a G… address; the tokenization contract id is a C… address
- * which would fail validation, so we reuse the buyer's wallet address here.)
- */
-const COLLATERAL_ASSET_ADDRESS = BUYER_ADDRESS_KYC_OK;
+/** Collateral token contract (BorrowDto requires a Soroban contract address). */
+const COLLATERAL_ASSET_ADDRESS = 'CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX';
+
+/** On-chain pool id of the seeded lending pool. */
+const CONTRACT_POOL_ID = 'e2e-usdc-pool';
 
 /** Deterministic tx hashes */
 const TOKENIZE_TX_HASH = 'a'.repeat(64);
 const BUY_SHARES_TX_HASH = 'b'.repeat(64);
+const BORROW_TX_HASH = 'c'.repeat(64);
 
 /** Mock contract ID (C… Soroban contract format, NOT a G… address) */
 const MOCK_CONTRACT_ID = 'CXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX';
@@ -88,6 +88,12 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   let originalPreparePurchaseShares: any;
   let originalVerifyPurchaseTransaction: any;
   let originalGetMintingConfig: any;
+  let originalPrepareLendingCall: any;
+  let originalVerifyLendingCall: any;
+  let originalReadLendingState: any;
+  let originalBuildTypedContractTransaction: any;
+  let originalAssertValidAddress: any;
+  const originalDefiRwaContractId = process.env.DEFI_RWA_CONTRACT_ID;
 
   /** Payment token used by the shared purchase stubs (7-decimal USDC units). */
   const PAYMENT_TOKEN_ID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
@@ -147,11 +153,13 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     });
     propertyId = prop.id;
 
-    // Lending pool - will be pre-funded with 2000 USDC for later borrow tests
+    // Lending pool mirrored on-chain under CONTRACT_POOL_ID
+    process.env.DEFI_RWA_CONTRACT_ID = MOCK_CONTRACT_ID;
     const pool = await lendingRepository.create({
+      contractPoolId: CONTRACT_POOL_ID,
       name: 'E2E USDC Pool',
       asset: 'USDC',
-      assetAddress: DEPOSITOR_ADDRESS,
+      assetAddress: PAYMENT_TOKEN_ID,
       collateralFactor: '0.75',
       liquidationThreshold: '0.80',
       liquidationPenalty: '0.05',
@@ -159,8 +167,17 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     });
     poolId = pool.id;
 
-    // Pre-fund the pool so there is available liquidity for borrowing
-    await lendingRepository.deposit(poolId, depositorId, '2000', '2000');
+    // Seed the cached state of a pool the depositor funded with 2000 USDC
+    await db.insert(depositPositions).values({
+      poolId,
+      depositorId,
+      amount: '2000',
+      shares: '2000',
+    });
+    await db
+      .update(lendingPools)
+      .set({ totalDeposits: '2000', availableLiquidity: '2000' })
+      .where(eq(lendingPools.id, poolId));
   });
 
   // -----------------------------------------------------------------------
@@ -171,6 +188,11 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     originalPreparePurchaseShares = stellarService.preparePurchaseShares;
     originalVerifyPurchaseTransaction = stellarService.verifyPurchaseTransaction;
     originalGetMintingConfig = stellarService.getMintingConfig;
+    originalPrepareLendingCall = stellarService.prepareLendingCall;
+    originalVerifyLendingCall = stellarService.verifyLendingCall;
+    originalReadLendingState = stellarService.readLendingState;
+    originalBuildTypedContractTransaction = (stellarService as any).buildTypedContractTransaction;
+    originalAssertValidAddress = stellarService.assertValidAddress;
 
     // Default minting config stub (shared by all tests)
     (stellarService as any).getMintingConfig = () => ({
@@ -185,6 +207,11 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     (stellarService as any).preparePurchaseShares = originalPreparePurchaseShares;
     (stellarService as any).verifyPurchaseTransaction = originalVerifyPurchaseTransaction;
     (stellarService as any).getMintingConfig = originalGetMintingConfig;
+    (stellarService as any).prepareLendingCall = originalPrepareLendingCall;
+    (stellarService as any).verifyLendingCall = originalVerifyLendingCall;
+    (stellarService as any).readLendingState = originalReadLendingState;
+    (stellarService as any).buildTypedContractTransaction = originalBuildTypedContractTransaction;
+    (stellarService as any).assertValidAddress = originalAssertValidAddress;
   });
 
   // -----------------------------------------------------------------------
@@ -192,6 +219,12 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   // -----------------------------------------------------------------------
   afterAll(async () => {
     if (skipIfNoDatabase) return;
+
+    if (originalDefiRwaContractId === undefined) {
+      delete process.env.DEFI_RWA_CONTRACT_ID;
+    } else {
+      process.env.DEFI_RWA_CONTRACT_ID = originalDefiRwaContractId;
+    }
 
     // Borrow & deposit positions (FK → pool and user)
     if (poolId) {
@@ -426,98 +459,153 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   });
 
   // =======================================================================
-  // STEP 4 - Collateral Lending (happy path)
+  // STEP 4 - Collateral Lending (happy path, prepare and confirm)
   // =======================================================================
   describe('Step 4: Borrow against share collateral - happy path', () => {
-    it('creates a borrow position using tokenized shares as collateral', async () => {
-      const poolBefore = await lendingRepository.findById(poolId);
-      const liquidityBefore = parseFloat(poolBefore!.availableLiquidity);
-      expect(liquidityBefore).toBeGreaterThanOrEqual(300);
+    it('prepares an unsigned borrow with the buyer wallet as source', async () => {
+      let captured: any = null;
+      (stellarService as any).prepareLendingCall = async (params: any) => {
+        captured = params;
+        return { xdr: 'unsigned-borrow-xdr', contractId: params.contractId };
+      };
 
-      // Buyer borrows 300 USDC, pledging their shares as collateral.
-      // collateralAsset must be a valid G… Stellar address per BorrowDto schema.
-      const response = await LendingController.borrow(
+      const response = await LendingController.prepareAction(
+        'borrow',
         makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, poolId, {
           borrowAmount: '300',
-          collateralAmount: '500', // 10 shares × 50.00 = 500 (> 300/0.75 = 400 required)
+          collateralAmount: '500',
           collateralAsset: COLLATERAL_ASSET_ADDRESS,
         }),
       );
 
       expect(response.status).toBe(200);
-      const position = (await response.json()) as any;
-      expect(position.poolId).toBe(poolId);
-      expect(position.borrowerId).toBe(buyerKycOkId);
-      expect(parseFloat(position.principal)).toBe(300);
-      expect(parseFloat(position.collateralAmount)).toBe(500);
-      expect(position.collateralAsset).toBe(COLLATERAL_ASSET_ADDRESS);
+      const body = (await response.json()) as any;
+      expect(body.xdr).toBe('unsigned-borrow-xdr');
+      expect(captured).toMatchObject({
+        source: BUYER_ADDRESS_KYC_OK,
+        functionName: 'borrow',
+        args: [
+          BUYER_ADDRESS_KYC_OK,
+          CONTRACT_POOL_ID,
+          BigInt(3_000_000_000),
+          COLLATERAL_ASSET_ADDRESS,
+          BigInt(5_000_000_000),
+        ],
+      });
+    });
 
-      // DB: pool liquidity decreased by borrow amount
+    it('records the borrow position read back from the contract', async () => {
+      (stellarService as any).verifyLendingCall = async () => ({
+        txHash: BORROW_TX_HASH,
+        sourceAccount: BUYER_ADDRESS_KYC_OK,
+        contractId: MOCK_CONTRACT_ID,
+        functionName: 'borrow',
+        actor: BUYER_ADDRESS_KYC_OK,
+        poolId: CONTRACT_POOL_ID,
+        amount: BigInt(3_000_000_000),
+        collateralAsset: COLLATERAL_ASSET_ADDRESS,
+        collateralAmount: BigInt(5_000_000_000),
+      });
+      (stellarService as any).readLendingState = async () => ({
+        totalDeposits: BigInt(20_000_000_000),
+        totalBorrows: BigInt(3_000_000_000),
+        deposit: null,
+        borrow: {
+          pool_id: CONTRACT_POOL_ID,
+          borrower: BUYER_ADDRESS_KYC_OK,
+          principal: BigInt(3_000_000_000),
+          index_at_borrow: BigInt('1000000000000000000'),
+          collateral_amount: BigInt(5_000_000_000),
+          collateral_asset: COLLATERAL_ASSET_ADDRESS,
+          borrowed_at: BigInt(1_790_000_000),
+          healthFactor: BigInt('1333333333333333333'),
+        },
+      });
+
+      const response = await LendingController.confirmAction(
+        'borrow',
+        makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, poolId, { txHash: BORROW_TX_HASH }),
+      );
+
+      expect(response.status).toBe(200);
+      const result = (await response.json()) as any;
+      expect(result.transactionHash).toBe(BORROW_TX_HASH);
+      expect(parseFloat(result.position.principal)).toBe(300);
+      expect(result.pool.availableLiquidity).toBe('1700.0000000');
+
+      // DB: pool totals are the contract's
       const poolAfter = await lendingRepository.findById(poolId);
-      expect(parseFloat(poolAfter!.availableLiquidity)).toBeCloseTo(liquidityBefore - 300, 4);
-      expect(parseFloat(poolAfter!.totalBorrows)).toBeGreaterThanOrEqual(300);
+      expect(parseFloat(poolAfter!.totalDeposits)).toBe(2000);
+      expect(parseFloat(poolAfter!.totalBorrows)).toBe(300);
+      expect(parseFloat(poolAfter!.availableLiquidity)).toBe(1700);
 
-      // DB: borrow position record exists
-      const [dbPosition] = await db
+      // DB: one borrow position with the contract's values
+      const rows = await db
         .select()
         .from(borrowPositions)
         .where(
           and(eq(borrowPositions.poolId, poolId), eq(borrowPositions.borrowerId, buyerKycOkId)),
         );
-      expect(dbPosition).toBeDefined();
-      expect(parseFloat(dbPosition!.principal)).toBe(300);
+      expect(rows).toHaveLength(1);
+      expect(parseFloat(rows[0]!.principal)).toBe(300);
+      expect(rows[0]!.healthFactor).toBe('1.3333');
+
+      // DB: the confirmed transaction is recorded once, keyed by its hash
+      const recorded = await db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.hash, BORROW_TX_HASH));
+      expect(recorded).toHaveLength(1);
+      expect(recorded[0]!.type).toBe('borrow');
     });
   });
 
   // =======================================================================
-  // STEP 5 - Collateral Lending (insufficient liquidity error path)
+  // STEP 5 - Collateral Lending (failed simulation and unknown pool)
   // =======================================================================
-  describe('Step 5: Borrow - insufficient liquidity in pool', () => {
-    /**
-     * Helper that calls LendingController.borrow and returns a normalized
-     * { status, body } pair regardless of whether the controller throws an
-     * ApiError (error path) or returns a Response (happy path).
-     */
-    async function callBorrow(ctx: any): Promise<{ status: number; body: any }> {
+  describe('Step 5: Borrow - rejected before anything is signed', () => {
+    async function callPrepareBorrow(ctx: any): Promise<{ status: number; body: any }> {
       try {
-        const response = await LendingController.borrow(ctx);
-        const body = await response.json();
-        return { status: response.status, body };
+        const response = await LendingController.prepareAction('borrow', ctx);
+        return { status: response.status, body: await response.json() };
       } catch (err: any) {
-        // ApiError thrown by the controller - mirror the error handler output
         if (err?.statusCode) {
-          return {
-            status: err.statusCode,
-            body: { error: err.code, message: err.message, statusCode: err.statusCode },
-          };
+          return { status: err.statusCode, body: { error: err.code, message: err.message } };
         }
         throw err;
       }
     }
 
-    it('rejects a borrow request that exceeds the pool available liquidity', async () => {
-      const pool = await lendingRepository.findById(poolId);
-      const available = parseFloat(pool!.availableLiquidity);
+    it('returns the contract insufficient-liquidity simulation error as a 400', async () => {
+      // The fixture wallets are readable placeholders, not checksummed keys.
+      (stellarService as any).assertValidAddress = () => undefined;
+      (stellarService as any).buildTypedContractTransaction = async () => ({
+        simulation: {
+          id: '1',
+          latestLedger: 1,
+          events: [],
+          _parsed: true,
+          error: 'HostError: Error(WasmVm, InvalidAction) "Insufficient liquidity"',
+        },
+        toXDR: () => 'never-returned',
+      });
 
-      // Ask for more than the pool has
-      const excessiveBorrow = (available + 10_000).toFixed(7);
-
-      const { status, body } = await callBorrow(
+      const { status, body } = await callPrepareBorrow(
         makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, poolId, {
-          borrowAmount: excessiveBorrow,
+          borrowAmount: '10000',
           collateralAmount: '99999',
           collateralAsset: COLLATERAL_ASSET_ADDRESS,
         }),
       );
 
       expect(status).toBe(400);
-      expect(body.error).toBe('INSUFFICIENT_LIQUIDITY');
+      expect(body.message).toBe('The pool does not have enough liquidity for this borrow');
     });
 
     it('rejects a borrow request against a non-existent pool', async () => {
       const fakePoolId = '00000000-0000-0000-0000-000000000000';
 
-      const { status, body } = await callBorrow(
+      const { status, body } = await callPrepareBorrow(
         makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, fakePoolId, {
           borrowAmount: '100',
           collateralAmount: '200',

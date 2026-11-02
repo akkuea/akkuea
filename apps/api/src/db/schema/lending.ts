@@ -7,31 +7,44 @@ import {
   boolean,
   integer,
   index,
+  uniqueIndex,
+  check,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 import { users } from './users';
 
-export const lendingPools = pgTable('lending_pools', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: varchar('name', { length: 255 }).notNull(),
-  asset: varchar('asset', { length: 20 }).notNull(),
-  assetAddress: varchar('asset_address', { length: 56 }).notNull(),
-  totalDeposits: decimal('total_deposits', { precision: 20, scale: 7 }).notNull().default('0'),
-  totalBorrows: decimal('total_borrows', { precision: 20, scale: 7 }).notNull().default('0'),
-  availableLiquidity: decimal('available_liquidity', { precision: 20, scale: 7 })
-    .notNull()
-    .default('0'),
-  utilizationRate: decimal('utilization_rate', { precision: 5, scale: 2 }).notNull().default('0'),
-  supplyAPY: decimal('supply_apy', { precision: 5, scale: 2 }).notNull().default('0'),
-  borrowAPY: decimal('borrow_apy', { precision: 5, scale: 2 }).notNull().default('0'),
-  collateralFactor: decimal('collateral_factor', { precision: 5, scale: 2 }).notNull(),
-  liquidationThreshold: decimal('liquidation_threshold', { precision: 5, scale: 2 }).notNull(),
-  liquidationPenalty: decimal('liquidation_penalty', { precision: 5, scale: 2 }).notNull(),
-  reserveFactor: integer('reserve_factor').notNull().default(1000),
-  isActive: boolean('is_active').notNull().default(true),
-  isPaused: boolean('is_paused').notNull().default(false),
-  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-});
+export const lendingPools = pgTable(
+  'lending_pools',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // The `pool_id` string the pool was created with on the defi-rwa contract.
+    // Rows created before pools were mirrored on-chain have none, so the column
+    // is nullable and the check below (added NOT VALID) only binds new rows.
+    contractPoolId: varchar('contract_pool_id', { length: 64 }),
+    name: varchar('name', { length: 255 }).notNull(),
+    asset: varchar('asset', { length: 20 }).notNull(),
+    assetAddress: varchar('asset_address', { length: 56 }).notNull(),
+    totalDeposits: decimal('total_deposits', { precision: 20, scale: 7 }).notNull().default('0'),
+    totalBorrows: decimal('total_borrows', { precision: 20, scale: 7 }).notNull().default('0'),
+    availableLiquidity: decimal('available_liquidity', { precision: 20, scale: 7 })
+      .notNull()
+      .default('0'),
+    utilizationRate: decimal('utilization_rate', { precision: 5, scale: 2 }).notNull().default('0'),
+    supplyAPY: decimal('supply_apy', { precision: 5, scale: 2 }).notNull().default('0'),
+    borrowAPY: decimal('borrow_apy', { precision: 5, scale: 2 }).notNull().default('0'),
+    collateralFactor: decimal('collateral_factor', { precision: 5, scale: 2 }).notNull(),
+    liquidationThreshold: decimal('liquidation_threshold', { precision: 5, scale: 2 }).notNull(),
+    liquidationPenalty: decimal('liquidation_penalty', { precision: 5, scale: 2 }).notNull(),
+    reserveFactor: integer('reserve_factor').notNull().default(1000),
+    isActive: boolean('is_active').notNull().default(true),
+    isPaused: boolean('is_paused').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('lending_pools_contract_pool_id_unique').on(t.contractPoolId),
+    check('lending_pools_contract_pool_id_not_null', sql`${t.contractPoolId} IS NOT NULL`),
+  ],
+);
 
 export const depositPositions = pgTable(
   'deposit_positions',
@@ -74,7 +87,8 @@ export const borrowPositions = pgTable(
     borrowedAt: timestamp('borrowed_at', { withTimezone: true }).notNull().defaultNow(),
     lastAccrualAt: timestamp('last_accrual_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('borrow_positions_pool_id_borrower_id_idx').on(t.poolId, t.borrowerId)],
+  // The contract keeps one borrow position per (pool, borrower), so the cache does too.
+  (t) => [uniqueIndex('borrow_positions_pool_id_borrower_id_unique').on(t.poolId, t.borrowerId)],
 );
 
 export const lendingPoolsRelations = relations(lendingPools, ({ many }) => ({

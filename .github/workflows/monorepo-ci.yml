@@ -22,12 +22,16 @@ on:
 
 env:
   NODE_VERSION: '24'
-  BUN_VERSION: '1.x'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   style-quality-gate:
     name: Codebase Style Quality Gate
     runs-on: ubuntu-latest
+    timeout-minutes: 2
 
     steps:
     - name: Checkout repository
@@ -44,6 +48,7 @@ jobs:
   shell-lint:
     name: Shell Script Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 2
 
     steps:
     - name: Checkout repository
@@ -101,6 +106,7 @@ jobs:
 
     name: Monorepo Integrity Check
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     
     steps:
     - name: Checkout repository
@@ -114,7 +120,7 @@ jobs:
     - name: Setup Bun
       uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       with:
-        bun-version: ${{ env.BUN_VERSION }}
+          bun-version-file: package.json
         
     - name: Check workspace consistency
       run: |
@@ -174,6 +180,7 @@ jobs:
   dependency-audit:
     name: Dependency Security Audit
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     
     steps:
     - name: Checkout repository
@@ -182,7 +189,7 @@ jobs:
     - name: Setup Bun
       uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       with:
-        bun-version: ${{ env.BUN_VERSION }}
+          bun-version-file: package.json
         
     - name: Install dependencies
       run: |
@@ -215,6 +222,7 @@ jobs:
   performance-benchmark:
     name: Performance Benchmark
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     
     steps:
     - name: Checkout repository
@@ -228,7 +236,7 @@ jobs:
     - name: Setup Bun
       uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       with:
-        bun-version: ${{ env.BUN_VERSION }}
+          bun-version-file: package.json
         
     - name: Build performance test
       run: |
@@ -312,6 +320,7 @@ jobs:
   integration-test:
     name: Cross-Workspace Integration
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     
     steps:
     - name: Checkout repository
@@ -325,7 +334,7 @@ jobs:
     - name: Setup Bun
       uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
       with:
-        bun-version: ${{ env.BUN_VERSION }}
+          bun-version-file: package.json
         
     - name: Integration tests
       run: |
@@ -368,6 +377,7 @@ jobs:
   security-compliance:
     name: Security Compliance Check
     runs-on: ubuntu-latest
+    timeout-minutes: 2
     
     steps:
     - name: Checkout repository

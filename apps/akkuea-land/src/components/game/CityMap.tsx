@@ -274,9 +274,19 @@ export function CityMap() {
   // ── Keyboard navigation handler ──────────────────────────────────────────
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
-      const target = (e.target as HTMLElement).closest<HTMLElement>(
-        "[data-property-id]",
-      );
+      const rawTarget = e.target as HTMLElement;
+      const activeElement =
+        typeof document !== "undefined" &&
+        document.activeElement instanceof HTMLElement &&
+        e.currentTarget.contains(document.activeElement)
+          ? document.activeElement
+          : null;
+      const target =
+        rawTarget.closest<HTMLElement>("[data-property-id]") ??
+        activeElement?.closest<HTMLElement>("[data-property-id]") ??
+        e.currentTarget.querySelector<HTMLElement>(
+          `[data-property-id="${focusedId}"]`,
+        );
       if (!target) return;
 
       const propertyId = target.dataset.propertyId!;
@@ -312,7 +322,7 @@ export function CityMap() {
       const nextProperty = properties[currentIndex + offset];
       if (nextProperty) focusTile(nextProperty.id);
     },
-    [focusTile, properties, selectTile],
+    [focusTile, focusedId, properties, selectTile],
   );
 
   // ── Close panel ──────────────────────────────────────────────────────────

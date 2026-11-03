@@ -109,7 +109,7 @@ pub fn get_admin(env: &Env) -> Option<Address> {
 /// This uses a dedicated storage key for quick admin lookups
 #[allow(dead_code)]
 pub fn set_admin(env: &Env, admin: &Address) {
-    let key = StorageKey::Admin;
+    let key = crate::access::roles::RoleKey::Admin;
     env.storage().instance().set(&key, admin);
 }
 

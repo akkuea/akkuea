@@ -2,6 +2,7 @@ use crate::access::ContractError;
 use soroban_sdk::{Address, Env};
 
 use super::keys::StorageKey;
+use super::property::property_bump;
 
 /// Share balance tracking for property ownership
 ///
@@ -20,7 +21,15 @@ use super::keys::StorageKey;
 #[allow(dead_code)]
 pub fn get_balance(env: &Env, property_id: u64, owner: &Address) -> u64 {
     let key = StorageKey::ShareBalance(property_id, owner.clone());
-    env.storage().persistent().get(&key).unwrap_or(0)
+    let value: Option<u64> = env.storage().persistent().get(&key);
+    if value.is_some() {
+        env.storage().persistent().extend_ttl(
+            &key,
+            property_bump::PERSISTENT_THRESHOLD,
+            property_bump::PERSISTENT_BUMP,
+        );
+    }
+    value.unwrap_or(0)
 }
 
 /// Sets the share balance for a specific owner and property
@@ -42,6 +51,11 @@ pub fn set_balance(env: &Env, property_id: u64, owner: &Address, balance: u64) {
         env.storage().persistent().remove(&key);
     } else {
         env.storage().persistent().set(&key, &balance);
+        env.storage().persistent().extend_ttl(
+            &key,
+            property_bump::PERSISTENT_THRESHOLD,
+            property_bump::PERSISTENT_BUMP,
+        );
     }
 }
 
@@ -106,7 +120,15 @@ pub fn decrease_balance(
 #[allow(dead_code)]
 pub fn get_total_shares(env: &Env, property_id: u64) -> u64 {
     let key = StorageKey::TotalShares(property_id);
-    env.storage().persistent().get(&key).unwrap_or(0)
+    let value: Option<u64> = env.storage().persistent().get(&key);
+    if value.is_some() {
+        env.storage().persistent().extend_ttl(
+            &key,
+            property_bump::PERSISTENT_THRESHOLD,
+            property_bump::PERSISTENT_BUMP,
+        );
+    }
+    value.unwrap_or(0)
 }
 
 /// Sets the total shares for a property
@@ -119,6 +141,11 @@ pub fn get_total_shares(env: &Env, property_id: u64) -> u64 {
 pub fn set_total_shares(env: &Env, property_id: u64, total: u64) {
     let key = StorageKey::TotalShares(property_id);
     env.storage().persistent().set(&key, &total);
+    env.storage().persistent().extend_ttl(
+        &key,
+        property_bump::PERSISTENT_THRESHOLD,
+        property_bump::PERSISTENT_BUMP,
+    );
 }
 
 /// Transfers shares from one owner to another
@@ -150,7 +177,15 @@ pub fn transfer_shares(
 #[allow(dead_code)]
 pub fn get_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Address) -> u64 {
     let key = StorageKey::Allowance(property_id, owner.clone(), spender.clone());
-    env.storage().persistent().get(&key).unwrap_or(0)
+    let value: Option<u64> = env.storage().persistent().get(&key);
+    if value.is_some() {
+        env.storage().persistent().extend_ttl(
+            &key,
+            property_bump::PERSISTENT_THRESHOLD,
+            property_bump::PERSISTENT_BUMP,
+        );
+    }
+    value.unwrap_or(0)
 }
 
 /// Helper to set approved allowance
@@ -161,7 +196,66 @@ pub fn set_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Add
         env.storage().persistent().remove(&key);
     } else {
         env.storage().persistent().set(&key, &amount);
+        env.storage().persistent().extend_ttl(
+            &key,
+            property_bump::PERSISTENT_THRESHOLD,
+            property_bump::PERSISTENT_BUMP,
+        );
     }
+}
+
+/// Atomically updates an allowance only if the current allowance matches `expected_current`.
+///
+/// Mitigates the classic ERC-20 approve race condition when changing a non-zero allowance.
+#[allow(dead_code)]
+pub fn approve_allowance_if_current(
+    env: &Env,
+    property_id: u64,
+    owner: &Address,
+    spender: &Address,
+    expected_current: u64,
+    new_amount: u64,
+) -> Result<(), ContractError> {
+    let current = get_allowance(env, property_id, owner, spender);
+    if current != expected_current {
+        return Err(ContractError::InsufficientAllowance);
+    }
+    set_allowance(env, property_id, owner, spender, new_amount);
+    Ok(())
+}
+
+/// Atomically increases an allowance by `added_value`.
+#[allow(dead_code)]
+pub fn increase_allowance(
+    env: &Env,
+    property_id: u64,
+    owner: &Address,
+    spender: &Address,
+    added_value: u64,
+) -> Result<u64, ContractError> {
+    let current = get_allowance(env, property_id, owner, spender);
+    let new_allowance = current
+        .checked_add(added_value)
+        .ok_or(ContractError::BalanceOverflow)?;
+    set_allowance(env, property_id, owner, spender, new_allowance);
+    Ok(new_allowance)
+}
+
+/// Atomically decreases an allowance by `subtracted_value`.
+#[allow(dead_code)]
+pub fn decrease_allowance(
+    env: &Env,
+    property_id: u64,
+    owner: &Address,
+    spender: &Address,
+    subtracted_value: u64,
+) -> Result<u64, ContractError> {
+    let current = get_allowance(env, property_id, owner, spender);
+    let new_allowance = current
+        .checked_sub(subtracted_value)
+        .ok_or(ContractError::InsufficientAllowance)?;
+    set_allowance(env, property_id, owner, spender, new_allowance);
+    Ok(new_allowance)
 }
 
 /// Helper to consume approved allowance

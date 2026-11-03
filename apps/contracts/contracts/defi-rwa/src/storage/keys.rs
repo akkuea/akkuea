@@ -24,10 +24,6 @@ pub enum StorageKey {
     /// Key: TotalShares(property_id)
     TotalShares(u64),
 
-    /// Admin address with special permissions
-    /// Single instance per contract
-    Admin,
-
     /// Property counter to generate unique property IDs
     /// Single instance per contract
     PropertyCounter,
@@ -62,7 +58,6 @@ impl StorageKey {
             StorageKey::Property(_) => Symbol::new(&soroban_sdk::Env::default(), "Prop"),
             StorageKey::ShareBalance(_, _) => Symbol::new(&soroban_sdk::Env::default(), "Share"),
             StorageKey::TotalShares(_) => Symbol::new(&soroban_sdk::Env::default(), "TotShrs"),
-            StorageKey::Admin => Symbol::new(&soroban_sdk::Env::default(), "Admin"),
             StorageKey::PropertyCounter => Symbol::new(&soroban_sdk::Env::default(), "PropCnt"),
             StorageKey::Allowance(_, _, _) => Symbol::new(&soroban_sdk::Env::default(), "Allow"),
             StorageKey::AvailableShares(_) => {

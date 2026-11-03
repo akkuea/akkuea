@@ -8,6 +8,25 @@ import type {
 import { StrKey } from "@stellar/stellar-sdk";
 
 export class ValidationService {
+  private static parseFiniteNumber(
+    value: number | string | undefined | null,
+  ): number | null {
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+      if (trimmed.length === 0) {
+        return null;
+      }
+      const parsed = Number(trimmed);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+
+    return null;
+  }
+
   static validatePropertyInfo(property: Partial<PropertyInfo>): {
     isValid: boolean;
     errors: string[];
@@ -22,25 +41,36 @@ export class ValidationService {
       errors.push("Valid owner address is required");
     }
 
-    if (!property.totalShares || property.totalShares <= 0) {
+    const totalShares = this.parseFiniteNumber(property.totalShares);
+    if (totalShares === null || totalShares <= 0) {
       errors.push("Total shares must be greater than 0");
     }
 
-    if (!property.pricePerShare || parseFloat(property.pricePerShare) <= 0) {
+    const pricePerShare = this.parseFiniteNumber(property.pricePerShare);
+    if (pricePerShare === null || pricePerShare <= 0) {
       errors.push("Price per share must be greater than 0");
     }
 
+    const availableShares =
+      property.availableShares !== undefined
+        ? this.parseFiniteNumber(property.availableShares)
+        : undefined;
+
     if (
       property.availableShares !== undefined &&
-      property.availableShares < 0
+      (availableShares === null ||
+        availableShares === undefined ||
+        availableShares < 0)
     ) {
       errors.push("Available shares cannot be negative");
     }
 
     if (
-      property.totalShares &&
-      property.availableShares &&
-      property.availableShares > property.totalShares
+      totalShares !== null &&
+      totalShares > 0 &&
+      availableShares !== null &&
+      availableShares !== undefined &&
+      availableShares > totalShares
     ) {
       errors.push("Available shares cannot exceed total shares");
     }
@@ -65,11 +95,13 @@ export class ValidationService {
       errors.push("Valid owner address is required");
     }
 
-    if (!ownership.shares || ownership.shares <= 0) {
+    const shares = this.parseFiniteNumber(ownership.shares);
+    if (shares === null || shares <= 0) {
       errors.push("Number of shares must be greater than 0");
     }
 
-    if (!ownership.purchasePrice || parseFloat(ownership.purchasePrice) <= 0) {
+    const purchasePrice = this.parseFiniteNumber(ownership.purchasePrice);
+    if (purchasePrice === null || purchasePrice <= 0) {
       errors.push("Purchase price must be greater than 0");
     }
 
@@ -93,33 +125,55 @@ export class ValidationService {
       errors.push("Asset is required");
     }
 
-    if (!pool.assetAddress || !this.validateStellarAddress(pool.assetAddress)) {
+    if (
+      !pool.assetAddress ||
+      (!this.validateStellarAddress(pool.assetAddress) &&
+        !this.validateContractAddress(pool.assetAddress))
+    ) {
       errors.push("Valid asset address is required");
     }
 
+    const collateralFactor = this.parseFiniteNumber(pool.collateralFactor);
     if (
-      pool.collateralFactor === undefined ||
-      pool.collateralFactor < 0 ||
-      pool.collateralFactor > 10000
+      collateralFactor === null ||
+      collateralFactor < 0 ||
+      collateralFactor > 10000
     ) {
       errors.push("Collateral factor must be between 0 and 10000 basis points");
     }
 
+    const totalDeposits =
+      pool.totalDeposits !== undefined
+        ? this.parseFiniteNumber(pool.totalDeposits)
+        : undefined;
+
     if (
       pool.totalDeposits !== undefined &&
-      parseFloat(pool.totalDeposits) < 0
+      (totalDeposits === null ||
+        totalDeposits === undefined ||
+        totalDeposits < 0)
     ) {
       errors.push("Total deposits cannot be negative");
     }
 
-    if (pool.totalBorrows !== undefined && parseFloat(pool.totalBorrows) < 0) {
+    const totalBorrows =
+      pool.totalBorrows !== undefined
+        ? this.parseFiniteNumber(pool.totalBorrows)
+        : undefined;
+
+    if (
+      pool.totalBorrows !== undefined &&
+      (totalBorrows === null || totalBorrows === undefined || totalBorrows < 0)
+    ) {
       errors.push("Total borrows cannot be negative");
     }
 
     if (
-      pool.totalDeposits &&
-      pool.totalBorrows &&
-      parseFloat(pool.totalBorrows) > parseFloat(pool.totalDeposits)
+      totalDeposits !== undefined &&
+      totalDeposits !== null &&
+      totalBorrows !== undefined &&
+      totalBorrows !== null &&
+      totalBorrows > totalDeposits
     ) {
       errors.push("Total borrows cannot exceed total deposits");
     }
@@ -153,7 +207,8 @@ export class ValidationService {
       errors.push("Valid transaction type is required");
     }
 
-    if (!tx.amount || parseFloat(tx.amount) <= 0) {
+    const amount = this.parseFiniteNumber(tx.amount);
+    if (amount === null || amount <= 0) {
       errors.push("Amount must be greater than 0");
     }
 
@@ -184,6 +239,19 @@ export class ValidationService {
     }
   }
 
+  static validateContractAddress(address: string): boolean {
+    try {
+      return (
+        typeof address === "string" &&
+        address.startsWith("C") &&
+        address.length === 56 &&
+        StrKey.isValidContract(address)
+      );
+    } catch {
+      return false;
+    }
+  }
+
   static validateEmail(email: string): boolean {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -206,9 +274,10 @@ export class ValidationService {
       errors.push("Property ID is required");
     }
 
-    if (payload.price === undefined || payload.price <= 0) {
+    const price = this.parseFiniteNumber(payload.price);
+    if (price === null || price <= 0) {
       errors.push("Price must be greater than 0");
-    } else if (payload.price < minPrice || payload.price > maxPrice) {
+    } else if (price < minPrice || price > maxPrice) {
       errors.push(`Price must be between ${minPrice} and ${maxPrice}`);
     }
 
@@ -227,22 +296,24 @@ export class ValidationService {
     if (!payload.timestamp) {
       errors.push("Timestamp is required");
     } else {
-      const age = Date.now() - new Date(payload.timestamp).getTime();
-      if (age > maxAgeMs) {
-        errors.push(
-          `Valuation is stale: timestamp is older than ${maxAgeMs / 3600000} hour(s)`,
-        );
-      }
-      if (age < 0) {
-        errors.push("Timestamp cannot be in the future");
+      const timestampMs = new Date(payload.timestamp).getTime();
+      if (!Number.isFinite(timestampMs)) {
+        errors.push("Timestamp must be a valid date");
+      } else {
+        const age = Date.now() - timestampMs;
+        if (age > maxAgeMs) {
+          errors.push(
+            `Valuation is stale: timestamp is older than ${maxAgeMs / 3600000} hour(s)`,
+          );
+        }
+        if (age < 0) {
+          errors.push("Timestamp cannot be in the future");
+        }
       }
     }
 
-    if (
-      payload.confidence === undefined ||
-      payload.confidence < 0 ||
-      payload.confidence > 100
-    ) {
+    const confidence = this.parseFiniteNumber(payload.confidence);
+    if (confidence === null || confidence < 0 || confidence > 100) {
       errors.push("Confidence must be between 0 and 100");
     }
 

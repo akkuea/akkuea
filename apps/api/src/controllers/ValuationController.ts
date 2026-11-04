@@ -14,7 +14,12 @@ export class ValuationController {
       const { record, warnings } = await OracleService.ingestValuation(body);
       return { success: true, record, warnings };
     } catch (error) {
-      if (error instanceof Error && (error.message.includes('rejected') || error.message.includes('invalid') || error.message.includes('stale'))) {
+      if (
+        error instanceof Error &&
+        (error.message.includes('rejected') ||
+          error.message.includes('invalid') ||
+          error.message.includes('stale'))
+      ) {
         throw new BadRequestError(error.message);
       }
       throw new Error(`Failed to ingest valuation: ${error}`);
@@ -75,7 +80,12 @@ export class ValuationController {
       const record = await OracleService.submitManualOverride(body);
       return { success: true, record };
     } catch (error) {
-      if (error instanceof Error && (error.message.includes('rejected') || error.message.includes('invalid') || error.message.includes('stale'))) {
+      if (
+        error instanceof Error &&
+        (error.message.includes('rejected') ||
+          error.message.includes('invalid') ||
+          error.message.includes('stale'))
+      ) {
         throw new BadRequestError(error.message);
       }
       throw new Error(`Failed to submit manual override: ${error}`);

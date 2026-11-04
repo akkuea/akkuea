@@ -309,7 +309,6 @@ describe('OracleService.submitManualOverride', () => {
   });
 });
 
-
 describe('Oracle API Routes Authentication & Validation', () => {
   const app = new Elysia().use(errorHandler).use(oracleRoutes);
   const TEST_CREDENTIAL = 'test-internal-ops-key';

@@ -63,12 +63,16 @@ export class ValuationRepository {
   }
 
   static async findHistory(propertyId: string, limit?: number): Promise<ValuationRecord[]> {
-    const query = db
+    const safeLimit =
+      typeof limit === 'number' && Number.isFinite(limit) && limit > 0
+        ? Math.min(Math.max(Math.floor(limit), 1), 500)
+        : 50;
+    const rows = await db
       .select()
       .from(valuations)
       .where(eq(valuations.propertyId, propertyId))
-      .orderBy(desc(valuations.timestamp));
-    const rows = limit ? await query.limit(limit) : await query;
+      .orderBy(desc(valuations.timestamp))
+      .limit(safeLimit);
     return rows.map(toRecord);
   }
 

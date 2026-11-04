@@ -1,7 +1,25 @@
 import { Elysia, t } from 'elysia';
 import { RiskMonitoringController } from '../controllers/RiskMonitoringController';
+import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
+
+export const riskLevelSchema = t.Union([
+  t.Literal('safe'),
+  t.Literal('warning'),
+  t.Literal('critical'),
+]);
 
 export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
+  .onBeforeHandle(({ headers, set }) => {
+    if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
+      set.status = 401;
+      return {
+        success: false,
+        error: 'UNAUTHORIZED',
+        message: 'Operations access denied',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  })
   .get('/positions', () => RiskMonitoringController.assessAllPositions(), {
     detail: {
       summary: 'Assess all positions',
@@ -14,7 +32,7 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
     ({ params: { level } }) => RiskMonitoringController.getPositionsByRisk(level),
     {
       params: t.Object({
-        level: t.String(),
+        level: riskLevelSchema,
       }),
       detail: {
         summary: 'Get positions by risk level',

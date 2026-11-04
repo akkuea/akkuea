@@ -103,47 +103,30 @@ for wasm in pilot_whitelist pilot_income_token pilot_payout_split; do
 done
 
 deploy() {
-    stellar contract deploy \
-        --wasm "$WASM_DIR/$1.wasm" \
-        --source-account "$IDENTITY" \
-        --network "$NETWORK"
-}
-
-invoke() {
-    local id="$1"
+    local wasm_name="$1"
     shift
-    stellar contract invoke \
-        --id "$id" \
+    stellar contract deploy \
+        --wasm "$WASM_DIR/$wasm_name.wasm" \
         --source-account "$IDENTITY" \
         --network "$NETWORK" \
         -- "$@"
 }
 
-echo "Deploying pilot_whitelist..."
-WHITELIST_ID="$(deploy pilot_whitelist)"
+echo "Deploying and initializing pilot_whitelist..."
+WHITELIST_ID="$(deploy pilot_whitelist --admin "$DEPLOYER")"
 echo "  -> $WHITELIST_ID"
 
-echo "Deploying pilot_income_token..."
-INCOME_TOKEN_ID="$(deploy pilot_income_token)"
-echo "  -> $INCOME_TOKEN_ID"
-
-echo "Deploying pilot_payout_split..."
-PAYOUT_SPLIT_ID="$(deploy pilot_payout_split)"
-echo "  -> $PAYOUT_SPLIT_ID"
-
-echo "Initializing pilot_whitelist..."
-invoke "$WHITELIST_ID" initialize --admin "$DEPLOYER"
-
-echo "Initializing pilot_income_token..."
-invoke "$INCOME_TOKEN_ID" initialize \
+echo "Deploying and initializing pilot_income_token..."
+INCOME_TOKEN_ID="$(deploy pilot_income_token \
     --admin "$DEPLOYER" \
     --whitelist "$WHITELIST_ID" \
     --name "Akkuea Pilot Income Participation" \
     --symbol "AKIN" \
-    --decimals 7
+    --decimals 7)"
+echo "  -> $INCOME_TOKEN_ID"
 
-echo "Initializing pilot_payout_split..."
-invoke "$PAYOUT_SPLIT_ID" initialize \
+echo "Deploying and initializing pilot_payout_split..."
+PAYOUT_SPLIT_ID="$(deploy pilot_payout_split \
     --admin "$DEPLOYER" \
     --operator "$OPERATOR" \
     --ally "$ALLY" \
@@ -152,7 +135,8 @@ invoke "$PAYOUT_SPLIT_ID" initialize \
     --whitelist "$WHITELIST_ID" \
     --usdc_token "$USDC_TOKEN" \
     --eurc_token "$EURC_TOKEN" \
-    --swap_router "$SWAP_ROUTER"
+    --swap_router "$SWAP_ROUTER")"
+echo "  -> $PAYOUT_SPLIT_ID"
 
 cat <<EOF
 

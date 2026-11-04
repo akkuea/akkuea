@@ -39,7 +39,6 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@typescript-eslint/eslint-plugin": "^8.56.0",
     "@typescript-eslint/parser": "^8.56.0",
-    "complexity-report": "^2.0.0-alpha",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.39.3",
     "eslint-config-prettier": "^9.1.2",

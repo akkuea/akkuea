@@ -1,7 +1,31 @@
 import { Elysia, t } from 'elysia';
+import { z } from 'zod';
 import { RiskMonitoringController } from '../controllers/RiskMonitoringController';
+import { validate } from '../middleware/validation';
+import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
+
+const riskLevelParamsSchema = z.object({
+  level: z.enum(['safe', 'warning', 'critical']),
+});
+
+const internalRiskAuth = new Elysia({ name: 'internal-risk-auth' }).onBeforeHandle(
+  { as: 'scoped' },
+  ({ headers, set }) => {
+    if (!isInternalOperationsAuthorized(headers as Record<string, string | undefined>)) {
+      set.status = 401;
+      return {
+        success: false,
+        error: 'UNAUTHORIZED',
+        message: 'Valid internal operations credential required',
+        statusCode: 401,
+        timestamp: new Date().toISOString(),
+      };
+    }
+  },
+);
 
 export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
+  .use(internalRiskAuth)
   .get('/positions', () => RiskMonitoringController.assessAllPositions(), {
     detail: {
       summary: 'Assess all positions',
@@ -9,19 +33,21 @@ export const riskMonitoringRoutes = new Elysia({ prefix: '/internal/risk' })
       tags: ['Risk Monitoring'],
     },
   })
-  .get(
-    '/positions/risk/:level',
-    ({ params: { level } }) => RiskMonitoringController.getPositionsByRisk(level),
-    {
-      params: t.Object({
-        level: t.String(),
-      }),
-      detail: {
-        summary: 'Get positions by risk level',
-        description: 'Retrieve positions filtered by risk severity level',
-        tags: ['Risk Monitoring'],
-      },
-    },
+  .group('', (app) =>
+    app
+      .use(validate({ params: riskLevelParamsSchema }))
+      .get(
+        '/positions/risk/:level',
+        ({ validatedParams }) =>
+          RiskMonitoringController.getPositionsByRisk(validatedParams!.level),
+        {
+          detail: {
+            summary: 'Get positions by risk level',
+            description: 'Retrieve positions filtered by risk severity level',
+            tags: ['Risk Monitoring'],
+          },
+        },
+      ),
   )
   .get(
     '/liquidation/:positionId',

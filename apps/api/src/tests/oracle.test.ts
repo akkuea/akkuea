@@ -1,6 +1,14 @@
 import { describe, test, expect, spyOn, mock, beforeEach, afterEach } from 'bun:test';
+import { Elysia } from 'elysia';
+import { errorHandler } from '../middleware/errorHandler';
+import { oracleRoutes } from '../routes/oracle';
 import { OracleService } from '../services/OracleService';
-import { ValuationRepository } from '../repositories/ValuationRepository';
+import {
+  DEFAULT_VALUATION_HISTORY_LIMIT,
+  MAX_VALUATION_HISTORY_LIMIT,
+  ValuationRepository,
+  sanitizeValuationHistoryLimit,
+} from '../repositories/ValuationRepository';
 import type { RealEstateValuationPayload, ValuationRecord } from '@akkuea/shared';
 import { ValidationService } from '@akkuea/shared';
 
@@ -299,5 +307,193 @@ describe('OracleService.submitManualOverride', () => {
     expect(record.status).toBe('active');
     expect(record.methodology).toBe('manual');
     expect(record.id).toBeTruthy();
+  });
+});
+
+describe('Oracle HTTP routes auth, validation, and bounded history', () => {
+  const INTERNAL_KEY = 'test-oracle-operations-credential';
+  const AUTH_HEADERS = {
+    'content-type': 'application/json',
+    'x-internal-api-key': INTERNAL_KEY,
+  };
+  const app = new Elysia().use(errorHandler).use(oracleRoutes);
+  const originalEnvKey = process.env.OPERATIONS_BACKEND_CREDENTIAL;
+
+  beforeEach(() => {
+    process.env.OPERATIONS_BACKEND_CREDENTIAL = INTERNAL_KEY;
+  });
+
+  afterEach(() => {
+    if (originalEnvKey === undefined) {
+      delete process.env.OPERATIONS_BACKEND_CREDENTIAL;
+    } else {
+      process.env.OPERATIONS_BACKEND_CREDENTIAL = originalEnvKey;
+    }
+  });
+
+  test('POST /oracle/valuations returns 401 without credential and 200 with it', async () => {
+    const payload = makePayload();
+
+    const unauth = await app.handle(
+      new Request('http://localhost/oracle/valuations', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      }),
+    );
+    expect(unauth.status).toBe(401);
+
+    const wrongKey = await app.handle(
+      new Request('http://localhost/oracle/valuations', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+          'x-internal-api-key': 'wrong-key',
+        },
+        body: JSON.stringify(payload),
+      }),
+    );
+    expect(wrongKey.status).toBe(401);
+
+    const authed = await app.handle(
+      new Request('http://localhost/oracle/valuations', {
+        method: 'POST',
+        headers: AUTH_HEADERS,
+        body: JSON.stringify(payload),
+      }),
+    );
+    expect(authed.status).toBe(200);
+    const body = (await authed.json()) as { success: boolean; record: ValuationRecord };
+    expect(body.success).toBe(true);
+    expect(body.record.propertyId).toBe(payload.propertyId);
+  });
+
+  test('POST /oracle/valuations/:propertyId/manual-review returns 401 without credential and 200 with it', async () => {
+    const payload = makePayload();
+    const { record } = await OracleService.ingestValuation(payload);
+
+    const unauth = await app.handle(
+      new Request(`http://localhost/oracle/valuations/${payload.propertyId}/manual-review`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: record.id, reason: 'Check appraisal' }),
+      }),
+    );
+    expect(unauth.status).toBe(401);
+
+    const authed = await app.handle(
+      new Request(`http://localhost/oracle/valuations/${payload.propertyId}/manual-review`, {
+        method: 'POST',
+        headers: AUTH_HEADERS,
+        body: JSON.stringify({ id: record.id, reason: 'Check appraisal' }),
+      }),
+    );
+    expect(authed.status).toBe(200);
+    const body = (await authed.json()) as { success: boolean; record: ValuationRecord };
+    expect(body.success).toBe(true);
+    expect(body.record.status).toBe('manual_review');
+  });
+
+  test('POST /oracle/valuations/manual-override returns 401 without credential and 200 with it', async () => {
+    const payload = makePayload();
+
+    const unauth = await app.handle(
+      new Request('http://localhost/oracle/valuations/manual-override', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...payload, overrideReason: 'Board review' }),
+      }),
+    );
+    expect(unauth.status).toBe(401);
+
+    const authed = await app.handle(
+      new Request('http://localhost/oracle/valuations/manual-override', {
+        method: 'POST',
+        headers: AUTH_HEADERS,
+        body: JSON.stringify({ ...payload, overrideReason: 'Board review' }),
+      }),
+    );
+    expect(authed.status).toBe(200);
+    const body = (await authed.json()) as { success: boolean; record: ValuationRecord };
+    expect(body.success).toBe(true);
+    expect(body.record.methodology).toBe('manual');
+  });
+
+  test('invalid oracle payloads return 400 on write routes', async () => {
+    const negativePriceRes = await app.handle(
+      new Request('http://localhost/oracle/valuations', {
+        method: 'POST',
+        headers: AUTH_HEADERS,
+        body: JSON.stringify({ ...makePayload(), price: -100 }),
+      }),
+    );
+    expect(negativePriceRes.status).toBe(400);
+
+    const staleTimestampRes = await app.handle(
+      new Request('http://localhost/oracle/valuations', {
+        method: 'POST',
+        headers: AUTH_HEADERS,
+        body: JSON.stringify(
+          makePayload({ timestamp: new Date(Date.now() - 26 * 60 * 60 * 1000) }),
+        ),
+      }),
+    );
+    expect(staleTimestampRes.status).toBe(400);
+
+    const badOverrideRes = await app.handle(
+      new Request('http://localhost/oracle/valuations/manual-override', {
+        method: 'POST',
+        headers: AUTH_HEADERS,
+        body: JSON.stringify({ ...makePayload(), overrideReason: '   ' }),
+      }),
+    );
+    expect(badOverrideRes.status).toBe(400);
+
+    const badReviewRes = await app.handle(
+      new Request('http://localhost/oracle/valuations/prop_1/manual-review', {
+        method: 'POST',
+        headers: AUTH_HEADERS,
+        body: JSON.stringify({ id: '', reason: '' }),
+      }),
+    );
+    expect(badReviewRes.status).toBe(400);
+  });
+
+  test('limit=abc and limit=-5 cannot produce an unbounded history query', async () => {
+    const propertyId = `prop_bounded_${Date.now()}`;
+    await OracleService.ingestValuation(makePayload({ propertyId, price: 250_000 }));
+
+    const abcRes = await app.handle(
+      new Request(`http://localhost/oracle/valuations/${propertyId}/history?limit=abc`),
+    );
+    expect(abcRes.status).toBe(200);
+    expect(ValuationRepository.findHistory).toHaveBeenLastCalledWith(
+      propertyId,
+      DEFAULT_VALUATION_HISTORY_LIMIT,
+    );
+
+    const negativeRes = await app.handle(
+      new Request(`http://localhost/oracle/valuations/${propertyId}/history?limit=-5`),
+    );
+    expect(negativeRes.status).toBe(200);
+    expect(ValuationRepository.findHistory).toHaveBeenLastCalledWith(
+      propertyId,
+      DEFAULT_VALUATION_HISTORY_LIMIT,
+    );
+
+    const hugeRes = await app.handle(
+      new Request(`http://localhost/oracle/valuations/${propertyId}/history?limit=9999`),
+    );
+    expect(hugeRes.status).toBe(200);
+    expect(ValuationRepository.findHistory).toHaveBeenLastCalledWith(
+      propertyId,
+      MAX_VALUATION_HISTORY_LIMIT,
+    );
+
+    expect(sanitizeValuationHistoryLimit(Number('abc'))).toBe(DEFAULT_VALUATION_HISTORY_LIMIT);
+    expect(sanitizeValuationHistoryLimit(-5)).toBe(DEFAULT_VALUATION_HISTORY_LIMIT);
+    expect(sanitizeValuationHistoryLimit(0)).toBe(DEFAULT_VALUATION_HISTORY_LIMIT);
+    expect(sanitizeValuationHistoryLimit(9999)).toBe(MAX_VALUATION_HISTORY_LIMIT);
+    expect(sanitizeValuationHistoryLimit(25)).toBe(25);
   });
 });

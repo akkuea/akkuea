@@ -1,34 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPrivyClient, ensureStellarWalletForUser } from "@/lib/privy-server";
+import * as privyServer from "@/lib/privy-server";
 
 function mapCreateWalletError(error: unknown): {
   message: string;
   status: number;
 } {
-  const message =
+  const rawMessage =
     error instanceof Error ? error.message : "Failed to create wallet";
 
-  if (message.includes("not configured")) {
-    return { message, status: 500 };
+  if (rawMessage.includes("not configured")) {
+    return {
+      message: "Privy credentials not configured on the server.",
+      status: 500,
+    };
   }
 
   if (
-    message.includes("Missing Privy access token") ||
-    message.includes("JWS") ||
-    message.includes("auth token")
+    rawMessage.includes("Missing Privy access token") ||
+    rawMessage.includes("JWS") ||
+    rawMessage.includes("auth token") ||
+    rawMessage.includes("invalid token")
   ) {
-    return { message, status: 401 };
+    return {
+      message: "Invalid or expired Privy access token.",
+      status: 401,
+    };
   }
 
-  if (message.includes("Privy server credentials are invalid")) {
-    return { message, status: 500 };
+  if (rawMessage.includes("Privy server credentials are invalid")) {
+    return {
+      message: "Privy server credentials are invalid.",
+      status: 500,
+    };
   }
 
-  if (message.includes("Stellar embedded wallets are not enabled")) {
-    return { message, status: 403 };
+  if (rawMessage.includes("Stellar embedded wallets are not enabled")) {
+    return {
+      message: "Stellar embedded wallets are not enabled for this Privy app.",
+      status: 403,
+    };
   }
 
-  return { message, status: 502 };
+  return {
+    message: "Failed to create Stellar wallet.",
+    status: 502,
+  };
 }
 
 /**
@@ -39,7 +55,7 @@ function mapCreateWalletError(error: unknown): {
  *   { chain_type: "stellar", owner: { user_id: "<privy-did>" } }
  */
 export async function POST(req: NextRequest) {
-  const privy = getPrivyClient();
+  const privy = privyServer.getPrivyClient();
   if (!privy) {
     return NextResponse.json(
       { error: "Privy credentials not configured on the server." },
@@ -48,8 +64,8 @@ export async function POST(req: NextRequest) {
   }
 
   const authHeader = req.headers.get("authorization");
-  const accessToken = authHeader?.replace(/^Bearer /i, "");
-  if (!accessToken) {
+  const accessToken = authHeader?.replace(/^Bearer\s+/i, "").trim();
+  if (!authHeader || !/^Bearer\s+/i.test(authHeader) || !accessToken) {
     return NextResponse.json(
       { error: "Missing Privy access token." },
       { status: 401 },
@@ -58,10 +74,11 @@ export async function POST(req: NextRequest) {
 
   try {
     const claims = await privy.verifyAuthToken(accessToken);
-    const wallet = await ensureStellarWalletForUser(claims.userId);
+    const wallet = await privyServer.ensureStellarWalletForUser(claims.userId);
     return NextResponse.json(wallet);
-  } catch (e) {
-    const { message, status } = mapCreateWalletError(e);
+  } catch (error) {
+    console.error("[privy/create-wallet] Failed to ensure wallet:", error);
+    const { message, status } = mapCreateWalletError(error);
     return NextResponse.json({ error: message }, { status });
   }
 }

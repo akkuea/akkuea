@@ -13,22 +13,43 @@ globalThis.MutationObserver = dom.window.MutationObserver as any;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
-import React from "react";
+import React, { forwardRef } from "react";
 import { cleanup, fireEvent } from "@testing-library/react";
 import axe from "axe-core";
 import { renderWithIntl } from "@/test/renderWithIntl";
 
-mock.module("framer-motion", () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
-}));
+mock.module("framer-motion", () => {
+  const motionDiv = forwardRef<HTMLDivElement, any>(function MotionDiv(
+    { children, ...props },
+    ref,
+  ) {
+    return (
+      <div ref={ref} {...props}>
+        {children}
+      </div>
+    );
+  });
+  const motionButton = forwardRef<HTMLButtonElement, any>(function MotionButton(
+    { children, ...props },
+    ref,
+  ) {
+    return (
+      <button ref={ref} {...props}>
+        {children}
+      </button>
+    );
+  });
 
-mock.module("../PropertyPanel", () => ({
-  PropertyPanel: ({ property }: any) => (
-    <aside aria-label="Selected property panel">{property.name}</aside>
-  ),
-}));
+  return {
+    AnimatePresence: ({ children }: { children: React.ReactNode }) => (
+      <>{children}</>
+    ),
+    motion: {
+      div: motionDiv,
+      button: motionButton,
+    },
+  };
+});
 
 import { CityMap } from "../CityMap";
 
@@ -42,10 +63,9 @@ describe("CityMap keyboard accessibility", () => {
     const grid = view.getByRole("grid", {
       name: "Akkuea City property grid",
     });
-    const firstTile = view.getByRole("gridcell", {
-      name: /Tile A1, row 1, column 1,/,
-    });
+    const firstTile = view.getByLabelText(/Tile A1, row 1, column 1,/);
 
+    expect(firstTile.getAttribute("role")).toBe("gridcell");
     expect(firstTile.getAttribute("tabindex")).toBe("0");
     expect(firstTile.getAttribute("aria-selected")).toBe("false");
     expect(firstTile.getAttribute("aria-label")).toContain(
@@ -56,22 +76,20 @@ describe("CityMap keyboard accessibility", () => {
     expect(document.activeElement).toBe(firstTile);
 
     fireEvent.keyDown(grid, { key: "ArrowRight" });
-    const secondTile = view.getByRole("gridcell", {
-      name: /Tile B1, row 1, column 2,/,
-    });
+    const secondTile = view.getByLabelText(/Tile B1, row 1, column 2,/);
     expect(document.activeElement).toBe(secondTile);
     expect(secondTile.getAttribute("tabindex")).toBe("0");
     expect(firstTile.getAttribute("tabindex")).toBe("-1");
 
     fireEvent.keyDown(grid, { key: "ArrowDown" });
-    const lowerTile = view.getByRole("gridcell", {
-      name: /Tile B2, row 2, column 2,/,
-    });
+    const lowerTile = view.getByLabelText(/Tile B2, row 2, column 2,/);
     expect(document.activeElement).toBe(lowerTile);
 
     fireEvent.keyDown(grid, { key: "Enter" });
     expect(lowerTile.getAttribute("aria-selected")).toBe("true");
-    expect(view.getByLabelText("Selected property panel")).not.toBeNull();
+    expect(
+      view.getByRole("dialog", { name: "Property details" }),
+    ).not.toBeNull();
   });
 
   it("supports tab focus and space activation on a tile", () => {
@@ -79,15 +97,15 @@ describe("CityMap keyboard accessibility", () => {
     const grid = view.getByRole("grid", {
       name: "Akkuea City property grid",
     });
-    const firstTile = view.getByRole("gridcell", {
-      name: /Tile A1, row 1, column 1,/,
-    });
+    const firstTile = view.getByLabelText(/Tile A1, row 1, column 1,/);
 
     firstTile.focus();
     fireEvent.keyDown(grid, { key: " " });
 
     expect(firstTile.getAttribute("aria-selected")).toBe("true");
-    expect(view.getByLabelText("Selected property panel")).not.toBeNull();
+    expect(
+      view.getByRole("dialog", { name: "Property details" }),
+    ).not.toBeNull();
   });
 
   it("renders in Spanish with translated headings and legend", () => {

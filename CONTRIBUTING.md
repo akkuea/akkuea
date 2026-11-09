@@ -395,13 +395,14 @@ cd apps/webapp && bun run test:e2e
 
 ## CI/CD: Workflows Must Pass
 
-Akkuea runs five GitHub Actions workflows on every pull request. **All five must pass before a pull request can be merged.** No exceptions.
+Akkuea runs six GitHub Actions workflows on every pull request. **All six must pass before a pull request can be merged.** No exceptions.
 
 | Workflow           | What it validates                                                                                         |
 | ------------------ | --------------------------------------------------------------------------------------------------------- |
 | `monorepo-ci.yml`  | Workspace integrity, dependency consistency, cross-workspace type compatibility, security compliance scan |
 | `api-ci.yml`       | API lint, type-check, unit and integration tests, build                                                   |
 | `webapp-ci.yml`    | Webapp lint, type-check, unit tests, build, Playwright e2e tests (isolated job)                            |
+| `land-ci.yml`      | Akkuea Land lint, type-check, Prettier check, unit tests, build                                           |
 | `shared-ci.yml`    | Shared library lint, type-check, build                                                                    |
 | `contracts-ci.yml` | Rust format (`rustfmt`), linting (`cargo clippy`), unit tests, WASM build                                 |
 
@@ -518,6 +519,7 @@ Use this checklist in your pull request description. Every item must be checked 
 - [ ] `monorepo-ci.yml` passes
 - [ ] `api-ci.yml` passes
 - [ ] `webapp-ci.yml` passes
+- [ ] `land-ci.yml` passes
 - [ ] `shared-ci.yml` passes
 - [ ] `contracts-ci.yml` passes (if contracts were modified)
 

@@ -274,9 +274,17 @@ export function CityMap() {
   // ── Keyboard navigation handler ──────────────────────────────────────────
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
-      const target = (e.target as HTMLElement).closest<HTMLElement>(
-        "[data-property-id]",
-      );
+      const eventTarget = e.target instanceof HTMLElement ? e.target : null;
+      const activeElement =
+        typeof document !== "undefined" &&
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      const target =
+        eventTarget?.closest<HTMLElement>("[data-property-id]") ??
+        (activeElement && gridRef.current?.contains(activeElement)
+          ? activeElement.closest<HTMLElement>("[data-property-id]")
+          : null);
       if (!target) return;
 
       const propertyId = target.dataset.propertyId!;

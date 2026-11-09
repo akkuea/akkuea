@@ -399,7 +399,7 @@ Akkuea runs five GitHub Actions workflows on every pull request. **All five must
 
 | Workflow           | What it validates                                                                                         |
 | ------------------ | --------------------------------------------------------------------------------------------------------- |
-| `monorepo-ci.yml`  | Workspace integrity, dependency consistency, cross-workspace type compatibility, security compliance scan |
+| `monorepo-ci.yml`  | Workspace integrity, dependency audit, shared build & import smoke test, security compliance scan |
 | `api-ci.yml`       | API lint, type-check, unit and integration tests, build                                                   |
 | `webapp-ci.yml`    | Webapp lint, type-check, unit tests, build, Playwright e2e tests (isolated job)                            |
 | `shared-ci.yml`    | Shared library lint, type-check, build                                                                    |

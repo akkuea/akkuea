@@ -1,4 +1,4 @@
-import type { Meta, StoryObj, Decorator } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 import { WhitelistReviewQueue } from "./WhitelistReviewQueue";
 
 // ---------------------------------------------------------------------------
@@ -6,16 +6,15 @@ import { WhitelistReviewQueue } from "./WhitelistReviewQueue";
 // ---------------------------------------------------------------------------
 type FetchMock = (input: RequestInfo | URL) => Promise<Response>;
 
-function mockFetch(handler: FetchMock): Decorator {
-  return (Story) => {
+// Installed in beforeEach so the mock is in place before the component's
+// effects run; the returned cleanup puts the real fetch back after the story.
+function mockFetch(handler: FetchMock) {
+  return () => {
     const original = globalThis.fetch;
     globalThis.fetch = handler as typeof fetch;
-    const result = Story();
-    // Restore after render (story cleanup)
-    setTimeout(() => {
+    return () => {
       globalThis.fetch = original;
-    }, 0);
-    return result;
+    };
   };
 }
 
@@ -66,51 +65,43 @@ type Story = StoryObj<typeof WhitelistReviewQueue>;
 
 /** Two pending requests in the queue, the typical operator view. */
 export const WithRequests: Story = {
-  decorators: [
-    mockFetch(
-      async () =>
-        new Response(
-          JSON.stringify({ success: true, data: [mockRequest1, mockRequest2] }),
-          { status: 200, headers: { "Content-Type": "application/json" } },
-        ),
-    ),
-  ],
+  beforeEach: mockFetch(
+    async () =>
+      new Response(
+        JSON.stringify({ success: true, data: [mockRequest1, mockRequest2] }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  ),
 };
 
 /** No pending requests, shows the EmptyState component. */
 export const EmptyQueue: Story = {
-  decorators: [
-    mockFetch(
-      async () =>
-        new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        }),
-    ),
-  ],
+  beforeEach: mockFetch(
+    async () =>
+      new Response(JSON.stringify({ success: true, data: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+  ),
 };
 
 /** API fetch is slow, shows the loading spinner text. */
 export const LoadingState: Story = {
-  decorators: [
-    mockFetch(
-      () =>
-        new Promise(() => {
-          /* intentionally never resolves */
-        }),
-    ),
-  ],
+  beforeEach: mockFetch(
+    () =>
+      new Promise(() => {
+        /* intentionally never resolves */
+      }),
+  ),
 };
 
 /** API returns an error, shows SectionErrorFallback with a Retry button. */
 export const ErrorState: Story = {
-  decorators: [
-    mockFetch(
-      async () =>
-        new Response(
-          JSON.stringify({ message: "Forbidden: admin access required" }),
-          { status: 403, headers: { "Content-Type": "application/json" } },
-        ),
-    ),
-  ],
+  beforeEach: mockFetch(
+    async () =>
+      new Response(
+        JSON.stringify({ message: "Forbidden: admin access required" }),
+        { status: 403, headers: { "Content-Type": "application/json" } },
+      ),
+  ),
 };

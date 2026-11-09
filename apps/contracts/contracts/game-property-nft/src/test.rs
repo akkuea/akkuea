@@ -2,7 +2,7 @@ use soroban_sdk::{testutils::Address as _, Address, Env};
 
 use crate::{GamePropertyNft, GamePropertyNftClient, NftError, TOTAL_TILES};
 
-fn setup() -> (Env, Address, Address, GamePropertyNftClient<'static>) {
+fn initialized() -> (Env, Address, Address, GamePropertyNftClient<'static>) {
     let env = Env::default();
     env.cost_estimate().budget().reset_unlimited();
     env.mock_all_auths();
@@ -10,15 +10,9 @@ fn setup() -> (Env, Address, Address, GamePropertyNftClient<'static>) {
     let treasury = Address::generate(&env);
     let game_engine = Address::generate(&env);
 
-    let contract_id = env.register(GamePropertyNft, ());
+    let contract_id = env.register(GamePropertyNft, (&treasury, &game_engine));
     let client = GamePropertyNftClient::new(&env, &contract_id);
 
-    (env, treasury, game_engine, client)
-}
-
-fn initialized() -> (Env, Address, Address, GamePropertyNftClient<'static>) {
-    let (env, treasury, game_engine, client) = setup();
-    client.initialize(&treasury, &game_engine);
     (env, treasury, game_engine, client)
 }
 

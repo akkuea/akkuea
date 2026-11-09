@@ -58,60 +58,68 @@ for wasm in game_property_nft game_land_token game_engine game_marketplace; do
     fi
 done
 
-# ── 3. Deploy ─────────────────────────────────────────────────────────────────
+# ── 3. Derive deterministic contract IDs ──────────────────────────────────────
+# `game-engine` and `game-property-nft` / `game-land-token` reference each
+# other's contract IDs in their `__constructor` arguments. On Soroban a
+# contract's ID is a pure hash of `(network_passphrase, deployer, salt)`, so
+# generating each salt up front lets us compute every contract ID before any
+# transaction is submitted.
 
-deploy() {
-    stellar contract deploy \
-        --wasm "$WASM_DIR/$1.wasm" \
-        --source-account "$IDENTITY" \
-        --network "$NETWORK"
+new_salt() {
+    openssl rand -hex 32
 }
 
-echo "Deploying game_property_nft..."
-NFT_ID="$(deploy game_property_nft)"
-echo "  -> $NFT_ID"
+derive_id() {
+    stellar contract id wasm \
+        --source-account "$IDENTITY" \
+        --network "$NETWORK" \
+        --salt "$1"
+}
 
-echo "Deploying game_land_token..."
-TOKEN_ID="$(deploy game_land_token)"
-echo "  -> $TOKEN_ID"
+NFT_SALT="$(new_salt)"
+TOKEN_SALT="$(new_salt)"
+ENGINE_SALT="$(new_salt)"
+MARKETPLACE_SALT="$(new_salt)"
 
-echo "Deploying game_engine..."
-ENGINE_ID="$(deploy game_engine)"
-echo "  -> $ENGINE_ID"
+NFT_ID="$(derive_id "$NFT_SALT")"
+TOKEN_ID="$(derive_id "$TOKEN_SALT")"
+ENGINE_ID="$(derive_id "$ENGINE_SALT")"
+MARKETPLACE_ID="$(derive_id "$MARKETPLACE_SALT")"
 
-echo "Deploying game_marketplace..."
-MARKETPLACE_ID="$(deploy game_marketplace)"
-echo "  -> $MARKETPLACE_ID"
-
-# ── 4. Initialize ─────────────────────────────────────────────────────────────
-# Arg names match the Rust signatures exactly. The NFT and token contracts
-# only need the engine's contract ID, which exists as soon as it is deployed
-# (deploy != initialize), so ordering here is safe.
+# ── 4. Deploy and initialize atomically ───────────────────────────────────────
+# Constructor arguments follow `--` and run in the same transaction that
+# creates the contract instance.
 
 IS_TESTNET=true
 if [ "$NETWORK" != "testnet" ]; then IS_TESTNET=false; fi
 
-invoke() {
-    local id="$1"
-    shift
-    stellar contract invoke \
-        --id "$id" \
+deploy() {
+    local wasm="$1"
+    local salt="$2"
+    shift 2
+    stellar contract deploy \
+        --wasm "$WASM_DIR/$wasm.wasm" \
         --source-account "$IDENTITY" \
         --network "$NETWORK" \
+        --salt "$salt" \
         -- "$@"
 }
 
-echo "Initializing game_property_nft (treasury owns all 400 tiles)..."
-invoke "$NFT_ID" initialize --treasury "$TREASURY" --game_engine "$ENGINE_ID"
+echo "Deploying game_property_nft (treasury owns all 400 tiles)..."
+DEPLOYED_NFT_ID="$(deploy game_property_nft "$NFT_SALT" --treasury "$TREASURY" --game_engine "$ENGINE_ID")"
+echo "  -> $DEPLOYED_NFT_ID"
 
-echo "Initializing game_land_token..."
-invoke "$TOKEN_ID" initialize --treasury "$TREASURY" --engine "$ENGINE_ID" --is_testnet "$IS_TESTNET"
+echo "Deploying game_land_token..."
+DEPLOYED_TOKEN_ID="$(deploy game_land_token "$TOKEN_SALT" --treasury "$TREASURY" --engine "$ENGINE_ID" --is_testnet "$IS_TESTNET")"
+echo "  -> $DEPLOYED_TOKEN_ID"
 
-echo "Initializing game_engine..."
-invoke "$ENGINE_ID" initialize --nft_contract "$NFT_ID" --token_contract "$TOKEN_ID" --treasury "$TREASURY"
+echo "Deploying game_engine..."
+DEPLOYED_ENGINE_ID="$(deploy game_engine "$ENGINE_SALT" --nft_contract "$NFT_ID" --token_contract "$TOKEN_ID" --treasury "$TREASURY")"
+echo "  -> $DEPLOYED_ENGINE_ID"
 
-echo "Initializing game_marketplace..."
-invoke "$MARKETPLACE_ID" initialize --nft_contract "$NFT_ID" --land_token "$TOKEN_ID"
+echo "Deploying game_marketplace..."
+DEPLOYED_MARKETPLACE_ID="$(deploy game_marketplace "$MARKETPLACE_SALT" --nft_contract "$NFT_ID" --land_token "$TOKEN_ID")"
+echo "  -> $DEPLOYED_MARKETPLACE_ID"
 
 # ── 5. Summary ────────────────────────────────────────────────────────────────
 

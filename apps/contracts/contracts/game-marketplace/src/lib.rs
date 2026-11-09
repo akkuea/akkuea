@@ -11,7 +11,6 @@ use soroban_sdk::{
 #[repr(u32)]
 pub enum MarketError {
     NotInitialized = 1,
-    AlreadyInitialized = 2,
     AlreadyListed = 3,
     NotListed = 4,
     NotSeller = 5,
@@ -121,11 +120,8 @@ pub struct GameMarketplace;
 
 #[contractimpl]
 impl GameMarketplace {
-    /// One-time initialisation: store the NFT and LAND token contract addresses.
-    pub fn initialize(env: Env, nft_contract: Address, land_token: Address) {
-        if env.storage().instance().has(&DataKey::NftContract) {
-            panic_with_error!(&env, MarketError::AlreadyInitialized);
-        }
+    /// One-time initialisation at deployment: store the NFT and LAND token contract addresses.
+    pub fn __constructor(env: Env, nft_contract: Address, land_token: Address) {
         env.storage()
             .instance()
             .set(&DataKey::NftContract, &nft_contract);
@@ -416,15 +412,13 @@ mod tests {
         let game_engine = Address::generate(&env);
         let land_admin = Address::generate(&env);
 
-        let nft_id = env.register(GamePropertyNft, ());
+        let nft_id = env.register(GamePropertyNft, (&treasury, &game_engine));
         let nft = GamePropertyNftClient::new(&env, &nft_id);
-        nft.initialize(&treasury, &game_engine);
 
         let land_id = env.register_stellar_asset_contract_v2(land_admin).address();
 
-        let marketplace_id = env.register(GameMarketplace, ());
+        let marketplace_id = env.register(GameMarketplace, (&nft_id, &land_id));
         let marketplace = GameMarketplaceClient::new(&env, &marketplace_id);
-        marketplace.initialize(&nft_id, &land_id);
 
         Setup {
             env,
@@ -548,7 +542,7 @@ mod tests {
         assert_eq!(result, Err(Ok(MarketError::AlreadyListed.into())));
     }
 
-    // ── initialize ────────────────────────────────────────────────────────────
+    // ── constructor ───────────────────────────────────────────────────────────
 
     #[test]
     fn test_initialize_starts_with_no_listings() {
@@ -559,11 +553,19 @@ mod tests {
     }
 
     #[test]
-    fn test_initialize_twice_fails() {
+    fn test_constructor_sets_config_at_registration() {
         let s = setup();
-
-        let result = s.marketplace.try_initialize(&s.nft.address, &s.land_id);
-        assert_eq!(result, Err(Ok(MarketError::AlreadyInitialized.into())));
+        s.env.as_contract(&s.marketplace_id, || {
+            let stored_nft: Address = s
+                .env
+                .storage()
+                .instance()
+                .get(&DataKey::NftContract)
+                .unwrap();
+            let stored_land: Address = s.env.storage().instance().get(&DataKey::LandToken).unwrap();
+            assert_eq!(stored_nft, s.nft.address);
+            assert_eq!(stored_land, s.land_id);
+        });
     }
 
     // ── list ──────────────────────────────────────────────────────────────────
@@ -571,11 +573,12 @@ mod tests {
     #[test]
     fn test_list_before_initialize_fails() {
         let s = setup();
-        let uninitialized_id = s.env.register(GameMarketplace, ());
-        let uninitialized = GameMarketplaceClient::new(&s.env, &uninitialized_id);
-        s.nft.approve(&s.treasury, &uninitialized_id, &7);
+        s.env.as_contract(&s.marketplace_id, || {
+            s.env.storage().instance().remove(&DataKey::NftContract);
+        });
+        s.nft.approve(&s.treasury, &s.marketplace_id, &7);
 
-        let result = uninitialized.try_list(&s.treasury, &7, &100);
+        let result = s.marketplace.try_list(&s.treasury, &7, &100);
         assert_eq!(result, Err(Ok(MarketError::NotInitialized.into())));
     }
 

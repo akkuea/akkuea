@@ -30,8 +30,8 @@ export const kycTierSchema = z.enum([
  * Schema for KycDocument
  */
 export const kycDocumentSchema = z.object({
-  id: z.string().uuid(),
-  userId: z.string().uuid(),
+  id: z.uuid(),
+  userId: z.uuid(),
   type: z.enum([
     "passport",
     "national_id",
@@ -41,7 +41,7 @@ export const kycDocumentSchema = z.object({
     "tax_document",
   ]),
   fileName: z.string().min(1),
-  fileUrl: z.string().url(),
+  fileUrl: z.url(),
   status: z.enum(["pending", "approved", "rejected"]),
   rejectionReason: z.string().optional(),
   uploadedAt: isoDateSchema,
@@ -52,9 +52,9 @@ export const kycDocumentSchema = z.object({
  * Schema for User
  */
 export const userSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   walletAddress: stellarAddressSchema,
-  email: z.string().email().optional(),
+  email: z.email().optional(),
   displayName: z.string().min(2).max(50).optional(),
   kycStatus: kycStatusSchema,
   kycTier: kycTierSchema,

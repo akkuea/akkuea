@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 import { EvidenceVerification } from "./EvidenceVerification";
 
 const HASH = "3b1f".repeat(16);

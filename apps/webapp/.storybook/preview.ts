@@ -1,4 +1,4 @@
-import type { Preview } from "@storybook/react";
+import type { Preview } from "@storybook/nextjs";
 import { createElement } from "react";
 import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
 import "../src/app/globals.css";
@@ -20,6 +20,9 @@ const preview: Preview = {
       ),
   ],
   parameters: {
+    nextjs: {
+      appDirectory: true,
+    },
     backgrounds: {
       default: "dark",
       values: [

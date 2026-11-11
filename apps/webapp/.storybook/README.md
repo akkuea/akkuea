@@ -28,7 +28,7 @@ Output goes to `apps/webapp/storybook-static/`.
 2. Import the component and Storybook types:
 
 ```tsx
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 import { Button } from "./Button";
 
 const meta: Meta<typeof Button> = {

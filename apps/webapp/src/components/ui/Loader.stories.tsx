@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs";
 import { Loader, PageLoader } from "./Loader";
 
 const meta: Meta<typeof Loader> = {

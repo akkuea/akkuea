@@ -26,10 +26,10 @@ export const propertyLocationSchema = z.object({
  * Schema for property document
  */
 export const propertyDocumentSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   type: z.enum(["deed", "appraisal", "inspection", "insurance", "other"]),
   name: z.string().min(1),
-  url: z.string().url(),
+  url: z.url(),
   uploadedAt: isoDateSchema,
   verified: z.boolean(),
 });
@@ -38,7 +38,7 @@ export const propertyDocumentSchema = z.object({
  * Schema for PropertyInfo
  */
 export const propertyInfoSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1, "Property name is required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   propertyType: z.enum([
@@ -55,9 +55,8 @@ export const propertyInfoSchema = z.object({
   availableShares: z.number().int().min(0),
   pricePerShare: positiveAmountSchema,
   expectedYield: percentageSchema.optional(),
-  images: z.array(z.string().url()).min(1, "At least one image required"),
+  images: z.array(z.url()).min(1, "At least one image required"),
   splatUrl: z
-    .string()
     .url()
     .optional()
     .describe("URL to 3D Gaussian Splatting file (.splat)"),
@@ -71,7 +70,7 @@ export const propertyInfoSchema = z.object({
  * Schema for ShareOwnership
  */
 export const shareOwnershipSchema = z.object({
-  propertyId: z.string().uuid(),
+  propertyId: z.uuid(),
   owner: stellarAddressSchema,
   shares: z.number().int().positive(),
   purchasePrice: positiveAmountSchema,

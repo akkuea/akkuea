@@ -455,7 +455,7 @@ describe('DLQ Elysia Routes', () => {
     NotificationService.prototype.getDlqEntryById = mock(() => Promise.resolve(undefined));
 
     try {
-      const nonExistentId = '12345678-1234-1234-1234-123456789012';
+      const nonExistentId = '12345678-1234-4234-8234-123456789012';
       const response = await app.handle(
         new Request(`http://localhost/internal/notifications/dlq/${nonExistentId}`, {
           headers: {
@@ -485,7 +485,7 @@ describe('DLQ Elysia Routes', () => {
     );
 
     try {
-      const dlqId = '12345678-1234-1234-1234-123456789012';
+      const dlqId = '12345678-1234-4234-8234-123456789012';
       const response = await app.handle(
         new Request(`http://localhost/internal/notifications/dlq/${dlqId}/reprocess`, {
           method: 'POST',

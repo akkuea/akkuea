@@ -39,7 +39,7 @@ const createPropertySchema = z.object({
   totalValue: z.string().regex(/^\d+(\.\d{1,2})?$/),
   totalShares: z.number().int().positive(),
   pricePerShare: z.string().regex(/^\d+(\.\d{1,2})?$/),
-  images: z.array(z.string().url()).min(1),
+  images: z.array(z.url()).min(1),
 });
 
 // Update property body schema

@@ -13,7 +13,12 @@ type ValidationBody = {
 
 const UUID = '123e4567-e89b-12d3-a456-426614174000';
 
-function jsonRequest(url: string, method: string, body: unknown, headers: Record<string, string> = {}) {
+function jsonRequest(
+  url: string,
+  method: string,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
   return new Request(url, {
     method,
     headers: { 'Content-Type': 'application/json', ...headers },
@@ -168,15 +173,27 @@ describe('Per-route validation isolation', () => {
       expectNotAValidationError(await readBody(response), 'body');
     });
 
-    it('rejects an invalid body on the later POST /lending/pools/:id/deposit route', async () => {
+    it('rejects an invalid body on the later POST /lending/pools/:id/deposit/prepare route', async () => {
       const response = await lendingApp.handle(
-        jsonRequest(`http://localhost/lending/pools/${UUID}/deposit`, 'POST', {}),
+        jsonRequest(`http://localhost/lending/pools/${UUID}/deposit/prepare`, 'POST', {}),
       );
 
       expect(response.status).toBe(400);
       const body = await readBody(response);
       expect(body.code).toBe('VALIDATION_ERROR');
       expect(body.details?.source).toBe('body');
+      expect(body.details?.errors).toHaveProperty('amount');
+    });
+
+    it('does not apply the deposit body schema to POST /lending/pools/:id/deposit/confirm', async () => {
+      const response = await lendingApp.handle(
+        jsonRequest(`http://localhost/lending/pools/${UUID}/deposit/confirm`, 'POST', {}),
+      );
+
+      expect(response.status).toBe(400);
+      const body = await readBody(response);
+      expect(body.details?.errors).toHaveProperty('txHash');
+      expect(body.details?.errors).not.toHaveProperty('amount');
     });
   });
 
@@ -184,9 +201,7 @@ describe('Per-route validation isolation', () => {
     const notificationApp = new Elysia().use(notificationRoutes);
 
     it('accepts a request without query params on GET /notifications', async () => {
-      const response = await notificationApp.handle(
-        new Request('http://localhost/notifications'),
-      );
+      const response = await notificationApp.handle(new Request('http://localhost/notifications'));
 
       expectNotAValidationError(await readBody(response), 'query');
     });

@@ -139,14 +139,17 @@ async function authenticate(secretKey: string): Promise<string> {
 Include the JWT in the `Authorization` header of all protected requests:
 
 ```typescript
-const response = await fetch(`${API_BASE}/lending/pools`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
+const response = await fetch(
+  `${API_BASE}/lending/pools/${poolId}/deposit/prepare`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ amount: "100" }),
   },
-  body: JSON.stringify({/* pool data */}),
-});
+);
 ```
 
 ---
@@ -178,13 +181,28 @@ All the following routes require a valid JWT in the `Authorization` header:
 
 ### Lending
 
-| Method | Route                         | Description         |
-| ------ | ----------------------------- | ------------------- |
-| POST   | `/lending/pools`              | Create lending pool |
-| POST   | `/lending/pools/:id/deposit`  | Deposit into pool   |
-| POST   | `/lending/pools/:id/withdraw` | Withdraw from pool  |
-| POST   | `/lending/pools/:id/borrow`   | Borrow from pool    |
-| POST   | `/lending/pools/:id/repay`    | Repay loan          |
+Lending actions settle on the `defi-rwa` contract. `prepare` returns a simulated, unsigned transaction with the authenticated wallet as source; the wallet signs and submits it, then `confirm` is called with `{ txHash }`. The API verifies the transaction on Soroban RPC and stores the position and pool totals read back from the contract. Confirming the same hash again returns the recorded result.
+
+| Method | Route                                 | Description                     |
+| ------ | ------------------------------------- | ------------------------------- |
+| POST   | `/lending/pools/:id/deposit/prepare`  | Unsigned deposit transaction    |
+| POST   | `/lending/pools/:id/deposit/confirm`  | Verify and record a deposit     |
+| POST   | `/lending/pools/:id/withdraw/prepare` | Unsigned withdrawal transaction |
+| POST   | `/lending/pools/:id/withdraw/confirm` | Verify and record a withdrawal  |
+| POST   | `/lending/pools/:id/borrow/prepare`   | Unsigned borrow transaction     |
+| POST   | `/lending/pools/:id/borrow/confirm`   | Verify and record a borrow      |
+| POST   | `/lending/pools/:id/repay/prepare`    | Unsigned repayment transaction  |
+| POST   | `/lending/pools/:id/repay/confirm`    | Verify and record a repayment   |
+
+The former `POST /lending/pools/:id/{deposit,withdraw,borrow,repay}` routes changed balances in the database only. They now return `410 Gone` with a pointer to the routes above.
+
+These lending routes use a key instead of a JWT:
+
+| Method | Route                                                           | Header               |
+| ------ | --------------------------------------------------------------- | -------------------- |
+| POST   | `/lending/pools` (creates the pool on-chain with the admin key) | `x-internal-api-key` |
+| POST   | `/lending/pools/:id/positions/:borrowerId/liquidate/prepare`    | `x-api-key`          |
+| POST   | `/lending/pools/:id/positions/:borrowerId/liquidate/confirm`    | `x-api-key`          |
 
 ### Properties
 

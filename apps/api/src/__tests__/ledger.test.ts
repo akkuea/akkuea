@@ -2,9 +2,14 @@ import { describe, test, expect, beforeEach, mock } from 'bun:test';
 
 let mockSequence = 100;
 
-// mock must be registered before any dynamic import of the route
+// mock must be registered before any dynamic import of the route. Bun shares
+// the module registry across test files, so keep the rest of the SDK real:
+// replacing the whole module breaks every other suite that builds XDR.
+const realSdk = { ...(await import('@stellar/stellar-sdk')) };
 mock.module('@stellar/stellar-sdk', () => ({
+  ...realSdk,
   rpc: {
+    ...realSdk.rpc,
     Server: class MockServer {
       async getLatestLedger() {
         return { sequence: mockSequence };

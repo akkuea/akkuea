@@ -85,12 +85,164 @@ export interface VerifiedPurchaseTransaction {
   sharePurchase: SharePurchaseEvent;
 }
 
+/**
+ * A confirmed transaction that invoked exactly one contract function, as
+ * loaded from Soroban RPC. Callers decode `args` for their own function and
+ * compare them against the database and the authenticated caller.
+ */
+export interface VerifiedContractCall {
+  txHash: string;
+  /** Source account of the transaction, which signed it. */
+  sourceAccount: string;
+  contractId: string;
+  functionName: string;
+  args: xdr.ScVal[];
+  events: RpcContractEvent[];
+}
+
+/** defi-rwa lending functions a user or liquidator signs themselves. */
+export type LendingContractFunction = 'deposit' | 'withdraw' | 'borrow' | 'repay' | 'liquidate';
+
+/** The decoded arguments of a confirmed defi-rwa lending call. */
+export interface VerifiedLendingCall {
+  txHash: string;
+  sourceAccount: string;
+  contractId: string;
+  functionName: LendingContractFunction;
+  /** First argument: depositor, borrower or liquidator, who must sign. */
+  actor: string;
+  poolId: string;
+  /** Amount, or `debt_to_cover` for a liquidation, in token units. */
+  amount: bigint;
+  /** Liquidated borrower (liquidate only). */
+  borrower?: string;
+  /** Collateral token and amount (borrow only). */
+  collateralAsset?: string;
+  collateralAmount?: bigint;
+}
+
+export interface PrepareLendingCallParams {
+  contractId: string;
+  /** The wallet that signs and pays for the transaction. */
+  source: string;
+  functionName: LendingContractFunction;
+  /** Arguments in contract order, as accepted by the typed client switch. */
+  args: unknown[];
+}
+
+export interface CreateLendingPoolParams {
+  contractId: string;
+  adminPublicKey: string;
+  adminSecret: string;
+  poolId: string;
+  name: string;
+  asset: string;
+  assetAddress: string;
+  /** Pool factors in contract PRECISION units (1.0 = 10^18). */
+  collateralFactor: bigint;
+  liquidationThreshold: bigint;
+  liquidationPenalty: bigint;
+  closeFactor: bigint;
+  reserveFactor: number;
+}
+
+/** A deposit position as the contract returns it (amounts in token units). */
+export type ChainDepositPosition = Awaited<
+  ReturnType<DefiLendingContractClient['getDepositPosition']>
+>['result'];
+
+/** A borrow position as the contract returns it (amounts in token units). */
+export type ChainBorrowPosition = Awaited<
+  ReturnType<DefiLendingContractClient['getBorrowPosition']>
+>['result'];
+
+/**
+ * Lending state read back from the contract after a confirmed action. A
+ * position is `null` when the contract holds none for the user (it removes
+ * fully withdrawn, repaid or liquidated positions).
+ */
+export interface LendingChainState {
+  totalDeposits: bigint;
+  totalBorrows: bigint;
+  deposit: ChainDepositPosition | null;
+  /** Health factor in contract PRECISION units (1.0 = 10^18). */
+  borrow: (ChainBorrowPosition & { healthFactor: bigint }) | null;
+}
+
+/** Number of arguments each lending function takes on the contract. */
+const LENDING_FUNCTION_ARITY: Record<LendingContractFunction, number> = {
+  deposit: 3,
+  withdraw: 3,
+  borrow: 5,
+  repay: 3,
+  liquidate: 4,
+};
+
+/**
+ * Contract panics a simulation can surface, mapped to the message returned to
+ * the caller. Matching is case-insensitive on the panic text.
+ */
+const LENDING_SIMULATION_ERRORS: Array<[string, string]> = [
+  ['insufficient pool liquidity', 'The pool does not have enough liquidity for this withdrawal'],
+  ['insufficient liquidity', 'The pool does not have enough liquidity for this borrow'],
+  ['insufficient balance', 'The amount exceeds your deposit in this pool'],
+  ['borrow exceeds collateral factor limit', 'The borrow exceeds what the collateral allows'],
+  ['health factor too low', 'The borrow would leave the position with too low a health factor'],
+  ['position is not underwater', 'The position is not eligible for liquidation'],
+  ['no deposit position', 'You have no deposit in this pool'],
+  ['borrow position not found', 'There is no borrow position in this pool'],
+  ['pool not found', 'The pool does not exist on-chain'],
+  ['pool is not active', 'The pool is not active'],
+  ['amount must be positive', 'The amount must be greater than zero'],
+  ['debt to cover must be positive', 'The debt to cover must be greater than zero'],
+  ['pool already exists', 'A pool with this id already exists on-chain'],
+];
+
+/** ContractError codes from the defi-rwa contract (`access/admin.rs`). */
+const CONTRACT_ERROR_MESSAGES: Record<number, string> = {
+  5: 'The protocol or this pool is paused',
+  7: 'The amount overflows the contract balance',
+  8: 'Insufficient balance',
+  22: 'The collateral price is stale',
+  23: 'No price is available for the collateral asset',
+  24: 'The oracle returned an invalid price',
+  25: 'The collateral price is below the configured floor',
+  26: 'The price oracle is not configured',
+};
+
+/**
+ * Turns a failed Soroban simulation into a message a user can act on. Known
+ * contract panics and errors get a readable explanation; anything else keeps
+ * the first line of the RPC error.
+ */
+export function describeSimulationError(error: string): string {
+  const lower = error.toLowerCase();
+  for (const [needle, message] of LENDING_SIMULATION_ERRORS) {
+    if (lower.includes(needle)) {
+      return message;
+    }
+  }
+  const contractError = error.match(/Error\(Contract, #(\d+)\)/);
+  if (contractError) {
+    const code = Number(contractError[1]);
+    return CONTRACT_ERROR_MESSAGES[code] ?? `The contract rejected the call (error ${code})`;
+  }
+  const firstLine = error.split('\n')[0]?.trim() ?? '';
+  return firstLine ? `Simulation failed: ${firstLine.slice(0, 200)}` : 'Simulation failed';
+}
+
 /** Event name that identifies the `SharePurchase` event (snake_case topic 0). */
 const SHARE_PURCHASE_EVENT = 'share_purchase';
 
 /** Contract events as parsed by the Soroban RPC client from `getTransaction`. */
 type RpcContractEvent =
   SorobanRpc.Api.GetSuccessfulTransactionResponse['events']['contractEventsXdr'][number][number];
+
+/** The part of an AssembledTransaction a prepared lending call relies on. */
+interface AssembledLendingTransaction {
+  simulation?: SorobanRpc.Api.SimulateTransactionResponse;
+  toXDR(): string;
+}
 
 export class StellarService {
   private readonly server: Horizon.Server;
@@ -359,6 +511,51 @@ export class StellarService {
     txHash: string,
     expectedContractId: string,
   ): Promise<VerifiedPurchaseTransaction> {
+    const verified = await this.verifyContractCall(txHash, expectedContractId, 'purchase_shares');
+
+    if (verified.args.length !== 4) {
+      throw ApiError.validation('purchase_shares must be called with exactly four arguments');
+    }
+    const [buyerArg, propertyIdArg, amountArg, paymentTokenArg] = verified.args;
+    if (!buyerArg || !propertyIdArg || !amountArg || !paymentTokenArg) {
+      throw ApiError.validation('purchase_shares arguments are malformed');
+    }
+    const call = {
+      buyer: this.asNativeAddress(buyerArg),
+      propertyId: this.asNativeBigInt(propertyIdArg),
+      amount: this.asNativeBigInt(amountArg),
+      paymentToken: this.asNativeAddress(paymentTokenArg),
+    };
+
+    const sharePurchase = this.parseSharePurchaseEvent(verified.events, expectedContractId);
+    if (!sharePurchase) {
+      throw ApiError.validation(
+        `Transaction ${txHash} emitted no SharePurchase event for contract ${expectedContractId}`,
+      );
+    }
+
+    return {
+      txHash: verified.txHash,
+      sourceAccount: verified.sourceAccount,
+      contractId: expectedContractId,
+      functionName: 'purchase_shares',
+      call,
+      sharePurchase,
+    };
+  }
+
+  /**
+   * Shared Soroban RPC verification for user-signed contract calls. Loads the
+   * transaction and requires that it exists, succeeded, is not a fee bump, and
+   * contains exactly one invocation of `expectedFunction` on
+   * `expectedContractId`. Returns the raw arguments and contract events so
+   * each flow can decode and check its own call.
+   */
+  async verifyContractCall(
+    txHash: string,
+    expectedContractId: string,
+    expectedFunction: string,
+  ): Promise<VerifiedContractCall> {
     if (!/^[0-9a-fA-F]{64}$/.test(txHash)) {
       throw ApiError.badRequest('Transaction hash must be a 64-character hex string');
     }
@@ -377,58 +574,21 @@ export class StellarService {
       );
     }
 
-    const { sourceAccount, call } = this.parsePurchaseCall(
-      response.envelopeXdr,
-      expectedContractId,
-    );
-    const sharePurchase = this.parseSharePurchaseEvent(
-      this.extractContractEvents(response),
-      expectedContractId,
-    );
-    if (!sharePurchase) {
-      throw ApiError.validation(
-        `Transaction ${txHash} emitted no SharePurchase event for contract ${expectedContractId}`,
-      );
-    }
-
-    return {
-      txHash: response.txHash,
-      sourceAccount,
-      contractId: expectedContractId,
-      functionName: 'purchase_shares',
-      call,
-      sharePurchase,
-    };
-  }
-
-  /**
-   * Decodes the single `purchase_shares` invocation a confirmed transaction
-   * must contain. Anything else (no invoke operation, several operations, a
-   * different contract or function, malformed arguments) is rejected.
-   */
-  private parsePurchaseCall(
-    envelope: xdr.TransactionEnvelope,
-    expectedContractId: string,
-  ): { sourceAccount: string; call: VerifiedPurchaseTransaction['call'] } {
-    const transaction = new Transaction(envelope, this.networkPassphrase);
+    const transaction = new Transaction(response.envelopeXdr, this.networkPassphrase);
     if (transaction.operations.length !== 1) {
-      throw ApiError.validation(
-        'A share purchase transaction must contain exactly one contract invocation',
-      );
+      throw ApiError.validation('The transaction must contain exactly one contract invocation');
     }
 
     const [operation] = transaction.operations;
     if (operation?.type !== 'invokeHostFunction') {
-      throw ApiError.validation(
-        'A share purchase transaction must invoke the tokenization contract',
-      );
+      throw ApiError.validation('The transaction must invoke a contract');
     }
 
     // The SDK types the parsed operation record loosely; at runtime an
     // invokeHostFunction operation always carries the xdr host function.
     const func = (operation as unknown as { func?: xdr.HostFunction }).func;
     if (!func || func.type !== 'hostFunctionTypeInvokeContract') {
-      throw ApiError.validation('A share purchase transaction must invoke a contract function');
+      throw ApiError.validation('The transaction must invoke a contract function');
     }
 
     const { contractAddress, functionName, args } = func.invokeContract;
@@ -438,28 +598,212 @@ export class StellarService {
         `Transaction invokes contract ${contractId}, expected ${expectedContractId}`,
       );
     }
-    if (functionName.toString() !== 'purchase_shares') {
+    if (functionName.toString() !== expectedFunction) {
       throw ApiError.validation(
-        `Transaction calls ${functionName.toString()}, expected purchase_shares`,
+        `Transaction calls ${functionName.toString()}, expected ${expectedFunction}`,
       );
-    }
-    if (args.length !== 4) {
-      throw ApiError.validation('purchase_shares must be called with exactly four arguments');
-    }
-    const [buyerArg, propertyIdArg, amountArg, paymentTokenArg] = args;
-    if (!buyerArg || !propertyIdArg || !amountArg || !paymentTokenArg) {
-      throw ApiError.validation('purchase_shares arguments are malformed');
     }
 
     return {
+      txHash: response.txHash,
       sourceAccount: transaction.source,
-      call: {
-        buyer: this.asNativeAddress(buyerArg),
-        propertyId: this.asNativeBigInt(propertyIdArg),
-        amount: this.asNativeBigInt(amountArg),
-        paymentToken: this.asNativeAddress(paymentTokenArg),
-      },
+      contractId,
+      functionName: expectedFunction,
+      args: [...args],
+      events: this.extractContractEvents(response),
     };
+  }
+
+  /**
+   * Verifies a confirmed defi-rwa lending call (deposit, withdraw, borrow,
+   * repay or liquidate) and decodes its arguments. The controller compares
+   * the decoded actor, pool and borrower against the request.
+   */
+  async verifyLendingCall(
+    txHash: string,
+    expectedContractId: string,
+    functionName: LendingContractFunction,
+  ): Promise<VerifiedLendingCall> {
+    const verified = await this.verifyContractCall(txHash, expectedContractId, functionName);
+
+    const arity = LENDING_FUNCTION_ARITY[functionName];
+    if (verified.args.length !== arity || verified.args.some((arg) => !arg)) {
+      throw ApiError.validation(`${functionName} must be called with exactly ${arity} arguments`);
+    }
+    const args = verified.args;
+    const base = {
+      txHash: verified.txHash,
+      sourceAccount: verified.sourceAccount,
+      contractId: verified.contractId,
+      functionName,
+      actor: this.asNativeAddress(args[0]!),
+      poolId: this.asNativeString(args[1]!),
+    };
+
+    if (functionName === 'liquidate') {
+      return {
+        ...base,
+        borrower: this.asNativeAddress(args[2]!),
+        amount: this.asNativeBigInt(args[3]!),
+      };
+    }
+    if (functionName === 'borrow') {
+      return {
+        ...base,
+        amount: this.asNativeBigInt(args[2]!),
+        collateralAsset: this.asNativeAddress(args[3]!),
+        collateralAmount: this.asNativeBigInt(args[4]!),
+      };
+    }
+    return { ...base, amount: this.asNativeBigInt(args[2]!) };
+  }
+
+  /**
+   * Builds a simulated, unsigned defi-rwa lending transaction with the user's
+   * wallet as its source, for the wallet to sign and submit. A failed
+   * simulation (not enough liquidity, health factor too low, no position, and
+   * so on) is returned as a 400 with a readable message, so nothing that
+   * would fail on-chain is ever handed to the wallet.
+   */
+  async prepareLendingCall(
+    params: PrepareLendingCallParams,
+  ): Promise<{ xdr: string; contractId: string }> {
+    this.assertValidContractId(params.contractId);
+    this.assertValidAddress(params.source);
+
+    let assembled: AssembledLendingTransaction;
+    try {
+      const built = await this.buildTypedContractTransaction(
+        params.contractId,
+        params.functionName,
+        params.args,
+        params.source,
+      );
+      if (!built) {
+        throw new Error(`No typed client for ${params.functionName}`);
+      }
+      assembled = built as AssembledLendingTransaction;
+    } catch (error) {
+      throw ApiError.badRequest(
+        describeSimulationError(this.describeError(error, 'Failed to prepare the transaction')),
+      );
+    }
+
+    const simulation = assembled.simulation;
+    if (simulation && SorobanRpc.Api.isSimulationError(simulation)) {
+      throw ApiError.badRequest(describeSimulationError(simulation.error));
+    }
+    if (!simulation) {
+      throw ApiError.badRequest('The transaction could not be simulated');
+    }
+
+    return { xdr: assembled.toXDR(), contractId: params.contractId };
+  }
+
+  /**
+   * Creates a lending pool on-chain with an admin-signed `create_pool` call
+   * and waits for it to succeed. Pool creation is an admin action, so the API
+   * signs it; the database row is written by the caller only after this
+   * returns.
+   */
+  async createLendingPool(params: CreateLendingPoolParams): Promise<{ txHash: string }> {
+    this.assertValidContractId(params.contractId);
+    this.assertValidAddress(params.adminPublicKey);
+
+    let txHash: string;
+    try {
+      txHash = await this.callAndSubmitContract(
+        params.contractId,
+        'create_pool',
+        [
+          params.adminPublicKey,
+          params.poolId,
+          params.name,
+          params.asset,
+          params.assetAddress,
+          params.collateralFactor,
+          params.liquidationThreshold,
+          params.liquidationPenalty,
+          params.closeFactor,
+          params.reserveFactor,
+        ],
+        params.adminSecret,
+        params.adminPublicKey,
+      );
+    } catch (error) {
+      throw new ApiError(
+        502,
+        'CHAIN_ERROR',
+        describeSimulationError(this.describeError(error, 'Failed to create the pool on-chain')),
+      );
+    }
+
+    // signAndSend can return a hash for a transaction that later failed, so
+    // the pool only counts as created once RPC reports it succeeded.
+    await this.verifyContractCall(txHash, params.contractId, 'create_pool');
+    return { txHash };
+  }
+
+  /**
+   * Reads the pool totals and the user's position back from the contract, so
+   * the database stores what the chain holds instead of numbers computed in
+   * JavaScript. Positions the contract no longer holds come back as `null`.
+   */
+  async readLendingState(
+    contractId: string,
+    poolId: string,
+    user: string,
+    position: 'deposit' | 'borrow',
+  ): Promise<LendingChainState> {
+    this.assertValidContractId(contractId);
+    const client = this.createDefiLendingClient(contractId);
+
+    try {
+      const [totalDeposits, totalBorrows] = await Promise.all([
+        this.simulatedResult(client.getTotalDeposits(poolId)),
+        this.simulatedResult(client.getTotalBorrows(poolId)),
+      ]);
+
+      let deposit: ChainDepositPosition | null = null;
+      let borrow: LendingChainState['borrow'] = null;
+      if (position === 'deposit') {
+        const pools = await this.simulatedResult(client.getUserDeposits(user));
+        if (pools.includes(poolId)) {
+          deposit = await this.simulatedResult(client.getDepositPosition({ user, poolId }));
+        }
+      } else {
+        const pools = await this.simulatedResult(client.getUserBorrows(user));
+        if (pools.includes(poolId)) {
+          const [current, healthFactor] = await Promise.all([
+            this.simulatedResult(client.getBorrowPosition({ user, poolId })),
+            this.simulatedResult(client.getHealthFactor({ user, poolId })),
+          ]);
+          borrow = { ...current, healthFactor: this.unwrapResult(healthFactor) };
+        }
+      }
+
+      return { totalDeposits, totalBorrows, deposit, borrow };
+    } catch (error) {
+      throw new ApiError(
+        502,
+        'CHAIN_READ_FAILED',
+        this.describeError(error, 'Could not read the lending state from the contract'),
+      );
+    }
+  }
+
+  /** The simulated return value of a read-only contract call. */
+  private async simulatedResult<T>(pending: Promise<{ result: T }>): Promise<T> {
+    const assembled = await pending;
+    return assembled.result;
+  }
+
+  /** Unwraps a contract `Result`, throwing its error. */
+  private unwrapResult<T>(value: { unwrap(): T } | T): T {
+    if (value && typeof value === 'object' && 'unwrap' in value) {
+      return (value as { unwrap(): T }).unwrap();
+    }
+    return value as T;
   }
 
   /**
@@ -526,6 +870,13 @@ export class StellarService {
       throw ApiError.validation('Expected a Stellar address argument');
     }
     return Address.fromScAddress(value.address).toString();
+  }
+
+  private asNativeString(value: xdr.ScVal): string {
+    if (value.type !== 'scvString') {
+      throw ApiError.validation('Expected a string argument');
+    }
+    return String(scValToNative(value));
   }
 
   private asNativeBigInt(value: xdr.ScVal): bigint {
@@ -754,7 +1105,8 @@ export class StellarService {
           collateralFactor: this.asBigInt(args[5]),
           liquidationThreshold: this.asBigInt(args[6]),
           liquidationPenalty: this.asBigInt(args[7]),
-          reserveFactor: this.asNumber(args[8]),
+          closeFactor: this.asBigInt(args[8]),
+          reserveFactor: this.asNumber(args[9]),
         });
       case 'deposit':
         return lendingClient.deposit({
@@ -781,6 +1133,13 @@ export class StellarService {
           actor: this.asAddress(args[0]),
           poolId: this.asString(args[1]),
           amount: this.asBigInt(args[2]),
+        });
+      case 'liquidate':
+        return lendingClient.liquidate({
+          liquidator: this.asAddress(args[0]),
+          poolId: this.asString(args[1]),
+          borrowerAddress: this.asAddress(args[2]),
+          debtToCover: this.asBigInt(args[3]),
         });
       case 'accrue_interest':
         return lendingClient.accrueInterest(this.asString(args[0]));

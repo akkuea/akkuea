@@ -42,10 +42,9 @@ describe("CityMap keyboard accessibility", () => {
     const grid = view.getByRole("grid", {
       name: "Akkuea City property grid",
     });
-    const firstTile = view.getByRole("gridcell", {
-      name: /Tile A1, row 1, column 1,/,
-    });
+    const firstTile = view.getByLabelText(/Tile A1, row 1, column 1,/);
 
+    expect(firstTile.getAttribute("role")).toBe("gridcell");
     expect(firstTile.getAttribute("tabindex")).toBe("0");
     expect(firstTile.getAttribute("aria-selected")).toBe("false");
     expect(firstTile.getAttribute("aria-label")).toContain(
@@ -56,17 +55,15 @@ describe("CityMap keyboard accessibility", () => {
     expect(document.activeElement).toBe(firstTile);
 
     fireEvent.keyDown(grid, { key: "ArrowRight" });
-    const secondTile = view.getByRole("gridcell", {
-      name: /Tile B1, row 1, column 2,/,
-    });
+    const secondTile = view.getByLabelText(/Tile B1, row 1, column 2,/);
+    expect(secondTile.getAttribute("role")).toBe("gridcell");
     expect(document.activeElement).toBe(secondTile);
     expect(secondTile.getAttribute("tabindex")).toBe("0");
     expect(firstTile.getAttribute("tabindex")).toBe("-1");
 
     fireEvent.keyDown(grid, { key: "ArrowDown" });
-    const lowerTile = view.getByRole("gridcell", {
-      name: /Tile B2, row 2, column 2,/,
-    });
+    const lowerTile = view.getByLabelText(/Tile B2, row 2, column 2,/);
+    expect(lowerTile.getAttribute("role")).toBe("gridcell");
     expect(document.activeElement).toBe(lowerTile);
 
     fireEvent.keyDown(grid, { key: "Enter" });
@@ -79,10 +76,9 @@ describe("CityMap keyboard accessibility", () => {
     const grid = view.getByRole("grid", {
       name: "Akkuea City property grid",
     });
-    const firstTile = view.getByRole("gridcell", {
-      name: /Tile A1, row 1, column 1,/,
-    });
+    const firstTile = view.getByLabelText(/Tile A1, row 1, column 1,/);
 
+    expect(firstTile.getAttribute("role")).toBe("gridcell");
     firstTile.focus();
     fireEvent.keyDown(grid, { key: " " });
 

@@ -21,6 +21,8 @@
     "build:land": "cd apps/akkuea-land && bun run build",
     "build:contracts": "./scripts/build.sh",
     "test": "bun test --workspaces",
+    "test:land": "cd apps/akkuea-land && bun test",
+    "check:land": "cd apps/akkuea-land && bun run check",
     "lint": "concurrently \"cd apps/api && bun run lint\" \"cd apps/webapp && bun run lint\" \"cd apps/shared && bun run lint\" \"cd apps/akkuea-land && bun run lint\"",
     "typecheck": "concurrently \"cd apps/api && bun run type-check\" \"cd apps/webapp && bun run type-check\" \"cd apps/shared && bun run type-check\" \"cd apps/akkuea-land && bun run type-check\"",
     "type-check": "bun run typecheck",

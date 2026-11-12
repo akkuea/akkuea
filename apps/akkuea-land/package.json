@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "test": "bun test"
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
+    "test": "bun test",
+    "check": "bun run type-check && bun run lint && bun run format:check && bun test"
   },
   "dependencies": {
     "next": "16.3.8",

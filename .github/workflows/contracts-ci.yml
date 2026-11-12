@@ -18,7 +18,8 @@ env:
 jobs:
   build-and-test:
     name: Build and Test Contracts
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     
     steps:
       - name: Checkout repository
@@ -33,24 +34,10 @@ jobs:
       - name: Install WASM target
         run: rustup target add wasm32v1-none
         
-      - name: Install Stellar CLI
-        run: |
-          if ! command -v brew &> /dev/null; then
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> $GITHUB_ENV
-          fi
-          brew install stellar-cli
-          stellar --version
-          
-      - name: Cache cargo registry
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      - name: Cache Rust dependencies and target artifacts
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
+          workspaces: "apps/contracts -> target"
             
       - name: Check Rust formatting
         run: |
@@ -69,7 +56,7 @@ jobs:
           ls -la target/wasm32v1-none/release/
           for file in target/wasm32v1-none/release/*.wasm; do
             if [ -f "$file" ]; then
-              size=$(stat -f%z "$file")
+              size=$(stat -c%s "$file")
               echo "Contract size: $size bytes"
               if [ $size -gt 1048576 ]; then
                 echo "Error: Contract size exceeds 1MB limit"
@@ -82,6 +69,12 @@ jobs:
         run: |
           cd apps/contracts
           cargo test --lib
+
+      - name: Run invocation budget tests
+        run: |
+          cd apps/contracts
+          echo "Running Soroban invocation budget checks for defi-rwa..."
+          cargo test --package rwa-defi-contract budget_check -- --nocapture
           
       - name: Upload build artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -143,7 +136,8 @@ jobs:
 
   code-coverage:
     name: Code Coverage
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
     
     steps:
       - name: Checkout repository
@@ -155,31 +149,27 @@ jobs:
           components: llvm-tools-preview
           
       - name: Install cargo-llvm-cov
-        run: cargo install cargo-llvm-cov
-        
-      - name: Cache cargo registry
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-coverage-${{ hashFiles('**/Cargo.lock') }}
+          tool: cargo-llvm-cov
+        
+      - name: Cache coverage build artifacts
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+        with:
+          workspaces: "apps/contracts -> target"
+          shared-key: "contracts-llvm-cov"
           
       - name: Generate coverage report
         run: |
           cd apps/contracts
-          cargo llvm-cov --lib --workspace --lcov --output-path lcov.info
-          cargo llvm-cov --lib --workspace --html
+          cargo llvm-cov --lib --workspace --no-report
+          cargo llvm-cov report --lcov --output-path lcov.info
+          cargo llvm-cov report --html
           
       - name: Verify coverage threshold
         run: |
           cd apps/contracts
-          COVERAGE=$(cargo llvm-cov --lib --workspace --text | grep -o '[0-9]*\.[0-9]*%' | head -1 | tr -d '%')
-          if (( $(echo "$COVERAGE < 80" | bc -l) )); then
-            echo "Error: Coverage $COVERAGE% is below required 80%"
-            exit 1
-          fi
-          echo "Coverage: $COVERAGE%"
+          cargo llvm-cov report --fail-under-lines 80
           
       - name: Filter llvm-cov phantom counters on derive-attribute lines
         # llvm-cov attributes a never-incremented counter to Soroban
@@ -204,32 +194,3 @@ jobs:
           name: coverage-report
           path: apps/contracts/target/llvm-cov/html/
           retention-days: 7
-
-  invocation-budget:
-    name: Soroban Invocation Budget Check
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@686976e191b89faba57d3206551f0f330d8cb249 # stable
-        with:
-          toolchain: stable
-
-      - name: Cache cargo registry
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-          key: ${{ runner.os }}-cargo-budget-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-budget-
-
-      - name: Run invocation budget tests
-        run: |
-          cd apps/contracts
-          echo "Running Soroban invocation budget checks for defi-rwa..."
-          cargo test --package rwa-defi-contract budget_check -- --nocapture

@@ -127,7 +127,7 @@ You also need:
   alternative.
 - Verified Soroswap AMM router contract ID used to convert USDC shares at
   payout time. The USDC, EURC, and router contract IDs must be pairwise
-  distinct; `initialize` rejects any two that match with
+  distinct; `__constructor` rejects any two that match with
   `RouterNotConfigured`.
 
 Never commit secret keys or `.env` files.
@@ -170,10 +170,9 @@ Use the helper script from the repository root:
 The script:
 
 1. Builds with `stellar contract build`.
-2. Deploys all three WASMs.
-3. Initializes `pilot-whitelist` with the deployer as admin.
-4. Initializes `pilot-income-token` with the whitelist contract ID.
-5. Initializes `pilot-payout-split` with admin, operator, ally, fee recipient, income token, whitelist, USDC, EURC, and swap router contract IDs.
+2. Deploys and atomically initializes `pilot-whitelist` (`__constructor`) with the deployer as admin.
+3. Deploys and atomically initializes `pilot-income-token` (`__constructor`) with the admin, whitelist contract ID, name, symbol, and decimals.
+4. Deploys and atomically initializes `pilot-payout-split` (`__constructor`) with admin, operator, ally, fee recipient, income token, whitelist, USDC, EURC, and swap router contract IDs.
 
 ---
 

@@ -58,62 +58,73 @@ for wasm in game_property_nft game_land_token game_engine game_marketplace; do
     fi
 done
 
-# ── 3. Deploy ─────────────────────────────────────────────────────────────────
-
-deploy() {
-    stellar contract deploy \
-        --wasm "$WASM_DIR/$1.wasm" \
-        --source-account "$IDENTITY" \
-        --network "$NETWORK"
-}
-
-echo "Deploying game_property_nft..."
-NFT_ID="$(deploy game_property_nft)"
-echo "  -> $NFT_ID"
-
-echo "Deploying game_land_token..."
-TOKEN_ID="$(deploy game_land_token)"
-echo "  -> $TOKEN_ID"
-
-echo "Deploying game_engine..."
-ENGINE_ID="$(deploy game_engine)"
-echo "  -> $ENGINE_ID"
-
-echo "Deploying game_marketplace..."
-MARKETPLACE_ID="$(deploy game_marketplace)"
-echo "  -> $MARKETPLACE_ID"
-
-# ── 4. Initialize ─────────────────────────────────────────────────────────────
-# Arg names match the Rust signatures exactly. The NFT and token contracts
-# only need the engine's contract ID, which exists as soon as it is deployed
-# (deploy != initialize), so ordering here is safe.
+# ── 3. Deploy + Initialize Atomically ─────────────────────────────────────────
+# Each contract uses a Soroban `__constructor`, so constructor arguments are
+# passed directly to `stellar contract deploy ... --`. Because `game-engine`
+# and the NFT/token contracts reference one another's addresses, deterministic
+# salts are derived ahead of time via `stellar contract id wasm` so every
+# contract ID is known before its peers are deployed.
 
 IS_TESTNET=true
 if [ "$NETWORK" != "testnet" ]; then IS_TESTNET=false; fi
 
-invoke() {
-    local id="$1"
-    shift
-    stellar contract invoke \
-        --id "$id" \
+derive_id() {
+    local salt="$1"
+    stellar contract id wasm \
         --source-account "$IDENTITY" \
         --network "$NETWORK" \
+        --salt "$salt"
+}
+
+deploy_with_salt() {
+    local wasm_name="$1"
+    local salt="$2"
+    shift 2
+    stellar contract deploy \
+        --wasm "$WASM_DIR/$wasm_name.wasm" \
+        --source-account "$IDENTITY" \
+        --network "$NETWORK" \
+        --salt "$salt" \
         -- "$@"
 }
 
-echo "Initializing game_property_nft (treasury owns all 400 tiles)..."
-invoke "$NFT_ID" initialize --treasury "$TREASURY" --game_engine "$ENGINE_ID"
+NFT_SALT="$(openssl rand -hex 32)"
+TOKEN_SALT="$(openssl rand -hex 32)"
+ENGINE_SALT="$(openssl rand -hex 32)"
+MARKETPLACE_SALT="$(openssl rand -hex 32)"
 
-echo "Initializing game_land_token..."
-invoke "$TOKEN_ID" initialize --treasury "$TREASURY" --engine "$ENGINE_ID" --is_testnet "$IS_TESTNET"
+NFT_ID="$(derive_id "$NFT_SALT")"
+TOKEN_ID="$(derive_id "$TOKEN_SALT")"
+ENGINE_ID="$(derive_id "$ENGINE_SALT")"
+MARKETPLACE_ID="$(derive_id "$MARKETPLACE_SALT")"
 
-echo "Initializing game_engine..."
-invoke "$ENGINE_ID" initialize --nft_contract "$NFT_ID" --token_contract "$TOKEN_ID" --treasury "$TREASURY"
+echo "Deploying and initializing game_property_nft (treasury owns all 400 tiles)..."
+deploy_with_salt game_property_nft "$NFT_SALT" \
+    --treasury "$TREASURY" \
+    --game_engine "$ENGINE_ID" >/dev/null
+echo "  -> $NFT_ID"
 
-echo "Initializing game_marketplace..."
-invoke "$MARKETPLACE_ID" initialize --nft_contract "$NFT_ID" --land_token "$TOKEN_ID"
+echo "Deploying and initializing game_land_token..."
+deploy_with_salt game_land_token "$TOKEN_SALT" \
+    --treasury "$TREASURY" \
+    --engine "$ENGINE_ID" \
+    --is_testnet "$IS_TESTNET" >/dev/null
+echo "  -> $TOKEN_ID"
 
-# ── 5. Summary ────────────────────────────────────────────────────────────────
+echo "Deploying and initializing game_engine..."
+deploy_with_salt game_engine "$ENGINE_SALT" \
+    --nft_contract "$NFT_ID" \
+    --token_contract "$TOKEN_ID" \
+    --treasury "$TREASURY" >/dev/null
+echo "  -> $ENGINE_ID"
+
+echo "Deploying and initializing game_marketplace..."
+deploy_with_salt game_marketplace "$MARKETPLACE_SALT" \
+    --nft_contract "$NFT_ID" \
+    --land_token "$TOKEN_ID" >/dev/null
+echo "  -> $MARKETPLACE_ID"
+
+# ── 4. Summary ────────────────────────────────────────────────────────────────
 
 cat <<EOF
 

@@ -1,10 +1,36 @@
 import type { Meta, StoryObj, Decorator } from "@storybook/react";
-import { WhitelistOnboardingForm } from "./WhitelistOnboardingForm";
+import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import esMessages from "../../../messages/es.json";
+import {
+  WhitelistOnboardingForm,
+  WhitelistOnboardingFormView,
+  type WhitelistOnboardingWallet,
+} from "./WhitelistOnboardingForm";
 
 // ---------------------------------------------------------------------------
-// Fetch mock helper
+// Fetch & locale mock helpers
 // ---------------------------------------------------------------------------
 type FetchMock = (input: RequestInfo | URL) => Promise<Response>;
+
+const CONNECTED_WALLET: WhitelistOnboardingWallet = {
+  address: "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBDQCQZVQQ6BRVV12BKHA",
+  isConnected: true,
+  connect: () => undefined,
+};
+
+const DISCONNECTED_WALLET: WhitelistOnboardingWallet = {
+  address: null,
+  isConnected: false,
+  connect: () => undefined,
+};
+
+const spanishMessages = esMessages as unknown as AbstractIntlMessages;
+
+const withSpanishLocale: Decorator = (Story) => (
+  <NextIntlClientProvider locale="es" messages={spanishMessages} timeZone="UTC">
+    <Story />
+  </NextIntlClientProvider>
+);
 
 function mockFetch(handler: FetchMock): Decorator {
   return (Story) => {
@@ -57,6 +83,7 @@ type Story = StoryObj<typeof WhitelistOnboardingForm>;
  * a "Start Application" CTA.
  */
 export const NoApplication: Story = {
+  render: () => <WhitelistOnboardingFormView wallet={DISCONNECTED_WALLET} />,
   decorators: [mockFetch(statusMock("none"))],
 };
 
@@ -64,6 +91,7 @@ export const NoApplication: Story = {
  * Loading state, status check is in flight.
  */
 export const StatusLoading: Story = {
+  render: () => <WhitelistOnboardingFormView wallet={CONNECTED_WALLET} />,
   decorators: [
     mockFetch(
       () =>
@@ -78,13 +106,15 @@ export const StatusLoading: Story = {
  * Request is under review by the operator.
  */
 export const PendingReview: Story = {
+  render: () => <WhitelistOnboardingFormView wallet={CONNECTED_WALLET} />,
   decorators: [mockFetch(statusMock("pending"))],
 };
 
 /**
- * Investor has been approved, whitelisted!
+ * Investor has been approved and whitelisted.
  */
 export const Approved: Story = {
+  render: () => <WhitelistOnboardingFormView wallet={CONNECTED_WALLET} />,
   decorators: [mockFetch(statusMock("approved"))],
 };
 
@@ -92,6 +122,7 @@ export const Approved: Story = {
  * Investor was rejected, rejection reason is displayed clearly.
  */
 export const Rejected: Story = {
+  render: () => <WhitelistOnboardingFormView wallet={CONNECTED_WALLET} />,
   decorators: [
     mockFetch(
       statusMock(
@@ -109,6 +140,7 @@ export const Rejected: Story = {
  */
 export const FormStep1PersonalDetails: Story = {
   name: "Form, Step 1: Personal Details",
+  render: () => <WhitelistOnboardingFormView wallet={DISCONNECTED_WALLET} />,
   decorators: [mockFetch(statusMock("none"))],
 };
 
@@ -119,6 +151,7 @@ export const FormStep1PersonalDetails: Story = {
  */
 export const FormStep3Review: Story = {
   name: "Form, Step 3: Review & Submit",
+  render: () => <WhitelistOnboardingFormView wallet={CONNECTED_WALLET} />,
   decorators: [
     mockFetch(async (input) => {
       const url = typeof input === "string" ? input : input.toString();
@@ -136,5 +169,49 @@ export const FormStep3Review: Story = {
         headers: { "Content-Type": "application/json" },
       });
     }),
+  ],
+};
+
+/**
+ * Spanish locale: Empty onboarding state.
+ */
+export const NoApplicationEs: Story = {
+  name: "Spanish (es): No Application",
+  render: () => <WhitelistOnboardingFormView wallet={DISCONNECTED_WALLET} />,
+  decorators: [withSpanishLocale, mockFetch(statusMock("none"))],
+};
+
+/**
+ * Spanish locale: Pending review state.
+ */
+export const PendingReviewEs: Story = {
+  name: "Spanish (es): Pending Review",
+  render: () => <WhitelistOnboardingFormView wallet={CONNECTED_WALLET} />,
+  decorators: [withSpanishLocale, mockFetch(statusMock("pending"))],
+};
+
+/**
+ * Spanish locale: Approved state.
+ */
+export const ApprovedEs: Story = {
+  name: "Spanish (es): Approved",
+  render: () => <WhitelistOnboardingFormView wallet={CONNECTED_WALLET} />,
+  decorators: [withSpanishLocale, mockFetch(statusMock("approved"))],
+};
+
+/**
+ * Spanish locale: Rejected state.
+ */
+export const RejectedEs: Story = {
+  name: "Spanish (es): Rejected",
+  render: () => <WhitelistOnboardingFormView wallet={CONNECTED_WALLET} />,
+  decorators: [
+    withSpanishLocale,
+    mockFetch(
+      statusMock(
+        "rejected",
+        "No fue posible verificar el documento proporcionado.",
+      ),
+    ),
   ],
 };

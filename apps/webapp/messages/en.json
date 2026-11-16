@@ -412,6 +412,117 @@
       "fileFallback": "If you already have the document, hash your own copy here to compare it yourself.",
       "chooseFile": "Hash a downloaded file",
       "failed": "The document could not be hashed."
+    },
+    "idTypes": {
+      "passport": "Passport",
+      "national_id": "National ID",
+      "drivers_license": "Driver's License"
+    },
+    "whitelistOnboarding": {
+      "metaTitle": "Investor Onboarding",
+      "title": "Investor Onboarding",
+      "subtitle": "Pilot Program Whitelist Request",
+      "loadingStatus": "Loading your whitelist status...",
+      "steps": {
+        "personal": {
+          "title": "Personal Details",
+          "description": "Your name and ID type"
+        },
+        "wallet": {
+          "title": "Wallet Connection",
+          "description": "Connect Stellar address"
+        },
+        "review": {
+          "title": "Review",
+          "description": "Submit application"
+        }
+      },
+      "empty": {
+        "title": "No Whitelist Application",
+        "description": "You haven't submitted a whitelist application yet. Start your application to join the pilot.",
+        "action": "Start Application"
+      },
+      "pending": {
+        "title": "Review Pending",
+        "description": "Your whitelist request is currently under review by the operator. Please check back later."
+      },
+      "approved": {
+        "title": "You're Whitelisted!",
+        "description": "Your address has been approved for the pilot. You can now participate in offerings."
+      },
+      "rejected": {
+        "title": "Application Rejected",
+        "description": "Unfortunately, your whitelist application was rejected.",
+        "reasonLabel": "Reason:",
+        "reapply": "Re-apply"
+      },
+      "fields": {
+        "fullName": "Full Name",
+        "fullNamePlaceholder": "John Doe",
+        "idType": "Government ID Type",
+        "idReference": "ID Reference Number",
+        "idReferencePlaceholder": "Document Number"
+      },
+      "walletStep": {
+        "title": "Connect Your Wallet",
+        "description": "Please connect your Stellar wallet to associate it with your whitelist application.",
+        "connect": "Connect Wallet"
+      },
+      "summary": {
+        "name": "Name",
+        "idType": "ID Type",
+        "idRef": "ID Ref",
+        "wallet": "Wallet",
+        "disclaimer": "By submitting this form, you confirm that the information provided is accurate and you agree to the pilot terms and conditions."
+      },
+      "actions": {
+        "back": "Back",
+        "continue": "Continue",
+        "submit": "Submit Request"
+      },
+      "errors": {
+        "submitFailed": "Failed to submit whitelist request"
+      }
+    },
+    "whitelistReview": {
+      "metaTitle": "Whitelist Review",
+      "pageTitle": "Pilot Whitelist Queue",
+      "loading": "Loading pending requests...",
+      "empty": {
+        "title": "No Pending Requests",
+        "description": "There are no whitelist requests waiting for review in the queue."
+      },
+      "card": {
+        "statusPending": "Pending",
+        "wallet": "Wallet:",
+        "idType": "ID Type:",
+        "idRef": "ID Ref:",
+        "submitted": "Submitted:",
+        "review": "Review"
+      },
+      "modal": {
+        "title": "Review Whitelist Request",
+        "description": "Reviewing application for {name}",
+        "fullName": "Full Name",
+        "walletAddress": "Wallet Address",
+        "idType": "ID Type",
+        "idReference": "ID Reference Number",
+        "rejectionReasonLabel": "Rejection Reason (Optional)",
+        "rejectionReasonPlaceholder": "Required if rejecting..."
+      },
+      "actions": {
+        "retry": "Retry",
+        "reject": "Reject Request",
+        "approve": "Approve & Whitelist"
+      },
+      "errors": {
+        "fetchFailed": "Failed to fetch requests",
+        "loadQueueFailed": "Failed to load whitelist queue",
+        "loadQueueDescription": "An unexpected error occurred in this section.",
+        "reasonRequired": "A reason is required when rejecting a request.",
+        "approveFailed": "Failed to approve request",
+        "rejectFailed": "Failed to reject request"
+      }
     }
   }
 }

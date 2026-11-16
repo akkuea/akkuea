@@ -6,8 +6,8 @@ import {
 } from "./fixtures/whitelist-api";
 
 /**
- * Covers the four states `WhitelistOnboardingForm` must handle: loading,
- * error, success, and disconnected-wallet.
+ * Covers the states `WhitelistOnboardingForm` handles in English and Spanish:
+ * loading, error, success, disconnected-wallet, approved, and rejected.
  */
 test.describe("WhitelistOnboardingForm", () => {
   test("disconnected wallet: blocks progress past the wallet step until a wallet is connected", async ({
@@ -109,6 +109,7 @@ test.describe("WhitelistOnboardingForm", () => {
       page.getByRole("heading", { name: "Review Pending" }),
     ).toBeVisible();
   });
+
   test("back from review returns to the wallet step even when already connected", async ({
     page,
   }) => {
@@ -121,14 +122,67 @@ test.describe("WhitelistOnboardingForm", () => {
     await page.getByPlaceholder("Document Number").fill("P-00000000");
     await page.getByRole("button", { name: "Continue" }).click();
 
-    await expect(page.getByRole("button", { name: "Submit Request" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Submit Request" }),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Back" }).click();
 
     await expect(
       page.getByRole("heading", { name: "Connect Your Wallet" }),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Connect Wallet" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Connect Wallet" }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
   });
 
+  test("es locale: renders the onboarding flow and pending state in Spanish", async ({
+    page,
+  }) => {
+    await mockConnectedWallet(page);
+    await mockWhitelistStatus(page, { status: "none" });
+    await mockWhitelistSubmit(page, { fail: false });
+
+    await page.goto("/es/pilot/onboarding");
+    await expect(page.getByText("Sin solicitud de lista blanca")).toBeVisible();
+
+    await page.getByRole("button", { name: "Iniciar solicitud" }).click();
+    await page.getByPlaceholder("Juan Pérez").fill("Ana Prueba");
+    await page.getByPlaceholder("Número de referencia").fill("P-00000000");
+    await page.getByRole("button", { name: "Continuar" }).click();
+
+    await expect(page.getByText("Ana Prueba")).toBeVisible();
+    await page.getByRole("button", { name: "Enviar solicitud" }).click();
+
+    await expect(
+      page.getByRole("heading", { name: "Revisión pendiente" }),
+    ).toBeVisible();
+  });
+
+  test("es locale: renders approved and rejected states in Spanish", async ({
+    page,
+  }) => {
+    await mockConnectedWallet(page);
+    await mockWhitelistStatus(page, { status: "approved" });
+
+    await page.goto("/es/pilot/onboarding");
+    await expect(
+      page.getByRole("heading", { name: "Estás en la lista blanca" }),
+    ).toBeVisible();
+
+    await mockWhitelistStatus(page, {
+      status: "rejected",
+      rejectionReason: "Documento vencido",
+    });
+    await page.reload();
+
+    await expect(
+      page.getByRole("heading", { name: "Solicitud rechazada" }),
+    ).toBeVisible();
+    await expect(page.getByText("Motivo:")).toBeVisible();
+    await expect(page.getByText("Documento vencido")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Volver a solicitar" }),
+    ).toBeVisible();
+  });
 });

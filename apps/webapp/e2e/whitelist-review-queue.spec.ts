@@ -8,8 +8,7 @@ import {
 
 /**
  * Covers `WhitelistReviewQueue`'s approve and reject actions, plus its
- * loading and error states as an operator navigating to the queue would
- * encounter them.
+ * loading and error states in English and Spanish.
  */
 test.describe("WhitelistReviewQueue", () => {
   test("loading: shows a loading indicator while requests are being fetched", async ({
@@ -92,5 +91,32 @@ test.describe("WhitelistReviewQueue", () => {
 
     await expect(dialog).toBeHidden();
     await expect(page.getByText("No Pending Requests")).toBeVisible();
+  });
+
+  test("es locale: renders the review queue, modal, and empty state in Spanish", async ({
+    page,
+  }) => {
+    await mockConnectedWallet(page);
+    await mockWhitelistQueue(page, [buildWhitelistRequest()]);
+
+    await page.goto("/es/pilot/review/whitelist");
+
+    await expect(
+      page.getByRole("heading", { name: "Cola de lista blanca del piloto" }),
+    ).toBeVisible();
+    await expect(page.getByText("Maria Santos")).toBeVisible();
+    await page.getByRole("button", { name: "Revisar" }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByPlaceholder("Obligatorio al rechazar..."),
+    ).toBeVisible();
+    await dialog
+      .getByRole("button", { name: "Aprobar e incluir en lista blanca" })
+      .click();
+
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText("No hay solicitudes pendientes")).toBeVisible();
   });
 });

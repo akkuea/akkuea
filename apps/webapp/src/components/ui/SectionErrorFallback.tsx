@@ -9,6 +9,10 @@ interface SectionErrorFallbackProps {
   onReset?: () => void;
   /** Optional custom message. Defaults to "This section couldn't load". */
   message?: string;
+  /** Optional custom description below the heading. */
+  description?: string;
+  /** Optional translated label for the retry button. */
+  retryLabel?: string;
 }
 
 /**
@@ -20,6 +24,8 @@ interface SectionErrorFallbackProps {
 export function SectionErrorFallback({
   onReset,
   message = "This section couldn't load",
+  description = "An unexpected error occurred in this section.",
+  retryLabel = "Retry",
 }: SectionErrorFallbackProps) {
   return (
     <Card variant="bordered" className="py-8">
@@ -29,9 +35,7 @@ export function SectionErrorFallback({
         </div>
         <div>
           <p className="text-sm font-medium text-white">{message}</p>
-          <p className="text-xs text-neutral-500 mt-1">
-            An unexpected error occurred in this section.
-          </p>
+          <p className="text-xs text-neutral-500 mt-1">{description}</p>
         </div>
         {onReset && (
           <Button
@@ -40,7 +44,7 @@ export function SectionErrorFallback({
             onClick={onReset}
             leftIcon={<RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />}
           >
-            Retry
+            {retryLabel}
           </Button>
         )}
       </div>

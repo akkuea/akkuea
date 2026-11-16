@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import {
   Card,
   Button,
@@ -15,7 +16,18 @@ import {
   type WhitelistRequest,
 } from "@/services/api/adminOperations";
 
+const KNOWN_ID_TYPES = ["passport", "national_id", "drivers_license"] as const;
+type KnownIdType = (typeof KNOWN_ID_TYPES)[number];
+
+function isKnownIdType(value: string): value is KnownIdType {
+  return (KNOWN_ID_TYPES as readonly string[]).includes(value);
+}
+
 export function WhitelistReviewQueue() {
+  const locale = useLocale();
+  const tPilot = useTranslations("Pilot");
+  const t = useTranslations("Pilot.whitelistReview");
+
   const [requests, setRequests] = useState<WhitelistRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,15 +41,16 @@ export function WhitelistReviewQueue() {
 
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const res = await whitelistOperationsApi.getPendingWhitelist();
       setRequests(res.data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to fetch requests");
+      setError(err instanceof Error ? err.message : t("errors.fetchFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -46,11 +59,16 @@ export function WhitelistReviewQueue() {
     return () => clearTimeout(timer);
   }, [fetchRequests]);
 
+  const formatIdType = (value: string): string =>
+    isKnownIdType(value)
+      ? tPilot(`idTypes.${value}`)
+      : value.replace(/_/g, " ");
+
   const handleReviewAction = async (action: "approve" | "reject") => {
     if (!selectedRequest) return;
 
     if (action === "reject" && !rejectionReason.trim()) {
-      setReviewError("A reason is required when rejecting a request.");
+      setReviewError(t("errors.reasonRequired"));
       return;
     }
 
@@ -62,13 +80,16 @@ export function WhitelistReviewQueue() {
         reason: action === "reject" ? rejectionReason : undefined,
       });
 
-      // Refresh list
       setSelectedRequest(null);
       setRejectionReason("");
       void fetchRequests();
     } catch (err: unknown) {
       setReviewError(
-        err instanceof Error ? err.message : `Failed to ${action} request`,
+        err instanceof Error
+          ? err.message
+          : action === "approve"
+            ? t("errors.approveFailed")
+            : t("errors.rejectFailed"),
       );
     } finally {
       setIsReviewing(false);
@@ -76,13 +97,15 @@ export function WhitelistReviewQueue() {
   };
 
   if (isLoading) {
-    return <div className="text-zinc-400">Loading pending requests...</div>;
+    return <div className="text-muted-foreground">{t("loading")}</div>;
   }
 
   if (error) {
     return (
       <SectionErrorFallback
-        message="Failed to load whitelist queue"
+        message={t("errors.loadQueueFailed")}
+        description={t("errors.loadQueueDescription")}
+        retryLabel={t("actions.retry")}
         onReset={fetchRequests}
       />
     );
@@ -92,45 +115,46 @@ export function WhitelistReviewQueue() {
     <div className="space-y-4">
       {requests.length === 0 ? (
         <EmptyState
-          title="No Pending Requests"
-          description="There are no whitelist requests waiting for review in the queue."
+          title={t("empty.title")}
+          description={t("empty.description")}
         />
       ) : (
         <div className="grid gap-4">
           {requests.map((req) => (
             <Card
               key={req.id}
-              className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-900/80 backdrop-blur-md"
+              className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card/80 backdrop-blur-md"
             >
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-white text-lg">
+                  <h3 className="font-semibold text-foreground text-lg">
                     {req.fullName}
                   </h3>
-                  <Badge
-                    variant="outline"
-                    className="text-emerald-400 border-emerald-400/30"
-                  >
-                    Pending
-                  </Badge>
+                  <Badge variant="success">{t("card.statusPending")}</Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
-                  <div className="text-zinc-500">Wallet:</div>
-                  <div className="text-zinc-300 font-mono text-xs">
+                  <div className="text-muted-foreground">
+                    {t("card.wallet")}
+                  </div>
+                  <div className="text-foreground/80 font-mono text-xs">
                     {req.walletAddress}
                   </div>
 
-                  <div className="text-zinc-500">ID Type:</div>
-                  <div className="text-zinc-300 capitalize">
-                    {req.idType.replace("_", " ")}
+                  <div className="text-muted-foreground">
+                    {t("card.idType")}
+                  </div>
+                  <div className="text-foreground/80">
+                    {formatIdType(req.idType)}
                   </div>
 
-                  <div className="text-zinc-500">ID Ref:</div>
-                  <div className="text-zinc-300">{req.idReference}</div>
+                  <div className="text-muted-foreground">{t("card.idRef")}</div>
+                  <div className="text-foreground/80">{req.idReference}</div>
 
-                  <div className="text-zinc-500">Submitted:</div>
-                  <div className="text-zinc-300">
-                    {new Date(req.createdAt).toLocaleString()}
+                  <div className="text-muted-foreground">
+                    {t("card.submitted")}
+                  </div>
+                  <div className="text-foreground/80">
+                    {new Date(req.createdAt).toLocaleString(locale)}
                   </div>
                 </div>
               </div>
@@ -139,7 +163,7 @@ export function WhitelistReviewQueue() {
                   variant="outline"
                   onClick={() => setSelectedRequest(req)}
                 >
-                  Review
+                  {t("card.review")}
                 </Button>
               </div>
             </Card>
@@ -157,71 +181,82 @@ export function WhitelistReviewQueue() {
               setRejectionReason("");
             }
           }}
-          title="Review Whitelist Request"
-          description={`Reviewing application for ${selectedRequest.fullName}`}
+          title={t("modal.title")}
+          description={t("modal.description", {
+            name: selectedRequest.fullName,
+          })}
         >
           <div className="space-y-6 mt-4">
-            <div className="bg-zinc-950 p-4 rounded-lg space-y-3 text-sm">
-              <div className="flex justify-between border-b border-zinc-800 pb-2">
-                <span className="text-zinc-500">Full Name</span>
-                <span className="font-medium text-white">
+            <div className="bg-background p-4 rounded-lg border border-border space-y-3 text-sm">
+              <div className="flex justify-between border-b border-border pb-2">
+                <span className="text-muted-foreground">
+                  {t("modal.fullName")}
+                </span>
+                <span className="font-medium text-foreground">
                   {selectedRequest.fullName}
                 </span>
               </div>
-              <div className="flex justify-between border-b border-zinc-800 pb-2">
-                <span className="text-zinc-500">Wallet Address</span>
-                <span className="font-mono text-white text-xs">
+              <div className="flex justify-between border-b border-border pb-2">
+                <span className="text-muted-foreground">
+                  {t("modal.walletAddress")}
+                </span>
+                <span className="font-mono text-foreground text-xs">
                   {selectedRequest.walletAddress}
                 </span>
               </div>
-              <div className="flex justify-between border-b border-zinc-800 pb-2">
-                <span className="text-zinc-500">ID Type</span>
-                <span className="font-medium text-white capitalize">
-                  {selectedRequest.idType.replace("_", " ")}
+              <div className="flex justify-between border-b border-border pb-2">
+                <span className="text-muted-foreground">
+                  {t("modal.idType")}
+                </span>
+                <span className="font-medium text-foreground">
+                  {formatIdType(selectedRequest.idType)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">ID Reference Number</span>
-                <span className="font-medium text-white">
+                <span className="text-muted-foreground">
+                  {t("modal.idReference")}
+                </span>
+                <span className="font-medium text-foreground">
                   {selectedRequest.idReference}
                 </span>
               </div>
             </div>
 
             {reviewError && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+              <div
+                role="alert"
+                className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"
+              >
                 {reviewError}
               </div>
             )}
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-zinc-300">
-                Rejection Reason (Optional)
-              </label>
+            <div>
               <Input
-                placeholder="Required if rejecting..."
+                id="whitelist-rejection-reason"
+                label={t("modal.rejectionReasonLabel")}
+                placeholder={t("modal.rejectionReasonPlaceholder")}
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
               />
             </div>
 
-            <div className="flex justify-end gap-3 pt-4 border-t border-zinc-800">
+            <div className="flex justify-end gap-3 pt-4 border-t border-border">
               <Button
-                variant="outline"
-                className="bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500/20"
-                onClick={() => handleReviewAction("reject")}
+                variant="danger"
+                onClick={() => void handleReviewAction("reject")}
                 disabled={isReviewing || !rejectionReason.trim()}
                 isLoading={isReviewing}
               >
-                Reject Request
+                {t("actions.reject")}
               </Button>
               <Button
-                className="bg-emerald-500 text-zinc-950 hover:bg-emerald-400"
-                onClick={() => handleReviewAction("approve")}
+                variant="primary"
+                onClick={() => void handleReviewAction("approve")}
                 disabled={isReviewing}
                 isLoading={isReviewing}
               >
-                Approve & Whitelist
+                {t("actions.approve")}
               </Button>
             </div>
           </div>

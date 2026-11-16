@@ -1,10 +1,20 @@
 import type { Meta, StoryObj, Decorator } from "@storybook/react";
+import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import esMessages from "../../../messages/es.json";
 import { WhitelistReviewQueue } from "./WhitelistReviewQueue";
 
 // ---------------------------------------------------------------------------
-// Fetch mock helpers, avoids needing msw-storybook-addon
+// Fetch & locale mock helpers, avoids needing msw-storybook-addon
 // ---------------------------------------------------------------------------
 type FetchMock = (input: RequestInfo | URL) => Promise<Response>;
+
+const spanishMessages = esMessages as unknown as AbstractIntlMessages;
+
+const withSpanishLocale: Decorator = (Story) => (
+  <NextIntlClientProvider locale="es" messages={spanishMessages} timeZone="UTC">
+    <Story />
+  </NextIntlClientProvider>
+);
 
 function mockFetch(handler: FetchMock): Decorator {
   return (Story) => {
@@ -105,6 +115,51 @@ export const LoadingState: Story = {
 /** API returns an error, shows SectionErrorFallback with a Retry button. */
 export const ErrorState: Story = {
   decorators: [
+    mockFetch(
+      async () =>
+        new Response(
+          JSON.stringify({ message: "Forbidden: admin access required" }),
+          { status: 403, headers: { "Content-Type": "application/json" } },
+        ),
+    ),
+  ],
+};
+
+/** Spanish locale: Two pending requests in the queue. */
+export const WithRequestsEs: Story = {
+  name: "Spanish (es): With Requests",
+  decorators: [
+    withSpanishLocale,
+    mockFetch(
+      async () =>
+        new Response(
+          JSON.stringify({ success: true, data: [mockRequest1, mockRequest2] }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+    ),
+  ],
+};
+
+/** Spanish locale: Empty queue state. */
+export const EmptyQueueEs: Story = {
+  name: "Spanish (es): Empty Queue",
+  decorators: [
+    withSpanishLocale,
+    mockFetch(
+      async () =>
+        new Response(JSON.stringify({ success: true, data: [] }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+    ),
+  ],
+};
+
+/** Spanish locale: Error state. */
+export const ErrorStateEs: Story = {
+  name: "Spanish (es): Error State",
+  decorators: [
+    withSpanishLocale,
     mockFetch(
       async () =>
         new Response(

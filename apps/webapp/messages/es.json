@@ -412,6 +412,117 @@
       "fileFallback": "Si ya tienes el documento, calcula aquí el hash de tu propia copia para compararlo tú mismo.",
       "chooseFile": "Calcular el hash de un archivo descargado",
       "failed": "No se pudo calcular el hash del documento."
+    },
+    "idTypes": {
+      "passport": "Pasaporte",
+      "national_id": "Documento nacional de identidad",
+      "drivers_license": "Licencia de conducir"
+    },
+    "whitelistOnboarding": {
+      "metaTitle": "Incorporación de inversor",
+      "title": "Incorporación de inversor",
+      "subtitle": "Solicitud de lista blanca del programa piloto",
+      "loadingStatus": "Cargando el estado de tu lista blanca...",
+      "steps": {
+        "personal": {
+          "title": "Datos personales",
+          "description": "Tu nombre y tipo de documento"
+        },
+        "wallet": {
+          "title": "Conexión de billetera",
+          "description": "Conecta tu dirección Stellar"
+        },
+        "review": {
+          "title": "Revisión",
+          "description": "Enviar solicitud"
+        }
+      },
+      "empty": {
+        "title": "Sin solicitud de lista blanca",
+        "description": "Aún no has enviado una solicitud de lista blanca. Inicia tu solicitud para unirte al piloto.",
+        "action": "Iniciar solicitud"
+      },
+      "pending": {
+        "title": "Revisión pendiente",
+        "description": "Tu solicitud de lista blanca está siendo revisada por el operador. Vuelve a consultar más tarde."
+      },
+      "approved": {
+        "title": "Estás en la lista blanca",
+        "description": "Tu dirección fue aprobada para el piloto. Ya puedes participar en las ofertas."
+      },
+      "rejected": {
+        "title": "Solicitud rechazada",
+        "description": "Lamentablemente, tu solicitud de lista blanca fue rechazada.",
+        "reasonLabel": "Motivo:",
+        "reapply": "Volver a solicitar"
+      },
+      "fields": {
+        "fullName": "Nombre completo",
+        "fullNamePlaceholder": "Juan Pérez",
+        "idType": "Tipo de documento oficial",
+        "idReference": "Número de documento",
+        "idReferencePlaceholder": "Número de referencia"
+      },
+      "walletStep": {
+        "title": "Conecta tu billetera",
+        "description": "Conecta tu billetera Stellar para asociarla con tu solicitud de lista blanca.",
+        "connect": "Conectar billetera"
+      },
+      "summary": {
+        "name": "Nombre",
+        "idType": "Tipo de documento",
+        "idRef": "Núm. de documento",
+        "wallet": "Billetera",
+        "disclaimer": "Al enviar este formulario, confirmas que la información proporcionada es exacta y aceptas los términos y condiciones del piloto."
+      },
+      "actions": {
+        "back": "Atrás",
+        "continue": "Continuar",
+        "submit": "Enviar solicitud"
+      },
+      "errors": {
+        "submitFailed": "No se pudo enviar la solicitud de lista blanca"
+      }
+    },
+    "whitelistReview": {
+      "metaTitle": "Revisión de lista blanca",
+      "pageTitle": "Cola de lista blanca del piloto",
+      "loading": "Cargando solicitudes pendientes...",
+      "empty": {
+        "title": "No hay solicitudes pendientes",
+        "description": "No hay solicitudes de lista blanca esperando revisión en la cola."
+      },
+      "card": {
+        "statusPending": "Pendiente",
+        "wallet": "Billetera:",
+        "idType": "Tipo de documento:",
+        "idRef": "Núm. de documento:",
+        "submitted": "Enviada:",
+        "review": "Revisar"
+      },
+      "modal": {
+        "title": "Revisar solicitud de lista blanca",
+        "description": "Revisando la solicitud de {name}",
+        "fullName": "Nombre completo",
+        "walletAddress": "Dirección de billetera",
+        "idType": "Tipo de documento",
+        "idReference": "Número de documento",
+        "rejectionReasonLabel": "Motivo de rechazo (opcional)",
+        "rejectionReasonPlaceholder": "Obligatorio al rechazar..."
+      },
+      "actions": {
+        "retry": "Reintentar",
+        "reject": "Rechazar solicitud",
+        "approve": "Aprobar e incluir en lista blanca"
+      },
+      "errors": {
+        "fetchFailed": "No se pudieron obtener las solicitudes",
+        "loadQueueFailed": "No se pudo cargar la cola de lista blanca",
+        "loadQueueDescription": "Ocurrió un error inesperado en esta sección.",
+        "reasonRequired": "Se requiere un motivo para rechazar una solicitud.",
+        "approveFailed": "No se pudo aprobar la solicitud",
+        "rejectFailed": "No se pudo rechazar la solicitud"
+      }
     }
   }
 }

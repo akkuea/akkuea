@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Stepper, Card, Input, Button, EmptyState } from "@/components/ui";
 import {
   ShieldCheck,
@@ -13,22 +14,57 @@ import { useWallet } from "@/components/auth/hooks";
 import { apiClient } from "@/services/api/client";
 import { useAuthenticationStore } from "@/components/auth/store/data/slices/authentication.slice";
 
-const STEPS = [
-  {
-    id: "personal",
-    title: "Personal Details",
-    description: "Your name and ID type",
-  },
-  {
-    id: "wallet",
-    title: "Wallet Connection",
-    description: "Connect Stellar address",
-  },
-  { id: "review", title: "Review", description: "Submit application" },
-];
+export interface WhitelistOnboardingWallet {
+  address: string | null;
+  isConnected: boolean;
+  connect: () => Promise<void> | void;
+}
+
+const KNOWN_ID_TYPES = ["passport", "national_id", "drivers_license"] as const;
+type KnownIdType = (typeof KNOWN_ID_TYPES)[number];
+
+function isKnownIdType(value: string): value is KnownIdType {
+  return (KNOWN_ID_TYPES as readonly string[]).includes(value);
+}
 
 export function WhitelistOnboardingForm() {
   const { address, isConnected, connect } = useWallet();
+
+  return (
+    <WhitelistOnboardingFormView wallet={{ address, isConnected, connect }} />
+  );
+}
+
+export function WhitelistOnboardingFormView({
+  wallet,
+}: {
+  wallet: WhitelistOnboardingWallet;
+}) {
+  const { address, isConnected, connect } = wallet;
+  const tPilot = useTranslations("Pilot");
+  const t = useTranslations("Pilot.whitelistOnboarding");
+
+  const steps = useMemo(
+    () => [
+      {
+        id: "personal",
+        title: t("steps.personal.title"),
+        description: t("steps.personal.description"),
+      },
+      {
+        id: "wallet",
+        title: t("steps.wallet.title"),
+        description: t("steps.wallet.description"),
+      },
+      {
+        id: "review",
+        title: t("steps.review.title"),
+        description: t("steps.review.description"),
+      },
+    ],
+    [t],
+  );
+
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [statusLoading, setStatusLoading] = useState(true);
@@ -73,7 +109,7 @@ export function WhitelistOnboardingForm() {
         setStatusLoading(false);
       }
     }
-    checkStatus();
+    void checkStatus();
   }, [isConnected, address]);
 
   const handleConnect = async () => {
@@ -84,7 +120,7 @@ export function WhitelistOnboardingForm() {
   };
 
   const handleNext = () => {
-    if (currentStep < STEPS.length - 1) {
+    if (currentStep < steps.length - 1) {
       // Skip the wallet step when a session already exists. Back from review
       // still returns to the wallet step and stays there.
       setCurrentStep((prev) => (prev === 0 && isConnected ? 2 : prev + 1));
@@ -105,20 +141,21 @@ export function WhitelistOnboardingForm() {
       });
       setRequestStatus("pending");
     } catch (err: unknown) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to submit whitelist request",
-      );
+      setError(err instanceof Error ? err.message : t("errors.submitFailed"));
     } finally {
       setIsLoading(false);
     }
   };
 
+  const formatIdType = (value: string): string =>
+    isKnownIdType(value)
+      ? tPilot(`idTypes.${value}`)
+      : value.replace(/_/g, " ");
+
   if (statusLoading) {
     return (
-      <Card className="max-w-md w-full p-8 text-center bg-zinc-900/80 border-zinc-800">
-        <div className="text-zinc-400">Loading your whitelist status...</div>
+      <Card className="max-w-md w-full p-8 text-center bg-card/80 border-border">
+        <div className="text-muted-foreground">{t("loadingStatus")}</div>
       </Card>
     );
   }
@@ -127,10 +164,10 @@ export function WhitelistOnboardingForm() {
     return (
       <div className="max-w-xl w-full">
         <EmptyState
-          title="No Whitelist Application"
-          description="You haven't submitted a whitelist application yet. Start your application to join the pilot."
+          title={t("empty.title")}
+          description={t("empty.description")}
           action={{
-            label: "Start Application",
+            label: t("empty.action"),
             onClick: () => setIsStartingForm(true),
           }}
         />
@@ -140,49 +177,47 @@ export function WhitelistOnboardingForm() {
 
   if (requestStatus === "pending") {
     return (
-      <Card className="max-w-md w-full p-8 text-center space-y-4 bg-zinc-900/80 border-zinc-800">
+      <Card className="max-w-md w-full p-8 text-center space-y-4 bg-card/80 border-border">
         <div className="w-16 h-16 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4">
-          <ShieldAlert size={32} />
+          <ShieldAlert size={32} aria-hidden="true" />
         </div>
-        <h2 className="text-2xl font-bold text-white">Review Pending</h2>
-        <p className="text-zinc-400">
-          Your whitelist request is currently under review by the operator.
-          Please check back later.
-        </p>
+        <h2 className="text-2xl font-bold text-foreground">
+          {t("pending.title")}
+        </h2>
+        <p className="text-muted-foreground">{t("pending.description")}</p>
       </Card>
     );
   }
 
   if (requestStatus === "approved") {
     return (
-      <Card className="max-w-md w-full p-8 text-center space-y-4 bg-zinc-900/80 border-zinc-800">
+      <Card className="max-w-md w-full p-8 text-center space-y-4 bg-card/80 border-border">
         <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
-          <ShieldCheck size={32} />
+          <ShieldCheck size={32} aria-hidden="true" />
         </div>
-        <h2 className="text-2xl font-bold text-white">
-          You&apos;re Whitelisted!
+        <h2 className="text-2xl font-bold text-foreground">
+          {t("approved.title")}
         </h2>
-        <p className="text-zinc-400">
-          Your address has been approved for the pilot. You can now participate
-          in offerings.
-        </p>
+        <p className="text-muted-foreground">{t("approved.description")}</p>
       </Card>
     );
   }
 
   if (requestStatus === "rejected") {
     return (
-      <Card className="max-w-md w-full p-8 text-center space-y-4 bg-zinc-900/80 border-zinc-800">
+      <Card className="max-w-md w-full p-8 text-center space-y-4 bg-card/80 border-border">
         <div className="w-16 h-16 bg-red-500/20 text-red-400 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FileX2 size={32} />
+          <FileX2 size={32} aria-hidden="true" />
         </div>
-        <h2 className="text-2xl font-bold text-white">Application Rejected</h2>
-        <p className="text-zinc-400">
-          Unfortunately, your whitelist application was rejected.
-        </p>
+        <h2 className="text-2xl font-bold text-foreground">
+          {t("rejected.title")}
+        </h2>
+        <p className="text-muted-foreground">{t("rejected.description")}</p>
         {rejectionReason && (
           <div className="bg-red-500/10 border border-red-500/20 rounded p-4 mt-4">
-            <p className="text-red-400 text-sm font-medium">Reason:</p>
+            <p className="text-red-400 text-sm font-medium">
+              {t("rejected.reasonLabel")}
+            </p>
             <p className="text-red-300 text-sm">{rejectionReason}</p>
           </div>
         )}
@@ -196,27 +231,30 @@ export function WhitelistOnboardingForm() {
             setCurrentStep(0);
           }}
         >
-          Re-apply
+          {t("rejected.reapply")}
         </Button>
       </Card>
     );
   }
 
   return (
-    <Card className="max-w-xl w-full p-6 sm:p-8 border-zinc-800 bg-zinc-900/80 backdrop-blur-md">
+    <Card className="max-w-xl w-full p-6 sm:p-8 border-border bg-card/80 backdrop-blur-md">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white text-center mb-2">
-          Investor Onboarding
+        <h1 className="text-2xl font-bold text-foreground text-center mb-2">
+          {t("title")}
         </h1>
-        <p className="text-zinc-400 text-center text-sm">
-          Pilot Program Whitelist Request
+        <p className="text-muted-foreground text-center text-sm">
+          {t("subtitle")}
         </p>
       </div>
 
-      <Stepper steps={STEPS} currentStep={currentStep} className="mb-8" />
+      <Stepper steps={steps} currentStep={currentStep} className="mb-8" />
 
       {error && (
-        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+        <div
+          role="alert"
+          className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm"
+        >
           {error}
         </div>
       )}
@@ -225,40 +263,46 @@ export function WhitelistOnboardingForm() {
         {currentStep === 0 && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
-                Full Name
-              </label>
               <Input
-                placeholder="John Doe"
+                id="whitelist-full-name"
+                label={t("fields.fullName")}
+                placeholder={t("fields.fullNamePlaceholder")}
                 value={formData.fullName}
                 onChange={(e) =>
                   setFormData({ ...formData, fullName: e.target.value })
                 }
-                leftIcon={<UserCircle className="w-4 h-4" />}
+                leftIcon={<UserCircle className="w-4 h-4" aria-hidden="true" />}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
-                Government ID Type
+              <label
+                htmlFor="whitelist-id-type"
+                className="block text-xs font-medium text-neutral-400 mb-2"
+              >
+                {t("fields.idType")}
               </label>
               <select
-                className="w-full h-10 px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-md text-sm text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                id="whitelist-id-type"
+                className="w-full h-10 px-3 py-2 bg-input border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 value={formData.idType}
                 onChange={(e) =>
                   setFormData({ ...formData, idType: e.target.value })
                 }
               >
-                <option value="passport">Passport</option>
-                <option value="national_id">National ID</option>
-                <option value="drivers_license">Driver&apos;s License</option>
+                <option value="passport">{tPilot("idTypes.passport")}</option>
+                <option value="national_id">
+                  {tPilot("idTypes.national_id")}
+                </option>
+                <option value="drivers_license">
+                  {tPilot("idTypes.drivers_license")}
+                </option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-1">
-                ID Reference Number
-              </label>
               <Input
-                placeholder="Document Number"
+                id="whitelist-id-reference"
+                label={t("fields.idReference")}
+                placeholder={t("fields.idReferencePlaceholder")}
                 value={formData.idReference}
                 onChange={(e) =>
                   setFormData({ ...formData, idReference: e.target.value })
@@ -270,56 +314,65 @@ export function WhitelistOnboardingForm() {
 
         {currentStep === 1 && (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 flex flex-col items-center justify-center py-8">
-            <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mb-4">
-              <Wallet className="w-8 h-8 text-zinc-400" />
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
+              <Wallet
+                className="w-8 h-8 text-muted-foreground"
+                aria-hidden="true"
+              />
             </div>
-            <h3 className="text-lg font-medium text-white mb-2">
-              Connect Your Wallet
+            <h3 className="text-lg font-medium text-foreground mb-2">
+              {t("walletStep.title")}
             </h3>
-            <p className="text-zinc-400 text-sm text-center max-w-sm mb-6">
-              Please connect your Stellar wallet to associate it with your
-              whitelist application.
+            <p className="text-muted-foreground text-sm text-center max-w-sm mb-6">
+              {t("walletStep.description")}
             </p>
             <Button
               onClick={handleConnect}
               className="w-full sm:w-auto min-w-[200px]"
             >
-              Connect Wallet
+              {t("walletStep.connect")}
             </Button>
           </div>
         )}
 
         {currentStep === 2 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 text-zinc-300 text-sm">
-            <div className="p-4 bg-zinc-950 rounded-lg space-y-3">
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 text-foreground/80 text-sm">
+            <div className="p-4 bg-background rounded-lg border border-border space-y-3">
               <div className="flex justify-between">
-                <span className="text-zinc-500">Name</span>
-                <span className="font-medium text-white">
+                <span className="text-muted-foreground">
+                  {t("summary.name")}
+                </span>
+                <span className="font-medium text-foreground">
                   {formData.fullName}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">ID Type</span>
-                <span className="font-medium text-white capitalize">
-                  {formData.idType.replace("_", " ")}
+                <span className="text-muted-foreground">
+                  {t("summary.idType")}
+                </span>
+                <span className="font-medium text-foreground">
+                  {formatIdType(formData.idType)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">ID Ref</span>
-                <span className="font-medium text-white">
+                <span className="text-muted-foreground">
+                  {t("summary.idRef")}
+                </span>
+                <span className="font-medium text-foreground">
                   {formData.idReference}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">Wallet</span>
-                <span className="font-medium text-white truncate max-w-[200px]">
+                <span className="text-muted-foreground">
+                  {t("summary.wallet")}
+                </span>
+                <span className="font-medium text-foreground truncate max-w-[200px]">
                   {address}
                 </span>
               </div>
             </div>
-            <p className="text-xs text-zinc-500 text-center">
-              By submitting this form, you confirm that the information provided
-              is accurate and you agree to the pilot terms and conditions.
+            <p className="text-xs text-muted-foreground text-center">
+              {t("summary.disclaimer")}
             </p>
           </div>
         )}
@@ -332,9 +385,9 @@ export function WhitelistOnboardingForm() {
           disabled={currentStep === 0 || isLoading}
           className="w-full"
         >
-          Back
+          {t("actions.back")}
         </Button>
-        {currentStep < STEPS.length - 1 ? (
+        {currentStep < steps.length - 1 ? (
           <Button
             onClick={handleNext}
             className="w-full"
@@ -344,7 +397,7 @@ export function WhitelistOnboardingForm() {
               (currentStep === 1 && !isConnected)
             }
           >
-            Continue
+            {t("actions.continue")}
           </Button>
         ) : (
           <Button
@@ -352,7 +405,7 @@ export function WhitelistOnboardingForm() {
             isLoading={isLoading}
             className="w-full"
           >
-            Submit Request
+            {t("actions.submit")}
           </Button>
         )}
       </div>

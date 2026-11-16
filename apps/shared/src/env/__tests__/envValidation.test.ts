@@ -426,4 +426,212 @@ describe("Environment Validation Module", () => {
       ]);
     });
   });
+
+  describe("Pilot Environment Validation (Webapp and API)", () => {
+    it("resolves missing or blank optional pilot webapp variables to documented defaults", () => {
+      const parsed = validateWebappEnv(VALID_WEBAPP_ENV);
+      expect(parsed.NEXT_PUBLIC_STELLAR_NETWORK).toBe("testnet");
+      expect(parsed.NEXT_PUBLIC_SOROBAN_RPC_URL).toBeUndefined();
+      expect(parsed.NEXT_PUBLIC_PILOT_ALLY_ADDRESS).toBeUndefined();
+      expect(parsed.NEXT_PUBLIC_PILOT_START_CYCLE).toBe("2026-01");
+      expect(parsed.NEXT_PUBLIC_PILOT_PAYMENT_DAY).toBe(5);
+      expect(parsed.NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL).toBeUndefined();
+      expect(parsed.NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID).toBeUndefined();
+      expect(parsed.NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID).toBeUndefined();
+      expect(parsed.NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID).toBeUndefined();
+      expect(parsed.NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS).toBe(24);
+      expect(parsed.NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS).toBe(100);
+
+      const blankParsed = validateWebappEnv({
+        ...VALID_WEBAPP_ENV,
+        NEXT_PUBLIC_PILOT_ALLY_ADDRESS: "   ",
+        NEXT_PUBLIC_PILOT_START_CYCLE: "",
+        NEXT_PUBLIC_PILOT_PAYMENT_DAY: " ",
+        NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL: "",
+        NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID: "",
+      });
+      expect(blankParsed.NEXT_PUBLIC_PILOT_ALLY_ADDRESS).toBeUndefined();
+      expect(blankParsed.NEXT_PUBLIC_PILOT_START_CYCLE).toBe("2026-01");
+      expect(blankParsed.NEXT_PUBLIC_PILOT_PAYMENT_DAY).toBe(5);
+      expect(blankParsed.NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL).toBeUndefined();
+      expect(
+        blankParsed.NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID,
+      ).toBeUndefined();
+    });
+
+    it("accepts valid pilot webapp configuration values", () => {
+      const parsed = validateWebappEnv({
+        ...VALID_WEBAPP_ENV,
+        NEXT_PUBLIC_STELLAR_NETWORK: "MAINNET",
+        NEXT_PUBLIC_SOROBAN_RPC_URL: "https://soroban.stellar.org",
+        NEXT_PUBLIC_PILOT_ALLY_ADDRESS: VALID_PUBLIC_KEY,
+        NEXT_PUBLIC_PILOT_START_CYCLE: "2026-12",
+        NEXT_PUBLIC_PILOT_PAYMENT_DAY: "28",
+        NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL:
+          "https://cdn.example.org/pilot/property.splat",
+        NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID: VALID_CONTRACT_ID,
+        NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID: VALID_CONTRACT_ID,
+        NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID: VALID_CONTRACT_ID,
+        NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS: "48",
+        NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS: "50",
+      });
+
+      expect(parsed.NEXT_PUBLIC_STELLAR_NETWORK).toBe("mainnet");
+      expect(parsed.NEXT_PUBLIC_SOROBAN_RPC_URL).toBe(
+        "https://soroban.stellar.org",
+      );
+      expect(parsed.NEXT_PUBLIC_PILOT_ALLY_ADDRESS).toBe(VALID_PUBLIC_KEY);
+      expect(parsed.NEXT_PUBLIC_PILOT_START_CYCLE).toBe("2026-12");
+      expect(parsed.NEXT_PUBLIC_PILOT_PAYMENT_DAY).toBe(28);
+      expect(parsed.NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL).toBe(
+        "https://cdn.example.org/pilot/property.splat",
+      );
+      expect(parsed.NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID).toBe(
+        VALID_CONTRACT_ID,
+      );
+      expect(parsed.NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID).toBe(
+        VALID_CONTRACT_ID,
+      );
+      expect(parsed.NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID).toBe(
+        VALID_CONTRACT_ID,
+      );
+      expect(parsed.NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS).toBe(48);
+      expect(parsed.NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS).toBe(50);
+    });
+
+    it("fails validation naming the offending pilot webapp variable", () => {
+      const invalidCases: Array<[string, string]> = [
+        ["NEXT_PUBLIC_PILOT_ALLY_ADDRESS", "not-a-stellar-key"],
+        ["NEXT_PUBLIC_PILOT_ALLY_ADDRESS", VALID_CONTRACT_ID],
+        ["NEXT_PUBLIC_PILOT_START_CYCLE", "2026-1"],
+        ["NEXT_PUBLIC_PILOT_START_CYCLE", "2026-00"],
+        ["NEXT_PUBLIC_PILOT_START_CYCLE", "2026-13"],
+        ["NEXT_PUBLIC_PILOT_PAYMENT_DAY", "0"],
+        ["NEXT_PUBLIC_PILOT_PAYMENT_DAY", "29"],
+        ["NEXT_PUBLIC_PILOT_PAYMENT_DAY", "31"],
+        ["NEXT_PUBLIC_PILOT_PAYMENT_DAY", "5.5"],
+        [
+          "NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL",
+          "http://insecure.example.org/property.splat",
+        ],
+        ["NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL", "not-a-url"],
+        ["NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID", "NOT_A_CONTRACT"],
+        ["NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID", VALID_PUBLIC_KEY],
+        ["NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID", "C_SHORT"],
+        ["NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS", "0"],
+        ["NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS", "10000"],
+        ["NEXT_PUBLIC_STELLAR_NETWORK", "futurenet"],
+        ["NEXT_PUBLIC_SOROBAN_RPC_URL", "ftp://soroban.example.org"],
+      ];
+
+      for (const [varName, badValue] of invalidCases) {
+        expect(() =>
+          validateWebappEnv({
+            ...VALID_WEBAPP_ENV,
+            [varName]: badValue,
+          }),
+        ).toThrow(EnvValidationError);
+
+        try {
+          validateWebappEnv({
+            ...VALID_WEBAPP_ENV,
+            [varName]: badValue,
+          });
+        } catch (err) {
+          const error = err as EnvValidationError;
+          expect(error.message).toContain(varName);
+        }
+      }
+    });
+
+    it("resolves missing optional pilot API variables to documented defaults", () => {
+      const parsed = validateApiEnv(VALID_API_ENV);
+      expect(parsed.PILOT_ESCALATION_JOB_ENABLED).toBe(true);
+      expect(parsed.PILOT_ESCALATION_AGREEMENT_START).toBeUndefined();
+      expect(parsed.PILOT_ESCALATION_OPERATOR_USER_ID).toBeUndefined();
+      expect(parsed.PILOT_ESCALATION_CADENCE_DAYS).toBe(30);
+      expect(parsed.PILOT_ESCALATION_THRESHOLD_CYCLES).toBe(2);
+      expect(parsed.PILOT_ESCALATION_POLL_INTERVAL_MS).toBe(21_600_000);
+      expect(parsed.PILOT_ESCALATION_RENOTIFY_INTERVAL_MS).toBe(604_800_000);
+      expect(parsed.PILOT_PAYOUT_SPLIT_CONTRACT_ID).toBeUndefined();
+      expect(parsed.WHITELIST_CONTRACT_ID).toBeUndefined();
+      expect(parsed.PILOT_WHITELIST_REVIEW_SLA_HOURS).toBe(48);
+      expect(parsed.PILOT_EVIDENCE_REVIEW_SLA_HOURS).toBe(48);
+      expect(parsed.PILOT_REVIEW_METRICS_WINDOW_DAYS).toBe(30);
+    });
+
+    it("accepts valid pilot API configuration values", () => {
+      const parsed = validateApiEnv({
+        ...VALID_API_ENV,
+        PILOT_ESCALATION_JOB_ENABLED: "false",
+        PILOT_ESCALATION_AGREEMENT_START: "2026-01-15T00:00:00.000Z",
+        PILOT_ESCALATION_OPERATOR_USER_ID:
+          "00000000-0000-0000-0000-000000000001",
+        PILOT_ESCALATION_CADENCE_DAYS: "30",
+        PILOT_ESCALATION_THRESHOLD_CYCLES: "3",
+        PILOT_ESCALATION_POLL_INTERVAL_MS: "3600000",
+        PILOT_ESCALATION_RENOTIFY_INTERVAL_MS: "86400000",
+        PILOT_PAYOUT_SPLIT_CONTRACT_ID: VALID_CONTRACT_ID,
+        WHITELIST_CONTRACT_ID: VALID_CONTRACT_ID,
+        PILOT_WHITELIST_REVIEW_SLA_HOURS: "24",
+        PILOT_EVIDENCE_REVIEW_SLA_HOURS: "36",
+        PILOT_REVIEW_METRICS_WINDOW_DAYS: "14",
+      });
+
+      expect(parsed.PILOT_ESCALATION_JOB_ENABLED).toBe(false);
+      expect(parsed.PILOT_ESCALATION_AGREEMENT_START).toBe(
+        "2026-01-15T00:00:00.000Z",
+      );
+      expect(parsed.PILOT_ESCALATION_OPERATOR_USER_ID).toBe(
+        "00000000-0000-0000-0000-000000000001",
+      );
+      expect(parsed.PILOT_ESCALATION_CADENCE_DAYS).toBe(30);
+      expect(parsed.PILOT_ESCALATION_THRESHOLD_CYCLES).toBe(3);
+      expect(parsed.PILOT_ESCALATION_POLL_INTERVAL_MS).toBe(3_600_000);
+      expect(parsed.PILOT_ESCALATION_RENOTIFY_INTERVAL_MS).toBe(86_400_000);
+      expect(parsed.PILOT_PAYOUT_SPLIT_CONTRACT_ID).toBe(VALID_CONTRACT_ID);
+      expect(parsed.WHITELIST_CONTRACT_ID).toBe(VALID_CONTRACT_ID);
+      expect(parsed.PILOT_WHITELIST_REVIEW_SLA_HOURS).toBe(24);
+      expect(parsed.PILOT_EVIDENCE_REVIEW_SLA_HOURS).toBe(36);
+      expect(parsed.PILOT_REVIEW_METRICS_WINDOW_DAYS).toBe(14);
+    });
+
+    it("fails validation naming the offending pilot API variable", () => {
+      const invalidCases: Array<[string, string]> = [
+        ["PILOT_ESCALATION_JOB_ENABLED", "maybe"],
+        ["PILOT_ESCALATION_AGREEMENT_START", "not-a-date"],
+        ["PILOT_ESCALATION_AGREEMENT_START", "2026-02-30"],
+        ["PILOT_ESCALATION_CADENCE_DAYS", "0"],
+        ["PILOT_ESCALATION_CADENCE_DAYS", "-10"],
+        ["PILOT_ESCALATION_THRESHOLD_CYCLES", "0"],
+        ["PILOT_ESCALATION_THRESHOLD_CYCLES", "1.5"],
+        ["PILOT_ESCALATION_POLL_INTERVAL_MS", "0"],
+        ["PILOT_ESCALATION_RENOTIFY_INTERVAL_MS", "-1"],
+        ["PILOT_PAYOUT_SPLIT_CONTRACT_ID", VALID_PUBLIC_KEY],
+        ["WHITELIST_CONTRACT_ID", "NOT_A_CONTRACT"],
+        ["PILOT_WHITELIST_REVIEW_SLA_HOURS", "0"],
+        ["PILOT_EVIDENCE_REVIEW_SLA_HOURS", "-5"],
+        ["PILOT_REVIEW_METRICS_WINDOW_DAYS", "nan"],
+      ];
+
+      for (const [varName, badValue] of invalidCases) {
+        expect(() =>
+          validateApiEnv({
+            ...VALID_API_ENV,
+            [varName]: badValue,
+          }),
+        ).toThrow(EnvValidationError);
+
+        try {
+          validateApiEnv({
+            ...VALID_API_ENV,
+            [varName]: badValue,
+          });
+        } catch (err) {
+          const error = err as EnvValidationError;
+          expect(error.message).toContain(varName);
+        }
+      }
+    });
+  });
 });

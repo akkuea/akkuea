@@ -235,6 +235,212 @@ export function resolveCorsAllowedOrigins(
   return [];
 }
 
+const PILOT_CYCLE_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+const ISO_DATE_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$/;
+
+export const isPilotCycle = (val: string): boolean =>
+  typeof val === "string" && PILOT_CYCLE_PATTERN.test(val);
+
+export const isHttpsUrl = (val: string): boolean => {
+  if (typeof val !== "string" || val.length === 0 || /\s/.test(val)) {
+    return false;
+  }
+  try {
+    const parsed = new URL(val);
+    return parsed.protocol === "https:" && parsed.hostname.length > 0;
+  } catch {
+    return false;
+  }
+};
+
+export const isIsoDateString = (val: string): boolean => {
+  if (typeof val !== "string") return false;
+  const match = ISO_DATE_PATTERN.exec(val);
+  if (!match) return false;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+
+  const calendarCheck = new Date(Date.UTC(year, month - 1, day));
+  if (
+    calendarCheck.getUTCFullYear() !== year ||
+    calendarCheck.getUTCMonth() !== month - 1 ||
+    calendarCheck.getUTCDate() !== day
+  ) {
+    return false;
+  }
+
+  return !Number.isNaN(Date.parse(val));
+};
+
+function normalizeOptionalString(val: string | undefined): string | undefined {
+  if (val === undefined) return undefined;
+  const trimmed = val.trim();
+  return trimmed === "" ? undefined : trimmed;
+}
+
+function optionalStellarPublicKeySchema(varName: string) {
+  return z
+    .string()
+    .optional()
+    .transform(normalizeOptionalString)
+    .refine((val) => val === undefined || isStellarPublicKey(val), {
+      message: `${varName} must be a valid Stellar public key (56 characters starting with G)`,
+    });
+}
+
+function optionalStellarContractIdSchema(varName: string) {
+  return z
+    .string()
+    .optional()
+    .transform(normalizeOptionalString)
+    .refine((val) => val === undefined || isStellarContractId(val), {
+      message: `${varName} must be a valid Soroban contract ID (56 characters starting with C)`,
+    });
+}
+
+function optionalHttpOrHttpsUrlSchema(varName: string) {
+  return z
+    .string()
+    .optional()
+    .transform(normalizeOptionalString)
+    .refine(
+      (val) => {
+        if (val === undefined) return true;
+        if (/\s/.test(val)) return false;
+        try {
+          const parsed = new URL(val);
+          return (
+            (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+            parsed.hostname.length > 0
+          );
+        } catch {
+          return false;
+        }
+      },
+      {
+        message: `${varName} must be a valid http:// or https:// URL`,
+      },
+    );
+}
+
+function optionalHttpsUrlSchema(varName: string) {
+  return z
+    .string()
+    .optional()
+    .transform(normalizeOptionalString)
+    .refine((val) => val === undefined || isHttpsUrl(val), {
+      message: `${varName} must be an absolute https:// URL`,
+    });
+}
+
+function optionalIsoDateSchema(varName: string) {
+  return z
+    .string()
+    .optional()
+    .transform(normalizeOptionalString)
+    .refine((val) => val === undefined || isIsoDateString(val), {
+      message: `${varName} must be a valid ISO-8601 date (e.g. 2026-01-15 or 2026-01-15T00:00:00.000Z)`,
+    });
+}
+
+function optionalPositiveNumberSchema(varName: string, defaultValue: number) {
+  return z
+    .string()
+    .optional()
+    .transform((val) => {
+      const normalized = normalizeOptionalString(val);
+      return normalized === undefined ? defaultValue : Number(normalized);
+    })
+    .refine((val) => Number.isFinite(val) && val > 0, {
+      message: `${varName} must be a positive number`,
+    });
+}
+
+function optionalPositiveIntSchema(varName: string, defaultValue: number) {
+  return z
+    .string()
+    .optional()
+    .transform((val) => {
+      const normalized = normalizeOptionalString(val);
+      if (normalized === undefined) return defaultValue;
+      return /^\d+$/.test(normalized) ? Number(normalized) : Number.NaN;
+    })
+    .refine((val) => Number.isSafeInteger(val) && val >= 1, {
+      message: `${varName} must be a positive integer`,
+    });
+}
+
+function optionalBoundedIntSchema(
+  varName: string,
+  min: number,
+  max: number,
+  defaultValue: number,
+) {
+  return z
+    .string()
+    .optional()
+    .transform((val) => {
+      const normalized = normalizeOptionalString(val);
+      if (normalized === undefined) return defaultValue;
+      return /^-?\d+$/.test(normalized) ? Number(normalized) : Number.NaN;
+    })
+    .refine((val) => Number.isSafeInteger(val) && val >= min && val <= max, {
+      message: `${varName} must be an integer between ${min} and ${max}`,
+    });
+}
+
+function optionalBooleanDefaultSchema(varName: string, defaultValue: boolean) {
+  return z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val, ctx): boolean => {
+      if (val === undefined) return defaultValue;
+      if (typeof val === "boolean") return val;
+      const normalized = val.trim().toLowerCase();
+      if (normalized === "") return defaultValue;
+      if (normalized === "true" || normalized === "1") return true;
+      if (normalized === "false" || normalized === "0") return false;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${varName} must be "true", "false", "1", or "0"`,
+      });
+      return z.NEVER;
+    });
+}
+
+export const pilotStartCycleSchema = z
+  .string()
+  .optional()
+  .transform((val) => normalizeOptionalString(val) ?? "2026-01")
+  .refine(isPilotCycle, {
+    message:
+      "NEXT_PUBLIC_PILOT_START_CYCLE must be in YYYY-MM format with month 01 to 12",
+  });
+
+export const pilotPaymentDaySchema = optionalBoundedIntSchema(
+  "NEXT_PUBLIC_PILOT_PAYMENT_DAY",
+  1,
+  28,
+  5,
+);
+
+export const pilotNetworkSchema = z
+  .string()
+  .optional()
+  .transform((val) => (normalizeOptionalString(val) ?? "testnet").toLowerCase())
+  .pipe(
+    z.enum(["testnet", "mainnet", "public"], {
+      errorMap: () => ({
+        message:
+          'NEXT_PUBLIC_STELLAR_NETWORK must be "testnet", "mainnet", or "public"',
+      }),
+    }),
+  );
+
 export const apiEnvSchema = z.object({
   DATABASE_URL: z
     .string({ required_error: "DATABASE_URL is required" })
@@ -291,6 +497,51 @@ export const apiEnvSchema = z.object({
   PAYMENT_TOKEN_CONTRACT_ID: stellarContractIdSchema
     .optional()
     .or(z.literal("")),
+  WHITELIST_CONTRACT_ID: optionalStellarContractIdSchema(
+    "WHITELIST_CONTRACT_ID",
+  ),
+  PILOT_PAYOUT_SPLIT_CONTRACT_ID: optionalStellarContractIdSchema(
+    "PILOT_PAYOUT_SPLIT_CONTRACT_ID",
+  ),
+  PILOT_ESCALATION_JOB_ENABLED: optionalBooleanDefaultSchema(
+    "PILOT_ESCALATION_JOB_ENABLED",
+    true,
+  ),
+  PILOT_ESCALATION_AGREEMENT_START: optionalIsoDateSchema(
+    "PILOT_ESCALATION_AGREEMENT_START",
+  ),
+  PILOT_ESCALATION_OPERATOR_USER_ID: z
+    .string()
+    .optional()
+    .transform(normalizeOptionalString),
+  PILOT_ESCALATION_CADENCE_DAYS: optionalPositiveNumberSchema(
+    "PILOT_ESCALATION_CADENCE_DAYS",
+    30,
+  ),
+  PILOT_ESCALATION_THRESHOLD_CYCLES: optionalPositiveIntSchema(
+    "PILOT_ESCALATION_THRESHOLD_CYCLES",
+    2,
+  ),
+  PILOT_ESCALATION_POLL_INTERVAL_MS: optionalPositiveNumberSchema(
+    "PILOT_ESCALATION_POLL_INTERVAL_MS",
+    21_600_000,
+  ),
+  PILOT_ESCALATION_RENOTIFY_INTERVAL_MS: optionalPositiveNumberSchema(
+    "PILOT_ESCALATION_RENOTIFY_INTERVAL_MS",
+    604_800_000,
+  ),
+  PILOT_WHITELIST_REVIEW_SLA_HOURS: optionalPositiveNumberSchema(
+    "PILOT_WHITELIST_REVIEW_SLA_HOURS",
+    48,
+  ),
+  PILOT_EVIDENCE_REVIEW_SLA_HOURS: optionalPositiveNumberSchema(
+    "PILOT_EVIDENCE_REVIEW_SLA_HOURS",
+    48,
+  ),
+  PILOT_REVIEW_METRICS_WINDOW_DAYS: optionalPositiveNumberSchema(
+    "PILOT_REVIEW_METRICS_WINDOW_DAYS",
+    30,
+  ),
 });
 
 export const webappEnvSchema = z.object({
@@ -308,6 +559,37 @@ export const webappEnvSchema = z.object({
   PRIVY_APP_SECRET: z.string().optional(),
   NEXT_PUBLIC_POLLAR_KEY: z.string().optional(),
   NEXT_PUBLIC_PROPERTY_IMAGE_HOSTS: propertyImageHostsSchema,
+  NEXT_PUBLIC_STELLAR_NETWORK: pilotNetworkSchema,
+  NEXT_PUBLIC_SOROBAN_RPC_URL: optionalHttpOrHttpsUrlSchema(
+    "NEXT_PUBLIC_SOROBAN_RPC_URL",
+  ),
+  NEXT_PUBLIC_PILOT_ALLY_ADDRESS: optionalStellarPublicKeySchema(
+    "NEXT_PUBLIC_PILOT_ALLY_ADDRESS",
+  ),
+  NEXT_PUBLIC_PILOT_START_CYCLE: pilotStartCycleSchema,
+  NEXT_PUBLIC_PILOT_PAYMENT_DAY: pilotPaymentDaySchema,
+  NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL: optionalHttpsUrlSchema(
+    "NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL",
+  ),
+  NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID: optionalStellarContractIdSchema(
+    "NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID",
+  ),
+  NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID: optionalStellarContractIdSchema(
+    "NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID",
+  ),
+  NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID: optionalStellarContractIdSchema(
+    "NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID",
+  ),
+  NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS: optionalPositiveNumberSchema(
+    "NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS",
+    24,
+  ),
+  NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS: optionalBoundedIntSchema(
+    "NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS",
+    0,
+    9_999,
+    100,
+  ),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

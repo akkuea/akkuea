@@ -118,6 +118,23 @@ pub struct EurcSwapPathStatus {
     pub eurc_token: Address,
 }
 
+/// Complete on-chain configuration of this payout-split contract, exposing
+/// every role and referenced contract address set at initialization or updated
+/// through succession.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PayoutConfig {
+    pub admin: Address,
+    pub operator: Address,
+    pub ally: Address,
+    pub platform_fee_recipient: Address,
+    pub income_token: Address,
+    pub whitelist: Address,
+    pub usdc_token: Address,
+    pub eurc_token: Address,
+    pub swap_router: Address,
+}
+
 /// Human review lifecycle of a cycle's income evidence.
 ///
 /// The pilot's credibility argument rests on an investor being able to see that
@@ -1254,17 +1271,39 @@ impl PilotPayoutSplit {
         Storage::evidence(&env, &cycle_id)
     }
 
+    /// Return all configured role and contract addresses for this payout split.
+    ///
+    /// Fails with `PayoutError::NotInitialized` before `initialize`. Available
+    /// while paused and after `exit` so investors and operators can always inspect
+    /// who holds each role and where the platform fee is paid.
+    pub fn config(env: Env) -> PayoutConfig {
+        Self::load_config(&env)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized))
+    }
+
     /// Report the live EURC settlement configuration. Returns `None` before
     /// initialization; after initialization the dashboard reads the actual
     /// router and asset addresses instead of a hardcoded marker string.
     pub fn eurc_swap_path_status(env: Env) -> Option<EurcSwapPathStatus> {
-        let swap_router = Storage::address(&env, &DataKey::SwapRouter)?;
-        let usdc_token = Storage::address(&env, &DataKey::UsdcToken)?;
-        let eurc_token = Storage::address(&env, &DataKey::EurcToken)?;
+        let cfg = Self::load_config(&env)?;
         Some(EurcSwapPathStatus {
-            swap_router,
-            usdc_token,
-            eurc_token,
+            swap_router: cfg.swap_router,
+            usdc_token: cfg.usdc_token,
+            eurc_token: cfg.eurc_token,
+        })
+    }
+
+    fn load_config(env: &Env) -> Option<PayoutConfig> {
+        Some(PayoutConfig {
+            admin: Storage::address(env, &DataKey::Admin)?,
+            operator: Storage::address(env, &DataKey::Operator)?,
+            ally: Storage::address(env, &DataKey::Ally)?,
+            platform_fee_recipient: Storage::address(env, &DataKey::PlatformFeeRecipient)?,
+            income_token: Storage::address(env, &DataKey::IncomeToken)?,
+            whitelist: Storage::address(env, &DataKey::Whitelist)?,
+            usdc_token: Storage::address(env, &DataKey::UsdcToken)?,
+            eurc_token: Storage::address(env, &DataKey::EurcToken)?,
+            swap_router: Storage::address(env, &DataKey::SwapRouter)?,
         })
     }
 
@@ -4175,6 +4214,60 @@ pub mod tests {
 
         assert_eq!(preference_ttl, TTL_EXTEND_TO);
         assert_eq!(instance_ttl, TTL_EXTEND_TO);
+    }
+
+    #[test]
+    fn config_returns_exact_initialized_addresses_and_reflects_admin_transfer() {
+        let s = setup();
+
+        let cfg = s.payout.config();
+        assert_eq!(cfg.admin, s.admin);
+        assert_eq!(cfg.operator, s.operator);
+        assert_eq!(cfg.ally, s.ally);
+        assert_eq!(cfg.platform_fee_recipient, s.fee_recipient);
+        assert_eq!(cfg.income_token, s.token.address);
+        assert_eq!(cfg.whitelist, s.whitelist.address);
+        assert_eq!(cfg.usdc_token, s.usdc_id);
+        assert_eq!(cfg.eurc_token, s.eurc_id);
+        assert_eq!(cfg.swap_router, s.router_id);
+
+        // Works while paused.
+        s.payout.pause(&s.admin);
+        assert_eq!(s.payout.config(), cfg);
+
+        // Reflects accepted admin transfer even while paused.
+        let new_admin = Address::generate(&s.env);
+        s.payout.transfer_admin_start(&s.admin, &new_admin);
+        assert_eq!(s.payout.config().admin, s.admin);
+        s.payout.transfer_admin_accept(&new_admin);
+        assert_eq!(s.payout.config().admin, new_admin);
+
+        // Works after permanent exit.
+        s.payout.unpause(&new_admin);
+        s.payout.exit(
+            &s.operator,
+            &s.ally,
+            &String::from_str(&s.env, "pilot concluded"),
+        );
+        let exited_cfg = s.payout.config();
+        assert_eq!(exited_cfg.admin, new_admin);
+        assert_eq!(exited_cfg.operator, s.operator);
+        assert_eq!(exited_cfg.ally, s.ally);
+        assert_eq!(exited_cfg.platform_fee_recipient, s.fee_recipient);
+    }
+
+    #[test]
+    fn config_fails_with_not_initialized_before_initialize() {
+        let env = Env::default();
+        let payout_id = env.register(PilotPayoutSplit, ());
+        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
+
+        assert_eq!(
+            payout.try_config(),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotInitialized as u32
+            )))
+        );
     }
 }
 

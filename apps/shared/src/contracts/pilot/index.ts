@@ -32,6 +32,7 @@ export type {
   ExitRecord,
   SwapFailureRecord,
   EurcSwapPathStatus,
+  PayoutConfig,
   AdminTransferStartedEvent as PayoutAdminTransferStartedEvent,
   AdminTransferAcceptedEvent as PayoutAdminTransferAcceptedEvent,
   AdminTransferCancelledEvent as PayoutAdminTransferCancelledEvent,

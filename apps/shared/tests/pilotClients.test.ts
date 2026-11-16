@@ -3,6 +3,7 @@ import {
   PilotWhitelistClient,
   PilotIncomeTokenClient,
   PilotPayoutSplitClient,
+  type PayoutConfig,
 } from "../src/contracts/pilot";
 import {
   WhitelistError,
@@ -33,6 +34,25 @@ describe("generated pilot clients", () => {
     const client = new PilotPayoutSplitClient(mockConfig);
     expect(client).toBeDefined();
     expect(client.options.contractId).toBe(mockConfig.contractId);
+  });
+
+  test("PilotPayoutSplitClient exposes config read method and PayoutConfig type", () => {
+    const client = new PilotPayoutSplitClient(mockConfig);
+    expect(typeof client.config).toBe("function");
+    expect(typeof client.fromJSON.config).toBe("function");
+
+    const sampleConfig: PayoutConfig = {
+      admin: mockConfig.contractId,
+      operator: mockConfig.contractId,
+      ally: mockConfig.contractId,
+      platform_fee_recipient: mockConfig.contractId,
+      income_token: mockConfig.contractId,
+      whitelist: mockConfig.contractId,
+      usdc_token: mockConfig.contractId,
+      eurc_token: mockConfig.contractId,
+      swap_router: mockConfig.contractId,
+    };
+    expect(sampleConfig.platform_fee_recipient).toBe(mockConfig.contractId);
   });
 
   test("WhitelistError contains expected error codes", () => {

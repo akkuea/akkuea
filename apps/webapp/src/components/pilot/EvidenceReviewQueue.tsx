@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ClipboardCheck, ExternalLink, Flag, Hash, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  ClipboardCheck,
+  ExternalLink,
+  Flag,
+  Hash,
+  Wallet,
+} from "lucide-react";
 import type { PilotEvidenceStatus } from "@akkuea/shared";
 import {
   Button,
@@ -24,6 +31,7 @@ import {
 } from "@/services/pilot/writes";
 import { holderAmountFor } from "@/services/pilot/reads";
 import { pilotAllyAddress } from "@/services/pilot/config";
+import { parseEvidenceUrl } from "@/services/pilot/evidenceUrl";
 import { DistributionCosignPanel } from "./DistributionCosignPanel";
 import { EvidenceStatusBadge } from "./EvidenceSubmissionForm";
 import { EvidenceVerification } from "./EvidenceVerification";
@@ -169,17 +177,37 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
               {shortenHash(cycle.evidenceHashHex)}
             </p>
           )}
-          {cycle.evidenceLink && (
-            <a
-              href={cycle.evidenceLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:underline"
-            >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("queue.openStatement")}
-            </a>
-          )}
+          {cycle.evidenceLink &&
+            (() => {
+              const parsedLink = parseEvidenceUrl(cycle.evidenceLink);
+              if (parsedLink.ok) {
+                return (
+                  <a
+                    href={parsedLink.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:underline"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t("queue.openStatement")}
+                  </a>
+                );
+              }
+              return (
+                <div className="mt-1 space-y-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-1.5 text-xs text-amber-200">
+                  <p className="flex items-center gap-1.5 font-medium">
+                    <AlertTriangle
+                      className="h-3.5 w-3.5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    {t("queue.invalidLinkWarning")}
+                  </p>
+                  <p className="break-all font-mono text-[11px] text-neutral-300">
+                    {cycle.evidenceLink}
+                  </p>
+                </div>
+              );
+            })()}
           {cycle.evidenceLink && cycle.evidenceHashHex && (
             <EvidenceVerification
               evidenceLink={cycle.evidenceLink}

@@ -16,6 +16,7 @@ import {
   verifyEvidenceDocument,
   type EvidenceVerification as EvidenceVerificationResult,
 } from "@/services/pilot/evidenceVerify";
+import { parseEvidenceUrl } from "@/services/pilot/evidenceUrl";
 import { shortenHash } from "./format";
 
 interface EvidenceVerificationProps {
@@ -44,11 +45,17 @@ export function EvidenceVerification({
   const [result, setResult] = useState<EvidenceVerificationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const parsedLink = parseEvidenceUrl(evidenceLink);
+
   async function verifyLink() {
+    if (!parsedLink.ok) {
+      setResult({ status: "unreachable", reason: t("verify.invalidLink") });
+      return;
+    }
     setPending(true);
     setError(null);
     try {
-      setResult(await verifyEvidenceDocument(evidenceLink, evidenceHashHex));
+      setResult(await verifyEvidenceDocument(parsedLink.href, evidenceHashHex));
     } catch (verifyError) {
       setError(
         verifyError instanceof Error ? verifyError.message : t("verify.failed"),
@@ -79,20 +86,52 @@ export function EvidenceVerification({
 
   return (
     <div className="mt-2 space-y-2">
-      <Button
-        variant="secondary"
-        size="sm"
-        disabled={pending}
-        isLoading={pending}
-        onClick={() => void verifyLink()}
-      >
-        <span className="inline-flex items-center gap-1.5">
-          {!pending && (
-            <SearchCheck className="h-3.5 w-3.5" aria-hidden="true" />
-          )}
-          {t("verify.action")}
-        </span>
-      </Button>
+      {parsedLink.ok ? (
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={pending}
+          isLoading={pending}
+          onClick={() => void verifyLink()}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            {!pending && (
+              <SearchCheck className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {t("verify.action")}
+          </span>
+        </Button>
+      ) : (
+        <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+          <p className="flex items-start gap-1.5 text-xs text-amber-200">
+            <AlertTriangle
+              className="mt-0.5 h-3.5 w-3.5 shrink-0"
+              aria-hidden="true"
+            />
+            <span>{t("verify.invalidLink")}</span>
+          </p>
+          <p className="text-xs text-neutral-400">{t("verify.fileFallback")}</p>
+          <label className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-cyan-400 hover:underline">
+            {pending ? (
+              <Loader2
+                className="h-3.5 w-3.5 animate-spin"
+                aria-hidden="true"
+              />
+            ) : (
+              <Upload className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {t("verify.chooseFile")}
+            <input
+              type="file"
+              className="sr-only"
+              disabled={pending}
+              onChange={(event) =>
+                void verifyFile(event.target.files?.[0] ?? null)
+              }
+            />
+          </label>
+        </div>
+      )}
 
       {error && (
         <p role="alert" className="text-xs text-red-400">

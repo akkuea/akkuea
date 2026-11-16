@@ -1,12 +1,17 @@
-import "@/test/setup-dom";
-import { cleanup, within } from "@testing-library/react";
-import { renderWithIntl as render } from "@/test/renderWithIntl";
-import {
-  EvidenceSubmissionFormView,
-  type EvidenceSubmissionWallet,
-} from "../EvidenceSubmissionForm";
+await import("@/test/setup-dom");
+const { afterEach, describe, expect, it } = await import("bun:test");
+const { cleanup, fireEvent, waitFor, within } =
+  await import("@testing-library/react");
+const { renderWithIntl: render } = await import("@/test/renderWithIntl");
+const { EvidenceSubmissionFormView } =
+  await import("../EvidenceSubmissionForm");
+type EvidenceSubmissionWallet =
+  import("../EvidenceSubmissionForm").EvidenceSubmissionWallet;
+const { RecordEvidenceCosignPanel } =
+  await import("../RecordEvidenceCosignPanel");
 
 const ALLY = "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBDQCQZVQQ6BRVV12BKHA";
+const OPERATOR = "GDTNXRLOJD2YEBPKK7KCMR7J33AAG5VZXHAJTHIG736D6LVEFLLLKPDL";
 
 const connectedWallet: EvidenceSubmissionWallet = {
   address: ALLY,
@@ -101,5 +106,120 @@ describe("EvidenceSubmissionForm", () => {
     const scope = within(view.container);
     expect(scope.queryByText(/payout contract is paused/i)).not.toBeNull();
     expect(fileInput(view.container)?.disabled).toBe(true);
+  });
+
+  it("rejects http://, javascript:, data:, relative paths, and spaces, and enables submit for valid https://", async () => {
+    const view = renderForm();
+    const scope = within(view.container);
+    const upload = fileInput(view.container)!;
+    const linkField = view.container.querySelector<HTMLInputElement>(
+      'input[placeholder="https://"]',
+    )!;
+    const amountField = view.container.querySelector<HTMLInputElement>(
+      'input[placeholder="0.00"]',
+    )!;
+    const submit = scope.getByRole("button", {
+      name: /submit for review/i,
+    }) as HTMLButtonElement;
+
+    const sampleFile = new File(["march statement"], "2026-03.pdf", {
+      type: "application/pdf",
+    });
+    fireEvent.change(upload, { target: { files: [sampleFile] } });
+    fireEvent.change(amountField, { target: { value: "1250.00" } });
+
+    await waitFor(() => {
+      expect(view.container.textContent).toMatch(/[0-9a-f]{4,}/i);
+    });
+
+    const invalidCases = [
+      "http://example.org/statements/2026-03.pdf",
+      "javascript:alert(1)",
+      "data:text/plain;base64,SGVsbG8=",
+      "/statements/2026-03.pdf",
+      "https://example.org/statements/2026 03.pdf",
+    ];
+
+    for (const badLink of invalidCases) {
+      fireEvent.change(linkField, { target: { value: badLink } });
+      expect(submit.disabled).toBe(true);
+      expect(
+        scope.queryByText(/enter a valid https:\/\/ url with no spaces/i),
+      ).not.toBeNull();
+    }
+
+    fireEvent.change(linkField, {
+      target: { value: "https://example.org/statements/2026-03.pdf" },
+    });
+    expect(
+      scope.queryByText(/enter a valid https:\/\/ url with no spaces/i),
+    ).toBeNull();
+    expect(submit.disabled).toBe(false);
+  });
+});
+
+describe("RecordEvidenceCosignPanel link validation", () => {
+  it("rejects non-https and space-containing links and enables prepare for valid https://", async () => {
+    const view = render(
+      <RecordEvidenceCosignPanel
+        operatorAddress={OPERATOR}
+        allyAddress={ALLY}
+        signTransaction={async (xdr: string) => xdr}
+      />,
+    );
+    const scope = within(view.container);
+    const cycleField = view.container.querySelector<HTMLInputElement>(
+      'input[placeholder="2026-09"]',
+    )!;
+    const upload = view.container.querySelector<HTMLInputElement>(
+      'input[id="record-evidence-file"]',
+    )!;
+    const linkField = view.container.querySelector<HTMLInputElement>(
+      'input[placeholder="https://"]',
+    )!;
+    const amountField = view.container.querySelector<HTMLInputElement>(
+      'input[placeholder="0.00"]',
+    )!;
+    const prepareBtn = scope.getByRole("button", {
+      name: /prepare/i,
+    }) as HTMLButtonElement;
+
+    fireEvent.change(cycleField, { target: { value: "2026-09" } });
+    fireEvent.change(upload, {
+      target: {
+        files: [
+          new File(["september statement"], "2026-09.pdf", {
+            type: "application/pdf",
+          }),
+        ],
+      },
+    });
+    fireEvent.change(amountField, { target: { value: "900.00" } });
+
+    await waitFor(() => {
+      expect(view.container.textContent).toMatch(/[0-9a-f]{4,}/i);
+    });
+
+    for (const badLink of [
+      "http://example.org/2026-09.pdf",
+      "javascript:alert(1)",
+      "data:text/plain;base64,SGVsbG8=",
+      "statements/2026-09.pdf",
+      "https://example.org/2026 09.pdf",
+    ]) {
+      fireEvent.change(linkField, { target: { value: badLink } });
+      expect(prepareBtn.disabled).toBe(true);
+      expect(
+        scope.queryByText(/enter a valid https:\/\/ url with no spaces/i),
+      ).not.toBeNull();
+    }
+
+    fireEvent.change(linkField, {
+      target: { value: "https://example.org/statements/2026-09.pdf" },
+    });
+    expect(
+      scope.queryByText(/enter a valid https:\/\/ url with no spaces/i),
+    ).toBeNull();
+    expect(prepareBtn.disabled).toBe(false);
   });
 });

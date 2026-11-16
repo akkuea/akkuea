@@ -8,6 +8,7 @@ import {
   hashEvidenceFile,
   type EvidenceDigest,
 } from "@/services/pilot/evidenceHash";
+import { parseEvidenceUrl } from "@/services/pilot/evidenceUrl";
 import {
   prepareRecordEvidence,
   summarizeRecordEvidence,
@@ -64,11 +65,20 @@ export function RecordEvidenceCosignPanel({
     return BigInt(Math.round(value * 10 ** 7));
   }, [totalIncome]);
 
+  const parsedLink = useMemo(
+    () => parseEvidenceUrl(evidenceLink),
+    [evidenceLink],
+  );
+  const linkValidationError =
+    evidenceLink.length > 0 && !parsedLink.ok
+      ? t("submission.invalidLink")
+      : undefined;
+
   const canPrepare =
     cycleId.trim().length > 0 &&
     digest !== null &&
     !isHashing &&
-    evidenceLink.trim().length > 0 &&
+    parsedLink.ok &&
     parsedIncome !== null;
 
   async function handleFileChange(selected: File | null) {
@@ -91,6 +101,10 @@ export function RecordEvidenceCosignPanel({
   }
 
   async function prepare() {
+    if (!parsedLink.ok) {
+      setError(t("submission.invalidLink"));
+      return;
+    }
     if (!canPrepare || !digest || parsedIncome === null) return;
     setError(null);
     setStep({ name: "preparing" });
@@ -100,7 +114,7 @@ export function RecordEvidenceCosignPanel({
         ally: allyAddress,
         cycleId: cycleId.trim(),
         evidenceHash: digest.bytes,
-        evidenceLink: evidenceLink.trim(),
+        evidenceLink: parsedLink.href,
         totalIncome: parsedIncome,
       });
       const summary = summarizeRecordEvidence(payloadJson);
@@ -213,6 +227,7 @@ export function RecordEvidenceCosignPanel({
             value={evidenceLink}
             disabled={step.name === "preparing"}
             hint={t("submission.linkHint")}
+            error={linkValidationError}
             onChange={(event) => setEvidenceLink(event.target.value)}
           />
 

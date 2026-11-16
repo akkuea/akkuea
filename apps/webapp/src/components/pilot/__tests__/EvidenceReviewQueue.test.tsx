@@ -124,4 +124,49 @@ describe("EvidenceReviewQueue", () => {
     });
     expect((reject as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it("renders a valid https evidence link as an external anchor", () => {
+    const view = render(
+      <EvidenceReviewQueueView {...baseProps} cycles={[awaitingReviewCycle]} />,
+    );
+    const anchors = view.container.querySelectorAll("a");
+    expect(anchors.length).toBe(1);
+    expect(anchors[0]?.getAttribute("href")).toBe(
+      "https://example.org/statements/2026-03.pdf",
+    );
+  });
+
+  it("never renders an anchor or fetch trigger for stored non-https links", () => {
+    const unsafeLinks = [
+      "javascript:alert(1)",
+      "http://example.org/statements/2026-03.pdf",
+      "data:text/html,<script>alert(1)</script>",
+      "/local/path.pdf",
+      "https://example.org/with spaces.pdf",
+    ];
+
+    for (const evidenceLink of unsafeLinks) {
+      const view = render(
+        <EvidenceReviewQueueView
+          {...baseProps}
+          cycles={[{ ...awaitingReviewCycle, evidenceLink }]}
+        />,
+      );
+      const scope = within(view.container);
+      expect(view.container.querySelectorAll("a").length).toBe(0);
+      expect(scope.queryByText(evidenceLink)).not.toBeNull();
+      expect(
+        scope.queryByText(/only https:\/\/ links can be opened/i),
+      ).not.toBeNull();
+      expect(
+        scope.queryByRole("button", { name: /verify this evidence/i }),
+      ).toBeNull();
+      expect(
+        scope.queryByText(
+          /not a valid https:\/\/ url, so it will not be fetched/i,
+        ),
+      ).not.toBeNull();
+      cleanup();
+    }
+  });
 });

@@ -91,4 +91,30 @@ describe("verifyEvidenceDocument", () => {
     expect(result.status).toBe("unreachable");
     expect(result.reason).toMatch(/404/);
   });
+
+  it("never calls fetch for non-https, relative, or space-containing links", async () => {
+    let fetchCalls = 0;
+    globalThis.fetch = (async () => {
+      fetchCalls += 1;
+      return body("should not be fetched");
+    }) as unknown as typeof fetch;
+
+    const invalidLinks = [
+      "http://example.org/statements/2026-08.pdf",
+      "javascript:alert(1)",
+      "data:text/plain;base64,SGVsbG8=",
+      "/statements/2026-08.pdf",
+      "https://example.org/statements/2026 08.pdf",
+    ];
+
+    for (const link of invalidLinks) {
+      const result = await verifyEvidenceDocument(
+        link,
+        await sha256Hex("anything"),
+      );
+      expect(result.status).toBe("unreachable");
+      expect(result.reason).toMatch(/valid https:\/\//i);
+    }
+    expect(fetchCalls).toBe(0);
+  });
 });

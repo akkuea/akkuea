@@ -16,6 +16,8 @@ import {
 import {
   createNodeContractSigner,
   DefiLendingContractClient,
+  PilotWhitelistClient,
+  type PilotWhitelistClientInterface,
   RealEstateTokenContractClient,
 } from '@akkuea/shared';
 import { ApiError } from '../errors/ApiError';
@@ -586,6 +588,28 @@ export class StellarService {
     const signer = Keypair.fromSecret(adminSecret);
     transaction.sign(signer);
     return this.submitTransaction(transaction.toXDR());
+  }
+
+  async submitWhitelistRevoke(
+    contractId: string,
+    adminPublicKey: string,
+    adminSecret: string,
+    walletAddress: string,
+  ): Promise<string> {
+    this.assertValidContractId(contractId);
+    this.assertValidAddress(adminPublicKey);
+    this.assertValidAddress(walletAddress);
+
+    const client = new PilotWhitelistClient(
+      this.getSorobanClientConfig(contractId, adminPublicKey, adminSecret),
+    ) as unknown as PilotWhitelistClientInterface;
+
+    const transaction = await client.revoke({
+      admin: adminPublicKey,
+      address: walletAddress,
+    });
+    const sentTransaction = await transaction.signAndSend();
+    return this.getSentTransactionHash(sentTransaction);
   }
 
   createKeypair(): { publicKey: string; secretKey: string } {

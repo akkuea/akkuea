@@ -143,28 +143,99 @@ const reviewPropertyRoute = new Elysia()
   );
 
 const reviewWhitelistSchema = t.Object({
-  action: t.Union([t.Literal('approve'), t.Literal('reject')]),
+  action: t.Union([t.Literal('approve'), t.Literal('reject'), t.Literal('revoke')]),
   reason: t.Optional(t.String()),
+});
+
+const revokeWhitelistSchema = t.Object({
+  reason: t.String({ minLength: 1 }),
 });
 
 const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
   .use(internalKeyAuth)
-  .get('/pending', () => WhitelistController.pending(), {
-    detail: {
-      summary: 'Get pending whitelist requests (Admin)',
-      tags: ['Internal Operations'],
-    },
+  .onError(({ error, code, set }) => {
+    const result = handleError(error);
+    if (code === 'VALIDATION') {
+      set.status = 400;
+      return {
+        ...result,
+        error: 'Validation Error',
+        statusCode: 400,
+      };
+    }
+    set.status = result.statusCode;
+    return result;
   })
-  .post('/:id/review', (ctx) => WhitelistController.review(ctx), {
-    body: reviewWhitelistSchema,
-    params: t.Object({
-      id: t.String(),
-    }),
-    detail: {
-      summary: 'Review whitelist request (Admin)',
-      tags: ['Internal Operations'],
+  .get(
+    '/pending',
+    async ({ set }) => {
+      try {
+        return await WhitelistController.pending();
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
     },
-  });
+    {
+      detail: {
+        summary: 'Get pending whitelist requests (Admin)',
+        tags: ['Internal Operations'],
+      },
+    },
+  )
+  .post(
+    '/:id/review',
+    async ({ params, body, headers, set }) => {
+      try {
+        return await WhitelistController.review({
+          params,
+          body,
+          headers: headers as Record<string, string | undefined>,
+        });
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      body: reviewWhitelistSchema,
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: 'Review whitelist request (Admin)',
+        tags: ['Internal Operations'],
+      },
+    },
+  )
+  .post(
+    '/:id/revoke',
+    async ({ params, body, headers, set }) => {
+      try {
+        return await WhitelistController.revoke({
+          params,
+          body,
+          headers: headers as Record<string, string | undefined>,
+        });
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      body: revokeWhitelistSchema,
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: 'Revoke an approved whitelist request (Operator)',
+        tags: ['Internal Operations'],
+      },
+    },
+  );
 
 const auditOperationsRoute = new Elysia()
   .use(internalKeyAuth)

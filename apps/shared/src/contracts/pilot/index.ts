@@ -35,6 +35,13 @@ export type {
   AdminTransferStartedEvent as PayoutAdminTransferStartedEvent,
   AdminTransferAcceptedEvent as PayoutAdminTransferAcceptedEvent,
   AdminTransferCancelledEvent as PayoutAdminTransferCancelledEvent,
+  OperatorTransferStartedEvent,
+  OperatorTransferAcceptedEvent,
+  OperatorTransferCancelledEvent,
+  AllyTransferStartedEvent,
+  AllyTransferAcceptedEvent,
+  AllyTransferCancelledEvent,
+  PlatformFeeRecipientUpdatedEvent,
 } from "./payout-split.js";
 export { PayoutError } from "./payout-split.js";
 export type { EvidenceStatus } from "./payout-split.js";

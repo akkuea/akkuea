@@ -33,6 +33,8 @@ pub enum DataKey {
     /// prove it never spends another holder's reserved funds.
     TotalWithheld,
     PendingAdmin,
+    PendingOperator,
+    PendingAlly,
 }
 
 pub struct Storage;
@@ -178,5 +180,35 @@ impl Storage {
 
     pub fn clear_pending_admin(env: &Env) {
         env.storage().instance().remove(&DataKey::PendingAdmin);
+    }
+
+    /// The address named by the admin as the next operator, if an operator
+    /// rotation is in progress. Cleared on accept or cancel.
+    pub fn pending_operator(env: &Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::PendingOperator)
+    }
+
+    pub fn set_pending_operator(env: &Env, pending: &Address) {
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingOperator, pending);
+    }
+
+    pub fn clear_pending_operator(env: &Env) {
+        env.storage().instance().remove(&DataKey::PendingOperator);
+    }
+
+    /// The address named by the admin as the next ally, if an ally rotation is
+    /// in progress. Cleared on accept or cancel.
+    pub fn pending_ally(env: &Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::PendingAlly)
+    }
+
+    pub fn set_pending_ally(env: &Env, pending: &Address) {
+        env.storage().instance().set(&DataKey::PendingAlly, pending);
+    }
+
+    pub fn clear_pending_ally(env: &Env) {
+        env.storage().instance().remove(&DataKey::PendingAlly);
     }
 }

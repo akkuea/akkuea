@@ -348,3 +348,132 @@ pub fn emit_admin_transfer_cancelled(env: &Env, admin: Address) {
         AdminTransferCancelledEvent { admin },
     );
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OperatorTransferStartedEvent {
+    pub admin: Address,
+    pub current_operator: Address,
+    pub new_operator: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OperatorTransferAcceptedEvent {
+    pub old_operator: Address,
+    pub new_operator: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OperatorTransferCancelledEvent {
+    pub admin: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AllyTransferStartedEvent {
+    pub admin: Address,
+    pub current_ally: Address,
+    pub new_ally: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AllyTransferAcceptedEvent {
+    pub old_ally: Address,
+    pub new_ally: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AllyTransferCancelledEvent {
+    pub admin: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PlatformFeeRecipientUpdatedEvent {
+    pub admin: Address,
+    pub old_recipient: Address,
+    pub new_recipient: Address,
+}
+
+pub fn emit_operator_transfer_started(
+    env: &Env,
+    admin: Address,
+    current_operator: Address,
+    new_operator: Address,
+) {
+    env.events().publish(
+        (symbol_short!("opstart"),),
+        OperatorTransferStartedEvent {
+            admin,
+            current_operator,
+            new_operator,
+        },
+    );
+}
+
+pub fn emit_operator_transfer_accepted(env: &Env, old_operator: Address, new_operator: Address) {
+    env.events().publish(
+        (symbol_short!("opacc"),),
+        OperatorTransferAcceptedEvent {
+            old_operator,
+            new_operator,
+        },
+    );
+}
+
+pub fn emit_operator_transfer_cancelled(env: &Env, admin: Address) {
+    env.events().publish(
+        (symbol_short!("opcan"),),
+        OperatorTransferCancelledEvent { admin },
+    );
+}
+
+pub fn emit_ally_transfer_started(
+    env: &Env,
+    admin: Address,
+    current_ally: Address,
+    new_ally: Address,
+) {
+    env.events().publish(
+        (symbol_short!("allysta"),),
+        AllyTransferStartedEvent {
+            admin,
+            current_ally,
+            new_ally,
+        },
+    );
+}
+
+pub fn emit_ally_transfer_accepted(env: &Env, old_ally: Address, new_ally: Address) {
+    env.events().publish(
+        (symbol_short!("allyacc"),),
+        AllyTransferAcceptedEvent { old_ally, new_ally },
+    );
+}
+
+pub fn emit_ally_transfer_cancelled(env: &Env, admin: Address) {
+    env.events().publish(
+        (symbol_short!("allycan"),),
+        AllyTransferCancelledEvent { admin },
+    );
+}
+
+pub fn emit_platform_fee_recipient_updated(
+    env: &Env,
+    admin: Address,
+    old_recipient: Address,
+    new_recipient: Address,
+) {
+    env.events().publish(
+        (symbol_short!("feerec"),),
+        PlatformFeeRecipientUpdatedEvent {
+            admin,
+            old_recipient,
+            new_recipient,
+        },
+    );
+}

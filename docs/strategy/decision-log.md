@@ -246,6 +246,64 @@ runbook is marked accordingly and needs a funded key holder to actually run
 it and record the resulting transaction hashes before it can be considered
 verified rather than merely written.
 
+### Operator, ally, and platform fee recipient rotation on `pilot-payout-split`
+
+**Adopted:** `pilot-payout-split` adds two-step start/accept/cancel rotation for
+`operator` (`transfer_operator_start`, `transfer_operator_accept`,
+`transfer_operator_cancel`, `pending_operator`) and `ally`
+(`transfer_ally_start`, `transfer_ally_accept`, `transfer_ally_cancel`,
+`pending_ally`), plus a single-step admin-gated update for
+`platform_fee_recipient` (`set_platform_fee_recipient`). Every rotation
+operation works while the contract is paused and is rejected with
+`PayoutError::ContractExited` once `exit` has permanently terminated the pilot.
+
+**Authorization rules and answers to the two design questions:**
+
+1. **Can the admin alone replace a lost operator key? Yes.**
+   `transfer_operator_start` and `transfer_operator_cancel` are authorized on
+   chain by `admin` alone (`require_admin`), and `transfer_operator_accept` is
+   signed by `new_operator`. Both `admin` (Akkuea's platform governance key)
+   and `operator` (Akkuea's operational review signer) are internal Akkuea
+   roles. Requiring the outgoing `operator` signature would make recovery from a
+   lost operator key impossible, and requiring `ally` co-signature would give an
+   external counterparty veto power over Akkuea's internal operational key
+   hygiene. Two-step acceptance by `new_operator` prevents a mistyped or
+   uncontrolled operator address from locking `record_evidence`,
+   `start_review`, `review_evidence`, `execute_distribution`, or `exit`.
+2. **Must the ally consent to its own replacement when its key still works?
+   Operationally yes via off-chain written agreement and incoming key
+   acceptance, but the outgoing `ally` key does NOT co-sign
+   `transfer_ally_start` on chain.**
+   `transfer_ally_start` and `transfer_ally_cancel` are authorized on chain by
+   `admin` alone, and `transfer_ally_accept` must be signed by `new_ally`. Two
+   failure modes rule out requiring the outgoing `ally`'s signature on chain:
+   - _Lost-key recoverability:_ the contract cannot distinguish a working ally
+     key from a lost or permanently unreachable one. Requiring
+     `current_ally.require_auth()` on `transfer_ally_start` would leave
+     `execute_distribution` and `exit` permanently bricked whenever an ally
+     loses custody of its key, which is the exact deadlock this change exists
+     to close.
+   - _Compromised-key containment:_ if a working ally key is stolen or turns
+     adversarial, requiring its co-signature on `transfer_ally_start` (or
+     allowing it to call `transfer_ally_cancel`) would let the compromised key
+     veto or grief its own replacement indefinitely.
+     When the ally's key still works during a routine key rotation, consent is
+     exercised operationally (recorded in
+     `docs/operations/runbook-pilot-role-rotation.md`): the ally generates the
+     replacement key, requests `transfer_ally_start` from `admin` in writing, and
+     signs `transfer_ally_accept` itself. Every start, accept, and cancel emits a
+     public on-chain event (`allysta`, `allyacc`, `allycan`), and
+     `SignerCollision` (`operator != ally`) is enforced on both `start` and
+     `accept` so `admin` can never collapse the two-signer model onto the
+     operator address.
+3. **Who authorizes `set_platform_fee_recipient`? `admin` alone, in one step.**
+   Unlike `operator` and `ally`, `platform_fee_recipient` never signs any
+   contract invocation and may be a non-signing multisig vault or custodial
+   deposit account. Because a mistyped fee recipient cannot lock any contract
+   entry point and can be corrected immediately by `admin`, a single-step
+   admin-gated setter (`feerec` event) avoids unnecessary friction while still
+   respecting `require_not_exited`.
+
 ## Naming
 
 Project renamed from the working title "Pili" to **Akkuea** (spelled letter-by-letter: A-K-K-U-E-A, double K) partway through this strategy's development.

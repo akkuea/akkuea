@@ -51,6 +51,24 @@ describe("generated pilot clients", () => {
     expect(PayoutError[1].message).toBe("AlreadyInitialized");
     expect(PayoutError[4].message).toBe("ContractPaused");
     expect(PayoutError[10].message).toBe("CycleAlreadyDistributed");
+    expect(PayoutError[32].message).toBe("NotPendingOperator");
+    expect(PayoutError[33].message).toBe("NotPendingAlly");
+  });
+
+  test("PilotPayoutSplitClient exposes operator, ally, and fee recipient rotation methods", () => {
+    const client = new PilotPayoutSplitClient(mockConfig);
+    expect(typeof client.transfer_operator_start).toBe("function");
+    expect(typeof client.transfer_operator_accept).toBe("function");
+    expect(typeof client.transfer_operator_cancel).toBe("function");
+    expect(typeof client.pending_operator).toBe("function");
+    expect(typeof client.transfer_ally_start).toBe("function");
+    expect(typeof client.transfer_ally_accept).toBe("function");
+    expect(typeof client.transfer_ally_cancel).toBe("function");
+    expect(typeof client.pending_ally).toBe("function");
+    expect(typeof client.set_platform_fee_recipient).toBe("function");
+    expect(typeof client.fromJSON.transfer_operator_start).toBe("function");
+    expect(typeof client.fromJSON.transfer_ally_start).toBe("function");
+    expect(typeof client.fromJSON.set_platform_fee_recipient).toBe("function");
   });
 });
 

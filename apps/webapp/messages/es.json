@@ -162,7 +162,16 @@
     "tokenize": "Tokenizar",
     "lending": "Préstamos",
     "map": "Mapa",
-    "connect": "Conectar"
+    "connect": "Conectar",
+    "mainNavigation": "Navegación principal",
+    "toggleMenu": "Alternar menú",
+    "pilot": "Piloto",
+    "pilotMenuLabel": "Navegación del piloto",
+    "pilotInvestor": "Panel de inversor",
+    "pilotOnboarding": "Solicitud de lista blanca",
+    "pilotAlly": "Panel de aliado",
+    "pilotReviewWhitelist": "Cola de lista blanca",
+    "pilotReviewEvidence": "Cola de evidencias"
   },
   "Treasury": {
     "title": "Tesorería",

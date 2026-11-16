@@ -7,55 +7,71 @@
  *   bun test src/tests/whitelist.manual-verification.test.ts
  */
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
+import { Keypair } from '@stellar/stellar-sdk';
 import Elysia from 'elysia';
 import jwt from 'jsonwebtoken';
 import { db } from '../db';
 import { whitelistRoutes } from '../routes/whitelist';
 import { setClientAddressResolverForTesting } from '../middleware/rateLimit';
+import { internalOperationsRoutes } from '../routes/internalOperations';
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
 
-/**
- * Header a test uses to declare the client address a request should be limited
- * as. It is read by the resolver installed below, which only exists under the
- * test runner.
- */
 const TEST_CLIENT_HEADER = 'x-ratelimit-test-client';
 
-/**
- * Requests driven through `app.handle()` never reach a socket, so the rate
- * limiter (which identifies clients by socket address, or by `x-forwarded-for`
- * only when proxies are trusted) has nothing to key on and declines to count
- * them. The tests that assert real limiting below therefore declare the client
- * address they want.
- *
- * This is not the removed `x-test-bypass-ratelimit` header: nothing here skips
- * the limiter, the requests are counted and limited for real, against the
- * declared address. `setClientAddressResolverForTesting` refuses to install
- * itself unless NODE_ENV is "test", so no deployment can reach this path.
- */
 setClientAddressResolverForTesting((context) => context.request.headers.get(TEST_CLIENT_HEADER));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';
 
-// Setup a minimal app for testing routes
-import { internalOperationsRoutes } from '../routes/internalOperations';
 const testApp = new Elysia().use(whitelistRoutes).use(internalOperationsRoutes);
 
-const WALLET_56 = 'GDK7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZ';
-const WALLET_B = 'GDC3C4X5R7N2X7CII7SPRD4U6ZLKZKAJZDW6N4Q4QAV3FJ7Q3N7GJ5P6';
+const WALLET_56 = Keypair.random().publicKey();
+const WALLET_B = Keypair.random().publicKey();
+const KNOWN_STATUSES = new Set(['pending', 'approved', 'rejected']);
 
-function extractWalletAddress(obj: any): string | undefined {
-  if (obj == null || typeof obj !== 'object') return undefined;
-  if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
-    for (const chunk of obj.queryChunks) {
-      if (chunk?.constructor?.name === 'Param' && typeof chunk.value === 'string') {
-        return chunk.value;
+function collectSqlParams(node: unknown, out: unknown[] = []): unknown[] {
+  if (node == null || typeof node !== 'object') return out;
+  const record = node as Record<string, unknown>;
+  if (node.constructor?.name === 'Param' && 'value' in record) {
+    out.push(record.value);
+    return out;
+  }
+  if (Array.isArray(record.queryChunks)) {
+    for (const chunk of record.queryChunks) {
+      collectSqlParams(chunk, out);
+    }
+  }
+  return out;
+}
+
+function parseWhereFilters(where: unknown): {
+  idOrWalletStrings: string[];
+  statuses: string[] | null;
+} {
+  const params = collectSqlParams(where);
+  const idOrWalletStrings: string[] = [];
+  const statuses: string[] = [];
+
+  for (const param of params) {
+    if (Array.isArray(param)) {
+      for (const item of param) {
+        if (typeof item === 'string' && KNOWN_STATUSES.has(item)) {
+          statuses.push(item);
+        }
+      }
+    } else if (typeof param === 'string') {
+      if (KNOWN_STATUSES.has(param)) {
+        statuses.push(param);
+      } else {
+        idOrWalletStrings.push(param);
       }
     }
   }
-  if ('value' in obj && typeof obj.value === 'string') return obj.value;
-  return undefined;
+
+  return {
+    idOrWalletStrings,
+    statuses: statuses.length > 0 ? statuses : null,
+  };
 }
 
 let mockDbStore: any[] = [];
@@ -63,22 +79,17 @@ let mockDbStore: any[] = [];
 beforeEach(() => {
   mockDbStore = [];
 
-  // Mock whitelist service (re-apply after each mock.restore)
-  mock.module('../services/WhitelistService', () => {
-    return {
-      whitelistService: {
-        approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
-        rejectRequest: mock(() => Promise.resolve()),
-      },
-    };
-  });
-
   (db as any).query = {
     pilotWhitelistRequests: {
       findFirst: mock(async ({ where }: any) => {
-        const walletAddr = extractWalletAddress(where);
-        if (walletAddr) return mockDbStore.find((r) => r.walletAddress === walletAddr);
-        return undefined;
+        const { idOrWalletStrings, statuses } = parseWhereFilters(where);
+        return [...mockDbStore].reverse().find((r) => {
+          const matchesId =
+            idOrWalletStrings.length === 0 ||
+            idOrWalletStrings.some((val) => r.walletAddress === val || r.id === val);
+          const matchesStatus = !statuses || statuses.includes(r.status);
+          return matchesId && matchesStatus;
+        });
       }),
       findMany: mock(async () => mockDbStore),
     },
@@ -106,20 +117,14 @@ beforeEach(() => {
   }));
 
   (db as any).delete = mock(() => ({
-    where: async (whereExpr: any) => {
-      const walletAddr = extractWalletAddress(whereExpr);
-      if (walletAddr) mockDbStore = mockDbStore.filter((r) => r.walletAddress !== walletAddr);
+    where: async () => {
+      throw new Error('Rejected history rows must not be deleted');
     },
   }));
 });
 
 afterEach(() => {
   mock.restore();
-  // Direct property assignment on the db Proxy mutates _dbTarget, which
-  // persists across test files in the same bun process. mock.restore()
-  // only undoes mock() calls, not these mutations, so delete them
-  // unconditionally: beforeEach always re-populates all four from scratch,
-  // so there's no prior legitimate state to preserve.
   for (const prop of ['query', 'insert', 'update', 'delete']) {
     delete (db as any)[prop];
   }
@@ -148,7 +153,7 @@ async function postWhitelistRequest(wallet: string, name = 'Test User', clientAd
 
 describe('Whitelist manual verification', () => {
   test('POST /request returns 200 with status pending', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+    const wallet = Keypair.random().publicKey();
     const res = await postWhitelistRequest(wallet);
     expect(res.status).toBe(200);
 
@@ -159,7 +164,7 @@ describe('Whitelist manual verification', () => {
   });
 
   test('rate limit headers are present on request', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+    const wallet = Keypair.random().publicKey();
     const res = await postWhitelistRequest(wallet, 'Header Test', '198.51.100.10');
     expect(res.status).toBe(200);
 
@@ -167,8 +172,7 @@ describe('Whitelist manual verification', () => {
     const remaining = parseInt(res.headers.get('X-RateLimit-Remaining') ?? '0');
     const reset = parseInt(res.headers.get('X-RateLimit-Reset') ?? '0');
 
-    expect(limit).toBe(10); // default window
-    // This client address is used by no other test, so it starts on a full budget.
+    expect(limit).toBe(10);
     expect(remaining).toBe(9);
     expect(reset).toBeGreaterThan(0);
   });
@@ -176,9 +180,8 @@ describe('Whitelist manual verification', () => {
   test('rate limit blocks after exceeding max requests', async () => {
     const statuses: number[] = [];
 
-    // The default budget is 10 requests per 60s for one client.
     for (let i = 0; i < 11; i++) {
-      const wallet = `GD${String(i + 300).padStart(54, '0')}`;
+      const wallet = Keypair.random().publicKey();
       const res = await postWhitelistRequest(wallet, `RL User ${i}`, '198.51.100.11');
       statuses.push(res.status);
     }
@@ -187,8 +190,8 @@ describe('Whitelist manual verification', () => {
     expect(statuses[10]).toBe(429);
   });
 
-  test('duplicate pending request returns error', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+  test('duplicate pending request returns 409 conflict', async () => {
+    const wallet = Keypair.random().publicKey();
     mockDbStore.push({
       id: 'existing',
       walletAddress: wallet,
@@ -196,14 +199,15 @@ describe('Whitelist manual verification', () => {
     });
 
     const res = await postWhitelistRequest(wallet);
-    expect(res.status).not.toBe(200);
+    expect(res.status).toBe(409);
   });
 
-  test('resubmission after rejection creates new pending request', async () => {
+  test('resubmission after rejection creates new pending request while preserving rejected row', async () => {
     mockDbStore.push({
       id: 'old_rejected',
       walletAddress: WALLET_B,
       status: 'rejected',
+      rejectionReason: 'Expired document',
       fullName: 'Old',
       idType: 'passport',
       idReference: 'OLD',
@@ -217,12 +221,14 @@ describe('Whitelist manual verification', () => {
     expect(body.data.fullName).toBe('New Submission');
 
     const forWallet = mockDbStore.filter((r) => r.walletAddress === WALLET_B);
-    expect(forWallet.length).toBe(1);
-    expect(forWallet[0].id).not.toBe('old_rejected');
+    expect(forWallet.length).toBe(2);
+    expect(forWallet[0].id).toBe('old_rejected');
+    expect(forWallet[0].status).toBe('rejected');
+    expect(forWallet[1].status).toBe('pending');
   });
 
-  test('blocked when already approved', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+  test('blocked with 409 when already approved', async () => {
+    const wallet = Keypair.random().publicKey();
     mockDbStore.push({
       id: 'approved',
       walletAddress: wallet,
@@ -230,7 +236,7 @@ describe('Whitelist manual verification', () => {
     });
 
     const res = await postWhitelistRequest(wallet);
-    expect(res.status).not.toBe(200);
+    expect(res.status).toBe(409);
   });
 
   test('GET /status returns none for unknown wallet', async () => {
@@ -334,7 +340,7 @@ describe('Whitelist manual verification', () => {
             [TEST_CLIENT_HEADER]: '198.51.100.12',
           },
           body: JSON.stringify({
-            walletAddress: `GD${String(i + 20).padStart(54, '0')}`,
+            walletAddress: Keypair.random().publicKey(),
             fullName: `Bypass User ${i}`,
             idType: 'passport',
             idReference: `BYPASS-${i}`,
@@ -344,13 +350,11 @@ describe('Whitelist manual verification', () => {
       statuses.push(res.status);
     }
 
-    // Every request below carried the old bypass header, and the limiter still
-    // counted them: the 11th request is over the budget of 10 and is rejected.
     expect(statuses.slice(0, 10)).toEqual(Array.from({ length: 10 }, () => 200));
     expect(statuses[10]).toBe(429);
 
     const blocked = await postWhitelistRequest(
-      `GD${String(400).padStart(54, '0')}`,
+      Keypair.random().publicKey(),
       'Blocked User',
       '198.51.100.12',
     );

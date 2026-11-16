@@ -149,22 +149,59 @@ const reviewWhitelistSchema = t.Object({
 
 const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
   .use(internalKeyAuth)
-  .get('/pending', () => WhitelistController.pending(), {
-    detail: {
-      summary: 'Get pending whitelist requests (Admin)',
-      tags: ['Internal Operations'],
-    },
+  .onError(({ error, code, set }) => {
+    const result = handleError(error);
+    if (code === 'VALIDATION') {
+      set.status = 400;
+      return {
+        ...result,
+        error: 'Validation Error',
+        statusCode: 400,
+      };
+    }
+    set.status = result.statusCode;
+    return result;
   })
-  .post('/:id/review', (ctx) => WhitelistController.review(ctx), {
-    body: reviewWhitelistSchema,
-    params: t.Object({
-      id: t.String(),
-    }),
-    detail: {
-      summary: 'Review whitelist request (Admin)',
-      tags: ['Internal Operations'],
+  .get(
+    '/pending',
+    async ({ set }) => {
+      try {
+        return await WhitelistController.pending();
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
     },
-  });
+    {
+      detail: {
+        summary: 'Get pending whitelist requests (Admin)',
+        tags: ['Internal Operations'],
+      },
+    },
+  )
+  .post(
+    '/:id/review',
+    async ({ params, body, set }) => {
+      try {
+        return await WhitelistController.review({ params, body });
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      body: reviewWhitelistSchema,
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: 'Review whitelist request (Admin)',
+        tags: ['Internal Operations'],
+      },
+    },
+  );
 
 const auditOperationsRoute = new Elysia()
   .use(internalKeyAuth)

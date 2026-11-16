@@ -7,10 +7,10 @@ import { rateLimit, authPlugin } from '../middleware';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
 
 const requestSchema = t.Object({
-  walletAddress: t.String({ maxLength: 56 }),
-  fullName: t.String({ maxLength: 255 }),
+  walletAddress: t.String(),
+  fullName: t.String({ minLength: 1, maxLength: 255 }),
   idType: t.Union([t.Literal('passport'), t.Literal('national_id'), t.Literal('drivers_license')]),
-  idReference: t.String({ maxLength: 255 }),
+  idReference: t.String({ minLength: 1, maxLength: 255 }),
 });
 
 const metricsQuerySchema = z.object({
@@ -59,16 +59,41 @@ export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
   // auth by itself, so applying it here lets /status check for an optional
   // session without requiring one on the otherwise-public endpoints below.
   .use(authPlugin)
-  .post('/request', (ctx) => WhitelistController.request(ctx), {
-    beforeHandle: [rateLimit()],
-    body: requestSchema,
-    detail: {
-      summary: 'Submit whitelist request',
-      description:
-        'Public, unauthenticated KYC intake endpoint. Rate-limited to 10 requests per minute per IP (same default as other public endpoints in this API). This endpoint accepts PII (full name, ID type, ID reference), so abuse protection is critical.',
-      tags: ['Pilot Whitelist'],
-    },
+  .onError(({ error, code, set }) => {
+    const result = handleError(error);
+    if (code === 'VALIDATION') {
+      set.status = 400;
+      return {
+        ...result,
+        error: 'Validation Error',
+        statusCode: 400,
+      };
+    }
+    set.status = result.statusCode;
+    return result;
   })
+  .post(
+    '/request',
+    async ({ body, set }) => {
+      try {
+        return await WhitelistController.request({ body });
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      beforeHandle: [rateLimit()],
+      body: requestSchema,
+      detail: {
+        summary: 'Submit whitelist request',
+        description:
+          'Public, unauthenticated KYC intake endpoint. Rate-limited to 10 requests per minute per IP (same default as other public endpoints in this API). This endpoint accepts PII (full name, ID type, ID reference), so abuse protection is critical.',
+        tags: ['Pilot Whitelist'],
+      },
+    },
+  )
   // GET /status is intentionally not rate-limited: the status itself is
   // coarse application state (pending/approved/rejected/none) with no PII,
   // and the endpoint is read-only. Rate limiting is not required for the
@@ -77,14 +102,26 @@ export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
   // (Bearer session) or an operator (x-internal-api-key); see
   // WhitelistController.status. Revisit if response data expands further or
   // enumeration becomes operationally relevant.
-  .get('/status/:walletAddress', (ctx) => WhitelistController.status(ctx), {
-    params: t.Object({ walletAddress: t.String() }),
-    detail: {
-      summary: 'Get status of whitelist request',
-      description:
-        'Returns the request status for a wallet. The rejectionReason field is only included when the caller is authenticated as that wallet or is an operator.',
-      tags: ['Pilot Whitelist'],
-      security: [{ bearerAuth: [] }, { internalApiKey: [] }],
+  .get(
+    '/status/:walletAddress',
+    async (ctx) => {
+      try {
+        return await WhitelistController.status(ctx);
+      } catch (error) {
+        const errorResponse = handleError(error);
+        ctx.set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
     },
-  })
+    {
+      params: t.Object({ walletAddress: t.String() }),
+      detail: {
+        summary: 'Get status of whitelist request',
+        description:
+          'Returns the request status for a wallet. The rejectionReason field is only included when the caller is authenticated as that wallet or is an operator.',
+        tags: ['Pilot Whitelist'],
+        security: [{ bearerAuth: [] }, { internalApiKey: [] }],
+      },
+    },
+  )
   .use(whitelistMetricsRoute);

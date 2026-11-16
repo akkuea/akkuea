@@ -141,6 +141,12 @@ impl GameMarketplace {
     /// The seller must have already called `approve(seller, marketplace, property_id)`
     /// on the NFT contract. This function calls `transfer_from` to take custody.
     /// `price` must be strictly positive.
+    ///
+    /// Rent follows reset-on-transfer semantics: transferring the tile into
+    /// escrow resets `last_claimed_ledger` to the current ledger, and releasing
+    /// it on `buy` or `cancel` resets `last_claimed_ledger` again while keeping
+    /// `level`. The seller forfeits any unclaimed rent upon listing and should
+    /// call `claim_rental` beforehand; time spent in escrow accrues no rent.
     pub fn list(env: Env, seller: Address, property_id: u32, price: i128) {
         seller.require_auth();
 
@@ -929,5 +935,177 @@ mod tests {
         assert_eq!(second.seller, s.treasury);
         assert_eq!(second.property_id, 25);
         assert_eq!(second.price, 888);
+    }
+
+    // ── issue #1325: rent checkpoints across list, buy, and cancel ───────────
+
+    struct FullRentSetup<'a> {
+        env: Env,
+        treasury: Address,
+        marketplace_id: Address,
+        marketplace: GameMarketplaceClient<'a>,
+        nft: GamePropertyNftClient<'a>,
+        engine: game_engine::GameEngineClient<'a>,
+        land: game_land_token::GameLandTokenClient<'a>,
+    }
+
+    fn setup_with_engine() -> FullRentSetup<'static> {
+        use soroban_sdk::testutils::Ledger as _;
+
+        let env = Env::default();
+        env.cost_estimate().budget().reset_unlimited();
+        env.mock_all_auths();
+        env.ledger().with_mut(|li| {
+            li.sequence_number = 50;
+        });
+
+        let treasury = Address::generate(&env);
+
+        let engine_id = env.register(game_engine::GameEngine, ());
+        let nft_id = env.register(GamePropertyNft, ());
+        let land_id = env.register(game_land_token::GameLandToken, ());
+        let marketplace_id = env.register(GameMarketplace, ());
+
+        let nft = GamePropertyNftClient::new(&env, &nft_id);
+        let land = game_land_token::GameLandTokenClient::new(&env, &land_id);
+        let engine = game_engine::GameEngineClient::new(&env, &engine_id);
+        let marketplace = GameMarketplaceClient::new(&env, &marketplace_id);
+
+        nft.initialize(&treasury, &engine_id);
+        land.initialize(&treasury, &engine_id, &true);
+        engine.initialize(&nft_id, &land_id, &treasury);
+        marketplace.initialize(&nft_id, &land_id);
+
+        FullRentSetup {
+            env,
+            treasury,
+            marketplace_id,
+            marketplace,
+            nft,
+            engine,
+            land,
+        }
+    }
+
+    #[test]
+    fn test_buy_resets_accrued_rent_and_preserves_level() {
+        use game_engine::constants::{
+            BASE_RENTAL_RATE, EPOCH_LENGTH, IMPROVEMENT_COST_COMMERCIAL,
+            IMPROVEMENT_COST_RESIDENTIAL, IMPROVEMENT_COST_SKYSCRAPER, LEVEL_SKYSCRAPER,
+        };
+        use soroban_sdk::testutils::Ledger as _;
+
+        let s = setup_with_engine();
+        let bob = Address::generate(&s.env);
+        let carol = Address::generate(&s.env);
+        let price: i128 = 5_000_000_000;
+
+        let upgrade_budget = IMPROVEMENT_COST_RESIDENTIAL
+            + IMPROVEMENT_COST_COMMERCIAL
+            + IMPROVEMENT_COST_SKYSCRAPER;
+        s.land.mint(&s.treasury, &bob, &upgrade_budget);
+        s.land
+            .approve(&bob, &s.engine.address, &upgrade_budget, &999_999);
+        s.land.mint(&s.treasury, &carol, &price);
+
+        // Transfer tile 40 to Bob and upgrade to Skyscraper.
+        s.nft.transfer(&s.treasury, &bob, &40);
+        s.engine.improve(&bob, &40);
+        s.engine.improve(&bob, &40);
+        s.engine.improve(&bob, &40);
+        assert_eq!(s.nft.get_property(&40).level, LEVEL_SKYSCRAPER);
+
+        // Bob accrues K = 1,000 epochs without claiming, then lists the tile.
+        s.env.ledger().with_mut(|li| {
+            li.sequence_number += (1_000 * EPOCH_LENGTH) as u32;
+        });
+        assert_eq!(
+            s.engine.get_accrued_income(&40),
+            BASE_RENTAL_RATE * 6 * 1_000
+        );
+
+        s.nft.approve(&bob, &s.marketplace_id, &40);
+        s.marketplace.list(&bob, &40, &price);
+
+        // Tile sits in escrow for 25 epochs before Carol buys it.
+        s.env.ledger().with_mut(|li| {
+            li.sequence_number += (25 * EPOCH_LENGTH) as u32;
+        });
+        s.marketplace.buy(&carol, &40);
+
+        // Right after buy: Carol owns the Skyscraper, accrued rent is 0, and
+        // Carol cannot collect Bob's 1,000 epochs or the 25 escrow epochs.
+        let prop_after_buy = s.nft.get_property(&40);
+        assert_eq!(prop_after_buy.owner, carol);
+        assert_eq!(prop_after_buy.level, LEVEL_SKYSCRAPER);
+        assert_eq!(s.engine.get_accrued_income(&40), 0);
+        assert_eq!(
+            s.engine.try_claim_rental(&carol, &40),
+            Err(Ok(game_engine::EngineError::NothingToClaim.into()))
+        );
+        assert_eq!(s.land.balance(&carol), 0);
+
+        // After 1 epoch of Carol's ownership, Carol receives only 1 epoch.
+        s.env.ledger().with_mut(|li| {
+            li.sequence_number += EPOCH_LENGTH as u32;
+        });
+        assert_eq!(s.engine.get_accrued_income(&40), BASE_RENTAL_RATE * 6);
+        s.engine.claim_rental(&carol, &40);
+        assert_eq!(s.land.balance(&carol), BASE_RENTAL_RATE * 6);
+    }
+
+    #[test]
+    fn test_cancel_does_not_pay_rent_for_escrow_period_and_preserves_level() {
+        use game_engine::constants::{
+            BASE_RENTAL_RATE, EPOCH_LENGTH, IMPROVEMENT_COST_COMMERCIAL,
+            IMPROVEMENT_COST_RESIDENTIAL, LEVEL_COMMERCIAL, MULTIPLIER_COMMERCIAL,
+        };
+        use soroban_sdk::testutils::Ledger as _;
+
+        let s = setup_with_engine();
+        let bob = Address::generate(&s.env);
+
+        let upgrade_budget = IMPROVEMENT_COST_RESIDENTIAL + IMPROVEMENT_COST_COMMERCIAL;
+        s.land.mint(&s.treasury, &bob, &upgrade_budget);
+        s.land
+            .approve(&bob, &s.engine.address, &upgrade_budget, &999_999);
+
+        // Transfer tile 41 to Bob and upgrade to Commercial.
+        s.nft.transfer(&s.treasury, &bob, &41);
+        s.engine.improve(&bob, &41);
+        s.engine.improve(&bob, &41);
+        assert_eq!(s.nft.get_property(&41).level, LEVEL_COMMERCIAL);
+
+        // Bob accrues 5 epochs without claiming, lists, and waits 40 epochs in escrow.
+        s.env.ledger().with_mut(|li| {
+            li.sequence_number += (5 * EPOCH_LENGTH) as u32;
+        });
+        s.nft.approve(&bob, &s.marketplace_id, &41);
+        s.marketplace.list(&bob, &41, &1_000_000_000);
+
+        s.env.ledger().with_mut(|li| {
+            li.sequence_number += (40 * EPOCH_LENGTH) as u32;
+        });
+        s.marketplace.cancel(&bob, &41);
+
+        // Right after cancel: tile returns to Bob at Commercial level with 0 accrued rent.
+        let prop_after_cancel = s.nft.get_property(&41);
+        assert_eq!(prop_after_cancel.owner, bob);
+        assert_eq!(prop_after_cancel.level, LEVEL_COMMERCIAL);
+        assert_eq!(s.engine.get_accrued_income(&41), 0);
+        assert_eq!(
+            s.engine.try_claim_rental(&bob, &41),
+            Err(Ok(game_engine::EngineError::NothingToClaim.into()))
+        );
+
+        // After 1 epoch back with Bob, Bob earns exactly 1 Commercial epoch.
+        s.env.ledger().with_mut(|li| {
+            li.sequence_number += EPOCH_LENGTH as u32;
+        });
+        let (num, den) = MULTIPLIER_COMMERCIAL;
+        let expected_one_epoch = BASE_RENTAL_RATE * num / den;
+        assert_eq!(s.engine.get_accrued_income(&41), expected_one_epoch);
+        s.engine.claim_rental(&bob, &41);
+        assert_eq!(s.land.balance(&bob), expected_one_epoch);
     }
 }

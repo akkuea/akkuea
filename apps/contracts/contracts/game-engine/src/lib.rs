@@ -713,4 +713,107 @@ mod tests {
         assert_eq!(earned_multiple, earned_single);
         assert_eq!(earned_multiple, BASE_RENTAL_RATE * 5);
     }
+
+    #[test]
+    fn test_treasury_aged_tile_transferred_to_alice_starts_with_zero_rent() {
+        let test = setup_test();
+        let alice = Address::generate(&test.env);
+
+        // Tile 5 stays untouched in treasury for 50 epochs from deploy.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (50 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+
+        // Transfer tile 5 from treasury to Alice.
+        test.nft_client.transfer(&test.treasury, &alice, &5);
+
+        assert_eq!(test.engine_client.get_accrued_income(&5), 0);
+        assert_eq!(
+            test.engine_client.try_claim_rental(&alice, &5),
+            Err(Ok(EngineError::NothingToClaim.into()))
+        );
+
+        // One ledger short of a full epoch: still nothing claimable.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (EPOCH_LENGTH - 1) as u32;
+        test.env.ledger().set(ledger);
+
+        assert_eq!(test.engine_client.get_accrued_income(&5), 0);
+        assert_eq!(
+            test.engine_client.try_claim_rental(&alice, &5),
+            Err(Ok(EngineError::NothingToClaim.into()))
+        );
+
+        // Completing the first epoch after transfer yields exactly 1 epoch at vacant rate.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += 1;
+        test.env.ledger().set(ledger);
+
+        assert_eq!(test.engine_client.get_accrued_income(&5), BASE_RENTAL_RATE);
+        test.engine_client.claim_rental(&alice, &5);
+        assert_eq!(test.token_client.balance(&alice), BASE_RENTAL_RATE);
+    }
+
+    #[test]
+    fn test_upgraded_tile_transfer_and_transfer_from_reset_rent_and_keep_level() {
+        let test = setup_test();
+        let alice = Address::generate(&test.env);
+        let bob = Address::generate(&test.env);
+        let operator = Address::generate(&test.env);
+        let full_nft_client =
+            game_property_nft::GamePropertyNftClient::new(&test.env, &test.nft_client.address);
+
+        // Upgrade tile 0 to Skyscraper (6x multiplier).
+        test.engine_client.improve(&test.owner, &0);
+        test.engine_client.improve(&test.owner, &0);
+        test.engine_client.improve(&test.owner, &0);
+
+        // Accrue 12 epochs without claiming, then transfer to Alice.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (12 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+
+        test.nft_client.transfer(&test.owner, &alice, &0);
+        assert_eq!(test.nft_client.get_property(&0).level, LEVEL_SKYSCRAPER);
+        assert_eq!(test.engine_client.get_accrued_income(&0), 0);
+        assert_eq!(
+            test.engine_client.try_claim_rental(&alice, &0),
+            Err(Ok(EngineError::NothingToClaim.into()))
+        );
+
+        // After 1 epoch Alice receives 1 epoch at Skyscraper rate, not the prior 12 epochs.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += EPOCH_LENGTH as u32;
+        test.env.ledger().set(ledger);
+
+        let expected_one_epoch = BASE_RENTAL_RATE * 6;
+        assert_eq!(
+            test.engine_client.get_accrued_income(&0),
+            expected_one_epoch
+        );
+        test.engine_client.claim_rental(&alice, &0);
+        assert_eq!(test.token_client.balance(&alice), expected_one_epoch);
+
+        // Accrue 8 more epochs on Alice, then transfer via approved spender to Bob.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (8 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+
+        full_nft_client.approve(&alice, &operator, &0);
+        full_nft_client.transfer_from(&operator, &alice, &bob, &0);
+
+        assert_eq!(test.nft_client.get_property(&0).level, LEVEL_SKYSCRAPER);
+        assert_eq!(test.engine_client.get_accrued_income(&0), 0);
+        assert_eq!(
+            test.engine_client.try_claim_rental(&bob, &0),
+            Err(Ok(EngineError::NothingToClaim.into()))
+        );
+
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += EPOCH_LENGTH as u32;
+        test.env.ledger().set(ledger);
+
+        test.engine_client.claim_rental(&bob, &0);
+        assert_eq!(test.token_client.balance(&bob), expected_one_epoch);
+    }
 }

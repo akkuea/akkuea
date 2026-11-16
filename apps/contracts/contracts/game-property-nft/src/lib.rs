@@ -66,7 +66,11 @@ impl GamePropertyNft {
         bump_owner_index(&env, &treasury);
     }
 
-    /// Transfer property
+    /// Transfer a property from `from` to `to`.
+    ///
+    /// Uses reset-on-transfer rent semantics: `last_claimed_ledger` is reset to
+    /// the current ledger sequence while `level` is preserved. Any unclaimed
+    /// rental income is forfeited by `from` unless claimed before transferring.
     pub fn transfer(env: Env, from: Address, to: Address, property_id: u32) {
         from.require_auth();
 
@@ -101,10 +105,12 @@ impl GamePropertyNft {
                 address: to.clone(),
             },
         );
+        checkpoint_meta_on_transfer(&env, &mut world, property_id);
 
         let mut approves = get_approvals(&env);
-        approves.remove(property_id);
-        save_approvals(&env, &approves);
+        if approves.remove(property_id).is_some() {
+            save_approvals(&env, &approves);
+        }
 
         save_world(&env, &world);
 
@@ -148,7 +154,11 @@ impl GamePropertyNft {
         events::emit_approve(&env, owner, spender, property_id);
     }
 
-    /// Transfer from approved spender
+    /// Transfer a property via an approved `spender` (such as marketplace escrow).
+    ///
+    /// Uses reset-on-transfer rent semantics: `last_claimed_ledger` is reset to
+    /// the current ledger sequence while `level` is preserved. Any unclaimed
+    /// rental income is forfeited by `from` unless claimed beforehand.
     pub fn transfer_from(env: Env, spender: Address, from: Address, to: Address, property_id: u32) {
         spender.require_auth();
 
@@ -189,6 +199,7 @@ impl GamePropertyNft {
                 address: to.clone(),
             },
         );
+        checkpoint_meta_on_transfer(&env, &mut world, property_id);
 
         let mut approves = approves;
         approves.remove(property_id);
@@ -359,11 +370,21 @@ impl GamePropertyNft {
             panic_with_error!(&env, NftError::Unauthorized);
         }
 
+        if property_id >= TOTAL_TILES {
+            panic_with_error!(&env, NftError::InvalidProperty);
+        }
+
+        let init_ledger = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("init_ledg"))
+            .unwrap_or(0u64);
+
         let mut world = load_world(&env);
 
         let mut meta: PropertyMeta = world.get_typed(&env, property_id).unwrap_or(PropertyMeta {
             level: 0,
-            last_claimed_ledger: 0,
+            last_claimed_ledger: init_ledger,
             approved_spender: 0,
         });
 
@@ -403,6 +424,42 @@ impl GamePropertyNft {
 }
 
 // ================= Helpers =================
+
+/// Reset `last_claimed_ledger` to the current ledger when a tile changes owner,
+/// keeping `level` intact so upgrades survive transfers while unclaimed rent does
+/// not move to the new owner. Skips redundant writes when the effective metadata
+/// already matches `(level, current_ledger, 0)`.
+fn checkpoint_meta_on_transfer(env: &Env, world: &mut SimpleWorld, property_id: u32) {
+    let current_ledger = env.ledger().sequence() as u64;
+
+    match world.get_typed::<PropertyMeta>(env, property_id) {
+        Some(mut meta) => {
+            if meta.last_claimed_ledger != current_ledger || meta.approved_spender != 0 {
+                meta.last_claimed_ledger = current_ledger;
+                meta.approved_spender = 0;
+                world.set_typed(env, property_id, &meta);
+            }
+        }
+        None => {
+            let init_ledger = env
+                .storage()
+                .instance()
+                .get(&symbol_short!("init_ledg"))
+                .unwrap_or(0u64);
+            if current_ledger != init_ledger {
+                world.set_typed(
+                    env,
+                    property_id,
+                    &PropertyMeta {
+                        level: 0,
+                        last_claimed_ledger: current_ledger,
+                        approved_spender: 0,
+                    },
+                );
+            }
+        }
+    }
+}
 
 fn load_world(env: &Env) -> SimpleWorld {
     SimpleWorld::new(env)

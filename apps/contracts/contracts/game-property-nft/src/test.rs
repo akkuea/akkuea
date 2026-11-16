@@ -1,4 +1,7 @@
-use soroban_sdk::{testutils::Address as _, Address, Env};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    Address, Env,
+};
 
 use crate::{GamePropertyNft, GamePropertyNftClient, NftError, TOTAL_TILES};
 
@@ -156,4 +159,72 @@ fn test_get_property_invalid_id() {
 
     let result = client.try_get_property(&400);
     assert_eq!(result, Err(Ok(NftError::InvalidProperty.into())));
+}
+
+#[test]
+fn test_set_last_claimed_ledger_rejects_invalid_property_id() {
+    let (_env, _treasury, game_engine, client) = initialized();
+
+    let at_bound = client.try_set_last_claimed_ledger(&game_engine, &TOTAL_TILES, &500);
+    assert_eq!(at_bound, Err(Ok(NftError::InvalidProperty.into())));
+
+    let above_bound = client.try_set_last_claimed_ledger(&game_engine, &u32::MAX, &500);
+    assert_eq!(above_bound, Err(Ok(NftError::InvalidProperty.into())));
+}
+
+#[test]
+fn test_set_last_claimed_ledger_keeps_level_zero_on_untouched_tile() {
+    let (env, treasury, game_engine, client) = setup();
+    env.ledger().with_mut(|li| {
+        li.sequence_number = 250;
+    });
+    client.initialize(&treasury, &game_engine);
+
+    let before = client.get_property(&7);
+    assert_eq!(before.level, 0);
+    assert_eq!(before.last_claimed_ledger, 250);
+
+    client.set_last_claimed_ledger(&game_engine, &7, &600);
+    let after = client.get_property(&7);
+    assert_eq!(after.level, 0);
+    assert_eq!(after.last_claimed_ledger, 600);
+}
+
+#[test]
+fn test_transfer_and_transfer_from_checkpoint_rent_and_preserve_level() {
+    let (env, treasury, game_engine, client) = setup();
+    env.ledger().with_mut(|li| {
+        li.sequence_number = 100;
+    });
+    client.initialize(&treasury, &game_engine);
+
+    let alice = Address::generate(&env);
+    let bob = Address::generate(&env);
+    let spender = Address::generate(&env);
+
+    // Upgrade tile 3 while in treasury, then age 500 ledgers and transfer.
+    client.set_improvement_level(&game_engine, &3, &2);
+    env.ledger().with_mut(|li| {
+        li.sequence_number = 600;
+    });
+    client.transfer(&treasury, &alice, &3);
+
+    let after_direct = client.get_property(&3);
+    assert_eq!(after_direct.owner, alice);
+    assert_eq!(after_direct.level, 2);
+    assert_eq!(after_direct.last_claimed_ledger, 600);
+
+    // Age another 400 ledgers and transfer via approved spender.
+    client.set_improvement_level(&game_engine, &3, &3);
+    client.approve(&alice, &spender, &3);
+    env.ledger().with_mut(|li| {
+        li.sequence_number = 1000;
+    });
+    client.transfer_from(&spender, &alice, &bob, &3);
+
+    let after_approved = client.get_property(&3);
+    assert_eq!(after_approved.owner, bob);
+    assert_eq!(after_approved.level, 3);
+    assert_eq!(after_approved.last_claimed_ledger, 1000);
+    assert_eq!(after_approved.approved, None);
 }

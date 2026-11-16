@@ -59,4 +59,11 @@ pub enum PayoutError {
     /// The income-token balances sum to more than its total supply, so the
     /// pro-rata split would pay out more than the cycle's holder pool.
     HolderBalancesExceedSupply = 31,
+    /// `cycle_id` is not formatted as `YYYY-MM` with ASCII digits and month
+    /// `01` through `12`.
+    InvalidCycleId = 32,
+    /// `evidence_link` exceeds `MAX_EVIDENCE_LINK_BYTES`.
+    EvidenceLinkTooLong = 33,
+    /// A review, dispute, or exit `reason` exceeds `MAX_REASON_BYTES`.
+    ReasonTooLong = 34,
 }

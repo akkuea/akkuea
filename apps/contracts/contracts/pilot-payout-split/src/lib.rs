@@ -6,6 +6,9 @@
 //! `Approved` record with `distributed == true`. Each cell is the resulting
 //! status, or the `PayoutError` the action fails with. After `exit`, every
 //! action in the table fails with `ContractExited` before it is evaluated.
+//! `record_evidence`, `submit_evidence`, `review_evidence`, and `flag_dispute`
+//! also validate `cycle_id` (`InvalidCycleId`) and free-text byte bounds
+//! (`EvidenceLinkTooLong`, `ReasonTooLong`) before evaluating the status row.
 //!
 //! | Current status | `record_evidence`      | `submit_evidence`      | `start_review`            | `review_evidence`         | `flag_dispute`            | `execute_distribution`    |
 //! | -------------- | ---------------------- | ---------------------- | ------------------------- | ------------------------- | ------------------------- | ------------------------- |
@@ -43,6 +46,12 @@ use ttl::extend_instance;
 pub const PLATFORM_FEE_PERCENT: i128 = 10;
 pub const PERCENT_DENOMINATOR: i128 = 100;
 pub const REQUIRED_EVIDENCE_HASH_BYTES: u32 = 32;
+/// Exact byte length of a valid `YYYY-MM` calendar-month cycle identifier.
+pub const CYCLE_ID_BYTES: u32 = 7;
+/// Maximum byte length accepted for `evidence_link`.
+pub const MAX_EVIDENCE_LINK_BYTES: u32 = 512;
+/// Maximum byte length accepted for review, dispute, and exit `reason` strings.
+pub const MAX_REASON_BYTES: u32 = 512;
 
 /// Scaling factor for the minimum USDC-to-EURC exchange-rate bound. Both USDC
 /// and EURC are 7-decimal Stellar assets, so `min_eurc_per_usdc` of 10_000_000
@@ -369,6 +378,7 @@ impl PilotPayoutSplit {
         Self::require_ally(&env, &ally);
         Self::require_not_exited(&env);
         Self::require_not_paused(&env);
+        Self::validate_cycle_id(&env, &cycle_id);
 
         if total_income <= 0 {
             panic_with_error!(&env, PayoutError::ZeroAmount);
@@ -378,9 +388,7 @@ impl PilotPayoutSplit {
             panic_with_error!(&env, PayoutError::InvalidEvidenceHash);
         }
 
-        if evidence_link.is_empty() {
-            panic_with_error!(&env, PayoutError::MissingEvidenceLink);
-        }
+        Self::validate_evidence_link(&env, &evidence_link);
 
         if Storage::evidence(&env, &cycle_id).is_some() {
             panic_with_error!(&env, PayoutError::CycleAlreadyRecorded);
@@ -429,6 +437,7 @@ impl PilotPayoutSplit {
         Self::require_ally(&env, &ally);
         Self::require_not_exited(&env);
         Self::require_not_paused(&env);
+        Self::validate_cycle_id(&env, &cycle_id);
 
         if total_income <= 0 {
             panic_with_error!(&env, PayoutError::ZeroAmount);
@@ -438,9 +447,7 @@ impl PilotPayoutSplit {
             panic_with_error!(&env, PayoutError::InvalidEvidenceHash);
         }
 
-        if evidence_link.is_empty() {
-            panic_with_error!(&env, PayoutError::MissingEvidenceLink);
-        }
+        Self::validate_evidence_link(&env, &evidence_link);
 
         let previous_status = Storage::evidence(&env, &cycle_id).map(|existing| {
             let resubmittable = !existing.distributed
@@ -518,6 +525,8 @@ impl PilotPayoutSplit {
         Self::require_operator(&env, &operator);
         Self::require_not_exited(&env);
         Self::require_not_paused(&env);
+        Self::validate_cycle_id(&env, &cycle_id);
+        Self::validate_reason_length(&env, &reason);
 
         let mut record = Storage::evidence(&env, &cycle_id)
             .unwrap_or_else(|| panic_with_error!(&env, PayoutError::EvidenceNotFound));
@@ -562,10 +571,12 @@ impl PilotPayoutSplit {
         caller.require_auth();
         Self::require_admin_or_operator(&env, &caller);
         Self::require_not_exited(&env);
+        Self::validate_cycle_id(&env, &cycle_id);
 
         if reason.is_empty() {
             panic_with_error!(&env, PayoutError::MissingReviewReason);
         }
+        Self::validate_reason_length(&env, &reason);
 
         let mut record = Storage::evidence(&env, &cycle_id)
             .unwrap_or_else(|| panic_with_error!(&env, PayoutError::EvidenceNotFound));
@@ -1231,6 +1242,7 @@ impl PilotPayoutSplit {
         if reason.is_empty() {
             panic_with_error!(&env, PayoutError::MissingExitReason);
         }
+        Self::validate_reason_length(&env, &reason);
 
         let record = ExitRecord {
             reason: reason.clone(),
@@ -1311,6 +1323,43 @@ impl PilotPayoutSplit {
     fn require_not_exited(env: &Env) {
         if Storage::exit_record(env).is_some() {
             panic_with_error!(env, PayoutError::ContractExited);
+        }
+    }
+
+    fn validate_cycle_id(env: &Env, cycle_id: &String) {
+        if cycle_id.len() != CYCLE_ID_BYTES {
+            panic_with_error!(env, PayoutError::InvalidCycleId);
+        }
+        let mut raw = [0u8; CYCLE_ID_BYTES as usize];
+        cycle_id.copy_into_slice(&mut raw);
+        let digits_valid = raw[0].is_ascii_digit()
+            && raw[1].is_ascii_digit()
+            && raw[2].is_ascii_digit()
+            && raw[3].is_ascii_digit()
+            && raw[4] == b'-'
+            && raw[5].is_ascii_digit()
+            && raw[6].is_ascii_digit();
+        if !digits_valid {
+            panic_with_error!(env, PayoutError::InvalidCycleId);
+        }
+        let month = (raw[5] - b'0') * 10 + (raw[6] - b'0');
+        if !(1..=12).contains(&month) {
+            panic_with_error!(env, PayoutError::InvalidCycleId);
+        }
+    }
+
+    fn validate_evidence_link(env: &Env, evidence_link: &String) {
+        if evidence_link.is_empty() {
+            panic_with_error!(env, PayoutError::MissingEvidenceLink);
+        }
+        if evidence_link.len() > MAX_EVIDENCE_LINK_BYTES {
+            panic_with_error!(env, PayoutError::EvidenceLinkTooLong);
+        }
+    }
+
+    fn validate_reason_length(env: &Env, reason: &String) {
+        if reason.len() > MAX_REASON_BYTES {
+            panic_with_error!(env, PayoutError::ReasonTooLong);
         }
     }
 }
@@ -1988,7 +2037,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "bad-hash"),
+            &cycle(&s.env, "2026-01"),
             &short_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/bad"),
             &10_000,
@@ -2009,7 +2058,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "zero"),
+            &cycle(&s.env, "2026-01"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/zero"),
             &0,
@@ -2079,7 +2128,7 @@ pub mod tests {
         let record_res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "paused"),
+            &cycle(&s.env, "2026-01"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/paused"),
             &10_000,
@@ -2094,7 +2143,7 @@ pub mod tests {
         let execute_res = s.payout.try_execute_distribution(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "missing"),
+            &cycle(&s.env, "2026-02"),
             &TEST_MIN_RATE,
         );
         assert_eq!(
@@ -2214,7 +2263,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "exited"),
+            &cycle(&s.env, "2026-01"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/exited"),
             &10_000,
@@ -2352,7 +2401,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "both"),
+            &cycle(&s.env, "2026-01"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/both"),
             &10_000,
@@ -2457,7 +2506,7 @@ pub mod tests {
             &router,
         );
 
-        let cycle_id = cycle(&env, "single-signer");
+        let cycle_id = cycle(&env, "2026-01");
         let hash = evidence_hash(&env);
         let link = String::from_str(&env, "ipfs://evidence/single-signer");
         env.mock_auths(&[MockAuth {
@@ -2647,7 +2696,7 @@ pub mod tests {
         s.payout.record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "budget-25"),
+            &cycle(&s.env, "2026-08"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/budget-25"),
             &325_000,
@@ -2657,7 +2706,7 @@ pub mod tests {
         let summary = s.payout.execute_distribution(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "budget-25"),
+            &cycle(&s.env, "2026-08"),
             &TEST_MIN_RATE,
         );
         let cpu = s.env.cost_estimate().budget().cpu_instruction_cost();
@@ -3345,7 +3394,7 @@ pub mod tests {
         for (stage, outcomes) in table {
             for (action, expected) in actions.iter().zip(outcomes.iter()) {
                 let s = setup();
-                let c = cycle(&s.env, "table");
+                let c = cycle(&s.env, "2026-09");
                 drive_to(&s, &c, stage);
                 let before = s.payout.get_evidence(&c);
 
@@ -3381,8 +3430,8 @@ pub mod tests {
     #[test]
     fn exited_contract_blocks_every_evidence_action() {
         let s = setup();
-        let submitted = cycle(&s.env, "submitted");
-        let under_review = cycle(&s.env, "under-review");
+        let submitted = cycle(&s.env, "2026-01");
+        let under_review = cycle(&s.env, "2026-02");
         submit_cycle(&s, &submitted, "ipfs://submitted", 10_000);
         submit_cycle(&s, &under_review, "ipfs://under-review", 10_000);
         s.payout.start_review(&s.operator, &under_review);
@@ -3395,7 +3444,7 @@ pub mod tests {
             PayoutError::ContractExited as u32,
         ));
 
-        assert_eq!(apply(&s, &cycle(&s.env, "new"), Action::Submit), exited);
+        assert_eq!(apply(&s, &cycle(&s.env, "2026-03"), Action::Submit), exited);
         assert_eq!(apply(&s, &submitted, Action::StartReview), exited);
         assert_eq!(apply(&s, &under_review, Action::Approve), exited);
         assert_eq!(apply(&s, &under_review, Action::Reject), exited);
@@ -4175,6 +4224,232 @@ pub mod tests {
 
         assert_eq!(preference_ttl, TTL_EXTEND_TO);
         assert_eq!(instance_ttl, TTL_EXTEND_TO);
+    }
+
+    #[test]
+    fn cycle_id_validation_accepts_yyyy_mm_and_rejects_malformed_ids() {
+        let s = setup();
+        let valid_record = cycle(&s.env, "2026-03");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &valid_record,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/2026-03"),
+            &10_000,
+        );
+        assert!(s.payout.get_evidence(&valid_record).is_some());
+
+        let s_sub = setup();
+        s_sub.payout.submit_evidence(
+            &s_sub.ally,
+            &cycle(&s_sub.env, "2026-03"),
+            &evidence_hash(&s_sub.env),
+            &String::from_str(&s_sub.env, "ipfs://evidence/2026-03"),
+            &10_000,
+        );
+        assert!(s_sub
+            .payout
+            .get_evidence(&cycle(&s_sub.env, "2026-03"))
+            .is_some());
+
+        let invalid_ids = [
+            "2026-3", "2026-13", "2026-00", "26-03", "2026/03", "", "abcd-ef", "2026-ab", "march",
+        ];
+        let expected_err = Err(Ok(Error::from_contract_error(
+            PayoutError::InvalidCycleId as u32,
+        )));
+
+        for bad in invalid_ids {
+            let bad_id = cycle(&s.env, bad);
+            assert_eq!(
+                s.payout.try_record_evidence(
+                    &s.operator,
+                    &s.ally,
+                    &bad_id,
+                    &evidence_hash(&s.env),
+                    &String::from_str(&s.env, "ipfs://evidence/bad"),
+                    &10_000,
+                ),
+                expected_err,
+                "record_evidence must reject {:?}",
+                bad
+            );
+            assert_eq!(
+                s.payout.try_submit_evidence(
+                    &s.ally,
+                    &bad_id,
+                    &evidence_hash(&s.env),
+                    &String::from_str(&s.env, "ipfs://evidence/bad"),
+                    &10_000,
+                ),
+                expected_err,
+                "submit_evidence must reject {:?}",
+                bad
+            );
+            assert_eq!(
+                s.payout.try_review_evidence(
+                    &s.operator,
+                    &bad_id,
+                    &true,
+                    &String::from_str(&s.env, "ok"),
+                ),
+                expected_err,
+                "review_evidence must reject {:?}",
+                bad
+            );
+            assert_eq!(
+                s.payout.try_flag_dispute(
+                    &s.operator,
+                    &bad_id,
+                    &String::from_str(&s.env, "dispute"),
+                ),
+                expected_err,
+                "flag_dispute must reject {:?}",
+                bad
+            );
+        }
+    }
+
+    #[test]
+    fn evidence_link_and_reason_bounds_accept_exact_max_and_reject_one_byte_over() {
+        let s = setup();
+        let max_link =
+            std::string::String::from_utf8(std::vec![b'a'; MAX_EVIDENCE_LINK_BYTES as usize])
+                .unwrap();
+        let over_link =
+            std::string::String::from_utf8(std::vec![b'a'; (MAX_EVIDENCE_LINK_BYTES + 1) as usize])
+                .unwrap();
+
+        let max_reason =
+            std::string::String::from_utf8(std::vec![b'r'; MAX_REASON_BYTES as usize]).unwrap();
+        let over_reason =
+            std::string::String::from_utf8(std::vec![b'r'; (MAX_REASON_BYTES + 1) as usize])
+                .unwrap();
+
+        let link_err = Err(Ok(Error::from_contract_error(
+            PayoutError::EvidenceLinkTooLong as u32,
+        )));
+        let reason_err = Err(Ok(Error::from_contract_error(
+            PayoutError::ReasonTooLong as u32,
+        )));
+
+        // record_evidence: exact max accepted, +1 byte rejected
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-01"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, &max_link),
+            &10_000,
+        );
+        assert_eq!(
+            s.payout.try_record_evidence(
+                &s.operator,
+                &s.ally,
+                &cycle(&s.env, "2026-02"),
+                &evidence_hash(&s.env),
+                &String::from_str(&s.env, &over_link),
+                &10_000,
+            ),
+            link_err
+        );
+
+        // submit_evidence: exact max accepted, +1 byte rejected
+        s.payout.submit_evidence(
+            &s.ally,
+            &cycle(&s.env, "2026-03"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, &max_link),
+            &10_000,
+        );
+        assert_eq!(
+            s.payout.try_submit_evidence(
+                &s.ally,
+                &cycle(&s.env, "2026-04"),
+                &evidence_hash(&s.env),
+                &String::from_str(&s.env, &over_link),
+                &10_000,
+            ),
+            link_err
+        );
+
+        // review_evidence: +1 byte rejected, exact max accepted
+        assert_eq!(
+            s.payout.try_review_evidence(
+                &s.operator,
+                &cycle(&s.env, "2026-03"),
+                &false,
+                &String::from_str(&s.env, &over_reason),
+            ),
+            reason_err
+        );
+        s.payout.review_evidence(
+            &s.operator,
+            &cycle(&s.env, "2026-03"),
+            &false,
+            &String::from_str(&s.env, &max_reason),
+        );
+
+        // flag_dispute: +1 byte rejected, exact max accepted
+        assert_eq!(
+            s.payout.try_flag_dispute(
+                &s.operator,
+                &cycle(&s.env, "2026-01"),
+                &String::from_str(&s.env, &over_reason),
+            ),
+            reason_err
+        );
+        s.payout.flag_dispute(
+            &s.operator,
+            &cycle(&s.env, "2026-01"),
+            &String::from_str(&s.env, &max_reason),
+        );
+
+        // exit: +1 byte rejected without mutating exit_status, exact max accepted
+        assert_eq!(
+            s.payout.try_exit(
+                &s.operator,
+                &s.ally,
+                &String::from_str(&s.env, &over_reason),
+            ),
+            reason_err
+        );
+        assert!(s.payout.exit_status().is_none());
+
+        s.payout
+            .exit(&s.operator, &s.ally, &String::from_str(&s.env, &max_reason));
+        assert_eq!(
+            s.payout.exit_status().unwrap().reason.len(),
+            MAX_REASON_BYTES
+        );
+    }
+
+    #[test]
+    fn get_evidence_reads_existing_legacy_cycle_id_without_validation_error() {
+        let s = setup();
+        let legacy_id = cycle(&s.env, "legacy-cycle");
+        let legacy_record = EvidenceRecord {
+            cycle_id: legacy_id.clone(),
+            evidence_hash: evidence_hash(&s.env),
+            evidence_link: String::from_str(&s.env, "ipfs://legacy"),
+            total_income: 5_000,
+            recorded_at: 1_772_323_200,
+            distributed: false,
+            status: EvidenceStatus::Approved,
+            submitted_at: 1_772_323_200,
+            reviewed_at: 1_772_323_200,
+            review_reason: String::from_str(&s.env, ""),
+            distributed_at: 0,
+            distribution: pending_summary(&legacy_id),
+            settlements: Vec::new(&s.env),
+        };
+        s.env.as_contract(&s.payout_id, || {
+            Storage::set_evidence(&s.env, &legacy_id, &legacy_record);
+        });
+
+        assert_eq!(s.payout.get_evidence(&legacy_id), Some(legacy_record));
+        assert_eq!(s.payout.get_evidence(&cycle(&s.env, "missing")), None);
     }
 }
 

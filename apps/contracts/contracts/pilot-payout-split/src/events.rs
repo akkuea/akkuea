@@ -348,3 +348,24 @@ pub fn emit_admin_transfer_cancelled(env: &Env, admin: Address) {
         AdminTransferCancelledEvent { admin },
     );
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DustReleasedEvent {
+    pub admin: Address,
+    pub recipient: Address,
+    pub amount_usdc: i128,
+}
+
+/// Emitted when accumulated rounding dust is released to the configured
+/// platform fee recipient.
+pub fn emit_dust_released(env: &Env, admin: Address, recipient: Address, amount_usdc: i128) {
+    env.events().publish(
+        (symbol_short!("dustrel"),),
+        DustReleasedEvent {
+            admin,
+            recipient,
+            amount_usdc,
+        },
+    );
+}

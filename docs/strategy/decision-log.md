@@ -246,6 +246,21 @@ runbook is marked accordingly and needs a funded key holder to actually run
 it and record the resulting transaction hashes before it can be considered
 verified rather than merely written.
 
+## Rounding-dust accounting and release policy (#1332, `pilot-payout-split`)
+
+**Adopted: track pro-rata rounding dust in a running on-chain total (`AccumulatedDust`, exposed via `accumulated_dust()`) with an explicit, admin-authorized release (`release_dust`) to the configured `PlatformFeeRecipient`.**
+
+**What was considered:**
+
+1. **Carry dust into the next cycle's holder amount.** Rejected because it couples cycle `N`'s pro-rata payout math to cycle `N - 1`'s integer-division remainder, breaks the self-contained per-cycle equation (`platform_fee + distributed_total + undistributed_failed_swaps + dust == total_income`) against the recorded evidence amount, and still leaves the final cycle's dust stranded when no subsequent cycle runs.
+2. **Track a running total and release explicitly to `PlatformFeeRecipient` (adopted).** In `execute_distribution`, the 10% platform fee already truncates towards zero in holders' favor, so each cycle's `dust` is strictly the integer-division remainder of the pro-rata holder split (`0 <= dust < paid_holders <= 10` stroops, less than `0.000001` USDC per cycle). Adding `dust` with checked arithmetic to `DataKey::AccumulatedDust` (in instance storage, costing zero extra footprint keys) makes the unreleased total readable at any time via `accumulated_dust()`.
+
+**Isolation and safety guarantees:**
+
+- **Fixed on-chain destination:** `release_dust` transfers only to the already-stored `PlatformFeeRecipient` address rather than accepting an arbitrary recipient parameter, and requires `admin` authorization while the contract is active and unpaused (post-`exit` balances remain governed by Known Risk #5).
+- **Single-release atomicity:** `take_accumulated_dust` zeroes `DataKey::AccumulatedDust` before the token transfer under `ExecutionGuard`; calling `release_dust` when `AccumulatedDust == 0` fails with `PayoutError::NoDustToRelease`.
+- **`TotalWithheld` protection:** `execute_distribution` requires `contract_balance >= total_income + TotalWithheld + AccumulatedDust`, and `release_dust` requires `contract_balance >= TotalWithheld + amount`, guaranteeing that neither a new distribution cycle nor a dust release can ever spend USDC reserved for holders in `TotalWithheld`.
+
 ## Naming
 
 Project renamed from the working title "Pili" to **Akkuea** (spelled letter-by-letter: A-K-K-U-E-A, double K) partway through this strategy's development.

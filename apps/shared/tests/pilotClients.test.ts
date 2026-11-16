@@ -33,6 +33,8 @@ describe("generated pilot clients", () => {
     const client = new PilotPayoutSplitClient(mockConfig);
     expect(client).toBeDefined();
     expect(client.options.contractId).toBe(mockConfig.contractId);
+    expect(typeof client.accumulated_dust).toBe("function");
+    expect(typeof client.release_dust).toBe("function");
   });
 
   test("WhitelistError contains expected error codes", () => {
@@ -51,6 +53,7 @@ describe("generated pilot clients", () => {
     expect(PayoutError[1].message).toBe("AlreadyInitialized");
     expect(PayoutError[4].message).toBe("ContractPaused");
     expect(PayoutError[10].message).toBe("CycleAlreadyDistributed");
+    expect(PayoutError[32].message).toBe("NoDustToRelease");
   });
 });
 

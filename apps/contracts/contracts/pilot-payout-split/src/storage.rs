@@ -33,6 +33,10 @@ pub enum DataKey {
     /// prove it never spends another holder's reserved funds.
     TotalWithheld,
     PendingAdmin,
+    /// Cumulative rounding dust from pro-rata holder splits that has not yet
+    /// been released via `release_dust`. Stored in instance storage so tracking
+    /// adds zero persistent footprint entries.
+    AccumulatedDust,
 }
 
 pub struct Storage;
@@ -178,5 +182,29 @@ impl Storage {
 
     pub fn clear_pending_admin(env: &Env) {
         env.storage().instance().remove(&DataKey::PendingAdmin);
+    }
+
+    /// Cumulative unreleased rounding dust across distributed cycles.
+    pub fn accumulated_dust(env: &Env) -> i128 {
+        env.storage()
+            .instance()
+            .get(&DataKey::AccumulatedDust)
+            .unwrap_or(0)
+    }
+
+    pub fn set_accumulated_dust(env: &Env, amount: i128) {
+        env.storage()
+            .instance()
+            .set(&DataKey::AccumulatedDust, &amount);
+    }
+
+    /// Atomically returns and zeroes the tracked rounding dust so repeat or
+    /// re-entrant calls can never release the same dust twice.
+    pub fn take_accumulated_dust(env: &Env) -> i128 {
+        let amount = Self::accumulated_dust(env);
+        if amount > 0 {
+            Self::set_accumulated_dust(env, 0);
+        }
+        amount
     }
 }

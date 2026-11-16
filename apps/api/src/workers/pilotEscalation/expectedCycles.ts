@@ -1,53 +1,119 @@
+export const DEFAULT_PILOT_PAYMENT_DAY = 5;
+export const MIN_PILOT_PAYMENT_DAY = 1;
+export const MAX_PILOT_PAYMENT_DAY = 28;
+
 export interface ExpectedCycle {
-  /** Sequential cycle identifier, e.g. `cycle-3`. */
+  /** Calendar month cycle identifier in `YYYY-MM` format, e.g. `2026-03`. */
   cycleId: string;
-  /** When this cycle's evidence was due. */
+  /** When this cycle's evidence was due (midnight UTC on `paymentDay` of the following month). */
   dueAt: Date;
 }
 
 export interface ExpectedCyclesConfig {
-  /** When the ally's reporting agreement began. */
+  /** When the ally's reporting agreement began (UTC year and month identify the first cycle). */
   agreementStartAt: Date;
-  /** Expected reporting cadence, in days. */
-  cadenceDays: number;
-  /** Prefix used to build sequential cycle IDs. Default: `cycle-`. */
-  cycleIdPrefix?: string;
+  /**
+   * Day of the month, in the month after each cycle, when evidence is due.
+   * Must be an integer from 1 to 28. Default: 5.
+   */
+  paymentDay?: number;
+}
+
+export function formatCycleId(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, '0')}`;
+}
+
+export function assertValidPaymentDay(paymentDay: number): void {
+  if (
+    !Number.isInteger(paymentDay) ||
+    paymentDay < MIN_PILOT_PAYMENT_DAY ||
+    paymentDay > MAX_PILOT_PAYMENT_DAY
+  ) {
+    throw new RangeError(
+      `paymentDay must be an integer between ${MIN_PILOT_PAYMENT_DAY} and ${MAX_PILOT_PAYMENT_DAY}`,
+    );
+  }
 }
 
 /**
- * Builds the ordered list of reporting cycles whose deadline has already
- * passed as of `now`.
- *
- * Cycle N covers `[start + (N-1)*cadence, start + N*cadence)` and is
- * "expected" once that window has fully elapsed. Cycle IDs are sequential
- * (`cycle-1`, `cycle-2`, ...) rather than derived from calendar dates: the
- * real `cycle_id` string convention is set by the operator/ally at
- * `record_evidence` time per their agreement, which does not exist yet for
- * a real pilot ally, so a deterministic, agreement-agnostic scheme is used
- * here and made configurable via `cycleIdPrefix`.
+ * Parses `PILOT_ESCALATION_PAYMENT_DAY` with the same default (5) and bounds
+ * (1 through 28) used by `pilotPaymentDay()` in `apps/webapp`.
+ */
+export function parsePaymentDayFromEnv(raw: string | undefined): number {
+  if (raw === undefined || raw.trim() === '') {
+    return DEFAULT_PILOT_PAYMENT_DAY;
+  }
+  const parsed = Number.parseInt(raw.trim(), 10);
+  if (
+    /^\d+$/.test(raw.trim()) &&
+    Number.isInteger(parsed) &&
+    parsed >= MIN_PILOT_PAYMENT_DAY &&
+    parsed <= MAX_PILOT_PAYMENT_DAY
+  ) {
+    return parsed;
+  }
+  return DEFAULT_PILOT_PAYMENT_DAY;
+}
+
+/**
+ * Parses `PILOT_ESCALATION_AGREEMENT_START` from either a `YYYY-MM` cycle string
+ * or a full ISO-8601 date/timestamp string.
+ */
+export function parseAgreementStart(raw: string | undefined): Date | undefined {
+  if (!raw) return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const yearMonthMatch = /^(\d{4})-(\d{2})$/.exec(trimmed);
+  if (yearMonthMatch) {
+    const year = Number.parseInt(yearMonthMatch[1]!, 10);
+    const month = Number.parseInt(yearMonthMatch[2]!, 10);
+    if (month < 1 || month > 12) return undefined;
+    return new Date(Date.UTC(year, month - 1, 1));
+  }
+  const parsed = new Date(trimmed);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+/**
+ * Builds the ordered list of `YYYY-MM` reporting cycles from the agreement
+ * start month up to the last month whose payment day (in the following month,
+ * at 00:00:00 UTC) has passed as of `now`.
  */
 export function buildExpectedCycles(
   config: ExpectedCyclesConfig,
   now: Date = new Date(),
 ): ExpectedCycle[] {
-  const { agreementStartAt, cadenceDays, cycleIdPrefix = 'cycle-' } = config;
+  const { agreementStartAt, paymentDay = DEFAULT_PILOT_PAYMENT_DAY } = config;
+  assertValidPaymentDay(paymentDay);
 
-  if (cadenceDays <= 0) {
-    throw new Error('cadenceDays must be > 0');
+  if (Number.isNaN(agreementStartAt.getTime())) {
+    throw new Error('agreementStartAt must be a valid Date');
   }
 
-  const cadenceMs = cadenceDays * 24 * 60 * 60 * 1_000;
-  const startMs = agreementStartAt.getTime();
+  let year = agreementStartAt.getUTCFullYear();
+  let month = agreementStartAt.getUTCMonth() + 1;
   const nowMs = now.getTime();
   const cycles: ExpectedCycle[] = [];
 
-  let index = 1;
-  let dueAtMs = startMs + cadenceMs;
+  while (true) {
+    // `month` is 1-based while `Date.UTC` expects a 0-based month index, so
+    // passing `month` directly lands on `paymentDay` of the following month
+    // (including rolling December `month = 12` to January of `year + 1`).
+    const dueAt = new Date(Date.UTC(year, month, paymentDay));
+    if (dueAt.getTime() > nowMs) {
+      break;
+    }
 
-  while (dueAtMs <= nowMs) {
-    cycles.push({ cycleId: `${cycleIdPrefix}${index}`, dueAt: new Date(dueAtMs) });
-    index += 1;
-    dueAtMs = startMs + cadenceMs * index;
+    cycles.push({
+      cycleId: formatCycleId(year, month),
+      dueAt,
+    });
+
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
   }
 
   return cycles;

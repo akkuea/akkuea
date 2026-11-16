@@ -6,7 +6,7 @@
  */
 
 export interface CycleEvidenceStatus {
-  /** The cycle identifier, e.g. `cycle-3`. */
+  /** The calendar month cycle identifier in `YYYY-MM` format, e.g. `2026-03`. */
   cycleId: string;
   /** Whether `record_evidence` was found on-chain for this cycle. */
   hasEvidence: boolean;

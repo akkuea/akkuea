@@ -9,7 +9,13 @@ import {
   PilotEscalationRepository,
 } from '../repositories/PilotEscalationRepository';
 import { logger } from '../services/logger';
-import { buildExpectedCycles } from './pilotEscalation/expectedCycles';
+import {
+  assertValidPaymentDay,
+  buildExpectedCycles,
+  DEFAULT_PILOT_PAYMENT_DAY,
+  parseAgreementStart,
+  parsePaymentDayFromEnv,
+} from './pilotEscalation/expectedCycles';
 import { detectMissedCycles, type CycleEvidenceStatus } from './pilotEscalation/detectMissedCycles';
 
 export interface EvidenceReaderLike {
@@ -19,8 +25,11 @@ export interface EvidenceReaderLike {
 export interface PilotEscalationJobConfig {
   /** How often the job runs, in milliseconds. Default: 6 hours. */
   pollIntervalMs?: number;
-  /** Expected evidence-reporting cadence, in days. Default: 30. */
-  cadenceDays?: number;
+  /**
+   * Day of the month, in the month after each `YYYY-MM` cycle, when evidence
+   * is contractually due (1 through 28). Default: 5.
+   */
+  paymentDay?: number;
   /** Consecutive missed cycles that constitutes a breach. Default: 2. */
   thresholdCycles?: number;
   /** When the ally's reporting agreement began. Required to run. */
@@ -38,6 +47,8 @@ export interface PilotEscalationJobConfig {
   rpcMaxRetries?: number;
   /** Base delay for RPC retry backoff, in milliseconds. */
   rpcRetryBaseDelayMs?: number;
+  /** Clock provider (useful for deterministic testing). */
+  now?: () => Date;
   /** Injected evidence reader (useful for testing). */
   evidenceReader?: EvidenceReaderLike;
   /** Injected NotificationService (useful for testing). */
@@ -48,7 +59,7 @@ export interface PilotEscalationJobConfig {
 
 interface ResolvedConfig {
   pollIntervalMs: number;
-  cadenceDays: number;
+  paymentDay: number;
   thresholdCycles: number;
   agreementStartAt: Date | null;
   renotifyIntervalMs: number;
@@ -56,13 +67,13 @@ interface ResolvedConfig {
   contractId: string;
   rpcMaxRetries: number;
   rpcRetryBaseDelayMs: number;
+  now: () => Date;
   evidenceReader: EvidenceReaderLike | null;
   notificationService: NotificationService;
   escalationRepository: PilotEscalationRepository;
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 6 * 60 * 60 * 1_000; // 6 hours
-const DEFAULT_CADENCE_DAYS = 30;
 const DEFAULT_THRESHOLD_CYCLES = 2;
 const DEFAULT_RENOTIFY_INTERVAL_MS = 7 * 24 * 60 * 60 * 1_000; // 7 days
 const DEFAULT_RPC_MAX_RETRIES = 3;
@@ -77,20 +88,9 @@ export type PilotEscalationTickResult =
  * PilotEscalationJob
  *
  * Periodically reads `pilot-payout-split`'s on-chain evidence history for
- * the pilot ally and proactively notifies an operator when two or more
- * consecutive expected reporting cycles have gone by without a recorded
- * `record_evidence` call, instead of leaving this as a passive dashboard
- * signal (see docs/strategy/product-brief.md).
- *
- * Structured after `kycExpiryJob.ts`: self-scheduling poll loop, no crash
- * on transient failure, disable via env.
- *
- * Dedup strategy: a small local table (`pilot_escalation_state`) tracks the
- * last breach an escalation was sent for. This is genuinely new operational
- * metadata (not a cache of on-chain data, which stays the source of truth
- * for the evidence itself), and it lets the job cheaply distinguish "same
- * gap, already notified" from "gap grew / new gap" without re-deriving
- * notification history from `NotificationService` on every tick.
+ * the pilot ally by calendar-month `YYYY-MM` cycle ID and notifies an operator
+ * when two or more consecutive expected reporting cycles (whose payment day in
+ * the following month has passed) have no recorded evidence on-chain.
  *
  * Disable via env: PILOT_ESCALATION_JOB_ENABLED=false
  */
@@ -101,9 +101,12 @@ export class PilotEscalationJob {
   private processing = false;
 
   constructor(config?: PilotEscalationJobConfig) {
+    const paymentDay = config?.paymentDay ?? DEFAULT_PILOT_PAYMENT_DAY;
+    assertValidPaymentDay(paymentDay);
+
     this.config = {
       pollIntervalMs: config?.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,
-      cadenceDays: config?.cadenceDays ?? DEFAULT_CADENCE_DAYS,
+      paymentDay,
       thresholdCycles: config?.thresholdCycles ?? DEFAULT_THRESHOLD_CYCLES,
       agreementStartAt: config?.agreementStartAt ?? null,
       renotifyIntervalMs: config?.renotifyIntervalMs ?? DEFAULT_RENOTIFY_INTERVAL_MS,
@@ -111,6 +114,7 @@ export class PilotEscalationJob {
       contractId: config?.contractId ?? getPilotPayoutSplitContractId(),
       rpcMaxRetries: config?.rpcMaxRetries ?? DEFAULT_RPC_MAX_RETRIES,
       rpcRetryBaseDelayMs: config?.rpcRetryBaseDelayMs ?? DEFAULT_RPC_RETRY_BASE_DELAY_MS,
+      now: config?.now ?? (() => new Date()),
       evidenceReader: config?.evidenceReader ?? null,
       notificationService: config?.notificationService ?? new NotificationService(),
       escalationRepository: config?.escalationRepository ?? pilotEscalationRepository,
@@ -123,7 +127,7 @@ export class PilotEscalationJob {
     logger.info('Pilot escalation job started', {
       operation: 'PILOT_ESCALATION_JOB_START',
       pollIntervalMs: this.config.pollIntervalMs,
-      cadenceDays: this.config.cadenceDays,
+      paymentDay: this.config.paymentDay,
       thresholdCycles: this.config.thresholdCycles,
     });
     void this.tick();
@@ -178,10 +182,14 @@ export class PilotEscalationJob {
         return { status: 'skipped', reason: 'no_contract_id' };
       }
 
-      const expectedCycles = buildExpectedCycles({
-        agreementStartAt: this.config.agreementStartAt,
-        cadenceDays: this.config.cadenceDays,
-      });
+      const now = this.config.now();
+      const expectedCycles = buildExpectedCycles(
+        {
+          agreementStartAt: this.config.agreementStartAt,
+          paymentDay: this.config.paymentDay,
+        },
+        now,
+      );
 
       if (expectedCycles.length === 0) {
         return { status: 'ok', breached: false, consecutiveMissed: 0, notified: false };
@@ -208,7 +216,7 @@ export class PilotEscalationJob {
         };
       }
 
-      const notified = await this.maybeNotify(gap);
+      const notified = await this.maybeNotify(gap, now);
       return { status: 'ok', breached: true, consecutiveMissed: gap.consecutiveMissed, notified };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -223,12 +231,6 @@ export class PilotEscalationJob {
     }
   }
 
-  /**
-   * Reads evidence presence for a single cycle, retrying transient RPC
-   * failures with exponential backoff (matching `notificationWorker.ts`'s
-   * retry/backoff convention). Rethrows once retries are exhausted so the
-   * tick aborts rather than risking a false "missed" read.
-   */
   private async readWithRetry(
     reader: EvidenceReaderLike,
     cycleId: string,
@@ -259,15 +261,17 @@ export class PilotEscalationJob {
       : new Error(`Failed to read evidence for cycle "${cycleId}" after retries`);
   }
 
-  private async maybeNotify(gap: {
-    breached: boolean;
-    consecutiveMissed: number;
-    missedCycleIds: string[];
-    lastMissedCycleId: string | null;
-  }): Promise<boolean> {
+  private async maybeNotify(
+    gap: {
+      breached: boolean;
+      consecutiveMissed: number;
+      missedCycleIds: string[];
+      lastMissedCycleId: string | null;
+    },
+    now: Date,
+  ): Promise<boolean> {
     const contractId = this.config.contractId;
     const existing = await this.config.escalationRepository.findByContractId(contractId);
-    const now = new Date();
 
     const isSameBreach = existing?.lastMissedCycleId === gap.lastMissedCycleId;
     const dueForRenotify =
@@ -319,26 +323,18 @@ function parsePositiveNumber(value: string | undefined): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function parseIsoDate(value: string | undefined): Date | undefined {
-  if (!value) return undefined;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-}
-
 /**
  * Factory that respects the PILOT_ESCALATION_JOB_ENABLED env flag (default:
- * enabled). Cadence, threshold, agreement start, operator, and dedup
- * re-notification cadence are all configurable via environment variables
- * since they are properties of a specific ally's agreement that does not
- * exist yet:
+ * enabled). Payment day, threshold, agreement start, operator, and dedup
+ * re-notification cadence are configurable via environment variables:
  *
- *  - PILOT_ESCALATION_CADENCE_DAYS (default 30)
+ *  - PILOT_ESCALATION_PAYMENT_DAY (default 5, 1 to 28)
  *  - PILOT_ESCALATION_THRESHOLD_CYCLES (default 2)
- *  - PILOT_ESCALATION_AGREEMENT_START (ISO date, required to run)
+ *  - PILOT_ESCALATION_AGREEMENT_START (YYYY-MM or ISO date, required to run)
  *  - PILOT_ESCALATION_OPERATOR_USER_ID (required to run)
  *  - PILOT_ESCALATION_POLL_INTERVAL_MS (default 6 hours)
  *  - PILOT_ESCALATION_RENOTIFY_INTERVAL_MS (default 7 days)
- *  - PILOT_PAYOUT_SPLIT_CONTRACT_ID (env override → shared deployment artifact)
+ *  - PILOT_PAYOUT_SPLIT_CONTRACT_ID (env override or shared deployment artifact)
  */
 export function createPilotEscalationJobFromEnv(): PilotEscalationJob | null {
   const enabled = (process.env.PILOT_ESCALATION_JOB_ENABLED ?? 'true').toLowerCase() !== 'false';
@@ -351,9 +347,9 @@ export function createPilotEscalationJobFromEnv(): PilotEscalationJob | null {
 
   return new PilotEscalationJob({
     pollIntervalMs: parsePositiveNumber(process.env.PILOT_ESCALATION_POLL_INTERVAL_MS),
-    cadenceDays: parsePositiveNumber(process.env.PILOT_ESCALATION_CADENCE_DAYS),
+    paymentDay: parsePaymentDayFromEnv(process.env.PILOT_ESCALATION_PAYMENT_DAY),
     thresholdCycles: parsePositiveNumber(process.env.PILOT_ESCALATION_THRESHOLD_CYCLES),
-    agreementStartAt: parseIsoDate(process.env.PILOT_ESCALATION_AGREEMENT_START),
+    agreementStartAt: parseAgreementStart(process.env.PILOT_ESCALATION_AGREEMENT_START),
     renotifyIntervalMs: parsePositiveNumber(process.env.PILOT_ESCALATION_RENOTIFY_INTERVAL_MS),
     operatorUserId: process.env.PILOT_ESCALATION_OPERATOR_USER_ID?.trim() || undefined,
   });

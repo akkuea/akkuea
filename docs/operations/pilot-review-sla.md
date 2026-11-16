@@ -10,10 +10,10 @@ This document is the recorded SLA that `docs/strategy/product-brief.md` requires
 
 ## Target
 
-| Surface            | Clock starts                         | Clock stops                                      | Provisional target      |
-| ------------------ | ------------------------------------ | ------------------------------------------------ | ----------------------- |
-| Whitelist review   | `createdAt` on the request row       | `reviewedAt` (approve or reject)                 | **48 hours**            |
-| Evidence review    | Cycle due date (`buildExpectedCycles`) | On-chain `recorded_at` from `record_evidence` | **48 hours**            |
+| Surface          | Clock starts                           | Clock stops                                   | Provisional target |
+| ---------------- | -------------------------------------- | --------------------------------------------- | ------------------ |
+| Whitelist review | `createdAt` on the request row         | `reviewedAt` (approve or reject)              | **48 hours**       |
+| Evidence review  | Cycle due date (`buildExpectedCycles`) | On-chain `recorded_at` from `record_evidence` | **48 hours**       |
 
 A review that completes in exactly 48 hours meets the SLA. Completing later, or remaining pending after 48 hours, is a breach.
 
@@ -31,7 +31,7 @@ A true business-hours clock (for example Mon-Fri 09:00-17:00 in an ally's timezo
 
 **Whitelist.** `pilot_whitelist_requests.createdAt` and `reviewedAt`. Turnaround for a reviewed request is `max(0, reviewedAt - createdAt)`. A still-pending request whose age exceeds the SLA is counted as a pending breach. No new columns.
 
-**Evidence.** There is no off-chain submission table, and this project does not add one for data that is already on-chain. `pilot-payout-split.record_evidence` writes `recorded_at` (ledger timestamp). Expected cycle due dates reuse the same agreement start and cadence as the ally-escalation job (`PILOT_ESCALATION_AGREEMENT_START`, `PILOT_ESCALATION_CADENCE_DAYS`). Turnaround for a recorded cycle is `max(0, recorded_at - dueAt)`: on or before the due date counts as 0. An expected cycle with no `record_evidence` whose age past `dueAt` exceeds the SLA is a pending breach. Reads go through Soroban RPC (`PilotPayoutEvidenceReader.get_evidence`), never a cache table.
+**Evidence.** There is no off-chain submission table, and this project does not add one for data that is already on-chain. `pilot-payout-split.record_evidence` writes `recorded_at` (ledger timestamp). Expected cycle due dates reuse the same agreement start and payment day as the ally-escalation job (`PILOT_ESCALATION_AGREEMENT_START`, `PILOT_ESCALATION_PAYMENT_DAY`). Turnaround for a recorded cycle is `max(0, recorded_at - dueAt)`: on or before the due date counts as 0. An expected cycle with no `record_evidence` whose age past `dueAt` exceeds the SLA is a pending breach. Reads go through Soroban RPC (`PilotPayoutEvidenceReader.get_evidence`), never a cache table.
 
 If the agreement start is unset, evidence metrics are returned as `available: false` with reason `agreement_start_not_configured`. Whitelist metrics still compute. An RPC failure on the evidence read does the same with reason `rpc_error`; it does not fail the whitelist half.
 
@@ -47,11 +47,11 @@ Same authorization as other operator-only surfaces: header `x-internal-api-key` 
 
 Query parameters (all optional):
 
-| Param        | Meaning                                              | Default                         |
-| ------------ | ---------------------------------------------------- | ------------------------------- |
-| `from`       | Window start (ISO 8601 with offset)                  | `to` minus `windowDays`         |
-| `to`         | Window end (ISO 8601 with offset)                    | now                             |
-| `windowDays` | Lookback in days when `from` is omitted              | 30 (`PILOT_REVIEW_METRICS_WINDOW_DAYS`) |
+| Param        | Meaning                                 | Default                                 |
+| ------------ | --------------------------------------- | --------------------------------------- |
+| `from`       | Window start (ISO 8601 with offset)     | `to` minus `windowDays`                 |
+| `to`         | Window end (ISO 8601 with offset)       | now                                     |
+| `windowDays` | Lookback in days when `from` is omitted | 30 (`PILOT_REVIEW_METRICS_WINDOW_DAYS`) |
 
 Whitelist rows are selected by `createdAt` in the window. Evidence cycles are selected by `dueAt` in the window.
 
@@ -67,7 +67,10 @@ The JSON is the machine form. `data.report` is the human form (also written as a
       "kind": "whitelist",
       "slaTargetHours": 48,
       "slaTargetMs": 172800000,
-      "window": { "from": "2026-03-01T00:00:00.000Z", "to": "2026-03-31T00:00:00.000Z" },
+      "window": {
+        "from": "2026-03-01T00:00:00.000Z",
+        "to": "2026-03-31T00:00:00.000Z"
+      },
       "count": 5,
       "meanMs": 43200000,
       "medianMs": 10800000,
@@ -110,11 +113,11 @@ curl -sS "http://localhost:3001/pilot/whitelist/metrics?windowDays=30" \
 
 ## Changing the target
 
-| Variable                            | Default | Effect                                      |
-| ----------------------------------- | ------- | ------------------------------------------- |
-| `PILOT_WHITELIST_REVIEW_SLA_HOURS`  | `48`    | Whitelist SLA, in calendar hours            |
-| `PILOT_EVIDENCE_REVIEW_SLA_HOURS`   | `48`    | Evidence SLA, in calendar hours             |
-| `PILOT_REVIEW_METRICS_WINDOW_DAYS`  | `30`    | Default metrics lookback                    |
+| Variable                           | Default | Effect                           |
+| ---------------------------------- | ------- | -------------------------------- |
+| `PILOT_WHITELIST_REVIEW_SLA_HOURS` | `48`    | Whitelist SLA, in calendar hours |
+| `PILOT_EVIDENCE_REVIEW_SLA_HOURS`  | `48`    | Evidence SLA, in calendar hours  |
+| `PILOT_REVIEW_METRICS_WINDOW_DAYS` | `30`    | Default metrics lookback         |
 
 Restart the API after changing these. No code change, no contract change.
 

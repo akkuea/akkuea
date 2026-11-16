@@ -5,16 +5,10 @@ import type { PilotEscalationRepository } from '../repositories/PilotEscalationR
 import type { EvidenceLookupResult } from '../services/PilotPayoutEvidenceReader';
 import type { PilotEscalationState } from '../db/schema';
 
-const CADENCE_DAYS = 30;
-const CADENCE_MS = CADENCE_DAYS * 24 * 60 * 60 * 1_000;
 const OPERATOR_USER_ID = 'operator-1';
 const CONTRACT_ID = 'CTESTPAYOUTSPLITCONTRACTID0000000000000000000000000000';
-
-/** Agreement start date relative to "now" so exactly `n` cycles are due, regardless of wall-clock date. */
-function agreementStartForDueCycles(n: number): Date {
-  // A little past the nth cadence boundary so the boundary check is unambiguous.
-  return new Date(Date.now() - n * CADENCE_MS - 60_000);
-}
+const JAN_START = new Date('2026-01-15T00:00:00.000Z');
+const MARCH_AFTER_PAYMENT_DAY = new Date('2026-03-10T00:00:00.000Z');
 
 function makeReader(evidenceByCycle: Record<string, boolean>) {
   return {
@@ -98,11 +92,9 @@ describe('PilotEscalationJob', () => {
   it('skips the tick without crashing when required config is missing', async () => {
     const job = new PilotEscalationJob({
       contractId: CONTRACT_ID,
-      cadenceDays: CADENCE_DAYS,
       evidenceReader: makeReader({}),
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,
-      // agreementStartAt and operatorUserId intentionally omitted
     });
 
     const result = await job.tick();
@@ -110,15 +102,15 @@ describe('PilotEscalationJob', () => {
     expect(notificationService.notifyPilotReportingEscalation).not.toHaveBeenCalled();
   });
 
-  it('does not breach when fewer than the threshold of cycles are missed', async () => {
-    // Exactly 1 cycle due; it has evidence recorded.
-    const reader = makeReader({ 'cycle-1': true });
+  it('reports no breach in March when agreement starts in January and 2026-01 and 2026-02 have evidence', async () => {
+    const reader = makeReader({ '2026-01': true, '2026-02': true });
     const job = new PilotEscalationJob({
       contractId: CONTRACT_ID,
-      agreementStartAt: agreementStartForDueCycles(1),
-      cadenceDays: CADENCE_DAYS,
+      agreementStartAt: JAN_START,
+      paymentDay: 5,
       operatorUserId: OPERATOR_USER_ID,
       thresholdCycles: 2,
+      now: () => MARCH_AFTER_PAYMENT_DAY,
       evidenceReader: reader,
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,
@@ -131,17 +123,46 @@ describe('PilotEscalationJob', () => {
       consecutiveMissed: 0,
       notified: false,
     });
+    expect(reader.hasEvidence.mock.calls.map((c) => c[0])).toEqual(['2026-01', '2026-02']);
+    expect(notificationService.notifyPilotReportingEscalation).not.toHaveBeenCalled();
+  });
+
+  it('does not count a month whose payment day has not passed yet as missed', async () => {
+    // On 2026-03-04 (paymentDay = 5), 2026-01 is due (due Feb 5), while 2026-02 (due Mar 5) is NOT yet due.
+    const marchBeforePaymentDay = new Date('2026-03-04T23:59:59.000Z');
+    const reader = makeReader({});
+    const job = new PilotEscalationJob({
+      contractId: CONTRACT_ID,
+      agreementStartAt: JAN_START,
+      paymentDay: 5,
+      operatorUserId: OPERATOR_USER_ID,
+      thresholdCycles: 2,
+      now: () => marchBeforePaymentDay,
+      evidenceReader: reader,
+      notificationService: notificationService as unknown as NotificationService,
+      escalationRepository: repository as unknown as PilotEscalationRepository,
+    });
+
+    const result = await job.tick();
+    expect(result).toEqual({
+      status: 'ok',
+      breached: false,
+      consecutiveMissed: 1,
+      notified: false,
+    });
+    expect(reader.hasEvidence.mock.calls.map((c) => c[0])).toEqual(['2026-01']);
     expect(notificationService.notifyPilotReportingEscalation).not.toHaveBeenCalled();
   });
 
   it('does not breach on exactly one missed cycle out of two due (threshold 2)', async () => {
-    const reader = makeReader({ 'cycle-1': true, 'cycle-2': false });
+    const reader = makeReader({ '2026-01': true, '2026-02': false });
     const job = new PilotEscalationJob({
       contractId: CONTRACT_ID,
-      agreementStartAt: agreementStartForDueCycles(2),
-      cadenceDays: CADENCE_DAYS,
+      agreementStartAt: JAN_START,
+      paymentDay: 5,
       operatorUserId: OPERATOR_USER_ID,
       thresholdCycles: 2,
+      now: () => MARCH_AFTER_PAYMENT_DAY,
       evidenceReader: reader,
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,
@@ -154,14 +175,15 @@ describe('PilotEscalationJob', () => {
     expect(notificationService.notifyPilotReportingEscalation).not.toHaveBeenCalled();
   });
 
-  it('enqueues exactly one notification when the two-cycle threshold is first crossed', async () => {
-    const reader = makeReader({}); // both due cycles missing
+  it('enqueues exactly one notification when two consecutive months past payment day have no evidence', async () => {
+    const reader = makeReader({});
     const job = new PilotEscalationJob({
       contractId: CONTRACT_ID,
-      agreementStartAt: agreementStartForDueCycles(2),
-      cadenceDays: CADENCE_DAYS,
+      agreementStartAt: JAN_START,
+      paymentDay: 5,
       operatorUserId: OPERATOR_USER_ID,
       thresholdCycles: 2,
+      now: () => MARCH_AFTER_PAYMENT_DAY,
       evidenceReader: reader,
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,
@@ -173,6 +195,12 @@ describe('PilotEscalationJob', () => {
     expect(result.consecutiveMissed).toBe(2);
     expect(result.notified).toBe(true);
     expect(notificationService.notifyPilotReportingEscalation).toHaveBeenCalledTimes(1);
+    expect(notificationService.notifyPilotReportingEscalation).toHaveBeenCalledWith(
+      OPERATOR_USER_ID,
+      CONTRACT_ID,
+      2,
+      ['2026-01', '2026-02'],
+    );
 
     // A second poll with the same unresolved gap must not re-notify.
     const second = await job.tick();
@@ -181,15 +209,44 @@ describe('PilotEscalationJob', () => {
     expect(notificationService.notifyPilotReportingEscalation).toHaveBeenCalledTimes(1);
   });
 
-  it('re-notifies once the configured re-notification cadence has elapsed for a persisting gap', async () => {
+  it('handles year boundaries (2026-12 then 2027-01) when checking consecutive missed months', async () => {
     const reader = makeReader({});
     const job = new PilotEscalationJob({
       contractId: CONTRACT_ID,
-      agreementStartAt: agreementStartForDueCycles(2),
-      cadenceDays: CADENCE_DAYS,
+      agreementStartAt: new Date('2026-12-01T00:00:00.000Z'),
+      paymentDay: 5,
       operatorUserId: OPERATOR_USER_ID,
       thresholdCycles: 2,
-      renotifyIntervalMs: 1, // effectively "always due" for this test
+      now: () => new Date('2027-02-06T00:00:00.000Z'),
+      evidenceReader: reader,
+      notificationService: notificationService as unknown as NotificationService,
+      escalationRepository: repository as unknown as PilotEscalationRepository,
+    });
+
+    const result = await job.tick();
+    if (result.status !== 'ok') throw new Error('unreachable');
+    expect(result.breached).toBe(true);
+    expect(result.consecutiveMissed).toBe(2);
+    expect(reader.hasEvidence.mock.calls.map((c) => c[0])).toEqual(['2026-12', '2027-01']);
+    expect(notificationService.notifyPilotReportingEscalation).toHaveBeenCalledWith(
+      OPERATOR_USER_ID,
+      CONTRACT_ID,
+      2,
+      ['2026-12', '2027-01'],
+    );
+  });
+
+  it('re-notifies once the configured re-notification cadence has elapsed for a persisting gap', async () => {
+    let currentNow = new Date('2026-03-10T00:00:00.000Z');
+    const reader = makeReader({});
+    const job = new PilotEscalationJob({
+      contractId: CONTRACT_ID,
+      agreementStartAt: JAN_START,
+      paymentDay: 5,
+      operatorUserId: OPERATOR_USER_ID,
+      thresholdCycles: 2,
+      renotifyIntervalMs: 1_000,
+      now: () => currentNow,
       evidenceReader: reader,
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,
@@ -198,21 +255,20 @@ describe('PilotEscalationJob', () => {
     await job.tick();
     expect(notificationService.notifyPilotReportingEscalation).toHaveBeenCalledTimes(1);
 
-    await new Promise((resolve) => setTimeout(resolve, 5));
+    currentNow = new Date(currentNow.getTime() + 2_000);
     await job.tick();
     expect(notificationService.notifyPilotReportingEscalation).toHaveBeenCalledTimes(2);
   });
 
   it('clears dedup state and stops notifying once the ally resumes reporting', async () => {
-    const agreementStartAt = agreementStartForDueCycles(2);
-
     const missingReader = makeReader({});
     const jobA = new PilotEscalationJob({
       contractId: CONTRACT_ID,
-      agreementStartAt,
-      cadenceDays: CADENCE_DAYS,
+      agreementStartAt: JAN_START,
+      paymentDay: 5,
       operatorUserId: OPERATOR_USER_ID,
       thresholdCycles: 2,
+      now: () => MARCH_AFTER_PAYMENT_DAY,
       evidenceReader: missingReader,
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,
@@ -221,16 +277,16 @@ describe('PilotEscalationJob', () => {
     expect(notificationService.notifyPilotReportingEscalation).toHaveBeenCalledTimes(1);
     expect(repository._store.size).toBe(1);
 
-    // The ally caught up: evidence now exists for every expected cycle.
     const allPresentReader = {
       hasEvidence: mock(async (): Promise<EvidenceLookupResult> => ({ present: true })),
     };
     const jobB = new PilotEscalationJob({
       contractId: CONTRACT_ID,
-      agreementStartAt,
-      cadenceDays: CADENCE_DAYS,
+      agreementStartAt: JAN_START,
+      paymentDay: 5,
       operatorUserId: OPERATOR_USER_ID,
       thresholdCycles: 2,
+      now: () => MARCH_AFTER_PAYMENT_DAY,
       evidenceReader: allPresentReader,
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,
@@ -246,12 +302,13 @@ describe('PilotEscalationJob', () => {
     const alwaysFailingReader = makeAlwaysFailingReader();
     const job = new PilotEscalationJob({
       contractId: CONTRACT_ID,
-      agreementStartAt: agreementStartForDueCycles(2),
-      cadenceDays: CADENCE_DAYS,
+      agreementStartAt: JAN_START,
+      paymentDay: 5,
       operatorUserId: OPERATOR_USER_ID,
       thresholdCycles: 2,
       rpcMaxRetries: 2,
       rpcRetryBaseDelayMs: 1,
+      now: () => MARCH_AFTER_PAYMENT_DAY,
       evidenceReader: alwaysFailingReader,
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,
@@ -260,21 +317,21 @@ describe('PilotEscalationJob', () => {
     const result = await job.tick();
     expect(result.status).toBe('rpc_error');
     expect(notificationService.notifyPilotReportingEscalation).not.toHaveBeenCalled();
-    // Retried up to rpcMaxRetries before giving up on the first cycle lookup.
     expect(alwaysFailingReader.hasEvidence).toHaveBeenCalledTimes(2);
     expect(job.isRunning()).toBe(false);
   });
 
   it('recovers on the next lookup after a transient RPC failure resolves within retry budget', async () => {
-    const reader = makeFlakyReader(1); // first call fails, subsequent calls succeed
+    const reader = makeFlakyReader(1);
     const job = new PilotEscalationJob({
       contractId: CONTRACT_ID,
-      agreementStartAt: agreementStartForDueCycles(2),
-      cadenceDays: CADENCE_DAYS,
+      agreementStartAt: JAN_START,
+      paymentDay: 5,
       operatorUserId: OPERATOR_USER_ID,
       thresholdCycles: 2,
       rpcMaxRetries: 3,
       rpcRetryBaseDelayMs: 1,
+      now: () => MARCH_AFTER_PAYMENT_DAY,
       evidenceReader: reader,
       notificationService: notificationService as unknown as NotificationService,
       escalationRepository: repository as unknown as PilotEscalationRepository,

@@ -26,6 +26,24 @@ const GameEventContext = createContext<GameEventContextValue>({
 
 const MAX_BUFFERED = 200;
 
+const VALID_GAME_EVENT_TYPES = new Set<string>([
+  "PropertyBought",
+  "PropertyListed",
+  "PropertyTransferred",
+  "RentCollected",
+]);
+
+function isValidGameEvent(value: unknown): value is GameEvent {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.type === "string" &&
+    VALID_GAME_EVENT_TYPES.has(candidate.type)
+  );
+}
+
 export function GameEventProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<GameEvent[]>([]);
   const [latest, setLatest] = useState<GameEvent | null>(null);
@@ -62,8 +80,9 @@ export function GameEventProvider({ children }: { children: ReactNode }) {
       es.onmessage = (e: MessageEvent<string>) => {
         if (!mountedRef.current) return;
         try {
-          const event = JSON.parse(e.data) as GameEvent;
-          dispatch(event);
+          const parsed: unknown = JSON.parse(e.data);
+          if (!isValidGameEvent(parsed)) return;
+          dispatch(parsed);
         } catch {
           // malformed payload - ignore
         }
@@ -73,7 +92,11 @@ export function GameEventProvider({ children }: { children: ReactNode }) {
         if (!mountedRef.current) return;
         es.close();
         setConnected(false);
+        if (timeoutId !== null) {
+          clearTimeout(timeoutId);
+        }
         timeoutId = setTimeout(() => {
+          timeoutId = null;
           backoff = Math.min(backoff * 2, 60_000);
           connect();
         }, backoff);

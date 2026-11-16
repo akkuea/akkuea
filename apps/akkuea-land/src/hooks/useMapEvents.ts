@@ -50,6 +50,17 @@ export function useMapEvents(
 
     const idx = Math.floor(Math.random() * props.length);
     const prop = props[idx];
+    if (
+      !prop ||
+      typeof prop.id !== "string" ||
+      prop.id.length === 0 ||
+      typeof prop.buildingLevel !== "number" ||
+      !Number.isFinite(prop.buildingLevel) ||
+      prop.buildingLevel < 0 ||
+      prop.buildingLevel > 3
+    ) {
+      return;
+    }
 
     // Randomly pick event type
     const roll = Math.random();

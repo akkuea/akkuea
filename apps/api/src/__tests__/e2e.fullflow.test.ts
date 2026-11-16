@@ -88,6 +88,10 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   let originalPreparePurchaseShares: any;
   let originalVerifyPurchaseTransaction: any;
   let originalGetMintingConfig: any;
+  let originalPrepareLendingAction: any;
+  let originalVerifyLendingTransaction: any;
+  let originalReadLendingStateFromChain: any;
+  let e2eContractPoolId: string;
 
   /** Payment token used by the shared purchase stubs (7-decimal USDC units). */
   const PAYMENT_TOKEN_ID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
@@ -148,7 +152,9 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     propertyId = prop.id;
 
     // Lending pool - will be pre-funded with 2000 USDC for later borrow tests
+    e2eContractPoolId = `e2e-usdc-pool-${Date.now()}`;
     const pool = await lendingRepository.create({
+      contractPoolId: e2eContractPoolId,
       name: 'E2E USDC Pool',
       asset: 'USDC',
       assetAddress: DEPOSITOR_ADDRESS,
@@ -159,8 +165,29 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     });
     poolId = pool.id;
 
-    // Pre-fund the pool so there is available liquidity for borrowing
-    await lendingRepository.deposit(poolId, depositorId, '2000', '2000');
+    // Pre-fund the pool from a confirmed setup deposit so there is available liquidity
+    await lendingRepository.recordConfirmedLendingAction({
+      txHash: 'e'.repeat(64),
+      action: 'deposit',
+      poolId,
+      contractPoolId: e2eContractPoolId,
+      contractId: MOCK_CONTRACT_ID,
+      actorUserId: depositorId,
+      actorWallet: DEPOSITOR_ADDRESS,
+      positionUserId: depositorId,
+      amount: '2000.0000000',
+      asset: 'USDC',
+      totalDeposits: '2000.0000000',
+      totalBorrows: '0.0000000',
+      availableLiquidity: '2000.0000000',
+      utilizationRate: '0.00',
+      kind: 'deposit',
+      depositPosition: {
+        amount: '2000.0000000',
+        shares: '2000.0000000',
+      },
+      borrowPosition: null,
+    });
   });
 
   // -----------------------------------------------------------------------
@@ -171,6 +198,9 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     originalPreparePurchaseShares = stellarService.preparePurchaseShares;
     originalVerifyPurchaseTransaction = stellarService.verifyPurchaseTransaction;
     originalGetMintingConfig = stellarService.getMintingConfig;
+    originalPrepareLendingAction = stellarService.prepareLendingAction;
+    originalVerifyLendingTransaction = stellarService.verifyLendingTransaction;
+    originalReadLendingStateFromChain = stellarService.readLendingStateFromChain;
 
     // Default minting config stub (shared by all tests)
     (stellarService as any).getMintingConfig = () => ({
@@ -185,6 +215,9 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
     (stellarService as any).preparePurchaseShares = originalPreparePurchaseShares;
     (stellarService as any).verifyPurchaseTransaction = originalVerifyPurchaseTransaction;
     (stellarService as any).getMintingConfig = originalGetMintingConfig;
+    (stellarService as any).prepareLendingAction = originalPrepareLendingAction;
+    (stellarService as any).verifyLendingTransaction = originalVerifyLendingTransaction;
+    (stellarService as any).readLendingStateFromChain = originalReadLendingStateFromChain;
   });
 
   // -----------------------------------------------------------------------
@@ -429,18 +462,67 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   // STEP 4 - Collateral Lending (happy path)
   // =======================================================================
   describe('Step 4: Borrow against share collateral - happy path', () => {
-    it('creates a borrow position using tokenized shares as collateral', async () => {
+    it('creates a borrow position using tokenized shares as collateral via prepare/confirm', async () => {
       const poolBefore = await lendingRepository.findById(poolId);
       const liquidityBefore = parseFloat(poolBefore!.availableLiquidity);
       expect(liquidityBefore).toBeGreaterThanOrEqual(300);
 
-      // Buyer borrows 300 USDC, pledging their shares as collateral.
-      // collateralAsset must be a valid G… Stellar address per BorrowDto schema.
-      const response = await LendingController.borrow(
+      const borrowTxHash = 'f'.repeat(64);
+      let capturedPrepare: any = null;
+      (stellarService as any).prepareLendingAction = async (params: any) => {
+        capturedPrepare = params;
+        return { xdr: 'AAAA-BORROW-XDR', contractId: params.contractId };
+      };
+      (stellarService as any).verifyLendingTransaction = async (
+        txHash: string,
+        contractId: string,
+      ) => ({
+        txHash,
+        sourceAccount: BUYER_ADDRESS_KYC_OK,
+        contractId,
+        functionName: 'borrow',
+        call: {
+          kind: 'borrow',
+          actor: BUYER_ADDRESS_KYC_OK,
+          poolId: e2eContractPoolId,
+          amount: 300_0000000n,
+          collateralAsset: COLLATERAL_ASSET_ADDRESS,
+          collateralAmount: 500_0000000n,
+        },
+      });
+      (stellarService as any).readLendingStateFromChain = async () => ({
+        totalDeposits: 2000_0000000n,
+        totalBorrows: 300_0000000n,
+        depositPosition: null,
+        borrowPosition: {
+          principal: 300_0000000n,
+          collateralAmount: 500_0000000n,
+          collateralAsset: COLLATERAL_ASSET_ADDRESS,
+          borrowedAt: 10n,
+          healthFactor: 1_333_333_333_333_333_333n,
+        },
+      });
+
+      const prepResponse = await LendingController.prepareBorrow(
         makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, poolId, {
           borrowAmount: '300',
-          collateralAmount: '500', // 10 shares × 50.00 = 500 (> 300/0.75 = 400 required)
+          collateralAmount: '500',
           collateralAsset: COLLATERAL_ASSET_ADDRESS,
+        }),
+      );
+      expect(prepResponse.status).toBe(200);
+      expect(capturedPrepare).toMatchObject({
+        action: 'borrow',
+        actor: BUYER_ADDRESS_KYC_OK,
+        poolId: e2eContractPoolId,
+        amount: 300_0000000n,
+        collateralAsset: COLLATERAL_ASSET_ADDRESS,
+        collateralAmount: 500_0000000n,
+      });
+
+      const response = await LendingController.confirmBorrow(
+        makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, poolId, {
+          txHash: borrowTxHash,
         }),
       );
 
@@ -474,13 +556,13 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   // =======================================================================
   describe('Step 5: Borrow - insufficient liquidity in pool', () => {
     /**
-     * Helper that calls LendingController.borrow and returns a normalized
+     * Helper that calls LendingController.prepareBorrow and returns a normalized
      * { status, body } pair regardless of whether the controller throws an
      * ApiError (error path) or returns a Response (happy path).
      */
-    async function callBorrow(ctx: any): Promise<{ status: number; body: any }> {
+    async function callPrepareBorrow(ctx: any): Promise<{ status: number; body: any }> {
       try {
-        const response = await LendingController.borrow(ctx);
+        const response = await LendingController.prepareBorrow(ctx);
         const body = await response.json();
         return { status: response.status, body };
       } catch (err: any) {
@@ -495,14 +577,18 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
       }
     }
 
-    it('rejects a borrow request that exceeds the pool available liquidity', async () => {
+    it('rejects a borrow prepare request when defi-rwa simulation fails due to insufficient liquidity', async () => {
       const pool = await lendingRepository.findById(poolId);
       const available = parseFloat(pool!.availableLiquidity);
 
-      // Ask for more than the pool has
+      // Ask for more than the pool has; simulation rejects with 400 Bad Request
       const excessiveBorrow = (available + 10_000).toFixed(7);
+      const { ApiError } = await import('../errors/ApiError');
+      (stellarService as any).prepareLendingAction = async () => {
+        throw ApiError.badRequest('Contract simulation error: InsufficientLiquidity');
+      };
 
-      const { status, body } = await callBorrow(
+      const { status, body } = await callPrepareBorrow(
         makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, poolId, {
           borrowAmount: excessiveBorrow,
           collateralAmount: '99999',
@@ -511,13 +597,13 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
       );
 
       expect(status).toBe(400);
-      expect(body.error).toBe('INSUFFICIENT_LIQUIDITY');
+      expect(body.message).toContain('InsufficientLiquidity');
     });
 
-    it('rejects a borrow request against a non-existent pool', async () => {
+    it('rejects a borrow prepare request against a non-existent pool', async () => {
       const fakePoolId = '00000000-0000-0000-0000-000000000000';
 
-      const { status, body } = await callBorrow(
+      const { status, body } = await callPrepareBorrow(
         makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, fakePoolId, {
           borrowAmount: '100',
           collateralAmount: '200',

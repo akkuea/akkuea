@@ -4,6 +4,7 @@ import {
   lendingPools,
   depositPositions,
   borrowPositions,
+  transactions,
   type LendingPool,
   type NewLendingPool,
   type DepositPosition,
@@ -12,6 +13,7 @@ import {
   type NewBorrowPosition,
 } from '../db/schema';
 import type { DbTransaction } from '../db/types';
+import { ApiError } from '../errors/ApiError';
 import { BaseRepository } from './BaseRepository';
 
 export interface LendingPoolFilter {
@@ -32,6 +34,51 @@ export interface PaginatedResult<T> {
     total: number;
     totalPages: number;
   };
+}
+
+export type ConfirmedLendingAction = 'deposit' | 'withdraw' | 'borrow' | 'repay' | 'liquidate';
+
+export interface ConfirmedDepositSnapshotInput {
+  amount: string;
+  shares: string;
+  accruedInterest?: string;
+}
+
+export interface ConfirmedBorrowSnapshotInput {
+  principal: string;
+  collateralAmount: string;
+  collateralAsset: string;
+  healthFactor: string;
+  accruedInterest?: string;
+}
+
+export interface RecordConfirmedLendingActionParams {
+  txHash: string;
+  action: ConfirmedLendingAction;
+  poolId: string;
+  contractPoolId: string;
+  contractId: string;
+  actorUserId: string;
+  actorWallet: string;
+  positionUserId: string;
+  toUserId?: string | null;
+  amount: string;
+  asset: string;
+  totalDeposits: string;
+  totalBorrows: string;
+  availableLiquidity: string;
+  utilizationRate: string;
+  kind: 'deposit' | 'borrow';
+  depositPosition: ConfirmedDepositSnapshotInput | null;
+  borrowPosition: ConfirmedBorrowSnapshotInput | null;
+}
+
+export interface ConfirmedLendingRecordResult {
+  recorded: boolean;
+  txHash: string;
+  pool: LendingPool;
+  depositPosition: DepositPosition | null;
+  borrowPosition: BorrowPosition | null;
 }
 
 export class LendingRepository extends BaseRepository<
@@ -91,206 +138,231 @@ export class LendingRepository extends BaseRepository<
     return results[0];
   }
 
-  async deposit(
-    poolId: string,
-    depositorId: string,
-    amount: string,
-    shares: string,
-  ): Promise<DepositPosition> {
+  async findByContractPoolId(contractPoolId: string): Promise<LendingPool | undefined> {
+    const results = await db
+      .select()
+      .from(lendingPools)
+      .where(eq(lendingPools.contractPoolId, contractPoolId))
+      .limit(1);
+    return results[0];
+  }
+
+  /**
+   * Atomically records a confirmed on-chain `defi-rwa` lending transaction in
+   * `transactions` (keyed by `hash`) and refreshes the cached pool totals and
+   * user position from the snapshot read directly from the contract.
+   *
+   * Confirming an already-recorded `txHash` for the same operation is a no-op
+   * that returns the cached state without modifying any balances.
+   */
+  async recordConfirmedLendingAction(
+    params: RecordConfirmedLendingActionParams,
+  ): Promise<ConfirmedLendingRecordResult> {
+    const transactionType = params.action === 'liquidate' ? 'liquidation' : params.action;
+
     return await db.transaction(async (tx: DbTransaction) => {
-      const results = await tx
-        .insert(depositPositions)
+      const [inserted] = await tx
+        .insert(transactions)
         .values({
-          poolId,
-          depositorId,
-          amount,
-          shares,
-        } satisfies NewDepositPosition)
-        .returning();
-
-      const position = results[0]!;
-
-      await tx
-        .update(lendingPools)
-        .set({
-          totalDeposits: sql`${lendingPools.totalDeposits}::numeric + ${amount}::numeric`,
-          availableLiquidity: sql`${lendingPools.availableLiquidity}::numeric + ${amount}::numeric`,
-          utilizationRate: sql`CASE WHEN (${lendingPools.totalDeposits}::numeric + ${amount}::numeric) = 0 THEN 0 ELSE (${lendingPools.totalBorrows}::numeric / (${lendingPools.totalDeposits}::numeric + ${amount}::numeric)) * 100 END`,
+          type: transactionType,
+          hash: params.txHash,
+          fromUserId: params.actorUserId,
+          toUserId: params.toUserId ?? null,
+          amount: params.amount,
+          asset: params.asset,
+          status: 'confirmed',
+          metadata: {
+            poolId: params.poolId,
+            contractPoolId: params.contractPoolId,
+            contractId: params.contractId,
+            action: params.action,
+            actorWallet: params.actorWallet,
+            positionUserId: params.positionUserId,
+          },
         })
-        .where(eq(lendingPools.id, poolId));
+        .onConflictDoNothing({ target: transactions.hash })
+        .returning({ id: transactions.id });
 
-      return position;
-    });
-  }
+      if (!inserted) {
+        const [recorded] = await tx
+          .select()
+          .from(transactions)
+          .where(eq(transactions.hash, params.txHash))
+          .limit(1);
 
-  async withdraw(
-    poolId: string,
-    depositorId: string,
-    amount: string,
-  ): Promise<DepositPosition | undefined> {
-    return await db.transaction(async (tx: DbTransaction) => {
-      const [existing] = await tx
-        .select()
-        .from(depositPositions)
-        .where(
-          and(eq(depositPositions.poolId, poolId), eq(depositPositions.depositorId, depositorId)),
-        )
-        .limit(1);
-
-      if (!existing) return undefined;
-
-      const newAmount = parseFloat(existing.amount) - parseFloat(amount);
-      const newShares = parseFloat(existing.shares) - parseFloat(amount);
-
-      const [updated] = await tx
-        .update(depositPositions)
-        .set({
-          amount: Math.max(0, newAmount).toFixed(7),
-          shares: Math.max(0, newShares).toFixed(7),
-        })
-        .where(eq(depositPositions.id, existing.id))
-        .returning();
-
-      await tx
-        .update(lendingPools)
-        .set({
-          totalDeposits: sql`GREATEST(${lendingPools.totalDeposits}::numeric - ${amount}::numeric, 0)`,
-          availableLiquidity: sql`GREATEST(${lendingPools.availableLiquidity}::numeric - ${amount}::numeric, 0)`,
-          utilizationRate: sql`CASE WHEN GREATEST(${lendingPools.totalDeposits}::numeric - ${amount}::numeric, 0) = 0 THEN 0 ELSE (${lendingPools.totalBorrows}::numeric / GREATEST(${lendingPools.totalDeposits}::numeric - ${amount}::numeric, 0)) * 100 END`,
-        })
-        .where(eq(lendingPools.id, poolId));
-
-      return updated;
-    });
-  }
-
-  async borrow(
-    poolId: string,
-    borrowerId: string,
-    data: { borrowAmount: string; collateralAmount: string; collateralAsset: string },
-  ): Promise<BorrowPosition> {
-    return await db.transaction(async (tx: DbTransaction) => {
-      const results = await tx
-        .insert(borrowPositions)
-        .values({
-          poolId,
-          borrowerId,
-          principal: data.borrowAmount,
-          collateralAmount: data.collateralAmount,
-          collateralAsset: data.collateralAsset,
-          healthFactor: '1.0000',
-        } satisfies NewBorrowPosition)
-        .returning();
-
-      const position = results[0]!;
-
-      await tx
-        .update(lendingPools)
-        .set({
-          totalBorrows: sql`${lendingPools.totalBorrows}::numeric + ${data.borrowAmount}::numeric`,
-          availableLiquidity: sql`GREATEST(${lendingPools.availableLiquidity}::numeric - ${data.borrowAmount}::numeric, 0)`,
-          utilizationRate: sql`CASE WHEN ${lendingPools.totalDeposits}::numeric = 0 THEN 0 ELSE ((${lendingPools.totalBorrows}::numeric + ${data.borrowAmount}::numeric) / ${lendingPools.totalDeposits}::numeric) * 100 END`,
-        })
-        .where(eq(lendingPools.id, poolId));
-
-      return position;
-    });
-  }
-
-  async repay(
-    poolId: string,
-    borrowerId: string,
-    amount: string,
-  ): Promise<BorrowPosition | undefined> {
-    return await db.transaction(async (tx: DbTransaction) => {
-      const [existing] = await tx
-        .select()
-        .from(borrowPositions)
-        .where(and(eq(borrowPositions.poolId, poolId), eq(borrowPositions.borrowerId, borrowerId)))
-        .limit(1);
-
-      if (!existing) return undefined;
-
-      const requestedRepayment = parseFloat(amount);
-      const principal = parseFloat(existing.principal);
-      const accruedInterest = parseFloat(existing.accruedInterest);
-      const collateralAmount = parseFloat(existing.collateralAmount);
-      const totalDebt = principal + accruedInterest;
-      const repaidAmount = Math.min(requestedRepayment, totalDebt);
-      const interestRepaid = Math.min(repaidAmount, accruedInterest);
-      const principalRepaid = repaidAmount - interestRepaid;
-      const remainingInterest = Math.max(0, accruedInterest - interestRepaid);
-      const remainingPrincipal = Math.max(0, principal - principalRepaid);
-      const remainingDebt = remainingPrincipal + remainingInterest;
-      const collateralReleased =
-        totalDebt === 0 ? 0 : (collateralAmount * repaidAmount) / totalDebt;
-
-      let updated: BorrowPosition;
-      if (remainingDebt === 0) {
-        await tx.delete(borrowPositions).where(eq(borrowPositions.id, existing.id));
-        updated = {
-          ...existing,
-          principal: '0.0000000',
-          accruedInterest: '0.0000000',
-          collateralAmount: '0.0000000',
+        const meta = (recorded?.metadata ?? {}) as {
+          poolId?: string;
+          action?: string;
+          actorWallet?: string;
+          positionUserId?: string;
         };
-      } else {
-        const [updatedRecord] = await tx
-          .update(borrowPositions)
-          .set({
-            principal: remainingPrincipal.toFixed(7),
-            accruedInterest: remainingInterest.toFixed(7),
-            collateralAmount: Math.max(0, collateralAmount - collateralReleased).toFixed(7),
-          })
-          .where(eq(borrowPositions.id, existing.id))
-          .returning();
 
-        if (!updatedRecord) {
-          throw new Error('Borrow position update failed during repayment');
+        if (
+          (meta.poolId && meta.poolId !== params.poolId) ||
+          (meta.action && meta.action !== params.action) ||
+          (meta.actorWallet && meta.actorWallet !== params.actorWallet) ||
+          (meta.positionUserId && meta.positionUserId !== params.positionUserId)
+        ) {
+          throw new ApiError(
+            409,
+            'CONFLICT',
+            'Transaction hash was already recorded for a different lending operation',
+          );
         }
 
-        updated = updatedRecord;
+        const [existingPool] = await tx
+          .select()
+          .from(lendingPools)
+          .where(eq(lendingPools.id, params.poolId))
+          .limit(1);
+
+        if (!existingPool) {
+          throw ApiError.notFound(`Pool with id ${params.poolId} not found`);
+        }
+
+        const [existingDeposit] =
+          params.kind === 'deposit'
+            ? await tx
+                .select()
+                .from(depositPositions)
+                .where(
+                  and(
+                    eq(depositPositions.poolId, params.poolId),
+                    eq(depositPositions.depositorId, params.positionUserId),
+                  ),
+                )
+                .limit(1)
+            : [undefined];
+
+        const [existingBorrow] =
+          params.kind === 'borrow'
+            ? await tx
+                .select()
+                .from(borrowPositions)
+                .where(
+                  and(
+                    eq(borrowPositions.poolId, params.poolId),
+                    eq(borrowPositions.borrowerId, params.positionUserId),
+                  ),
+                )
+                .limit(1)
+            : [undefined];
+
+        return {
+          recorded: false,
+          txHash: params.txHash,
+          pool: existingPool,
+          depositPosition: existingDeposit ?? null,
+          borrowPosition: existingBorrow ?? null,
+        };
       }
 
-      await tx
+      const [updatedPool] = await tx
         .update(lendingPools)
         .set({
-          totalBorrows: sql`GREATEST(${lendingPools.totalBorrows}::numeric - ${principalRepaid.toFixed(7)}::numeric, 0)`,
-          availableLiquidity: sql`${lendingPools.availableLiquidity}::numeric + ${principalRepaid.toFixed(7)}::numeric`,
-          utilizationRate: sql`CASE WHEN ${lendingPools.totalDeposits}::numeric = 0 THEN 0 ELSE (GREATEST(${lendingPools.totalBorrows}::numeric - ${principalRepaid.toFixed(7)}::numeric, 0) / ${lendingPools.totalDeposits}::numeric) * 100 END`,
+          totalDeposits: params.totalDeposits,
+          totalBorrows: params.totalBorrows,
+          availableLiquidity: params.availableLiquidity,
+          utilizationRate: params.utilizationRate,
         })
-        .where(eq(lendingPools.id, poolId));
+        .where(eq(lendingPools.id, params.poolId))
+        .returning();
 
-      return updated;
-    });
-  }
+      if (!updatedPool) {
+        throw ApiError.notFound(`Pool with id ${params.poolId} not found`);
+      }
 
-  async liquidate(poolId: string, borrowerId: string): Promise<BorrowPosition | undefined> {
-    return await db.transaction(async (tx) => {
-      const [position] = await tx
-        .select()
-        .from(borrowPositions)
-        .where(and(eq(borrowPositions.poolId, poolId), eq(borrowPositions.borrowerId, borrowerId)))
-        .limit(1);
+      let syncedDeposit: DepositPosition | null = null;
+      let syncedBorrow: BorrowPosition | null = null;
+      const now = new Date();
 
-      if (!position) return undefined;
+      if (params.kind === 'deposit') {
+        if (params.depositPosition === null) {
+          await tx
+            .delete(depositPositions)
+            .where(
+              and(
+                eq(depositPositions.poolId, params.poolId),
+                eq(depositPositions.depositorId, params.positionUserId),
+              ),
+            );
+        } else {
+          const [upserted] = await tx
+            .insert(depositPositions)
+            .values({
+              poolId: params.poolId,
+              depositorId: params.positionUserId,
+              amount: params.depositPosition.amount,
+              shares: params.depositPosition.shares,
+              accruedInterest: params.depositPosition.accruedInterest ?? '0.0000000',
+              lastAccrualAt: now,
+            } satisfies NewDepositPosition)
+            .onConflictDoUpdate({
+              target: [depositPositions.poolId, depositPositions.depositorId],
+              set: {
+                amount: params.depositPosition.amount,
+                shares: params.depositPosition.shares,
+                accruedInterest: params.depositPosition.accruedInterest ?? '0.0000000',
+                lastAccrualAt: now,
+              },
+            })
+            .returning();
 
-      const principal = parseFloat(position.principal);
-      const accruedInterest = parseFloat(position.accruedInterest);
-      const totalDebt = principal + accruedInterest;
+          if (!upserted) {
+            throw new Error('Failed to persist deposit position');
+          }
+          syncedDeposit = upserted;
+        }
+      } else {
+        if (params.borrowPosition === null) {
+          await tx
+            .delete(borrowPositions)
+            .where(
+              and(
+                eq(borrowPositions.poolId, params.poolId),
+                eq(borrowPositions.borrowerId, params.positionUserId),
+              ),
+            );
+        } else {
+          const [upserted] = await tx
+            .insert(borrowPositions)
+            .values({
+              poolId: params.poolId,
+              borrowerId: params.positionUserId,
+              principal: params.borrowPosition.principal,
+              accruedInterest: params.borrowPosition.accruedInterest ?? '0.0000000',
+              collateralAmount: params.borrowPosition.collateralAmount,
+              collateralAsset: params.borrowPosition.collateralAsset,
+              healthFactor: params.borrowPosition.healthFactor,
+              lastAccrualAt: now,
+            } satisfies NewBorrowPosition)
+            .onConflictDoUpdate({
+              target: [borrowPositions.poolId, borrowPositions.borrowerId],
+              set: {
+                principal: params.borrowPosition.principal,
+                accruedInterest: params.borrowPosition.accruedInterest ?? '0.0000000',
+                collateralAmount: params.borrowPosition.collateralAmount,
+                collateralAsset: params.borrowPosition.collateralAsset,
+                healthFactor: params.borrowPosition.healthFactor,
+                lastAccrualAt: now,
+              },
+            })
+            .returning();
 
-      await tx.delete(borrowPositions).where(eq(borrowPositions.id, position.id));
+          if (!upserted) {
+            throw new Error('Failed to persist borrow position');
+          }
+          syncedBorrow = upserted;
+        }
+      }
 
-      await tx
-        .update(lendingPools)
-        .set({
-          totalBorrows: sql`GREATEST(${lendingPools.totalBorrows}::numeric - ${totalDebt.toFixed(7)}::numeric, 0)`,
-          availableLiquidity: sql`${lendingPools.availableLiquidity}::numeric + ${principal.toFixed(7)}::numeric`,
-          utilizationRate: sql`CASE WHEN ${lendingPools.totalDeposits}::numeric = 0 THEN 0 ELSE (GREATEST(${lendingPools.totalBorrows}::numeric - ${totalDebt.toFixed(7)}::numeric, 0) / ${lendingPools.totalDeposits}::numeric) * 100 END`,
-        })
-        .where(eq(lendingPools.id, poolId));
-
-      return position;
+      return {
+        recorded: true,
+        txHash: params.txHash,
+        pool: updatedPool,
+        depositPosition: syncedDeposit,
+        borrowPosition: syncedBorrow,
+      };
     });
   }
 

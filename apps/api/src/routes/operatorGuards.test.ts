@@ -1,6 +1,7 @@
-import { describe, expect, it, mock, beforeEach } from 'bun:test';
+import { describe, expect, it, mock, spyOn, beforeEach, afterEach } from 'bun:test';
 import { Elysia } from 'elysia';
 import { VALID_UUID } from '@akkuea/shared';
+import { LendingController } from '../controllers/LendingController';
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-ops-secret';
 process.env.LIQUIDATOR_API_KEY = 'test-liquidator-secret';
@@ -46,25 +47,16 @@ mock.module('../controllers/TreasuryController', () => ({
 }));
 
 const lendingLiquidateMock = mock(async () => new Response(JSON.stringify({ success: true })));
-
-mock.module('../controllers/LendingController', () => ({
-  LendingController: {
-    getPools: mock(async () => new Response(JSON.stringify({ data: [] }))),
-    getPool: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    getUserDeposits: mock(async () => new Response(JSON.stringify({ data: [] }))),
-    getUserBorrows: mock(async () => new Response(JSON.stringify({ data: [] }))),
-    getUserPositionSummary: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    createPool: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    deposit: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    withdraw: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    borrow: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    repay: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    liquidate: lendingLiquidateMock,
-  },
-}));
+const lendingPrepareLiquidateMock = mock(
+  async () => new Response(JSON.stringify({ xdr: 'mock_xdr' })),
+);
+const lendingConfirmLiquidateMock = mock(
+  async () => new Response(JSON.stringify({ txHash: 'a'.repeat(64) })),
+);
 
 // Imported after the mocks above so each route module picks up the mocked
-// controllers instead of the real ones.
+// controllers instead of the real ones. LendingController uses per-test spies
+// so later lending test suites in the same process still exercise real logic.
 const { internalOperationsRoutes } = await import('./internalOperations');
 const { treasuryRoutes } = await import('./treasury');
 const { lendingRoutes } = await import('./lending');
@@ -81,11 +73,30 @@ function allControllerMocks() {
     treasuryDepositMock,
     treasuryWithdrawMock,
     lendingLiquidateMock,
+    lendingPrepareLiquidateMock,
+    lendingConfirmLiquidateMock,
   ];
 }
 
+const activeLendingSpies: Array<{ mockRestore: () => void }> = [];
+
 beforeEach(() => {
   for (const m of allControllerMocks()) m.mockClear();
+  activeLendingSpies.push(
+    spyOn(LendingController, 'liquidate').mockImplementation(lendingLiquidateMock as never),
+    spyOn(LendingController, 'prepareLiquidate').mockImplementation(
+      lendingPrepareLiquidateMock as never,
+    ),
+    spyOn(LendingController, 'confirmLiquidate').mockImplementation(
+      lendingConfirmLiquidateMock as never,
+    ),
+  );
+});
+
+afterEach(() => {
+  while (activeLendingSpies.length > 0) {
+    activeLendingSpies.pop()?.mockRestore();
+  }
 });
 
 const reviewBody = JSON.stringify({ action: 'approve', actorWallet: 'G'.repeat(56) });
@@ -253,6 +264,80 @@ describe('Operator, treasury and liquidator guards actually apply', () => {
 
       expect(response.status).not.toBe(403);
       expect(lendingLiquidateMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('POST /lending/pools/:id/positions/:borrowerId/liquidate/prepare', () => {
+    const path = `/lending/pools/${VALID_UUID}/positions/${VALID_UUID}/liquidate/prepare`;
+
+    it('returns 403 when no key is sent', async () => {
+      const response = await testApp.handle(
+        new Request(`http://localhost${path}`, { method: 'POST' }),
+      );
+
+      expect(response.status).toBe(403);
+      expect(lendingPrepareLiquidateMock).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 when the key is wrong', async () => {
+      const response = await testApp.handle(
+        new Request(`http://localhost${path}`, {
+          method: 'POST',
+          headers: { 'x-api-key': 'wrong-key' },
+        }),
+      );
+
+      expect(response.status).toBe(403);
+      expect(lendingPrepareLiquidateMock).not.toHaveBeenCalled();
+    });
+
+    it('reaches the controller when the key is correct', async () => {
+      const response = await testApp.handle(
+        new Request(`http://localhost${path}`, {
+          method: 'POST',
+          headers: { 'x-api-key': 'test-liquidator-secret' },
+        }),
+      );
+
+      expect(response.status).not.toBe(403);
+      expect(lendingPrepareLiquidateMock).toHaveBeenCalled();
+    });
+  });
+
+  describe('POST /lending/pools/:id/positions/:borrowerId/liquidate/confirm', () => {
+    const path = `/lending/pools/${VALID_UUID}/positions/${VALID_UUID}/liquidate/confirm`;
+
+    it('returns 403 when no key is sent', async () => {
+      const response = await testApp.handle(
+        new Request(`http://localhost${path}`, { method: 'POST' }),
+      );
+
+      expect(response.status).toBe(403);
+      expect(lendingConfirmLiquidateMock).not.toHaveBeenCalled();
+    });
+
+    it('returns 403 when the key is wrong', async () => {
+      const response = await testApp.handle(
+        new Request(`http://localhost${path}`, {
+          method: 'POST',
+          headers: { 'x-api-key': 'wrong-key' },
+        }),
+      );
+
+      expect(response.status).toBe(403);
+      expect(lendingConfirmLiquidateMock).not.toHaveBeenCalled();
+    });
+
+    it('reaches the controller when the key is correct', async () => {
+      const response = await testApp.handle(
+        new Request(`http://localhost${path}`, {
+          method: 'POST',
+          headers: { 'x-api-key': 'test-liquidator-secret' },
+        }),
+      );
+
+      expect(response.status).not.toBe(403);
+      expect(lendingConfirmLiquidateMock).toHaveBeenCalled();
     });
   });
 

@@ -7,12 +7,14 @@ import {
   boolean,
   integer,
   index,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { users } from './users';
 
 export const lendingPools = pgTable('lending_pools', {
   id: uuid('id').primaryKey().defaultRandom(),
+  contractPoolId: varchar('contract_pool_id', { length: 128 }).unique(),
   name: varchar('name', { length: 255 }).notNull(),
   asset: varchar('asset', { length: 20 }).notNull(),
   assetAddress: varchar('asset_address', { length: 56 }).notNull(),
@@ -51,7 +53,10 @@ export const depositPositions = pgTable(
       .notNull()
       .default('0'),
   },
-  (t) => [index('deposit_positions_pool_id_depositor_id_idx').on(t.poolId, t.depositorId)],
+  (t) => [
+    index('deposit_positions_pool_id_depositor_id_idx').on(t.poolId, t.depositorId),
+    uniqueIndex('deposit_positions_pool_id_depositor_id_unique').on(t.poolId, t.depositorId),
+  ],
 );
 
 export const borrowPositions = pgTable(
@@ -74,7 +79,10 @@ export const borrowPositions = pgTable(
     borrowedAt: timestamp('borrowed_at', { withTimezone: true }).notNull().defaultNow(),
     lastAccrualAt: timestamp('last_accrual_at', { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index('borrow_positions_pool_id_borrower_id_idx').on(t.poolId, t.borrowerId)],
+  (t) => [
+    index('borrow_positions_pool_id_borrower_id_idx').on(t.poolId, t.borrowerId),
+    uniqueIndex('borrow_positions_pool_id_borrower_id_unique').on(t.poolId, t.borrowerId),
+  ],
 );
 
 export const lendingPoolsRelations = relations(lendingPools, ({ many }) => ({

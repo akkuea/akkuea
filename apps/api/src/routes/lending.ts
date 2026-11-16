@@ -10,6 +10,7 @@ import {
   idempotency,
 } from '../middleware';
 import { LendingController } from '../controllers/LendingController';
+import { sorobanAssetAddressSchema } from '../dto/lending.dto';
 import { positionService } from '../services/PositionService';
 import { isLiquidatorAuthorized } from '../utils/liquidatorAuth';
 
@@ -67,7 +68,7 @@ const withdrawSchema = z.object({
 const borrowSchema = z.object({
   borrowAmount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
   collateralAmount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
-  collateralAsset: stellarAddressSchema,
+  collateralAsset: sorobanAssetAddressSchema,
 });
 
 const repaySchema = z.object({
@@ -75,13 +76,18 @@ const repaySchema = z.object({
 });
 
 const createPoolSchema = z.object({
+  contractPoolId: z.string().trim().min(1).max(128).optional(),
   name: z.string().min(1).max(255),
   asset: z.string().min(1).max(20),
-  assetAddress: stellarAddressSchema,
+  assetAddress: sorobanAssetAddressSchema,
   collateralFactor: z.string().regex(/^\d+(\.\d+)?$/),
   liquidationThreshold: z.string().regex(/^\d+(\.\d+)?$/),
   liquidationPenalty: z.string().regex(/^\d+(\.\d+)?$/),
-  reserveFactor: z.coerce.number().int().nonnegative().optional(),
+  closeFactor: z
+    .string()
+    .regex(/^\d+(\.\d+)?$/)
+    .optional(),
+  reserveFactor: z.coerce.number().int().min(0).max(10000).optional(),
 });
 
 // Every route below registers its own `validate()` inside a group, so the
@@ -170,7 +176,7 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
   // PROTECTED ROUTES
   .use(authPlugin)
 
-  // POST /pools - Create pool (auth required)
+  // POST /pools - Create pool on-chain (operator authorization required)
   .group('', (app) =>
     app
       .use(validate({ body: createPoolSchema }))
@@ -178,41 +184,154 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
         beforeHandle: [rateLimit({ keyGenerator: walletKeyGenerator })],
         detail: {
           summary: 'Create a lending pool',
-          description: 'Create a new lending pool (requires authentication)',
+          description:
+            'Create a new lending pool on defi-rwa and store contract_pool_id (requires operator authorization)',
           tags: ['Lending'],
         },
       }),
   )
 
-  // POST /pools/:id/deposit - Deposit into pool (auth required)
+  // POST /pools/:id/deposit/prepare - Build unsigned deposit XDR
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema }))
+      .post('/pools/:id/deposit/prepare', async (ctx) => LendingController.prepareDeposit(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Prepare deposit transaction',
+          description: 'Simulate and return an unsigned defi-rwa deposit XDR',
+          tags: ['Lending'],
+        },
+      }),
+  )
+
+  // POST /pools/:id/deposit/confirm - Verify confirmed deposit tx and cache chain state
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema }))
+      .post('/pools/:id/deposit/confirm', async (ctx) => LendingController.confirmDeposit(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Confirm deposit transaction',
+          description: 'Verify a confirmed defi-rwa deposit transaction and refresh chain state',
+          tags: ['Lending'],
+        },
+      }),
+  )
+
+  // POST /pools/:id/withdraw/prepare - Build unsigned withdraw XDR
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema }))
+      .post('/pools/:id/withdraw/prepare', async (ctx) => LendingController.prepareWithdraw(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Prepare withdraw transaction',
+          description: 'Simulate and return an unsigned defi-rwa withdraw XDR',
+          tags: ['Lending'],
+        },
+      }),
+  )
+
+  // POST /pools/:id/withdraw/confirm - Verify confirmed withdraw tx and cache chain state
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema }))
+      .post('/pools/:id/withdraw/confirm', async (ctx) => LendingController.confirmWithdraw(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Confirm withdraw transaction',
+          description: 'Verify a confirmed defi-rwa withdraw transaction and refresh chain state',
+          tags: ['Lending'],
+        },
+      }),
+  )
+
+  // POST /pools/:id/borrow/prepare - Build unsigned borrow XDR
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema }))
+      .post('/pools/:id/borrow/prepare', async (ctx) => LendingController.prepareBorrow(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Prepare borrow transaction',
+          description: 'Simulate and return an unsigned defi-rwa borrow XDR',
+          tags: ['Lending'],
+        },
+      }),
+  )
+
+  // POST /pools/:id/borrow/confirm - Verify confirmed borrow tx and cache chain state
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema }))
+      .post('/pools/:id/borrow/confirm', async (ctx) => LendingController.confirmBorrow(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Confirm borrow transaction',
+          description: 'Verify a confirmed defi-rwa borrow transaction and refresh chain state',
+          tags: ['Lending'],
+        },
+      }),
+  )
+
+  // POST /pools/:id/repay/prepare - Build unsigned repay XDR
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema }))
+      .post('/pools/:id/repay/prepare', async (ctx) => LendingController.prepareRepay(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Prepare repay transaction',
+          description: 'Simulate and return an unsigned defi-rwa repay XDR',
+          tags: ['Lending'],
+        },
+      }),
+  )
+
+  // POST /pools/:id/repay/confirm - Verify confirmed repay tx and cache chain state
+  .group('', (app) =>
+    app
+      .use(validate({ params: poolIdParamSchema }))
+      .post('/pools/:id/repay/confirm', async (ctx) => LendingController.confirmRepay(ctx), {
+        beforeHandle: [rateLimit()],
+        detail: {
+          summary: 'Confirm repay transaction',
+          description: 'Verify a confirmed defi-rwa repay transaction and refresh chain state',
+          tags: ['Lending'],
+        },
+      }),
+  )
+
+  // RETIRED DIRECT WRITE ROUTES (410 Gone pointing to /prepare and /confirm)
   .group('', (app) =>
     app
       .use(validate({ body: depositSchema }))
       .post('/pools/:id/deposit', async (ctx) => LendingController.deposit(ctx), {
         beforeHandle: [rateLimit()],
         detail: {
-          summary: 'Deposit into pool',
-          description: 'Deposit assets into a lending pool (requires authentication)',
+          summary: 'Retired direct deposit route',
+          description:
+            'Retired. Returns 410 Gone pointing to /deposit/prepare and /deposit/confirm',
           tags: ['Lending'],
         },
       }),
   )
 
-  // POST /pools/:id/withdraw - Withdraw from pool (auth required)
   .group('', (app) =>
     app
       .use(validate({ body: withdrawSchema }))
       .post('/pools/:id/withdraw', async (ctx) => LendingController.withdraw(ctx), {
         beforeHandle: [rateLimit()],
         detail: {
-          summary: 'Withdraw from pool',
-          description: 'Withdraw assets from a lending pool (requires authentication)',
+          summary: 'Retired direct withdraw route',
+          description:
+            'Retired. Returns 410 Gone pointing to /withdraw/prepare and /withdraw/confirm',
           tags: ['Lending'],
         },
       }),
   )
 
-  // POST /pools/:id/borrow - Borrow from pool (auth required)
   .use(idempotency)
   .group('', (app) =>
     app
@@ -220,15 +339,13 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
       .post('/pools/:id/borrow', async (ctx) => LendingController.borrow(ctx), {
         beforeHandle: [rateLimit()],
         detail: {
-          summary: 'Borrow from pool',
-          description:
-            'Borrow assets from a lending pool by providing collateral (requires authentication)',
+          summary: 'Retired direct borrow route',
+          description: 'Retired. Returns 410 Gone pointing to /borrow/prepare and /borrow/confirm',
           tags: ['Lending'],
         },
       }),
   )
 
-  // POST /pools/:id/repay - Repay loan (auth required)
   .use(idempotency)
   .group('', (app) =>
     app
@@ -236,15 +353,47 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
       .post('/pools/:id/repay', async (ctx) => LendingController.repay(ctx), {
         beforeHandle: [rateLimit()],
         detail: {
-          summary: 'Repay loan',
-          description: 'Repay a borrowed loan in a lending pool (requires authentication)',
+          summary: 'Retired direct repay route',
+          description: 'Retired. Returns 410 Gone pointing to /repay/prepare and /repay/confirm',
           tags: ['Lending'],
         },
       }),
   )
 
-  // POST /pools/:id/positions/:borrowerId/liquidate - Execute liquidation (liquidator role required)
+  // LIQUIDATOR ROUTES (liquidator role required)
   .use(liquidatorAuth)
+  .group('', (app) =>
+    app
+      .use(validate({ params: liquidationParamsSchema }))
+      .post(
+        '/pools/:id/positions/:borrowerId/liquidate/prepare',
+        async (ctx) => LendingController.prepareLiquidate(ctx),
+        {
+          detail: {
+            summary: 'Prepare liquidation transaction',
+            description:
+              'Build and simulate an unsigned defi-rwa liquidate call (requires liquidator role)',
+            tags: ['Lending'],
+          },
+        },
+      ),
+  )
+  .group('', (app) =>
+    app
+      .use(validate({ params: liquidationParamsSchema }))
+      .post(
+        '/pools/:id/positions/:borrowerId/liquidate/confirm',
+        async (ctx) => LendingController.confirmLiquidate(ctx),
+        {
+          detail: {
+            summary: 'Confirm liquidation transaction',
+            description:
+              'Verify a confirmed defi-rwa liquidate transaction and refresh position from chain',
+            tags: ['Lending'],
+          },
+        },
+      ),
+  )
   .group('', (app) =>
     app
       .use(validate({ params: liquidationParamsSchema }))
@@ -253,9 +402,9 @@ export const lendingRoutes = new Elysia({ prefix: '/lending' })
         async (ctx) => LendingController.liquidate(ctx),
         {
           detail: {
-            summary: 'Liquidate position',
+            summary: 'Retired direct liquidate route',
             description:
-              'Execute liquidation on an undercollateralized position (requires liquidator role)',
+              'Retired. Returns 410 Gone pointing to /liquidate/prepare and /liquidate/confirm',
             tags: ['Lending'],
           },
         },

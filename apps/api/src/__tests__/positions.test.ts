@@ -15,6 +15,7 @@ const FIXED_NOW = new Date('2026-03-22T12:00:00.000Z');
 
 const testPool: LendingPool = {
   id: VALID_POOL_ID,
+  contractPoolId: 'usdc-pool',
   name: 'USDC Pool',
   asset: 'USDC',
   assetAddress: VALID_STELLAR_ADDRESS,

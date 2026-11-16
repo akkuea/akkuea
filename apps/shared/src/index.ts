@@ -11,7 +11,17 @@ export {
   type SorobanClientConfig,
 } from "./contracts/clientConfig.js";
 export { RealEstateTokenContractClient } from "./contracts/realEstateToken.js";
-export { DefiLendingContractClient } from "./contracts/defiLending.js";
+export {
+  DefiLendingContractClient,
+  type BorrowArgs,
+  type BorrowPosition as DefiBorrowPosition,
+  type CreatePoolArgs,
+  type DepositPosition as DefiDepositPosition,
+  type LendingPool as DefiLendingPool,
+  type LiquidateArgs,
+  type PoolActionArgs,
+  type PoolUserArgs,
+} from "./contracts/defiLending.js";
 export {
   DefindexVaultContractClient,
   DefindexVaultError,

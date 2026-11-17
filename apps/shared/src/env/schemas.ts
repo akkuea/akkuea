@@ -76,6 +76,75 @@ export const urlSchema = z
     message: "Must be a valid URL (e.g. https://... or http://...)",
   });
 
+export const httpsUrlSchema = z
+  .string({ required_error: "Must be a valid HTTPS URL" })
+  .url({
+    message: "Must be a valid HTTPS URL (e.g. https://...)",
+  })
+  .refine((val) => val.startsWith("https://"), {
+    message: "Must be an HTTPS URL (starting with https://)",
+  });
+
+export const isCycleId = (val: string): boolean =>
+  typeof val === "string" && /^\d{4}-(?:0[1-9]|1[0-2])$/.test(val.trim());
+
+export const cycleIdSchema = z
+  .string({ required_error: "Must be a valid cycle ID in YYYY-MM format" })
+  .refine(isCycleId, {
+    message: "Must be in YYYY-MM format (e.g. 2026-01)",
+  });
+
+export const pilotStartCycleSchema = z
+  .string()
+  .optional()
+  .transform((val) =>
+    val === undefined || val.trim() === "" ? "2026-01" : val.trim(),
+  )
+  .refine(isCycleId, {
+    message:
+      "NEXT_PUBLIC_PILOT_START_CYCLE must be in YYYY-MM format (e.g. 2026-01)",
+  });
+
+export const pilotPaymentDaySchema = z
+  .union([z.number(), z.string()])
+  .optional()
+  .transform((val) => {
+    if (
+      val === undefined ||
+      val === null ||
+      (typeof val === "string" && val.trim() === "")
+    ) {
+      return 5;
+    }
+    return typeof val === "number" ? val : Number(val);
+  })
+  .refine((val) => Number.isInteger(val) && val >= 1 && val <= 28, {
+    message:
+      "NEXT_PUBLIC_PILOT_PAYMENT_DAY must be an integer between 1 and 28",
+  });
+
+export const positiveNumberSchema = z
+  .union([z.number(), z.string()])
+  .optional()
+  .transform((val) => {
+    if (
+      val === undefined ||
+      val === null ||
+      (typeof val === "string" && val.trim() === "")
+    ) {
+      return undefined;
+    }
+    return typeof val === "number" ? val : Number(val);
+  })
+  .refine((val) => val === undefined || (Number.isFinite(val) && val > 0), {
+    message: "Must be a positive number",
+  });
+
+export const pilotIsoDateSchema = z
+  .string()
+  .datetime({ message: "Must be a valid ISO 8601 date string" })
+  .optional();
+
 export const portSchema = z
   .string()
   .optional()
@@ -291,6 +360,19 @@ export const apiEnvSchema = z.object({
   PAYMENT_TOKEN_CONTRACT_ID: stellarContractIdSchema
     .optional()
     .or(z.literal("")),
+  PILOT_ESCALATION_JOB_ENABLED: booleanSchema,
+  PILOT_ESCALATION_POLL_INTERVAL_MS: positiveNumberSchema,
+  PILOT_ESCALATION_CADENCE_DAYS: positiveNumberSchema,
+  PILOT_ESCALATION_THRESHOLD_CYCLES: positiveNumberSchema,
+  PILOT_ESCALATION_AGREEMENT_START: pilotIsoDateSchema,
+  PILOT_ESCALATION_RENOTIFY_INTERVAL_MS: positiveNumberSchema,
+  PILOT_ESCALATION_OPERATOR_USER_ID: z.string().optional(),
+  PILOT_PAYOUT_SPLIT_CONTRACT_ID: stellarContractIdSchema
+    .optional()
+    .or(z.literal("")),
+  PILOT_WHITELIST_REVIEW_SLA_HOURS: positiveNumberSchema,
+  PILOT_EVIDENCE_REVIEW_SLA_HOURS: positiveNumberSchema,
+  PILOT_REVIEW_METRICS_WINDOW_DAYS: positiveNumberSchema,
 });
 
 export const webappEnvSchema = z.object({
@@ -308,6 +390,28 @@ export const webappEnvSchema = z.object({
   PRIVY_APP_SECRET: z.string().optional(),
   NEXT_PUBLIC_POLLAR_KEY: z.string().optional(),
   NEXT_PUBLIC_PROPERTY_IMAGE_HOSTS: propertyImageHostsSchema,
+  NEXT_PUBLIC_STELLAR_NETWORK: z
+    .enum(["testnet", "mainnet"])
+    .optional()
+    .default("testnet"),
+  NEXT_PUBLIC_SOROBAN_RPC_URL: urlSchema.optional().or(z.literal("")),
+  NEXT_PUBLIC_PILOT_ALLY_ADDRESS: stellarPublicKeySchema
+    .optional()
+    .or(z.literal("")),
+  NEXT_PUBLIC_PILOT_START_CYCLE: pilotStartCycleSchema,
+  NEXT_PUBLIC_PILOT_PAYMENT_DAY: pilotPaymentDaySchema,
+  NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL: httpsUrlSchema
+    .optional()
+    .or(z.literal("")),
+  NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID: stellarContractIdSchema
+    .optional()
+    .or(z.literal("")),
+  NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID: stellarContractIdSchema
+    .optional()
+    .or(z.literal("")),
+  NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID: stellarContractIdSchema
+    .optional()
+    .or(z.literal("")),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

@@ -826,6 +826,27 @@ describe("prepareRecordEvidence", () => {
     ).rejects.toMatchObject({ reason: "already_recorded" });
   });
 
+  it("refuses a non-https evidence link", async () => {
+    for (const invalidLink of [
+      "http://example.com/statement.pdf",
+      "javascript:alert(1)",
+      "data:text/plain,hello",
+      "/relative/statement.pdf",
+      "https://example.com/with space.pdf",
+    ]) {
+      await expect(
+        prepareRecordEvidence({
+          operator: OPERATOR,
+          ally: ALLY,
+          cycleId: "2026-03",
+          evidenceHash: Buffer.alloc(32),
+          evidenceLink: invalidLink,
+          totalIncome: BigInt(100),
+        }),
+      ).rejects.toMatchObject({ reason: "invalid_evidence_link" });
+    }
+  });
+
   it("prepares successfully with valid arguments", async () => {
     const { payloadJson } = await prepareRecordEvidence({
       operator: OPERATOR,

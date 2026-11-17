@@ -26,6 +26,7 @@ import {
   SoroswapQuoteError,
 } from "./soroswapQuote";
 import { EVIDENCE_HASH_BYTES } from "./evidenceHash";
+import { parseEvidenceLink } from "./evidenceLink";
 import type { SignXdr } from "./writes";
 
 /**
@@ -81,6 +82,7 @@ export class CosignError extends Error {
       | "zero_amount"
       | "invalid_evidence_hash"
       | "missing_evidence_link"
+      | "invalid_evidence_link"
       | "missing_reason"
       | "wrong_contract",
   ) {
@@ -756,6 +758,13 @@ export async function prepareRecordEvidence(args: {
       "missing_evidence_link",
     );
   }
+  const parsedLink = parseEvidenceLink(args.evidenceLink);
+  if (!parsedLink) {
+    throw new CosignError(
+      "Evidence link must be an absolute https:// URL.",
+      "invalid_evidence_link",
+    );
+  }
 
   const existing = await payout.get_evidence({ cycle_id: args.cycleId });
   if (existing.result) {
@@ -770,7 +779,7 @@ export async function prepareRecordEvidence(args: {
     ally: args.ally,
     cycle_id: args.cycleId,
     evidence_hash: args.evidenceHash,
-    evidence_link: args.evidenceLink,
+    evidence_link: parsedLink.href,
     total_income: args.totalIncome,
   });
 

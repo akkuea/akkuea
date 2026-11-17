@@ -17,6 +17,7 @@ import {
   hashEvidenceFile,
   type EvidenceDigest,
 } from "@/services/pilot/evidenceHash";
+import { parseEvidenceLink } from "@/services/pilot/evidenceLink";
 import { submitEvidence, type SignXdr } from "@/services/pilot/writes";
 import { formatCycleLabel, shortenHash } from "./format";
 
@@ -123,6 +124,15 @@ export function EvidenceSubmissionFormView({
     return BigInt(Math.round(value * 10 ** 7));
   }, [totalIncome]);
 
+  const parsedLink = useMemo(
+    () => parseEvidenceLink(evidenceLink),
+    [evidenceLink],
+  );
+  const linkError =
+    evidenceLink.length > 0 && parsedLink === null
+      ? t("submission.invalidLink")
+      : undefined;
+
   const canSubmit =
     isConnected &&
     !isLocked &&
@@ -130,7 +140,7 @@ export function EvidenceSubmissionFormView({
     !isSubmitting &&
     !isHashing &&
     digest !== null &&
-    evidenceLink.trim().length > 0 &&
+    parsedLink !== null &&
     parsedIncome !== null;
 
   async function handleFileChange(selected: File | null) {
@@ -157,6 +167,10 @@ export function EvidenceSubmissionFormView({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (!parsedLink) {
+      setError(t("submission.invalidLink"));
+      return;
+    }
     if (!canSubmit || !address || !digest || parsedIncome === null) {
       return;
     }
@@ -169,7 +183,7 @@ export function EvidenceSubmissionFormView({
           ally: address,
           cycleId,
           evidenceHash: digest.bytes,
-          evidenceLink: evidenceLink.trim(),
+          evidenceLink: parsedLink.href,
           totalIncome: parsedIncome,
         },
         signTransaction,
@@ -293,6 +307,7 @@ export function EvidenceSubmissionFormView({
           disabled={isLocked || isPaused || isSubmitting}
           leftIcon={<Link2 className="h-4 w-4" aria-hidden="true" />}
           hint={t("submission.linkHint")}
+          error={linkError}
           onChange={(event) => setEvidenceLink(event.target.value)}
         />
 

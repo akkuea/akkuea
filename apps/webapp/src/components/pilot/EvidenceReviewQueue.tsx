@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ClipboardCheck, ExternalLink, Flag, Hash, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  ClipboardCheck,
+  ExternalLink,
+  Flag,
+  Hash,
+  Wallet,
+} from "lucide-react";
 import type { PilotEvidenceStatus } from "@akkuea/shared";
 import {
   Button,
@@ -23,6 +30,7 @@ import {
   type SignXdr,
 } from "@/services/pilot/writes";
 import { holderAmountFor } from "@/services/pilot/reads";
+import { parseEvidenceLink } from "@/services/pilot/evidenceLink";
 import { pilotAllyAddress } from "@/services/pilot/config";
 import { DistributionCosignPanel } from "./DistributionCosignPanel";
 import { EvidenceStatusBadge } from "./EvidenceSubmissionForm";
@@ -147,6 +155,9 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
 
   const busy = pending !== null;
   const blocked = busy || isPaused || !address;
+  const parsedEvidenceLink = cycle.evidenceLink
+    ? parseEvidenceLink(cycle.evidenceLink)
+    : null;
 
   return (
     <li className="border-b border-white/5 py-5 last:border-b-0">
@@ -169,17 +180,31 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
               {shortenHash(cycle.evidenceHashHex)}
             </p>
           )}
-          {cycle.evidenceLink && (
-            <a
-              href={cycle.evidenceLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:underline"
-            >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("queue.openStatement")}
-            </a>
-          )}
+          {cycle.evidenceLink &&
+            (parsedEvidenceLink ? (
+              <a
+                href={parsedEvidenceLink.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                {t("queue.openStatement")}
+              </a>
+            ) : (
+              <div className="mt-1 space-y-1">
+                <p className="break-all font-mono text-xs text-neutral-400">
+                  {cycle.evidenceLink}
+                </p>
+                <p className="flex items-center gap-1.5 text-xs text-amber-300">
+                  <AlertTriangle
+                    className="h-3.5 w-3.5 shrink-0"
+                    aria-hidden="true"
+                  />
+                  {t("queue.invalidLinkWarning")}
+                </p>
+              </div>
+            ))}
           {cycle.evidenceLink && cycle.evidenceHashHex && (
             <EvidenceVerification
               evidenceLink={cycle.evidenceLink}

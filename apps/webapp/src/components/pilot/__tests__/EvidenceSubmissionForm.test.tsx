@@ -1,10 +1,11 @@
-import "@/test/setup-dom";
-import { cleanup, within } from "@testing-library/react";
-import { renderWithIntl as render } from "@/test/renderWithIntl";
-import {
-  EvidenceSubmissionFormView,
-  type EvidenceSubmissionWallet,
-} from "../EvidenceSubmissionForm";
+await import("@/test/setup-dom");
+const { cleanup, fireEvent, waitFor, within } =
+  await import("@testing-library/react");
+const { renderWithIntl: render } = await import("@/test/renderWithIntl");
+const { EvidenceSubmissionFormView } =
+  await import("../EvidenceSubmissionForm");
+type EvidenceSubmissionWallet =
+  import("../EvidenceSubmissionForm").EvidenceSubmissionWallet;
 
 const ALLY = "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBDQCQZVQQ6BRVV12BKHA";
 
@@ -101,5 +102,66 @@ describe("EvidenceSubmissionForm", () => {
     const scope = within(view.container);
     expect(scope.queryByText(/payout contract is paused/i)).not.toBeNull();
     expect(fileInput(view.container)?.disabled).toBe(true);
+  });
+
+  it("rejects non-https links with a validation message and accepts a valid https URL", async () => {
+    const view = renderForm();
+    const scope = within(view.container);
+
+    const file = new File(
+      [new TextEncoder().encode("March income statement")],
+      "march.pdf",
+      { type: "application/pdf" },
+    );
+    const upload = fileInput(view.container);
+    expect(upload).not.toBeNull();
+    fireEvent.change(upload as HTMLInputElement, {
+      target: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(view.container.textContent).toContain("...");
+    });
+
+    const amountInput = view.container.querySelector<HTMLInputElement>(
+      'input[type="number"]',
+    );
+    expect(amountInput).not.toBeNull();
+    fireEvent.change(amountInput as HTMLInputElement, {
+      target: { value: "1250.50" },
+    });
+
+    const linkInput = scope.getByPlaceholderText(
+      "https://",
+    ) as HTMLInputElement;
+    const submit = scope.getByRole("button", {
+      name: /submit for review/i,
+    }) as HTMLButtonElement;
+
+    const invalidCases = [
+      "http://example.org/statements/2026-03.pdf",
+      "javascript:alert(1)",
+      "data:text/plain;base64,SGVsbG8=",
+      "/statements/2026-03.pdf",
+      "https://example.org/statements/march 2026.pdf",
+    ];
+
+    for (const candidate of invalidCases) {
+      fireEvent.change(linkInput, { target: { value: candidate } });
+      expect(submit.disabled).toBe(true);
+      expect(linkInput.getAttribute("aria-invalid")).toBe("true");
+      expect(
+        scope.queryByText(/enter a complete https:\/\/ url with no spaces/i),
+      ).not.toBeNull();
+    }
+
+    fireEvent.change(linkInput, {
+      target: { value: "https://example.org/statements/2026-03.pdf" },
+    });
+    expect(linkInput.getAttribute("aria-invalid")).toBeNull();
+    expect(
+      scope.queryByText(/enter a complete https:\/\/ url with no spaces/i),
+    ).toBeNull();
+    expect(submit.disabled).toBe(false);
   });
 });

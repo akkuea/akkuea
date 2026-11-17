@@ -1,4 +1,5 @@
 import { hashEvidenceBytes } from "./evidenceHash";
+import { parseEvidenceLink } from "./evidenceLink";
 
 /**
  * Client-side evidence verification.
@@ -58,8 +59,16 @@ export async function verifyEvidenceDocument(
   link: string,
   expectedHex: string,
 ): Promise<EvidenceVerification> {
+  const parsedLink = parseEvidenceLink(link);
+  if (!parsedLink) {
+    return {
+      status: "unreachable",
+      reason: "Evidence link must be an https:// URL.",
+    };
+  }
+
   try {
-    const response = await fetch(link, { redirect: "follow" });
+    const response = await fetch(parsedLink.href, { redirect: "follow" });
     if (!response.ok) {
       return { status: "unreachable", reason: `HTTP ${response.status}` };
     }

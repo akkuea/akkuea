@@ -82,7 +82,35 @@ describe("EvidenceReviewQueue", () => {
     const scope = within(view.container);
     expect(scope.queryByText(/march 2026/i)).not.toBeNull();
     expect(scope.queryByText(/reported 12,400.00 usdc/i)).not.toBeNull();
-    expect(scope.queryByText(/check it against the hash/i)).not.toBeNull();
+    const anchor = scope.getByRole("link", {
+      name: /check it against the hash/i,
+    }) as HTMLAnchorElement;
+    expect(anchor.getAttribute("href")).toBe(
+      "https://example.org/statements/2026-03.pdf",
+    );
+  });
+
+  it("renders a non-https stored link as plain text with a warning and never as an anchor", () => {
+    for (const unsafeLink of [
+      "http://example.org/statements/2026-03.pdf",
+      "javascript:alert(1)",
+      "data:text/html,<script>alert(1)</script>",
+      "/relative/statement.pdf",
+    ]) {
+      const view = render(
+        <EvidenceReviewQueueView
+          {...baseProps}
+          cycles={[{ ...awaitingReviewCycle, evidenceLink: unsafeLink }]}
+        />,
+      );
+      const scope = within(view.container);
+      expect(view.container.querySelectorAll("a").length).toBe(0);
+      expect(scope.queryByText(unsafeLink)).not.toBeNull();
+      expect(
+        scope.queryByText(/stored link is not an https:\/\/ url/i),
+      ).not.toBeNull();
+      cleanup();
+    }
   });
 
   it("excludes already distributed cycles from the queue", () => {

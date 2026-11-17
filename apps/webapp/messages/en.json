@@ -253,6 +253,7 @@
       "hashing": "Hashing locally",
       "linkLabel": "Evidence link",
       "linkHint": "Where a reviewer can retrieve the statement to check it against the hash.",
+      "invalidLink": "Enter a complete https:// URL with no spaces.",
       "amountLabel": "Total income (USDC)",
       "submit": "Submit for review",
       "submitted": "Submitted. The operator can now review this cycle.",
@@ -271,6 +272,7 @@
       "pausedNotice": "The payout contract is paused. Review actions are disabled until an admin resumes it.",
       "reported": "Reported {amount}",
       "openStatement": "Open the statement to check it against the hash",
+      "invalidLinkWarning": "Stored link is not an https:// URL, so it is shown as plain text.",
       "reasonLabel": "Reason",
       "reasonPlaceholder": "Required to reject, optional to approve",
       "startReview": "Start review",
@@ -409,6 +411,7 @@
       "match": "The document matches the hash recorded on-chain.",
       "mismatch": "The document does not match the hash recorded on-chain.",
       "unreachable": "The document could not be retrieved, so it was not verified.",
+      "invalidLink": "Automatic verification requires an https:// URL, so the stored link was not fetched.",
       "fileFallback": "If you already have the document, hash your own copy here to compare it yourself.",
       "chooseFile": "Hash a downloaded file",
       "failed": "The document could not be hashed."

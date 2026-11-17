@@ -76,6 +76,7 @@ impl PilotIncomeToken {
     pub fn mint_fixed_supply(env: Env, admin: Address, holders: Vec<Address>, amounts: Vec<i128>) {
         admin.require_auth();
         Self::require_admin(&env, &admin);
+        Self::require_not_wound_down(&env);
         Self::require_not_paused(&env);
 
         extend_instance(&env);
@@ -199,6 +200,7 @@ impl PilotIncomeToken {
     pub fn transfer(env: Env, caller: Address, from: Address, to: Address, amount: i128) {
         caller.require_auth();
         Self::require_admin(&env, &caller);
+        Self::require_not_wound_down(&env);
         Self::require_not_paused(&env);
 
         if amount <= 0 {
@@ -224,17 +226,19 @@ impl PilotIncomeToken {
     /// Permanently mark the pilot as wound down.
     ///
     /// One-way and irreversible: once set, the marker can never be cleared and
-    /// no un-wind-down function exists. Admin-gated, matching every other
-    /// state-changing function on this contract, so the same platform key that
-    /// mints and corrects balances owns the terminal state too.
+    /// no un-wind-down function exists. Every subsequent `mint_fixed_supply` or
+    /// `transfer` fails with `IncomeTokenError::ContractWoundDown`, while reads
+    /// (`balance`, `holders`, `total_supply`, `wound_down_status`, and metadata)
+    /// and two-step admin succession keep working. Admin-gated, matching every
+    /// other state-changing function on this contract, so the same platform key
+    /// that mints and corrects balances owns the terminal state too.
     ///
     /// This is an independent write from `exit` on the payout-split contract:
     /// each contract stores and exposes its own terminal marker, so a client
     /// reading either contract alone gets a complete answer without a
-    /// cross-contract call at read time. Recording the fact of wind-down only;
-    /// no fund-recovery, refund, or unwind logic is implemented here (that
-    /// remains an open product/legal question, Known Risk #5 in the product
-    /// brief).
+    /// cross-contract call at read time. No fund-recovery, refund, or unwind
+    /// logic is implemented here (that remains an open product/legal question,
+    /// Known Risk #5 in the product brief).
     pub fn mark_wound_down(env: Env, admin: Address, reason: String) {
         admin.require_auth();
         Self::require_admin(&env, &admin);
@@ -321,12 +325,14 @@ impl PilotIncomeToken {
         Storage::pending_admin(&env)
     }
 
-    /// Pause `mint_fixed_supply`, `transfer`, and `mark_wound_down`.
-    /// Read-only calls (`balance`, `holders`, `total_supply`, and the rest)
-    /// keep working.
+    /// Pause `mint_fixed_supply`, `transfer`, and `mark_wound_down` while the
+    /// pilot is active. Read-only calls (`balance`, `holders`, `total_supply`,
+    /// `wound_down_status`, and the rest) and admin succession keep working.
     ///
-    /// Mirrors `pilot-payout-split`'s `pause`. Before this change, a
-    /// wrongful mint or correction transfer had no on-chain circuit breaker.
+    /// Mirrors `pilot-payout-split`'s `pause`. Pause is reversible via
+    /// `unpause`, unlike `mark_wound_down`: once the pilot is permanently wound
+    /// down, `mint_fixed_supply` and `transfer` always fail with
+    /// `IncomeTokenError::ContractWoundDown` regardless of the pause flag.
     pub fn pause(env: Env, admin: Address) {
         admin.require_auth();
         Self::require_admin(&env, &admin);
@@ -337,7 +343,8 @@ impl PilotIncomeToken {
         events::emit_paused(&env, admin);
     }
 
-    /// Resume `mint_fixed_supply`, `transfer`, and `mark_wound_down`.
+    /// Resume active-pilot calls paused by `pause` (`mint_fixed_supply`,
+    /// `transfer`, and `mark_wound_down`). Does not reverse `mark_wound_down`.
     pub fn unpause(env: Env, admin: Address) {
         admin.require_auth();
         Self::require_admin(&env, &admin);
@@ -361,10 +368,21 @@ impl PilotIncomeToken {
         }
     }
 
+    /// Reject `mint_fixed_supply` and `transfer` permanently once
+    /// `mark_wound_down` has recorded a terminal wind-down marker.
+    fn require_not_wound_down(env: &Env) {
+        if Storage::wound_down_record(env).is_some() {
+            panic_with_error!(env, IncomeTokenError::ContractWoundDown);
+        }
+    }
+
     /// `mark_wound_down` is deliberately included: pausing exists to stop
     /// every state-changing effect, including a permanent one, while an
     /// incident is under review. Ending the pilot is a decision the admin can
-    /// still make after an explicit `unpause`.
+    /// still make after an explicit `unpause`. On `mint_fixed_supply` and
+    /// `transfer`, `require_not_wound_down` runs ahead of this check so a
+    /// permanently wound-down contract always reports `ContractWoundDown`
+    /// rather than the reversible `ContractPaused` error.
     fn require_not_paused(env: &Env) {
         if Storage::is_paused(env) {
             panic_with_error!(env, IncomeTokenError::ContractPaused);
@@ -884,6 +902,141 @@ mod tests {
             )))
         );
         assert_eq!(s.token.wound_down_status(), None);
+    }
+
+    #[test]
+    fn transfer_after_wound_down_fails_and_leaves_balances_and_holders_unchanged() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        let replacement = approved_addresses(&s, 1).get(0).unwrap();
+        let initial_holders = vec![&s.env, s.holder_one.clone(), s.holder_two.clone()];
+        s.token
+            .mint_fixed_supply(&s.admin, &initial_holders, &vec![&s.env, 700i128, 300i128]);
+
+        s.token.mark_wound_down(
+            &s.admin,
+            &String::from_str(&s.env, "ally ceased operations"),
+        );
+
+        let partial = s
+            .token
+            .try_transfer(&s.admin, &s.holder_one, &s.holder_two, &200);
+        assert_eq!(
+            partial,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::ContractWoundDown as u32
+            )))
+        );
+
+        let full_to_new = s
+            .token
+            .try_transfer(&s.admin, &s.holder_one, &replacement, &700);
+        assert_eq!(
+            full_to_new,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::ContractWoundDown as u32
+            )))
+        );
+
+        assert_eq!(s.token.balance(&s.holder_one), 700);
+        assert_eq!(s.token.balance(&s.holder_two), 300);
+        assert_eq!(s.token.balance(&replacement), 0);
+        assert_eq!(s.token.total_supply(), 1000);
+        assert_eq!(s.token.holders(), initial_holders);
+    }
+
+    #[test]
+    fn mint_fixed_supply_after_wound_down_fails() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+
+        s.token.mark_wound_down(
+            &s.admin,
+            &String::from_str(&s.env, "pilot cancelled before mint"),
+        );
+
+        let res = s.token.try_mint_fixed_supply(
+            &s.admin,
+            &vec![&s.env, s.holder_one.clone(), s.holder_two.clone()],
+            &vec![&s.env, 700i128, 300i128],
+        );
+
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::ContractWoundDown as u32
+            )))
+        );
+        assert_eq!(s.token.balance(&s.holder_one), 0);
+        assert_eq!(s.token.balance(&s.holder_two), 0);
+        assert_eq!(s.token.total_supply(), 0);
+        assert_eq!(s.token.holders().len(), 0);
+    }
+
+    #[test]
+    fn reads_and_admin_succession_still_work_after_wound_down() {
+        let s = setup();
+        s.env.mock_all_auths();
+        approve_default_holders(&s);
+        let initial_holders = vec![&s.env, s.holder_one.clone(), s.holder_two.clone()];
+        s.token
+            .mint_fixed_supply(&s.admin, &initial_holders, &vec![&s.env, 700i128, 300i128]);
+
+        let reason = String::from_str(&s.env, "property sold");
+        s.token.mark_wound_down(&s.admin, &reason);
+
+        // Every read stays available after wind-down.
+        assert_eq!(s.token.balance(&s.holder_one), 700);
+        assert_eq!(s.token.balance(&s.holder_two), 300);
+        assert_eq!(s.token.holders(), initial_holders);
+        assert_eq!(s.token.total_supply(), 1000);
+        assert_eq!(
+            s.token.name(),
+            String::from_str(&s.env, "Akkuea Pilot Income")
+        );
+        assert_eq!(s.token.symbol(), String::from_str(&s.env, "AKIN"));
+        assert_eq!(s.token.decimals(), 7);
+        assert_eq!(s.token.admin(), s.admin);
+        let status = s
+            .token
+            .wound_down_status()
+            .expect("wound-down status must remain readable");
+        assert_eq!(status.reason, reason);
+
+        // Two-step admin succession (including cancel) still works after wind-down.
+        let aborted_admin = Address::generate(&s.env);
+        s.token.transfer_admin_start(&s.admin, &aborted_admin);
+        assert_eq!(s.token.pending_admin(), Some(aborted_admin));
+        s.token.transfer_admin_cancel(&s.admin);
+        assert_eq!(s.token.pending_admin(), None);
+
+        let new_admin = Address::generate(&s.env);
+        s.token.transfer_admin_start(&s.admin, &new_admin);
+        assert_eq!(s.token.pending_admin(), Some(new_admin.clone()));
+        s.token.transfer_admin_accept(&new_admin);
+        assert_eq!(s.token.admin(), new_admin);
+        assert_eq!(s.token.pending_admin(), None);
+
+        // Even after admin rotation, pause/unpause cannot re-enable writes on a
+        // wound-down contract, and the terminal error takes precedence over pause.
+        s.token.pause(&new_admin);
+        assert_eq!(
+            s.token
+                .try_transfer(&new_admin, &s.holder_one, &s.holder_two, &50),
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::ContractWoundDown as u32
+            )))
+        );
+        s.token.unpause(&new_admin);
+        assert_eq!(
+            s.token
+                .try_transfer(&new_admin, &s.holder_one, &s.holder_two, &50),
+            Err(Ok(Error::from_contract_error(
+                IncomeTokenError::ContractWoundDown as u32
+            )))
+        );
     }
 
     #[test]

@@ -31,4 +31,8 @@ pub enum IncomeTokenError {
     /// A mint or correction transfer would leave more than `MAX_HOLDERS`
     /// addresses holding a balance.
     TooManyHolders = 18,
+    /// The pilot has been permanently wound down via `mark_wound_down`;
+    /// minting and correction transfers are rejected forever after. Distinct
+    /// from `ContractPaused`, which is reversible.
+    ContractWoundDown = 19,
 }

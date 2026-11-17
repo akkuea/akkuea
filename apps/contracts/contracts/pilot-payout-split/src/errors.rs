@@ -59,4 +59,8 @@ pub enum PayoutError {
     /// The income-token balances sum to more than its total supply, so the
     /// pro-rata split would pay out more than the cycle's holder pool.
     HolderBalancesExceedSupply = 31,
+    /// `release_dust` was invoked when `accumulated_dust` is zero: either no
+    /// cycle has produced rounding dust yet, or all accumulated dust has
+    /// already been released.
+    NoDustToRelease = 32,
 }

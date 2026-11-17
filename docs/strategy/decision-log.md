@@ -246,6 +246,22 @@ runbook is marked accordingly and needs a funded key holder to actually run
 it and record the resulting transaction hashes before it can be considered
 verified rather than merely written.
 
+## Rounding-dust accounting and release policy on `pilot-payout-split`
+
+**Adopted: track pro-rata rounding dust in a running on-chain total (`DataKey::TotalDust`, exposed via `accumulated_dust`) and release it explicitly via admin-authorized `release_dust` to the configured `PlatformFeeRecipient`.**
+
+### What was considered
+
+1. **Carry dust into the next cycle's `holder_amount`.** Adds the previous cycle's leftover stroops into the next cycle's distributable holder pool before computing pro-rata shares.
+2. **Track dust in a running total with an explicit, authorized release to a documented destination (`PlatformFeeRecipient`).** Keeps each cycle's arithmetic self-contained, accumulates `dust` in instance storage, and sweeps the tracked remainder to the platform fee recipient on demand.
+
+### Why explicit tracking and release to `PlatformFeeRecipient` was chosen over carry-forward
+
+1. **Clean per-cycle conservation and auditability.** Under explicit tracking, every individual cycle preserves the exact identity `platform_fee + distributed_total + undistributed_failed_swaps + dust == total_income`, and across cycles `accumulated_dust() == sum(cycle.dust) - released_dust`. Carrying dust into the next cycle's `holder_amount` makes a cycle distribute more than `90%` of its own recorded `total_income`, coupling cycle `N`'s payout math to cycle `N - 1`'s rounding outcome and complicating independent off-chain verification of `EvidenceRecord.distribution`.
+2. **No terminal-cycle stranding.** Because integer division can leave up to `paid_holders - 1` stroops (at most 9 stroops, or `$0.0000009` USDC at `MAX_HOLDERS = 10`) on _every_ cycle, carry-forward still leaves the final cycle's dust permanently trapped inside the contract once the pilot ends (`exit`). Explicit release works after the final cycle (including after `exit`), leaving zero stranded rounding dust.
+3. **Zero footprint overhead and strict isolation from `TotalWithheld`.** `TotalDust` lives in instance storage alongside `TotalWithheld`, adding zero ledger footprint entries to a ten-holder distribution. `execute_distribution` requires the contract's USDC balance to cover `total_income + TotalWithheld + TotalDust`, and `release_dust` atomically zeroes `TotalDust` before transferring while verifying `contract_balance >= amount + TotalWithheld`. Neither a subsequent cycle nor `release_dust` can ever spend a single stroop reserved for holders in `TotalWithheld`, and `release_dust` never touches arbitrary overfunded USDC (leaving Known Risk #5 in `product-brief.md` strictly separate).
+4. **Why `admin` and `PlatformFeeRecipient`.** Every stroop in `TotalDust` has already been separated from holder shares and holder reserves by a distribution jointly signed by `operator` and `ally`. Sending released dust only to the stored `PlatformFeeRecipient` eliminates any caller-chosen destination risk, and gating `release_dust` by `admin` (while respecting `pause`) avoids requiring two-party manual co-sign coordination with the agency over sub-cent rounding remainders that feed the same treasury track (`product-brief.md` Phase 1a) as `platform_fee`.
+
 ## Naming
 
 Project renamed from the working title "Pili" to **Akkuea** (spelled letter-by-letter: A-K-K-U-E-A, double K) partway through this strategy's development.

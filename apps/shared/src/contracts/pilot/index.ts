@@ -35,6 +35,7 @@ export type {
   AdminTransferStartedEvent as PayoutAdminTransferStartedEvent,
   AdminTransferAcceptedEvent as PayoutAdminTransferAcceptedEvent,
   AdminTransferCancelledEvent as PayoutAdminTransferCancelledEvent,
+  DustReleasedEvent,
 } from "./payout-split.js";
 export { PayoutError } from "./payout-split.js";
 export type { EvidenceStatus } from "./payout-split.js";

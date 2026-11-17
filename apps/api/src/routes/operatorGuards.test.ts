@@ -22,11 +22,13 @@ mock.module('../controllers/OperationalPropertyController', () => ({
 
 const whitelistPendingMock = mock(async () => ({ success: true, data: [] }));
 const whitelistReviewMock = mock(async () => ({ success: true, txHash: 'mock_tx_hash' }));
+const whitelistRevokeMock = mock(async () => ({ success: true, txHash: 'mock_revoke_tx_hash' }));
 
 mock.module('../controllers/WhitelistController', () => ({
   WhitelistController: {
     pending: whitelistPendingMock,
     review: whitelistReviewMock,
+    revoke: whitelistRevokeMock,
   },
 }));
 
@@ -78,6 +80,7 @@ function allControllerMocks() {
     applyReviewActionMock,
     whitelistPendingMock,
     whitelistReviewMock,
+    whitelistRevokeMock,
     treasuryDepositMock,
     treasuryWithdrawMock,
     lendingLiquidateMock,
@@ -90,6 +93,7 @@ beforeEach(() => {
 
 const reviewBody = JSON.stringify({ action: 'approve', actorWallet: 'G'.repeat(56) });
 const whitelistReviewBody = JSON.stringify({ action: 'approve' });
+const whitelistRevokeBody = JSON.stringify({ reason: 'Approved in error' });
 const treasuryMovementBody = JSON.stringify({ venue: 'defindex-blend', amount: 100 });
 
 type GuardedRoute = {
@@ -146,6 +150,15 @@ const guardedRoutes: GuardedRoute[] = [
     headerName: 'x-internal-api-key',
     validKey: 'test-ops-secret',
     controllerMock: whitelistReviewMock,
+  },
+  {
+    name: 'POST /internal/operations/pilot/whitelist/:id/revoke',
+    path: `/internal/operations/pilot/whitelist/${VALID_UUID}/revoke`,
+    method: 'POST',
+    body: whitelistRevokeBody,
+    headerName: 'x-internal-api-key',
+    validKey: 'test-ops-secret',
+    controllerMock: whitelistRevokeMock,
   },
   {
     name: 'POST /api/v1/treasury/deposit',

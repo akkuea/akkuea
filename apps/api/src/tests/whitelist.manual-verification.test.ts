@@ -69,6 +69,7 @@ beforeEach(() => {
       whitelistService: {
         approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
         rejectRequest: mock(() => Promise.resolve()),
+        revokeRequest: mock(() => Promise.resolve('mock_revoke_tx_hash')),
       },
     };
   });

@@ -144,27 +144,91 @@ const reviewPropertyRoute = new Elysia()
 
 const reviewWhitelistSchema = t.Object({
   action: t.Union([t.Literal('approve'), t.Literal('reject')]),
-  reason: t.Optional(t.String()),
+  reason: t.Optional(t.String({ maxLength: 2000 })),
 });
+
+const revokeWhitelistBodySchema = z.object({
+  reason: z.string().trim().min(1, 'Revocation reason is required').max(2000),
+});
+
+const revokeWhitelistRoute = new Elysia()
+  .use(internalKeyAuth)
+  .use(validateBody(revokeWhitelistBodySchema))
+  .post(
+    '/:id/revoke',
+    async ({ params, validatedBody, headers, set }) => {
+      try {
+        return await WhitelistController.revoke({
+          params,
+          body: validatedBody!,
+          headers: headers as Record<string, string | undefined>,
+        });
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: 'Revoke an approved whitelist request (Admin)',
+        description:
+          'Submits an on-chain revoke call to pilot-whitelist first, then sets the request to revoked with the operator reason and writes an audit entry.',
+        tags: ['Internal Operations'],
+      },
+    },
+  );
 
 const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
   .use(internalKeyAuth)
-  .get('/pending', () => WhitelistController.pending(), {
-    detail: {
-      summary: 'Get pending whitelist requests (Admin)',
-      tags: ['Internal Operations'],
+  .get(
+    '/pending',
+    async ({ set }) => {
+      try {
+        return await WhitelistController.pending();
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
     },
-  })
-  .post('/:id/review', (ctx) => WhitelistController.review(ctx), {
-    body: reviewWhitelistSchema,
-    params: t.Object({
-      id: t.String(),
-    }),
-    detail: {
-      summary: 'Review whitelist request (Admin)',
-      tags: ['Internal Operations'],
+    {
+      detail: {
+        summary: 'Get pending whitelist requests (Admin)',
+        tags: ['Internal Operations'],
+      },
     },
-  });
+  )
+  .post(
+    '/:id/review',
+    async ({ params, body, headers, set }) => {
+      try {
+        return await WhitelistController.review({
+          params,
+          body,
+          headers: headers as Record<string, string | undefined>,
+        });
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      body: reviewWhitelistSchema,
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: 'Review whitelist request (Admin)',
+        tags: ['Internal Operations'],
+      },
+    },
+  )
+  .use(revokeWhitelistRoute);
 
 const auditOperationsRoute = new Elysia()
   .use(internalKeyAuth)

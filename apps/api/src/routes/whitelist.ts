@@ -59,22 +59,34 @@ export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
   // auth by itself, so applying it here lets /status check for an optional
   // session without requiring one on the otherwise-public endpoints below.
   .use(authPlugin)
-  .post('/request', (ctx) => WhitelistController.request(ctx), {
-    beforeHandle: [rateLimit()],
-    body: requestSchema,
-    detail: {
-      summary: 'Submit whitelist request',
-      description:
-        'Public, unauthenticated KYC intake endpoint. Rate-limited to 10 requests per minute per IP (same default as other public endpoints in this API). This endpoint accepts PII (full name, ID type, ID reference), so abuse protection is critical.',
-      tags: ['Pilot Whitelist'],
+  .post(
+    '/request',
+    async (ctx) => {
+      try {
+        return await WhitelistController.request(ctx);
+      } catch (error) {
+        const errorResponse = handleError(error);
+        ctx.set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
     },
-  })
+    {
+      beforeHandle: [rateLimit()],
+      body: requestSchema,
+      detail: {
+        summary: 'Submit whitelist request',
+        description:
+          'Public, unauthenticated KYC intake endpoint. Rate-limited to 10 requests per minute per IP (same default as other public endpoints in this API). This endpoint accepts PII (full name, ID type, ID reference), so abuse protection is critical.',
+        tags: ['Pilot Whitelist'],
+      },
+    },
+  )
   // GET /status is intentionally not rate-limited: the status itself is
-  // coarse application state (pending/approved/rejected/none) with no PII,
-  // and the endpoint is read-only. Rate limiting is not required for the
-  // current pilot threat model. The one field that is PII-adjacent,
-  // rejectionReason, is only ever included for the wallet's own owner
-  // (Bearer session) or an operator (x-internal-api-key); see
+  // coarse application state (pending/approved/rejected/revoked/none) with no
+  // PII, and the endpoint is read-only. Rate limiting is not required for the
+  // current pilot threat model. The PII-adjacent operator reason fields
+  // (rejectionReason, revocationReason) are only ever included for the wallet's
+  // own owner (Bearer session) or an operator (x-internal-api-key); see
   // WhitelistController.status. Revisit if response data expands further or
   // enumeration becomes operationally relevant.
   .get('/status/:walletAddress', (ctx) => WhitelistController.status(ctx), {
@@ -82,7 +94,7 @@ export const whitelistRoutes = new Elysia({ prefix: '/pilot/whitelist' })
     detail: {
       summary: 'Get status of whitelist request',
       description:
-        'Returns the request status for a wallet. The rejectionReason field is only included when the caller is authenticated as that wallet or is an operator.',
+        'Returns the request status for a wallet. The rejectionReason and revocationReason fields are only included when the caller is authenticated as that wallet or is an operator.',
       tags: ['Pilot Whitelist'],
       security: [{ bearerAuth: [] }, { internalApiKey: [] }],
     },

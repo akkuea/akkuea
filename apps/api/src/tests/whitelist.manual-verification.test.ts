@@ -12,6 +12,8 @@ import jwt from 'jsonwebtoken';
 import { db } from '../db';
 import { whitelistRoutes } from '../routes/whitelist';
 import { setClientAddressResolverForTesting } from '../middleware/rateLimit';
+import { Keypair } from '@stellar/stellar-sdk';
+import { errorHandler } from '../middleware/errorHandler';
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
 
@@ -22,40 +24,35 @@ process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
  */
 const TEST_CLIENT_HEADER = 'x-ratelimit-test-client';
 
-/**
- * Requests driven through `app.handle()` never reach a socket, so the rate
- * limiter (which identifies clients by socket address, or by `x-forwarded-for`
- * only when proxies are trusted) has nothing to key on and declines to count
- * them. The tests that assert real limiting below therefore declare the client
- * address they want.
- *
- * This is not the removed `x-test-bypass-ratelimit` header: nothing here skips
- * the limiter, the requests are counted and limited for real, against the
- * declared address. `setClientAddressResolverForTesting` refuses to install
- * itself unless NODE_ENV is "test", so no deployment can reach this path.
- */
 setClientAddressResolverForTesting((context) => context.request.headers.get(TEST_CLIENT_HEADER));
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';
 
 // Setup a minimal app for testing routes
 import { internalOperationsRoutes } from '../routes/internalOperations';
-const testApp = new Elysia().use(whitelistRoutes).use(internalOperationsRoutes);
+const testApp = new Elysia().use(errorHandler).use(whitelistRoutes).use(internalOperationsRoutes);
 
-const WALLET_56 = 'GDK7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZ';
-const WALLET_B = 'GDC3C4X5R7N2X7CII7SPRD4U6ZLKZKAJZDW6N4Q4QAV3FJ7Q3N7GJ5P6';
+const WALLET_56 = Keypair.random().publicKey();
+const WALLET_B = Keypair.random().publicKey();
 
-function extractWalletAddress(obj: any): string | undefined {
-  if (obj == null || typeof obj !== 'object') return undefined;
-  if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
-    for (const chunk of obj.queryChunks) {
-      if (chunk?.constructor?.name === 'Param' && typeof chunk.value === 'string') {
-        return chunk.value;
-      }
+function extractParams(obj: any): any[] {
+  const params: any[] = [];
+  function walk(o: any) {
+    if (!o || typeof o !== 'object') return;
+    if (o.constructor?.name === 'Param') {
+      params.push(o.value);
+      return;
+    }
+    if (Array.isArray(o)) {
+      for (const item of o) walk(item);
+      return;
+    }
+    if (o.queryChunks) {
+      walk(o.queryChunks);
     }
   }
-  if ('value' in obj && typeof obj.value === 'string') return obj.value;
-  return undefined;
+  walk(obj);
+  return params;
 }
 
 let mockDbStore: any[] = [];
@@ -75,10 +72,37 @@ beforeEach(() => {
 
   (db as any).query = {
     pilotWhitelistRequests: {
-      findFirst: mock(async ({ where }: any) => {
-        const walletAddr = extractWalletAddress(where);
-        if (walletAddr) return mockDbStore.find((r) => r.walletAddress === walletAddr);
-        return undefined;
+      findFirst: mock(async ({ where, orderBy }: any) => {
+        const params = extractParams(where);
+        let results = [...mockDbStore];
+
+        const idParam = params.find(
+          (p) => typeof p === 'string' && mockDbStore.some((r) => r.id === p),
+        );
+        if (idParam) {
+          return mockDbStore.find((r) => r.id === idParam);
+        }
+
+        const walletParam = params.find((p) => typeof p === 'string' && p.startsWith('G'));
+        if (walletParam) {
+          results = results.filter((r) => r.walletAddress === walletParam);
+          const statusParams = params.filter((p) =>
+            ['pending', 'approved', 'rejected'].includes(p),
+          );
+          if (statusParams.length > 0) {
+            results = results.filter((r) => statusParams.includes(r.status));
+          }
+        }
+
+        if (orderBy) {
+          results.sort((a, b) => {
+            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return bTime - aTime;
+          });
+        }
+
+        return results[0];
       }),
       findMany: mock(async () => mockDbStore),
     },
@@ -89,6 +113,8 @@ beforeEach(() => {
       returning: async () => {
         const inserted = {
           id: `test_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+          createdAt: new Date(),
+          updatedAt: new Date(),
           ...val,
         };
         mockDbStore.push(inserted);
@@ -106,20 +132,14 @@ beforeEach(() => {
   }));
 
   (db as any).delete = mock(() => ({
-    where: async (whereExpr: any) => {
-      const walletAddr = extractWalletAddress(whereExpr);
-      if (walletAddr) mockDbStore = mockDbStore.filter((r) => r.walletAddress !== walletAddr);
+    where: async () => {
+      // Deletions no longer occur on resubmission
     },
   }));
 });
 
 afterEach(() => {
   mock.restore();
-  // Direct property assignment on the db Proxy mutates _dbTarget, which
-  // persists across test files in the same bun process. mock.restore()
-  // only undoes mock() calls, not these mutations, so delete them
-  // unconditionally: beforeEach always re-populates all four from scratch,
-  // so there's no prior legitimate state to preserve.
   for (const prop of ['query', 'insert', 'update', 'delete']) {
     delete (db as any)[prop];
   }
@@ -140,7 +160,7 @@ async function postWhitelistRequest(wallet: string, name = 'Test User', clientAd
         walletAddress: wallet,
         fullName: name,
         idType: 'passport',
-        idReference: `REF-${Date.now()}`,
+        idReference: 'ID-12345',
       }),
     }),
   );
@@ -148,7 +168,7 @@ async function postWhitelistRequest(wallet: string, name = 'Test User', clientAd
 
 describe('Whitelist manual verification', () => {
   test('POST /request returns 200 with status pending', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+    const wallet = Keypair.random().publicKey();
     const res = await postWhitelistRequest(wallet);
     expect(res.status).toBe(200);
 
@@ -159,7 +179,7 @@ describe('Whitelist manual verification', () => {
   });
 
   test('rate limit headers are present on request', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+    const wallet = Keypair.random().publicKey();
     const res = await postWhitelistRequest(wallet, 'Header Test', '198.51.100.10');
     expect(res.status).toBe(200);
 
@@ -178,7 +198,7 @@ describe('Whitelist manual verification', () => {
 
     // The default budget is 10 requests per 60s for one client.
     for (let i = 0; i < 11; i++) {
-      const wallet = `GD${String(i + 300).padStart(54, '0')}`;
+      const wallet = Keypair.random().publicKey();
       const res = await postWhitelistRequest(wallet, `RL User ${i}`, '198.51.100.11');
       statuses.push(res.status);
     }
@@ -188,11 +208,12 @@ describe('Whitelist manual verification', () => {
   });
 
   test('duplicate pending request returns error', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+    const wallet = Keypair.random().publicKey();
     mockDbStore.push({
       id: 'existing',
       walletAddress: wallet,
       status: 'pending',
+      createdAt: new Date(),
     });
 
     const res = await postWhitelistRequest(wallet);
@@ -207,6 +228,7 @@ describe('Whitelist manual verification', () => {
       fullName: 'Old',
       idType: 'passport',
       idReference: 'OLD',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
     });
 
     const res = await postWhitelistRequest(WALLET_B, 'New Submission');
@@ -217,16 +239,18 @@ describe('Whitelist manual verification', () => {
     expect(body.data.fullName).toBe('New Submission');
 
     const forWallet = mockDbStore.filter((r) => r.walletAddress === WALLET_B);
-    expect(forWallet.length).toBe(1);
-    expect(forWallet[0].id).not.toBe('old_rejected');
+    expect(forWallet.length).toBe(2);
+    expect(forWallet.some((r) => r.id === 'old_rejected')).toBe(true);
+    expect(forWallet.some((r) => r.id !== 'old_rejected' && r.status === 'pending')).toBe(true);
   });
 
   test('blocked when already approved', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+    const wallet = Keypair.random().publicKey();
     mockDbStore.push({
       id: 'approved',
       walletAddress: wallet,
       status: 'approved',
+      createdAt: new Date(),
     });
 
     const res = await postWhitelistRequest(wallet);
@@ -248,6 +272,7 @@ describe('Whitelist manual verification', () => {
       walletAddress: WALLET_56,
       status: 'rejected',
       rejectionReason: 'Document illegible',
+      createdAt: new Date(),
     });
 
     const res = await testApp.handle(
@@ -266,6 +291,7 @@ describe('Whitelist manual verification', () => {
       walletAddress: WALLET_56,
       status: 'rejected',
       rejectionReason: 'Document illegible',
+      createdAt: new Date(),
     });
 
     const token = jwt.sign({ id: 'user-1', walletAddress: WALLET_56 }, JWT_SECRET);
@@ -287,6 +313,7 @@ describe('Whitelist manual verification', () => {
       walletAddress: WALLET_56,
       status: 'rejected',
       rejectionReason: 'Document illegible',
+      createdAt: new Date(),
     });
 
     const res = await testApp.handle(
@@ -306,6 +333,7 @@ describe('Whitelist manual verification', () => {
       walletAddress: WALLET_56,
       status: 'rejected',
       rejectionReason: 'Document illegible',
+      createdAt: new Date(),
     });
 
     const token = jwt.sign({ id: 'user-2', walletAddress: WALLET_B }, JWT_SECRET);
@@ -325,6 +353,7 @@ describe('Whitelist manual verification', () => {
     const statuses: number[] = [];
 
     for (let i = 0; i < 11; i++) {
+      const wallet = Keypair.random().publicKey();
       const res = await testApp.handle(
         new Request('http://localhost/pilot/whitelist/request', {
           method: 'POST',
@@ -334,7 +363,7 @@ describe('Whitelist manual verification', () => {
             [TEST_CLIENT_HEADER]: '198.51.100.12',
           },
           body: JSON.stringify({
-            walletAddress: `GD${String(i + 20).padStart(54, '0')}`,
+            walletAddress: wallet,
             fullName: `Bypass User ${i}`,
             idType: 'passport',
             idReference: `BYPASS-${i}`,
@@ -350,7 +379,7 @@ describe('Whitelist manual verification', () => {
     expect(statuses[10]).toBe(429);
 
     const blocked = await postWhitelistRequest(
-      `GD${String(400).padStart(54, '0')}`,
+      Keypair.random().publicKey(),
       'Blocked User',
       '198.51.100.12',
     );

@@ -149,22 +149,46 @@ const reviewWhitelistSchema = t.Object({
 
 const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
   .use(internalKeyAuth)
-  .get('/pending', () => WhitelistController.pending(), {
-    detail: {
-      summary: 'Get pending whitelist requests (Admin)',
-      tags: ['Internal Operations'],
+  .get(
+    '/pending',
+    async ({ set }) => {
+      try {
+        return await WhitelistController.pending();
+      } catch (error) {
+        const errorResponse = handleError(error);
+        set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
     },
-  })
-  .post('/:id/review', (ctx) => WhitelistController.review(ctx), {
-    body: reviewWhitelistSchema,
-    params: t.Object({
-      id: t.String(),
-    }),
-    detail: {
-      summary: 'Review whitelist request (Admin)',
-      tags: ['Internal Operations'],
+    {
+      detail: {
+        summary: 'Get pending whitelist requests (Admin)',
+        tags: ['Internal Operations'],
+      },
     },
-  });
+  )
+  .post(
+    '/:id/review',
+    async (ctx) => {
+      try {
+        return await WhitelistController.review(ctx);
+      } catch (error) {
+        const errorResponse = handleError(error);
+        ctx.set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      body: reviewWhitelistSchema,
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: 'Review whitelist request (Admin)',
+        tags: ['Internal Operations'],
+      },
+    },
+  );
 
 const auditOperationsRoute = new Elysia()
   .use(internalKeyAuth)

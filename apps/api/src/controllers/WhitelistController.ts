@@ -6,8 +6,33 @@ import {
   type ReviewMetricsResult,
 } from '../services/ReviewTurnaroundService';
 import type { MetricsWindowQuery } from '../services/reviewTurnaround';
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
+import { BadRequestError, ConflictError } from '../utils/errors';
+import { StrKey } from '@stellar/stellar-sdk';
+
+/** Request payload for submitting a whitelist intake application. */
+interface RequestBody {
+  walletAddress: string;
+  fullName: string;
+  idType: 'passport' | 'national_id' | 'drivers_license';
+  idReference: string;
+}
+
+interface RequestContext {
+  body: RequestBody;
+}
+
+/** Operator review payload. */
+interface ReviewBody {
+  action: 'approve' | 'reject';
+  reason?: string;
+}
+
+interface ReviewContext {
+  params: { id: string };
+  body: ReviewBody;
+}
 
 /** Minimal context shape consumed by WhitelistController.status. */
 interface StatusContext {
@@ -17,29 +42,32 @@ interface StatusContext {
 }
 
 export class WhitelistController {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static async request(ctx: any) {
+  static async request(ctx: RequestContext) {
     const { walletAddress, fullName, idType, idReference } = ctx.body;
 
-    // Check if a request already exists
-    const existing = await db.query.pilotWhitelistRequests.findFirst({
-      where: eq(pilotWhitelistRequests.walletAddress, walletAddress),
-    });
-
-    if (existing) {
-      if (existing.status === 'pending') {
-        throw new Error('A whitelist request is already pending for this address');
-      }
-      if (existing.status === 'approved') {
-        throw new Error('This address is already whitelisted');
-      }
-      // If previously rejected, allow re-submission: delete the old record
-      // so the investor gets a clean slate after fixing whatever was wrong.
-      await db
-        .delete(pilotWhitelistRequests)
-        .where(eq(pilotWhitelistRequests.walletAddress, walletAddress));
+    if (!StrKey.isValidEd25519PublicKey(walletAddress)) {
+      throw new BadRequestError('Invalid Stellar wallet address');
     }
 
+    // Check if an active request already exists (pending or approved)
+    const active = await db.query.pilotWhitelistRequests.findFirst({
+      where: and(
+        eq(pilotWhitelistRequests.walletAddress, walletAddress),
+        inArray(pilotWhitelistRequests.status, ['pending', 'approved']),
+      ),
+    });
+
+    if (active) {
+      if (active.status === 'pending') {
+        throw new ConflictError('A whitelist request is already pending for this address');
+      }
+      if (active.status === 'approved') {
+        throw new ConflictError('This address is already whitelisted');
+      }
+    }
+
+    // Allow re-submission after rejection without deleting historical records:
+    // the previous rejected row is preserved in the database along with its reason.
     const inserted = await db
       .insert(pilotWhitelistRequests)
       .values({
@@ -72,8 +100,7 @@ export class WhitelistController {
     return { success: true, data };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static async review(ctx: any) {
+  static async review(ctx: ReviewContext) {
     const { id } = ctx.params;
     const { action, reason } = ctx.body;
 
@@ -81,20 +108,26 @@ export class WhitelistController {
       const txHash = await whitelistService.approveRequest(id);
       return { success: true, txHash };
     } else if (action === 'reject') {
-      if (!reason) {
-        throw new Error('Rejection reason is required');
+      if (!reason || reason.trim() === '') {
+        throw new BadRequestError('Rejection reason is required');
       }
-      await whitelistService.rejectRequest(id, reason);
+      await whitelistService.rejectRequest(id, reason.trim());
       return { success: true };
     } else {
-      throw new Error('Invalid action');
+      throw new BadRequestError('Invalid action');
     }
   }
 
   static async status(ctx: StatusContext) {
     const { walletAddress } = ctx.params;
+
+    if (!StrKey.isValidEd25519PublicKey(walletAddress)) {
+      throw new BadRequestError('Invalid Stellar wallet address');
+    }
+
     const existing = await db.query.pilotWhitelistRequests.findFirst({
       where: eq(pilotWhitelistRequests.walletAddress, walletAddress),
+      orderBy: (requests, { desc: descOrder }) => [descOrder(requests.createdAt)],
     });
 
     if (!existing) {

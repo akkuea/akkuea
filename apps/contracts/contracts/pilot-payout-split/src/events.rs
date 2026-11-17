@@ -348,3 +348,132 @@ pub fn emit_admin_transfer_cancelled(env: &Env, admin: Address) {
         AdminTransferCancelledEvent { admin },
     );
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OperatorRotationStartedEvent {
+    pub admin: Address,
+    pub current_operator: Address,
+    pub new_operator: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OperatorRotationAcceptedEvent {
+    pub old_operator: Address,
+    pub new_operator: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct OperatorRotationCancelledEvent {
+    pub admin: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AllyRotationStartedEvent {
+    pub admin: Address,
+    pub current_ally: Address,
+    pub new_ally: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AllyRotationAcceptedEvent {
+    pub old_ally: Address,
+    pub new_ally: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct AllyRotationCancelledEvent {
+    pub admin: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FeeRecipientUpdatedEvent {
+    pub admin: Address,
+    pub old_recipient: Address,
+    pub new_recipient: Address,
+}
+
+pub fn emit_operator_rotation_started(
+    env: &Env,
+    admin: Address,
+    current_operator: Address,
+    new_operator: Address,
+) {
+    env.events().publish(
+        (symbol_short!("opersta"),),
+        OperatorRotationStartedEvent {
+            admin,
+            current_operator,
+            new_operator,
+        },
+    );
+}
+
+pub fn emit_operator_rotation_accepted(env: &Env, old_operator: Address, new_operator: Address) {
+    env.events().publish(
+        (symbol_short!("operacc"),),
+        OperatorRotationAcceptedEvent {
+            old_operator,
+            new_operator,
+        },
+    );
+}
+
+pub fn emit_operator_rotation_cancelled(env: &Env, admin: Address) {
+    env.events().publish(
+        (symbol_short!("opercan"),),
+        OperatorRotationCancelledEvent { admin },
+    );
+}
+
+pub fn emit_ally_rotation_started(
+    env: &Env,
+    admin: Address,
+    current_ally: Address,
+    new_ally: Address,
+) {
+    env.events().publish(
+        (symbol_short!("allysta"),),
+        AllyRotationStartedEvent {
+            admin,
+            current_ally,
+            new_ally,
+        },
+    );
+}
+
+pub fn emit_ally_rotation_accepted(env: &Env, old_ally: Address, new_ally: Address) {
+    env.events().publish(
+        (symbol_short!("allyacc"),),
+        AllyRotationAcceptedEvent { old_ally, new_ally },
+    );
+}
+
+pub fn emit_ally_rotation_cancelled(env: &Env, admin: Address) {
+    env.events().publish(
+        (symbol_short!("allycan"),),
+        AllyRotationCancelledEvent { admin },
+    );
+}
+
+pub fn emit_fee_recipient_updated(
+    env: &Env,
+    admin: Address,
+    old_recipient: Address,
+    new_recipient: Address,
+) {
+    env.events().publish(
+        (symbol_short!("feerecip"),),
+        FeeRecipientUpdatedEvent {
+            admin,
+            old_recipient,
+            new_recipient,
+        },
+    );
+}

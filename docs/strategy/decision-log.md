@@ -246,6 +246,43 @@ runbook is marked accordingly and needs a funded key holder to actually run
 it and record the resulting transaction hashes before it can be considered
 verified rather than merely written.
 
+## Operator, ally, and fee-recipient rotation on `pilot-payout-split`
+
+`pilot-payout-split` previously wrote `Operator`, `Ally`, and `PlatformFeeRecipient` once in `initialize` and never modified them again, while C8-003 added two-step succession only for `Admin`. Losing or compromising either operational signer (`Operator` or `Ally`) permanently froze `record_evidence`, `execute_distribution`, and `exit`; closing or compromising the fee-recipient account forced every subsequent cycle to keep paying it.
+
+### Operator rotation: two-step, initiated by the admin alone
+
+**Adopted:** `rotate_operator_start` / `rotate_operator_accept` / `rotate_operator_cancel` (plus `operator` and `pending_operator` reads).
+
+**Can the admin alone replace a lost operator key? Yes.** Both `admin` (Akkuea's cold platform key) and `operator` (Akkuea's day-to-day pilot operations key) belong to Akkuea. Requiring the outgoing `operator` key to sign `rotate_operator_start` would leave a lost operator key permanently unrecoverable. Conversely, allowing the hot `operator` key itself to start or cancel a rotation without `admin` would let a compromised operator key self-rotate to a second attacker-controlled key or race to cancel `admin`'s recovery rotation. Requiring an `ally` co-signature on Akkuea's internal operational-key recovery is rejected for the same reason recorded in C8-003 for `transfer_admin_start`: an unreachable or adversarial counterparty must not hold veto power over Akkuea replacing a lost or compromised internal key. Two-step acceptance (`new_operator.require_auth()`) guarantees that a mistyped or dead address can never lock the contract, and `SignerCollision` (`new_operator != ally`) is enforced at both `start` and `accept`.
+
+### Ally rotation: two-step, initiated by the admin and accepted by the incoming ally
+
+**Adopted:** `rotate_ally_start` / `rotate_ally_accept` / `rotate_ally_cancel` (plus `ally` and `pending_ally` reads), gated by `admin` on `start`/`cancel` and by `new_ally.require_auth()` on `accept`.
+
+**Must the ally consent to its own replacement when its key still works? No on-chain signature from the outgoing ally key is required, even when that key still works; only the incoming ally key must sign `rotate_ally_accept`.**
+
+Reasoning:
+
+1. **Recoverability when a key is lost or compromised.** On-chain code cannot distinguish an ally whose private key is permanently lost from an ally whose key still works and has not signed. Requiring `current_ally.require_auth()` on `rotate_ally_start` would mean a lost ally key still permanently strands every future distribution and even `exit`, failing the exact outage mode this change exists to close. Allowing `current_ally` alone to start its own replacement without `admin` would introduce the symmetric compromise hazard: an attacker who steals the ally's hot signing key could immediately rotate `ally` to a second attacker wallet and lock out the real agency.
+2. **Honest trust-boundary disclosure.** Consistent with `product-brief.md` ("Honesty about the trust model"), this decision states plainly where trust sits rather than pretending a single contract can simultaneously give the outgoing ally an unconditional veto and recover from a lost ally key without a timelock or external arbitrator. Akkuea's cold `admin` key already holds recovery and administrative authority across the pilot suite (`pause`, `approve`/`revoke` on `pilot-whitelist`, and `mint_fixed_supply` / balance-correction `transfer` on `pilot-income-token`). Extending cold-admin recovery to `ally` rotation keeps key recovery possible without redeploying all three contracts, while four on-chain controls bound the power:
+   - The replacement address must actively sign `rotate_ally_accept` with its own key, preventing accidental lockout.
+   - `SignerCollision` (`operator != ally`) is checked at both `rotate_ally_start` and `rotate_ally_accept`, so `admin` can never collapse `operator` and `ally` onto one address, even across concurrent pending rotations.
+   - Every `start`, `accept`, and `cancel` emits a dedicated event (`allysta`, `allyacc`, `allycan`) carrying the old and new addresses, making any unauthorized rotation immediately visible on the read-only chain history to investors and the agency alike.
+   - Once `exit` has executed, every rotation entry point rejects with `ContractExited`, so historical attribution on a terminated pilot is immutable.
+
+Operationally, when the current ally's key still works (routine wallet rotation), the agency requests the rotation off-chain, `admin` stages the agency's new wallet via `rotate_ally_start`, and the agency consents on-chain by signing `rotate_ally_accept` from its new wallet (recorded in `docs/operations/runbook-pilot-role-rotation.md`).
+
+### Platform fee recipient: one-step update, gated by the admin alone
+
+**Adopted:** `set_platform_fee_recipient(caller, new_recipient)` (plus `platform_fee_recipient` read), gated by `admin`.
+
+Unlike `operator` and `ally`, `platform_fee_recipient` never signs contract invocations, so a mistyped fee-recipient address can never lock the contract and can be corrected immediately by another `set_platform_fee_recipient` call. Keeping it one-step also preserves compatibility with passive destination addresses (such as cold multi-sig vaults or DeFindex/treasury contracts under the Phase 1a treasury track in `product-brief.md`) that cannot submit an interactive `require_auth` acceptance call. Because the 10% platform fee is Akkuea's revenue share, `admin` alone authorizes redirecting future fee transfers.
+
+### Pause and exit interaction
+
+All role-rotation and fee-recipient entry points remain callable while the contract is `paused` (matching `transfer_admin_*`: during a suspected key compromise, the safe sequence is to `pause` first, rotate the affected role, and `unpause` once clean keys are active) and reject with `PayoutError::ContractExited` after `exit` (including accepting or cancelling a rotation started before `exit`).
+
 ## Naming
 
 Project renamed from the working title "Pili" to **Akkuea** (spelled letter-by-letter: A-K-K-U-E-A, double K) partway through this strategy's development.

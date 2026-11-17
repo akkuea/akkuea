@@ -3,11 +3,7 @@
  * (stellar contract bindings typescript) against apps/contracts/contracts/
  * pilot-payout-split.
  *
- * Regenerated for two-step admin transfer (transfer_admin_start /
- * transfer_admin_accept / transfer_admin_cancel / pending_admin), issue
- * #1127 (C8-003), and for the durable settlement records (per-cycle
- * DistributionSummary and per-holder HolderSettlement, carried on the evidence
- * entry), the withheld-USDC reserve, and its `claim_withheld` release path.
+ * Regenerated for operator, ally, and platform fee recipient rotation (issue #1328).
  * Generated from the locally built release WASM
  * (`stellar contract bindings typescript --wasm ...`), not from a live
  * testnet contract: no new deployment has happened yet, so there is no
@@ -312,6 +308,23 @@ export const PayoutError = {
    * reservable unit twice.
    */
   30: { message: "NothingToClaim" },
+  /**
+   * The income-token balances sum to more than its total supply, so the
+   * pro-rata split would pay out more than the cycle's holder pool.
+   */
+  31: { message: "HolderBalancesExceedSupply" },
+  /**
+   * `rotate_operator_accept` was called by an address that does not match
+   * the pending operator recorded by `rotate_operator_start`, or no
+   * operator rotation is pending at all.
+   */
+  32: { message: "NotPendingOperator" },
+  /**
+   * `rotate_ally_accept` was called by an address that does not match the
+   * pending ally recorded by `rotate_ally_start`, or no ally rotation is
+   * pending at all.
+   */
+  33: { message: "NotPendingAlly" },
 };
 
 export interface SwapFailedEvent {
@@ -383,9 +396,27 @@ export interface PayoutInitializedEvent {
   operator: string;
 }
 
-export interface CurrencyPreferenceSetEvent {
-  currency: Currency;
-  holder: string;
+export interface AllyRotationStartedEvent {
+  admin: string;
+  current_ally: string;
+  new_ally: string;
+}
+
+export interface EvidenceResubmittedEvent {
+  ally: string;
+  cycle_id: string;
+  /**
+   * The status the resubmission replaced: `Rejected` or `Disputed`.
+   */
+  previous_status: EvidenceStatus;
+  submitted_at: u64;
+  total_income: i128;
+}
+
+export interface FeeRecipientUpdatedEvent {
+  admin: string;
+  new_recipient: string;
+  old_recipient: string;
 }
 
 export interface AdminTransferStartedEvent {
@@ -393,12 +424,41 @@ export interface AdminTransferStartedEvent {
   new_admin: string;
 }
 
+export interface AllyRotationAcceptedEvent {
+  new_ally: string;
+  old_ally: string;
+}
+
 export interface AdminTransferAcceptedEvent {
   new_admin: string;
   old_admin: string;
 }
 
+export interface AllyRotationCancelledEvent {
+  admin: string;
+}
+
+export interface CurrencyPreferenceSetEvent {
+  currency: Currency;
+  holder: string;
+}
+
 export interface AdminTransferCancelledEvent {
+  admin: string;
+}
+
+export interface OperatorRotationStartedEvent {
+  admin: string;
+  current_operator: string;
+  new_operator: string;
+}
+
+export interface OperatorRotationAcceptedEvent {
+  new_operator: string;
+  old_operator: string;
+}
+
+export interface OperatorRotationCancelledEvent {
   admin: string;
 }
 
@@ -420,9 +480,17 @@ export type DataKey =
   | { tag: "Exit"; values: void }
   | { tag: "WithheldBalance"; values: readonly [string] }
   | { tag: "TotalWithheld"; values: void }
-  | { tag: "PendingAdmin"; values: void };
+  | { tag: "PendingAdmin"; values: void }
+  | { tag: "PendingOperator"; values: void }
+  | { tag: "PendingAlly"; values: void };
 
 export interface PilotPayoutSplitClientInterface {
+  /**
+   * Construct and simulate a ally transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Return the configured ally signer.
+   */
+  ally: (options?: MethodOptions) => Promise<AssembledTransaction<string>>;
+
   /**
    * Construct and simulate a exit transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Permanently terminate the ally/property relationship.
@@ -471,6 +539,12 @@ export interface PilotPayoutSplitClientInterface {
     { admin }: { admin: string },
     options?: MethodOptions,
   ) => Promise<AssembledTransaction<null>>;
+
+  /**
+   * Construct and simulate a operator transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Return the configured operator signer.
+   */
+  operator: (options?: MethodOptions) => Promise<AssembledTransaction<string>>;
 
   /**
    * Construct and simulate a is_paused transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -529,8 +603,16 @@ export interface PilotPayoutSplitClientInterface {
    * Construct and simulate a flag_dispute transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Flag a cycle as disputed. Callable by the admin or the operator.
    *
-   * A disputed cycle cannot be distributed until it is resubmitted and
-   * reviewed again, and it counts against the ally in the investor timeline.
+   * Any cycle that has not been distributed can be disputed, including one
+   * already disputed (the newer reason replaces the older one). A disputed
+   * cycle cannot be distributed until the ally resubmits it under the same
+   * `cycle_id` through `submit_evidence` and the operator reviews and
+   * approves it again. It counts against the ally in the investor timeline.
+   *
+   * Rejected after `exit`, like every other evidence action. Deliberately
+   * not blocked by `pause`: a dispute can only stop money from moving, so
+   * the admin or operator must be able to freeze a suspicious cycle while
+   * an incident is under review, before anyone unpauses.
    */
   flag_dispute: (
     {
@@ -551,6 +633,14 @@ export interface PilotPayoutSplitClientInterface {
   ) => Promise<AssembledTransaction<Option<EvidenceRecord>>>;
 
   /**
+   * Construct and simulate a pending_ally transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Return the pending ally, if a rotation is in progress.
+   */
+  pending_ally: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<string>>>;
+
+  /**
    * Construct and simulate a start_review transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Move a submitted cycle into `UnderReview`.
    *
@@ -561,6 +651,14 @@ export interface PilotPayoutSplitClientInterface {
     { operator, cycle_id }: { operator: string; cycle_id: string },
     options?: MethodOptions,
   ) => Promise<AssembledTransaction<null>>;
+
+  /**
+   * Construct and simulate a pending_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Return the pending admin, if a transfer is in progress.
+   */
+  pending_admin: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<string>>>;
 
   /**
    * Construct and simulate a claim_withheld transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -633,8 +731,9 @@ export interface PilotPayoutSplitClientInterface {
    *
    * Only the ally signs. The cycle enters `Submitted` and waits for the
    * operator, which is what makes the review queue an on-chain fact rather
-   * than an off-chain bookkeeping table. A cycle previously rejected may be
-   * submitted again; an approved or distributed cycle may not.
+   * than an off-chain bookkeeping table. A rejected or disputed cycle may be
+   * submitted again under the same `cycle_id`, which also emits `resubmit`;
+   * any other existing cycle, approved or distributed included, may not.
    */
   submit_evidence: (
     {
@@ -654,6 +753,14 @@ export interface PilotPayoutSplitClientInterface {
   ) => Promise<AssembledTransaction<null>>;
 
   /**
+   * Construct and simulate a pending_operator transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Return the pending operator, if a rotation is in progress.
+   */
+  pending_operator: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<string>>>;
+
+  /**
    * Construct and simulate a get_swap_failures transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Return the swap legs rejected during a cycle's distribution.
    */
@@ -661,6 +768,42 @@ export interface PilotPayoutSplitClientInterface {
     { cycle_id }: { cycle_id: string },
     options?: MethodOptions,
   ) => Promise<AssembledTransaction<Array<SwapFailureRecord>>>;
+
+  /**
+   * Construct and simulate a rotate_ally_start transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Begin rotating the ally signer to a new address.
+   *
+   * Two-step (`rotate_ally_start` / `rotate_ally_accept` /
+   * `rotate_ally_cancel`), gated by the admin on start/cancel and signed by
+   * `new_ally` on acceptance so a lost or compromised ally key can be
+   * replaced without stranding distributions or `exit` (see
+   * docs/strategy/decision-log.md). Works while paused; rejected after
+   * `exit` with `PayoutError::ContractExited`.
+   */
+  rotate_ally_start: (
+    { caller, new_ally }: { caller: string; new_ally: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
+
+  /**
+   * Construct and simulate a rotate_ally_accept transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Accept a pending ally rotation. Must be signed by the address named in
+   * `rotate_ally_start`. Re-checks `operator != ally` at acceptance time so
+   * concurrent pending rotations can never collide.
+   */
+  rotate_ally_accept: (
+    { new_ally }: { new_ally: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
+
+  /**
+   * Construct and simulate a rotate_ally_cancel transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Cancel a pending ally rotation before acceptance. Admin-only.
+   */
+  rotate_ally_cancel: (
+    { caller }: { caller: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 
   /**
    * Construct and simulate a execute_distribution transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -709,50 +852,6 @@ export interface PilotPayoutSplitClientInterface {
   ) => Promise<AssembledTransaction<i128>>;
 
   /**
-   * Construct and simulate a eurc_swap_path_status transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   * Report the live EURC settlement configuration. Returns `None` before
-   * initialization; after initialization the dashboard reads the actual
-   * router and asset addresses instead of a hardcoded marker string.
-   */
-  eurc_swap_path_status: (
-    options?: MethodOptions,
-  ) => Promise<AssembledTransaction<Option<EurcSwapPathStatus>>>;
-
-  /**
-   * Construct and simulate a get_holder_settlement transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   * Return one holder's persisted settlement outcome for a cycle.
-   *
-   * This is the authoritative answer to "what did this investor actually
-   * receive, and in which currency, for this cycle": the currency paid, the
-   * delivered amount, and whether the share is still withheld. Read from
-   * stored state, never recomputed from the holder's current balance, which
-   * could have changed since the cycle ran.
-   */
-  get_holder_settlement: (
-    { cycle_id, holder }: { cycle_id: string; holder: string },
-    options?: MethodOptions,
-  ) => Promise<AssembledTransaction<Option<HolderSettlement>>>;
-
-  /**
-   * Construct and simulate a total_withheld_balance transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   * Return the total USDC reserved for every holder across all cycles.
-   *
-   * Exposed so an auditor can reconcile the contract's USDC balance against
-   * the sum of outstanding holder claims without scanning every holder.
-   */
-  total_withheld_balance: (
-    options?: MethodOptions,
-  ) => Promise<AssembledTransaction<i128>>;
-
-  /**
-   * Construct and simulate a pending_admin transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
-   * Return the pending admin, if a transfer is in progress.
-   */
-  pending_admin: (
-    options?: MethodOptions,
-  ) => Promise<AssembledTransaction<Option<string>>>;
-
-  /**
    * Construct and simulate a transfer_admin_start transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Begin transferring admin to a new address.
    *
@@ -778,6 +877,48 @@ export interface PilotPayoutSplitClientInterface {
   ) => Promise<AssembledTransaction<null>>;
 
   /**
+   * Construct and simulate a eurc_swap_path_status transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Report the live EURC settlement configuration. Returns `None` before
+   * initialization; after initialization the dashboard reads the actual
+   * router and asset addresses instead of a hardcoded marker string.
+   */
+  eurc_swap_path_status: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<EurcSwapPathStatus>>>;
+
+  /**
+   * Construct and simulate a get_holder_settlement transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Return one holder's persisted settlement outcome for a cycle.
+   *
+   * This is the authoritative answer to "what did this investor actually
+   * receive, and in which currency, for this cycle": the currency paid, the
+   * delivered amount, and whether the share is still withheld. Read from
+   * stored state, never recomputed from the holder's current balance, which
+   * could have changed since the cycle ran.
+   */
+  get_holder_settlement: (
+    { cycle_id, holder }: { cycle_id: string; holder: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<Option<HolderSettlement>>>;
+
+  /**
+   * Construct and simulate a rotate_operator_start transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Begin rotating the operator signer to a new address.
+   *
+   * Two-step (`rotate_operator_start` / `rotate_operator_accept` /
+   * `rotate_operator_cancel`), matching the admin succession flow so a
+   * mistyped or unreachable address can never lock out the contract. Gated
+   * by the admin alone so a lost or compromised operator key remains
+   * recoverable without requiring the outgoing key or an ally co-signature
+   * (see docs/strategy/decision-log.md). Works while paused; rejected after
+   * `exit` with `PayoutError::ContractExited`.
+   */
+  rotate_operator_start: (
+    { caller, new_operator }: { caller: string; new_operator: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
+
+  /**
    * Construct and simulate a transfer_admin_accept transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Accept a pending admin transfer. Must be signed by the address named
    * in `transfer_admin_start`. The old admin loses every privilege the
@@ -798,6 +939,45 @@ export interface PilotPayoutSplitClientInterface {
     { caller }: { caller: string },
     options?: MethodOptions,
   ) => Promise<AssembledTransaction<null>>;
+
+  /**
+   * Construct and simulate a platform_fee_recipient transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Return the configured platform fee recipient.
+   */
+  platform_fee_recipient: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<string>>;
+
+  /**
+   * Construct and simulate a rotate_operator_accept transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Accept a pending operator rotation. Must be signed by the address named
+   * in `rotate_operator_start`. Re-checks `operator != ally` at acceptance
+   * time so concurrent pending rotations can never collide.
+   */
+  rotate_operator_accept: (
+    { new_operator }: { new_operator: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
+
+  /**
+   * Construct and simulate a rotate_operator_cancel transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Cancel a pending operator rotation before acceptance. Admin-only.
+   */
+  rotate_operator_cancel: (
+    { caller }: { caller: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
+
+  /**
+   * Construct and simulate a total_withheld_balance transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Return the total USDC reserved for every holder across all cycles.
+   *
+   * Exposed so an auditor can reconcile the contract's USDC balance against
+   * the sum of outstanding holder claims without scanning every holder.
+   */
+  total_withheld_balance: (
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<i128>>;
 
   /**
    * Construct and simulate a get_currency_preference transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -832,6 +1012,21 @@ export interface PilotPayoutSplitClientInterface {
     { cycle_id }: { cycle_id: string },
     options?: MethodOptions,
   ) => Promise<AssembledTransaction<Option<DistributionSummary>>>;
+
+  /**
+   * Construct and simulate a set_platform_fee_recipient transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   * Replace the platform fee recipient address.
+   *
+   * One-step and admin-gated: the fee recipient never signs invocations, so
+   * a mistyped address cannot lock the contract and passive treasury vault
+   * contracts remain valid destinations (see docs/strategy/decision-log.md).
+   * Works while paused; rejected after `exit` with
+   * `PayoutError::ContractExited`.
+   */
+  set_platform_fee_recipient: (
+    { caller, new_recipient }: { caller: string; new_recipient: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<null>>;
 }
 export class PilotPayoutSplitClient extends ContractClient {
   static override async deploy<T = PilotPayoutSplitClient>(
@@ -860,29 +1055,45 @@ export class PilotPayoutSplitClient extends ContractClient {
         "AAAAAQAAAMNPbi1jaGFpbiByZWNvcmQgb2Ygb25lIHJlamVjdGVkIHN3YXAgbGVnLiBQZXJzaXN0ZWQgcGVyIGN5Y2xlIHNvIGEgcmVqZWN0ZWQKcGF5b3V0IGlzIGF1ZGl0YWJsZSBpbnN0ZWFkIG9mIHNpbGVudDsgdGhlIGNvcnJlc3BvbmRpbmcgVVNEQyBzdGF5cyBpbiB0aGlzCmNvbnRyYWN0LCByZXNlcnZlZCBmb3IgdGhlIGFmZmVjdGVkIGhvbGRlci4AAAAAAAAAABFTd2FwRmFpbHVyZVJlY29yZAAAAAAAAAMAAAAAAAAAC2Ftb3VudF91c2RjAAAAAAsAAAAAAAAABmhvbGRlcgAAAAAAEwAAAD9gUGF5b3V0RXJyb3JgIGRpc2NyaW1pbmFudCBkZXNjcmliaW5nIHdoeSB0aGUgbGVnIHdhcyByZWplY3RlZC4AAAAAC3JlYXNvbl9jb2RlAAAAAAQ=",
         "AAAAAQAAAHxMaXZlIEVVUkMgc2V0dGxlbWVudCBjb25maWd1cmF0aW9uIHJlcG9ydGVkIHRvIHRoZSBkYXNoYm9hcmQuIFJlcGxhY2VzIHRoZQpyZXRpcmVkIGhhcmRjb2RlZCBgInN0dWJiZWQtZmFzdC1mb2xsb3ciYCBtYXJrZXIuAAAAAAAAABJFdXJjU3dhcFBhdGhTdGF0dXMAAAAAAAMAAAAAAAAACmV1cmNfdG9rZW4AAAAAABMAAAAAAAAAC3N3YXBfcm91dGVyAAAAABMAAAAAAAAACnVzZGNfdG9rZW4AAAAAABM=",
         "AAAAAQAAAAAAAAAAAAAAE0Rpc3RyaWJ1dGlvblN1bW1hcnkAAAAACgAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAhFN1bSBvZiBwcm8tcmF0YSBzaGFyZXMgZnVsbHkgZGVsaXZlcmVkLCB3aGV0aGVyIHBhaWQgaW4gVVNEQyBkaXJlY3RseQpvciBzd2FwcGVkIGludG8gRVVSQy4gUmVqZWN0ZWQgc3dhcCBsZWdzIGFyZSBub3QgY291bnRlZCBoZXJlLgAAABFkaXN0cmlidXRlZF90b3RhbAAAAAAAAAsAAAAAAAAABGR1c3QAAAALAAAAM0VVUkMgYWN0dWFsbHkgcmVjZWl2ZWQgYWNyb3NzIHN1Y2Nlc3NmdWwgc3dhcCBsZWdzLgAAAAAWZXVyY19kaXN0cmlidXRlZF90b3RhbAAAAAAACwAAAAAAAAANaG9sZGVyX2Ftb3VudAAAAAAAAAsAAAAAAAAADGhvbGRlcl9jb3VudAAAAAQAAAAAAAAADHBsYXRmb3JtX2ZlZQAAAAsAAAA+TnVtYmVyIG9mIGhvbGRlcnMgd2hvc2UgRVVSQyBzd2FwIGxlZyB3YXMgcmVqZWN0ZWQgdGhpcyBjeWNsZS4AAAAAAAxzd2Fwc19mYWlsZWQAAAAEAAAAAAAAAAx0b3RhbF9pbmNvbWUAAAALAAAAQlVTREMgd2l0aGhlbGQgaW4gdGhpcyBjb250cmFjdCBmb3IgaG9sZGVycyB3aG9zZSBzd2FwIGxlZ3MgZmFpbGVkLgAAAAAAGnVuZGlzdHJpYnV0ZWRfZmFpbGVkX3N3YXBzAAAAAAAL",
+        "AAAAAAAAACJSZXR1cm4gdGhlIGNvbmZpZ3VyZWQgYWxseSBzaWduZXIuAAAAAAAEYWxseQAAAAAAAAABAAAAEw==",
         "AAAAAAAABABQZXJtYW5lbnRseSB0ZXJtaW5hdGUgdGhlIGFsbHkvcHJvcGVydHkgcmVsYXRpb25zaGlwLgoKT25lLXdheSBhbmQgaXJyZXZlcnNpYmxlOiBvbmNlIGNhbGxlZCwgYHJlY29yZF9ldmlkZW5jZWAgYW5kCmBleGVjdXRlX2Rpc3RyaWJ1dGlvbmAgcmVqZWN0IGV2ZXJ5IHN1YnNlcXVlbnQgaW52b2NhdGlvbiB3aXRoCmBQYXlvdXRFcnJvcjo6Q29udHJhY3RFeGl0ZWRgLCBhbmQgbm8gdW4tZXhpdCBvciByZXZlcnNhbCBmdW5jdGlvbgpleGlzdHMuIFRoaXMgaXMgZGVsaWJlcmF0ZWx5IGEgc2VwYXJhdGUgZ2F0ZSBmcm9tIGBwYXVzZWAvYHVucGF1c2VgOgpwYXVzZSBpcyByZXZlcnNpYmxlIGFuZCBvcGVyYXRpb25hbCwgZXhpdCBpcyB0ZXJtaW5hbCBhbmQgZmFjdHVhbCwgc28gYQpjbGllbnQgY2FuIGFsd2F5cyB0ZWxsICJ0ZW1wb3JhcmlseSBwYXVzZWQiIGZyb20gInRoaXMgcGlsb3QgaXMgb3Zlci4iCgpHYXRlZCBieSB0aGUgc2FtZSB0d28tc2lnbmVyIGF1dGhvcml6YXRpb24gYXMKYGV4ZWN1dGVfZGlzdHJpYnV0aW9uYDogYm90aCBgb3BlcmF0b3JgIGFuZCBgYWxseWAgbXVzdCBhdXRob3JpemUgdGhlCnNhbWUgaW52b2NhdGlvbiwgc2luY2UgZW5kaW5nIHRoZSByZWxhdGlvbnNoaXAgaXMgYXQgbGVhc3QgYXMKY29uc2VxdWVudGlhbCBhcyBhcHByb3ZpbmcgYSBkaXN0cmlidXRpb24uIFRoZSBgcmVhc29uYCBpcyBzdG9yZWQgYW5kCmV4cG9zZWQgb24tY2hhaW4gdmlhIGBleGl0X3N0YXR1c2Agc28gYSBjbGllbnQgY2FuIHJlbmRlciB3aHkgYW5kIHdoZW4KdGhlIGV4aXQgaGFwcGVuZWQgd2l0aG91dCBhbnkgb2ZmLWNoYWluIHN0YXRlLgoKVGhpcyBmdW5jdGlvbiByZWNvcmRzIHRoZSBmYWN0IG9mIGV4aXQgb25seS4gSXQgZG9lcyBub3QgYXR0ZW1wdCBhbnkKZnVuZC1yZWNvdmVyeSwgcmVmdW5kLCBwcm8tcmF0YSB1bndpbmQsIG9yIGxlZ2FsIHdpbmQtZG93biBsb2dpYzogd2hhdApoYXBwZW5zIHRvIGFscmVhZHktY29sbGVjdGVkIG9yIGZ1dHVyZSBmdW5kcyBpcyBhbiBvcGVuIHByAAAABGV4aXQAAAADAAAAAAAAAAhvcGVyYXRvcgAAABMAAAAAAAAABGFsbHkAAAATAAAAAAAAAAZyZWFzb24AAAAAABAAAAAA",
         "AAAAAAAAAElQYXVzZSBldmlkZW5jZSByZWNvcmRpbmcsIHByZWZlcmVuY2UgY2hhbmdlcywgYW5kIGRpc3RyaWJ1dGlvbiBleGVjdXRpb24uAAAAAAAABXBhdXNlAAAAAAAAAQAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAA==",
         "AAAAAAAAAEpSZXN1bWUgZXZpZGVuY2UgcmVjb3JkaW5nLCBwcmVmZXJlbmNlIGNoYW5nZXMsIGFuZCBkaXN0cmlidXRpb24gZXhlY3V0aW9uLgAAAAAAB3VucGF1c2UAAAAAAQAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAA==",
+        "AAAAAAAAACZSZXR1cm4gdGhlIGNvbmZpZ3VyZWQgb3BlcmF0b3Igc2lnbmVyLgAAAAAACG9wZXJhdG9yAAAAAAAAAAEAAAAT",
         "AAAAAAAAACZSZXR1cm4gd2hldGhlciB0aGUgY29udHJhY3QgaXMgcGF1c2VkLgAAAAAACWlzX3BhdXNlZAAAAAAAAAAAAAABAAAAAQ==",
         "AAAAAAAAARtJbml0aWFsaXplIHBheW91dCBjb25maWd1cmF0aW9uLCBpbmNsdWRpbmcgdGhlIHR3byByZXF1aXJlZCBldmlkZW5jZSBhcHByb3ZlcnMuCgpgZXVyY190b2tlbmAgaXMgdGhlIEVVUkMgYXNzZXQgY29udHJhY3Qgb2ZmZXJlZCBhcyBzZXR0bGVtZW50IGFsdGVybmF0aXZlCmFuZCBgc3dhcF9yb3V0ZXJgIHRoZSB2ZXJpZmllZCBTb3Jvc3dhcCBBTU0gcm91dGVyIHVzZWQgdG8gY29udmVydCBVU0RDCnNoYXJlcyBhdCBwYXlvdXQgdGltZS4gQm90aCBhcmUgc3RvcmVkLCBuZXZlciBoYXJkY29kZWQuAAAAAAppbml0aWFsaXplAAAAAAAJAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAACG9wZXJhdG9yAAAAEwAAAAAAAAAEYWxseQAAABMAAAAAAAAAFnBsYXRmb3JtX2ZlZV9yZWNpcGllbnQAAAAAABMAAAAAAAAADGluY29tZV90b2tlbgAAABMAAAAAAAAACXdoaXRlbGlzdAAAAAAAABMAAAAAAAAACnVzZGNfdG9rZW4AAAAAABMAAAAAAAAACmV1cmNfdG9rZW4AAAAAABMAAAAAAAAAC3N3YXBfcm91dGVyAAAAABMAAAAA",
         "AAAAAAAAAP9SZXR1cm4gdGhlIHRlcm1pbmFsIGV4aXQgcmVjb3JkLCBvciBgTm9uZWAgd2hpbGUgdGhlIHBpbG90IGlzIGFjdGl2ZS4KClJlYWQtb25seSBhbmQgc2VsZi1jb250YWluZWQ6IGEgY2xpZW50IG5lZWRzIG5vIGNyb3NzLWNvbnRyYWN0IGNhbGwgYW5kCm5vIG9mZi1jaGFpbiBzdGF0ZSB0byBkaXN0aW5ndWlzaCAibm90IGV4aXRlZCIgKE5vbmUpIGZyb20gYSBwZXJtYW5lbnQKZXhpdCAodGhlIHJlY29yZGVkIHJlYXNvbiBhbmQgdGltZXN0YW1wKS4AAAAAC2V4aXRfc3RhdHVzAAAAAAAAAAABAAAD6AAAB9AAAAAKRXhpdFJlY29yZAAA",
-        "AAAAAAAAAM1GbGFnIGEgY3ljbGUgYXMgZGlzcHV0ZWQuIENhbGxhYmxlIGJ5IHRoZSBhZG1pbiBvciB0aGUgb3BlcmF0b3IuCgpBIGRpc3B1dGVkIGN5Y2xlIGNhbm5vdCBiZSBkaXN0cmlidXRlZCB1bnRpbCBpdCBpcyByZXN1Ym1pdHRlZCBhbmQKcmV2aWV3ZWQgYWdhaW4sIGFuZCBpdCBjb3VudHMgYWdhaW5zdCB0aGUgYWxseSBpbiB0aGUgaW52ZXN0b3IgdGltZWxpbmUuAAAAAAAADGZsYWdfZGlzcHV0ZQAAAAMAAAAAAAAABmNhbGxlcgAAAAAAEwAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAAAAAAAZyZWFzb24AAAAAABAAAAAA",
+        "AAAAAAAAAqhGbGFnIGEgY3ljbGUgYXMgZGlzcHV0ZWQuIENhbGxhYmxlIGJ5IHRoZSBhZG1pbiBvciB0aGUgb3BlcmF0b3IuCgpBbnkgY3ljbGUgdGhhdCBoYXMgbm90IGJlZW4gZGlzdHJpYnV0ZWQgY2FuIGJlIGRpc3B1dGVkLCBpbmNsdWRpbmcgb25lCmFscmVhZHkgZGlzcHV0ZWQgKHRoZSBuZXdlciByZWFzb24gcmVwbGFjZXMgdGhlIG9sZGVyIG9uZSkuIEEgZGlzcHV0ZWQKY3ljbGUgY2Fubm90IGJlIGRpc3RyaWJ1dGVkIHVudGlsIHRoZSBhbGx5IHJlc3VibWl0cyBpdCB1bmRlciB0aGUgc2FtZQpgY3ljbGVfaWRgIHRocm91Z2ggYHN1Ym1pdF9ldmlkZW5jZWAgYW5kIHRoZSBvcGVyYXRvciByZXZpZXdzIGFuZAphcHByb3ZlcyBpdCBhZ2Fpbi4gSXQgY291bnRzIGFnYWluc3QgdGhlIGFsbHkgaW4gdGhlIGludmVzdG9yIHRpbWVsaW5lLgoKUmVqZWN0ZWQgYWZ0ZXIgYGV4aXRgLCBsaWtlIGV2ZXJ5IG90aGVyIGV2aWRlbmNlIGFjdGlvbi4gRGVsaWJlcmF0ZWx5Cm5vdCBibG9ja2VkIGJ5IGBwYXVzZWA6IGEgZGlzcHV0ZSBjYW4gb25seSBzdG9wIG1vbmV5IGZyb20gbW92aW5nLCBzbwp0aGUgYWRtaW4gb3Igb3BlcmF0b3IgbXVzdCBiZSBhYmxlIHRvIGZyZWV6ZSBhIHN1c3BpY2lvdXMgY3ljbGUgd2hpbGUKYW4gaW5jaWRlbnQgaXMgdW5kZXIgcmV2aWV3LCBiZWZvcmUgYW55b25lIHVucGF1c2VzLgAAAAxmbGFnX2Rpc3B1dGUAAAADAAAAAAAAAAZjYWxsZXIAAAAAABMAAAAAAAAACGN5Y2xlX2lkAAAAEAAAAAAAAAAGcmVhc29uAAAAAAAQAAAAAA==",
         "AAAAAAAAADJSZXR1cm4gYW4gZXZpZGVuY2UgcmVjb3JkIGZvciBhIGN5Y2xlLCBpZiBwcmVzZW50LgAAAAAADGdldF9ldmlkZW5jZQAAAAEAAAAAAAAACGN5Y2xlX2lkAAAAEAAAAAEAAAPoAAAH0AAAAA5FdmlkZW5jZVJlY29yZAAA",
+        "AAAAAAAAADZSZXR1cm4gdGhlIHBlbmRpbmcgYWxseSwgaWYgYSByb3RhdGlvbiBpcyBpbiBwcm9ncmVzcy4AAAAAAAxwZW5kaW5nX2FsbHkAAAAAAAAAAQAAA+gAAAAT",
         "AAAAAAAAALdNb3ZlIGEgc3VibWl0dGVkIGN5Y2xlIGludG8gYFVuZGVyUmV2aWV3YC4KClRoaXMgZXhpc3RzIHNvIGFuIGFsbHkgY2FuIHNlZSB0aGF0IHRoZWlyIHN1Ym1pc3Npb24gd2FzIGFjdHVhbGx5IHBpY2tlZAp1cCwgaW5zdGVhZCBvZiBzdGFyaW5nIGF0IGFuIHVuY2hhbmdlZCBgU3VibWl0dGVkYCBiYWRnZSBmb3IgZGF5cy4AAAAADHN0YXJ0X3JldmlldwAAAAIAAAAAAAAACG9wZXJhdG9yAAAAEwAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAAA==",
+        "AAAAAAAAADdSZXR1cm4gdGhlIHBlbmRpbmcgYWRtaW4sIGlmIGEgdHJhbnNmZXIgaXMgaW4gcHJvZ3Jlc3MuAAAAAA1wZW5kaW5nX2FkbWluAAAAAAAAAAAAAAEAAAPoAAAAEw==",
         "AAAAAAAAAp5SZWxlYXNlIFVTREMgdGhpcyBjb250cmFjdCB3aXRoaGVsZCBhZnRlciBhIGZhaWxlZCBFVVJDIHN3YXAgbGVnLgoKU2VsZi1zZXJ2ZSBhbmQgcGFpZCBpbiBVU0RDOiB0aGUgd2l0aGhlbGQgYW1vdW50IGlzIHRoZSBob2xkZXIncyBvd24KcHJvLXJhdGEgc2hhcmUgdGhhdCBuZXZlciBsZWZ0IHRoaXMgY29udHJhY3QsIHNvIGEgZmFpbGVkIHN3YXAgbGVnIGNhbgpuZXZlciBwZXJtYW5lbnRseSBzdHJhbmQgaXQuCgpEZWxpYmVyYXRlbHkgTk9UIGdhdGVkIGJ5IGBwYXVzZWAsIGBleGl0YCwgb3IgdGhlIHdoaXRlbGlzdC4gVGhvc2UgZ2F0ZXMKZXhpc3QgdG8gc3RvcCBuZXcgb2JsaWdhdGlvbnMgYmVpbmcgY3JlYXRlZDsgcmVmdXNpbmcgdG8gcmV0dXJuIG1vbmV5CnRoaXMgY29udHJhY3QgYWxyZWFkeSBob2xkcyBmb3IgaXRzIG93bmVyIHdvdWxkIHR1cm4gYW4gb3BlcmF0aW9uYWwKcGF1c2Ugb3IgYSB3aW5kLWRvd24gaW50byBhIGZ1bmQgbG9zcywgd2hpY2ggaXMgZXhhY3RseSB3aGF0IHRoZSBwaWxvdApmb3JiaWRzLiBUaGUgcmVzZXJ2ZWQgYmFsYW5jZSBpcyB6ZXJvZWQgYmVmb3JlIHRoZSB0cmFuc2Zlciwgc28gYSByZXBlYXQKb3IgcmUtZW50cmFudCBjYWxsIGlzIHJlamVjdGVkIHdpdGggYE5vdGhpbmdUb0NsYWltYCByYXRoZXIgdGhhbiBwYXlpbmcKdHdpY2UuAAAAAAAOY2xhaW1fd2l0aGhlbGQAAAAAAAEAAAAAAAAABmhvbGRlcgAAAAAAEwAAAAA=",
         "AAAAAAAAAKZSZWNvcmQgYSBtb250aGx5IGluY29tZSBldmlkZW5jZSByZWZlcmVuY2UgYW5kIGFwcHJvdmUgdGhlIGRpc3RyaWJ1dGlvbiBhbW91bnQuCgpCb3RoIGBvcGVyYXRvcmAgYW5kIGBhbGx5YCBtdXN0IHNpZ24gdGhlIHNhbWUgaW52b2NhdGlvbiB0aHJvdWdoIG5hdGl2ZSBTb3JvYmFuIGF1dGguAAAAAAAPcmVjb3JkX2V2aWRlbmNlAAAAAAYAAAAAAAAACG9wZXJhdG9yAAAAEwAAAAAAAAAEYWxseQAAABMAAAAAAAAACGN5Y2xlX2lkAAAAEAAAAAAAAAANZXZpZGVuY2VfaGFzaAAAAAAAAA4AAAAAAAAADWV2aWRlbmNlX2xpbmsAAAAAAAAQAAAAAAAAAAx0b3RhbF9pbmNvbWUAAAALAAAAAA==",
         "AAAAAAAAAEFBcHByb3ZlIG9yIHJlamVjdCBhIGN5Y2xlJ3MgZXZpZGVuY2UsIHdpdGggYSByZWFzb24gb24gcmVqZWN0aW9uLgAAAAAAAA9yZXZpZXdfZXZpZGVuY2UAAAAABAAAAAAAAAAIb3BlcmF0b3IAAAATAAAAAAAAAAhjeWNsZV9pZAAAABAAAAAAAAAACGFwcHJvdmVkAAAAAQAAAAAAAAAGcmVhc29uAAAAAAAQAAAAAA==",
-        "AAAAAAAAATtTdWJtaXQgYSBjeWNsZSdzIGluY29tZSBldmlkZW5jZSBmb3IgcmV2aWV3LgoKT25seSB0aGUgYWxseSBzaWducy4gVGhlIGN5Y2xlIGVudGVycyBgU3VibWl0dGVkYCBhbmQgd2FpdHMgZm9yIHRoZQpvcGVyYXRvciwgd2hpY2ggaXMgd2hhdCBtYWtlcyB0aGUgcmV2aWV3IHF1ZXVlIGFuIG9uLWNoYWluIGZhY3QgcmF0aGVyCnRoYW4gYW4gb2ZmLWNoYWluIGJvb2trZWVwaW5nIHRhYmxlLiBBIGN5Y2xlIHByZXZpb3VzbHkgcmVqZWN0ZWQgbWF5IGJlCnN1Ym1pdHRlZCBhZ2FpbjsgYW4gYXBwcm92ZWQgb3IgZGlzdHJpYnV0ZWQgY3ljbGUgbWF5IG5vdC4AAAAAD3N1Ym1pdF9ldmlkZW5jZQAAAAAFAAAAAAAAAARhbGx5AAAAEwAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAAAAAAA1ldmlkZW5jZV9oYXNoAAAAAAAADgAAAAAAAAANZXZpZGVuY2VfbGluawAAAAAAABAAAAAAAAAADHRvdGFsX2luY29tZQAAAAsAAAAA",
+        "AAAAAAAAAY5TdWJtaXQgYSBjeWNsZSdzIGluY29tZSBldmlkZW5jZSBmb3IgcmV2aWV3LgoKT25seSB0aGUgYWxseSBzaWducy4gVGhlIGN5Y2xlIGVudGVycyBgU3VibWl0dGVkYCBhbmQgd2FpdHMgZm9yIHRoZQpvcGVyYXRvciwgd2hpY2ggaXMgd2hhdCBtYWtlcyB0aGUgcmV2aWV3IHF1ZXVlIGFuIG9uLWNoYWluIGZhY3QgcmF0aGVyCnRoYW4gYW4gb2ZmLWNoYWluIGJvb2trZWVwaW5nIHRhYmxlLiBBIHJlamVjdGVkIG9yIGRpc3B1dGVkIGN5Y2xlIG1heSBiZQpzdWJtaXR0ZWQgYWdhaW4gdW5kZXIgdGhlIHNhbWUgYGN5Y2xlX2lkYCwgd2hpY2ggYWxzbyBlbWl0cyBgcmVzdWJtaXRgOwphbnkgb3RoZXIgZXhpc3RpbmcgY3ljbGUsIGFwcHJvdmVkIG9yIGRpc3RyaWJ1dGVkIGluY2x1ZGVkLCBtYXkgbm90LgAAAAAAD3N1Ym1pdF9ldmlkZW5jZQAAAAAFAAAAAAAAAARhbGx5AAAAEwAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAAAAAAA1ldmlkZW5jZV9oYXNoAAAAAAAADgAAAAAAAAANZXZpZGVuY2VfbGluawAAAAAAABAAAAAAAAAADHRvdGFsX2luY29tZQAAAAsAAAAA",
+        "AAAAAAAAADpSZXR1cm4gdGhlIHBlbmRpbmcgb3BlcmF0b3IsIGlmIGEgcm90YXRpb24gaXMgaW4gcHJvZ3Jlc3MuAAAAAAAQcGVuZGluZ19vcGVyYXRvcgAAAAAAAAABAAAD6AAAABM=",
         "AAAAAAAAADxSZXR1cm4gdGhlIHN3YXAgbGVncyByZWplY3RlZCBkdXJpbmcgYSBjeWNsZSdzIGRpc3RyaWJ1dGlvbi4AAAARZ2V0X3N3YXBfZmFpbHVyZXMAAAAAAAABAAAAAAAAAAhjeWNsZV9pZAAAABAAAAABAAAD6gAAB9AAAAARU3dhcEZhaWx1cmVSZWNvcmQAAAA=",
+        "AAAAAAAAAZhCZWdpbiByb3RhdGluZyB0aGUgYWxseSBzaWduZXIgdG8gYSBuZXcgYWRkcmVzcy4KClR3by1zdGVwIChgcm90YXRlX2FsbHlfc3RhcnRgIC8gYHJvdGF0ZV9hbGx5X2FjY2VwdGAgLwpgcm90YXRlX2FsbHlfY2FuY2VsYCksIGdhdGVkIGJ5IHRoZSBhZG1pbiBvbiBzdGFydC9jYW5jZWwgYW5kIHNpZ25lZCBieQpgbmV3X2FsbHlgIG9uIGFjY2VwdGFuY2Ugc28gYSBsb3N0IG9yIGNvbXByb21pc2VkIGFsbHkga2V5IGNhbiBiZQpyZXBsYWNlZCB3aXRob3V0IHN0cmFuZGluZyBkaXN0cmlidXRpb25zIG9yIGBleGl0YCAoc2VlCmRvY3Mvc3RyYXRlZ3kvZGVjaXNpb24tbG9nLm1kKS4gV29ya3Mgd2hpbGUgcGF1c2VkOyByZWplY3RlZCBhZnRlcgpgZXhpdGAgd2l0aCBgUGF5b3V0RXJyb3I6OkNvbnRyYWN0RXhpdGVkYC4AAAARcm90YXRlX2FsbHlfc3RhcnQAAAAAAAACAAAAAAAAAAZjYWxsZXIAAAAAABMAAAAAAAAACG5ld19hbGx5AAAAEwAAAAA=",
+        "AAAAAAAAAL5BY2NlcHQgYSBwZW5kaW5nIGFsbHkgcm90YXRpb24uIE11c3QgYmUgc2lnbmVkIGJ5IHRoZSBhZGRyZXNzIG5hbWVkIGluCmByb3RhdGVfYWxseV9zdGFydGAuIFJlLWNoZWNrcyBgb3BlcmF0b3IgIT0gYWxseWAgYXQgYWNjZXB0YW5jZSB0aW1lIHNvCmNvbmN1cnJlbnQgcGVuZGluZyByb3RhdGlvbnMgY2FuIG5ldmVyIGNvbGxpZGUuAAAAAAAScm90YXRlX2FsbHlfYWNjZXB0AAAAAAABAAAAAAAAAAhuZXdfYWxseQAAABMAAAAA",
+        "AAAAAAAAAD1DYW5jZWwgYSBwZW5kaW5nIGFsbHkgcm90YXRpb24gYmVmb3JlIGFjY2VwdGFuY2UuIEFkbWluLW9ubHkuAAAAAAAAEnJvdGF0ZV9hbGx5X2NhbmNlbAAAAAAAAQAAAAAAAAAGY2FsbGVyAAAAAAATAAAAAA==",
         "AAAAAAAABABFeGVjdXRlIHRoZSBhcHByb3ZlZCBwYXlvdXQgZm9yIGEgY3ljbGUsIGhvbm9yaW5nIGVhY2ggaG9sZGVyJ3MKc2V0dGxlbWVudC1jdXJyZW5jeSBwcmVmZXJlbmNlLgoKQm90aCBzaWduZXJzIG11c3QgYXV0aG9yaXplIHRoZSBleGVjdXRpb24gYmVjYXVzZSB0aGV5IGFsc28gY2FycnkgdGhlCnByaWNlLWd1YXJkIHJlc3BvbnNpYmlsaXR5OiBgbWluX2V1cmNfcGVyX3VzZGNgIGlzIHRoZSBtaW5pbXVtIGV4Y2hhbmdlCnJhdGUgKHNjYWxlZCBieSBgUkFURV9ERU5PTUlOQVRPUmApIGF0IHdoaWNoIEVVUkMtcHJlZmVyZW5jZSBzaGFyZXMgbWF5CmJlIGNvbnZlcnRlZC4gVGhpcyBib3VuZCBpcyBkZWxpYmVyYXRlbHkgc3VwcGxpZWQgcGVyIGN5Y2xlIGJ5IHRoZSBzYW1lCmR1YWwgc2lnbmF0dXJlIHRoYXQgYXBwcm92ZXMgYHRvdGFsX2luY29tZWAsIHJhdGhlciB0aGFuIGJlaW5nIGEgc3RhdGljCmluaXQtdGltZSBzbGlwcGFnZSB0b2xlcmFuY2U6IHdpdGhvdXQgYW4gb3JhY2xlIHRoZXJlIGlzIG5vIG9uLWNoYWluCnJlZmVyZW5jZSByYXRlIHRvIGFwcGx5IGEgdG9sZXJhbmNlIGFnYWluc3QsIGFuZCB0eWluZyB0aGUgZmxvb3IgdG8gdGhlCmFjY291bnRhYmxlIHNpZ25lcnMgbWVhbnMgb25seSBqb2ludCBvcGVyYXRvcithbGx5IGFjdGlvbiBjYW4gbW92ZSB0aGUKZWZmZWN0aXZlIHByaWNlIHdoaWxlIGV2ZXJ5IEVVUkMtb3B0ZWQgaG9sZGVyIG9mIHRoYXQgY3ljbGUgaXMgcHJvdGVjdGVkCmJ5IHRoZSB2ZW51ZS1lbmZvcmNlZCBgYW1vdW50X291dF9taW5gLiBUaGUgcm91dGVyIHJlamVjdHMgdGhlIGxlZyBiZWZvcmUKbW92aW5nIGFueSB0b2tlbnMgd2hlbiB0aGUgcG9vbCBjYW5ub3Qgc2F0aXNmeSB0aGUgYm91bmQsIGFuZCB0aGlzCmNvbnRyYWN0IHJlLXZlcmlmaWVzIHRoZSBkZWxpdmVyZWQgYW1vdW50IGRlZmVuc2l2ZWx5IGFmdGVyd2FyZHMuCgpGYWlsdXJlIGlzb2xhdGlvbjogYSByZWplY3RlZCBzd2FwIGxlZyAoaWxsaXF1aWRpdHksIHNsaXBwYWdlIGJyZWFjaCwKdmVudWUgAAAAFGV4ZWN1dGVfZGlzdHJpYnV0aW9uAAAABAAAAAAAAAAIb3BlcmF0b3IAAAATAAAAAAAAAARhbGx5AAAAEwAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAAAAAABFtaW5fZXVyY19wZXJfdXNkYwAAAAAAAAsAAAABAAAH0AAAABNEaXN0cmlidXRpb25TdW1tYXJ5AA==",
         "AAAAAAAAAI1SZXR1cm4gdGhlIFVTREMgcmVzZXJ2ZWQgaW4gdGhpcyBjb250cmFjdCBmb3IgYSBob2xkZXIgd2hvc2UgRVVSQyBzd2FwCmxlZyBmYWlsZWQgYW5kIHdobyBoYXMgbm90IHlldCBjbGFpbWVkIGl0LiBaZXJvIG1lYW5zIG5vdGhpbmcgaXMgb3dlZC4AAAAAAAAUZ2V0X3dpdGhoZWxkX2JhbGFuY2UAAAABAAAAAAAAAAZob2xkZXIAAAAAABMAAAABAAAACw==",
+        "AAAAAAAAA59CZWdpbiB0cmFuc2ZlcnJpbmcgYWRtaW4gdG8gYSBuZXcgYWRkcmVzcy4KClR3by1zdGVwLCBmb2xsb3dpbmcgdGhlIHNhbWUgcGF0dGVybiBhcyBgZGVmaS1yd2FgJ3MKYEFkbWluQ29udHJvbDo6dHJhbnNmZXJfYWRtaW5fc3RhcnRgIChzZWUKZG9jcy9vcGVyYXRpb25zL3J1bmJvb2stcm9sZS1tYW5hZ2VtZW50Lm1kKS4gVGhlIGN1cnJlbnQgYWRtaW4ga2VlcHMKZnVsbCBjb250cm9sIHVudGlsIGBuZXdfYWRtaW5gIGNhbGxzIGB0cmFuc2Zlcl9hZG1pbl9hY2NlcHRgLCBzbyBhCm1pc3R5cGVkIG9yIHVucmVhY2hhYmxlIG5ldyBhZG1pbiBjYW4gbmV2ZXIgbG9jayB0aGUgY29udHJhY3Qgb3V0LgpOb3QgYmxvY2tlZCBieSBgcGF1c2VgOiBhZG1pbiByZWNvdmVyeSBtdXN0IGtlZXAgd29ya2luZyB3aGlsZSBwYXVzZWQuCgpEZWxpYmVyYXRlbHkgZ2F0ZWQgYnkgdGhlIGFkbWluIGFsb25lLCBub3QgYnkgdGhlIG9wZXJhdG9yK2FsbHkKdHdvLXNpZ25lciBtb2RlbCB1c2VkIGZvciBgcmVjb3JkX2V2aWRlbmNlYCwgYGV4ZWN1dGVfZGlzdHJpYnV0aW9uYCwKYW5kIGBleGl0YC4gUmVhc29uaW5nIHJlY29yZGVkIGluIGRvY3Mvc3RyYXRlZ3kvZGVjaXNpb24tbG9nLm1kOiB0aGUKYWRtaW4ga2V5IGlzIEFra3VlYSdzIG93biBwbGF0Zm9ybSBrZXksIGRpc3RpbmN0IGZyb20gdGhlIG9wZXJhdG9yIGFuZAphbGx5IGJ1c2luZXNzIHJvbGVzLCBhbmQgcmVxdWlyaW5nIHRoZSBhbGx5J3MgY28tc2lnbmF0dXJlIHdvdWxkIGxldAphbiB1bnJlc3BvbnNpdmUgb3IgYWR2ZXJzYXJpYWwgYWxseSBibG9jayBBa2t1ZWEncyBhYmlsaXR5IHRvIHJlY292ZXIKZnJvbSBhIGxvc3Qgb3IgY29tcHJvbWlzZWQgYWRtaW4ga2V5LCB3aGljaCBpcyBleGFjdGx5IHRoZSBmYWlsdXJlCm1vZGUgdGhpcyBmZWF0dXJlIGV4aXN0cyB0byBjbG9zZS4AAAAAFHRyYW5zZmVyX2FkbWluX3N0YXJ0AAAAAgAAAAAAAAAGY2FsbGVyAAAAAAATAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAA==",
         "AAAAAAAAAMlSZXBvcnQgdGhlIGxpdmUgRVVSQyBzZXR0bGVtZW50IGNvbmZpZ3VyYXRpb24uIFJldHVybnMgYE5vbmVgIGJlZm9yZQppbml0aWFsaXphdGlvbjsgYWZ0ZXIgaW5pdGlhbGl6YXRpb24gdGhlIGRhc2hib2FyZCByZWFkcyB0aGUgYWN0dWFsCnJvdXRlciBhbmQgYXNzZXQgYWRkcmVzc2VzIGluc3RlYWQgb2YgYSBoYXJkY29kZWQgbWFya2VyIHN0cmluZy4AAAAAAAAVZXVyY19zd2FwX3BhdGhfc3RhdHVzAAAAAAAAAAAAAAEAAAPoAAAH0AAAABJFdXJjU3dhcFBhdGhTdGF0dXMAAA==",
         "AAAAAAAAAYBSZXR1cm4gb25lIGhvbGRlcidzIHBlcnNpc3RlZCBzZXR0bGVtZW50IG91dGNvbWUgZm9yIGEgY3ljbGUuCgpUaGlzIGlzIHRoZSBhdXRob3JpdGF0aXZlIGFuc3dlciB0byAid2hhdCBkaWQgdGhpcyBpbnZlc3RvciBhY3R1YWxseQpyZWNlaXZlLCBhbmQgaW4gd2hpY2ggY3VycmVuY3ksIGZvciB0aGlzIGN5Y2xlIjogdGhlIGN1cnJlbmN5IHBhaWQsIHRoZQpkZWxpdmVyZWQgYW1vdW50LCBhbmQgd2hldGhlciB0aGUgc2hhcmUgaXMgc3RpbGwgd2l0aGhlbGQuIFJlYWQgZnJvbQpzdG9yZWQgc3RhdGUsIG5ldmVyIHJlY29tcHV0ZWQgZnJvbSB0aGUgaG9sZGVyJ3MgY3VycmVudCBiYWxhbmNlLCB3aGljaApjb3VsZCBoYXZlIGNoYW5nZWQgc2luY2UgdGhlIGN5Y2xlIHJhbi4AAAAVZ2V0X2hvbGRlcl9zZXR0bGVtZW50AAAAAAAAAgAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAAAAAAAZob2xkZXIAAAAAABMAAAABAAAD6AAAB9AAAAAQSG9sZGVyU2V0dGxlbWVudA==",
+        "AAAAAAAAAflCZWdpbiByb3RhdGluZyB0aGUgb3BlcmF0b3Igc2lnbmVyIHRvIGEgbmV3IGFkZHJlc3MuCgpUd28tc3RlcCAoYHJvdGF0ZV9vcGVyYXRvcl9zdGFydGAgLyBgcm90YXRlX29wZXJhdG9yX2FjY2VwdGAgLwpgcm90YXRlX29wZXJhdG9yX2NhbmNlbGApLCBtYXRjaGluZyB0aGUgYWRtaW4gc3VjY2Vzc2lvbiBmbG93IHNvIGEKbWlzdHlwZWQgb3IgdW5yZWFjaGFibGUgYWRkcmVzcyBjYW4gbmV2ZXIgbG9jayBvdXQgdGhlIGNvbnRyYWN0LiBHYXRlZApieSB0aGUgYWRtaW4gYWxvbmUgc28gYSBsb3N0IG9yIGNvbXByb21pc2VkIG9wZXJhdG9yIGtleSByZW1haW5zCnJlY292ZXJhYmxlIHdpdGhvdXQgcmVxdWlyaW5nIHRoZSBvdXRnb2luZyBrZXkgb3IgYW4gYWxseSBjby1zaWduYXR1cmUKKHNlZSBkb2NzL3N0cmF0ZWd5L2RlY2lzaW9uLWxvZy5tZCkuIFdvcmtzIHdoaWxlIHBhdXNlZDsgcmVqZWN0ZWQgYWZ0ZXIKYGV4aXRgIHdpdGggYFBheW91dEVycm9yOjpDb250cmFjdEV4aXRlZGAuAAAAAAAAFXJvdGF0ZV9vcGVyYXRvcl9zdGFydAAAAAAAAAIAAAAAAAAABmNhbGxlcgAAAAAAEwAAAAAAAAAMbmV3X29wZXJhdG9yAAAAEwAAAAA=",
+        "AAAAAAAAAOtBY2NlcHQgYSBwZW5kaW5nIGFkbWluIHRyYW5zZmVyLiBNdXN0IGJlIHNpZ25lZCBieSB0aGUgYWRkcmVzcyBuYW1lZAppbiBgdHJhbnNmZXJfYWRtaW5fc3RhcnRgLiBUaGUgb2xkIGFkbWluIGxvc2VzIGV2ZXJ5IHByaXZpbGVnZSB0aGUKaW5zdGFudCB0aGlzIGNhbGwgc3VjY2VlZHMsIHNpbmNlIGByZXF1aXJlX2FkbWluYCBjb21wYXJlcyBhZ2FpbnN0IHRoZQpzaW5nbGUgc3RvcmVkIGFkbWluIGFkZHJlc3MuAAAAABV0cmFuc2Zlcl9hZG1pbl9hY2NlcHQAAAAAAAABAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAA==",
+        "AAAAAAAAAFlDYW5jZWwgYSBwZW5kaW5nIGFkbWluIHRyYW5zZmVyIGJlZm9yZSBpdCBpcyBhY2NlcHRlZC4gT25seSB0aGUKY3VycmVudCBhZG1pbiBjYW4gY2FuY2VsLgAAAAAAABV0cmFuc2Zlcl9hZG1pbl9jYW5jZWwAAAAAAAABAAAAAAAAAAZjYWxsZXIAAAAAABMAAAAA",
+        "AAAAAAAAAC1SZXR1cm4gdGhlIGNvbmZpZ3VyZWQgcGxhdGZvcm0gZmVlIHJlY2lwaWVudC4AAAAAAAAWcGxhdGZvcm1fZmVlX3JlY2lwaWVudAAAAAAAAAAAAAEAAAAT",
+        "AAAAAAAAAMZBY2NlcHQgYSBwZW5kaW5nIG9wZXJhdG9yIHJvdGF0aW9uLiBNdXN0IGJlIHNpZ25lZCBieSB0aGUgYWRkcmVzcyBuYW1lZAppbiBgcm90YXRlX29wZXJhdG9yX3N0YXJ0YC4gUmUtY2hlY2tzIGBvcGVyYXRvciAhPSBhbGx5YCBhdCBhY2NlcHRhbmNlCnRpbWUgc28gY29uY3VycmVudCBwZW5kaW5nIHJvdGF0aW9ucyBjYW4gbmV2ZXIgY29sbGlkZS4AAAAAABZyb3RhdGVfb3BlcmF0b3JfYWNjZXB0AAAAAAABAAAAAAAAAAxuZXdfb3BlcmF0b3IAAAATAAAAAA==",
+        "AAAAAAAAAEFDYW5jZWwgYSBwZW5kaW5nIG9wZXJhdG9yIHJvdGF0aW9uIGJlZm9yZSBhY2NlcHRhbmNlLiBBZG1pbi1vbmx5LgAAAAAAABZyb3RhdGVfb3BlcmF0b3JfY2FuY2VsAAAAAAABAAAAAAAAAAZjYWxsZXIAAAAAABMAAAAA",
         "AAAAAAAAAM9SZXR1cm4gdGhlIHRvdGFsIFVTREMgcmVzZXJ2ZWQgZm9yIGV2ZXJ5IGhvbGRlciBhY3Jvc3MgYWxsIGN5Y2xlcy4KCkV4cG9zZWQgc28gYW4gYXVkaXRvciBjYW4gcmVjb25jaWxlIHRoZSBjb250cmFjdCdzIFVTREMgYmFsYW5jZSBhZ2FpbnN0CnRoZSBzdW0gb2Ygb3V0c3RhbmRpbmcgaG9sZGVyIGNsYWltcyB3aXRob3V0IHNjYW5uaW5nIGV2ZXJ5IGhvbGRlci4AAAAAFnRvdGFsX3dpdGhoZWxkX2JhbGFuY2UAAAAAAAAAAAABAAAACw==",
         "AAAAAAAAAENSZXR1cm4gYSBob2xkZXIncyBzZXR0bGVtZW50LWN1cnJlbmN5IHByZWZlcmVuY2U7IGRlZmF1bHRzIHRvIFVTREMuAAAAABdnZXRfY3VycmVuY3lfcHJlZmVyZW5jZQAAAAABAAAAAAAAAAZob2xkZXIAAAAAABMAAAABAAAH0AAAAAhDdXJyZW5jeQ==",
         "AAAAAAAAAL1TZXQgb3IgdXBkYXRlIHRoZSBjYWxsZXIncyBvd24gc2V0dGxlbWVudC1jdXJyZW5jeSBwcmVmZXJlbmNlLgoKU2VsZi1zZXJ2ZTogZ2F0ZWQgYnkgYHJlcXVpcmVfYXV0aGAgdG8gdGhlIGhvbGRlcidzIG93biBhZGRyZXNzLCBhbmQKcmVzdHJpY3RlZCB0byBhZGRyZXNzZXMgYXBwcm92ZWQgb24gdGhlIHBpbG90IHdoaXRlbGlzdC4AAAAAAAAXc2V0X2N1cnJlbmN5X3ByZWZlcmVuY2UAAAAAAgAAAAAAAAAGaG9sZGVyAAAAAAATAAAAAAAAAAhjdXJyZW5jeQAAB9AAAAAIQ3VycmVuY3kAAAAA",
         "AAAAAAAAAQlSZXR1cm4gYSBjeWNsZSdzIHBlcnNpc3RlZCBkaXN0cmlidXRpb24gc3VtbWFyeSwgaWYgaXQgaGFzIGRpc3RyaWJ1dGVkLgoKUmVhZCBmcm9tIHRoZSBjeWNsZSdzIHN0b3JlZCByZWNvcmQgcmF0aGVyIHRoYW4gZnJvbSB0aGUgYGRpc3RgIGV2ZW50LApzbyBhIGNsaWVudCBjYW4gc3RpbGwgc2hvdyBmZWUsIGN1cnJlbmN5IHRvdGFscywgYW5kIGZhaWxlZC1sZWcgdG90YWxzCmFmdGVyIHRoZSBSUEMncyBldmVudCByZXRlbnRpb24gd2luZG93IGhhcyBwYXNzZWQuAAAAAAAAGGdldF9kaXN0cmlidXRpb25fc3VtbWFyeQAAAAEAAAAAAAAACGN5Y2xlX2lkAAAAEAAAAAEAAAPoAAAH0AAAABNEaXN0cmlidXRpb25TdW1tYXJ5AA==",
-        "AAAABAAAAAAAAAAAAAAAC1BheW91dEVycm9yAAAAAB4AAAAAAAAAEkFscmVhZHlJbml0aWFsaXplZAAAAAAAAQAAAAAAAAAOTm90SW5pdGlhbGl6ZWQAAAAAAAIAAAAAAAAADFVuYXV0aG9yaXplZAAAAAMAAAAAAAAADkNvbnRyYWN0UGF1c2VkAAAAAAAEAAAAAAAAABNJbnZhbGlkRXZpZGVuY2VIYXNoAAAAAAUAAAAAAAAAE01pc3NpbmdFdmlkZW5jZUxpbmsAAAAABgAAAAAAAAAKWmVyb0Ftb3VudAAAAAAABwAAAAAAAAAUQ3ljbGVBbHJlYWR5UmVjb3JkZWQAAAAIAAAAAAAAABBDeWNsZU5vdFJlY29yZGVkAAAACQAAAAAAAAAXQ3ljbGVBbHJlYWR5RGlzdHJpYnV0ZWQAAAAACgAAAAAAAAAORW1wdHlIb2xkZXJTZXQAAAAAAAsAAAAAAAAAFFJlY2lwaWVudE5vdEFwcHJvdmVkAAAADAAAAAAAAAASQXJpdGhtZXRpY092ZXJmbG93AAAAAAANAAAAAAAAABlJbnN1ZmZpY2llbnRQYXlvdXRCYWxhbmNlAAAAAAAADgAAAAAAAAAKUmVlbnRyYW5jeQAAAAAADwAAAAAAAAARSW50ZXJuYWxJbnZhcmlhbnQAAAAAAAAQAAAAAAAAAA9TaWduZXJDb2xsaXNpb24AAAAAEQAAAJZBIHBlci1ob2xkZXIgc3dhcCBsZWcgZmFpbGVkIGF0IHRoZSBleHRlcm5hbCB2ZW51ZSAoaWxsaXF1aWRpdHksIHZlbnVlIGVycm9yKS4KVGhlIGxlZyBpcyByZWplY3RlZCBmb3IgdGhhdCBob2xkZXIgb25seTsgb3RoZXIgaG9sZGVycyBhcmUgdW5hZmZlY3RlZC4AAAAAAApTd2FwRmFpbGVkAAAAAAASAAAAP1RoZSBzd2FwIGRlbGl2ZXJlZCBsZXNzIHRoYW4gdGhlIHNpZ25lZCBtaW5pbXVtLXJlY2VpdmVkIGJvdW5kLgAAAAAQU2xpcHBhZ2VFeGNlZWRlZAAAABMAAAA6RVVSQy9zd2FwLXJvdXRlciBjb25maWd1cmF0aW9uIGlzIG1pc3Npbmcgb3IgaW5jb25zaXN0ZW50LgAAAAAAE1JvdXRlck5vdENvbmZpZ3VyZWQAAAAAFAAAAGFBIGN5Y2xlIHdpdGggRVVSQy1wcmVmZXJlbmNlIGhvbGRlcnMgd2FzIGV4ZWN1dGVkIHdpdGhvdXQgYSBwb3NpdGl2ZQptaW5pbXVtIGV4Y2hhbmdlIHJhdGUgYm91bmQuAAAAAAAADkludmFsaWRNaW5SYXRlAAAAAAAVAAAAyVRoZSBhbGx5L3Byb3BlcnR5IHJlbGF0aW9uc2hpcCBoYXMgYmVlbiBwZXJtYW5lbnRseSB0ZXJtaW5hdGVkIHZpYQpgZXhpdGA7IGV2aWRlbmNlIHJlY29yZGluZyBhbmQgZGlzdHJpYnV0aW9uIGV4ZWN1dGlvbiBhcmUgcmVqZWN0ZWQKZm9yZXZlciBhZnRlci4gRGlzdGluY3QgZnJvbSBgQ29udHJhY3RQYXVzZWRgLCB3aGljaCBpcyByZXZlcnNpYmxlLgAAAAAAAA5Db250cmFjdEV4aXRlZAAAAAAAFgAAADVgZXhpdGAgd2FzIGludm9rZWQgd2l0aG91dCBhIG5vbi1lbXB0eSByZWFzb24gc3RyaW5nLgAAAAAAABFNaXNzaW5nRXhpdFJlYXNvbgAAAAAAABcAAABGRGlzdHJpYnV0aW9uIHdhcyByZXF1ZXN0ZWQgZm9yIGEgY3ljbGUgd2hvc2UgZXZpZGVuY2UgaXMgbm90IGFwcHJvdmVkLgAAAAAAE0V2aWRlbmNlTm90QXBwcm92ZWQAAAAAGAAAADtBIHJldmlldyB3YXMgcmVxdWVzdGVkIG9uIGEgY3ljbGUgdGhhdCBpcyBub3QgYXdhaXRpbmcgb25lLgAAAAAXSW52YWxpZFN0YXR1c1RyYW5zaXRpb24AAAAAGQAAAD1BIHJlamVjdGlvbiBvciBkaXNwdXRlIHdhcyBzdWJtaXR0ZWQgd2l0aG91dCBhIHJlYXNvbiBzdHJpbmcuAAAAAAAAE01pc3NpbmdSZXZpZXdSZWFzb24AAAAAGgAAAChObyBldmlkZW5jZSByZWNvcmQgZXhpc3RzIGZvciB0aGUgY3ljbGUuAAAAEEV2aWRlbmNlTm90Rm91bmQAAAAbAAAANk51bWJlciBvZiBob2xkZXJzIGV4Y2VlZHMgdGhlIG1heGltdW0gc3VwcG9ydGVkIGJvdW5kLgAAAAAADlRvb01hbnlIb2xkZXJzAAAAAAAcAAAAnGB0cmFuc2Zlcl9hZG1pbl9hY2NlcHRgIHdhcyBjYWxsZWQgYnkgYW4gYWRkcmVzcyB0aGF0IGRvZXMgbm90IG1hdGNoCnRoZSBwZW5kaW5nIGFkbWluIHJlY29yZGVkIGJ5IGB0cmFuc2Zlcl9hZG1pbl9zdGFydGAsIG9yIG5vIHRyYW5zZmVyCmlzIHBlbmRpbmcgYXQgYWxsLgAAAA9Ob3RQZW5kaW5nQWRtaW4AAAAAHQAAAOVgY2xhaW1fd2l0aGhlbGRgIHdhcyBpbnZva2VkIHdpdGggbm8gVVNEQyBjdXJyZW50bHkgcmVzZXJ2ZWQgZm9yIHRoZQpjYWxsZXIuIEVpdGhlciB0aGUgaG9sZGVyIG5ldmVyIGhhZCBhIGZhaWxlZCBzd2FwIGxlZywgb3IgdGhlIHdpdGhoZWxkCmJhbGFuY2Ugd2FzIGFscmVhZHkgY2xhaW1lZDogdGhpcyBjb250cmFjdCBuZXZlciByZWxlYXNlcyB0aGUgc2FtZQpyZXNlcnZhYmxlIHVuaXQgdHdpY2UuAAAAAAAADk5vdGhpbmdUb0NsYWltAAAAAAAe",
+        "AAAAAAAAAVJSZXBsYWNlIHRoZSBwbGF0Zm9ybSBmZWUgcmVjaXBpZW50IGFkZHJlc3MuCgpPbmUtc3RlcCBhbmQgYWRtaW4tZ2F0ZWQ6IHRoZSBmZWUgcmVjaXBpZW50IG5ldmVyIHNpZ25zIGludm9jYXRpb25zLCBzbwphIG1pc3R5cGVkIGFkZHJlc3MgY2Fubm90IGxvY2sgdGhlIGNvbnRyYWN0IGFuZCBwYXNzaXZlIHRyZWFzdXJ5IHZhdWx0CmNvbnRyYWN0cyByZW1haW4gdmFsaWQgZGVzdGluYXRpb25zIChzZWUgZG9jcy9zdHJhdGVneS9kZWNpc2lvbi1sb2cubWQpLgpXb3JrcyB3aGlsZSBwYXVzZWQ7IHJlamVjdGVkIGFmdGVyIGBleGl0YCB3aXRoCmBQYXlvdXRFcnJvcjo6Q29udHJhY3RFeGl0ZWRgLgAAAAAAGnNldF9wbGF0Zm9ybV9mZWVfcmVjaXBpZW50AAAAAAACAAAAAAAAAAZjYWxsZXIAAAAAABMAAAAAAAAADW5ld19yZWNpcGllbnQAAAAAAAATAAAAAA==",
+        "AAAABAAAAAAAAAAAAAAAC1BheW91dEVycm9yAAAAACEAAAAAAAAAEkFscmVhZHlJbml0aWFsaXplZAAAAAAAAQAAAAAAAAAOTm90SW5pdGlhbGl6ZWQAAAAAAAIAAAAAAAAADFVuYXV0aG9yaXplZAAAAAMAAAAAAAAADkNvbnRyYWN0UGF1c2VkAAAAAAAEAAAAAAAAABNJbnZhbGlkRXZpZGVuY2VIYXNoAAAAAAUAAAAAAAAAE01pc3NpbmdFdmlkZW5jZUxpbmsAAAAABgAAAAAAAAAKWmVyb0Ftb3VudAAAAAAABwAAAAAAAAAUQ3ljbGVBbHJlYWR5UmVjb3JkZWQAAAAIAAAAAAAAABBDeWNsZU5vdFJlY29yZGVkAAAACQAAAAAAAAAXQ3ljbGVBbHJlYWR5RGlzdHJpYnV0ZWQAAAAACgAAAAAAAAAORW1wdHlIb2xkZXJTZXQAAAAAAAsAAAAAAAAAFFJlY2lwaWVudE5vdEFwcHJvdmVkAAAADAAAAAAAAAASQXJpdGhtZXRpY092ZXJmbG93AAAAAAANAAAAAAAAABlJbnN1ZmZpY2llbnRQYXlvdXRCYWxhbmNlAAAAAAAADgAAAAAAAAAKUmVlbnRyYW5jeQAAAAAADwAAAAAAAAARSW50ZXJuYWxJbnZhcmlhbnQAAAAAAAAQAAAAAAAAAA9TaWduZXJDb2xsaXNpb24AAAAAEQAAAJZBIHBlci1ob2xkZXIgc3dhcCBsZWcgZmFpbGVkIGF0IHRoZSBleHRlcm5hbCB2ZW51ZSAoaWxsaXF1aWRpdHksIHZlbnVlIGVycm9yKS4KVGhlIGxlZyBpcyByZWplY3RlZCBmb3IgdGhhdCBob2xkZXIgb25seTsgb3RoZXIgaG9sZGVycyBhcmUgdW5hZmZlY3RlZC4AAAAAAApTd2FwRmFpbGVkAAAAAAASAAAAP1RoZSBzd2FwIGRlbGl2ZXJlZCBsZXNzIHRoYW4gdGhlIHNpZ25lZCBtaW5pbXVtLXJlY2VpdmVkIGJvdW5kLgAAAAAQU2xpcHBhZ2VFeGNlZWRlZAAAABMAAAA6RVVSQy9zd2FwLXJvdXRlciBjb25maWd1cmF0aW9uIGlzIG1pc3Npbmcgb3IgaW5jb25zaXN0ZW50LgAAAAAAE1JvdXRlck5vdENvbmZpZ3VyZWQAAAAAFAAAAGFBIGN5Y2xlIHdpdGggRVVSQy1wcmVmZXJlbmNlIGhvbGRlcnMgd2FzIGV4ZWN1dGVkIHdpdGhvdXQgYSBwb3NpdGl2ZQptaW5pbXVtIGV4Y2hhbmdlIHJhdGUgYm91bmQuAAAAAAAADkludmFsaWRNaW5SYXRlAAAAAAAVAAAAyVRoZSBhbGx5L3Byb3BlcnR5IHJlbGF0aW9uc2hpcCBoYXMgYmVlbiBwZXJtYW5lbnRseSB0ZXJtaW5hdGVkIHZpYQpgZXhpdGA7IGV2aWRlbmNlIHJlY29yZGluZyBhbmQgZGlzdHJpYnV0aW9uIGV4ZWN1dGlvbiBhcmUgcmVqZWN0ZWQKZm9yZXZlciBhZnRlci4gRGlzdGluY3QgZnJvbSBgQ29udHJhY3RQYXVzZWRgLCB3aGljaCBpcyByZXZlcnNpYmxlLgAAAAAAAA5Db250cmFjdEV4aXRlZAAAAAAAFgAAADVgZXhpdGAgd2FzIGludm9rZWQgd2l0aG91dCBhIG5vbi1lbXB0eSByZWFzb24gc3RyaW5nLgAAAAAAABFNaXNzaW5nRXhpdFJlYXNvbgAAAAAAABcAAABGRGlzdHJpYnV0aW9uIHdhcyByZXF1ZXN0ZWQgZm9yIGEgY3ljbGUgd2hvc2UgZXZpZGVuY2UgaXMgbm90IGFwcHJvdmVkLgAAAAAAE0V2aWRlbmNlTm90QXBwcm92ZWQAAAAAGAAAADtBIHJldmlldyB3YXMgcmVxdWVzdGVkIG9uIGEgY3ljbGUgdGhhdCBpcyBub3QgYXdhaXRpbmcgb25lLgAAAAAXSW52YWxpZFN0YXR1c1RyYW5zaXRpb24AAAAAGQAAAD1BIHJlamVjdGlvbiBvciBkaXNwdXRlIHdhcyBzdWJtaXR0ZWQgd2l0aG91dCBhIHJlYXNvbiBzdHJpbmcuAAAAAAAAE01pc3NpbmdSZXZpZXdSZWFzb24AAAAAGgAAAChObyBldmlkZW5jZSByZWNvcmQgZXhpc3RzIGZvciB0aGUgY3ljbGUuAAAAEEV2aWRlbmNlTm90Rm91bmQAAAAbAAAANk51bWJlciBvZiBob2xkZXJzIGV4Y2VlZHMgdGhlIG1heGltdW0gc3VwcG9ydGVkIGJvdW5kLgAAAAAADlRvb01hbnlIb2xkZXJzAAAAAAAcAAAAnGB0cmFuc2Zlcl9hZG1pbl9hY2NlcHRgIHdhcyBjYWxsZWQgYnkgYW4gYWRkcmVzcyB0aGF0IGRvZXMgbm90IG1hdGNoCnRoZSBwZW5kaW5nIGFkbWluIHJlY29yZGVkIGJ5IGB0cmFuc2Zlcl9hZG1pbl9zdGFydGAsIG9yIG5vIHRyYW5zZmVyCmlzIHBlbmRpbmcgYXQgYWxsLgAAAA9Ob3RQZW5kaW5nQWRtaW4AAAAAHQAAAOVgY2xhaW1fd2l0aGhlbGRgIHdhcyBpbnZva2VkIHdpdGggbm8gVVNEQyBjdXJyZW50bHkgcmVzZXJ2ZWQgZm9yIHRoZQpjYWxsZXIuIEVpdGhlciB0aGUgaG9sZGVyIG5ldmVyIGhhZCBhIGZhaWxlZCBzd2FwIGxlZywgb3IgdGhlIHdpdGhoZWxkCmJhbGFuY2Ugd2FzIGFscmVhZHkgY2xhaW1lZDogdGhpcyBjb250cmFjdCBuZXZlciByZWxlYXNlcyB0aGUgc2FtZQpyZXNlcnZhYmxlIHVuaXQgdHdpY2UuAAAAAAAADk5vdGhpbmdUb0NsYWltAAAAAAAeAAAAg1RoZSBpbmNvbWUtdG9rZW4gYmFsYW5jZXMgc3VtIHRvIG1vcmUgdGhhbiBpdHMgdG90YWwgc3VwcGx5LCBzbyB0aGUKcHJvLXJhdGEgc3BsaXQgd291bGQgcGF5IG91dCBtb3JlIHRoYW4gdGhlIGN5Y2xlJ3MgaG9sZGVyIHBvb2wuAAAAABpIb2xkZXJCYWxhbmNlc0V4Y2VlZFN1cHBseQAAAAAAHwAAAKpgcm90YXRlX29wZXJhdG9yX2FjY2VwdGAgd2FzIGNhbGxlZCBieSBhbiBhZGRyZXNzIHRoYXQgZG9lcyBub3QgbWF0Y2gKdGhlIHBlbmRpbmcgb3BlcmF0b3IgcmVjb3JkZWQgYnkgYHJvdGF0ZV9vcGVyYXRvcl9zdGFydGAsIG9yIG5vCm9wZXJhdG9yIHJvdGF0aW9uIGlzIHBlbmRpbmcgYXQgYWxsLgAAAAAAEk5vdFBlbmRpbmdPcGVyYXRvcgAAAAAAIAAAAJpgcm90YXRlX2FsbHlfYWNjZXB0YCB3YXMgY2FsbGVkIGJ5IGFuIGFkZHJlc3MgdGhhdCBkb2VzIG5vdCBtYXRjaCB0aGUKcGVuZGluZyBhbGx5IHJlY29yZGVkIGJ5IGByb3RhdGVfYWxseV9zdGFydGAsIG9yIG5vIGFsbHkgcm90YXRpb24gaXMKcGVuZGluZyBhdCBhbGwuAAAAAAAOTm90UGVuZGluZ0FsbHkAAAAAACE=",
         "AAAAAQAAAAAAAAAAAAAAD1N3YXBGYWlsZWRFdmVudAAAAAAEAAAAAAAAABRhbW91bnRfdXNkY19yZXRhaW5lZAAAAAsAAAAAAAAACGN5Y2xlX2lkAAAAEAAAAAAAAAAGaG9sZGVyAAAAAAATAAAAP2BQYXlvdXRFcnJvcmAgZGlzY3JpbWluYW50IGRlc2NyaWJpbmcgd2h5IHRoZSBsZWcgd2FzIHJlamVjdGVkLgAAAAALcmVhc29uX2NvZGUAAAAABA==",
         "AAAAAQAAAJ5FbWl0dGVkIG9uY2Ugd2hlbiB0aGUgYWxseS9wcm9wZXJ0eSByZWxhdGlvbnNoaXAgaXMgcGVybWFuZW50bHkgdGVybWluYXRlZC4KQ2xpZW50cyBjYW4gd2F0Y2ggdGhpcyB0byByZW5kZXIgdGhlIHRlcm1pbmFsIHN0YXRlIHdpdGhvdXQgcG9sbGluZwpgZXhpdF9zdGF0dXNgLgAAAAAAAAAAABFFeGl0UmVjb3JkZWRFdmVudAAAAAAAAAQAAAAAAAAABGFsbHkAAAATAAAAAAAAAAJhdAAAAAAABgAAAAAAAAAIb3BlcmF0b3IAAAATAAAAAAAAAAZyZWFzb24AAAAAABA=",
         "AAAAAQAAAAAAAAAAAAAAEVN3YXBFeGVjdXRlZEV2ZW50AAAAAAAABAAAAAAAAAAPYW1vdW50X2V1cmNfb3V0AAAAAAsAAAAAAAAADmFtb3VudF91c2RjX2luAAAAAAALAAAAAAAAAAhjeWNsZV9pZAAAABAAAAAAAAAABmhvbGRlcgAAAAAAEw==",
@@ -892,44 +1103,61 @@ export class PilotPayoutSplitClient extends ContractClient {
         "AAAAAQAAAAAAAAAAAAAAFUV2aWRlbmNlUmV2aWV3ZWRFdmVudAAAAAAAAAUAAAAAAAAACGFwcHJvdmVkAAAAAQAAAAAAAAAIY3ljbGVfaWQAAAAQAAAAAAAAAAhvcGVyYXRvcgAAABMAAAAAAAAABnJlYXNvbgAAAAAAEAAAAAAAAAALcmV2aWV3ZWRfYXQAAAAABg==",
         "AAAAAQAAAAAAAAAAAAAAFkV2aWRlbmNlU3VibWl0dGVkRXZlbnQAAAAAAAQAAAAAAAAABGFsbHkAAAATAAAAAAAAAAhjeWNsZV9pZAAAABAAAAAAAAAADHN1Ym1pdHRlZF9hdAAAAAYAAAAAAAAADHRvdGFsX2luY29tZQAAAAs=",
         "AAAAAQAAAAAAAAAAAAAAFlBheW91dEluaXRpYWxpemVkRXZlbnQAAAAAAAMAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAEYWxseQAAABMAAAAAAAAACG9wZXJhdG9yAAAAEw==",
-        "AAAAAQAAAAAAAAAAAAAAGkN1cnJlbmN5UHJlZmVyZW5jZVNldEV2ZW50AAAAAAACAAAAAAAAAAhjdXJyZW5jeQAAB9AAAAAIQ3VycmVuY3kAAAAAAAAABmhvbGRlcgAAAAAAEw==",
-        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAAEgAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAAIT3BlcmF0b3IAAAAAAAAAAAAAAARBbGx5AAAAAAAAAAAAAAAUUGxhdGZvcm1GZWVSZWNpcGllbnQAAAAAAAAAAAAAAAtJbmNvbWVUb2tlbgAAAAAAAAAAAAAAAAlXaGl0ZWxpc3QAAAAAAAAAAAAAAAAAAAlVc2RjVG9rZW4AAAAAAAAAAAAAAAAAAAlFdXJjVG9rZW4AAAAAAAAAAAAAAAAAAApTd2FwUm91dGVyAAAAAAAAAAAAAAAAAAZQYXVzZWQAAAAAAAAAAAAAAAAABUd1YXJkAAAAAAAAAQAAAAAAAAAIRXZpZGVuY2UAAAABAAAAEAAAAAEAAAAAAAAAEkN1cnJlbmN5UHJlZmVyZW5jZQAAAAAAAQAAABMAAAABAAAAAAAAAAxTd2FwRmFpbHVyZXMAAAABAAAAEAAAAAAAAAAAAAAABEV4aXQAAAABAAABOFVTREMgcmVzZXJ2ZWQgaW4gdGhpcyBjb250cmFjdCBmb3IgYSBob2xkZXIgd2hvc2UgRVVSQyBzd2FwIGxlZyBmYWlsZWQKYW5kIHdobyBoYXMgbm90IHlldCBjbGFpbWVkIGl0LgoKS2VwdCBzZXBhcmF0ZSBmcm9tIHRoZSBjeWNsZSByZWNvcmQgYmVjYXVzZSBhIGhvbGRlcidzIHJlc2VydmUgaXMKY3VtdWxhdGl2ZSBhY3Jvc3MgY3ljbGVzIGFuZCBtdXN0IGJlIHJlbGVhc2FibGUgaW4gb25lIGNhbGwuIEl0IGlzIG9ubHkKd3JpdHRlbiBvbiBhIGZhaWxlZCBsZWcsIHNvIGEgbm9ybWFsIGRpc3RyaWJ1dGlvbiBhZGRzIG5vIGxlZGdlciBrZXlzLgAAAA9XaXRoaGVsZEJhbGFuY2UAAAAAAQAAABMAAAAAAAAAvlN1bSBvZiBldmVyeSBvdXRzdGFuZGluZyBgV2l0aGhlbGRCYWxhbmNlYC4gSW5zdGFuY2Ugc3RvcmFnZSwgc28gaXQKY29zdHMgbm8gYWRkaXRpb25hbCBmb290cHJpbnQgZW50cnkgYW5kIGxldHMgYGV4ZWN1dGVfZGlzdHJpYnV0aW9uYApwcm92ZSBpdCBuZXZlciBzcGVuZHMgYW5vdGhlciBob2xkZXIncyByZXNlcnZlZCBmdW5kcy4AAAAAAA1Ub3RhbFdpdGhoZWxkAAAAAAAAAAAAAAAAAAAMUGVuZGluZ0FkbWlu",
-        "AAAAAAAAA59CZWdpbiB0cmFuc2ZlcnJpbmcgYWRtaW4gdG8gYSBuZXcgYWRkcmVzcy4KClR3by1zdGVwLCBmb2xsb3dpbmcgdGhlIHNhbWUgcGF0dGVybiBhcyBgZGVmaS1yd2FgJ3MKYEFkbWluQ29udHJvbDo6dHJhbnNmZXJfYWRtaW5fc3RhcnRgIChzZWUKZG9jcy9vcGVyYXRpb25zL3J1bmJvb2stcm9sZS1tYW5hZ2VtZW50Lm1kKS4gVGhlIGN1cnJlbnQgYWRtaW4ga2VlcHMKZnVsbCBjb250cm9sIHVudGlsIGBuZXdfYWRtaW5gIGNhbGxzIGB0cmFuc2Zlcl9hZG1pbl9hY2NlcHRgLCBzbyBhCm1pc3R5cGVkIG9yIHVucmVhY2hhYmxlIG5ldyBhZG1pbiBjYW4gbmV2ZXIgbG9jayB0aGUgY29udHJhY3Qgb3V0LgpOb3QgYmxvY2tlZCBieSBgcGF1c2VgOiBhZG1pbiByZWNvdmVyeSBtdXN0IGtlZXAgd29ya2luZyB3aGlsZSBwYXVzZWQuCgpEZWxpYmVyYXRlbHkgZ2F0ZWQgYnkgdGhlIGFkbWluIGFsb25lLCBub3QgYnkgdGhlIG9wZXJhdG9yK2FsbHkKdHdvLXNpZ25lciBtb2RlbCB1c2VkIGZvciBgcmVjb3JkX2V2aWRlbmNlYCwgYGV4ZWN1dGVfZGlzdHJpYnV0aW9uYCwKYW5kIGBleGl0YC4gUmVhc29uaW5nIHJlY29yZGVkIGluIGRvY3Mvc3RyYXRlZ3kvZGVjaXNpb24tbG9nLm1kOiB0aGUKYWRtaW4ga2V5IGlzIEFra3VlYSdzIG93biBwbGF0Zm9ybSBrZXksIGRpc3RpbmN0IGZyb20gdGhlIG9wZXJhdG9yIGFuZAphbGx5IGJ1c2luZXNzIHJvbGVzLCBhbmQgcmVxdWlyaW5nIHRoZSBhbGx5J3MgY28tc2lnbmF0dXJlIHdvdWxkIGxldAphbiB1bnJlc3BvbnNpdmUgb3IgYWR2ZXJzYXJpYWwgYWxseSBibG9jayBBa2t1ZWEncyBhYmlsaXR5IHRvIHJlY292ZXIKZnJvbSBhIGxvc3Qgb3IgY29tcHJvbWlzZWQgYWRtaW4ga2V5LCB3aGljaCBpcyBleGFjdGx5IHRoZSBmYWlsdXJlCm1vZGUgdGhpcyBmZWF0dXJlIGV4aXN0cyB0byBjbG9zZS4AAAAAFHRyYW5zZmVyX2FkbWluX3N0YXJ0AAAAAgAAAAAAAAAGY2FsbGVyAAAAAAATAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAA==",
-        "AAAAAAAAAOtBY2NlcHQgYSBwZW5kaW5nIGFkbWluIHRyYW5zZmVyLiBNdXN0IGJlIHNpZ25lZCBieSB0aGUgYWRkcmVzcyBuYW1lZAppbiBgdHJhbnNmZXJfYWRtaW5fc3RhcnRgLiBUaGUgb2xkIGFkbWluIGxvc2VzIGV2ZXJ5IHByaXZpbGVnZSB0aGUKaW5zdGFudCB0aGlzIGNhbGwgc3VjY2VlZHMsIHNpbmNlIGByZXF1aXJlX2FkbWluYCBjb21wYXJlcyBhZ2FpbnN0IHRoZQpzaW5nbGUgc3RvcmVkIGFkbWluIGFkZHJlc3MuAAAAABV0cmFuc2Zlcl9hZG1pbl9hY2NlcHQAAAAAAAABAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAA==",
-        "AAAAAAAAAFlDYW5jZWwgYSBwZW5kaW5nIGFkbWluIHRyYW5zZmVyIGJlZm9yZSBpdCBpcyBhY2NlcHRlZC4gT25seSB0aGUKY3VycmVudCBhZG1pbiBjYW4gY2FuY2VsLgAAAAAAABV0cmFuc2Zlcl9hZG1pbl9jYW5jZWwAAAAAAAABAAAAAAAAAAZjYWxsZXIAAAAAABMAAAAA",
+        "AAAAAQAAAAAAAAAAAAAAGEFsbHlSb3RhdGlvblN0YXJ0ZWRFdmVudAAAAAMAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAAMY3VycmVudF9hbGx5AAAAEwAAAAAAAAAIbmV3X2FsbHkAAAAT",
+        "AAAAAQAAAAAAAAAAAAAAGEV2aWRlbmNlUmVzdWJtaXR0ZWRFdmVudAAAAAUAAAAAAAAABGFsbHkAAAATAAAAAAAAAAhjeWNsZV9pZAAAABAAAAA/VGhlIHN0YXR1cyB0aGUgcmVzdWJtaXNzaW9uIHJlcGxhY2VkOiBgUmVqZWN0ZWRgIG9yIGBEaXNwdXRlZGAuAAAAAA9wcmV2aW91c19zdGF0dXMAAAAH0AAAAA5FdmlkZW5jZVN0YXR1cwAAAAAAAAAAAAxzdWJtaXR0ZWRfYXQAAAAGAAAAAAAAAAx0b3RhbF9pbmNvbWUAAAAL",
+        "AAAAAQAAAAAAAAAAAAAAGEZlZVJlY2lwaWVudFVwZGF0ZWRFdmVudAAAAAMAAAAAAAAABWFkbWluAAAAAAAAEwAAAAAAAAANbmV3X3JlY2lwaWVudAAAAAAAABMAAAAAAAAADW9sZF9yZWNpcGllbnQAAAAAAAAT",
         "AAAAAQAAAAAAAAAAAAAAGUFkbWluVHJhbnNmZXJTdGFydGVkRXZlbnQAAAAAAAACAAAAAAAAAA1jdXJyZW50X2FkbWluAAAAAAAAEwAAAAAAAAAJbmV3X2FkbWluAAAAAAAAEw==",
+        "AAAAAQAAAAAAAAAAAAAAGUFsbHlSb3RhdGlvbkFjY2VwdGVkRXZlbnQAAAAAAAACAAAAAAAAAAhuZXdfYWxseQAAABMAAAAAAAAACG9sZF9hbGx5AAAAEw==",
         "AAAAAQAAAAAAAAAAAAAAGkFkbWluVHJhbnNmZXJBY2NlcHRlZEV2ZW50AAAAAAACAAAAAAAAAAluZXdfYWRtaW4AAAAAAAATAAAAAAAAAAlvbGRfYWRtaW4AAAAAAAAT",
+        "AAAAAQAAAAAAAAAAAAAAGkFsbHlSb3RhdGlvbkNhbmNlbGxlZEV2ZW50AAAAAAABAAAAAAAAAAVhZG1pbgAAAAAAABM=",
+        "AAAAAQAAAAAAAAAAAAAAGkN1cnJlbmN5UHJlZmVyZW5jZVNldEV2ZW50AAAAAAACAAAAAAAAAAhjdXJyZW5jeQAAB9AAAAAIQ3VycmVuY3kAAAAAAAAABmhvbGRlcgAAAAAAEw==",
         "AAAAAQAAAAAAAAAAAAAAG0FkbWluVHJhbnNmZXJDYW5jZWxsZWRFdmVudAAAAAABAAAAAAAAAAVhZG1pbgAAAAAAABM=",
+        "AAAAAQAAAAAAAAAAAAAAHE9wZXJhdG9yUm90YXRpb25TdGFydGVkRXZlbnQAAAADAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAAEGN1cnJlbnRfb3BlcmF0b3IAAAATAAAAAAAAAAxuZXdfb3BlcmF0b3IAAAAT",
+        "AAAAAQAAAAAAAAAAAAAAHU9wZXJhdG9yUm90YXRpb25BY2NlcHRlZEV2ZW50AAAAAAAAAgAAAAAAAAAMbmV3X29wZXJhdG9yAAAAEwAAAAAAAAAMb2xkX29wZXJhdG9yAAAAEw==",
+        "AAAAAQAAAAAAAAAAAAAAHk9wZXJhdG9yUm90YXRpb25DYW5jZWxsZWRFdmVudAAAAAAAAQAAAAAAAAAFYWRtaW4AAAAAAAAT",
+        "AAAAAgAAAAAAAAAAAAAAB0RhdGFLZXkAAAAAFAAAAAAAAAAAAAAABUFkbWluAAAAAAAAAAAAAAAAAAAIT3BlcmF0b3IAAAAAAAAAAAAAAARBbGx5AAAAAAAAAAAAAAAUUGxhdGZvcm1GZWVSZWNpcGllbnQAAAAAAAAAAAAAAAtJbmNvbWVUb2tlbgAAAAAAAAAAAAAAAAlXaGl0ZWxpc3QAAAAAAAAAAAAAAAAAAAlVc2RjVG9rZW4AAAAAAAAAAAAAAAAAAAlFdXJjVG9rZW4AAAAAAAAAAAAAAAAAAApTd2FwUm91dGVyAAAAAAAAAAAAAAAAAAZQYXVzZWQAAAAAAAAAAAAAAAAABUd1YXJkAAAAAAAAAQAAAAAAAAAIRXZpZGVuY2UAAAABAAAAEAAAAAEAAAAAAAAAEkN1cnJlbmN5UHJlZmVyZW5jZQAAAAAAAQAAABMAAAABAAAAAAAAAAxTd2FwRmFpbHVyZXMAAAABAAAAEAAAAAAAAAAAAAAABEV4aXQAAAABAAABOFVTREMgcmVzZXJ2ZWQgaW4gdGhpcyBjb250cmFjdCBmb3IgYSBob2xkZXIgd2hvc2UgRVVSQyBzd2FwIGxlZyBmYWlsZWQKYW5kIHdobyBoYXMgbm90IHlldCBjbGFpbWVkIGl0LgoKS2VwdCBzZXBhcmF0ZSBmcm9tIHRoZSBjeWNsZSByZWNvcmQgYmVjYXVzZSBhIGhvbGRlcidzIHJlc2VydmUgaXMKY3VtdWxhdGl2ZSBhY3Jvc3MgY3ljbGVzIGFuZCBtdXN0IGJlIHJlbGVhc2FibGUgaW4gb25lIGNhbGwuIEl0IGlzIG9ubHkKd3JpdHRlbiBvbiBhIGZhaWxlZCBsZWcsIHNvIGEgbm9ybWFsIGRpc3RyaWJ1dGlvbiBhZGRzIG5vIGxlZGdlciBrZXlzLgAAAA9XaXRoaGVsZEJhbGFuY2UAAAAAAQAAABMAAAAAAAAAvlN1bSBvZiBldmVyeSBvdXRzdGFuZGluZyBgV2l0aGhlbGRCYWxhbmNlYC4gSW5zdGFuY2Ugc3RvcmFnZSwgc28gaXQKY29zdHMgbm8gYWRkaXRpb25hbCBmb290cHJpbnQgZW50cnkgYW5kIGxldHMgYGV4ZWN1dGVfZGlzdHJpYnV0aW9uYApwcm92ZSBpdCBuZXZlciBzcGVuZHMgYW5vdGhlciBob2xkZXIncyByZXNlcnZlZCBmdW5kcy4AAAAAAA1Ub3RhbFdpdGhoZWxkAAAAAAAAAAAAAAAAAAAMUGVuZGluZ0FkbWluAAAAAAAAAAAAAAAPUGVuZGluZ09wZXJhdG9yAAAAAAAAAAAAAAAAC1BlbmRpbmdBbGx5AA==",
       ]),
       options,
     );
   }
   public readonly fromJSON = {
+    ally: this.txFromJSON<string>,
     exit: this.txFromJSON<null>,
     pause: this.txFromJSON<null>,
     unpause: this.txFromJSON<null>,
+    operator: this.txFromJSON<string>,
     is_paused: this.txFromJSON<boolean>,
     initialize: this.txFromJSON<null>,
     exit_status: this.txFromJSON<Option<ExitRecord>>,
     flag_dispute: this.txFromJSON<null>,
     get_evidence: this.txFromJSON<Option<EvidenceRecord>>,
+    pending_ally: this.txFromJSON<Option<string>>,
     start_review: this.txFromJSON<null>,
-    claim_withheld: this.txFromJSON<null>,
     pending_admin: this.txFromJSON<Option<string>>,
+    claim_withheld: this.txFromJSON<null>,
     record_evidence: this.txFromJSON<null>,
     review_evidence: this.txFromJSON<null>,
     submit_evidence: this.txFromJSON<null>,
+    pending_operator: this.txFromJSON<Option<string>>,
     get_swap_failures: this.txFromJSON<Array<SwapFailureRecord>>,
+    rotate_ally_start: this.txFromJSON<null>,
+    rotate_ally_accept: this.txFromJSON<null>,
+    rotate_ally_cancel: this.txFromJSON<null>,
     execute_distribution: this.txFromJSON<DistributionSummary>,
     get_withheld_balance: this.txFromJSON<i128>,
+    transfer_admin_start: this.txFromJSON<null>,
     eurc_swap_path_status: this.txFromJSON<Option<EurcSwapPathStatus>>,
     get_holder_settlement: this.txFromJSON<Option<HolderSettlement>>,
-    total_withheld_balance: this.txFromJSON<i128>,
-    transfer_admin_start: this.txFromJSON<null>,
+    rotate_operator_start: this.txFromJSON<null>,
     transfer_admin_accept: this.txFromJSON<null>,
     transfer_admin_cancel: this.txFromJSON<null>,
+    platform_fee_recipient: this.txFromJSON<string>,
+    rotate_operator_accept: this.txFromJSON<null>,
+    rotate_operator_cancel: this.txFromJSON<null>,
+    total_withheld_balance: this.txFromJSON<i128>,
     get_currency_preference: this.txFromJSON<Currency>,
     set_currency_preference: this.txFromJSON<null>,
     get_distribution_summary: this.txFromJSON<Option<DistributionSummary>>,
+    set_platform_fee_recipient: this.txFromJSON<null>,
   };
 }

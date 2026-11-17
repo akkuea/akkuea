@@ -59,4 +59,12 @@ pub enum PayoutError {
     /// The income-token balances sum to more than its total supply, so the
     /// pro-rata split would pay out more than the cycle's holder pool.
     HolderBalancesExceedSupply = 31,
+    /// `rotate_operator_accept` was called by an address that does not match
+    /// the pending operator recorded by `rotate_operator_start`, or no
+    /// operator rotation is pending at all.
+    NotPendingOperator = 32,
+    /// `rotate_ally_accept` was called by an address that does not match the
+    /// pending ally recorded by `rotate_ally_start`, or no ally rotation is
+    /// pending at all.
+    NotPendingAlly = 33,
 }

@@ -1199,6 +1199,178 @@ impl PilotPayoutSplit {
         Storage::pending_admin(&env)
     }
 
+    /// Return the configured operator signer.
+    pub fn operator(env: Env) -> Address {
+        Storage::address(&env, &DataKey::Operator)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized))
+    }
+
+    /// Return the configured ally signer.
+    pub fn ally(env: Env) -> Address {
+        Storage::address(&env, &DataKey::Ally)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized))
+    }
+
+    /// Return the configured platform fee recipient.
+    pub fn platform_fee_recipient(env: Env) -> Address {
+        Storage::address(&env, &DataKey::PlatformFeeRecipient)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized))
+    }
+
+    /// Begin rotating the operator signer to a new address.
+    ///
+    /// Two-step (`rotate_operator_start` / `rotate_operator_accept` /
+    /// `rotate_operator_cancel`), matching the admin succession flow so a
+    /// mistyped or unreachable address can never lock out the contract. Gated
+    /// by the admin alone so a lost or compromised operator key remains
+    /// recoverable without requiring the outgoing key or an ally co-signature
+    /// (see docs/strategy/decision-log.md). Works while paused; rejected after
+    /// `exit` with `PayoutError::ContractExited`.
+    pub fn rotate_operator_start(env: Env, caller: Address, new_operator: Address) {
+        extend_instance(&env);
+        caller.require_auth();
+        Self::require_admin(&env, &caller);
+        Self::require_not_exited(&env);
+
+        let current_operator = Storage::address(&env, &DataKey::Operator)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        let current_ally = Storage::address(&env, &DataKey::Ally)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        if new_operator == current_ally {
+            panic_with_error!(&env, PayoutError::SignerCollision);
+        }
+
+        Storage::set_pending_operator(&env, &new_operator);
+        events::emit_operator_rotation_started(&env, caller, current_operator, new_operator);
+    }
+
+    /// Accept a pending operator rotation. Must be signed by the address named
+    /// in `rotate_operator_start`. Re-checks `operator != ally` at acceptance
+    /// time so concurrent pending rotations can never collide.
+    pub fn rotate_operator_accept(env: Env, new_operator: Address) {
+        extend_instance(&env);
+        new_operator.require_auth();
+        Self::require_not_exited(&env);
+
+        if Storage::pending_operator(&env) != Some(new_operator.clone()) {
+            panic_with_error!(&env, PayoutError::NotPendingOperator);
+        }
+
+        let current_ally = Storage::address(&env, &DataKey::Ally)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        if new_operator == current_ally {
+            panic_with_error!(&env, PayoutError::SignerCollision);
+        }
+
+        let old_operator = Storage::address(&env, &DataKey::Operator)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        Storage::set_address(&env, &DataKey::Operator, &new_operator);
+        Storage::clear_pending_operator(&env);
+        events::emit_operator_rotation_accepted(&env, old_operator, new_operator);
+    }
+
+    /// Cancel a pending operator rotation before acceptance. Admin-only.
+    pub fn rotate_operator_cancel(env: Env, caller: Address) {
+        extend_instance(&env);
+        caller.require_auth();
+        Self::require_admin(&env, &caller);
+        Self::require_not_exited(&env);
+
+        Storage::clear_pending_operator(&env);
+        events::emit_operator_rotation_cancelled(&env, caller);
+    }
+
+    /// Return the pending operator, if a rotation is in progress.
+    pub fn pending_operator(env: Env) -> Option<Address> {
+        Storage::pending_operator(&env)
+    }
+
+    /// Begin rotating the ally signer to a new address.
+    ///
+    /// Two-step (`rotate_ally_start` / `rotate_ally_accept` /
+    /// `rotate_ally_cancel`), gated by the admin on start/cancel and signed by
+    /// `new_ally` on acceptance so a lost or compromised ally key can be
+    /// replaced without stranding distributions or `exit` (see
+    /// docs/strategy/decision-log.md). Works while paused; rejected after
+    /// `exit` with `PayoutError::ContractExited`.
+    pub fn rotate_ally_start(env: Env, caller: Address, new_ally: Address) {
+        extend_instance(&env);
+        caller.require_auth();
+        Self::require_admin(&env, &caller);
+        Self::require_not_exited(&env);
+
+        let current_ally = Storage::address(&env, &DataKey::Ally)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        let current_operator = Storage::address(&env, &DataKey::Operator)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        if new_ally == current_operator {
+            panic_with_error!(&env, PayoutError::SignerCollision);
+        }
+
+        Storage::set_pending_ally(&env, &new_ally);
+        events::emit_ally_rotation_started(&env, caller, current_ally, new_ally);
+    }
+
+    /// Accept a pending ally rotation. Must be signed by the address named in
+    /// `rotate_ally_start`. Re-checks `operator != ally` at acceptance time so
+    /// concurrent pending rotations can never collide.
+    pub fn rotate_ally_accept(env: Env, new_ally: Address) {
+        extend_instance(&env);
+        new_ally.require_auth();
+        Self::require_not_exited(&env);
+
+        if Storage::pending_ally(&env) != Some(new_ally.clone()) {
+            panic_with_error!(&env, PayoutError::NotPendingAlly);
+        }
+
+        let current_operator = Storage::address(&env, &DataKey::Operator)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        if new_ally == current_operator {
+            panic_with_error!(&env, PayoutError::SignerCollision);
+        }
+
+        let old_ally = Storage::address(&env, &DataKey::Ally)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        Storage::set_address(&env, &DataKey::Ally, &new_ally);
+        Storage::clear_pending_ally(&env);
+        events::emit_ally_rotation_accepted(&env, old_ally, new_ally);
+    }
+
+    /// Cancel a pending ally rotation before acceptance. Admin-only.
+    pub fn rotate_ally_cancel(env: Env, caller: Address) {
+        extend_instance(&env);
+        caller.require_auth();
+        Self::require_admin(&env, &caller);
+        Self::require_not_exited(&env);
+
+        Storage::clear_pending_ally(&env);
+        events::emit_ally_rotation_cancelled(&env, caller);
+    }
+
+    /// Return the pending ally, if a rotation is in progress.
+    pub fn pending_ally(env: Env) -> Option<Address> {
+        Storage::pending_ally(&env)
+    }
+
+    /// Replace the platform fee recipient address.
+    ///
+    /// One-step and admin-gated: the fee recipient never signs invocations, so
+    /// a mistyped address cannot lock the contract and passive treasury vault
+    /// contracts remain valid destinations (see docs/strategy/decision-log.md).
+    /// Works while paused; rejected after `exit` with
+    /// `PayoutError::ContractExited`.
+    pub fn set_platform_fee_recipient(env: Env, caller: Address, new_recipient: Address) {
+        extend_instance(&env);
+        caller.require_auth();
+        Self::require_admin(&env, &caller);
+        Self::require_not_exited(&env);
+
+        let old_recipient = Storage::address(&env, &DataKey::PlatformFeeRecipient)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        Storage::set_address(&env, &DataKey::PlatformFeeRecipient, &new_recipient);
+        events::emit_fee_recipient_updated(&env, caller, old_recipient, new_recipient);
+    }
+
     /// Permanently terminate the ally/property relationship.
     ///
     /// One-way and irreversible: once called, `record_evidence` and
@@ -3976,6 +4148,636 @@ pub mod tests {
             ally_res,
             Err(Ok(Error::from_contract_error(
                 PayoutError::Unauthorized as u32
+            )))
+        );
+    }
+
+    // --- Operator, ally, and fee-recipient rotation ---
+
+    #[test]
+    fn replaced_operator_loses_every_privilege_and_new_operator_succeeds() {
+        let s = setup();
+        let new_operator = Address::generate(&s.env);
+
+        assert_eq!(s.payout.operator(), s.operator);
+        assert_eq!(s.payout.pending_operator(), None);
+
+        s.payout.rotate_operator_start(&s.admin, &new_operator);
+        assert_eq!(s.payout.pending_operator(), Some(new_operator.clone()));
+        assert_eq!(s.payout.operator(), s.operator);
+
+        s.payout.rotate_operator_accept(&new_operator);
+        assert_eq!(s.payout.operator(), new_operator);
+        assert_eq!(s.payout.pending_operator(), None);
+
+        let link = String::from_str(&s.env, "ipfs://evidence/2026-08");
+        let c1 = cycle(&s.env, "2026-08");
+        let c2 = cycle(&s.env, "2026-09");
+
+        // Old operator is rejected on record_evidence.
+        assert_eq!(
+            s.payout.try_record_evidence(
+                &s.operator,
+                &s.ally,
+                &c1,
+                &evidence_hash(&s.env),
+                &link,
+                &1_000,
+            ),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+
+        // Submit c1 as ally so we can test start_review, review_evidence,
+        // flag_dispute, execute_distribution, and exit against both operators.
+        s.payout
+            .submit_evidence(&s.ally, &c1, &evidence_hash(&s.env), &link, &1_000);
+
+        assert_eq!(
+            s.payout.try_start_review(&s.operator, &c1),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        s.payout.start_review(&new_operator, &c1);
+
+        assert_eq!(
+            s.payout
+                .try_review_evidence(&s.operator, &c1, &true, &String::from_str(&s.env, "")),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        assert_eq!(
+            s.payout
+                .try_flag_dispute(&s.operator, &c1, &String::from_str(&s.env, "stale key")),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        s.payout
+            .review_evidence(&new_operator, &c1, &true, &String::from_str(&s.env, ""));
+
+        assert_eq!(
+            s.payout
+                .try_execute_distribution(&s.operator, &s.ally, &c1, &TEST_MIN_RATE),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        let summary = s
+            .payout
+            .execute_distribution(&new_operator, &s.ally, &c1, &TEST_MIN_RATE);
+        assert_eq!(summary.total_income, 1_000);
+
+        // New operator can also record_evidence directly and co-sign exit,
+        // while old operator cannot co-sign exit.
+        s.payout.record_evidence(
+            &new_operator,
+            &s.ally,
+            &c2,
+            &evidence_hash(&s.env),
+            &link,
+            &2_000,
+        );
+        assert_eq!(
+            s.payout
+                .try_exit(&s.operator, &s.ally, &String::from_str(&s.env, "wind down")),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        s.payout.exit(
+            &new_operator,
+            &s.ally,
+            &String::from_str(&s.env, "wind down"),
+        );
+        assert!(s.payout.exit_status().is_some());
+    }
+
+    #[test]
+    fn replaced_ally_can_no_longer_submit_or_cosign_and_new_ally_can() {
+        let s = setup();
+        let new_ally = Address::generate(&s.env);
+
+        assert_eq!(s.payout.ally(), s.ally);
+        assert_eq!(s.payout.pending_ally(), None);
+
+        s.payout.rotate_ally_start(&s.admin, &new_ally);
+        assert_eq!(s.payout.pending_ally(), Some(new_ally.clone()));
+        assert_eq!(s.payout.ally(), s.ally);
+
+        s.payout.rotate_ally_accept(&new_ally);
+        assert_eq!(s.payout.ally(), new_ally);
+        assert_eq!(s.payout.pending_ally(), None);
+
+        let link = String::from_str(&s.env, "ipfs://evidence/2026-08");
+        let c1 = cycle(&s.env, "2026-08");
+        let c2 = cycle(&s.env, "2026-09");
+
+        // Old ally is rejected on submit_evidence and on co-signed calls.
+        assert_eq!(
+            s.payout
+                .try_submit_evidence(&s.ally, &c1, &evidence_hash(&s.env), &link, &1_000),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        assert_eq!(
+            s.payout.try_record_evidence(
+                &s.operator,
+                &s.ally,
+                &c1,
+                &evidence_hash(&s.env),
+                &link,
+                &1_000,
+            ),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+
+        // New ally submits c1, operator approves, old ally cannot co-sign
+        // distribution, new ally co-signs distribution.
+        s.payout
+            .submit_evidence(&new_ally, &c1, &evidence_hash(&s.env), &link, &1_000);
+        s.payout
+            .review_evidence(&s.operator, &c1, &true, &String::from_str(&s.env, ""));
+
+        assert_eq!(
+            s.payout
+                .try_execute_distribution(&s.operator, &s.ally, &c1, &TEST_MIN_RATE),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        let summary = s
+            .payout
+            .execute_distribution(&s.operator, &new_ally, &c1, &TEST_MIN_RATE);
+        assert_eq!(summary.total_income, 1_000);
+
+        // New ally can also co-sign record_evidence and exit; old ally cannot.
+        s.payout.record_evidence(
+            &s.operator,
+            &new_ally,
+            &c2,
+            &evidence_hash(&s.env),
+            &link,
+            &2_000,
+        );
+        assert_eq!(
+            s.payout
+                .try_exit(&s.operator, &s.ally, &String::from_str(&s.env, "wind down")),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        s.payout.exit(
+            &s.operator,
+            &new_ally,
+            &String::from_str(&s.env, "wind down"),
+        );
+        assert!(s.payout.exit_status().is_some());
+    }
+
+    #[test]
+    fn fee_recipient_rotation_pays_exact_fee_to_new_recipient() {
+        let s = setup();
+        let new_recipient = Address::generate(&s.env);
+        let link = String::from_str(&s.env, "ipfs://evidence");
+
+        assert_eq!(s.payout.platform_fee_recipient(), s.fee_recipient);
+
+        // First cycle pays 10% of 10_000 = 1_000 USDC to the initial recipient.
+        let c1 = cycle(&s.env, "2026-08");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c1,
+            &evidence_hash(&s.env),
+            &link,
+            &10_000,
+        );
+        s.payout
+            .execute_distribution(&s.operator, &s.ally, &c1, &TEST_MIN_RATE);
+        assert_eq!(s.usdc.balance(&s.fee_recipient), 1_000);
+        assert_eq!(s.usdc.balance(&new_recipient), 0);
+
+        // Rotate fee recipient and run a second cycle of 20_000 USDC (fee = 2_000).
+        s.payout
+            .set_platform_fee_recipient(&s.admin, &new_recipient);
+        assert_eq!(s.payout.platform_fee_recipient(), new_recipient);
+
+        let c2 = cycle(&s.env, "2026-09");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c2,
+            &evidence_hash(&s.env),
+            &link,
+            &20_000,
+        );
+        let summary = s
+            .payout
+            .execute_distribution(&s.operator, &s.ally, &c2, &TEST_MIN_RATE);
+
+        assert_eq!(summary.platform_fee, 2_000);
+        assert_eq!(summary.distributed_total, 18_000);
+        assert_eq!(s.usdc.balance(&s.fee_recipient), 1_000);
+        assert_eq!(s.usdc.balance(&new_recipient), 2_000);
+    }
+
+    #[test]
+    fn signer_collision_is_rejected_at_start_and_on_concurrent_accept() {
+        let s = setup();
+
+        // Direct collision at start time: naming the active counterpart fails.
+        assert_eq!(
+            s.payout.try_rotate_operator_start(&s.admin, &s.ally),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
+        assert_eq!(s.payout.pending_operator(), None);
+
+        assert_eq!(
+            s.payout.try_rotate_ally_start(&s.admin, &s.operator),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
+        assert_eq!(s.payout.pending_ally(), None);
+
+        // Concurrent pending rotations naming the same fresh address: the
+        // first accept succeeds and the second accept fails with SignerCollision.
+        let shared = Address::generate(&s.env);
+        s.payout.rotate_operator_start(&s.admin, &shared);
+        s.payout.rotate_ally_start(&s.admin, &shared);
+        s.payout.rotate_operator_accept(&shared);
+        assert_eq!(s.payout.operator(), shared);
+
+        assert_eq!(
+            s.payout.try_rotate_ally_accept(&shared),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
+        assert_eq!(s.payout.ally(), s.ally);
+        s.payout.rotate_ally_cancel(&s.admin);
+
+        // Symmetrical order: ally accepts first, then operator accept fails.
+        let shared_two = Address::generate(&s.env);
+        s.payout.rotate_operator_start(&s.admin, &shared_two);
+        s.payout.rotate_ally_start(&s.admin, &shared_two);
+        s.payout.rotate_ally_accept(&shared_two);
+        assert_eq!(s.payout.ally(), shared_two);
+
+        assert_eq!(
+            s.payout.try_rotate_operator_accept(&shared_two),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
+        assert_eq!(s.payout.operator(), shared);
+    }
+
+    #[test]
+    fn rotation_cancel_and_wrong_acceptor_and_unauthorized_callers_fail() {
+        let s = setup();
+        let new_operator = Address::generate(&s.env);
+        let new_ally = Address::generate(&s.env);
+        let stranger = Address::generate(&s.env);
+
+        // Accept with nothing pending fails with typed NotPending* errors.
+        assert_eq!(
+            s.payout.try_rotate_operator_accept(&new_operator),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingOperator as u32
+            )))
+        );
+        assert_eq!(
+            s.payout.try_rotate_ally_accept(&new_ally),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingAlly as u32
+            )))
+        );
+
+        // Non-admin callers (operator, ally, stranger) cannot start, cancel,
+        // or change the fee recipient.
+        for caller in [&s.operator, &s.ally, &stranger] {
+            assert_eq!(
+                s.payout.try_rotate_operator_start(caller, &new_operator),
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::Unauthorized as u32
+                )))
+            );
+            assert_eq!(
+                s.payout.try_rotate_operator_cancel(caller),
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::Unauthorized as u32
+                )))
+            );
+            assert_eq!(
+                s.payout.try_rotate_ally_start(caller, &new_ally),
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::Unauthorized as u32
+                )))
+            );
+            assert_eq!(
+                s.payout.try_rotate_ally_cancel(caller),
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::Unauthorized as u32
+                )))
+            );
+            assert_eq!(
+                s.payout.try_set_platform_fee_recipient(caller, &stranger),
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::Unauthorized as u32
+                )))
+            );
+        }
+
+        // Wrong address cannot accept a pending operator or ally rotation.
+        s.payout.rotate_operator_start(&s.admin, &new_operator);
+        assert_eq!(
+            s.payout.try_rotate_operator_accept(&stranger),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingOperator as u32
+            )))
+        );
+
+        s.payout.rotate_ally_start(&s.admin, &new_ally);
+        assert_eq!(
+            s.payout.try_rotate_ally_accept(&stranger),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingAlly as u32
+            )))
+        );
+
+        // Cancelling clears the pending address and blocks acceptance.
+        s.payout.rotate_operator_cancel(&s.admin);
+        assert_eq!(s.payout.pending_operator(), None);
+        assert_eq!(
+            s.payout.try_rotate_operator_accept(&new_operator),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingOperator as u32
+            )))
+        );
+
+        s.payout.rotate_ally_cancel(&s.admin);
+        assert_eq!(s.payout.pending_ally(), None);
+        assert_eq!(
+            s.payout.try_rotate_ally_accept(&new_ally),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingAlly as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn rotation_works_while_paused_and_is_rejected_after_exit() {
+        let s = setup();
+        let new_operator = Address::generate(&s.env);
+        let new_ally = Address::generate(&s.env);
+        let new_recipient = Address::generate(&s.env);
+
+        // Pause the contract and run all three rotations end-to-end (including
+        // cancel + restart) while paused.
+        s.payout.pause(&s.admin);
+        assert!(s.payout.is_paused());
+
+        s.payout.rotate_operator_start(&s.admin, &new_operator);
+        s.payout.rotate_operator_cancel(&s.admin);
+        s.payout.rotate_operator_start(&s.admin, &new_operator);
+        s.payout.rotate_operator_accept(&new_operator);
+
+        s.payout.rotate_ally_start(&s.admin, &new_ally);
+        s.payout.rotate_ally_cancel(&s.admin);
+        s.payout.rotate_ally_start(&s.admin, &new_ally);
+        s.payout.rotate_ally_accept(&new_ally);
+
+        s.payout
+            .set_platform_fee_recipient(&s.admin, &new_recipient);
+
+        s.payout.unpause(&s.admin);
+
+        // Stage pending rotations BEFORE exit so we also prove accept is
+        // rejected once the contract has exited.
+        let post_exit_operator = Address::generate(&s.env);
+        let post_exit_ally = Address::generate(&s.env);
+        let post_exit_recipient = Address::generate(&s.env);
+        s.payout
+            .rotate_operator_start(&s.admin, &post_exit_operator);
+        s.payout.rotate_ally_start(&s.admin, &post_exit_ally);
+
+        s.payout.exit(
+            &new_operator,
+            &new_ally,
+            &String::from_str(&s.env, "pilot concluded"),
+        );
+
+        assert_eq!(
+            s.payout
+                .try_rotate_operator_start(&s.admin, &post_exit_operator),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+        assert_eq!(
+            s.payout.try_rotate_operator_accept(&post_exit_operator),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+        assert_eq!(
+            s.payout.try_rotate_operator_cancel(&s.admin),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+        assert_eq!(
+            s.payout.try_rotate_ally_start(&s.admin, &post_exit_ally),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+        assert_eq!(
+            s.payout.try_rotate_ally_accept(&post_exit_ally),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+        assert_eq!(
+            s.payout.try_rotate_ally_cancel(&s.admin),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+        assert_eq!(
+            s.payout
+                .try_set_platform_fee_recipient(&s.admin, &post_exit_recipient),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        // Active signers and fee recipient remain frozen at their pre-exit values.
+        assert_eq!(s.payout.operator(), new_operator);
+        assert_eq!(s.payout.ally(), new_ally);
+        assert_eq!(s.payout.platform_fee_recipient(), new_recipient);
+    }
+
+    #[test]
+    fn rotation_emits_typed_events_and_uninitialized_reads_fail() {
+        let s = setup();
+        let new_operator = Address::generate(&s.env);
+        let new_ally = Address::generate(&s.env);
+        let new_recipient = Address::generate(&s.env);
+
+        s.payout.rotate_operator_start(&s.admin, &new_operator);
+        assert_eq!(
+            s.env.events().all().filter_by_contract(&s.payout_id),
+            Vec::from_array(
+                &s.env,
+                [(
+                    s.payout_id.clone(),
+                    (symbol_short!("opersta"),).into_val(&s.env),
+                    events::OperatorRotationStartedEvent {
+                        admin: s.admin.clone(),
+                        current_operator: s.operator.clone(),
+                        new_operator: new_operator.clone(),
+                    }
+                    .into_val(&s.env),
+                )],
+            )
+        );
+
+        s.payout.rotate_operator_cancel(&s.admin);
+        assert_eq!(
+            s.env.events().all().filter_by_contract(&s.payout_id),
+            Vec::from_array(
+                &s.env,
+                [(
+                    s.payout_id.clone(),
+                    (symbol_short!("opercan"),).into_val(&s.env),
+                    events::OperatorRotationCancelledEvent {
+                        admin: s.admin.clone(),
+                    }
+                    .into_val(&s.env),
+                )],
+            )
+        );
+
+        s.payout.rotate_operator_start(&s.admin, &new_operator);
+        s.payout.rotate_operator_accept(&new_operator);
+        assert_eq!(
+            s.env.events().all().filter_by_contract(&s.payout_id),
+            Vec::from_array(
+                &s.env,
+                [(
+                    s.payout_id.clone(),
+                    (symbol_short!("operacc"),).into_val(&s.env),
+                    events::OperatorRotationAcceptedEvent {
+                        old_operator: s.operator.clone(),
+                        new_operator,
+                    }
+                    .into_val(&s.env),
+                )],
+            )
+        );
+
+        s.payout.rotate_ally_start(&s.admin, &new_ally);
+        assert_eq!(
+            s.env.events().all().filter_by_contract(&s.payout_id),
+            Vec::from_array(
+                &s.env,
+                [(
+                    s.payout_id.clone(),
+                    (symbol_short!("allysta"),).into_val(&s.env),
+                    events::AllyRotationStartedEvent {
+                        admin: s.admin.clone(),
+                        current_ally: s.ally.clone(),
+                        new_ally: new_ally.clone(),
+                    }
+                    .into_val(&s.env),
+                )],
+            )
+        );
+
+        s.payout.rotate_ally_cancel(&s.admin);
+        assert_eq!(
+            s.env.events().all().filter_by_contract(&s.payout_id),
+            Vec::from_array(
+                &s.env,
+                [(
+                    s.payout_id.clone(),
+                    (symbol_short!("allycan"),).into_val(&s.env),
+                    events::AllyRotationCancelledEvent {
+                        admin: s.admin.clone(),
+                    }
+                    .into_val(&s.env),
+                )],
+            )
+        );
+
+        s.payout.rotate_ally_start(&s.admin, &new_ally);
+        s.payout.rotate_ally_accept(&new_ally);
+        assert_eq!(
+            s.env.events().all().filter_by_contract(&s.payout_id),
+            Vec::from_array(
+                &s.env,
+                [(
+                    s.payout_id.clone(),
+                    (symbol_short!("allyacc"),).into_val(&s.env),
+                    events::AllyRotationAcceptedEvent {
+                        old_ally: s.ally.clone(),
+                        new_ally,
+                    }
+                    .into_val(&s.env),
+                )],
+            )
+        );
+
+        s.payout
+            .set_platform_fee_recipient(&s.admin, &new_recipient);
+        assert_eq!(
+            s.env.events().all().filter_by_contract(&s.payout_id),
+            Vec::from_array(
+                &s.env,
+                [(
+                    s.payout_id.clone(),
+                    (symbol_short!("feerecip"),).into_val(&s.env),
+                    events::FeeRecipientUpdatedEvent {
+                        admin: s.admin.clone(),
+                        old_recipient: s.fee_recipient.clone(),
+                        new_recipient,
+                    }
+                    .into_val(&s.env),
+                )],
+            )
+        );
+
+        // Uninitialized contract reports NotInitialized on the three role reads.
+        let bare_env = Env::default();
+        let bare_id = bare_env.register(PilotPayoutSplit, ());
+        let bare = PilotPayoutSplitClient::new(&bare_env, &bare_id);
+        assert_eq!(
+            bare.try_operator(),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotInitialized as u32
+            )))
+        );
+        assert_eq!(
+            bare.try_ally(),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotInitialized as u32
+            )))
+        );
+        assert_eq!(
+            bare.try_platform_fee_recipient(),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotInitialized as u32
             )))
         );
     }

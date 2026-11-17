@@ -8,6 +8,7 @@ import {
   hashEvidenceFile,
   type EvidenceDigest,
 } from "@/services/pilot/evidenceHash";
+import { isValidEvidenceHttpsUrl } from "@/services/pilot/evidenceUrl";
 import {
   prepareRecordEvidence,
   summarizeRecordEvidence,
@@ -23,6 +24,7 @@ interface RecordEvidenceCosignPanelProps {
   allyAddress: string;
   signTransaction: SignXdr;
   onRecorded?: () => void;
+  initialEvidenceLink?: string;
 }
 
 type Step =
@@ -44,6 +46,7 @@ export function RecordEvidenceCosignPanel({
   allyAddress,
   signTransaction,
   onRecorded,
+  initialEvidenceLink = "",
 }: RecordEvidenceCosignPanelProps) {
   const t = useTranslations("Pilot");
   const [step, setStep] = useState<Step>({ name: "compose" });
@@ -55,7 +58,7 @@ export function RecordEvidenceCosignPanel({
   const [file, setFile] = useState<File | null>(null);
   const [digest, setDigest] = useState<EvidenceDigest | null>(null);
   const [isHashing, setIsHashing] = useState(false);
-  const [evidenceLink, setEvidenceLink] = useState("");
+  const [evidenceLink, setEvidenceLink] = useState(initialEvidenceLink);
   const [totalIncome, setTotalIncome] = useState("");
 
   const parsedIncome = useMemo(() => {
@@ -64,11 +67,17 @@ export function RecordEvidenceCosignPanel({
     return BigInt(Math.round(value * 10 ** 7));
   }, [totalIncome]);
 
+  const isEvidenceLinkValid = isValidEvidenceHttpsUrl(evidenceLink);
+  const evidenceLinkError =
+    evidenceLink.length > 0 && !isEvidenceLinkValid
+      ? t("submission.invalidHttpsLink")
+      : undefined;
+
   const canPrepare =
     cycleId.trim().length > 0 &&
     digest !== null &&
     !isHashing &&
-    evidenceLink.trim().length > 0 &&
+    isEvidenceLinkValid &&
     parsedIncome !== null;
 
   async function handleFileChange(selected: File | null) {
@@ -91,7 +100,7 @@ export function RecordEvidenceCosignPanel({
   }
 
   async function prepare() {
-    if (!canPrepare || !digest || parsedIncome === null) return;
+    if (!canPrepare || !digest || parsedIncome === null || !isEvidenceLinkValid) return;
     setError(null);
     setStep({ name: "preparing" });
     try {
@@ -213,6 +222,7 @@ export function RecordEvidenceCosignPanel({
             value={evidenceLink}
             disabled={step.name === "preparing"}
             hint={t("submission.linkHint")}
+            error={evidenceLinkError}
             onChange={(event) => setEvidenceLink(event.target.value)}
           />
 

@@ -102,4 +102,32 @@ describe("EvidenceSubmissionForm", () => {
     expect(scope.queryByText(/payout contract is paused/i)).not.toBeNull();
     expect(fileInput(view.container)?.disabled).toBe(true);
   });
+
+  it("rejects non-https, relative, and space-containing links with a validation message and disables submit", () => {
+    const invalidLinks = [
+      "http://example.com/test.pdf",
+      "javascript:alert(1)",
+      "data:text/plain;base64,123",
+      "/relative/path.pdf",
+      "https://example.com/has space.pdf",
+    ];
+
+    for (const invalid of invalidLinks) {
+      const view = renderForm({ initialEvidenceLink: invalid });
+      const scope = within(view.container);
+      expect(
+        scope.queryByText(/must be a valid https:\/\/ url/i),
+      ).not.toBeNull();
+      const submit = scope.getByRole("button", { name: /submit for review/i });
+      expect((submit as HTMLButtonElement).disabled).toBe(true);
+    }
+  });
+
+  it("does not show an error message when the link is valid https", () => {
+    const view = renderForm({
+      initialEvidenceLink: "https://example.com/statement.pdf",
+    });
+    const scope = within(view.container);
+    expect(scope.queryByText(/must be a valid https:\/\/ url/i)).toBeNull();
+  });
 });

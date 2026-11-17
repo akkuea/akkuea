@@ -260,6 +260,7 @@
       "lockedNotice": "This cycle is already recorded on-chain. A new submission is only possible after a rejection.",
       "pausedNotice": "The payout contract is paused. Submissions are disabled until an admin resumes it.",
       "hashUnavailable": "Could not hash the selected file.",
+      "invalidHttpsLink": "The evidence link must be a valid https:// URL.",
       "submitFailed": "The submission was not accepted on-chain."
     },
     "queue": {
@@ -271,6 +272,7 @@
       "pausedNotice": "The payout contract is paused. Review actions are disabled until an admin resumes it.",
       "reported": "Reported {amount}",
       "openStatement": "Open the statement to check it against the hash",
+      "invalidLinkWarning": "Evidence link is not a valid HTTPS URL and cannot be opened.",
       "reasonLabel": "Reason",
       "reasonPlaceholder": "Required to reject, optional to approve",
       "startReview": "Start review",

@@ -124,4 +124,61 @@ describe("EvidenceReviewQueue", () => {
     });
     expect((reject as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it("renders a valid https evidence link as an openable anchor", () => {
+    const view = render(
+      <EvidenceReviewQueueView {...baseProps} cycles={populatedCycles} />,
+    );
+    const link = view.container.querySelector(
+      'a[href="https://example.org/statements/2026-03.pdf"]',
+    );
+    expect(link).not.toBeNull();
+  });
+
+  it("renders an invalid stored evidence link as plain text warning and never as an anchor", () => {
+    const invalidCycles = [
+      {
+        ...awaitingReviewCycle,
+        cycleId: "2026-04",
+        evidenceLink: "http://insecure.org/statement.pdf",
+      },
+      {
+        ...awaitingReviewCycle,
+        cycleId: "2026-05",
+        evidenceLink: "javascript:alert(1)",
+      },
+      {
+        ...awaitingReviewCycle,
+        cycleId: "2026-06",
+        evidenceLink: "data:text/plain;base64,123",
+      },
+      {
+        ...awaitingReviewCycle,
+        cycleId: "2026-07",
+        evidenceLink: "/relative/statement.pdf",
+      },
+    ];
+    const view = render(
+      <EvidenceReviewQueueView {...baseProps} cycles={invalidCycles} />,
+    );
+    // Invalid links must never become anchors
+    expect(view.container.querySelector('a[href^="http://"]')).toBeNull();
+    expect(view.container.querySelector('a[href^="javascript:"]')).toBeNull();
+    expect(view.container.querySelector('a[href^="data:"]')).toBeNull();
+    expect(view.container.querySelector('a[href^="/relative"]')).toBeNull();
+
+    // Plain text and warnings should be displayed
+    const scope = within(view.container);
+    expect(
+      scope.queryByText("http://insecure.org/statement.pdf"),
+    ).not.toBeNull();
+    expect(scope.queryByText("javascript:alert(1)")).not.toBeNull();
+    expect(
+      scope.queryByText("data:text/plain;base64,123"),
+    ).not.toBeNull();
+    expect(
+      scope.queryByText("/relative/statement.pdf"),
+    ).not.toBeNull();
+    expect(scope.queryAllByText(/not a valid https url/i).length).toBe(4);
+  });
 });

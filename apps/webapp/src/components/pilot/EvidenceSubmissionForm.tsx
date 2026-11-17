@@ -17,6 +17,7 @@ import {
   hashEvidenceFile,
   type EvidenceDigest,
 } from "@/services/pilot/evidenceHash";
+import { isValidEvidenceHttpsUrl } from "@/services/pilot/evidenceUrl";
 import { submitEvidence, type SignXdr } from "@/services/pilot/writes";
 import { formatCycleLabel, shortenHash } from "./format";
 
@@ -64,6 +65,8 @@ interface EvidenceSubmissionFormProps {
   isPaused?: boolean;
   /** Called after a successful submission so the parent can re-read the chain. */
   onSubmitted?: () => void;
+  /** Optional initial evidence link for prefill or test scenarios. */
+  initialEvidenceLink?: string;
 }
 
 /**
@@ -97,6 +100,7 @@ export function EvidenceSubmissionFormView({
   reviewReason,
   isPaused = false,
   onSubmitted,
+  initialEvidenceLink = "",
   wallet,
 }: EvidenceSubmissionFormProps & { wallet: EvidenceSubmissionWallet }) {
   const t = useTranslations("Pilot");
@@ -105,7 +109,7 @@ export function EvidenceSubmissionFormView({
   const [file, setFile] = useState<File | null>(null);
   const [digest, setDigest] = useState<EvidenceDigest | null>(null);
   const [isHashing, setIsHashing] = useState(false);
-  const [evidenceLink, setEvidenceLink] = useState("");
+  const [evidenceLink, setEvidenceLink] = useState(initialEvidenceLink);
   const [totalIncome, setTotalIncome] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -123,6 +127,12 @@ export function EvidenceSubmissionFormView({
     return BigInt(Math.round(value * 10 ** 7));
   }, [totalIncome]);
 
+  const isEvidenceLinkValid = isValidEvidenceHttpsUrl(evidenceLink);
+  const evidenceLinkError =
+    evidenceLink.length > 0 && !isEvidenceLinkValid
+      ? t("submission.invalidHttpsLink")
+      : undefined;
+
   const canSubmit =
     isConnected &&
     !isLocked &&
@@ -130,7 +140,7 @@ export function EvidenceSubmissionFormView({
     !isSubmitting &&
     !isHashing &&
     digest !== null &&
-    evidenceLink.trim().length > 0 &&
+    isEvidenceLinkValid &&
     parsedIncome !== null;
 
   async function handleFileChange(selected: File | null) {
@@ -293,6 +303,7 @@ export function EvidenceSubmissionFormView({
           disabled={isLocked || isPaused || isSubmitting}
           leftIcon={<Link2 className="h-4 w-4" aria-hidden="true" />}
           hint={t("submission.linkHint")}
+          error={evidenceLinkError}
           onChange={(event) => setEvidenceLink(event.target.value)}
         />
 

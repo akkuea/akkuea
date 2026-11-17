@@ -24,6 +24,7 @@ import {
 } from "@/services/pilot/writes";
 import { holderAmountFor } from "@/services/pilot/reads";
 import { pilotAllyAddress } from "@/services/pilot/config";
+import { parseEvidenceHttpsUrl } from "@/services/pilot/evidenceUrl";
 import { DistributionCosignPanel } from "./DistributionCosignPanel";
 import { EvidenceStatusBadge } from "./EvidenceSubmissionForm";
 import { EvidenceVerification } from "./EvidenceVerification";
@@ -169,23 +170,41 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
               {shortenHash(cycle.evidenceHashHex)}
             </p>
           )}
-          {cycle.evidenceLink && (
-            <a
-              href={cycle.evidenceLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:underline"
-            >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("queue.openStatement")}
-            </a>
-          )}
-          {cycle.evidenceLink && cycle.evidenceHashHex && (
-            <EvidenceVerification
-              evidenceLink={cycle.evidenceLink}
-              evidenceHashHex={cycle.evidenceHashHex}
-            />
-          )}
+          {cycle.evidenceLink &&
+            (() => {
+              const parsedLink = parseEvidenceHttpsUrl(cycle.evidenceLink);
+              if (parsedLink.isValid) {
+                return (
+                  <>
+                    <a
+                      href={parsedLink.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                      {t("queue.openStatement")}
+                    </a>
+                    {cycle.evidenceHashHex && (
+                      <EvidenceVerification
+                        evidenceLink={parsedLink.href}
+                        evidenceHashHex={cycle.evidenceHashHex}
+                      />
+                    )}
+                  </>
+                );
+              }
+              return (
+                <div className="mt-1 flex flex-col gap-0.5 text-xs">
+                  <span className="break-all font-mono text-neutral-400">
+                    {cycle.evidenceLink}
+                  </span>
+                  <span className="text-amber-400">
+                    {t("queue.invalidLinkWarning")}
+                  </span>
+                </div>
+              );
+            })()}
         </div>
       </div>
 

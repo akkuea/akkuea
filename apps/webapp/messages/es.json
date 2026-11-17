@@ -260,6 +260,7 @@
       "lockedNotice": "Este ciclo ya está registrado on-chain. Solo se puede volver a enviar tras un rechazo.",
       "pausedNotice": "El contrato de pagos está pausado. Los envíos quedan deshabilitados hasta que un administrador lo reanude.",
       "hashUnavailable": "No se pudo calcular el hash del archivo seleccionado.",
+      "invalidHttpsLink": "El enlace de la evidencia debe ser una URL https:// válida.",
       "submitFailed": "El envío no fue aceptado on-chain."
     },
     "queue": {
@@ -271,6 +272,7 @@
       "pausedNotice": "El contrato de pagos está pausado. Las acciones de revisión quedan deshabilitadas hasta que un administrador lo reanude.",
       "reported": "Reportó {amount}",
       "openStatement": "Abrir el estado para contrastarlo con el hash",
+      "invalidLinkWarning": "El enlace de la evidencia no es una URL HTTPS válida y no se puede abrir.",
       "reasonLabel": "Motivo",
       "reasonPlaceholder": "Obligatorio para rechazar, opcional para aprobar",
       "startReview": "Iniciar revisión",

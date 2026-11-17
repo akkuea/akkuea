@@ -4,7 +4,11 @@ import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
 import { getPilotReviewSlaConfig, type PilotReviewSlaConfig } from '../config/pilotReviewSla';
 import { getPilotPayoutSplitContractId } from '../config/contracts';
 import { PilotPayoutEvidenceReader, type EvidenceLookupResult } from './PilotPayoutEvidenceReader';
-import { buildExpectedCycles } from '../workers/pilotEscalation/expectedCycles';
+import {
+  buildExpectedCycles,
+  DEFAULT_PILOT_PAYMENT_DAY,
+  parsePilotPaymentDay,
+} from '../workers/pilotEscalation/expectedCycles';
 import { logger } from './logger';
 import {
   computeReviewTurnaround,
@@ -46,8 +50,7 @@ export interface ReviewTurnaroundServiceOptions {
   evidenceReader?: EvidenceReaderLike;
   sla?: PilotReviewSlaConfig;
   agreementStartAt?: Date | null;
-  cadenceDays?: number;
-  cycleIdPrefix?: string;
+  paymentDay?: number;
   contractId?: string;
   now?: () => Date;
 }
@@ -56,13 +59,6 @@ function parseIsoDate(value: string | undefined): Date | null {
   if (!value) return null;
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function parsePositiveNumber(value: string | undefined, fallback: number): number {
-  if (!value) return fallback;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
-  return parsed;
 }
 
 async function defaultListWhitelistRequests(from: Date, to: Date): Promise<WhitelistRequestRow[]> {
@@ -91,8 +87,7 @@ export class ReviewTurnaroundService {
   private readonly injectedEvidenceReader: EvidenceReaderLike | undefined;
   private readonly slaOverride: PilotReviewSlaConfig | undefined;
   private readonly agreementStartOverride: Date | null | undefined;
-  private readonly cadenceDaysOverride: number | undefined;
-  private readonly cycleIdPrefix: string;
+  private readonly paymentDayOverride: number | undefined;
   private readonly contractIdOverride: string | undefined;
   private readonly now: () => Date;
 
@@ -101,8 +96,7 @@ export class ReviewTurnaroundService {
     this.injectedEvidenceReader = options?.evidenceReader;
     this.slaOverride = options?.sla;
     this.agreementStartOverride = options?.agreementStartAt;
-    this.cadenceDaysOverride = options?.cadenceDays;
-    this.cycleIdPrefix = options?.cycleIdPrefix ?? 'cycle-';
+    this.paymentDayOverride = options?.paymentDay;
     this.contractIdOverride = options?.contractId;
     this.now = options?.now ?? (() => new Date());
   }
@@ -116,9 +110,11 @@ export class ReviewTurnaroundService {
     return parseIsoDate(process.env.PILOT_ESCALATION_AGREEMENT_START);
   }
 
-  private cadenceDays(): number {
+  private paymentDay(): number {
     return (
-      this.cadenceDaysOverride ?? parsePositiveNumber(process.env.PILOT_ESCALATION_CADENCE_DAYS, 30)
+      this.paymentDayOverride ??
+      parsePilotPaymentDay(process.env.PILOT_ESCALATION_PAYMENT_DAY) ??
+      DEFAULT_PILOT_PAYMENT_DAY
     );
   }
 
@@ -193,8 +189,7 @@ export class ReviewTurnaroundService {
     const cycles = buildExpectedCycles(
       {
         agreementStartAt,
-        cadenceDays: this.cadenceDays(),
-        cycleIdPrefix: this.cycleIdPrefix,
+        paymentDay: this.paymentDay(),
       },
       this.now(),
     ).filter(

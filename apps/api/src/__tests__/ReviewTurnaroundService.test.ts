@@ -60,10 +60,10 @@ describe('ReviewTurnaroundService whitelist metrics', () => {
 
 describe('ReviewTurnaroundService evidence metrics', () => {
   const agreementStartAt = new Date('2026-01-01T00:00:00.000Z');
-  // cycle-1 due 2026-01-31, cycle-2 due 2026-03-02, cycle-3 due 2026-04-01
-  const cycle1Due = new Date('2026-01-31T00:00:00.000Z');
-  const cycle2Due = new Date('2026-03-02T00:00:00.000Z');
-  const now = new Date('2026-04-03T01:00:00.000Z');
+  // 2026-01 due 2026-02-05, 2026-02 due 2026-03-05, 2026-03 due 2026-04-05
+  const janDue = new Date('2026-02-05T00:00:00.000Z');
+  const febDue = new Date('2026-03-05T00:00:00.000Z');
+  const now = new Date('2026-04-07T01:00:00.000Z');
 
   function unixSeconds(date: Date): number {
     return Math.floor(date.getTime() / 1000);
@@ -71,9 +71,9 @@ describe('ReviewTurnaroundService evidence metrics', () => {
 
   it('computes turnaround from on-chain recorded_at, not a database table', async () => {
     const lookups: Record<string, EvidenceLookupResult> = {
-      'cycle-1': { present: true, recordedAt: unixSeconds(hoursAfter(cycle1Due, 2)) },
-      'cycle-2': { present: true, recordedAt: unixSeconds(hoursAfter(cycle2Due, 50)) },
-      'cycle-3': { present: false },
+      '2026-01': { present: true, recordedAt: unixSeconds(hoursAfter(janDue, 2)) },
+      '2026-02': { present: true, recordedAt: unixSeconds(hoursAfter(febDue, 50)) },
+      '2026-03': { present: false },
     };
 
     const service = new ReviewTurnaroundService({
@@ -83,7 +83,7 @@ describe('ReviewTurnaroundService evidence metrics', () => {
       },
       sla: defaultSla,
       agreementStartAt,
-      cadenceDays: 30,
+      paymentDay: 5,
       contractId: 'C-TEST',
       now: () => now,
     });
@@ -98,10 +98,10 @@ describe('ReviewTurnaroundService evidence metrics', () => {
     expect(metrics.meanMs).toBe(((2 + 50) / 2) * HOUR_MS);
     expect(metrics.medianMs).toBe(((2 + 50) / 2) * HOUR_MS);
     expect(metrics.breachCount).toBe(1);
-    expect(metrics.completedBreachIds).toEqual(['cycle-2']);
+    expect(metrics.completedBreachIds).toEqual(['2026-02']);
     expect(metrics.pendingCount).toBe(1);
     expect(metrics.pendingBreachCount).toBe(1);
-    expect(metrics.pendingBreachIds).toEqual(['cycle-3']);
+    expect(metrics.pendingBreachIds).toEqual(['2026-03']);
     expect(metrics.breached).toBe(true);
   });
 
@@ -133,7 +133,7 @@ describe('ReviewTurnaroundService evidence metrics', () => {
       },
       sla: defaultSla,
       agreementStartAt,
-      cadenceDays: 30,
+      paymentDay: 5,
       contractId: 'C-TEST',
       now: () => now,
     });

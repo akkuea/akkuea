@@ -4,8 +4,18 @@ import {
   type CycleEvidenceStatus,
 } from '../workers/pilotEscalation/detectMissedCycles';
 
-function cycles(pattern: boolean[]): CycleEvidenceStatus[] {
-  return pattern.map((hasEvidence, i) => ({ cycleId: `cycle-${i + 1}`, hasEvidence }));
+function cycles(pattern: boolean[], startYear = 2026, startMonth = 1): CycleEvidenceStatus[] {
+  let year = startYear;
+  let month = startMonth;
+  return pattern.map((hasEvidence) => {
+    const cycleId = `${year}-${String(month).padStart(2, '0')}`;
+    month += 1;
+    if (month > 12) {
+      month = 1;
+      year += 1;
+    }
+    return { cycleId, hasEvidence };
+  });
 }
 
 describe('detectMissedCycles', () => {
@@ -21,22 +31,30 @@ describe('detectMissedCycles', () => {
     const result = detectMissedCycles(cycles([true, true, false]), 2);
     expect(result.breached).toBe(false);
     expect(result.consecutiveMissed).toBe(1);
-    expect(result.missedCycleIds).toEqual(['cycle-3']);
+    expect(result.missedCycleIds).toEqual(['2026-03']);
   });
 
   it('breaches on exactly two consecutive missed cycles (threshold 2)', () => {
     const result = detectMissedCycles(cycles([true, false, false]), 2);
     expect(result.breached).toBe(true);
     expect(result.consecutiveMissed).toBe(2);
-    expect(result.missedCycleIds).toEqual(['cycle-2', 'cycle-3']);
-    expect(result.lastMissedCycleId).toBe('cycle-3');
+    expect(result.missedCycleIds).toEqual(['2026-02', '2026-03']);
+    expect(result.lastMissedCycleId).toBe('2026-03');
+  });
+
+  it('tracks missed YYYY-MM cycles cleanly across a year boundary', () => {
+    const result = detectMissedCycles(cycles([true, false, false], 2026, 11), 2);
+    expect(result.breached).toBe(true);
+    expect(result.consecutiveMissed).toBe(2);
+    expect(result.missedCycleIds).toEqual(['2026-12', '2027-01']);
+    expect(result.lastMissedCycleId).toBe('2027-01');
   });
 
   it('breaches on more than the threshold', () => {
     const result = detectMissedCycles(cycles([true, false, false, false]), 2);
     expect(result.breached).toBe(true);
     expect(result.consecutiveMissed).toBe(3);
-    expect(result.missedCycleIds).toEqual(['cycle-2', 'cycle-3', 'cycle-4']);
+    expect(result.missedCycleIds).toEqual(['2026-02', '2026-03', '2026-04']);
   });
 
   it('only counts the trailing gap, not an earlier resolved gap', () => {
@@ -50,6 +68,7 @@ describe('detectMissedCycles', () => {
     const result = detectMissedCycles(cycles([false, false]), 2);
     expect(result.breached).toBe(true);
     expect(result.consecutiveMissed).toBe(2);
+    expect(result.missedCycleIds).toEqual(['2026-01', '2026-02']);
   });
 
   it('returns no breach for an empty cycle history', () => {

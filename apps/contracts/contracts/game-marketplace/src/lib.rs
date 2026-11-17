@@ -141,6 +141,13 @@ impl GameMarketplace {
     /// The seller must have already called `approve(seller, marketplace, property_id)`
     /// on the NFT contract. This function calls `transfer_from` to take custody.
     /// `price` must be strictly positive.
+    ///
+    /// Rent policy (reset on transfer): moving the tile into escrow via
+    /// `transfer_from` and out of escrow on `buy` or `cancel` via `transfer`
+    /// resets `PropertyMeta.last_claimed_ledger` to the current ledger sequence
+    /// while preserving `level`. Sellers must call `claim_rental` on the game
+    /// engine before listing a property, otherwise any unclaimed rental income
+    /// is forfeited; no rent accrues during the escrow period.
     pub fn list(env: Env, seller: Address, property_id: u32, price: i128) {
         seller.require_auth();
 
@@ -392,7 +399,7 @@ mod tests {
     use soroban_sdk::{
         testutils::{
             storage::{Instance as _, Persistent as _},
-            Address as _,
+            Address as _, Ledger as _,
         },
         token::{StellarAssetClient, TokenClient},
         Address, Env,
@@ -401,6 +408,7 @@ mod tests {
     struct Setup<'a> {
         env: Env,
         treasury: Address,
+        game_engine: Address,
         marketplace_id: Address,
         marketplace: GameMarketplaceClient<'a>,
         nft: GamePropertyNftClient<'a>,
@@ -429,6 +437,7 @@ mod tests {
         Setup {
             env,
             treasury,
+            game_engine,
             marketplace_id,
             marketplace,
             nft,
@@ -929,5 +938,71 @@ mod tests {
         assert_eq!(second.seller, s.treasury);
         assert_eq!(second.property_id, 25);
         assert_eq!(second.price, 888);
+    }
+
+    #[test]
+    fn test_buy_resets_unclaimed_rent_and_preserves_level() {
+        let s = setup();
+        let bob = Address::generate(&s.env);
+        let carol = Address::generate(&s.env);
+        mint_land(&s, &carol, 5_000);
+
+        s.nft.transfer(&s.treasury, &bob, &32);
+        s.nft.set_improvement_level(&s.game_engine, &32, &3);
+
+        // Bob accrues K = 10 epochs (1,000 ledgers) without claiming, then lists
+        let mut ledger = s.env.ledger().get();
+        ledger.sequence_number = 1_000;
+        s.env.ledger().set(ledger);
+
+        s.nft.approve(&bob, &s.marketplace_id, &32);
+        s.marketplace.list(&bob, &32, &1_500);
+
+        let escrowed = s.nft.get_property(&32);
+        assert_eq!(escrowed.owner, s.marketplace_id);
+        assert_eq!(escrowed.level, 3);
+        assert_eq!(escrowed.last_claimed_ledger, 1_000);
+
+        // Tile sits in escrow for 5 epochs (500 ledgers) before Carol buys
+        let mut ledger = s.env.ledger().get();
+        ledger.sequence_number = 1_500;
+        s.env.ledger().set(ledger);
+
+        s.marketplace.buy(&carol, &32);
+
+        let bought = s.nft.get_property(&32);
+        assert_eq!(bought.owner, carol);
+        assert_eq!(bought.level, 3);
+        // Checkpointed to the exact buy ledger so Carol starts with 0 accrued epochs
+        assert_eq!(bought.last_claimed_ledger, 1_500);
+    }
+
+    #[test]
+    fn test_cancel_resets_escrow_period_and_preserves_level() {
+        let s = setup();
+        let bob = Address::generate(&s.env);
+
+        s.nft.transfer(&s.treasury, &bob, &33);
+        s.nft.set_improvement_level(&s.game_engine, &33, &2);
+
+        let mut ledger = s.env.ledger().get();
+        ledger.sequence_number = 400;
+        s.env.ledger().set(ledger);
+
+        s.nft.approve(&bob, &s.marketplace_id, &33);
+        s.marketplace.list(&bob, &33, &900);
+
+        // Tile sits in escrow for 8 epochs (800 ledgers), then Bob cancels
+        let mut ledger = s.env.ledger().get();
+        ledger.sequence_number = 1_200;
+        s.env.ledger().set(ledger);
+
+        s.marketplace.cancel(&bob, &33);
+
+        let returned = s.nft.get_property(&33);
+        assert_eq!(returned.owner, bob);
+        assert_eq!(returned.level, 2);
+        // Checkpointed to the cancel ledger so escrow time does not accrue rent
+        assert_eq!(returned.last_claimed_ledger, 1_200);
     }
 }

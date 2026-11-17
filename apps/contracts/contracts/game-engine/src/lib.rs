@@ -713,4 +713,141 @@ mod tests {
         assert_eq!(earned_multiple, earned_single);
         assert_eq!(earned_multiple, BASE_RENTAL_RATE * 5);
     }
+
+    #[test]
+    fn test_aged_treasury_tile_resets_rent_on_transfer_to_alice() {
+        let test = setup_test();
+        let alice = Address::generate(&test.env);
+
+        // Upgrade treasury tile 5 to Commercial (level 2) via engine client setup:
+        // first let treasury age N = 50 epochs (5,000 ledgers) on untouched tile 4
+        // and upgraded tile 5.
+        test.nft_client.transfer(&test.treasury, &test.owner, &5);
+        test.engine_client.improve(&test.owner, &5);
+        test.engine_client.improve(&test.owner, &5);
+        test.nft_client.transfer(&test.owner, &test.treasury, &5);
+
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (50 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+
+        // Transfer aged treasury tiles (untouched vacant tile 4 and level-2 tile 5) to Alice
+        test.nft_client.transfer(&test.treasury, &alice, &4);
+        test.nft_client.transfer(&test.treasury, &alice, &5);
+
+        assert_eq!(test.nft_client.get_property(&4).level, LEVEL_VACANT);
+        assert_eq!(test.nft_client.get_property(&5).level, LEVEL_COMMERCIAL);
+
+        // Immediately after transfer, accrued income is 0 and claim_rental returns NothingToClaim
+        assert_eq!(test.engine_client.get_accrued_income(&4), 0);
+        assert_eq!(test.engine_client.get_accrued_income(&5), 0);
+        assert_eq!(
+            test.engine_client.try_claim_rental(&alice, &4),
+            Err(Ok(EngineError::NothingToClaim.into()))
+        );
+        assert_eq!(
+            test.engine_client.try_claim_rental(&alice, &5),
+            Err(Ok(EngineError::NothingToClaim.into()))
+        );
+
+        // Partial epoch (EPOCH_LENGTH - 1 ledgers): still 0 and NothingToClaim
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (EPOCH_LENGTH - 1) as u32;
+        test.env.ledger().set(ledger);
+
+        assert_eq!(test.engine_client.get_accrued_income(&4), 0);
+        assert_eq!(test.engine_client.get_accrued_income(&5), 0);
+        assert_eq!(
+            test.engine_client.try_claim_rental(&alice, &5),
+            Err(Ok(EngineError::NothingToClaim.into()))
+        );
+
+        // Complete 1 full epoch: Alice earns exactly 1 epoch at each tile's level
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += 1;
+        test.env.ledger().set(ledger);
+
+        let (comm_num, comm_den) = MULTIPLIER_COMMERCIAL;
+        let expected_commercial_one_epoch = BASE_RENTAL_RATE * comm_num / comm_den;
+
+        assert_eq!(test.engine_client.get_accrued_income(&4), BASE_RENTAL_RATE);
+        assert_eq!(
+            test.engine_client.get_accrued_income(&5),
+            expected_commercial_one_epoch
+        );
+
+        test.engine_client.claim_rental(&alice, &4);
+        test.engine_client.claim_rental(&alice, &5);
+        assert_eq!(
+            test.token_client.balance(&alice),
+            BASE_RENTAL_RATE + expected_commercial_one_epoch
+        );
+    }
+
+    #[test]
+    fn test_escrow_transfer_from_buy_and_cancel_never_leak_backlog_or_escrow_rent() {
+        let test = setup_test();
+        let bob = test.owner.clone();
+        let carol = Address::generate(&test.env);
+        let escrow = Address::generate(&test.env);
+        let full_nft =
+            game_property_nft::GamePropertyNftClient::new(&test.env, &test.nft_client.address);
+
+        // Upgrade Bob's tile 0 to Skyscraper (level 3)
+        test.engine_client.improve(&bob, &0);
+        test.engine_client.improve(&bob, &0);
+        test.engine_client.improve(&bob, &0);
+        assert_eq!(test.nft_client.get_property(&0).level, LEVEL_SKYSCRAPER);
+
+        // Bob accrues K = 12 epochs without claiming
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (12 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(
+            test.engine_client.get_accrued_income(&0),
+            BASE_RENTAL_RATE * 6 * 12
+        );
+
+        // Bob lists into escrow via approve + transfer_from
+        full_nft.approve(&bob, &escrow, &0);
+        full_nft.transfer_from(&escrow, &bob, &escrow, &0);
+
+        // Tile sits in escrow for 4 epochs, then Carol buys (escrow transfers to Carol)
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (4 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+        full_nft.transfer(&escrow, &carol, &0);
+
+        // Right after buy: level survived, Carol's accrued income is 0, Carol never receives Bob's K epochs
+        assert_eq!(test.nft_client.get_property(&0).level, LEVEL_SKYSCRAPER);
+        assert_eq!(test.engine_client.get_accrued_income(&0), 0);
+        assert_eq!(
+            test.engine_client.try_claim_rental(&carol, &0),
+            Err(Ok(EngineError::NothingToClaim.into()))
+        );
+
+        // After 1 epoch, Carol receives only 1 Skyscraper epoch (never Bob's 12 or escrow's 4)
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += EPOCH_LENGTH as u32;
+        test.env.ledger().set(ledger);
+        test.engine_client.claim_rental(&carol, &0);
+        assert_eq!(test.token_client.balance(&carol), BASE_RENTAL_RATE * 6);
+
+        // Cancel scenario: Carol lists into escrow, 7 epochs pass in escrow, Carol cancels back to herself
+        full_nft.approve(&carol, &escrow, &0);
+        full_nft.transfer_from(&escrow, &carol, &escrow, &0);
+
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (7 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+        full_nft.transfer(&escrow, &carol, &0);
+
+        // Escrow period pays zero rent after cancel
+        assert_eq!(test.nft_client.get_property(&0).level, LEVEL_SKYSCRAPER);
+        assert_eq!(test.engine_client.get_accrued_income(&0), 0);
+        assert_eq!(
+            test.engine_client.try_claim_rental(&carol, &0),
+            Err(Ok(EngineError::NothingToClaim.into()))
+        );
+    }
 }

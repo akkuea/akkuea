@@ -46,10 +46,19 @@ export function useMapEvents(
 
   const simulateEvent = useCallback(() => {
     const props = propertiesRef.current;
-    if (props.length === 0) return;
+    if (!Array.isArray(props) || props.length === 0) return;
 
     const idx = Math.floor(Math.random() * props.length);
     const prop = props[idx];
+    if (
+      !prop ||
+      typeof prop.id !== "string" ||
+      prop.id.length === 0 ||
+      typeof prop.buildingLevel !== "number" ||
+      !Number.isFinite(prop.buildingLevel)
+    ) {
+      return;
+    }
 
     // Randomly pick event type
     const roll = Math.random();

@@ -62,8 +62,15 @@ export function GameEventProvider({ children }: { children: ReactNode }) {
       es.onmessage = (e: MessageEvent<string>) => {
         if (!mountedRef.current) return;
         try {
-          const event = JSON.parse(e.data) as GameEvent;
-          dispatch(event);
+          const parsed: unknown = JSON.parse(e.data);
+          if (
+            !parsed ||
+            typeof parsed !== "object" ||
+            typeof (parsed as { type?: unknown }).type !== "string"
+          ) {
+            return;
+          }
+          dispatch(parsed as GameEvent);
         } catch {
           // malformed payload - ignore
         }
@@ -73,7 +80,9 @@ export function GameEventProvider({ children }: { children: ReactNode }) {
         if (!mountedRef.current) return;
         es.close();
         setConnected(false);
+        if (timeoutId) clearTimeout(timeoutId);
         timeoutId = setTimeout(() => {
+          timeoutId = null;
           backoff = Math.min(backoff * 2, 60_000);
           connect();
         }, backoff);

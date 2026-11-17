@@ -1,12 +1,6 @@
 "use client";
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useRef,
-} from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link, useRouter } from "@/i18n/routing";
 import {
@@ -34,6 +28,7 @@ import { TIMEOUTS } from "@/lib/constants";
 import { PilotCta } from "@/components/game/PilotCta";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
+import { GameEventProvider, useGameEvents } from "@/context/GameEventContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -323,14 +318,23 @@ function eventAmountSign(type: EventType): string {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  return (
+    <GameEventProvider>
+      <DashboardPageContent />
+    </GameEventProvider>
+  );
+}
+
+function DashboardPageContent() {
   const t = useTranslations("Dashboard");
   const tCommon = useTranslations("Common");
   const locale = useLocale();
   const router = useRouter();
+  const { latest, latestLedger, streamFailed } = useGameEvents();
 
   const [isConnected] = useState(true);
   const [landBalance, setLandBalance] = useState(4_250);
-  const [currentLedger, setCurrentLedger] = useState(0);
+  const [polledLedger, setPolledLedger] = useState(0);
   const [properties, setProperties] =
     useState<DashboardProperty[]>(MOCK_PROPERTIES);
   const [claimProgress, setClaimProgress] = useState<ClaimProgress | null>(
@@ -338,101 +342,61 @@ export default function DashboardPage() {
   );
   const [eventPage, setEventPage] = useState(1);
 
-  // SSE primary, 5 s RPC poll fallback
-  const MAX_SSE_RETRIES = 3;
-  const SSE_RETRY_DELAY_MS = 2_000;
-  const FALLBACK_POLL_MS = TIMEOUTS.LEDGER_POLL_MS;
-  const SSE_ENDPOINT = "/api/ledger/stream";
+  const currentLedger = Math.max(
+    polledLedger,
+    latestLedger,
+    latest?.ledger ?? 0,
+  );
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const sseRetriesRef = useRef(0);
-  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollLatestLedger = useCallback(
+    (onLedger: (sequence: number) => void) => {
+      const server = new SorobanRpc.Server(SOROBAN_RPC_URL, {
+        allowHttp: SOROBAN_RPC_URL.startsWith("http://"),
+      });
+      void server
+        .getLatestLedger()
+        .then(({ sequence }) => {
+          onLedger(sequence);
+        })
+        .catch(() => {
+          /* keep current value */
+        });
+    },
+    [],
+  );
 
   useEffect(() => {
-    const server = new SorobanRpc.Server(SOROBAN_RPC_URL);
-
-    async function fetchLatestLedger() {
-      try {
-        const { sequence } = await server.getLatestLedger();
-        setCurrentLedger(sequence);
-      } catch {
-        /* keep current value */
+    let cancelled = false;
+    pollLatestLedger((sequence) => {
+      if (!cancelled) {
+        setPolledLedger((prev) => Math.max(prev, sequence));
       }
-    }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pollLatestLedger]);
 
-    function startPolling() {
-      if (intervalRef.current) return;
-      void fetchLatestLedger();
-      intervalRef.current = setInterval(fetchLatestLedger, FALLBACK_POLL_MS);
-    }
+  useEffect(() => {
+    if (!streamFailed) return;
 
-    function stopPolling() {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+    let cancelled = false;
+    const applySequence = (sequence: number) => {
+      if (!cancelled) {
+        setPolledLedger((prev) => Math.max(prev, sequence));
       }
-    }
+    };
 
-    function closeSSE() {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-    }
-
-    function connectSSE() {
-      closeSSE();
-      if (typeof window === "undefined") {
-        startPolling();
-        return;
-      }
-
-      try {
-        const es = new EventSource(SSE_ENDPOINT);
-        eventSourceRef.current = es;
-
-        es.onopen = () => {
-          sseRetriesRef.current = 0;
-          stopPolling();
-        };
-
-        es.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data) as { sequence: number };
-            setCurrentLedger(data.sequence);
-          } catch {
-            /* ignore malformed */
-          }
-        };
-
-        es.onerror = () => {
-          closeSSE();
-          if (sseRetriesRef.current < MAX_SSE_RETRIES) {
-            sseRetriesRef.current += 1;
-            retryTimeoutRef.current = setTimeout(
-              connectSSE,
-              SSE_RETRY_DELAY_MS,
-            );
-          } else {
-            startPolling(); // fallback after max retries
-          }
-        };
-      } catch {
-        startPolling();
-      }
-    }
-
-    void fetchLatestLedger();
-    connectSSE();
+    pollLatestLedger(applySequence);
+    const intervalId = setInterval(() => {
+      pollLatestLedger(applySequence);
+    }, TIMEOUTS.LEDGER_POLL_MS);
 
     return () => {
-      closeSSE();
-      stopPolling();
-      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+      cancelled = true;
+      clearInterval(intervalId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [streamFailed, pollLatestLedger]);
 
   // Recompute accrued income on every ledger tick
   const propertiesWithIncome = useMemo(

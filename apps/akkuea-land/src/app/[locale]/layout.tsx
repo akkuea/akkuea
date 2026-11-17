@@ -4,6 +4,7 @@ import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
 import "../globals.css";
 import { OnboardingGate } from "@/components/game/onboarding/OnboardingGate";
+import { GameEventProvider } from "@/context/GameEventContext";
 import { ThemeProvider, THEME_INIT_SCRIPT } from "@/context/ThemeContext";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -42,9 +43,11 @@ export default async function RootLayout({
         </a>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
-            <OnboardingGate>
-              <div id="main-content">{children}</div>
-            </OnboardingGate>
+            <GameEventProvider>
+              <OnboardingGate>
+                <div id="main-content">{children}</div>
+              </OnboardingGate>
+            </GameEventProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

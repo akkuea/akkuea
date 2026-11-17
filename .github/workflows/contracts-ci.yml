@@ -12,6 +12,10 @@ on:
       - 'apps/contracts/**'
       - '.github/workflows/contracts-ci.yml'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -19,6 +23,7 @@ jobs:
   build-and-test:
     name: Build and Test Contracts
     runs-on: macos-latest
+    timeout-minutes: 30
     
     steps:
       - name: Checkout repository
@@ -93,6 +98,7 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: macos-latest
+    timeout-minutes: 25
     
     steps:
       - name: Checkout repository
@@ -144,6 +150,7 @@ jobs:
   code-coverage:
     name: Code Coverage
     runs-on: macos-latest
+    timeout-minutes: 55
     
     steps:
       - name: Checkout repository
@@ -208,6 +215,7 @@ jobs:
   invocation-budget:
     name: Soroban Invocation Budget Check
     runs-on: macos-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository

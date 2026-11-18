@@ -254,6 +254,14 @@ Project renamed from the working title "Pili" to **Akkuea** (spelled letter-by-l
 
 All downstream artifacts (architecture docs, API references, UX specs, pitch materials) are held to a professional bar: clearly structured, precisely defined, illustrated with proper diagrams rather than prose-only descriptions. A standing requirement, not a one-time pass - see `product-brief.md`.
 
+## Rounding dust tracking and release in payout distributions (#1332)
+
+**Adopted: Track unreleased rounding dust in instance storage (`DataKey::AccumulatedDust`) and expose an operator-gated release method.**
+
+In `pilot-payout-split`, `execute_distribution` calculates each token holder's pro-rata share with integer arithmetic. The leftover integer remainder (`dust = holder_amount - sum(payouts)`) is tracked incrementally across cycles in instance storage under `DataKey::AccumulatedDust`.
+
+**Why instance storage:** Instance storage avoids adding to the contract's persistent footprint while preserving the critical invariant that `TotalWithheld` (reserved for failed currency swaps) remains untouched. The operator can periodically release accumulated dust via `release_accumulated_dust` to a designated treasury or platform fee recipient, resetting the accumulator to zero with reentrancy safety.
+
 ---
 
 ## See also

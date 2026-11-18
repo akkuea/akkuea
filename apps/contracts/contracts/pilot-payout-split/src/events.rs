@@ -348,3 +348,22 @@ pub fn emit_admin_transfer_cancelled(env: &Env, admin: Address) {
         AdminTransferCancelledEvent { admin },
     );
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DustReleasedEvent {
+    pub operator: Address,
+    pub recipient: Address,
+    pub amount: i128,
+}
+
+pub fn emit_dust_released(env: &Env, operator: Address, recipient: Address, amount: i128) {
+    env.events().publish(
+        (symbol_short!("dust_rel"),),
+        DustReleasedEvent {
+            operator,
+            recipient,
+            amount,
+        },
+    );
+}

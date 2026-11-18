@@ -33,6 +33,7 @@ pub enum DataKey {
     /// prove it never spends another holder's reserved funds.
     TotalWithheld,
     PendingAdmin,
+    AccumulatedDust,
 }
 
 pub struct Storage;
@@ -178,5 +179,37 @@ impl Storage {
 
     pub fn clear_pending_admin(env: &Env) {
         env.storage().instance().remove(&DataKey::PendingAdmin);
+    }
+
+    pub fn accumulated_dust(env: &Env) -> i128 {
+        env.storage()
+            .instance()
+            .get(&DataKey::AccumulatedDust)
+            .unwrap_or(0)
+    }
+
+    pub fn set_accumulated_dust(env: &Env, amount: i128) {
+        env.storage()
+            .instance()
+            .set(&DataKey::AccumulatedDust, &amount);
+    }
+
+    pub fn add_accumulated_dust(env: &Env, amount: i128) {
+        if amount <= 0 {
+            return;
+        }
+        let current = Self::accumulated_dust(env);
+        let updated = current
+            .checked_add(amount)
+            .unwrap_or_else(|| panic_with_error!(env, PayoutError::ArithmeticOverflow));
+        Self::set_accumulated_dust(env, updated);
+    }
+
+    pub fn take_accumulated_dust(env: &Env) -> i128 {
+        let amount = Self::accumulated_dust(env);
+        if amount > 0 {
+            Self::set_accumulated_dust(env, 0);
+        }
+        amount
     }
 }

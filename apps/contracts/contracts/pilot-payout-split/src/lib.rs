@@ -918,6 +918,10 @@ impl PilotPayoutSplit {
         record.settlements = settlements;
         Storage::set_evidence(&env, &cycle_id, &record);
 
+        if dust > 0 {
+            Storage::add_accumulated_dust(&env, dust);
+        }
+
         if undistributed_failed_swaps > 0 {
             let reserved_after = reserved_before
                 .checked_add(undistributed_failed_swaps)
@@ -1266,6 +1270,32 @@ impl PilotPayoutSplit {
             usdc_token,
             eurc_token,
         })
+    }
+
+    /// Return the total unreleased rounding dust currently accumulated in the contract.
+    pub fn accumulated_dust(env: Env) -> i128 {
+        Storage::accumulated_dust(&env)
+    }
+
+    /// Release accumulated payout rounding dust to an authorized recipient (e.g. platform fee reserve).
+    pub fn release_accumulated_dust(env: Env, operator: Address, recipient: Address) -> i128 {
+        extend_instance(&env);
+        operator.require_auth();
+        Self::require_operator(&env, &operator);
+
+        let dust = Storage::take_accumulated_dust(&env);
+        if dust <= 0 {
+            return 0;
+        }
+
+        let usdc_token_address = Storage::address(&env, &DataKey::UsdcToken)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        let usdc = token::Client::new(&env, &usdc_token_address);
+        let contract_address = env.current_contract_address();
+
+        usdc.transfer(&contract_address, &recipient, &dust);
+        events::emit_dust_released(&env, operator, recipient, dust);
+        dust
     }
 
     fn require_admin(env: &Env, caller: &Address) {
@@ -1633,6 +1663,35 @@ pub mod tests {
         let record = s.payout.get_evidence(&cycle(&s.env, "2026-08")).unwrap();
         assert!(record.distributed);
         assert!(record.distributed_at > 0);
+    }
+
+    #[test]
+    fn test_accumulated_dust_tracking_and_release() {
+        let s = setup_with_balance_values(&[1, 1, 1]);
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-09"),
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/2026-09"),
+            &105,
+        );
+
+        let summary = s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-09"),
+            &TEST_MIN_RATE,
+        );
+
+        assert_eq!(summary.dust, 2);
+        assert_eq!(s.payout.accumulated_dust(), 2);
+
+        let recipient = Address::generate(&s.env);
+        let released = s.payout.release_accumulated_dust(&s.operator, &recipient);
+        assert_eq!(released, 2);
+        assert_eq!(s.usdc.balance(&recipient), 2);
+        assert_eq!(s.payout.accumulated_dust(), 0);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use soroban_sdk::{testutils::Address as _, Address, Env};
+use soroban_sdk::{testutils::{Address as _, Ledger as _}, Address, Env};
 
 use crate::{GamePropertyNft, GamePropertyNftClient, NftError, TOTAL_TILES};
 
@@ -155,5 +155,51 @@ fn test_get_property_invalid_id() {
     let (_env, _treasury, _game_engine, client) = initialized();
 
     let result = client.try_get_property(&400);
+    assert_eq!(result, Err(Ok(NftError::InvalidProperty.into())));
+}
+
+#[test]
+fn test_transfer_checkpoints_last_claimed_ledger_and_preserves_level() {
+    let (env, treasury, game_engine, client) = initialized();
+    let buyer = Address::generate(&env);
+
+    client.set_improvement_level(&game_engine, &0, &2);
+
+    let mut ledger = env.ledger().get();
+    ledger.sequence_number = 500;
+    env.ledger().set(ledger);
+
+    client.transfer(&treasury, &buyer, &0);
+    let prop = client.get_property(&0);
+    assert_eq!(prop.owner, buyer);
+    assert_eq!(prop.level, 2);
+    assert_eq!(prop.last_claimed_ledger, 500);
+}
+
+#[test]
+fn test_transfer_from_checkpoints_last_claimed_ledger_and_preserves_level() {
+    let (env, treasury, game_engine, client) = initialized();
+    let spender = Address::generate(&env);
+    let buyer = Address::generate(&env);
+
+    client.set_improvement_level(&game_engine, &10, &3);
+    client.approve(&treasury, &spender, &10);
+
+    let mut ledger = env.ledger().get();
+    ledger.sequence_number = 800;
+    env.ledger().set(ledger);
+
+    client.transfer_from(&spender, &treasury, &buyer, &10);
+    let prop = client.get_property(&10);
+    assert_eq!(prop.owner, buyer);
+    assert_eq!(prop.level, 3);
+    assert_eq!(prop.last_claimed_ledger, 800);
+}
+
+#[test]
+fn test_set_last_claimed_ledger_invalid_id() {
+    let (_env, _treasury, game_engine, client) = initialized();
+
+    let result = client.try_set_last_claimed_ledger(&game_engine, &400, &100);
     assert_eq!(result, Err(Ok(NftError::InvalidProperty.into())));
 }

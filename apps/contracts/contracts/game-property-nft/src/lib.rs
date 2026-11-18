@@ -102,6 +102,20 @@ impl GamePropertyNft {
             },
         );
 
+        let init_ledger: u64 = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("init_ledg"))
+            .unwrap_or(0);
+
+        let mut meta: PropertyMeta = world.get_typed(&env, property_id).unwrap_or(PropertyMeta {
+            level: 0,
+            last_claimed_ledger: init_ledger,
+            approved_spender: 0,
+        });
+        meta.last_claimed_ledger = env.ledger().sequence() as u64;
+        world.set_typed(&env, property_id, &meta);
+
         let mut approves = get_approvals(&env);
         approves.remove(property_id);
         save_approvals(&env, &approves);
@@ -189,6 +203,20 @@ impl GamePropertyNft {
                 address: to.clone(),
             },
         );
+
+        let init_ledger: u64 = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("init_ledg"))
+            .unwrap_or(0);
+
+        let mut meta: PropertyMeta = world.get_typed(&env, property_id).unwrap_or(PropertyMeta {
+            level: 0,
+            last_claimed_ledger: init_ledger,
+            approved_spender: 0,
+        });
+        meta.last_claimed_ledger = env.ledger().sequence() as u64;
+        world.set_typed(&env, property_id, &meta);
 
         let mut approves = approves;
         approves.remove(property_id);
@@ -359,11 +387,21 @@ impl GamePropertyNft {
             panic_with_error!(&env, NftError::Unauthorized);
         }
 
+        if property_id >= TOTAL_TILES {
+            panic_with_error!(&env, NftError::InvalidProperty);
+        }
+
+        let init_ledger: u64 = env
+            .storage()
+            .instance()
+            .get(&symbol_short!("init_ledg"))
+            .unwrap_or(0);
+
         let mut world = load_world(&env);
 
         let mut meta: PropertyMeta = world.get_typed(&env, property_id).unwrap_or(PropertyMeta {
             level: 0,
-            last_claimed_ledger: 0,
+            last_claimed_ledger: init_ledger,
             approved_spender: 0,
         });
 

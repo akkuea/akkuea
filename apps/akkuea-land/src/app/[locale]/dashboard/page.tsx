@@ -26,11 +26,10 @@ import {
   Home,
 } from "lucide-react";
 import { computeAccruedRent } from "@akkuea/shared";
-import { rpc as SorobanRpc } from "@stellar/stellar-sdk";
 import { GameProperty, BuildingLevel } from "@/types/game.types";
 import { connectWalletKit } from "@/lib/walletKit";
 import { claimAllRentals } from "@/lib/claim-rental";
-import { TIMEOUTS } from "@/lib/constants";
+import { useGameEvents } from "@/context/GameEventContext";
 import { PilotCta } from "@/components/game/PilotCta";
 import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { LocaleSwitcher } from "@/components/layout/LocaleSwitcher";
@@ -89,9 +88,6 @@ const EVENT_LABEL_KEY: Record<
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const VIEWER_ADDRESS = process.env.NEXT_PUBLIC_DEFAULT_VIEWER_ADDRESS ?? "";
-const SOROBAN_RPC_URL =
-  process.env.NEXT_PUBLIC_SOROBAN_RPC_URL ??
-  "https://soroban-testnet.stellar.org";
 const EVENTS_PAGE_SIZE = 5;
 
 // ─── Mock data ─────────────────────────────────────────────────────────────────
@@ -330,109 +326,13 @@ export default function DashboardPage() {
 
   const [isConnected] = useState(true);
   const [landBalance, setLandBalance] = useState(4_250);
-  const [currentLedger, setCurrentLedger] = useState(0);
+  const { currentLedger } = useGameEvents();
   const [properties, setProperties] =
     useState<DashboardProperty[]>(MOCK_PROPERTIES);
   const [claimProgress, setClaimProgress] = useState<ClaimProgress | null>(
     null,
   );
   const [eventPage, setEventPage] = useState(1);
-
-  // SSE primary, 5 s RPC poll fallback
-  const MAX_SSE_RETRIES = 3;
-  const SSE_RETRY_DELAY_MS = 2_000;
-  const FALLBACK_POLL_MS = TIMEOUTS.LEDGER_POLL_MS;
-  const SSE_ENDPOINT = "/api/ledger/stream";
-
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const sseRetriesRef = useRef(0);
-  const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const server = new SorobanRpc.Server(SOROBAN_RPC_URL);
-
-    async function fetchLatestLedger() {
-      try {
-        const { sequence } = await server.getLatestLedger();
-        setCurrentLedger(sequence);
-      } catch {
-        /* keep current value */
-      }
-    }
-
-    function startPolling() {
-      if (intervalRef.current) return;
-      void fetchLatestLedger();
-      intervalRef.current = setInterval(fetchLatestLedger, FALLBACK_POLL_MS);
-    }
-
-    function stopPolling() {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-
-    function closeSSE() {
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
-      }
-    }
-
-    function connectSSE() {
-      closeSSE();
-      if (typeof window === "undefined") {
-        startPolling();
-        return;
-      }
-
-      try {
-        const es = new EventSource(SSE_ENDPOINT);
-        eventSourceRef.current = es;
-
-        es.onopen = () => {
-          sseRetriesRef.current = 0;
-          stopPolling();
-        };
-
-        es.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data) as { sequence: number };
-            setCurrentLedger(data.sequence);
-          } catch {
-            /* ignore malformed */
-          }
-        };
-
-        es.onerror = () => {
-          closeSSE();
-          if (sseRetriesRef.current < MAX_SSE_RETRIES) {
-            sseRetriesRef.current += 1;
-            retryTimeoutRef.current = setTimeout(
-              connectSSE,
-              SSE_RETRY_DELAY_MS,
-            );
-          } else {
-            startPolling(); // fallback after max retries
-          }
-        };
-      } catch {
-        startPolling();
-      }
-    }
-
-    void fetchLatestLedger();
-    connectSSE();
-
-    return () => {
-      closeSSE();
-      stopPolling();
-      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // Recompute accrued income on every ledger tick
   const propertiesWithIncome = useMemo(

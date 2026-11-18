@@ -1,4 +1,7 @@
-use soroban_sdk::{testutils::{Address as _, Ledger as _}, Address, Env};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger as _},
+    Address, Env,
+};
 
 use crate::{GamePropertyNft, GamePropertyNftClient, NftError, TOTAL_TILES};
 

@@ -33,7 +33,7 @@ export class WhitelistController {
       if (existing.status === 'approved') {
         throw new Error('This address is already whitelisted');
       }
-      // If previously rejected, allow re-submission: delete the old record
+      // If previously rejected or revoked, allow re-submission: delete the old record
       // so the investor gets a clean slate after fixing whatever was wrong.
       await db
         .delete(pilotWhitelistRequests)
@@ -86,6 +86,13 @@ export class WhitelistController {
       }
       await whitelistService.rejectRequest(id, reason);
       return { success: true };
+    } else if (action === 'revoke') {
+      if (!reason) {
+        throw new Error('Revocation reason is required');
+      }
+      const operatorWallet = ctx.headers ? ctx.headers['x-operator-wallet'] : undefined;
+      const txHash = await whitelistService.revokeRequest(id, reason, operatorWallet);
+      return { success: true, txHash };
     } else {
       throw new Error('Invalid action');
     }
@@ -101,8 +108,8 @@ export class WhitelistController {
       return { success: true, status: 'none' };
     }
 
-    // The rejection reason is an operator's note on why an investor failed
-    // review; it should only reach that investor or an operator, not anyone
+    // The rejection/revocation reason is an operator's note on why an investor failed
+    // review or was revoked; it should only reach that investor or an operator, not anyone
     // who knows the wallet address.
     const isOperator = isInternalOperationsAuthorized(ctx.headers);
     let isOwner = false;
@@ -123,6 +130,7 @@ export class WhitelistController {
       success: true,
       status: existing.status,
       rejectionReason: existing.rejectionReason,
+      revocationReason: existing.revocationReason,
     };
   }
 }

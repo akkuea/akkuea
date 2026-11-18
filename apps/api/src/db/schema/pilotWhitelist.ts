@@ -4,6 +4,7 @@ export const pilotWhitelistStatusEnum = pgEnum('pilot_whitelist_status', [
   'pending',
   'approved',
   'rejected',
+  'revoked',
 ]);
 
 export const pilotWhitelistIdTypeEnum = pgEnum('pilot_whitelist_id_type', [
@@ -20,6 +21,9 @@ export const pilotWhitelistRequests = pgTable('pilot_whitelist_requests', {
   idReference: varchar('id_reference', { length: 255 }).notNull(),
   status: pilotWhitelistStatusEnum('status').notNull().default('pending'),
   rejectionReason: text('rejection_reason'),
+  revocationReason: text('revocation_reason'),
+  revokedAt: timestamp('revoked_at', { withTimezone: true }),
+  reviewedBy: varchar('reviewed_by', { length: 255 }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   reviewedAt: timestamp('reviewed_at', { withTimezone: true }),

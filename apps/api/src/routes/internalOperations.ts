@@ -143,7 +143,7 @@ const reviewPropertyRoute = new Elysia()
   );
 
 const reviewWhitelistSchema = t.Object({
-  action: t.Union([t.Literal('approve'), t.Literal('reject')]),
+  action: t.Union([t.Literal('approve'), t.Literal('reject'), t.Literal('revoke')]),
   reason: t.Optional(t.String()),
 });
 

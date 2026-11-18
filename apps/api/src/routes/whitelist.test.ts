@@ -37,6 +37,10 @@ describe('Whitelist API Routes', () => {
         whitelistService: {
           approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
           rejectRequest: mock(() => Promise.resolve()),
+          revokeRequest: mock((id: string, reason: string) => {
+            if (!reason) throw new Error('Revocation reason is required');
+            return Promise.resolve('mock_revoke_tx_hash');
+          }),
         },
       };
     });
@@ -275,5 +279,107 @@ describe('Whitelist API Routes', () => {
     );
 
     expect(response.status).not.toBe(200);
+  });
+
+  it('should review a request with revoke action and return txHash', async () => {
+    mockDbStore.push({
+      id: 'target_approved_id',
+      walletAddress: mockWallet,
+      status: 'approved',
+    });
+
+    const response = await testApp.handle(
+      new Request('http://localhost/internal/operations/pilot/whitelist/target_approved_id/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-api-key': 'test-secret',
+        },
+        body: JSON.stringify({
+          action: 'revoke',
+          reason: 'Sanctions list match',
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as any;
+    expect(body.success).toBe(true);
+    expect(body.txHash).toBe('mock_revoke_tx_hash');
+  });
+
+  it('should require a reason when revoking an investor', async () => {
+    mockDbStore.push({
+      id: 'target_approved_id',
+      walletAddress: mockWallet,
+      status: 'approved',
+    });
+
+    const response = await testApp.handle(
+      new Request('http://localhost/internal/operations/pilot/whitelist/target_approved_id/review', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-api-key': 'test-secret',
+        },
+        body: JSON.stringify({
+          action: 'revoke',
+        }),
+      }),
+    );
+
+    expect(response.status).not.toBe(200);
+  });
+
+  it('should allow resubmission after revocation', async () => {
+    mockDbStore.push({
+      id: 'revoked_id',
+      walletAddress: mockWallet,
+      status: 'revoked',
+    });
+
+    const response = await testApp.handle(
+      new Request('http://localhost/pilot/whitelist/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: mockWallet,
+          fullName: 'Test User Reapplying',
+          idType: 'passport',
+          idReference: 'B9876543',
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as any;
+    expect(body.success).toBe(true);
+    expect(body.data.status).toBe('pending');
+  });
+
+  it('should expose revocationReason in status endpoint for operator', async () => {
+    mockDbStore.push({
+      id: 'revoked_id',
+      walletAddress: mockWallet,
+      status: 'revoked',
+      revocationReason: 'KYC expired',
+    });
+
+    const response = await testApp.handle(
+      new Request(`http://localhost/pilot/whitelist/status/${mockWallet}`, {
+        method: 'GET',
+        headers: {
+          'x-internal-api-key': 'test-secret',
+        },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as any;
+    expect(body.success).toBe(true);
+    expect(body.status).toBe('revoked');
+    expect(body.revocationReason).toBe('KYC expired');
   });
 });

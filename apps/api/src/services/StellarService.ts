@@ -588,6 +588,31 @@ export class StellarService {
     return this.submitTransaction(transaction.toXDR());
   }
 
+  async submitWhitelistRevoke(
+    contractId: string,
+    adminPublicKey: string,
+    adminSecret: string,
+    walletAddress: string,
+  ): Promise<string> {
+    this.assertValidContractId(contractId);
+    this.assertValidAddress(adminPublicKey);
+    this.assertValidAddress(walletAddress);
+
+    const adminScVal = nativeToScVal(adminPublicKey, { type: 'address' });
+    const walletScVal = nativeToScVal(walletAddress, { type: 'address' });
+
+    const unsignedXdr = await this.callContractLegacy(
+      contractId,
+      'revoke',
+      [adminScVal, walletScVal],
+      adminPublicKey,
+    );
+    const transaction = TransactionBuilder.fromXDR(unsignedXdr, this.networkPassphrase);
+    const signer = Keypair.fromSecret(adminSecret);
+    transaction.sign(signer);
+    return this.submitTransaction(transaction.toXDR());
+  }
+
   createKeypair(): { publicKey: string; secretKey: string } {
     const keypair = Keypair.random();
 

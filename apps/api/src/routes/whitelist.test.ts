@@ -289,17 +289,20 @@ describe('Whitelist API Routes', () => {
     });
 
     const response = await testApp.handle(
-      new Request('http://localhost/internal/operations/pilot/whitelist/target_approved_id/review', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-api-key': 'test-secret',
+      new Request(
+        'http://localhost/internal/operations/pilot/whitelist/target_approved_id/review',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-api-key': 'test-secret',
+          },
+          body: JSON.stringify({
+            action: 'revoke',
+            reason: 'Sanctions list match',
+          }),
         },
-        body: JSON.stringify({
-          action: 'revoke',
-          reason: 'Sanctions list match',
-        }),
-      }),
+      ),
     );
 
     expect(response.status).toBe(200);
@@ -316,16 +319,19 @@ describe('Whitelist API Routes', () => {
     });
 
     const response = await testApp.handle(
-      new Request('http://localhost/internal/operations/pilot/whitelist/target_approved_id/review', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-internal-api-key': 'test-secret',
+      new Request(
+        'http://localhost/internal/operations/pilot/whitelist/target_approved_id/review',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-api-key': 'test-secret',
+          },
+          body: JSON.stringify({
+            action: 'revoke',
+          }),
         },
-        body: JSON.stringify({
-          action: 'revoke',
-        }),
-      }),
+      ),
     );
 
     expect(response.status).not.toBe(200);

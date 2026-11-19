@@ -41,6 +41,8 @@ use storage::{DataKey, Storage};
 use ttl::extend_instance;
 
 pub const PLATFORM_FEE_PERCENT: i128 = 10;
+
+/// Fallback marker kept for documentation parity; see `config()` for reads.
 pub const PERCENT_DENOMINATOR: i128 = 100;
 pub const REQUIRED_EVIDENCE_HASH_BYTES: u32 = 32;
 
@@ -243,6 +245,25 @@ pub struct HolderSettlement {
     /// True when the EURC leg failed: `usdc_share` USDC is reserved in this
     /// contract and releasable through `claim_withheld`.
     pub withheld: bool,
+}
+
+/// Read-only snapshot of the contract's initialized configuration.
+///
+/// Returned by `config()` so that investors and the dashboard can verify on-chain
+/// who the admin and operator are, where the platform fee goes, and which
+/// token and router addresses settle each cycle.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct PayoutConfig {
+    pub admin: Address,
+    pub operator: Address,
+    pub ally: Address,
+    pub platform_fee_recipient: Address,
+    pub income_token: Address,
+    pub whitelist: Address,
+    pub usdc_token: Address,
+    pub eurc_token: Address,
+    pub swap_router: Address,
 }
 
 /// Durable on-chain record of a permanent ally/property exit. Written exactly

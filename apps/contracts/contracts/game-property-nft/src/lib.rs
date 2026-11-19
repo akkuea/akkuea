@@ -66,7 +66,13 @@ impl GamePropertyNft {
         bump_owner_index(&env, &treasury);
     }
 
-    /// Transfer property
+    /// Transfer property ownership.
+    ///
+    /// Rent uses the reset-on-transfer policy: the tile's rental checkpoint
+    /// (`last_claimed_ledger`) is moved to the current ledger, so the sender
+    /// forfeits any unclaimed epochs and the recipient starts earning from
+    /// this ledger. The improvement `level` is preserved. A seller who wants
+    /// the rent accrued so far must call `claim_rental` before transferring.
     pub fn transfer(env: Env, from: Address, to: Address, property_id: u32) {
         from.require_auth();
 
@@ -106,6 +112,7 @@ impl GamePropertyNft {
         approves.remove(property_id);
         save_approvals(&env, &approves);
 
+        checkpoint_rental_ledger(&env, &mut world, property_id);
         save_world(&env, &world);
 
         Self::update_owner_index(&env, &from, &to, property_id);
@@ -148,7 +155,12 @@ impl GamePropertyNft {
         events::emit_approve(&env, owner, spender, property_id);
     }
 
-    /// Transfer from approved spender
+    /// Transfer from approved spender.
+    ///
+    /// Applies the same reset-on-transfer rental policy as [`Self::transfer`]:
+    /// the rental checkpoint moves to the current ledger and `level` is kept.
+    /// The marketplace relies on this when it takes escrow custody, so escrow
+    /// time never accrues rent for the seller or the buyer.
     pub fn transfer_from(env: Env, spender: Address, from: Address, to: Address, property_id: u32) {
         spender.require_auth();
 
@@ -194,6 +206,7 @@ impl GamePropertyNft {
         approves.remove(property_id);
         save_approvals(&env, &approves);
 
+        checkpoint_rental_ledger(&env, &mut world, property_id);
         save_world(&env, &world);
 
         Self::update_owner_index(&env, &from, &to, property_id);
@@ -359,11 +372,15 @@ impl GamePropertyNft {
             panic_with_error!(&env, NftError::Unauthorized);
         }
 
+        if property_id >= TOTAL_TILES {
+            panic_with_error!(&env, NftError::InvalidProperty);
+        }
+
         let mut world = load_world(&env);
 
         let mut meta: PropertyMeta = world.get_typed(&env, property_id).unwrap_or(PropertyMeta {
             level: 0,
-            last_claimed_ledger: 0,
+            last_claimed_ledger: get_init_ledger(&env),
             approved_spender: 0,
         });
 
@@ -406,6 +423,33 @@ impl GamePropertyNft {
 
 fn load_world(env: &Env) -> SimpleWorld {
     SimpleWorld::new(env)
+}
+
+fn get_init_ledger(env: &Env) -> u64 {
+    env.storage()
+        .instance()
+        .get(&symbol_short!("init_ledg"))
+        .unwrap_or(0u64)
+}
+
+/// Ownership-change checkpoint for rental accrual.
+///
+/// Akkuea Land uses the reset-on-transfer design: whenever a tile changes
+/// owner (direct transfer, approved transfer, or marketplace escrow) its
+/// `last_claimed_ledger` is set to the current ledger. Unclaimed rent belongs
+/// to the previous owner and is forfeited unless they claimed before moving
+/// the tile; the new owner accrues from this ledger onward. `level` and the
+/// approval marker are left untouched here.
+fn checkpoint_rental_ledger(env: &Env, world: &mut SimpleWorld, property_id: u32) {
+    let mut meta: PropertyMeta = world.get_typed(env, property_id).unwrap_or(PropertyMeta {
+        level: 0,
+        last_claimed_ledger: get_init_ledger(env),
+        approved_spender: 0,
+    });
+
+    meta.last_claimed_ledger = env.ledger().sequence() as u64;
+
+    world.set_typed(env, property_id, &meta);
 }
 
 fn save_world(_env: &Env, _world: &SimpleWorld) {}

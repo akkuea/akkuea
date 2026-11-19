@@ -1,6 +1,15 @@
-use soroban_sdk::{testutils::Address as _, Address, Env};
+use soroban_sdk::{
+    testutils::{Address as _, Ledger},
+    Address, Env,
+};
 
 use crate::{GamePropertyNft, GamePropertyNftClient, NftError, TOTAL_TILES};
+
+fn set_sequence(env: &Env, sequence: u32) {
+    let mut ledger = env.ledger().get();
+    ledger.sequence_number = sequence;
+    env.ledger().set(ledger);
+}
 
 fn setup() -> (Env, Address, Address, GamePropertyNftClient<'static>) {
     let env = Env::default();
@@ -148,6 +157,71 @@ fn test_pause_unpause_non_owner_fails() {
 
     let result = client.try_pause(&attacker);
     assert_eq!(result, Err(Ok(NftError::Unauthorized.into())));
+}
+
+#[test]
+fn test_transfer_checkpoints_rental_ledger() {
+    let (env, treasury, _game_engine, client) = initialized();
+    let alice = Address::generate(&env);
+
+    set_sequence(&env, 500);
+    client.transfer(&treasury, &alice, &0);
+
+    let prop = client.get_property(&0);
+    assert_eq!(prop.owner, alice);
+    assert_eq!(prop.last_claimed_ledger, 500);
+}
+
+#[test]
+fn test_transfer_preserves_level() {
+    let (env, treasury, game_engine, client) = initialized();
+    let alice = Address::generate(&env);
+
+    client.set_improvement_level(&game_engine, &0, &2);
+    set_sequence(&env, 7_000);
+    client.transfer(&treasury, &alice, &0);
+
+    let prop = client.get_property(&0);
+    assert_eq!(prop.owner, alice);
+    assert_eq!(prop.level, 2);
+    assert_eq!(prop.last_claimed_ledger, 7_000);
+}
+
+#[test]
+fn test_transfer_from_checkpoints_rental_ledger_and_preserves_level() {
+    let (env, treasury, game_engine, client) = initialized();
+    let spender = Address::generate(&env);
+    let buyer = Address::generate(&env);
+
+    client.set_improvement_level(&game_engine, &0, &3);
+    client.approve(&treasury, &spender, &0);
+    set_sequence(&env, 1_234);
+    client.transfer_from(&spender, &treasury, &buyer, &0);
+
+    let prop = client.get_property(&0);
+    assert_eq!(prop.owner, buyer);
+    assert_eq!(prop.level, 3);
+    assert_eq!(prop.last_claimed_ledger, 1_234);
+}
+
+#[test]
+fn test_set_last_claimed_ledger_rejects_invalid_property() {
+    let (_env, _treasury, game_engine, client) = initialized();
+
+    let result = client.try_set_last_claimed_ledger(&game_engine, &TOTAL_TILES, &12345);
+    assert_eq!(result, Err(Ok(NftError::InvalidProperty.into())));
+}
+
+#[test]
+fn test_set_last_claimed_ledger_keeps_level_zero_on_untouched_tile() {
+    let (_env, _treasury, game_engine, client) = initialized();
+
+    client.set_last_claimed_ledger(&game_engine, &7, &999);
+
+    let prop = client.get_property(&7);
+    assert_eq!(prop.id, 7);
+    assert_eq!(prop.level, 0);
+    assert_eq!(prop.last_claimed_ledger, 999);
 }
 
 #[test]

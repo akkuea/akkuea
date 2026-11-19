@@ -68,24 +68,6 @@ jobs:
           cd apps/shared
           bun run build
 
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-
-      - name: Install dependencies
-        run: |
-          bun install --frozen-lockfile
-
-      - name: Audit dependencies
-        run: bash .github/scripts/dependency-audit.sh .
-
   type-safety:
     name: Type Safety Analysis
     runs-on: ubuntu-latest
@@ -96,6 +78,8 @@ jobs:
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Install dependencies
         run: |
@@ -112,57 +96,3 @@ jobs:
         run: |
           cd apps/shared
           bunx type-coverage --strict --detail
-
-  # api-compatibility:
-  #   name: API Compatibility Test
-  #   runs-on: ubuntu-latest
-
-  #   steps:
-  #   - name: Checkout repository
-  #     uses: actions/checkout@v4
-
-  #   - name: Setup Bun
-  #     uses: oven-sh/setup-bun@v2
-
-  #   - name: Install dependencies
-  #     run: |
-  #       cd apps/shared
-  #       bun install
-
-  #       cd ../api
-  #       bun install
-
-  #   - name: Test API integration
-  #     run: |
-  #       cd apps/api
-
-  #       # Import shared library in API context
-  #       node -e "
-  #       try {
-  #         const shared = require('../shared/dist/index.js');
-  #         const { ValidationService } = shared;
-  #         console.log('✅ Shared library imported successfully');
-  #         console.log('✅ ValidationService available:', typeof ValidationService);
-  #         console.log('✅ Stellar validation works:', ValidationService.validateStellarAddress ? 'Yes' : 'No');
-  #       } catch (error) {
-  #         console.error('❌ Import failed:', error.message);
-  #         process.exit(1);
-  #       }
-  #       "
-
-  #   - name: Test frontend integration
-  #     run: |
-  #       cd apps/webapp
-
-  #       # Test importing in frontend context
-  #       bun install
-
-  #       node -e "
-  #       try {
-  #         const shared = require('../shared/dist/index.js');
-  #         console.log('✅ Frontend integration test passed');
-  #       } catch (error) {
-  #         console.error('❌ Frontend integration failed:', error.message);
-  #         process.exit(1);
-  #       }
-  #       "

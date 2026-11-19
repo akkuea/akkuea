@@ -31,4 +31,6 @@ pub enum IncomeTokenError {
     /// A mint or correction transfer would leave more than `MAX_HOLDERS`
     /// addresses holding a balance.
     TooManyHolders = 18,
+    /// `mint_fixed_supply` or `transfer` was called after `mark_wound_down`.
+    ContractWoundDown = 19,
 }

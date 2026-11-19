@@ -879,14 +879,19 @@ mod tests {
         // CPU is deliberately not used as a scaling proof here: the test host
         // charges per-access costs proportional to the total state a test
         // created, so every call (even a plain `nft.get_owner`) gets more
-        // expensive as listings are added. This bound is only a regression
-        // guard: the instance-based implementation measured 11,377,627 CPU in
-        // case B and the index-based one measured about 6.6M. Since issue
-        // #1325, every transfer also reads and writes the tile's rent
-        // checkpoint in `game-property-nft`, which adds a constant number of
-        // extra accesses per call and brings case B to about 10.6M. The
-        // write-bytes assertions above remain the flat-storage proof.
-        assert!(cpu_300 <= 12_000_000, "cpu_300={cpu_300}");
+        // expensive as listings are added. Instead this is a regression guard
+        // against the old marketplace that rewrote the whole order book on
+        // every `buy`: that implementation measured 11,377,627 CPU in case B
+        // before rent checkpoints existed.
+        //
+        // Since issue #1325 every transfer also reads and writes the tile's
+        // rent checkpoint in `game-property-nft`. That only adds work to the
+        // old implementation, so comparing against its measured cost still
+        // fails it, while the index-based implementation with checkpoints
+        // measures 10,625,129 and stays below the line. The write-bytes
+        // assertions above remain the primary flat-storage proof.
+        const INSTANCE_ORDER_BOOK_CPU: u64 = 11_377_627;
+        assert!(cpu_300 < INSTANCE_ORDER_BOOK_CPU, "cpu_300={cpu_300}");
     }
 
     #[test]

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."pilot_whitelist_status" ADD VALUE 'revoked';

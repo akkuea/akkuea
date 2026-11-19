@@ -37,6 +37,7 @@ describe('Whitelist API Routes', () => {
         whitelistService: {
           approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
           rejectRequest: mock(() => Promise.resolve()),
+          revokeRequest: mock(() => Promise.resolve('mock_revoke_tx_hash')),
         },
       };
     });
@@ -275,5 +276,85 @@ describe('Whitelist API Routes', () => {
     );
 
     expect(response.status).not.toBe(200);
+  });
+
+  it('should revoke a request via /review with action=revoke', async () => {
+    const response = await testApp.handle(
+      new Request('http://localhost/internal/operations/pilot/whitelist/req_id_1/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-internal-api-key': 'test-secret' },
+        body: JSON.stringify({ action: 'revoke', reason: 'Sanctions violation' }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as any;
+    expect(result.success).toBe(true);
+    expect(result.txHash).toBe('mock_revoke_tx_hash');
+    expect(whitelistService.revokeRequest).toHaveBeenCalledWith('req_id_1', 'Sanctions violation');
+  });
+
+  it('should revoke a request via dedicated POST /:id/revoke', async () => {
+    const response = await testApp.handle(
+      new Request('http://localhost/internal/operations/pilot/whitelist/req_id_2/revoke', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-api-key': 'test-secret',
+          'x-operator-wallet': 'GBU54MOHX7J3F2C2X4R56Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6',
+        },
+        body: JSON.stringify({ reason: 'Compliance audit failed' }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as any;
+    expect(result.success).toBe(true);
+    expect(result.txHash).toBe('mock_revoke_tx_hash');
+    expect(whitelistService.revokeRequest).toHaveBeenCalledWith(
+      'req_id_2',
+      'Compliance audit failed',
+      'GBU54MOHX7J3F2C2X4R56Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6',
+    );
+  });
+
+  it('should allow resubmission after revocation', async () => {
+    const revokeWallet = 'GBU54MOHX7J3F2C2X4R56Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6';
+
+    // Seed a revoked request for this wallet
+    mockDbStore.push({
+      id: 'old_revoked_id',
+      walletAddress: revokeWallet,
+      status: 'revoked',
+      fullName: 'Old Revoked Submission',
+      idType: 'passport',
+      idReference: 'REVOKED123',
+    });
+
+    const response = await testApp.handle(
+      new Request('http://localhost/pilot/whitelist/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: revokeWallet,
+          fullName: 'New Submission After Revoke',
+          idType: 'national_id',
+          idReference: 'NEWREV456',
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as any;
+    expect(result.success).toBe(true);
+    expect(result.data.status).toBe('pending');
+    expect(result.data.fullName).toBe('New Submission After Revoke');
+
+    // Only the new request should exist; the old revoked one was deleted
+    const requestsForWallet = mockDbStore.filter((r) => r.walletAddress === revokeWallet);
+    expect(requestsForWallet.length).toBe(1);
+    expect(requestsForWallet[0].id).not.toBe('old_revoked_id');
   });
 });

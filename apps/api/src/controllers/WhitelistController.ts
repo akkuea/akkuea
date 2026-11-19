@@ -33,7 +33,7 @@ export class WhitelistController {
       if (existing.status === 'approved') {
         throw new Error('This address is already whitelisted');
       }
-      // If previously rejected, allow re-submission: delete the old record
+      // If previously rejected or revoked, allow re-submission: delete the old record
       // so the investor gets a clean slate after fixing whatever was wrong.
       await db
         .delete(pilotWhitelistRequests)
@@ -76,19 +76,50 @@ export class WhitelistController {
   static async review(ctx: any) {
     const { id } = ctx.params;
     const { action, reason } = ctx.body;
+    const actor = ctx.headers?.['x-operator-wallet'];
 
     if (action === 'approve') {
-      const txHash = await whitelistService.approveRequest(id);
+      const txHash = actor
+        ? await whitelistService.approveRequest(id, actor)
+        : await whitelistService.approveRequest(id);
       return { success: true, txHash };
     } else if (action === 'reject') {
       if (!reason) {
         throw new Error('Rejection reason is required');
       }
-      await whitelistService.rejectRequest(id, reason);
+      if (actor) {
+        await whitelistService.rejectRequest(id, reason, actor);
+      } else {
+        await whitelistService.rejectRequest(id, reason);
+      }
       return { success: true };
+    } else if (action === 'revoke') {
+      if (!reason) {
+        throw new Error('Revocation reason is required');
+      }
+      const txHash = actor
+        ? await whitelistService.revokeRequest(id, reason, actor)
+        : await whitelistService.revokeRequest(id, reason);
+      return { success: true, txHash };
     } else {
       throw new Error('Invalid action');
     }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static async revoke(ctx: any) {
+    const { id } = ctx.params;
+    const { reason } = ctx.body;
+    const actor = ctx.headers?.['x-operator-wallet'];
+
+    if (!reason || reason.trim().length === 0) {
+      throw new Error('Revocation reason is required');
+    }
+
+    const txHash = actor
+      ? await whitelistService.revokeRequest(id, reason, actor)
+      : await whitelistService.revokeRequest(id, reason);
+    return { success: true, txHash };
   }
 
   static async status(ctx: StatusContext) {

@@ -127,6 +127,13 @@
       "when": 1792785924870,
       "tag": "0017_notification_claiming",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795122777525,
+      "tag": "0018_nifty_the_initiative",
+      "breakpoints": true
     }
   ]
 }

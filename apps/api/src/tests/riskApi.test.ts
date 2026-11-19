@@ -3,6 +3,7 @@ import { Elysia } from 'elysia';
 import { errorHandler } from '../middleware/errorHandler';
 import { riskMonitoringRoutes } from '../routes/riskMonitoring';
 import { lendingRoutes } from '../routes/lending';
+import { VALID_STELLAR_ADDRESS } from '@akkuea/shared';
 
 const TEST_CREDENTIAL = 'test-internal-ops-key';
 
@@ -160,17 +161,29 @@ describe('Liquidation endpoint auth', () => {
   const VALID_BORROWER_ID = '00000000-0000-0000-0000-000000000002';
   const app = new Elysia().use(errorHandler).use(lendingRoutes);
 
+  const body = JSON.stringify({ liquidator: VALID_STELLAR_ADDRESS, debtToCover: '10' });
+
   test('Returns 403 when x-api-key header is missing', async () => {
-    const url = `http://localhost/lending/pools/${VALID_POOL_ID}/positions/${VALID_BORROWER_ID}/liquidate`;
-    const response = await app.handle(new Request(url, { method: 'POST' }));
+    const url = `http://localhost/lending/pools/${VALID_POOL_ID}/positions/${VALID_BORROWER_ID}/liquidate/prepare`;
+    const response = await app.handle(
+      new Request(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      }),
+    );
 
     expect(response.status).toBe(403);
   });
 
   test('Returns 403 when x-api-key is wrong', async () => {
-    const url = `http://localhost/lending/pools/${VALID_POOL_ID}/positions/${VALID_BORROWER_ID}/liquidate`;
+    const url = `http://localhost/lending/pools/${VALID_POOL_ID}/positions/${VALID_BORROWER_ID}/liquidate/prepare`;
     const response = await app.handle(
-      new Request(url, { method: 'POST', headers: { 'x-api-key': 'wrong-key' } }),
+      new Request(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': 'wrong-key' },
+        body,
+      }),
     );
 
     expect(response.status).toBe(403);

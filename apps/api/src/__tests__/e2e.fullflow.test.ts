@@ -51,13 +51,6 @@ const BUYER_ADDRESS_KYC_OK = 'GBUYERKYC2ETESTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 const BUYER_ADDRESS_NO_KYC = 'GNOKYCBUYR2ETESTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; // 56
 const DEPOSITOR_ADDRESS = 'GDEPOSI2ETESTFLOWAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'; // 56
 
-/**
- * Valid 56-char G… Stellar address used as a stand-in for the collateral asset address.
- * (BorrowDto requires a G… address; the tokenization contract id is a C… address
- * which would fail validation, so we reuse the buyer's wallet address here.)
- */
-const COLLATERAL_ASSET_ADDRESS = BUYER_ADDRESS_KYC_OK;
-
 /** Deterministic tx hashes */
 const TOKENIZE_TX_HASH = 'a'.repeat(64);
 const BUY_SHARES_TX_HASH = 'b'.repeat(64);
@@ -91,21 +84,6 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
 
   /** Payment token used by the shared purchase stubs (7-decimal USDC units). */
   const PAYMENT_TOKEN_ID = 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA';
-
-  /**
-   * Build a minimal auth context compatible with LendingController's
-   * resolveAuthenticatedUser() which calls ctx.getAuthenticatedUser().
-   */
-  function makeAuthCtx(userId: string, walletAddress: string, poolIdParam: string, body: unknown) {
-    return {
-      getAuthenticatedUser: async () => ({ id: userId, walletAddress }),
-      params: { id: poolIdParam },
-      body,
-      headers: {},
-      query: {},
-      set: { headers: {} },
-    } as any;
-  }
 
   // -----------------------------------------------------------------------
   // One-time setup: seed users, property, and lending pool
@@ -152,15 +130,15 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
       name: 'E2E USDC Pool',
       asset: 'USDC',
       assetAddress: DEPOSITOR_ADDRESS,
+      contractPoolId: 'e2e-usdc-pool',
+      totalDeposits: '2000',
+      availableLiquidity: '2000',
       collateralFactor: '0.75',
       liquidationThreshold: '0.80',
       liquidationPenalty: '0.05',
       reserveFactor: 1000,
     });
     poolId = pool.id;
-
-    // Pre-fund the pool so there is available liquidity for borrowing
-    await lendingRepository.deposit(poolId, depositorId, '2000', '2000');
   });
 
   // -----------------------------------------------------------------------
@@ -426,107 +404,18 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
   });
 
   // =======================================================================
-  // STEP 4 - Collateral Lending (happy path)
+  // STEP 4 - Legacy lending writes are retired
   // =======================================================================
-  describe('Step 4: Borrow against share collateral - happy path', () => {
-    it('creates a borrow position using tokenized shares as collateral', async () => {
-      const poolBefore = await lendingRepository.findById(poolId);
-      const liquidityBefore = parseFloat(poolBefore!.availableLiquidity);
-      expect(liquidityBefore).toBeGreaterThanOrEqual(300);
+  describe('Step 4: Legacy borrow route no longer writes to the database', () => {
+    it('returns 410 and leaves the borrow positions untouched', async () => {
+      const response = await LendingController.borrow();
+      expect(response.status).toBe(410);
 
-      // Buyer borrows 300 USDC, pledging their shares as collateral.
-      // collateralAsset must be a valid G… Stellar address per BorrowDto schema.
-      const response = await LendingController.borrow(
-        makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, poolId, {
-          borrowAmount: '300',
-          collateralAmount: '500', // 10 shares × 50.00 = 500 (> 300/0.75 = 400 required)
-          collateralAsset: COLLATERAL_ASSET_ADDRESS,
-        }),
-      );
-
-      expect(response.status).toBe(200);
-      const position = (await response.json()) as any;
-      expect(position.poolId).toBe(poolId);
-      expect(position.borrowerId).toBe(buyerKycOkId);
-      expect(parseFloat(position.principal)).toBe(300);
-      expect(parseFloat(position.collateralAmount)).toBe(500);
-      expect(position.collateralAsset).toBe(COLLATERAL_ASSET_ADDRESS);
-
-      // DB: pool liquidity decreased by borrow amount
-      const poolAfter = await lendingRepository.findById(poolId);
-      expect(parseFloat(poolAfter!.availableLiquidity)).toBeCloseTo(liquidityBefore - 300, 4);
-      expect(parseFloat(poolAfter!.totalBorrows)).toBeGreaterThanOrEqual(300);
-
-      // DB: borrow position record exists
-      const [dbPosition] = await db
+      const positions = await db
         .select()
         .from(borrowPositions)
-        .where(
-          and(eq(borrowPositions.poolId, poolId), eq(borrowPositions.borrowerId, buyerKycOkId)),
-        );
-      expect(dbPosition).toBeDefined();
-      expect(parseFloat(dbPosition!.principal)).toBe(300);
-    });
-  });
-
-  // =======================================================================
-  // STEP 5 - Collateral Lending (insufficient liquidity error path)
-  // =======================================================================
-  describe('Step 5: Borrow - insufficient liquidity in pool', () => {
-    /**
-     * Helper that calls LendingController.borrow and returns a normalized
-     * { status, body } pair regardless of whether the controller throws an
-     * ApiError (error path) or returns a Response (happy path).
-     */
-    async function callBorrow(ctx: any): Promise<{ status: number; body: any }> {
-      try {
-        const response = await LendingController.borrow(ctx);
-        const body = await response.json();
-        return { status: response.status, body };
-      } catch (err: any) {
-        // ApiError thrown by the controller - mirror the error handler output
-        if (err?.statusCode) {
-          return {
-            status: err.statusCode,
-            body: { error: err.code, message: err.message, statusCode: err.statusCode },
-          };
-        }
-        throw err;
-      }
-    }
-
-    it('rejects a borrow request that exceeds the pool available liquidity', async () => {
-      const pool = await lendingRepository.findById(poolId);
-      const available = parseFloat(pool!.availableLiquidity);
-
-      // Ask for more than the pool has
-      const excessiveBorrow = (available + 10_000).toFixed(7);
-
-      const { status, body } = await callBorrow(
-        makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, poolId, {
-          borrowAmount: excessiveBorrow,
-          collateralAmount: '99999',
-          collateralAsset: COLLATERAL_ASSET_ADDRESS,
-        }),
-      );
-
-      expect(status).toBe(400);
-      expect(body.error).toBe('INSUFFICIENT_LIQUIDITY');
-    });
-
-    it('rejects a borrow request against a non-existent pool', async () => {
-      const fakePoolId = '00000000-0000-0000-0000-000000000000';
-
-      const { status, body } = await callBorrow(
-        makeAuthCtx(buyerKycOkId, BUYER_ADDRESS_KYC_OK, fakePoolId, {
-          borrowAmount: '100',
-          collateralAmount: '200',
-          collateralAsset: COLLATERAL_ASSET_ADDRESS,
-        }),
-      );
-
-      expect(status).toBe(404);
-      expect(body.error).toBe('NOT_FOUND');
+        .where(eq(borrowPositions.poolId, poolId));
+      expect(positions).toHaveLength(0);
     });
   });
 
@@ -552,15 +441,12 @@ describe.skipIf(skipIfNoDatabase)('E2E: tokenization → share purchase → coll
         );
       expect(ownership!.shares).toBe(10);
 
-      // Borrow position: principal is 300
-      const [borrow] = await db
+      // Lending positions only change through verified on-chain confirmations.
+      const positions = await db
         .select()
         .from(borrowPositions)
-        .where(
-          and(eq(borrowPositions.poolId, poolId), eq(borrowPositions.borrowerId, buyerKycOkId)),
-        );
-      expect(borrow).toBeDefined();
-      expect(parseFloat(borrow!.principal)).toBe(300);
+        .where(eq(borrowPositions.poolId, poolId));
+      expect(positions).toHaveLength(0);
 
       // Non-KYC user: no share ownership record at all
       const [noKycOwnership] = await db

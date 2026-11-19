@@ -16,6 +16,7 @@ export const CreatePoolDto = z.object({
   collateralFactor: decimalString,
   liquidationThreshold: decimalString,
   liquidationPenalty: decimalString,
+  closeFactor: decimalString,
   reserveFactor: z.coerce.number().int().nonnegative().default(1000),
 });
 
@@ -49,7 +50,26 @@ export const RepayDto = z.object({
   amount: positiveAmountSchema,
 });
 
+/**
+ * Confirmation of a submitted on-chain action
+ */
+export const ConfirmActionDto = z.object({
+  txHash: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/, 'Transaction hash must be a 64-character hex string'),
+});
+
+/**
+ * Liquidation preparation request
+ */
+export const LiquidatePrepareDto = z.object({
+  liquidator: stellarAddressSchema,
+  debtToCover: positiveAmountSchema,
+});
+
 export type CreatePoolInput = z.infer<typeof CreatePoolDto>;
+export type ConfirmActionInput = z.infer<typeof ConfirmActionDto>;
+export type LiquidatePrepareInput = z.infer<typeof LiquidatePrepareDto>;
 export type DepositInput = z.infer<typeof DepositDto>;
 export type WithdrawInput = z.infer<typeof WithdrawDto>;
 export type BorrowInput = z.infer<typeof BorrowDto>;

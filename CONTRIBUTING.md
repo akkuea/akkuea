@@ -397,13 +397,17 @@ cd apps/webapp && bun run test:e2e
 
 Akkuea runs five GitHub Actions workflows on every pull request. **All five must pass before a pull request can be merged.** No exceptions.
 
-| Workflow           | What it validates                                                                                         |
-| ------------------ | --------------------------------------------------------------------------------------------------------- |
-| `monorepo-ci.yml`  | Workspace integrity, dependency consistency, cross-workspace type compatibility, security compliance scan |
-| `api-ci.yml`       | API lint, type-check, unit and integration tests, build                                                   |
-| `webapp-ci.yml`    | Webapp lint, type-check, unit tests, build, Playwright e2e tests (isolated job)                            |
-| `shared-ci.yml`    | Shared library lint, type-check, build                                                                    |
-| `contracts-ci.yml` | Rust format (`rustfmt`), linting (`cargo clippy`), unit tests, WASM build                                 |
+| Workflow           | What it validates                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------------- |
+| `monorepo-ci.yml`  | Workspace integrity, the single dependency audit, cross-workspace integration, security compliance scan |
+| `api-ci.yml`       | API lint, type-check, unit and integration tests, build                                                 |
+| `webapp-ci.yml`    | Webapp lint, type-check, unit tests, build, Playwright e2e tests (isolated job)                         |
+| `shared-ci.yml`    | Shared library lint, type-check, build                                                                  |
+| `contracts-ci.yml` | Rust format (`rustfmt`), linting (`cargo clippy`), unit tests, WASM build                               |
+
+The dependency audit (`bash .github/scripts/dependency-audit.sh .`) runs **once**, in `monorepo-ci.yml`. Do not add another copy to a per-app workflow: two audits of the same lockfile only double the runtime and can disagree.
+
+`monorepo-ci.yml` also runs the cheap gates (`style-quality-gate`, `shell-lint`) on every pull request, while the expensive jobs (`performance-benchmark`, `integration-test`) detect changed paths first and skip themselves when a pull request only touches docs, scripts or `.github`. A docs-only pull request therefore stays fast without dropping the checks that actually apply to it.
 
 ### Before opening your pull request
 

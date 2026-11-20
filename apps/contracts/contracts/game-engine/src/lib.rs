@@ -713,4 +713,111 @@ mod tests {
         assert_eq!(earned_multiple, earned_single);
         assert_eq!(earned_multiple, BASE_RENTAL_RATE * 5);
     }
+
+    #[test]
+    fn test_transfer_resets_rental_for_new_owner() {
+        let test = setup_test();
+        let alice = Address::generate(&test.env);
+
+        // A treasury tile ages 5 epochs before it is handed over.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (5 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+
+        test.nft_client.transfer(&test.treasury, &alice, &1);
+
+        // The new owner starts at the transfer ledger: no backlog is payable.
+        assert_eq!(test.engine_client.get_accrued_income(&1), 0);
+        let res = test.engine_client.try_claim_rental(&alice, &1);
+        assert_eq!(res, Err(Ok(EngineError::NothingToClaim.into())));
+
+        // Still inside the first epoch after the transfer.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (EPOCH_LENGTH - 1) as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(test.engine_client.get_accrued_income(&1), 0);
+        let res = test.engine_client.try_claim_rental(&alice, &1);
+        assert_eq!(res, Err(Ok(EngineError::NothingToClaim.into())));
+
+        // One full epoch after the transfer pays exactly one vacant epoch.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += 1;
+        test.env.ledger().set(ledger);
+        assert_eq!(test.engine_client.get_accrued_income(&1), BASE_RENTAL_RATE);
+
+        let balance_before = test.token_client.balance(&alice);
+        test.engine_client.claim_rental(&alice, &1);
+        assert_eq!(
+            test.token_client.balance(&alice) - balance_before,
+            BASE_RENTAL_RATE
+        );
+    }
+
+    #[test]
+    fn test_buyer_never_receives_sellers_backlog() {
+        let test = setup_test();
+        let bob = Address::generate(&test.env);
+        let carol = Address::generate(&test.env);
+
+        test.nft_client.transfer(&test.treasury, &bob, &2);
+
+        // Bob holds for 3 epochs without claiming.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (3 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(
+            test.engine_client.get_accrued_income(&2),
+            BASE_RENTAL_RATE * 3
+        );
+
+        // The sale transfers the tile at ledger 300 and checkpoints the rent.
+        test.nft_client.transfer(&bob, &carol, &2);
+        assert_eq!(test.engine_client.get_accrued_income(&2), 0);
+
+        // Carol only earns her own epochs, never Bob's 3.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += EPOCH_LENGTH as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(test.engine_client.get_accrued_income(&2), BASE_RENTAL_RATE);
+
+        let balance_before = test.token_client.balance(&carol);
+        test.engine_client.claim_rental(&carol, &2);
+        assert_eq!(
+            test.token_client.balance(&carol) - balance_before,
+            BASE_RENTAL_RATE
+        );
+    }
+
+    #[test]
+    fn test_transfer_preserves_level_and_resets_rental() {
+        let test = setup_test();
+        let alice = Address::generate(&test.env);
+        let (num, den) = MULTIPLIER_RESIDENTIAL;
+
+        test.engine_client.improve(&test.owner, &0);
+
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (4 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(
+            test.engine_client.get_accrued_income(&0),
+            BASE_RENTAL_RATE * num / den * 4
+        );
+
+        test.nft_client.transfer(&test.owner, &alice, &0);
+
+        let prop = test.nft_client.get_property(&0);
+        assert_eq!(prop.owner, alice);
+        assert_eq!(prop.level, LEVEL_RESIDENTIAL);
+        assert_eq!(test.engine_client.get_accrued_income(&0), 0);
+
+        // One epoch after the transfer accrues at the preserved level.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += EPOCH_LENGTH as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(
+            test.engine_client.get_accrued_income(&0),
+            BASE_RENTAL_RATE * num / den
+        );
+    }
 }

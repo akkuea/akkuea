@@ -1,10 +1,12 @@
 import "@/test/setup-dom";
-import { cleanup, within } from "@testing-library/react";
-import { renderWithIntl as render } from "@/test/renderWithIntl";
-import {
-  EvidenceSubmissionFormView,
-  type EvidenceSubmissionWallet,
-} from "../EvidenceSubmissionForm";
+
+// Testing Library (and with it react-dom) is loaded only after setup-dom has
+// installed `window` and DOM globals.
+const { cleanup, fireEvent, within } = await import("@testing-library/react");
+const { renderWithIntl: render } = await import("@/test/renderWithIntl");
+const { EvidenceSubmissionFormView } = await import("../EvidenceSubmissionForm");
+type EvidenceSubmissionWallet =
+  import("../EvidenceSubmissionForm").EvidenceSubmissionWallet;
 
 const ALLY = "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBDQCQZVQQ6BRVV12BKHA";
 
@@ -101,5 +103,43 @@ describe("EvidenceSubmissionForm", () => {
     const scope = within(view.container);
     expect(scope.queryByText(/payout contract is paused/i)).not.toBeNull();
     expect(fileInput(view.container)?.disabled).toBe(true);
+  });
+
+  it("rejects http, javascript, data, relative path, and strings with spaces", () => {
+    const view = renderForm();
+    const scope = within(view.container);
+    const linkInput = view.container.querySelector('input[placeholder="https://"]') as HTMLInputElement;
+    expect(linkInput).not.toBeNull();
+
+    const invalidLinks = [
+      "http://example.com/statement.pdf",
+      "javascript:alert('xss')",
+      "data:text/html;base64,PHNjcmlwdD4=",
+      "/statements/2026-08.pdf",
+      "https://example.com/my statement.pdf",
+      "   ",
+    ];
+
+    for (const invalid of invalidLinks) {
+      fireEvent.change(linkInput, { target: { value: invalid } });
+      expect(
+        scope.queryByText(/evidence link must be a valid https:\/\/ url/i),
+      ).not.toBeNull();
+      const submit = scope.getByRole("button", { name: /submit for review/i });
+      expect((submit as HTMLButtonElement).disabled).toBe(true);
+    }
+  });
+
+  it("accepts a valid https URL without displaying validation error", () => {
+    const view = renderForm();
+    const scope = within(view.container);
+    const linkInput = view.container.querySelector('input[placeholder="https://"]') as HTMLInputElement;
+
+    fireEvent.change(linkInput, {
+      target: { value: "https://example.org/statements/2026-08.pdf" },
+    });
+    expect(
+      scope.queryByText(/evidence link must be a valid https:\/\/ url/i),
+    ).toBeNull();
   });
 });

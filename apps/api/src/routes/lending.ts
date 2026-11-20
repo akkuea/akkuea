@@ -28,13 +28,13 @@ const stellarAddressSchema = z
   );
 
 const poolUserParamsSchema = z.object({
-  id: z.string().uuid('Invalid UUID format'),
+  id: z.uuid('Invalid UUID format'),
   address: stellarAddressSchema,
 });
 
 const liquidationParamsSchema = z.object({
-  id: z.string().uuid('Invalid pool UUID format'),
-  borrowerId: z.string().uuid('Invalid borrower UUID format'),
+  id: z.uuid('Invalid pool UUID format'),
+  borrowerId: z.uuid('Invalid borrower UUID format'),
 });
 
 // `as: 'scoped'` is required: a default-scope (`'local'`) hook only applies

@@ -43,7 +43,7 @@ export const basisPointsSchema = z.number().int().min(0).max(10000);
 /**
  * Schema for ISO date strings
  */
-export const isoDateSchema = z.string().datetime();
+export const isoDateSchema = z.iso.datetime();
 
 /**
  * Schema for Unix timestamps

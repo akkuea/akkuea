@@ -14,8 +14,8 @@ const requestSchema = t.Object({
 });
 
 const metricsQuerySchema = z.object({
-  from: z.string().datetime({ offset: true }).optional(),
-  to: z.string().datetime({ offset: true }).optional(),
+  from: z.iso.datetime({ offset: true }).optional(),
+  to: z.iso.datetime({ offset: true }).optional(),
   windowDays: z.coerce.number().int().positive().max(365).optional(),
 });
 

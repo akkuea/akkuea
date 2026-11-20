@@ -83,10 +83,7 @@ fn set_lending_admin(env: &Env, admin: &Address) {
 
 fn require_admin(env: &Env, caller: &Address) {
     caller.require_auth();
-    let admin = get_lending_admin(env);
-    if *caller != admin {
-        panic!("only admin");
-    }
+    AdminControl::require_admin(env, caller).unwrap_or_else(|e| panic_with_error!(env, e));
 }
 
 /// Accrue interest for a pool – updates the global interest index, reserves,
@@ -246,6 +243,23 @@ impl PropertyTokenContract {
 
     pub fn approve(env: Env, owner: Address, spender: Address, property_id: u64, amount: u64) {
         owner.require_auth();
+        set_allowance(&env, property_id, &owner, &spender, amount);
+    }
+
+    /// Race-safe allowance update: only succeeds if the current allowance equals `expected_current`.
+    pub fn approve_with_expected(
+        env: Env,
+        owner: Address,
+        spender: Address,
+        property_id: u64,
+        expected_current: u64,
+        amount: u64,
+    ) {
+        owner.require_auth();
+        let current = get_allowance(&env, property_id, &owner, &spender);
+        if current != expected_current {
+            panic!("allowance changed");
+        }
         set_allowance(&env, property_id, &owner, &spender, amount);
     }
 

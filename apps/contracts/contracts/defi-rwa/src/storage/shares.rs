@@ -1,4 +1,5 @@
 use crate::access::ContractError;
+use crate::lending::keys::lending_bump;
 use soroban_sdk::{Address, Env};
 
 use super::keys::StorageKey;
@@ -20,7 +21,17 @@ use super::keys::StorageKey;
 #[allow(dead_code)]
 pub fn get_balance(env: &Env, property_id: u64, owner: &Address) -> u64 {
     let key = StorageKey::ShareBalance(property_id, owner.clone());
-    env.storage().persistent().get(&key).unwrap_or(0)
+    match env.storage().persistent().get::<_, u64>(&key) {
+        Some(balance) => {
+            env.storage().persistent().extend_ttl(
+                &key,
+                lending_bump::PERSISTENT_BUMP,
+                lending_bump::PERSISTENT_BUMP,
+            );
+            balance
+        }
+        None => 0,
+    }
 }
 
 /// Sets the share balance for a specific owner and property
@@ -42,6 +53,11 @@ pub fn set_balance(env: &Env, property_id: u64, owner: &Address, balance: u64) {
         env.storage().persistent().remove(&key);
     } else {
         env.storage().persistent().set(&key, &balance);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
     }
 }
 
@@ -119,6 +135,11 @@ pub fn get_total_shares(env: &Env, property_id: u64) -> u64 {
 pub fn set_total_shares(env: &Env, property_id: u64, total: u64) {
     let key = StorageKey::TotalShares(property_id);
     env.storage().persistent().set(&key, &total);
+    env.storage().persistent().extend_ttl(
+        &key,
+        lending_bump::PERSISTENT_BUMP,
+        lending_bump::PERSISTENT_BUMP,
+    );
 }
 
 /// Transfers shares from one owner to another
@@ -150,7 +171,17 @@ pub fn transfer_shares(
 #[allow(dead_code)]
 pub fn get_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Address) -> u64 {
     let key = StorageKey::Allowance(property_id, owner.clone(), spender.clone());
-    env.storage().persistent().get(&key).unwrap_or(0)
+    match env.storage().persistent().get::<_, u64>(&key) {
+        Some(amount) => {
+            env.storage().persistent().extend_ttl(
+                &key,
+                lending_bump::PERSISTENT_BUMP,
+                lending_bump::PERSISTENT_BUMP,
+            );
+            amount
+        }
+        None => 0,
+    }
 }
 
 /// Helper to set approved allowance
@@ -161,6 +192,11 @@ pub fn set_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Add
         env.storage().persistent().remove(&key);
     } else {
         env.storage().persistent().set(&key, &amount);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
     }
 }
 

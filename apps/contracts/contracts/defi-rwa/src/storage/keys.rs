@@ -5,6 +5,10 @@ use soroban_sdk::{contracttype, Address, Symbol};
 /// This enum defines unique storage keys to prevent collisions and organize
 /// contract data efficiently. Each key type corresponds to a specific data
 /// structure stored on-chain.
+///
+/// Note: the admin address is intentionally NOT stored under a key in this
+/// enum. The single canonical admin storage key lives in the access-control
+/// module (`RoleKey::Admin`), which is the only key read by `AdminControl`.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StorageKey {
@@ -23,10 +27,6 @@ pub enum StorageKey {
     /// Total shares issued for a property
     /// Key: TotalShares(property_id)
     TotalShares(u64),
-
-    /// Admin address with special permissions
-    /// Single instance per contract
-    Admin,
 
     /// Property counter to generate unique property IDs
     /// Single instance per contract
@@ -62,7 +62,6 @@ impl StorageKey {
             StorageKey::Property(_) => Symbol::new(&soroban_sdk::Env::default(), "Prop"),
             StorageKey::ShareBalance(_, _) => Symbol::new(&soroban_sdk::Env::default(), "Share"),
             StorageKey::TotalShares(_) => Symbol::new(&soroban_sdk::Env::default(), "TotShrs"),
-            StorageKey::Admin => Symbol::new(&soroban_sdk::Env::default(), "Admin"),
             StorageKey::PropertyCounter => Symbol::new(&soroban_sdk::Env::default(), "PropCnt"),
             StorageKey::Allowance(_, _, _) => Symbol::new(&soroban_sdk::Env::default(), "Allow"),
             StorageKey::AvailableShares(_) => {

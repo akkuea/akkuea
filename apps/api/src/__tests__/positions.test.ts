@@ -18,6 +18,7 @@ const testPool: LendingPool = {
   name: 'USDC Pool',
   asset: 'USDC',
   assetAddress: VALID_STELLAR_ADDRESS,
+  contractPoolId: null,
   totalDeposits: '0',
   totalBorrows: '0',
   availableLiquidity: '0',

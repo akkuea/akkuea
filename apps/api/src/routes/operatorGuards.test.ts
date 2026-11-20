@@ -1,6 +1,6 @@
 import { describe, expect, it, mock, beforeEach } from 'bun:test';
 import { Elysia } from 'elysia';
-import { VALID_UUID } from '@akkuea/shared';
+import { VALID_STELLAR_ADDRESS, VALID_UUID } from '@akkuea/shared';
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-ops-secret';
 process.env.LIQUIDATOR_API_KEY = 'test-liquidator-secret';
@@ -46,6 +46,7 @@ mock.module('../controllers/TreasuryController', () => ({
 }));
 
 const lendingLiquidateMock = mock(async () => new Response(JSON.stringify({ success: true })));
+const createPoolMock = mock(async () => new Response(JSON.stringify({ id: VALID_UUID })));
 
 mock.module('../controllers/LendingController', () => ({
   LendingController: {
@@ -54,12 +55,21 @@ mock.module('../controllers/LendingController', () => ({
     getUserDeposits: mock(async () => new Response(JSON.stringify({ data: [] }))),
     getUserBorrows: mock(async () => new Response(JSON.stringify({ data: [] }))),
     getUserPositionSummary: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    createPool: mock(async () => new Response(JSON.stringify({ data: {} }))),
+    createPool: createPoolMock,
     deposit: mock(async () => new Response(JSON.stringify({ data: {} }))),
     withdraw: mock(async () => new Response(JSON.stringify({ data: {} }))),
     borrow: mock(async () => new Response(JSON.stringify({ data: {} }))),
     repay: mock(async () => new Response(JSON.stringify({ data: {} }))),
-    liquidate: lendingLiquidateMock,
+    prepareDeposit: mock(async () => new Response(JSON.stringify({ xdr: 'x' }))),
+    confirmDeposit: mock(async () => new Response(JSON.stringify({ ok: true }))),
+    prepareWithdraw: mock(async () => new Response(JSON.stringify({ xdr: 'x' }))),
+    confirmWithdraw: mock(async () => new Response(JSON.stringify({ ok: true }))),
+    prepareBorrow: mock(async () => new Response(JSON.stringify({ xdr: 'x' }))),
+    confirmBorrow: mock(async () => new Response(JSON.stringify({ ok: true }))),
+    prepareRepay: mock(async () => new Response(JSON.stringify({ xdr: 'x' }))),
+    confirmRepay: mock(async () => new Response(JSON.stringify({ ok: true }))),
+    prepareLiquidation: lendingLiquidateMock,
+    confirmLiquidation: mock(async () => new Response(JSON.stringify({ ok: true }))),
   },
 }));
 
@@ -81,6 +91,7 @@ function allControllerMocks() {
     treasuryDepositMock,
     treasuryWithdrawMock,
     lendingLiquidateMock,
+    createPoolMock,
   ];
 }
 
@@ -157,6 +168,24 @@ const guardedRoutes: GuardedRoute[] = [
     controllerMock: treasuryDepositMock,
   },
   {
+    name: 'POST /lending/pools',
+    path: '/lending/pools',
+    method: 'POST',
+    body: JSON.stringify({
+      name: 'Guarded pool',
+      asset: 'USDC',
+      assetAddress: VALID_STELLAR_ADDRESS,
+      collateralFactor: '0.75',
+      liquidationThreshold: '0.80',
+      liquidationPenalty: '0.05',
+      closeFactor: '0.50',
+      reserveFactor: 1000,
+    }),
+    headerName: 'x-internal-api-key',
+    validKey: 'test-ops-secret',
+    controllerMock: createPoolMock,
+  },
+  {
     name: 'POST /api/v1/treasury/withdraw',
     path: '/api/v1/treasury/withdraw',
     method: 'POST',
@@ -219,12 +248,17 @@ describe('Operator, treasury and liquidator guards actually apply', () => {
     });
   }
 
-  describe('POST /lending/pools/:id/positions/:borrowerId/liquidate', () => {
-    const path = `/lending/pools/${VALID_UUID}/positions/${VALID_UUID}/liquidate`;
+  describe('POST /lending/pools/:id/positions/:borrowerId/liquidate/prepare', () => {
+    const path = `/lending/pools/${VALID_UUID}/positions/${VALID_UUID}/liquidate/prepare`;
+    const body = JSON.stringify({ liquidator: VALID_STELLAR_ADDRESS, debtToCover: '10' });
 
     it('returns 403, not 500, when no key is sent', async () => {
       const response = await testApp.handle(
-        new Request(`http://localhost${path}`, { method: 'POST' }),
+        new Request(`http://localhost${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        }),
       );
 
       expect(response.status).toBe(403);
@@ -235,7 +269,8 @@ describe('Operator, treasury and liquidator guards actually apply', () => {
       const response = await testApp.handle(
         new Request(`http://localhost${path}`, {
           method: 'POST',
-          headers: { 'x-api-key': 'wrong-key' },
+          headers: { 'Content-Type': 'application/json', 'x-api-key': 'wrong-key' },
+          body,
         }),
       );
 
@@ -247,7 +282,8 @@ describe('Operator, treasury and liquidator guards actually apply', () => {
       const response = await testApp.handle(
         new Request(`http://localhost${path}`, {
           method: 'POST',
-          headers: { 'x-api-key': 'test-liquidator-secret' },
+          headers: { 'Content-Type': 'application/json', 'x-api-key': 'test-liquidator-secret' },
+          body,
         }),
       );
 

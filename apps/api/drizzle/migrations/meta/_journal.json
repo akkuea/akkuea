@@ -127,6 +127,13 @@
       "when": 1792785924870,
       "tag": "0017_notification_claiming",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1795123071750,
+      "tag": "0018_onchain_lending_positions",
+      "breakpoints": true
     }
   ]
 }

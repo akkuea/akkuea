@@ -85,6 +85,10 @@ export interface LendingPool {
    */
   asset_address: string;
   /**
+   * Close factor - max % of debt liquidatable per tx (e.g., 50% = 500000000000000000)
+   */
+  close_factor: i128;
+  /**
    * Collateral factor (e.g., 75% = 750000000000000000)
    */
   collateral_factor: i128;
@@ -451,6 +455,7 @@ export interface Client {
       collateral_factor,
       liquidation_threshold,
       liquidation_penalty,
+      close_factor,
       reserve_factor,
     }: {
       admin: string;
@@ -461,10 +466,29 @@ export interface Client {
       collateral_factor: i128;
       liquidation_threshold: i128;
       liquidation_penalty: i128;
+      close_factor: i128;
       reserve_factor: u32;
     },
     options?: MethodOptions,
   ) => Promise<AssembledTransaction<null>>;
+
+  /**
+   * Construct and simulate a liquidate transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  liquidate: (
+    {
+      liquidator,
+      pool_id,
+      borrower_address,
+      debt_to_cover,
+    }: {
+      liquidator: string;
+      pool_id: string;
+      borrower_address: string;
+      debt_to_cover: i128;
+    },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<BorrowPosition>>;
 
   /**
    * Construct and simulate a get_balance transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
@@ -602,6 +626,22 @@ export interface Client {
   ) => Promise<AssembledTransaction<readonly [u64, i128]>>;
 
   /**
+   * Construct and simulate a get_available_liquidity transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  get_available_liquidity: (
+    { pool_id }: { pool_id: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<i128>>;
+
+  /**
+   * Construct and simulate a get_health_factor transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
+   */
+  get_health_factor: (
+    { user, pool_id }: { user: string; pool_id: string },
+    options?: MethodOptions,
+  ) => Promise<AssembledTransaction<i128>>;
+
+  /**
    * Construct and simulate a get_total_borrows transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    */
   get_total_borrows: (
@@ -710,6 +750,7 @@ export class Client extends ContractClient {
     super(
       new ContractSpec([
         "AAAAAAAAAAAAAAAFcmVwYXkAAAAAAAADAAAAAAAAAAhib3Jyb3dlcgAAABMAAAAAAAAAB3Bvb2xfaWQAAAAAEAAAAAAAAAAGYW1vdW50AAAAAAALAAAAAQAAB9AAAAAOQm9ycm93UG9zaXRpb24AAA==",
+        "AAAAAAAAAAAAAAAJbGlxdWlkYXRlAAAAAAAABAAAAAAAAAAKbGlxdWlkYXRvcgAAAAAAEwAAAAAAAAAHcG9vbF9pZAAAAAAQAAAAAAAAABBib3Jyb3dlcl9hZGRyZXNzAAAAEwAAAAAAAAANZGVidF90b19jb3ZlcgAAAAAAAAsAAAABAAAH0AAAAA5Cb3Jyb3dQb3NpdGlvbgAA",
         "AAAAAAAAAAAAAAAGYm9ycm93AAAAAAAFAAAAAAAAAAhib3Jyb3dlcgAAABMAAAAAAAAAB3Bvb2xfaWQAAAAAEAAAAAAAAAAGYW1vdW50AAAAAAALAAAAAAAAABBjb2xsYXRlcmFsX2Fzc2V0AAAAEwAAAAAAAAARY29sbGF0ZXJhbF9hbW91bnQAAAAAAAALAAAAAQAAB9AAAAAOQm9ycm93UG9zaXRpb24AAA==",
         "AAAAAAAAAAAAAAAHYXBwcm92ZQAAAAAEAAAAAAAAAAVvd25lcgAAAAAAABMAAAAAAAAAB3NwZW5kZXIAAAAAEwAAAAAAAAALcHJvcGVydHlfaWQAAAAABgAAAAAAAAAGYW1vdW50AAAAAAAGAAAAAA==",
         "AAAAAAAAAAAAAAAHZGVwb3NpdAAAAAADAAAAAAAAAAlkZXBvc2l0b3IAAAAAAAATAAAAAAAAAAdwb29sX2lkAAAAABAAAAAAAAAABmFtb3VudAAAAAAACwAAAAA=",
@@ -717,7 +758,7 @@ export class Client extends ContractClient {
         "AAAAAAAAAAAAAAAId2l0aGRyYXcAAAADAAAAAAAAAAlkZXBvc2l0b3IAAAAAAAATAAAAAAAAAAdwb29sX2lkAAAAABAAAAAAAAAABmFtb3VudAAAAAAACwAAAAA=",
         "AAAAAAAAAAAAAAAKc2V0X29yYWNsZQAAAAAAAgAAAAAAAAAOb3JhY2xlX2FkZHJlc3MAAAAAABMAAAAAAAAABmNhbGxlcgAAAAAAEwAAAAA=",
         "AAAAAAAAAAAAAAALYnVybl9zaGFyZXMAAAAAAwAAAAAAAAAFb3duZXIAAAAAAAATAAAAAAAAAAtwcm9wZXJ0eV9pZAAAAAAGAAAAAAAAAAZhbW91bnQAAAAAAAYAAAAA",
-        "AAAAAAAAAAAAAAALY3JlYXRlX3Bvb2wAAAAACQAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAdwb29sX2lkAAAAABAAAAAAAAAABG5hbWUAAAAQAAAAAAAAAAVhc3NldAAAAAAAABAAAAAAAAAADWFzc2V0X2FkZHJlc3MAAAAAAAATAAAAAAAAABFjb2xsYXRlcmFsX2ZhY3RvcgAAAAAAAAsAAAAAAAAAFWxpcXVpZGF0aW9uX3RocmVzaG9sZAAAAAAAAAsAAAAAAAAAE2xpcXVpZGF0aW9uX3BlbmFsdHkAAAAACwAAAAAAAAAOcmVzZXJ2ZV9mYWN0b3IAAAAAAAQAAAAA",
+        "AAAAAAAAAAAAAAALY3JlYXRlX3Bvb2wAAAAACgAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAdwb29sX2lkAAAAABAAAAAAAAAABG5hbWUAAAAQAAAAAAAAAAVhc3NldAAAAAAAABAAAAAAAAAADWFzc2V0X2FkZHJlc3MAAAAAAAATAAAAAAAAABFjb2xsYXRlcmFsX2ZhY3RvcgAAAAAAAAsAAAAAAAAAFWxpcXVpZGF0aW9uX3RocmVzaG9sZAAAAAAAAAsAAAAAAAAAE2xpcXVpZGF0aW9uX3BlbmFsdHkAAAAACwAAAAAAAAAMY2xvc2VfZmFjdG9yAAAACwAAAAAAAAAOcmVzZXJ2ZV9mYWN0b3IAAAAAAAQAAAAA",
         "AAAAAAAAAAAAAAALZ2V0X2JhbGFuY2UAAAAAAgAAAAAAAAALcHJvcGVydHlfaWQAAAAABgAAAAAAAAAFb3duZXIAAAAAAAATAAAAAQAAAAY=",
         "AAAAAAAAAAAAAAALbWludF9zaGFyZXMAAAAABAAAAAAAAAAFYWRtaW4AAAAAAAATAAAAAAAAAAtwcm9wZXJ0eV9pZAAAAAAGAAAAAAAAAAlyZWNpcGllbnQAAAAAAAATAAAAAAAAAAZhbW91bnQAAAAAAAYAAAAA",
         "AAAAAAAAAAAAAAANX19jb25zdHJ1Y3RvcgAAAAAAAAEAAAAAAAAABWFkbWluAAAAAAAAEwAAAAA=",
@@ -732,6 +773,8 @@ export class Client extends ContractClient {
         "AAAAAAAAAAAAAAAQZ2V0X3RvdGFsX3NoYXJlcwAAAAEAAAAAAAAAC3Byb3BlcnR5X2lkAAAAAAYAAAABAAAABg==",
         "AAAAAAAAAAAAAAAQZ2V0X3VzZXJfYm9ycm93cwAAAAEAAAAAAAAABHVzZXIAAAATAAAAAQAAA+oAAAAQ",
         "AAAAAAAAAEdSZXR1cm4gdGhlIGN1cnJlbnQgb3JhY2xlIGd1YXJkcmFpbCBwYXJhbWV0ZXJzOiBgKG1heF9hZ2UsIG1pbl9wcmljZSlgLgAAAAARZ2V0X29yYWNsZV9jb25maWcAAAAAAAAAAAAAAQAAA+0AAAACAAAABgAAAAs=",
+        "AAAAAAAAAAAAAAAXZ2V0X2F2YWlsYWJsZV9saXF1aWRpdHkAAAAAAQAAAAAAAAAHcG9vbF9pZAAAAAAQAAAAAQAAAAs=",
+        "AAAAAAAAAAAAAAARZ2V0X2hlYWx0aF9mYWN0b3IAAAAAAAACAAAAAAAAAAR1c2VyAAAAEwAAAAAAAAAHcG9vbF9pZAAAAAAQAAAAAQAAAAs=",
         "AAAAAAAAAAAAAAARZ2V0X3RvdGFsX2JvcnJvd3MAAAAAAAABAAAAAAAAAAdwb29sX2lkAAAAABAAAAABAAAACw==",
         "AAAAAAAAAAAAAAARZ2V0X3VzZXJfZGVwb3NpdHMAAAAAAAABAAAAAAAAAAR1c2VyAAAAEwAAAAEAAAPqAAAAEA==",
         "AAAAAAAAAAAAAAARc2NoZWR1bGVfcmVjb3ZlcnkAAAAAAAABAAAAAAAAAAZjYWxsZXIAAAAAABMAAAAA",
@@ -766,7 +809,7 @@ export class Client extends ContractClient {
         "AAAABQAAAD5FbWl0dGVkIHdoZW4gYSBwZW5kaW5nIHJlY292ZXJ5IGlzIGNhbmNlbGxlZCB3aXRob3V0IHVucGF1c2luZwAAAAAAAAAAABFSZWNvdmVyeUNhbmNlbGxlZAAAAAAAAAEAAAAScmVjb3ZlcnlfY2FuY2VsbGVkAAAAAAACAAAAAAAAAAJieQAAAAAAEwAAAAAAAAAAAAAACXRpbWVzdGFtcAAAAAAAAAYAAAAAAAAAAg==",
         "AAAABQAAAC9FbWl0dGVkIHdoZW4gYSB0aW1lbG9ja2VkIHJlY292ZXJ5IGlzIHNjaGVkdWxlZAAAAAAAAAAAEVJlY292ZXJ5U2NoZWR1bGVkAAAAAAAAAQAAABJyZWNvdmVyeV9zY2hlZHVsZWQAAAAAAAMAAAAAAAAAAmJ5AAAAAAATAAAAAAAAAAAAAAASZWFybGllc3RfZXhlY3V0aW9uAAAAAAAGAAAAAAAAAAAAAAAJdGltZXN0YW1wAAAAAAAABgAAAAAAAAAC",
         "AAAAAgAAAChTdG9yYWdlIGtleSB0eXBlcyBmb3IgdGhlIGxlbmRpbmcgbW9kdWxlAAAAAAAAAApMZW5kaW5nS2V5AAAAAAATAAAAAQAAAC5MZW5kaW5nIHBvb2wgY29uZmlndXJhdGlvbgpTdG9yYWdlOiBQZXJzaXN0ZW50AAAAAAAEUG9vbAAAAAEAAAAQAAAAAAAAAChMaXN0IG9mIGFsbCBwb29sIElEcwpTdG9yYWdlOiBQZXJzaXN0ZW50AAAACFBvb2xMaXN0AAAAAAAAACdUb3RhbCBudW1iZXIgb2YgcG9vbHMKU3RvcmFnZTogSW5zdGFuY2UAAAAACVBvb2xDb3VudAAAAAAAAAEAAAA1RGVwb3NpdCBwb3NpdGlvbiBmb3IgdXNlciBpbiBwb29sClN0b3JhZ2U6IFBlcnNpc3RlbnQAAAAAAAAPRGVwb3NpdFBvc2l0aW9uAAAAAAIAAAATAAAAEAAAAAEAAAA0Qm9ycm93IHBvc2l0aW9uIGZvciB1c2VyIGluIHBvb2wKU3RvcmFnZTogUGVyc2lzdGVudAAAAA5Cb3Jyb3dQb3NpdGlvbgAAAAAAAgAAABMAAAAQAAAAAQAAADFVc2VyJ3MgZGVwb3NpdCBwb3NpdGlvbnMgbGlzdApTdG9yYWdlOiBQZXJzaXN0ZW50AAAAAAAADFVzZXJEZXBvc2l0cwAAAAEAAAATAAAAAQAAADBVc2VyJ3MgYm9ycm93IHBvc2l0aW9ucyBsaXN0ClN0b3JhZ2U6IFBlcnNpc3RlbnQAAAALVXNlckJvcnJvd3MAAAAAAQAAABMAAAABAAAAKVBvb2wncyB0b3RhbCBkZXBvc2l0cwpTdG9yYWdlOiBQZXJzaXN0ZW50AAAAAAAAEVBvb2xUb3RhbERlcG9zaXRzAAAAAAAAAQAAABAAAAABAAAAKFBvb2wncyB0b3RhbCBib3Jyb3dzClN0b3JhZ2U6IFBlcnNpc3RlbnQAAAAQUG9vbFRvdGFsQm9ycm93cwAAAAEAAAAQAAAAAQAAADVQb29sJ3MgYWNjdW11bGF0ZWQgaW50ZXJlc3QgaW5kZXgKU3RvcmFnZTogUGVyc2lzdGVudAAAAAAAABFQb29sSW50ZXJlc3RJbmRleAAAAAAAAAEAAAAQAAAAAQAAACpMYXN0IGFjY3J1YWwgdGltZXN0YW1wClN0b3JhZ2U6IFBlcnNpc3RlbnQAAAAAAA9Qb29sTGFzdEFjY3J1YWwAAAAAAQAAABAAAAABAAAALFJlc2VydmUgYmFsYW5jZSBmb3IgcG9vbApTdG9yYWdlOiBQZXJzaXN0ZW50AAAADFBvb2xSZXNlcnZlcwAAAAEAAAAQAAAAAQAAADBJbnRlcmVzdCByYXRlIG1vZGVsIHBhcmFtZXRlcnMKU3RvcmFnZTogSW5zdGFuY2UAAAARSW50ZXJlc3RSYXRlTW9kZWwAAAAAAAABAAAAEAAAAAAAAAAuR2xvYmFsIGxlbmRpbmcgY29uZmlndXJhdGlvbgpTdG9yYWdlOiBJbnN0YW5jZQAAAAAADUxlbmRpbmdDb25maWcAAAAAAAABAAAAI1Bvb2wgcGF1c2Ugc3RhdHVzClN0b3JhZ2U6IEluc3RhbmNlAAAAAApQb29sUGF1c2VkAAAAAAABAAAAEAAAAAAAAAAwQ29udHJhY3QgYWRtaW5pc3RyYXRvciBhZGRyZXNzClN0b3JhZ2U6IEluc3RhbmNlAAAABUFkbWluAAAAAAAAAAAAACBPcmFjbGUgQWRkcmVzcwpTdG9yYWdlOiBJbnN0YW5jZQAAAA1PcmFjbGVBZGRyZXNzAAAAAAAAAAAAAE1NYXhpbXVtIGFnZSAoaW4gc2Vjb25kcykgYmVmb3JlIGEgcHJpY2UgaXMgY29uc2lkZXJlZCBzdGFsZQpTdG9yYWdlOiBJbnN0YW5jZQAAAAAAAAxPcmFjbGVNYXhBZ2UAAAAAAAAAPU1pbmltdW0gYWNjZXB0YWJsZSBub3JtYWxpemVkIHByaWNlIChmbG9vcikKU3RvcmFnZTogSW5zdGFuY2UAAAAAAAAOT3JhY2xlTWluUHJpY2UAAA==",
-        "AAAAAQAAACRMZW5kaW5nIHBvb2wgY29uZmlndXJhdGlvbiBhbmQgc3RhdGUAAAAAAAAAC0xlbmRpbmdQb29sAAAAAAoAAAAbQXNzZXQgc3ltYm9sIChlLmcuLCAiVVNEQyIpAAAAAAVhc3NldAAAAAAAABAAAAAWQXNzZXQgY29udHJhY3QgYWRkcmVzcwAAAAAADWFzc2V0X2FkZHJlc3MAAAAAAAATAAAAMkNvbGxhdGVyYWwgZmFjdG9yIChlLmcuLCA3NSUgPSA3NTAwMDAwMDAwMDAwMDAwMDApAAAAAAARY29sbGF0ZXJhbF9mYWN0b3IAAAAAAAALAAAAF1Bvb2wgY3JlYXRpb24gdGltZXN0YW1wAAAAAApjcmVhdGVkX2F0AAAAAAAGAAAAFlVuaXF1ZSBwb29sIGlkZW50aWZpZXIAAAAAAAJpZAAAAAAAEAAAABZXaGV0aGVyIHBvb2wgaXMgYWN0aXZlAAAAAAAJaXNfYWN0aXZlAAAAAAAAAQAAADJMaXF1aWRhdGlvbiBwZW5hbHR5IChlLmcuLCA1JSA9IDUwMDAwMDAwMDAwMDAwMDAwKQAAAAAAE2xpcXVpZGF0aW9uX3BlbmFsdHkAAAAACwAAADZMaXF1aWRhdGlvbiB0aHJlc2hvbGQgKGUuZy4sIDgwJSA9IDgwMDAwMDAwMDAwMDAwMDAwMCkAAAAAABVsaXF1aWRhdGlvbl90aHJlc2hvbGQAAAAAAAALAAAAEVBvb2wgZGlzcGxheSBuYW1lAAAAAAAABG5hbWUAAAAQAAAAMVJlc2VydmUgZmFjdG9yIGluIGJhc2lzIHBvaW50cyAoZS5nLiwgMTAwMCA9IDEwJSkAAAAAAAAOcmVzZXJ2ZV9mYWN0b3IAAAAAAAQ=",
+        "AAAAAQAAAAAAAAAAAAAAC0xlbmRpbmdQb29sAAAAAAsAAAAAAAAABWFzc2V0AAAAAAAAEAAAAAAAAAANYXNzZXRfYWRkcmVzcwAAAAAAABMAAAAAAAAAEWNvbGxhdGVyYWxfZmFjdG9yAAAAAAAACwAAAAAAAAAKY3JlYXRlZF9hdAAAAAAABgAAAAAAAAACaWQAAAAAABAAAAAAAAAACWlzX2FjdGl2ZQAAAAAAAAEAAAAAAAAAE2xpcXVpZGF0aW9uX3BlbmFsdHkAAAAACwAAAAAAAAAVbGlxdWlkYXRpb25fdGhyZXNob2xkAAAAAAAACwAAAAAAAAAMY2xvc2VfZmFjdG9yAAAACwAAAAAAAAAEbmFtZQAAABAAAAAAAAAADnJlc2VydmVfZmFjdG9yAAAAAAAE",
         "AAAAAQAAABdMZW5kaW5nIHBvb2wgZXZlbnQgZGF0YQAAAAAAAAAADERlcG9zaXRFdmVudAAAAAMAAAAAAAAABmFtb3VudAAAAAAACwAAAAAAAAAJZGVwb3NpdG9yAAAAAAAAEwAAAAAAAAAHcG9vbF9pZAAAAAAQ",
         "AAAAAQAAABNXaXRoZHJhdyBldmVudCBkYXRhAAAAAAAAAAANV2l0aGRyYXdFdmVudAAAAAAAAAMAAAAAAAAABmFtb3VudAAAAAAACwAAAAAAAAAJZGVwb3NpdG9yAAAAAAAAEwAAAAAAAAAHcG9vbF9pZAAAAAAQ",
         "AAAAAQAAABdQb29sIGNyZWF0ZWQgZXZlbnQgZGF0YQAAAAAAAAAAEFBvb2xDcmVhdGVkRXZlbnQAAAACAAAAAAAAAAVhZG1pbgAAAAAAABMAAAAAAAAAB3Bvb2xfaWQAAAAAEA==",
@@ -792,6 +835,7 @@ export class Client extends ContractClient {
     set_oracle: this.txFromJSON<null>,
     burn_shares: this.txFromJSON<null>,
     create_pool: this.txFromJSON<null>,
+    liquidate: this.txFromJSON<BorrowPosition>,
     get_balance: this.txFromJSON<u64>,
     mint_shares: this.txFromJSON<null>,
     get_allowance: this.txFromJSON<u64>,
@@ -806,6 +850,8 @@ export class Client extends ContractClient {
     get_user_borrows: this.txFromJSON<Array<string>>,
     get_oracle_config: this.txFromJSON<readonly [u64, i128]>,
     get_total_borrows: this.txFromJSON<i128>,
+    get_available_liquidity: this.txFromJSON<i128>,
+    get_health_factor: this.txFromJSON<i128>,
     get_user_deposits: this.txFromJSON<Array<string>>,
     schedule_recovery: this.txFromJSON<null>,
     set_oracle_config: this.txFromJSON<null>,

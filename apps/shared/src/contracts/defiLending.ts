@@ -29,7 +29,15 @@ export interface CreatePoolArgs {
   collateralFactor: bigint;
   liquidationThreshold: bigint;
   liquidationPenalty: bigint;
+  closeFactor: bigint;
   reserveFactor: number;
+}
+
+export interface LiquidateArgs {
+  liquidator: string;
+  poolId: string;
+  borrowerAddress: string;
+  debtToCover: bigint;
 }
 
 export interface PoolActionArgs {
@@ -71,6 +79,7 @@ export class DefiLendingContractClient {
         collateral_factor: args.collateralFactor,
         liquidation_threshold: args.liquidationThreshold,
         liquidation_penalty: args.liquidationPenalty,
+        close_factor: args.closeFactor,
         reserve_factor: args.reserveFactor,
       },
       options,
@@ -135,6 +144,21 @@ export class DefiLendingContractClient {
     );
   }
 
+  liquidate(
+    args: LiquidateArgs,
+    options?: MethodOptions,
+  ): Promise<AssembledTransaction<BorrowPosition>> {
+    return this.client.liquidate(
+      {
+        liquidator: args.liquidator,
+        pool_id: args.poolId,
+        borrower_address: args.borrowerAddress,
+        debt_to_cover: args.debtToCover,
+      },
+      options,
+    );
+  }
+
   accrueInterest(
     poolId: string,
     options?: MethodOptions,
@@ -192,6 +216,31 @@ export class DefiLendingContractClient {
     return this.client.get_total_borrows(
       {
         pool_id: poolId,
+      },
+      options,
+    );
+  }
+
+  getAvailableLiquidity(
+    poolId: string,
+    options?: MethodOptions,
+  ): Promise<AssembledTransaction<bigint>> {
+    return this.client.get_available_liquidity(
+      {
+        pool_id: poolId,
+      },
+      options,
+    );
+  }
+
+  getHealthFactor(
+    args: PoolUserArgs,
+    options?: MethodOptions,
+  ): Promise<AssembledTransaction<bigint>> {
+    return this.client.get_health_factor(
+      {
+        user: args.user,
+        pool_id: args.poolId,
       },
       options,
     );

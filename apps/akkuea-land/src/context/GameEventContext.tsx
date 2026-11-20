@@ -111,7 +111,7 @@ export function GameEventProvider({ children }: { children: ReactNode }) {
         es.onopen = () => {
           if (!mountedRef.current) return;
           setConnected(true);
-          stopPolling();
+          // Keep ledger polling running regardless of SSE state so currentLedger advances
           backoff = 1_000;
         };
 
@@ -130,18 +130,17 @@ export function GameEventProvider({ children }: { children: ReactNode }) {
           es.close();
           esRef.current = null;
           setConnected(false);
-          startPolling();
           timeoutId = setTimeout(() => {
             backoff = Math.min(backoff * 2, 60_000);
             connect();
           }, backoff);
         };
       } catch {
-        startPolling();
+        // failed to construct EventSource
       }
     }
 
-    void fetchLatestLedger();
+    startPolling();
     connect();
 
     return () => {

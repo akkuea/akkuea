@@ -3,12 +3,32 @@ use soroban_sdk::{Address, Env};
 
 use super::keys::StorageKey;
 
+/// TTL bump amounts for persistent share and allowance entries.
+///
+/// Mirrors the lending module's `lending_bump` constants so that share
+/// balances and allowances stay alive alongside lending positions.
+pub mod share_bump {
+    pub const PERSISTENT_BUMP: u32 = 2592000; // ~300 days
+    pub const PERSISTENT_THRESHOLD: u32 = 518400; // ~60 days
+}
+
+/// Extends the TTL of a persistent entry for a key if it is close to expiry.
+fn bump_persistent(env: &Env, key: &StorageKey) {
+    env.storage().persistent().extend_ttl(
+        key,
+        share_bump::PERSISTENT_THRESHOLD,
+        share_bump::PERSISTENT_BUMP,
+    );
+}
+
 /// Share balance tracking for property ownership
 ///
 /// This module manages the ownership of property shares. Each balance entry
 /// represents how many shares a specific address owns for a given property.
 /// Storage is optimized by using composite keys (property_id, owner_address).
 /// Gets the share balance for a specific owner and property
+///
+/// The entry's TTL is extended on read so that active holders keep their balance live.
 ///
 /// # Arguments
 /// * `env` - Soroban environment
@@ -20,7 +40,11 @@ use super::keys::StorageKey;
 #[allow(dead_code)]
 pub fn get_balance(env: &Env, property_id: u64, owner: &Address) -> u64 {
     let key = StorageKey::ShareBalance(property_id, owner.clone());
-    env.storage().persistent().get(&key).unwrap_or(0)
+    let balance = env.storage().persistent().get(&key).unwrap_or(0);
+    if env.storage().persistent().has(&key) {
+        bump_persistent(env, &key);
+    }
+    balance
 }
 
 /// Sets the share balance for a specific owner and property
@@ -42,6 +66,7 @@ pub fn set_balance(env: &Env, property_id: u64, owner: &Address, balance: u64) {
         env.storage().persistent().remove(&key);
     } else {
         env.storage().persistent().set(&key, &balance);
+        bump_persistent(env, &key);
     }
 }
 
@@ -147,10 +172,16 @@ pub fn transfer_shares(
 }
 
 /// Helper to get approved allowance
+///
+/// Extends the allowance entry's TTL when it exists.
 #[allow(dead_code)]
 pub fn get_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Address) -> u64 {
     let key = StorageKey::Allowance(property_id, owner.clone(), spender.clone());
-    env.storage().persistent().get(&key).unwrap_or(0)
+    let allowance = env.storage().persistent().get(&key).unwrap_or(0);
+    if env.storage().persistent().has(&key) {
+        bump_persistent(env, &key);
+    }
+    allowance
 }
 
 /// Helper to set approved allowance
@@ -161,6 +192,7 @@ pub fn set_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Add
         env.storage().persistent().remove(&key);
     } else {
         env.storage().persistent().set(&key, &amount);
+        bump_persistent(env, &key);
     }
 }
 

@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Env, Vec};
+use soroban_sdk::{contracttype, Address, Env, Map, Vec};
 
 // Minimum seconds that must elapse between scheduling and executing recovery
 pub const TIMELOCK_DURATION: u64 = 86_400; // 24 hours
@@ -44,52 +44,17 @@ pub struct RoleStorage;
 impl RoleStorage {
     pub fn has_role(env: &Env, address: &Address, role: &Role) -> bool {
         let key = RoleKey::HasRole(address.clone(), role.clone());
-        env.storage().instance().get(&key).unwrap_or(false)
+        env.storage().persistent().get(&key).unwrap_or(false)
     }
 
     pub fn grant_role(env: &Env, address: &Address, role: &Role) {
         let key = RoleKey::HasRole(address.clone(), role.clone());
-        env.storage().instance().set(&key, &true);
-
-        let members_key = RoleKey::RoleMembers(role.clone());
-        let mut members: Vec<Address> = env
-            .storage()
-            .instance()
-            .get(&members_key)
-            .unwrap_or(Vec::new(env));
-
-        let mut exists = false;
-        for i in 0..members.len() {
-            if members.get(i).unwrap() == address.clone() {
-                exists = true;
-                break;
-            }
-        }
-        if !exists {
-            members.push_back(address.clone());
-            env.storage().instance().set(&members_key, &members);
-        }
+        env.storage().persistent().set(&key, &true);
     }
 
     pub fn revoke_role(env: &Env, address: &Address, role: &Role) {
         let key = RoleKey::HasRole(address.clone(), role.clone());
-        env.storage().instance().remove(&key);
-
-        let members_key = RoleKey::RoleMembers(role.clone());
-        if let Some(members) = env
-            .storage()
-            .instance()
-            .get::<RoleKey, Vec<Address>>(&members_key)
-        {
-            let mut new_members: Vec<Address> = Vec::new(env);
-            for i in 0..members.len() {
-                let member = members.get(i).unwrap();
-                if member != address.clone() {
-                    new_members.push_back(member);
-                }
-            }
-            env.storage().instance().set(&members_key, &new_members);
-        }
+        env.storage().persistent().remove(&key);
     }
 
     pub fn get_role_members(env: &Env, role: &Role) -> Vec<Address> {

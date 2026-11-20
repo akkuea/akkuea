@@ -1,4 +1,5 @@
 use super::access::{AdminControl, ContractError, PauseControl};
+use super::events::AdminEvents;
 use super::events::{LendingEvents, PropertyEvents};
 use super::lending::PriceOracle;
 use super::oracle_types::{Asset, PriceData};

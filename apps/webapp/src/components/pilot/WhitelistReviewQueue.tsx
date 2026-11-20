@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Card,
   Button,
@@ -16,6 +17,8 @@ import {
 } from "@/services/api/adminOperations";
 
 export function WhitelistReviewQueue() {
+  const t = useTranslations("Pilot.whitelist.review");
+  const tIdType = useTranslations("Pilot.whitelist.onboarding.fields.idTypes");
   const [requests, setRequests] = useState<WhitelistRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,17 +30,28 @@ export function WhitelistReviewQueue() {
   const [rejectionReason, setRejectionReason] = useState("");
   const [reviewError, setReviewError] = useState<string | null>(null);
 
+  const formatIdType = (value: string) => {
+    switch (value) {
+      case "passport":
+      case "national_id":
+      case "drivers_license":
+        return tIdType(value);
+      default:
+        return value.replace(/_/g, " ");
+    }
+  };
+
   const fetchRequests = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await whitelistOperationsApi.getPendingWhitelist();
       setRequests(res.data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to fetch requests");
+      setError(err instanceof Error ? err.message : t("loadFailed"));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -50,7 +64,7 @@ export function WhitelistReviewQueue() {
     if (!selectedRequest) return;
 
     if (action === "reject" && !rejectionReason.trim()) {
-      setReviewError("A reason is required when rejecting a request.");
+      setReviewError(t("reasonRequired"));
       return;
     }
 
@@ -68,7 +82,9 @@ export function WhitelistReviewQueue() {
       void fetchRequests();
     } catch (err: unknown) {
       setReviewError(
-        err instanceof Error ? err.message : `Failed to ${action} request`,
+        err instanceof Error
+          ? err.message
+          : t(action === "reject" ? "rejectFailed" : "approveFailed"),
       );
     } finally {
       setIsReviewing(false);
@@ -76,15 +92,12 @@ export function WhitelistReviewQueue() {
   };
 
   if (isLoading) {
-    return <div className="text-zinc-400">Loading pending requests...</div>;
+    return <div className="text-zinc-400">{t("loading")}</div>;
   }
 
   if (error) {
     return (
-      <SectionErrorFallback
-        message="Failed to load whitelist queue"
-        onReset={fetchRequests}
-      />
+      <SectionErrorFallback message={t("loadFailed")} onReset={fetchRequests} />
     );
   }
 
@@ -92,8 +105,8 @@ export function WhitelistReviewQueue() {
     <div className="space-y-4">
       {requests.length === 0 ? (
         <EmptyState
-          title="No Pending Requests"
-          description="There are no whitelist requests waiting for review in the queue."
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
         />
       ) : (
         <div className="grid gap-4">
@@ -111,24 +124,24 @@ export function WhitelistReviewQueue() {
                     variant="outline"
                     className="text-emerald-400 border-emerald-400/30"
                   >
-                    Pending
+                    {t("pendingBadge")}
                   </Badge>
                 </div>
                 <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm">
-                  <div className="text-zinc-500">Wallet:</div>
+                  <div className="text-zinc-500">{t("fields.wallet")}</div>
                   <div className="text-zinc-300 font-mono text-xs">
                     {req.walletAddress}
                   </div>
 
-                  <div className="text-zinc-500">ID Type:</div>
+                  <div className="text-zinc-500">{t("fields.idType")}</div>
                   <div className="text-zinc-300 capitalize">
-                    {req.idType.replace("_", " ")}
+                    {formatIdType(req.idType)}
                   </div>
 
-                  <div className="text-zinc-500">ID Ref:</div>
+                  <div className="text-zinc-500">{t("fields.idReference")}</div>
                   <div className="text-zinc-300">{req.idReference}</div>
 
-                  <div className="text-zinc-500">Submitted:</div>
+                  <div className="text-zinc-500">{t("fields.submitted")}</div>
                   <div className="text-zinc-300">
                     {new Date(req.createdAt).toLocaleString()}
                   </div>
@@ -139,7 +152,7 @@ export function WhitelistReviewQueue() {
                   variant="outline"
                   onClick={() => setSelectedRequest(req)}
                 >
-                  Review
+                  {t("reviewAction")}
                 </Button>
               </div>
             </Card>
@@ -157,31 +170,37 @@ export function WhitelistReviewQueue() {
               setRejectionReason("");
             }
           }}
-          title="Review Whitelist Request"
-          description={`Reviewing application for ${selectedRequest.fullName}`}
+          title={t("modalTitle")}
+          description={t("modalDescription", {
+            name: selectedRequest.fullName,
+          })}
         >
           <div className="space-y-6 mt-4">
             <div className="bg-zinc-950 p-4 rounded-lg space-y-3 text-sm">
               <div className="flex justify-between border-b border-zinc-800 pb-2">
-                <span className="text-zinc-500">Full Name</span>
+                <span className="text-zinc-500">{t("fields.fullName")}</span>
                 <span className="font-medium text-white">
                   {selectedRequest.fullName}
                 </span>
               </div>
               <div className="flex justify-between border-b border-zinc-800 pb-2">
-                <span className="text-zinc-500">Wallet Address</span>
+                <span className="text-zinc-500">
+                  {t("fields.walletAddress")}
+                </span>
                 <span className="font-mono text-white text-xs">
                   {selectedRequest.walletAddress}
                 </span>
               </div>
               <div className="flex justify-between border-b border-zinc-800 pb-2">
-                <span className="text-zinc-500">ID Type</span>
+                <span className="text-zinc-500">{t("fields.idTypeModal")}</span>
                 <span className="font-medium text-white capitalize">
-                  {selectedRequest.idType.replace("_", " ")}
+                  {formatIdType(selectedRequest.idType)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-zinc-500">ID Reference Number</span>
+                <span className="text-zinc-500">
+                  {t("fields.idReferenceFull")}
+                </span>
                 <span className="font-medium text-white">
                   {selectedRequest.idReference}
                 </span>
@@ -196,10 +215,10 @@ export function WhitelistReviewQueue() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-zinc-300">
-                Rejection Reason (Optional)
+                {t("rejectionReasonLabel")}
               </label>
               <Input
-                placeholder="Required if rejecting..."
+                placeholder={t("rejectionReasonPlaceholder")}
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
               />
@@ -213,7 +232,7 @@ export function WhitelistReviewQueue() {
                 disabled={isReviewing || !rejectionReason.trim()}
                 isLoading={isReviewing}
               >
-                Reject Request
+                {t("reject")}
               </Button>
               <Button
                 className="bg-emerald-500 text-zinc-950 hover:bg-emerald-400"
@@ -221,7 +240,7 @@ export function WhitelistReviewQueue() {
                 disabled={isReviewing}
                 isLoading={isReviewing}
               >
-                Approve & Whitelist
+                {t("approve")}
               </Button>
             </div>
           </div>

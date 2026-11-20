@@ -246,6 +246,37 @@ runbook is marked accordingly and needs a funded key holder to actually run
 it and record the resulting transaction hashes before it can be considered
 verified rather than merely written.
 
+## Pilot payout role rotation (C8-004)
+
+### Adopted: admin-only two-step rotation for the operator, ally, and fee recipient
+
+`pilot-payout-split` now exposes a start, accept, and cancel flow for each of
+the three mutable operational roles. The current admin starts a replacement,
+the named replacement accepts with its own signature, and the current admin can
+cancel before acceptance. The previous role address loses its authority as soon
+as acceptance updates storage. Every start, acceptance, and cancellation emits
+a typed event for the operations dashboard and audit trail.
+
+The admin alone authorizes all three starts and cancellations. The outgoing
+operator or ally does not co-sign. This answers the recovery question directly:
+an admin can replace an operator whose key is lost, and can also replace an ally
+whose key is still available. Requiring the outgoing party would make a failed
+or uncooperative counterparty a permanent veto over platform recovery. The
+two-step accept protects against a mistyped destination because only the named
+replacement can take the role.
+
+Operator and ally rotation checks `SignerCollision` both when the replacement
+is proposed and when it accepts. The two roles can never become the same
+address. Fee-recipient rotation uses the same two-step safety but has no signer
+collision rule because it is not an authorization role.
+
+Role rotation remains available while the contract is paused so an incident can
+be repaired. It is rejected after `exit`, because exit is terminal and must not
+allow any new operational identity to be installed. The replacement methods and
+the new `NotPendingRole` error are covered by contract tests, including old-role
+authorization failures, wrong and cancelled accepts, collision attempts, fee
+accounting, pause behavior, and terminal-exit behavior.
+
 ## Naming
 
 Project renamed from the working title "Pili" to **Akkuea** (spelled letter-by-letter: A-K-K-U-E-A, double K) partway through this strategy's development.

@@ -16,6 +16,7 @@ import {
   verifyEvidenceDocument,
   type EvidenceVerification as EvidenceVerificationResult,
 } from "@/services/pilot/evidenceVerify";
+import { parseEvidenceLink } from "@/services/pilot/evidenceLink";
 import { shortenHash } from "./format";
 
 interface EvidenceVerificationProps {
@@ -45,10 +46,18 @@ export function EvidenceVerification({
   const [error, setError] = useState<string | null>(null);
 
   async function verifyLink() {
+    const parsed = parseEvidenceLink(evidenceLink);
+    if (!parsed) {
+      setResult({
+        status: "unreachable",
+        reason: t("verify.invalidLink"),
+      });
+      return;
+    }
     setPending(true);
     setError(null);
     try {
-      setResult(await verifyEvidenceDocument(evidenceLink, evidenceHashHex));
+      setResult(await verifyEvidenceDocument(parsed.href, evidenceHashHex));
     } catch (verifyError) {
       setError(
         verifyError instanceof Error ? verifyError.message : t("verify.failed"),

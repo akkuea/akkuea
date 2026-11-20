@@ -91,4 +91,33 @@ describe("verifyEvidenceDocument", () => {
     expect(result.status).toBe("unreachable");
     expect(result.reason).toMatch(/404/);
   });
+
+  it("never fetches and reports unreachable for non-https URLs", async () => {
+    let fetchCalled = false;
+    globalThis.fetch = (async () => {
+      fetchCalled = true;
+      return body("content");
+    }) as unknown as typeof fetch;
+
+    const nonHttpsLinks = [
+      "http://example.org/statement.pdf",
+      "javascript:alert(1)",
+      "data:text/plain;base64,abc",
+      "/statements/2026-08.pdf",
+      "https://example.org/my statement.pdf",
+      "   ",
+      "not a url",
+    ];
+
+    for (const link of nonHttpsLinks) {
+      fetchCalled = false;
+      const result = await verifyEvidenceDocument(
+        link,
+        await sha256Hex("anything"),
+      );
+      expect(result.status).toBe("unreachable");
+      expect(result.reason).toMatch(/not a valid https url/i);
+      expect(fetchCalled).toBe(false);
+    }
+  });
 });

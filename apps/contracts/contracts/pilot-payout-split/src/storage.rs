@@ -32,6 +32,10 @@ pub enum DataKey {
     /// costs no additional footprint entry and lets `execute_distribution`
     /// prove it never spends another holder's reserved funds.
     TotalWithheld,
+    /// Sum of unreleased rounding dust accumulated from integer division across
+    /// distribution cycles. Instance storage, so reading or updating it adds
+    /// no additional ledger footprint entries.
+    TotalDust,
     PendingAdmin,
 }
 
@@ -162,6 +166,35 @@ impl Storage {
         env.storage()
             .instance()
             .set(&DataKey::TotalWithheld, &amount);
+    }
+
+    /// Sum of unreleased rounding dust across all distribution cycles.
+    pub fn total_dust(env: &Env) -> i128 {
+        env.storage()
+            .instance()
+            .get(&DataKey::TotalDust)
+            .unwrap_or(0)
+    }
+
+    pub fn set_total_dust(env: &Env, amount: i128) {
+        env.storage().instance().set(&DataKey::TotalDust, &amount);
+    }
+
+    /// Adds a cycle's rounding dust to the accumulated running total.
+    pub fn add_dust(env: &Env, amount: i128) {
+        let updated = Self::total_dust(env)
+            .checked_add(amount)
+            .unwrap_or_else(|| panic_with_error!(env, PayoutError::ArithmeticOverflow));
+        Self::set_total_dust(env, updated);
+    }
+
+    /// Deducts released dust from the accumulated running total.
+    pub fn sub_dust(env: &Env, amount: i128) {
+        let current = Self::total_dust(env);
+        let updated = current
+            .checked_sub(amount)
+            .unwrap_or_else(|| panic_with_error!(env, PayoutError::ArithmeticOverflow));
+        Self::set_total_dust(env, updated);
     }
 
     /// The address named by the current admin as the next admin, if a

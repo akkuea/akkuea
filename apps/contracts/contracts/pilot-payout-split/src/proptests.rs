@@ -47,6 +47,16 @@ mod tests {
             summary.platform_fee + summary.distributed_total + summary.dust,
             101
         );
+        assert_eq!(s.payout.total_dust(), 1);
+        assert_eq!(s.payout.get_total_dust(), 1);
+
+        let fee_recipient_before = s.usdc.balance(&s.fee_recipient);
+        let released = s
+            .payout
+            .release_dust(&s.operator, &s.ally, &s.fee_recipient, &1);
+        assert_eq!(released, 1);
+        assert_eq!(s.payout.total_dust(), 0);
+        assert_eq!(s.usdc.balance(&s.fee_recipient), fee_recipient_before + 1);
     }
 
     proptest! {
@@ -136,7 +146,26 @@ mod tests {
             // 4. Every unit of the remainder is accounted for: distributed amounts plus any rounding dust sum back to the exact remainder, nothing is silently created or destroyed.
             assert_eq!(summary.platform_fee + total_distributed + summary.dust, summary.total_income);
 
-            // 5. Distribution is monotonic in holder balance: a holder with a strictly larger balance never receives a strictly smaller payout than a holder with a smaller balance, all else equal.
+            // 5. Tracked dust matches summary dust and is releasable to the documented destination.
+            assert_eq!(s.payout.total_dust(), summary.dust);
+            assert_eq!(s.payout.get_total_dust(), summary.dust);
+            if summary.dust > 0 {
+                let fee_recipient_before = s.usdc.balance(&s.fee_recipient);
+                let released = s.payout.release_dust(
+                    &s.operator,
+                    &s.ally,
+                    &s.fee_recipient,
+                    &summary.dust,
+                );
+                assert_eq!(released, summary.dust);
+                assert_eq!(s.payout.total_dust(), 0);
+                assert_eq!(
+                    s.usdc.balance(&s.fee_recipient),
+                    fee_recipient_before + summary.dust
+                );
+            }
+
+            // 6. Distribution is monotonic in holder balance: a holder with a strictly larger balance never receives a strictly smaller payout than a holder with a smaller balance, all else equal.
             // We can verify this by checking the final balances of the holders.
             let mut previous_payouts = std::vec::Vec::new();
             for (i, balance) in balances.iter().enumerate() {
@@ -152,6 +181,71 @@ mod tests {
                         assert!(pay1 >= pay2, "Monotonicity violated: balance {} got payout {} while smaller balance {} got payout {}", bal1, pay1, bal2, pay2);
                     }
                 }
+            }
+        }
+    }
+
+    proptest! {
+        #![proptest_config(ProptestConfig::with_cases(100))]
+
+        #[test]
+        fn fuzz_multi_cycle_dust_conservation(
+            incomes in prop::collection::vec(100i128..10_000i128, 2..=5)
+        ) {
+            let s = setup_with_balance_values(&[1, 1, 1]);
+            let total_income_sum: i128 = incomes.iter().sum();
+            s.usdc.mint(&s.payout_id, &total_income_sum);
+
+            let mut expected_dust = 0i128;
+            for (idx, income) in incomes.iter().enumerate() {
+                let cycle_str = std::format!("cycle-{}", idx);
+                let c = cycle(&s.env, &cycle_str);
+                s.payout.record_evidence(
+                    &s.operator,
+                    &s.ally,
+                    &c,
+                    &evidence_hash(&s.env),
+                    &String::from_str(&s.env, "ipfs://evidence"),
+                    income,
+                );
+                let summary = s.payout.execute_distribution(
+                    &s.operator,
+                    &s.ally,
+                    &c,
+                    &TEST_MIN_RATE,
+                );
+                expected_dust += summary.dust;
+                assert_eq!(s.payout.total_dust(), expected_dust);
+                assert_eq!(
+                    summary.platform_fee + summary.distributed_total + summary.undistributed_failed_swaps + summary.dust,
+                    summary.total_income
+                );
+            }
+
+            let half = expected_dust / 2;
+            if half > 0 {
+                let fee_recipient_before = s.usdc.balance(&s.fee_recipient);
+                let released = s.payout.release_dust(&s.operator, &s.ally, &s.fee_recipient, &half);
+                assert_eq!(released, half);
+                expected_dust -= half;
+                assert_eq!(s.payout.total_dust(), expected_dust);
+                assert_eq!(s.usdc.balance(&s.fee_recipient), fee_recipient_before + half);
+            }
+
+            if expected_dust > 0 {
+                let fee_recipient_before = s.usdc.balance(&s.fee_recipient);
+                let released = s.payout.release_dust(
+                    &s.operator,
+                    &s.ally,
+                    &s.fee_recipient,
+                    &expected_dust,
+                );
+                assert_eq!(released, expected_dust);
+                assert_eq!(s.payout.total_dust(), 0);
+                assert_eq!(
+                    s.usdc.balance(&s.fee_recipient),
+                    fee_recipient_before + expected_dust
+                );
             }
         }
     }

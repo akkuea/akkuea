@@ -58,60 +58,56 @@ for wasm in game_property_nft game_land_token game_engine game_marketplace; do
     fi
 done
 
-# ── 3. Deploy ─────────────────────────────────────────────────────────────────
-
-deploy() {
-    stellar contract deploy \
-        --wasm "$WASM_DIR/$1.wasm" \
-        --source-account "$IDENTITY" \
-        --network "$NETWORK"
-}
-
-echo "Deploying game_property_nft..."
-NFT_ID="$(deploy game_property_nft)"
-echo "  -> $NFT_ID"
-
-echo "Deploying game_land_token..."
-TOKEN_ID="$(deploy game_land_token)"
-echo "  -> $TOKEN_ID"
-
-echo "Deploying game_engine..."
-ENGINE_ID="$(deploy game_engine)"
-echo "  -> $ENGINE_ID"
-
-echo "Deploying game_marketplace..."
-MARKETPLACE_ID="$(deploy game_marketplace)"
-echo "  -> $MARKETPLACE_ID"
-
-# ── 4. Initialize ─────────────────────────────────────────────────────────────
-# Arg names match the Rust signatures exactly. The NFT and token contracts
-# only need the engine's contract ID, which exists as soon as it is deployed
-# (deploy != initialize), so ordering here is safe.
+# ── 3. Deploy and initialize atomically via __constructor ─────────────────────
+# game_property_nft and game_land_token reference game_engine, while
+# game_engine references both. Precomputing game_engine's deterministic
+# contract ID from a fresh 32-byte salt lets all four contracts initialize
+# atomically during deployment with no uninitialized window.
 
 IS_TESTNET=true
 if [ "$NETWORK" != "testnet" ]; then IS_TESTNET=false; fi
 
-invoke() {
-    local id="$1"
+ENGINE_SALT="$(openssl rand -hex 32)"
+ENGINE_ID="$(stellar contract id wasm \
+    --salt "$ENGINE_SALT" \
+    --source-account "$IDENTITY" \
+    --network "$NETWORK")"
+echo "Precomputed game_engine contract ID: $ENGINE_ID"
+
+deploy() {
+    local wasm="$1"
     shift
-    stellar contract invoke \
-        --id "$id" \
+    stellar contract deploy \
+        --wasm "$WASM_DIR/$wasm.wasm" \
         --source-account "$IDENTITY" \
         --network "$NETWORK" \
         -- "$@"
 }
 
-echo "Initializing game_property_nft (treasury owns all 400 tiles)..."
-invoke "$NFT_ID" initialize --treasury "$TREASURY" --game_engine "$ENGINE_ID"
+echo "Deploying and initializing game_property_nft (treasury owns all 400 tiles)..."
+NFT_ID="$(deploy game_property_nft --treasury "$TREASURY" --game_engine "$ENGINE_ID")"
+echo "  -> $NFT_ID"
 
-echo "Initializing game_land_token..."
-invoke "$TOKEN_ID" initialize --treasury "$TREASURY" --engine "$ENGINE_ID" --is_testnet "$IS_TESTNET"
+echo "Deploying and initializing game_land_token..."
+TOKEN_ID="$(deploy game_land_token --treasury "$TREASURY" --engine "$ENGINE_ID" --is_testnet "$IS_TESTNET")"
+echo "  -> $TOKEN_ID"
 
-echo "Initializing game_engine..."
-invoke "$ENGINE_ID" initialize --nft_contract "$NFT_ID" --token_contract "$TOKEN_ID" --treasury "$TREASURY"
+echo "Deploying and initializing game_engine at precomputed ID..."
+DEPLOYED_ENGINE_ID="$(stellar contract deploy \
+    --wasm "$WASM_DIR/game_engine.wasm" \
+    --salt "$ENGINE_SALT" \
+    --source-account "$IDENTITY" \
+    --network "$NETWORK" \
+    -- --nft_contract "$NFT_ID" --token_contract "$TOKEN_ID" --treasury "$TREASURY")"
+if [ "$DEPLOYED_ENGINE_ID" != "$ENGINE_ID" ]; then
+    echo "Unexpected game_engine contract ID: expected $ENGINE_ID, got $DEPLOYED_ENGINE_ID" >&2
+    exit 1
+fi
+echo "  -> $ENGINE_ID"
 
-echo "Initializing game_marketplace..."
-invoke "$MARKETPLACE_ID" initialize --nft_contract "$NFT_ID" --land_token "$TOKEN_ID"
+echo "Deploying and initializing game_marketplace..."
+MARKETPLACE_ID="$(deploy game_marketplace --nft_contract "$NFT_ID" --land_token "$TOKEN_ID")"
+echo "  -> $MARKETPLACE_ID"
 
 # ── 5. Summary ────────────────────────────────────────────────────────────────
 

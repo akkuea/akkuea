@@ -412,6 +412,93 @@
       "fileFallback": "If you already have the document, hash your own copy here to compare it yourself.",
       "chooseFile": "Hash a downloaded file",
       "failed": "The document could not be hashed."
+    },
+    "whitelist": {
+      "onboarding": {
+        "title": "Investor Onboarding",
+        "subtitle": "Pilot Program Whitelist Request",
+        "steps": {
+          "personal": {
+            "title": "Personal Details",
+            "description": "Your name and ID type"
+          },
+          "wallet": {
+            "title": "Wallet Connection",
+            "description": "Connect Stellar address"
+          },
+          "review": {
+            "title": "Review",
+            "description": "Submit application"
+          }
+        },
+        "statusLoading": "Loading your whitelist status...",
+        "emptyTitle": "No Whitelist Application",
+        "emptyDescription": "You haven’t submitted a whitelist application yet. Start your application to join the pilot.",
+        "startApplication": "Start Application",
+        "pendingTitle": "Review Pending",
+        "pendingDescription": "Your whitelist request is currently under review by the operator. Please check back later.",
+        "approvedTitle": "You’re Whitelisted!",
+        "approvedDescription": "Your address has been approved for the pilot. You can now participate in offerings.",
+        "rejectedTitle": "Application Rejected",
+        "rejectedDescription": "Unfortunately, your whitelist application was rejected.",
+        "rejectionReasonLabel": "Reason:",
+        "reapply": "Re-apply",
+        "fields": {
+          "fullName": "Full Name",
+          "fullNamePlaceholder": "John Doe",
+          "idType": "Government ID Type",
+          "idTypes": {
+            "passport": "Passport",
+            "national_id": "National ID",
+            "drivers_license": "Driver’s License"
+          },
+          "idReference": "ID Reference Number",
+          "idReferencePlaceholder": "Document Number"
+        },
+        "walletStepTitle": "Connect Your Wallet",
+        "walletStepDescription": "Please connect your Stellar wallet to associate it with your whitelist application.",
+        "connectWallet": "Connect Wallet",
+        "summary": {
+          "name": "Name",
+          "idType": "ID Type",
+          "idReference": "ID Ref",
+          "wallet": "Wallet",
+          "disclaimer": "By submitting this form, you confirm that the information provided is accurate and you agree to the pilot terms and conditions."
+        },
+        "back": "Back",
+        "continue": "Continue",
+        "submit": "Submit Request",
+        "submitFailed": "Failed to submit whitelist request"
+      },
+      "review": {
+        "pageTitle": "Pilot Whitelist Queue",
+        "metadataTitle": "Whitelist Review",
+        "loading": "Loading pending requests...",
+        "loadFailed": "Failed to load whitelist queue",
+        "emptyTitle": "No Pending Requests",
+        "emptyDescription": "There are no whitelist requests waiting for review in the queue.",
+        "pendingBadge": "Pending",
+        "fields": {
+          "wallet": "Wallet:",
+          "idType": "ID Type:",
+          "idReference": "ID Ref:",
+          "submitted": "Submitted:",
+          "fullName": "Full Name",
+          "walletAddress": "Wallet Address",
+          "idTypeModal": "ID Type",
+          "idReferenceFull": "ID Reference Number"
+        },
+        "reviewAction": "Review",
+        "modalTitle": "Review Whitelist Request",
+        "modalDescription": "Reviewing application for {name}",
+        "rejectionReasonLabel": "Rejection Reason (Optional)",
+        "rejectionReasonPlaceholder": "Required if rejecting...",
+        "reasonRequired": "A reason is required when rejecting a request.",
+        "approveFailed": "Failed to approve request",
+        "rejectFailed": "Failed to reject request",
+        "reject": "Reject Request",
+        "approve": "Approve & Whitelist"
+      }
     }
   }
 }

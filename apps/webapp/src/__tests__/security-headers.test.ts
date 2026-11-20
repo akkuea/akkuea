@@ -44,6 +44,9 @@ describe("webapp security headers and Content-Security-Policy", () => {
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("frame-ancestors 'none'");
     expect(csp).toContain("form-action 'self'");
+    expect(csp).toContain("child-src 'self' blob: https://auth.privy.io");
+    expect(csp).toContain("https://*.pollar.xyz");
+    expect(csp).toContain("https://stellar.creit.tech");
     expect(csp).not.toContain("'unsafe-eval'");
   });
 
@@ -66,10 +69,13 @@ describe("webapp security headers and Content-Security-Policy", () => {
       NEXT_PUBLIC_STELLAR_NETWORK: "testnet",
       NEXT_PUBLIC_API_URL: "http://localhost:4000/api/v1",
       NEXT_PUBLIC_LENDING_SSE_URL: "http://127.0.0.1:4100/events",
+      NEXT_PUBLIC_SMART_ACCOUNT_RPC_URL:
+        "https://rpc.smart-account.example/soroban",
     });
 
     expect(testnetCsp).toContain("http://localhost:4000");
     expect(testnetCsp).toContain("http://127.0.0.1:4100");
+    expect(testnetCsp).toContain("https://rpc.smart-account.example");
     expect(testnetCsp).toContain(API_ENDPOINTS.HORIZON.TESTNET);
     expect(testnetCsp).toContain(API_ENDPOINTS.SOROBAN_RPC.TESTNET);
     expect(testnetCsp).not.toContain(API_ENDPOINTS.HORIZON.MAINNET);

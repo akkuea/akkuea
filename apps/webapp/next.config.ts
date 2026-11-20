@@ -41,6 +41,11 @@ export function buildContentSecurityPolicy(
       "blob:",
       ...imageHosts.map((hostname) => `https://${hostname}`),
       "https://*.privy.io",
+      // Wallet provider icons rendered by @creit.tech/stellar-wallets-kit defaultModules()
+      "https://stellar.creit.tech",
+      "https://uni.onekey-asset.com",
+      "https://scopuly.com",
+      "https://storage.herewallet.app",
     ]),
   );
 
@@ -49,6 +54,7 @@ export function buildContentSecurityPolicy(
     normalizeCspSource(env.API_URL),
     normalizeCspSource(env.NEXT_PUBLIC_LENDING_SSE_URL),
     normalizeCspSource(env.NEXT_PUBLIC_SOROBAN_RPC_URL),
+    normalizeCspSource(env.NEXT_PUBLIC_SMART_ACCOUNT_RPC_URL),
     API_ENDPOINTS.HORIZON[stellarNetwork],
     API_ENDPOINTS.SOROBAN_RPC[stellarNetwork],
   ].filter((source): source is string => Boolean(source));
@@ -60,6 +66,7 @@ export function buildContentSecurityPolicy(
       "https://auth.privy.io",
       "https://*.privy.io",
       "https://api.privy.io",
+      "https://*.pollar.xyz",
       "https://*.walletconnect.com",
       "https://*.walletconnect.org",
       "wss://*.walletconnect.com",
@@ -90,6 +97,7 @@ export function buildContentSecurityPolicy(
     `font-src 'self' data: https://fonts.gstatic.com`,
     `img-src ${imgSources.join(" ")}`,
     `connect-src ${connectSources.join(" ")}`,
+    `child-src 'self' blob: https://auth.privy.io https://*.privy.io https://verify.walletconnect.com https://verify.walletconnect.org`,
     `frame-src 'self' https://auth.privy.io https://*.privy.io https://verify.walletconnect.com https://verify.walletconnect.org https://challenges.cloudflare.com`,
     `worker-src 'self' blob:`,
   ];

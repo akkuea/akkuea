@@ -235,6 +235,247 @@ export function resolveCorsAllowedOrigins(
   return [];
 }
 
+// ---------------------------------------------------------------------------
+// Pilot settings
+//
+// Configuration for the single-ally pilot (docs/strategy/product-brief.md),
+// read by the pilot dashboard in apps/webapp and by the pilot jobs and routes
+// in apps/api. Every variable is optional. An unset, empty, or whitespace-only
+// value resolves to its default in `PILOT_ENV_DEFAULTS` (or to `undefined` when
+// it has none), so the empty assignments shipped in the `.env.example` files
+// are valid. A value that is set but malformed fails validation with a message
+// naming the variable, instead of being silently replaced by the default at
+// its read site. See docs/deployment/environment-variables.md.
+// ---------------------------------------------------------------------------
+
+/**
+ * Defaults applied when an optional pilot variable is unset or empty. The
+ * single source of truth for these values; the read sites in apps/webapp and
+ * apps/api apply the same numbers. Pilot variables with no entry here (the ally
+ * address, contract ID overrides, splat URL, agreement start, and operator user
+ * ID) have no default and resolve to `undefined` when unset. See
+ * docs/deployment/environment-variables.md.
+ */
+export const PILOT_ENV_DEFAULTS = {
+  NEXT_PUBLIC_PILOT_START_CYCLE: "2026-01",
+  NEXT_PUBLIC_PILOT_PAYMENT_DAY: 5,
+  NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS: 24,
+  NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS: 100,
+  PILOT_ESCALATION_JOB_ENABLED: true,
+  PILOT_ESCALATION_CADENCE_DAYS: 30,
+  PILOT_ESCALATION_THRESHOLD_CYCLES: 2,
+  /** 6 hours. */
+  PILOT_ESCALATION_POLL_INTERVAL_MS: 21_600_000,
+  /** 7 days. */
+  PILOT_ESCALATION_RENOTIFY_INTERVAL_MS: 604_800_000,
+  PILOT_WHITELIST_REVIEW_SLA_HOURS: 48,
+  PILOT_EVIDENCE_REVIEW_SLA_HOURS: 48,
+  PILOT_REVIEW_METRICS_WINDOW_DAYS: 30,
+} as const;
+
+/**
+ * Builds the schema for one optional pilot variable. The raw value is trimmed;
+ * an unset or blank value resolves to `fallback`. Otherwise `parse` converts
+ * it, and a result of `undefined` means the value is malformed, which is
+ * reported as `<name> must be <expected> (got "<value>")`.
+ */
+function pilotSetting<T, D extends T | undefined>(
+  name: string,
+  expected: string,
+  parse: (value: string) => T | undefined,
+  fallback: D,
+) {
+  return z
+    .string()
+    .optional()
+    .transform((raw, ctx): T | D => {
+      const value = raw?.trim();
+      if (!value) return fallback;
+      const parsed = parse(value);
+      if (parsed === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          message: `${name} must be ${expected} (got "${value}")`,
+          input: raw,
+        });
+        return z.NEVER;
+      }
+      return parsed;
+    });
+}
+
+const WHOLE_NUMBER_PATTERN = /^\d+$/;
+const POSITIVE_DECIMAL_PATTERN = /^\d+(\.\d+)?$/;
+const CYCLE_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ISO_DATE_PATTERN =
+  /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?(Z|[+-](\d{2}):(\d{2})))?$/;
+
+/**
+ * Largest delay, in milliseconds, that `setInterval` accepts (2^31 - 1, about
+ * 24.8 days). A larger delay overflows and the runtime fires the timer every
+ * millisecond instead, so the escalation job's poll interval is capped here.
+ */
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
+
+/** Parses a whole number written only with digits, within `[min, max]`. */
+const parseWholeNumber =
+  (min: number, max: number) =>
+  (value: string): number | undefined => {
+    if (!WHOLE_NUMBER_PATTERN.test(value)) return undefined;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed >= min && parsed <= max
+      ? parsed
+      : undefined;
+  };
+
+/**
+ * True for a real calendar date in ISO 8601 form: `YYYY-MM-DD`, or a date-time
+ * with an explicit `Z` or `+HH:MM` / `-HH:MM` offset, such as
+ * `2026-01-15T00:00:00.000Z`. Rejects impossible dates such as `2026-02-30`.
+ */
+export const isIsoDate = (val: string): boolean => {
+  const match = ISO_DATE_PATTERN.exec(val);
+  if (!match) return false;
+  const [, year, month, day, hour, minute, second, , offsetHour, offsetMin] =
+    match;
+  const calendar = new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day)),
+  );
+  const isRealDate =
+    calendar.getUTCFullYear() === Number(year) &&
+    calendar.getUTCMonth() === Number(month) - 1 &&
+    calendar.getUTCDate() === Number(day);
+  const isRealTime =
+    hour === undefined ||
+    (Number(hour) <= 23 &&
+      Number(minute) <= 59 &&
+      Number(second ?? 0) <= 59 &&
+      Number(offsetHour ?? 0) <= 23 &&
+      Number(offsetMin ?? 0) <= 59);
+  return isRealDate && isRealTime && !Number.isNaN(new Date(val).getTime());
+};
+
+const isHttpsUrl = (val: string): boolean => {
+  try {
+    const url = new URL(val);
+    return url.protocol === "https:" && url.hostname.length > 0;
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Optional Stellar account address (`G...`), validated with its StrKey
+ * checksum. Used for `NEXT_PUBLIC_PILOT_ALLY_ADDRESS`.
+ */
+export const pilotStellarAddressSchema = (name: string) =>
+  pilotSetting(
+    name,
+    "a valid Stellar public key, 56 characters starting with G",
+    (value) => (isStellarPublicKey(value) ? value : undefined),
+    undefined,
+  );
+
+/**
+ * Optional Soroban contract ID (`C...`), validated with its StrKey checksum.
+ * Unset means the read site falls back to the committed deployment artifact.
+ */
+export const pilotContractIdSchema = (name: string) =>
+  pilotSetting(
+    name,
+    "a valid Soroban contract ID, 56 characters starting with C",
+    (value) => (isStellarContractId(value) ? value : undefined),
+    undefined,
+  );
+
+/** Optional month in `YYYY-MM` form, month `01` to `12`. */
+export const pilotCycleSchema = (name: string, fallback: string) =>
+  pilotSetting(
+    name,
+    "a month in YYYY-MM format, such as 2026-01",
+    (value) => (CYCLE_PATTERN.test(value) ? value : undefined),
+    fallback,
+  );
+
+/**
+ * Optional whole number from `min` to `max`. Only digits are accepted, so
+ * `5.0`, `5junk`, `-1`, `0x10`, and `1e3` are rejected rather than coerced.
+ * Without `max`, the message reads "a positive whole number" when `min` is 1.
+ */
+export const pilotWholeNumberSchema = (
+  name: string,
+  options: { min: number; max?: number; fallback: number },
+) => {
+  const { min, max = Number.MAX_SAFE_INTEGER, fallback } = options;
+  const expected =
+    options.max !== undefined
+      ? `a whole number from ${min} to ${max}`
+      : min === 1
+        ? "a positive whole number"
+        : `a whole number of at least ${min}`;
+  return pilotSetting(name, expected, parseWholeNumber(min, max), fallback);
+};
+
+/**
+ * Optional number greater than zero, written with digits and an optional
+ * decimal part (such as `24` or `1.5`). Rejects `0`, signs, exponents, and
+ * `Infinity`.
+ */
+export const pilotPositiveNumberSchema = (name: string, fallback: number) =>
+  pilotSetting(
+    name,
+    "a positive number, such as 24 or 1.5",
+    (value) => {
+      if (!POSITIVE_DECIMAL_PATTERN.test(value)) return undefined;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+    },
+    fallback,
+  );
+
+/** Optional `true` or `false`, case-insensitive. */
+export const pilotFlagSchema = (name: string, fallback: boolean) =>
+  pilotSetting(
+    name,
+    "true or false",
+    (value) => {
+      const lowered = value.toLowerCase();
+      if (lowered === "true") return true;
+      if (lowered === "false") return false;
+      return undefined;
+    },
+    fallback,
+  );
+
+/** Optional `https` URL. */
+export const pilotHttpsUrlSchema = (name: string) =>
+  pilotSetting(
+    name,
+    "an https URL, such as https://example.org/property.splat",
+    (value) => (isHttpsUrl(value) ? value : undefined),
+    undefined,
+  );
+
+/** Optional ISO 8601 date or date-time; see {@link isIsoDate}. */
+export const pilotIsoDateSchema = (name: string) =>
+  pilotSetting(
+    name,
+    "an ISO 8601 date such as 2026-01-15, or a date-time with Z or an offset such as 2026-01-15T00:00:00.000Z",
+    (value) => (isIsoDate(value) ? value : undefined),
+    undefined,
+  );
+
+/** Optional UUID in canonical `8-4-4-4-12` hexadecimal form. */
+export const pilotUuidSchema = (name: string) =>
+  pilotSetting(
+    name,
+    "a user UUID, such as 3f2b8c1e-5d4a-4c7b-9e1f-0a2b3c4d5e6f",
+    (value) => (UUID_PATTERN.test(value) ? value : undefined),
+    undefined,
+  );
+
 export const apiEnvSchema = z.object({
   DATABASE_URL: z
     .string({ error: "DATABASE_URL is required" })
@@ -291,6 +532,59 @@ export const apiEnvSchema = z.object({
   PAYMENT_TOKEN_CONTRACT_ID: stellarContractIdSchema
     .optional()
     .or(z.literal("")),
+  // Pilot settings (all optional; see the "Pilot settings" section above).
+  PILOT_ESCALATION_JOB_ENABLED: pilotFlagSchema(
+    "PILOT_ESCALATION_JOB_ENABLED",
+    PILOT_ENV_DEFAULTS.PILOT_ESCALATION_JOB_ENABLED,
+  ),
+  PILOT_ESCALATION_AGREEMENT_START: pilotIsoDateSchema(
+    "PILOT_ESCALATION_AGREEMENT_START",
+  ),
+  PILOT_ESCALATION_OPERATOR_USER_ID: pilotUuidSchema(
+    "PILOT_ESCALATION_OPERATOR_USER_ID",
+  ),
+  PILOT_ESCALATION_CADENCE_DAYS: pilotPositiveNumberSchema(
+    "PILOT_ESCALATION_CADENCE_DAYS",
+    PILOT_ENV_DEFAULTS.PILOT_ESCALATION_CADENCE_DAYS,
+  ),
+  PILOT_ESCALATION_THRESHOLD_CYCLES: pilotWholeNumberSchema(
+    "PILOT_ESCALATION_THRESHOLD_CYCLES",
+    {
+      min: 1,
+      fallback: PILOT_ENV_DEFAULTS.PILOT_ESCALATION_THRESHOLD_CYCLES,
+    },
+  ),
+  PILOT_ESCALATION_POLL_INTERVAL_MS: pilotWholeNumberSchema(
+    "PILOT_ESCALATION_POLL_INTERVAL_MS",
+    {
+      min: 1,
+      max: MAX_TIMER_DELAY_MS,
+      fallback: PILOT_ENV_DEFAULTS.PILOT_ESCALATION_POLL_INTERVAL_MS,
+    },
+  ),
+  PILOT_ESCALATION_RENOTIFY_INTERVAL_MS: pilotWholeNumberSchema(
+    "PILOT_ESCALATION_RENOTIFY_INTERVAL_MS",
+    {
+      min: 1,
+      fallback: PILOT_ENV_DEFAULTS.PILOT_ESCALATION_RENOTIFY_INTERVAL_MS,
+    },
+  ),
+  PILOT_PAYOUT_SPLIT_CONTRACT_ID: pilotContractIdSchema(
+    "PILOT_PAYOUT_SPLIT_CONTRACT_ID",
+  ),
+  WHITELIST_CONTRACT_ID: pilotContractIdSchema("WHITELIST_CONTRACT_ID"),
+  PILOT_WHITELIST_REVIEW_SLA_HOURS: pilotPositiveNumberSchema(
+    "PILOT_WHITELIST_REVIEW_SLA_HOURS",
+    PILOT_ENV_DEFAULTS.PILOT_WHITELIST_REVIEW_SLA_HOURS,
+  ),
+  PILOT_EVIDENCE_REVIEW_SLA_HOURS: pilotPositiveNumberSchema(
+    "PILOT_EVIDENCE_REVIEW_SLA_HOURS",
+    PILOT_ENV_DEFAULTS.PILOT_EVIDENCE_REVIEW_SLA_HOURS,
+  ),
+  PILOT_REVIEW_METRICS_WINDOW_DAYS: pilotPositiveNumberSchema(
+    "PILOT_REVIEW_METRICS_WINDOW_DAYS",
+    PILOT_ENV_DEFAULTS.PILOT_REVIEW_METRICS_WINDOW_DAYS,
+  ),
 });
 
 export const webappEnvSchema = z.object({
@@ -308,6 +602,47 @@ export const webappEnvSchema = z.object({
   PRIVY_APP_SECRET: z.string().optional(),
   NEXT_PUBLIC_POLLAR_KEY: z.string().optional(),
   NEXT_PUBLIC_PROPERTY_IMAGE_HOSTS: propertyImageHostsSchema,
+  // Pilot dashboard settings (all optional; see the "Pilot settings" section
+  // above).
+  NEXT_PUBLIC_PILOT_ALLY_ADDRESS: pilotStellarAddressSchema(
+    "NEXT_PUBLIC_PILOT_ALLY_ADDRESS",
+  ),
+  NEXT_PUBLIC_PILOT_START_CYCLE: pilotCycleSchema(
+    "NEXT_PUBLIC_PILOT_START_CYCLE",
+    PILOT_ENV_DEFAULTS.NEXT_PUBLIC_PILOT_START_CYCLE,
+  ),
+  NEXT_PUBLIC_PILOT_PAYMENT_DAY: pilotWholeNumberSchema(
+    "NEXT_PUBLIC_PILOT_PAYMENT_DAY",
+    {
+      min: 1,
+      max: 28,
+      fallback: PILOT_ENV_DEFAULTS.NEXT_PUBLIC_PILOT_PAYMENT_DAY,
+    },
+  ),
+  NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL: pilotHttpsUrlSchema(
+    "NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL",
+  ),
+  NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID: pilotContractIdSchema(
+    "NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID",
+  ),
+  NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID: pilotContractIdSchema(
+    "NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID",
+  ),
+  NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID: pilotContractIdSchema(
+    "NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID",
+  ),
+  NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS: pilotPositiveNumberSchema(
+    "NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS",
+    PILOT_ENV_DEFAULTS.NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS,
+  ),
+  NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS: pilotWholeNumberSchema(
+    "NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS",
+    {
+      min: 0,
+      max: 9999,
+      fallback: PILOT_ENV_DEFAULTS.NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS,
+    },
+  ),
 });
 
 export type ApiEnv = z.infer<typeof apiEnvSchema>;

@@ -5,6 +5,10 @@ use soroban_sdk::{contracttype, Address, Symbol};
 /// This enum defines unique storage keys to prevent collisions and organize
 /// contract data efficiently. Each key type corresponds to a specific data
 /// structure stored on-chain.
+///
+/// Note: the admin address is intentionally NOT stored under a key in this
+/// enum. The single canonical admin storage key lives in the access-control
+/// module (`RoleKey::Admin`), which is the only key read by `AdminControl`.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StorageKey {

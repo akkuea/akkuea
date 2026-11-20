@@ -1,4 +1,4 @@
-use soroban_sdk::{contracttype, Address, Env, Map, Vec};
+use soroban_sdk::{contracttype, Address, Env, Vec};
 
 // Minimum seconds that must elapse between scheduling and executing recovery
 pub const TIMELOCK_DURATION: u64 = 86_400; // 24 hours

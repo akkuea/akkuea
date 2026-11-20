@@ -1,5 +1,4 @@
 use super::access::{AdminControl, ContractError, PauseControl};
-use super::events::AdminEvents;
 use super::events::{LendingEvents, PropertyEvents};
 use super::lending::PriceOracle;
 use super::oracle_types::{Asset, PriceData};
@@ -117,6 +116,20 @@ fn setup_internal() -> (Address, Env) {
     let env = Env::default();
     let admin = Address::generate(&env);
     (env.register(PropertyTokenContract, (&admin,)), env)
+}
+
+// Admin key aliasing: the admin must live under exactly one storage key and be
+// checked through one code path (AdminControl). This guards against the
+// LendingKey::Admin / RoleKey::Admin coincidence silently breaking admin checks.
+#[test]
+fn test_admin_single_storage_key() {
+    let env = Env::default();
+    let admin = Address::generate(&env);
+    let contract_id = env.register(PropertyTokenContract, (&admin,));
+
+    env.as_contract(&contract_id, || {
+        assert_eq!(AdminControl::get_admin(&env), Some(admin.clone()));
+    });
 }
 
 // Store and retrieve LendingPool

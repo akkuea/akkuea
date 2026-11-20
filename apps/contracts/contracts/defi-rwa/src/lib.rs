@@ -183,35 +183,6 @@ impl PropertyTokenContract {
         set_lending_admin(&env, &admin);
     }
 
-    // ─── Admin Transfer (two-step) ─────────────
-
-    pub fn transfer_admin_start(env: Env, admin: Address, new_admin: Address) {
-        admin.require_auth();
-        AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
-        let _ = AdminControl::transfer_admin_start(&env, &admin, &new_admin);
-        env.events()
-            .publish(("admin_transfer_started",), (admin, new_admin));
-    }
-
-    pub fn transfer_admin_accept(env: Env, new_admin: Address) {
-        new_admin.require_auth();
-        let _ = AdminControl::transfer_admin_accept(&env, &new_admin);
-        env.events()
-            .publish(("admin_transfer_accepted",), new_admin);
-    }
-
-    pub fn transfer_admin_cancel(env: Env, admin: Address) {
-        admin.require_auth();
-        AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
-        let _ = AdminControl::transfer_admin_cancel(&env, &admin);
-        env.events()
-            .publish(("admin_transfer_cancelled",), admin);
-    }
-
-    pub fn pending_admin(env: Env) -> Option<Address> {
-        AdminControl::pending_admin(&env)
-    }
-
     // ─── Share Management (Admin) ──────────────
 
     pub fn mint_shares(
@@ -275,7 +246,7 @@ impl PropertyTokenContract {
         set_allowance(&env, property_id, &owner, &spender, amount);
     }
 
-    /// Race-safe allowance change: only applies if the current allowance equals `expected_current`.
+    /// Race-safe allowance update: only succeeds if the current allowance equals `expected_current`.
     pub fn approve_with_expected(
         env: Env,
         owner: Address,
@@ -287,7 +258,7 @@ impl PropertyTokenContract {
         owner.require_auth();
         let current = get_allowance(&env, property_id, &owner, &spender);
         if current != expected_current {
-            panic!("Allowance changed");
+            panic!("allowance changed");
         }
         set_allowance(&env, property_id, &owner, &spender, amount);
     }

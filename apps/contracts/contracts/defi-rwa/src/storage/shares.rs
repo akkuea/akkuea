@@ -1,25 +1,8 @@
 use crate::access::ContractError;
+use crate::lending::keys::lending_bump;
 use soroban_sdk::{Address, Env};
 
 use super::keys::StorageKey;
-
-/// TTL bump amounts for persistent share and allowance entries.
-///
-/// Mirrors the lending module's `lending_bump` constants so that share
-/// balances and allowances stay alive alongside lending positions.
-pub mod share_bump {
-    pub const PERSISTENT_BUMP: u32 = 2592000; // ~300 days
-    pub const PERSISTENT_THRESHOLD: u32 = 518400; // ~60 days
-}
-
-/// Extends the TTL of a persistent entry for a key if it is close to expiry.
-fn bump_persistent(env: &Env, key: &StorageKey) {
-    env.storage().persistent().extend_ttl(
-        key,
-        share_bump::PERSISTENT_THRESHOLD,
-        share_bump::PERSISTENT_BUMP,
-    );
-}
 
 /// Share balance tracking for property ownership
 ///
@@ -27,8 +10,6 @@ fn bump_persistent(env: &Env, key: &StorageKey) {
 /// represents how many shares a specific address owns for a given property.
 /// Storage is optimized by using composite keys (property_id, owner_address).
 /// Gets the share balance for a specific owner and property
-///
-/// The entry's TTL is extended on read so that active holders keep their balance live.
 ///
 /// # Arguments
 /// * `env` - Soroban environment
@@ -40,11 +21,17 @@ fn bump_persistent(env: &Env, key: &StorageKey) {
 #[allow(dead_code)]
 pub fn get_balance(env: &Env, property_id: u64, owner: &Address) -> u64 {
     let key = StorageKey::ShareBalance(property_id, owner.clone());
-    let balance = env.storage().persistent().get(&key).unwrap_or(0);
-    if env.storage().persistent().has(&key) {
-        bump_persistent(env, &key);
+    match env.storage().persistent().get::<_, u64>(&key) {
+        Some(balance) => {
+            env.storage().persistent().extend_ttl(
+                &key,
+                lending_bump::PERSISTENT_BUMP,
+                lending_bump::PERSISTENT_BUMP,
+            );
+            balance
+        }
+        None => 0,
     }
-    balance
 }
 
 /// Sets the share balance for a specific owner and property
@@ -66,7 +53,11 @@ pub fn set_balance(env: &Env, property_id: u64, owner: &Address, balance: u64) {
         env.storage().persistent().remove(&key);
     } else {
         env.storage().persistent().set(&key, &balance);
-        bump_persistent(env, &key);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
     }
 }
 
@@ -144,6 +135,11 @@ pub fn get_total_shares(env: &Env, property_id: u64) -> u64 {
 pub fn set_total_shares(env: &Env, property_id: u64, total: u64) {
     let key = StorageKey::TotalShares(property_id);
     env.storage().persistent().set(&key, &total);
+    env.storage().persistent().extend_ttl(
+        &key,
+        lending_bump::PERSISTENT_BUMP,
+        lending_bump::PERSISTENT_BUMP,
+    );
 }
 
 /// Transfers shares from one owner to another
@@ -172,16 +168,20 @@ pub fn transfer_shares(
 }
 
 /// Helper to get approved allowance
-///
-/// Extends the allowance entry's TTL when it exists.
 #[allow(dead_code)]
 pub fn get_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Address) -> u64 {
     let key = StorageKey::Allowance(property_id, owner.clone(), spender.clone());
-    let allowance = env.storage().persistent().get(&key).unwrap_or(0);
-    if env.storage().persistent().has(&key) {
-        bump_persistent(env, &key);
+    match env.storage().persistent().get::<_, u64>(&key) {
+        Some(amount) => {
+            env.storage().persistent().extend_ttl(
+                &key,
+                lending_bump::PERSISTENT_BUMP,
+                lending_bump::PERSISTENT_BUMP,
+            );
+            amount
+        }
+        None => 0,
     }
-    allowance
 }
 
 /// Helper to set approved allowance
@@ -192,7 +192,11 @@ pub fn set_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Add
         env.storage().persistent().remove(&key);
     } else {
         env.storage().persistent().set(&key, &amount);
-        bump_persistent(env, &key);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
     }
 }
 

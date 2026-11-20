@@ -53,7 +53,10 @@ export class WhitelistService {
       entityType: 'pilot_whitelist_request',
       entityId: requestId,
       beforeValue: request as unknown as Record<string, unknown>,
-      afterValue: (updated[0] ?? { ...request, status: 'approved' }) as unknown as Record<string, unknown>,
+      afterValue: (updated[0] ?? { ...request, status: 'approved' }) as unknown as Record<
+        string,
+        unknown
+      >,
       metadata: {
         walletAddress: request.walletAddress,
         txHash,
@@ -92,7 +95,11 @@ export class WhitelistService {
       entityType: 'pilot_whitelist_request',
       entityId: requestId,
       beforeValue: request as unknown as Record<string, unknown>,
-      afterValue: (updated[0] ?? { ...request, status: 'rejected', rejectionReason: reason }) as unknown as Record<string, unknown>,
+      afterValue: (updated[0] ?? {
+        ...request,
+        status: 'rejected',
+        rejectionReason: reason,
+      }) as unknown as Record<string, unknown>,
       metadata: {
         walletAddress: request.walletAddress,
         reason,
@@ -104,7 +111,11 @@ export class WhitelistService {
    * Revokes an approved investor on-chain and updates the database record.
    * If on-chain submission fails, the database remains in 'approved' status.
    */
-  async revokeRequest(requestId: string, reason: string, actor: string = 'system'): Promise<string> {
+  async revokeRequest(
+    requestId: string,
+    reason: string,
+    actor: string = 'system',
+  ): Promise<string> {
     if (!reason || reason.trim().length === 0) {
       throw new Error('Revocation reason is required');
     }
@@ -154,7 +165,11 @@ export class WhitelistService {
       entityType: 'pilot_whitelist_request',
       entityId: requestId,
       beforeValue: request as unknown as Record<string, unknown>,
-      afterValue: (updated[0] ?? { ...request, status: 'revoked', rejectionReason: reason }) as unknown as Record<string, unknown>,
+      afterValue: (updated[0] ?? {
+        ...request,
+        status: 'revoked',
+        rejectionReason: reason,
+      }) as unknown as Record<string, unknown>,
       metadata: {
         walletAddress: request.walletAddress,
         reason,

@@ -3,9 +3,8 @@ import { afterEach, describe, expect, it } from "bun:test";
 
 const { cleanup, fireEvent, within } = await import("@testing-library/react");
 const { renderWithIntl: render } = await import("@/test/renderWithIntl");
-const { RecordEvidenceCosignPanel } = await import(
-  "../RecordEvidenceCosignPanel"
-);
+const { RecordEvidenceCosignPanel } =
+  await import("../RecordEvidenceCosignPanel");
 
 const OPERATOR = "GBZXN7PIRZGNMHGA728RGRFZAPPWN9G8LYHQ7R8BA53G5Z8K9M8N7O6P";
 const ALLY = "GCEZWKCA5VLDNRLN3RPRJMRZOX3Z6G5CHCGBDQCQZVQQ6BRVV12BKHA";

@@ -14,9 +14,13 @@ describe("parseEvidenceLink", () => {
 
   it("rejects data: URLs", () => {
     expect(
-      parseEvidenceLink("data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg=="),
+      parseEvidenceLink(
+        "data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==",
+      ),
     ).toBeNull();
-    expect(isValidEvidenceLink("data:text/plain;charset=utf-8,hello")).toBe(false);
+    expect(isValidEvidenceLink("data:text/plain;charset=utf-8,hello")).toBe(
+      false,
+    );
   });
 
   it("rejects relative paths", () => {
@@ -29,7 +33,9 @@ describe("parseEvidenceLink", () => {
 
   it("rejects strings with spaces", () => {
     expect(parseEvidenceLink("a string with spaces")).toBeNull();
-    expect(parseEvidenceLink("https://example.com/my statement.pdf")).toBeNull();
+    expect(
+      parseEvidenceLink("https://example.com/my statement.pdf"),
+    ).toBeNull();
     expect(parseEvidenceLink("https://example.com ")).toBeNull();
     expect(parseEvidenceLink(" https://example.com")).toBeNull();
     expect(parseEvidenceLink("   ")).toBeNull();

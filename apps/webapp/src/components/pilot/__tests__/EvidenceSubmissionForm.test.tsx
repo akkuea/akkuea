@@ -4,7 +4,8 @@ import "@/test/setup-dom";
 // installed `window` and DOM globals.
 const { cleanup, fireEvent, within } = await import("@testing-library/react");
 const { renderWithIntl: render } = await import("@/test/renderWithIntl");
-const { EvidenceSubmissionFormView } = await import("../EvidenceSubmissionForm");
+const { EvidenceSubmissionFormView } =
+  await import("../EvidenceSubmissionForm");
 type EvidenceSubmissionWallet =
   import("../EvidenceSubmissionForm").EvidenceSubmissionWallet;
 
@@ -108,7 +109,9 @@ describe("EvidenceSubmissionForm", () => {
   it("rejects http, javascript, data, relative path, and strings with spaces", () => {
     const view = renderForm();
     const scope = within(view.container);
-    const linkInput = view.container.querySelector('input[placeholder="https://"]') as HTMLInputElement;
+    const linkInput = view.container.querySelector(
+      'input[placeholder="https://"]',
+    ) as HTMLInputElement;
     expect(linkInput).not.toBeNull();
 
     const invalidLinks = [
@@ -133,7 +136,9 @@ describe("EvidenceSubmissionForm", () => {
   it("accepts a valid https URL without displaying validation error", () => {
     const view = renderForm();
     const scope = within(view.container);
-    const linkInput = view.container.querySelector('input[placeholder="https://"]') as HTMLInputElement;
+    const linkInput = view.container.querySelector(
+      'input[placeholder="https://"]',
+    ) as HTMLInputElement;
 
     fireEvent.change(linkInput, {
       target: { value: "https://example.org/statements/2026-08.pdf" },

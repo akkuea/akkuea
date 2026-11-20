@@ -173,8 +173,8 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
               {shortenHash(cycle.evidenceHashHex)}
             </p>
           )}
-          {cycle.evidenceLink && (
-            parsedEvidenceLink ? (
+          {cycle.evidenceLink &&
+            (parsedEvidenceLink ? (
               <a
                 href={parsedEvidenceLink.href}
                 target="_blank"
@@ -186,11 +186,14 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
               </a>
             ) : (
               <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-400">
-                <span className="break-all font-mono">{cycle.evidenceLink}</span>
-                <span className="text-amber-400">({t("queue.invalidLink")})</span>
+                <span className="break-all font-mono">
+                  {cycle.evidenceLink}
+                </span>
+                <span className="text-amber-400">
+                  ({t("queue.invalidLink")})
+                </span>
               </p>
-            )
-          )}
+            ))}
           {cycle.evidenceLink && cycle.evidenceHashHex && (
             <EvidenceVerification
               evidenceLink={cycle.evidenceLink}

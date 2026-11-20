@@ -111,7 +111,10 @@ describe("verifyEvidenceDocument", () => {
 
     for (const link of nonHttpsLinks) {
       fetchCalled = false;
-      const result = await verifyEvidenceDocument(link, await sha256Hex("anything"));
+      const result = await verifyEvidenceDocument(
+        link,
+        await sha256Hex("anything"),
+      );
       expect(result.status).toBe("unreachable");
       expect(result.reason).toMatch(/not a valid https url/i);
       expect(fetchCalled).toBe(false);

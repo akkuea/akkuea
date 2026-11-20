@@ -37,15 +37,15 @@ describe("EvidenceVerification", () => {
       // Assert that unreachable warning with the translated invalid link reason is shown
       const scope = within(view.container);
       expect(
-        scope.queryByText(/the document could not be retrieved, so it was not verified/i),
+        scope.queryByText(
+          /the document could not be retrieved, so it was not verified/i,
+        ),
       ).not.toBeNull();
       expect(
         scope.queryByText(/evidence link is not a valid https:\/\/ url/i),
       ).not.toBeNull();
       // File fallback is still accessible
-      expect(
-        scope.queryByText(/hash a downloaded file/i),
-      ).not.toBeNull();
+      expect(scope.queryByText(/hash a downloaded file/i)).not.toBeNull();
     } finally {
       globalThis.fetch = originalFetch;
     }

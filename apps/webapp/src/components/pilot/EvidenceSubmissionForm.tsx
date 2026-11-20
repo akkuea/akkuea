@@ -167,7 +167,13 @@ export function EvidenceSubmissionFormView({
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!canSubmit || !address || !digest || parsedIncome === null || !parsedLink) {
+    if (
+      !canSubmit ||
+      !address ||
+      !digest ||
+      parsedIncome === null ||
+      !parsedLink
+    ) {
       return;
     }
 

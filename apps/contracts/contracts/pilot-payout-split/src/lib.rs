@@ -44,6 +44,19 @@ pub const PLATFORM_FEE_PERCENT: i128 = 10;
 pub const PERCENT_DENOMINATOR: i128 = 100;
 pub const REQUIRED_EVIDENCE_HASH_BYTES: u32 = 32;
 
+/// Byte length of a cycle id. A cycle id is exactly `YYYY-MM` with a month
+/// from `01` to `12`, the only format the dashboard enumerates and reads.
+pub const CYCLE_ID_LEN: u32 = 7;
+
+/// Maximum byte length of an `evidence_link`. The link is written to contract
+/// storage and copied into an event, so it must be bounded.
+pub const MAX_EVIDENCE_LINK_LEN: u32 = 256;
+
+/// Maximum byte length of the `reason` passed to `review_evidence`,
+/// `flag_dispute` and `exit`. Each reason is written to contract storage and
+/// copied into an event, so it must be bounded.
+pub const MAX_REASON_LEN: u32 = 512;
+
 /// Scaling factor for the minimum USDC-to-EURC exchange-rate bound. Both USDC
 /// and EURC are 7-decimal Stellar assets, so `min_eurc_per_usdc` of 10_000_000
 /// means a 1:1 rate, 9_500_000 means at least 0.95 EURC per USDC, etc.
@@ -369,6 +382,7 @@ impl PilotPayoutSplit {
         Self::require_ally(&env, &ally);
         Self::require_not_exited(&env);
         Self::require_not_paused(&env);
+        Self::require_valid_cycle_id(&env, &cycle_id);
 
         if total_income <= 0 {
             panic_with_error!(&env, PayoutError::ZeroAmount);
@@ -381,6 +395,12 @@ impl PilotPayoutSplit {
         if evidence_link.is_empty() {
             panic_with_error!(&env, PayoutError::MissingEvidenceLink);
         }
+        Self::require_max_len(
+            &env,
+            &evidence_link,
+            MAX_EVIDENCE_LINK_LEN,
+            PayoutError::EvidenceLinkTooLong,
+        );
 
         if Storage::evidence(&env, &cycle_id).is_some() {
             panic_with_error!(&env, PayoutError::CycleAlreadyRecorded);
@@ -429,6 +449,7 @@ impl PilotPayoutSplit {
         Self::require_ally(&env, &ally);
         Self::require_not_exited(&env);
         Self::require_not_paused(&env);
+        Self::require_valid_cycle_id(&env, &cycle_id);
 
         if total_income <= 0 {
             panic_with_error!(&env, PayoutError::ZeroAmount);
@@ -441,6 +462,12 @@ impl PilotPayoutSplit {
         if evidence_link.is_empty() {
             panic_with_error!(&env, PayoutError::MissingEvidenceLink);
         }
+        Self::require_max_len(
+            &env,
+            &evidence_link,
+            MAX_EVIDENCE_LINK_LEN,
+            PayoutError::EvidenceLinkTooLong,
+        );
 
         let previous_status = Storage::evidence(&env, &cycle_id).map(|existing| {
             let resubmittable = !existing.distributed
@@ -532,6 +559,7 @@ impl PilotPayoutSplit {
         if !approved && reason.is_empty() {
             panic_with_error!(&env, PayoutError::MissingReviewReason);
         }
+        Self::require_max_len(&env, &reason, MAX_REASON_LEN, PayoutError::ReasonTooLong);
 
         let now = env.ledger().timestamp();
         record.status = if approved {
@@ -566,6 +594,7 @@ impl PilotPayoutSplit {
         if reason.is_empty() {
             panic_with_error!(&env, PayoutError::MissingReviewReason);
         }
+        Self::require_max_len(&env, &reason, MAX_REASON_LEN, PayoutError::ReasonTooLong);
 
         let mut record = Storage::evidence(&env, &cycle_id)
             .unwrap_or_else(|| panic_with_error!(&env, PayoutError::EvidenceNotFound));
@@ -1231,6 +1260,7 @@ impl PilotPayoutSplit {
         if reason.is_empty() {
             panic_with_error!(&env, PayoutError::MissingExitReason);
         }
+        Self::require_max_len(&env, &reason, MAX_REASON_LEN, PayoutError::ReasonTooLong);
 
         let record = ExitRecord {
             reason: reason.clone(),
@@ -1311,6 +1341,40 @@ impl PilotPayoutSplit {
     fn require_not_exited(env: &Env) {
         if Storage::exit_record(env).is_some() {
             panic_with_error!(env, PayoutError::ContractExited);
+        }
+    }
+
+    /// Reject a `cycle_id` that is not exactly `YYYY-MM` with a month from
+    /// `01` to `12`. Applied only where a cycle is created, so reading,
+    /// reviewing or disputing a cycle that already exists is unaffected.
+    fn require_valid_cycle_id(env: &Env, cycle_id: &String) {
+        if cycle_id.len() != CYCLE_ID_LEN {
+            panic_with_error!(env, PayoutError::InvalidCycleId);
+        }
+        let mut buf = [0u8; CYCLE_ID_LEN as usize];
+        cycle_id.copy_into_slice(&mut buf);
+        let shape_ok = buf.iter().enumerate().all(|(i, byte)| {
+            if i == 4 {
+                *byte == b'-'
+            } else {
+                byte.is_ascii_digit()
+            }
+        });
+        // Checked before the month is computed, so a non-digit byte can never
+        // underflow the subtraction below.
+        if !shape_ok {
+            panic_with_error!(env, PayoutError::InvalidCycleId);
+        }
+        let month = (buf[5] - b'0') * 10 + (buf[6] - b'0');
+        if !(1..=12).contains(&month) {
+            panic_with_error!(env, PayoutError::InvalidCycleId);
+        }
+    }
+
+    /// Reject a free-text argument longer than `max` bytes with `error`.
+    fn require_max_len(env: &Env, value: &String, max: u32, error: PayoutError) {
+        if value.len() > max {
+            panic_with_error!(env, error);
         }
     }
 }
@@ -1988,7 +2052,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "bad-hash"),
+            &cycle(&s.env, "2026-01"),
             &short_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/bad"),
             &10_000,
@@ -2009,7 +2073,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "zero"),
+            &cycle(&s.env, "2026-02"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/zero"),
             &0,
@@ -2079,7 +2143,7 @@ pub mod tests {
         let record_res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "paused"),
+            &cycle(&s.env, "2026-03"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/paused"),
             &10_000,
@@ -2094,7 +2158,7 @@ pub mod tests {
         let execute_res = s.payout.try_execute_distribution(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "missing"),
+            &cycle(&s.env, "2026-04"),
             &TEST_MIN_RATE,
         );
         assert_eq!(
@@ -2214,7 +2278,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "exited"),
+            &cycle(&s.env, "2026-05"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/exited"),
             &10_000,
@@ -2352,7 +2416,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "both"),
+            &cycle(&s.env, "2026-06"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/both"),
             &10_000,
@@ -2457,7 +2521,7 @@ pub mod tests {
             &router,
         );
 
-        let cycle_id = cycle(&env, "single-signer");
+        let cycle_id = cycle(&env, "2026-07");
         let hash = evidence_hash(&env);
         let link = String::from_str(&env, "ipfs://evidence/single-signer");
         env.mock_auths(&[MockAuth {
@@ -2647,7 +2711,7 @@ pub mod tests {
         s.payout.record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "budget-25"),
+            &cycle(&s.env, "2026-11"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/budget-25"),
             &325_000,
@@ -2657,7 +2721,7 @@ pub mod tests {
         let summary = s.payout.execute_distribution(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "budget-25"),
+            &cycle(&s.env, "2026-11"),
             &TEST_MIN_RATE,
         );
         let cpu = s.env.cost_estimate().budget().cpu_instruction_cost();
@@ -3345,7 +3409,7 @@ pub mod tests {
         for (stage, outcomes) in table {
             for (action, expected) in actions.iter().zip(outcomes.iter()) {
                 let s = setup();
-                let c = cycle(&s.env, "table");
+                let c = cycle(&s.env, "2026-01");
                 drive_to(&s, &c, stage);
                 let before = s.payout.get_evidence(&c);
 
@@ -3381,8 +3445,8 @@ pub mod tests {
     #[test]
     fn exited_contract_blocks_every_evidence_action() {
         let s = setup();
-        let submitted = cycle(&s.env, "submitted");
-        let under_review = cycle(&s.env, "under-review");
+        let submitted = cycle(&s.env, "2026-01");
+        let under_review = cycle(&s.env, "2026-02");
         submit_cycle(&s, &submitted, "ipfs://submitted", 10_000);
         submit_cycle(&s, &under_review, "ipfs://under-review", 10_000);
         s.payout.start_review(&s.operator, &under_review);
@@ -3395,7 +3459,7 @@ pub mod tests {
             PayoutError::ContractExited as u32,
         ));
 
-        assert_eq!(apply(&s, &cycle(&s.env, "new"), Action::Submit), exited);
+        assert_eq!(apply(&s, &cycle(&s.env, "2026-03"), Action::Submit), exited);
         assert_eq!(apply(&s, &submitted, Action::StartReview), exited);
         assert_eq!(apply(&s, &under_review, Action::Approve), exited);
         assert_eq!(apply(&s, &under_review, Action::Reject), exited);
@@ -4175,6 +4239,217 @@ pub mod tests {
 
         assert_eq!(preference_ttl, TTL_EXTEND_TO);
         assert_eq!(instance_ttl, TTL_EXTEND_TO);
+    }
+
+    /// A string of exactly `len` ASCII bytes.
+    fn string_of_len(env: &Env, len: u32) -> String {
+        String::from_bytes(env, &std::vec![b'a'; len as usize])
+    }
+
+    #[test]
+    fn cycle_id_must_be_yyyy_mm_with_a_real_month() {
+        let s = setup();
+        let link = String::from_str(&s.env, "ipfs://evidence/cycle");
+
+        for valid in ["2026-03", "2026-01", "2026-12"] {
+            let c = cycle(&s.env, valid);
+            s.payout.record_evidence(
+                &s.operator,
+                &s.ally,
+                &c,
+                &evidence_hash(&s.env),
+                &link,
+                &10_000,
+            );
+            assert!(s.payout.get_evidence(&c).is_some(), "{}", valid);
+        }
+        let submitted = cycle(&s.env, "2027-03");
+        submit_cycle(&s, &submitted, "ipfs://evidence/cycle", 10_000);
+        assert_eq!(
+            s.payout.get_evidence(&submitted).unwrap().status,
+            EvidenceStatus::Submitted
+        );
+
+        for invalid in [
+            "2026-3", "2026-13", "2026-00", "26-03", "2026/03", "", "abcdefg",
+        ] {
+            let c = cycle(&s.env, invalid);
+            let recorded = s.payout.try_record_evidence(
+                &s.operator,
+                &s.ally,
+                &c,
+                &evidence_hash(&s.env),
+                &link,
+                &10_000,
+            );
+            assert_eq!(
+                recorded,
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::InvalidCycleId as u32
+                ))),
+                "record_evidence {:?}",
+                invalid
+            );
+            let submitted =
+                s.payout
+                    .try_submit_evidence(&s.ally, &c, &evidence_hash(&s.env), &link, &10_000);
+            assert_eq!(
+                submitted,
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::InvalidCycleId as u32
+                ))),
+                "submit_evidence {:?}",
+                invalid
+            );
+            assert_eq!(s.payout.get_evidence(&c), None, "{:?}", invalid);
+        }
+    }
+
+    #[test]
+    fn get_evidence_still_reads_an_existing_cycle_with_a_legacy_id() {
+        let s = setup();
+        record_default(&s);
+        let legacy = cycle(&s.env, "march");
+        let mut record = s.payout.get_evidence(&cycle(&s.env, "2026-08")).unwrap();
+        record.cycle_id = legacy.clone();
+        s.env.as_contract(&s.payout_id, || {
+            Storage::set_evidence(&s.env, &legacy, &record);
+        });
+
+        assert_eq!(s.payout.get_evidence(&legacy), Some(record));
+    }
+
+    #[test]
+    fn evidence_link_is_bounded_on_record_and_submit() {
+        let s = setup();
+        let at_max = string_of_len(&s.env, MAX_EVIDENCE_LINK_LEN);
+        let over_max = string_of_len(&s.env, MAX_EVIDENCE_LINK_LEN + 1);
+
+        let recorded = cycle(&s.env, "2026-03");
+        assert_eq!(
+            s.payout.try_record_evidence(
+                &s.operator,
+                &s.ally,
+                &recorded,
+                &evidence_hash(&s.env),
+                &over_max,
+                &10_000,
+            ),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::EvidenceLinkTooLong as u32
+            )))
+        );
+        assert_eq!(s.payout.get_evidence(&recorded), None);
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &recorded,
+            &evidence_hash(&s.env),
+            &at_max,
+            &10_000,
+        );
+        assert_eq!(
+            s.payout.get_evidence(&recorded).unwrap().evidence_link,
+            at_max
+        );
+
+        let submitted = cycle(&s.env, "2026-04");
+        assert_eq!(
+            s.payout.try_submit_evidence(
+                &s.ally,
+                &submitted,
+                &evidence_hash(&s.env),
+                &over_max,
+                &10_000,
+            ),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::EvidenceLinkTooLong as u32
+            )))
+        );
+        assert_eq!(s.payout.get_evidence(&submitted), None);
+        s.payout.submit_evidence(
+            &s.ally,
+            &submitted,
+            &evidence_hash(&s.env),
+            &at_max,
+            &10_000,
+        );
+        assert_eq!(
+            s.payout.get_evidence(&submitted).unwrap().evidence_link,
+            at_max
+        );
+    }
+
+    #[test]
+    fn review_reason_is_bounded() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-03");
+        submit_cycle(&s, &c, "ipfs://evidence/review", 10_000);
+        let at_max = string_of_len(&s.env, MAX_REASON_LEN);
+        let over_max = string_of_len(&s.env, MAX_REASON_LEN + 1);
+        let before = s.payout.get_evidence(&c);
+
+        for approved in [false, true] {
+            assert_eq!(
+                s.payout
+                    .try_review_evidence(&s.operator, &c, &approved, &over_max),
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::ReasonTooLong as u32
+                ))),
+                "approved = {}",
+                approved
+            );
+        }
+        assert_eq!(s.payout.get_evidence(&c), before);
+
+        s.payout.review_evidence(&s.operator, &c, &false, &at_max);
+        let record = s.payout.get_evidence(&c).unwrap();
+        assert_eq!(record.status, EvidenceStatus::Rejected);
+        assert_eq!(record.review_reason, at_max);
+    }
+
+    #[test]
+    fn dispute_reason_is_bounded() {
+        let s = setup();
+        record_default(&s);
+        let c = cycle(&s.env, "2026-08");
+        let before = s.payout.get_evidence(&c);
+
+        assert_eq!(
+            s.payout
+                .try_flag_dispute(&s.admin, &c, &string_of_len(&s.env, MAX_REASON_LEN + 1)),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ReasonTooLong as u32
+            )))
+        );
+        assert_eq!(s.payout.get_evidence(&c), before);
+
+        let at_max = string_of_len(&s.env, MAX_REASON_LEN);
+        s.payout.flag_dispute(&s.admin, &c, &at_max);
+        let record = s.payout.get_evidence(&c).unwrap();
+        assert_eq!(record.status, EvidenceStatus::Disputed);
+        assert_eq!(record.review_reason, at_max);
+    }
+
+    #[test]
+    fn exit_reason_is_bounded() {
+        let s = setup();
+
+        assert_eq!(
+            s.payout.try_exit(
+                &s.operator,
+                &s.ally,
+                &string_of_len(&s.env, MAX_REASON_LEN + 1)
+            ),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ReasonTooLong as u32
+            )))
+        );
+        assert_eq!(s.payout.exit_status(), None);
+
+        let at_max = string_of_len(&s.env, MAX_REASON_LEN);
+        s.payout.exit(&s.operator, &s.ally, &at_max);
+        assert_eq!(s.payout.exit_status().unwrap().reason, at_max);
     }
 }
 

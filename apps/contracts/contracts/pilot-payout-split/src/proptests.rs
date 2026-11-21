@@ -16,7 +16,7 @@ mod tests {
         let s = setup_with_balance_values(&[1, 1, 1]);
         s.usdc.mint(&s.payout_id, &100_000);
 
-        let cycle_id = cycle(&s.env, "dust-test");
+        let cycle_id = cycle(&s.env, "2026-01");
         s.payout.record_evidence(
             &s.operator,
             &s.ally,
@@ -26,7 +26,7 @@ mod tests {
             &100, // total_income
         );
 
-        let cycle_id2 = cycle(&s.env, "dust-test-2");
+        let cycle_id2 = cycle(&s.env, "2026-02");
         s.payout.record_evidence(
             &s.operator,
             &s.ally,
@@ -63,7 +63,7 @@ mod tests {
                 // If there are no holders, the contract panics with EmptyHolderSet, which is expected.
                 // We test this explicitly to ensure the typed error is returned.
                 s.usdc.mint(&s.payout_id, &total_income);
-                let cycle_id = cycle(&s.env, "fuzz");
+                let cycle_id = cycle(&s.env, "2026-01");
                 s.payout.record_evidence(
                     &s.operator,
                     &s.ally,
@@ -89,7 +89,7 @@ mod tests {
             }
 
             s.usdc.mint(&s.payout_id, &total_income);
-            let cycle_id = cycle(&s.env, "fuzz");
+            let cycle_id = cycle(&s.env, "2026-01");
             s.payout.record_evidence(
                 &s.operator,
                 &s.ally,

@@ -10,16 +10,16 @@
     "apps/akkuea-land"
   ],
   "scripts": {
-    "dev": "concurrently \"bun run dev:webapp\" \"bun run dev:api\" \"bun run dev:land\"",
-    "dev:webapp": "cd apps/webapp && bun run dev",
-    "dev:api": "cd apps/api && bun run dev",
-    "dev:land": "cd apps/akkuea-land && bun run dev",
-    "build": "concurrently \"bun run build:api\" \"bun run build:webapp\" \"bun run build:shared\" \"bun run build:land\"",
-    "build:webapp": "cd apps/webapp && bun run build",
-    "build:api": "cd apps/api && bun run build",
-    "build:shared": "cd apps/shared && bun run build",
-    "build:land": "cd apps/akkuea-land && bun run build",
-    "build:contracts": "./scripts/build.sh",
+    "dev": "node init && concurrently \"bun run dev:webapp\" \"bun run dev:api\" \"bun run dev:land\"",
+    "dev:webapp": "node init && cd apps/webapp && bun run dev",
+    "dev:api": "node init && cd apps/api && bun run dev",
+    "dev:land": "node init && cd apps/akkuea-land && bun run dev",
+    "build": "node init && concurrently \"bun run build:api\" \"bun run build:webapp\" \"bun run build:shared\" \"bun run build:land\"",
+    "build:webapp": "node init && cd apps/webapp && bun run build",
+    "build:api": "node init && cd apps/api && bun run build",
+    "build:shared": "node init && cd apps/shared && bun run build",
+    "build:land": "node init && cd apps/akkuea-land && bun run build",
+    "build:contracts": "node init && ./scripts/build.sh",
     "test": "bun test --workspaces",
     "lint": "concurrently \"cd apps/api && bun run lint\" \"cd apps/webapp && bun run lint\" \"cd apps/shared && bun run lint\" \"cd apps/akkuea-land && bun run lint\"",
     "typecheck": "concurrently \"cd apps/api && bun run type-check\" \"cd apps/webapp && bun run type-check\" \"cd apps/shared && bun run type-check\" \"cd apps/akkuea-land && bun run type-check\"",
@@ -31,7 +31,7 @@
     "smoke": "./scripts/smoke/run-smoke-tests.sh",
     "smoke:pilot": "cd apps/api && bun test tests/e2e/pilot-lifecycle.e2e.ts",
     "storybook": "cd apps/webapp && bun run storybook",
-    "build-storybook": "cd apps/webapp && bun run build-storybook"
+    "build-storybook": "node init && cd apps/webapp && bun run build-storybook"
   },
   "devDependencies": {
     "@types/node": "^25.9.5",

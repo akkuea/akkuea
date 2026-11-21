@@ -70,12 +70,12 @@ fn u64_to_string(env: &Env, mut val: u64) -> String {
 fn get_lending_admin(env: &Env) -> Address {
     env.storage()
         .instance()
-        .get(&LendingKey::Admin)
+        .get(&StorageKey::Admin)
         .expect("admin not set")
 }
 
 fn set_lending_admin(env: &Env, admin: &Address) {
-    env.storage().instance().set(&LendingKey::Admin, admin);
+    env.storage().instance().set(&StorageKey::Admin, admin);
     env.storage()
         .instance()
         .extend_ttl(lending_bump::INSTANCE_BUMP, lending_bump::INSTANCE_BUMP);

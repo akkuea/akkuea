@@ -9,6 +9,8 @@ use soroban_sdk::{contracttype, Address, Symbol};
 /// Note: the admin address is intentionally NOT stored under a key in this
 /// enum. The single canonical admin storage key lives in the access-control
 /// module (`RoleKey::Admin`), which is the only key read by `AdminControl`.
+/// The `StorageKey::Admin` and `LendingKey::Admin` variants were removed; any
+/// remaining references must use `RoleKey::Admin` instead.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StorageKey {

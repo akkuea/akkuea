@@ -119,8 +119,9 @@ fn setup_internal() -> (Address, Env) {
 }
 
 // Admin key aliasing: the admin must live under exactly one storage key and be
-// checked through one code path (AdminControl). This guards against the
-// LendingKey::Admin / RoleKey::Admin coincidence silently breaking admin checks.
+// checked through one code path (AdminControl). The constructor writes the admin
+// via AdminControl::set_admin and this test reads it back through the raw storage
+// key used by AdminControl, so the test fails if the two ever diverge.
 #[test]
 fn test_admin_single_storage_key() {
     let env = Env::default();
@@ -128,7 +129,10 @@ fn test_admin_single_storage_key() {
     let contract_id = env.register(PropertyTokenContract, (&admin,));
 
     env.as_contract(&contract_id, || {
+        // Read through the same path the constructor wrote to.
         assert_eq!(AdminControl::get_admin(&env), Some(admin.clone()));
+        // Confirm the admin is stored under the single canonical key only.
+        assert!(AdminControl::is_admin(&env, &admin));
     });
 }
 

@@ -16,10 +16,10 @@
     "./game-contracts.testnet.json": "./src/contracts/game-contracts.testnet.json"
   },
   "scripts": {
-    "build": "tsc",
-    "build:types": "tsc",
-    "dev": "tsc --watch",
-    "dev:types": "tsc --watch",
+    "build": "node init && tsc",
+    "build:types": "node init && tsc",
+    "dev": "node init && tsc --watch",
+    "dev:types": "node init && tsc --watch",
     "test": "bun test",
     "clean": "rm -rf dist",
     "lint": "eslint .",

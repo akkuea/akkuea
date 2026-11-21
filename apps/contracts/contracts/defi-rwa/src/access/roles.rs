@@ -50,6 +50,9 @@ impl RoleStorage {
     pub fn grant_role(env: &Env, address: &Address, role: &Role) {
         let key = RoleKey::HasRole(address.clone(), role.clone());
         env.storage().persistent().set(&key, &true);
+        env.storage()
+            .persistent()
+            .extend_ttl(&key, crate::storage::keys::LEDGER_BUMP_THRESHOLD, crate::storage::keys::LEDGER_BUMP_EXTEND);
     }
 
     pub fn revoke_role(env: &Env, address: &Address, role: &Role) {

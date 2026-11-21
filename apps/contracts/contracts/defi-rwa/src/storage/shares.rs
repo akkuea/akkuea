@@ -1,5 +1,5 @@
 use crate::access::ContractError;
-use crate::lending::keys::lending_bump;
+use crate::storage::keys::lending_bump;
 use soroban_sdk::{Address, Env};
 
 use super::keys::StorageKey;

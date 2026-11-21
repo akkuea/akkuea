@@ -1,18 +1,16 @@
 // @ts-expect-error: jsdom types not fully compatible with bun runtime
 import { JSDOM } from "jsdom";
 
-if (!globalThis.window) {
-  const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-    url: "http://localhost",
-  });
-  (dom.window as unknown as { fetch: typeof fetch }).fetch = fetch;
-  globalThis.window = dom.window as unknown as Window & typeof globalThis;
-  globalThis.document = dom.window.document;
-  globalThis.navigator = dom.window.navigator;
-  globalThis.HTMLElement = dom.window.HTMLElement;
-  globalThis.MutationObserver = dom.window.MutationObserver;
-  (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-}
+const dom = new JSDOM("<!doctype html><html><body></body></html>", {
+  url: "http://localhost",
+});
+(dom.window as unknown as { fetch: typeof fetch }).fetch = fetch;
+globalThis.window = dom.window as unknown as Window & typeof globalThis;
+globalThis.document = dom.window.document;
+globalThis.navigator = dom.window.navigator;
+globalThis.HTMLElement = dom.window.HTMLElement;
+globalThis.MutationObserver = dom.window.MutationObserver;
+(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import React from "react";

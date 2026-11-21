@@ -61,4 +61,13 @@ pub enum PayoutError {
     HolderBalancesExceedSupply = 31,
     /// A role accept call did not match the pending address for that role.
     NotPendingRole = 32,
+    /// `record_evidence` or `submit_evidence` was called with a `cycle_id`
+    /// that is not exactly `YYYY-MM` with a month from `01` to `12`, the only
+    /// format the dashboard reads.
+    InvalidCycleId = 33,
+    /// `evidence_link` is longer than `MAX_EVIDENCE_LINK_LEN` bytes.
+    EvidenceLinkTooLong = 34,
+    /// A `reason` passed to `review_evidence`, `flag_dispute` or `exit` is
+    /// longer than `MAX_REASON_LEN` bytes.
+    ReasonTooLong = 35,
 }

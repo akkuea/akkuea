@@ -155,16 +155,28 @@ const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
       tags: ['Internal Operations'],
     },
   })
-  .post('/:id/review', (ctx) => WhitelistController.review(ctx), {
-    body: reviewWhitelistSchema,
-    params: t.Object({
-      id: t.String(),
-    }),
-    detail: {
-      summary: 'Review whitelist request (Admin)',
-      tags: ['Internal Operations'],
+  .post(
+    '/:id/review',
+    async (ctx) => {
+      try {
+        return await WhitelistController.review(ctx);
+      } catch (error) {
+        const errorResponse = handleError(error);
+        ctx.set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
     },
-  });
+    {
+      body: reviewWhitelistSchema,
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: 'Review whitelist request (Admin)',
+        tags: ['Internal Operations'],
+      },
+    },
+  );
 
 const auditOperationsRoute = new Elysia()
   .use(internalKeyAuth)

@@ -1,3 +1,4 @@
+import { and, eq, inArray } from 'drizzle-orm';
 import { db } from '../db';
 import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
 import { whitelistService } from '../services/WhitelistService';
@@ -6,8 +7,27 @@ import {
   type ReviewMetricsResult,
 } from '../services/ReviewTurnaroundService';
 import type { MetricsWindowQuery } from '../services/reviewTurnaround';
-import { eq } from 'drizzle-orm';
+import { BadRequestError, ConflictError } from '../utils/errors';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
+
+/** Minimal context shape consumed by WhitelistController.request. */
+interface RequestContext {
+  body: {
+    walletAddress: string;
+    fullName: string;
+    idType: 'passport' | 'national_id' | 'drivers_license';
+    idReference: string;
+  };
+}
+
+/** Minimal context shape consumed by WhitelistController.review. */
+interface ReviewContext {
+  params: { id: string };
+  body: {
+    action: 'approve' | 'reject';
+    reason?: string;
+  };
+}
 
 /** Minimal context shape consumed by WhitelistController.status. */
 interface StatusContext {
@@ -17,27 +37,23 @@ interface StatusContext {
 }
 
 export class WhitelistController {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static async request(ctx: any) {
+  static async request(ctx: RequestContext) {
     const { walletAddress, fullName, idType, idReference } = ctx.body;
 
-    // Check if a request already exists
-    const existing = await db.query.pilotWhitelistRequests.findFirst({
-      where: eq(pilotWhitelistRequests.walletAddress, walletAddress),
+    // Only the active request (pending or approved) blocks a new submission.
+    // Rejected rows are kept so their rejection reason stays auditable.
+    const active = await db.query.pilotWhitelistRequests.findFirst({
+      where: and(
+        eq(pilotWhitelistRequests.walletAddress, walletAddress),
+        inArray(pilotWhitelistRequests.status, ['pending', 'approved']),
+      ),
     });
 
-    if (existing) {
-      if (existing.status === 'pending') {
-        throw new Error('A whitelist request is already pending for this address');
-      }
-      if (existing.status === 'approved') {
-        throw new Error('This address is already whitelisted');
-      }
-      // If previously rejected, allow re-submission: delete the old record
-      // so the investor gets a clean slate after fixing whatever was wrong.
-      await db
-        .delete(pilotWhitelistRequests)
-        .where(eq(pilotWhitelistRequests.walletAddress, walletAddress));
+    if (active?.status === 'pending') {
+      throw new ConflictError('A whitelist request is already pending for this address');
+    }
+    if (active?.status === 'approved') {
+      throw new ConflictError('This address is already whitelisted');
     }
 
     const inserted = await db
@@ -72,29 +88,33 @@ export class WhitelistController {
     return { success: true, data };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static async review(ctx: any) {
+  static async review(ctx: ReviewContext) {
     const { id } = ctx.params;
     const { action, reason } = ctx.body;
 
     if (action === 'approve') {
       const txHash = await whitelistService.approveRequest(id);
       return { success: true, txHash };
-    } else if (action === 'reject') {
+    }
+
+    if (action === 'reject') {
       if (!reason) {
-        throw new Error('Rejection reason is required');
+        throw new BadRequestError('Rejection reason is required');
       }
       await whitelistService.rejectRequest(id, reason);
       return { success: true };
-    } else {
-      throw new Error('Invalid action');
     }
+
+    throw new BadRequestError('Invalid action');
   }
 
   static async status(ctx: StatusContext) {
     const { walletAddress } = ctx.params;
+    // A wallet can have several rows once a rejected request has been
+    // resubmitted, so report the newest one rather than an arbitrary row.
     const existing = await db.query.pilotWhitelistRequests.findFirst({
       where: eq(pilotWhitelistRequests.walletAddress, walletAddress),
+      orderBy: (requests, { desc }) => [desc(requests.createdAt)],
     });
 
     if (!existing) {

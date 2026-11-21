@@ -358,4 +358,52 @@ describe('Whitelist manual verification', () => {
     expect(body.error).toBe('RATE_LIMITED');
     expect(body.success).toBe(false);
   });
+
+  test('GET /status includes rejectionReason for revoked wallet owner (Bearer session)', async () => {
+    const revokedWallet = 'GDREVOKEDOWNER00000000000000000000000000000000000000000001';
+    mockDbStore.push({
+      id: 'revoked_id_1',
+      walletAddress: revokedWallet,
+      status: 'revoked',
+      rejectionReason: 'Investor sanctions check failed',
+      fullName: 'Revoked Person',
+      idType: 'passport',
+      idReference: 'R12345678',
+    });
+
+    const token = jwt.sign({ id: 'user-revoked', walletAddress: revokedWallet }, JWT_SECRET);
+
+    const res = await testApp.handle(
+      new Request(`http://localhost/pilot/whitelist/status/${revokedWallet}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.status).toBe('revoked');
+    expect(body.rejectionReason).toBe('Investor sanctions check failed');
+  });
+
+  test('GET /status hides rejectionReason of revoked wallet from unauthenticated caller', async () => {
+    const revokedWallet = 'GDREVOKEDOWNER00000000000000000000000000000000000000000002';
+    mockDbStore.push({
+      id: 'revoked_id_2',
+      walletAddress: revokedWallet,
+      status: 'revoked',
+      rejectionReason: 'Investor sanctions check failed',
+      fullName: 'Revoked Person 2',
+      idType: 'passport',
+      idReference: 'R87654321',
+    });
+
+    const res = await testApp.handle(
+      new Request(`http://localhost/pilot/whitelist/status/${revokedWallet}`),
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.status).toBe('revoked');
+    expect(body.rejectionReason).toBeUndefined();
+  });
 });

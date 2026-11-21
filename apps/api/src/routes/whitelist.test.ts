@@ -4,10 +4,12 @@ import { db } from '../db';
 import { whitelistService } from '../services/WhitelistService';
 import Elysia from 'elysia';
 import { whitelistRoutes } from './whitelist';
+import { BadRequestError, NotFoundError } from '../utils/errors';
 
 // Setup a minimal app for testing routes
 import { internalOperationsRoutes } from './internalOperations';
-const testApp = new Elysia().use(whitelistRoutes).use(internalOperationsRoutes);
+import { errorHandler } from '../middleware/errorHandler';
+const testApp = new Elysia().use(errorHandler).use(whitelistRoutes).use(internalOperationsRoutes);
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
 
@@ -37,6 +39,7 @@ describe('Whitelist API Routes', () => {
         whitelistService: {
           approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
           rejectRequest: mock(() => Promise.resolve()),
+          revokeRequest: mock(() => Promise.resolve('mock_revoke_tx_hash')),
         },
       };
     });
@@ -275,5 +278,183 @@ describe('Whitelist API Routes', () => {
     );
 
     expect(response.status).not.toBe(200);
+  });
+
+  it('should revoke a request via /review with action=revoke', async () => {
+    const response = await testApp.handle(
+      new Request('http://localhost/internal/operations/pilot/whitelist/req_id_1/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-internal-api-key': 'test-secret' },
+        body: JSON.stringify({ action: 'revoke', reason: 'Sanctions violation' }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as any;
+    expect(result.success).toBe(true);
+    expect(result.txHash).toBe('mock_revoke_tx_hash');
+    expect(whitelistService.revokeRequest).toHaveBeenCalledWith('req_id_1', 'Sanctions violation');
+  });
+
+  it('should revoke a request via dedicated POST /:id/revoke', async () => {
+    const response = await testApp.handle(
+      new Request('http://localhost/internal/operations/pilot/whitelist/req_id_2/revoke', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-api-key': 'test-secret',
+          'x-operator-wallet': 'GBU54MOHX7J3F2C2X4R56Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6',
+        },
+        body: JSON.stringify({ reason: 'Compliance audit failed' }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as any;
+    expect(result.success).toBe(true);
+    expect(result.txHash).toBe('mock_revoke_tx_hash');
+    expect(whitelistService.revokeRequest).toHaveBeenCalledWith(
+      'req_id_2',
+      'Compliance audit failed',
+      'GBU54MOHX7J3F2C2X4R56Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6',
+    );
+  });
+
+  it('should allow resubmission after revocation', async () => {
+    const revokeWallet = 'GBU54MOHX7J3F2C2X4R56Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6';
+
+    // Seed a revoked request for this wallet
+    mockDbStore.push({
+      id: 'old_revoked_id',
+      walletAddress: revokeWallet,
+      status: 'revoked',
+      fullName: 'Old Revoked Submission',
+      idType: 'passport',
+      idReference: 'REVOKED123',
+    });
+
+    const response = await testApp.handle(
+      new Request('http://localhost/pilot/whitelist/request', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          walletAddress: revokeWallet,
+          fullName: 'New Submission After Revoke',
+          idType: 'national_id',
+          idReference: 'NEWREV456',
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as any;
+    expect(result.success).toBe(true);
+    expect(result.data.status).toBe('pending');
+    expect(result.data.fullName).toBe('New Submission After Revoke');
+
+    // Only the new request should exist; the old revoked one was deleted
+    const requestsForWallet = mockDbStore.filter((r) => r.walletAddress === revokeWallet);
+    expect(requestsForWallet.length).toBe(1);
+    expect(requestsForWallet[0].id).not.toBe('old_revoked_id');
+  });
+
+  describe('Revocation 4xx error cases', () => {
+    const errorCases = [
+      { status: 'pending', label: 'pending request' },
+      { status: 'rejected', label: 'rejected request' },
+      { status: 'revoked', label: 'already revoked request' },
+    ];
+
+    for (const { status, label } of errorCases) {
+      it(`POST /:id/revoke returns 4xx for a ${label}`, async () => {
+        const reqId = `req_${status}_1`;
+        (whitelistService.revokeRequest as any).mockImplementationOnce(() => {
+          throw new BadRequestError('Only approved requests can be revoked');
+        });
+
+        const response = await testApp.handle(
+          new Request(`http://localhost/internal/operations/pilot/whitelist/${reqId}/revoke`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-internal-api-key': 'test-secret',
+            },
+            body: JSON.stringify({ reason: 'Compliance issue' }),
+          }),
+        );
+
+        expect(response.status).toBe(400);
+        const result = (await response.json()) as any;
+        expect(result.success).toBe(false);
+      });
+
+      it(`POST /:id/review with action=revoke returns 4xx for a ${label}`, async () => {
+        const reqId = `req_${status}_review`;
+        (whitelistService.revokeRequest as any).mockImplementationOnce(() => {
+          throw new BadRequestError('Only approved requests can be revoked');
+        });
+
+        const response = await testApp.handle(
+          new Request(`http://localhost/internal/operations/pilot/whitelist/${reqId}/review`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-internal-api-key': 'test-secret',
+            },
+            body: JSON.stringify({ action: 'revoke', reason: 'Compliance issue' }),
+          }),
+        );
+
+        expect(response.status).toBe(400);
+        const result = (await response.json()) as any;
+        expect(result.success).toBe(false);
+      });
+    }
+
+    it('POST /:id/revoke returns 404 for a missing request', async () => {
+      (whitelistService.revokeRequest as any).mockImplementationOnce(() => {
+        throw new NotFoundError('Whitelist request not found');
+      });
+
+      const response = await testApp.handle(
+        new Request('http://localhost/internal/operations/pilot/whitelist/nonexistent_id/revoke', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-api-key': 'test-secret',
+          },
+          body: JSON.stringify({ reason: 'Compliance issue' }),
+        }),
+      );
+
+      expect(response.status).toBe(404);
+      const result = (await response.json()) as any;
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('NOT_FOUND');
+    });
+
+    it('POST /:id/review with action=revoke returns 404 for a missing request', async () => {
+      (whitelistService.revokeRequest as any).mockImplementationOnce(() => {
+        throw new NotFoundError('Whitelist request not found');
+      });
+
+      const response = await testApp.handle(
+        new Request('http://localhost/internal/operations/pilot/whitelist/nonexistent_id/review', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-api-key': 'test-secret',
+          },
+          body: JSON.stringify({ action: 'revoke', reason: 'Compliance issue' }),
+        }),
+      );
+
+      expect(response.status).toBe(404);
+      const result = (await response.json()) as any;
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('NOT_FOUND');
+    });
   });
 });

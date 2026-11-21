@@ -143,8 +143,12 @@ const reviewPropertyRoute = new Elysia()
   );
 
 const reviewWhitelistSchema = t.Object({
-  action: t.Union([t.Literal('approve'), t.Literal('reject')]),
+  action: t.Union([t.Literal('approve'), t.Literal('reject'), t.Literal('revoke')]),
   reason: t.Optional(t.String()),
+});
+
+const revokeWhitelistSchema = t.Object({
+  reason: t.String({ minLength: 1 }),
 });
 
 const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
@@ -162,6 +166,16 @@ const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
     }),
     detail: {
       summary: 'Review whitelist request (Admin)',
+      tags: ['Internal Operations'],
+    },
+  })
+  .post('/:id/revoke', (ctx) => WhitelistController.revoke(ctx), {
+    body: revokeWhitelistSchema,
+    params: t.Object({
+      id: t.String(),
+    }),
+    detail: {
+      summary: 'Revoke whitelisted investor (Admin)',
       tags: ['Internal Operations'],
     },
   });

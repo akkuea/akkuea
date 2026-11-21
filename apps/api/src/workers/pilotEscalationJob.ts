@@ -19,8 +19,8 @@ export interface EvidenceReaderLike {
 export interface PilotEscalationJobConfig {
   /** How often the job runs, in milliseconds. Default: 6 hours. */
   pollIntervalMs?: number;
-  /** Expected evidence-reporting cadence, in days. Default: 30. */
-  cadenceDays?: number;
+  /** Day of the month when income is due, from 1 through 28. Default: 5. */
+  paymentDay?: number;
   /** Consecutive missed cycles that constitutes a breach. Default: 2. */
   thresholdCycles?: number;
   /** When the ally's reporting agreement began. Required to run. */
@@ -48,7 +48,7 @@ export interface PilotEscalationJobConfig {
 
 interface ResolvedConfig {
   pollIntervalMs: number;
-  cadenceDays: number;
+  paymentDay: number;
   thresholdCycles: number;
   agreementStartAt: Date | null;
   renotifyIntervalMs: number;
@@ -62,7 +62,7 @@ interface ResolvedConfig {
 }
 
 const DEFAULT_POLL_INTERVAL_MS = 6 * 60 * 60 * 1_000; // 6 hours
-const DEFAULT_CADENCE_DAYS = 30;
+const DEFAULT_PAYMENT_DAY = 5;
 const DEFAULT_THRESHOLD_CYCLES = 2;
 const DEFAULT_RENOTIFY_INTERVAL_MS = 7 * 24 * 60 * 60 * 1_000; // 7 days
 const DEFAULT_RPC_MAX_RETRIES = 3;
@@ -103,7 +103,7 @@ export class PilotEscalationJob {
   constructor(config?: PilotEscalationJobConfig) {
     this.config = {
       pollIntervalMs: config?.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS,
-      cadenceDays: config?.cadenceDays ?? DEFAULT_CADENCE_DAYS,
+      paymentDay: config?.paymentDay ?? DEFAULT_PAYMENT_DAY,
       thresholdCycles: config?.thresholdCycles ?? DEFAULT_THRESHOLD_CYCLES,
       agreementStartAt: config?.agreementStartAt ?? null,
       renotifyIntervalMs: config?.renotifyIntervalMs ?? DEFAULT_RENOTIFY_INTERVAL_MS,
@@ -123,7 +123,7 @@ export class PilotEscalationJob {
     logger.info('Pilot escalation job started', {
       operation: 'PILOT_ESCALATION_JOB_START',
       pollIntervalMs: this.config.pollIntervalMs,
-      cadenceDays: this.config.cadenceDays,
+      paymentDay: this.config.paymentDay,
       thresholdCycles: this.config.thresholdCycles,
     });
     void this.tick();
@@ -154,7 +154,7 @@ export class PilotEscalationJob {
    * Execute one cycle of the job. Public so tests can call it directly with
    * mocked evidence reader/services to simulate arbitrary cycle histories.
    */
-  async tick(): Promise<PilotEscalationTickResult> {
+  async tick(now: Date = new Date()): Promise<PilotEscalationTickResult> {
     if (this.processing) return { status: 'skipped', reason: 'already_processing' };
     this.processing = true;
 
@@ -178,10 +178,13 @@ export class PilotEscalationJob {
         return { status: 'skipped', reason: 'no_contract_id' };
       }
 
-      const expectedCycles = buildExpectedCycles({
-        agreementStartAt: this.config.agreementStartAt,
-        cadenceDays: this.config.cadenceDays,
-      });
+      const expectedCycles = buildExpectedCycles(
+        {
+          agreementStartAt: this.config.agreementStartAt,
+          paymentDay: this.config.paymentDay,
+        },
+        now,
+      );
 
       if (expectedCycles.length === 0) {
         return { status: 'ok', breached: false, consecutiveMissed: 0, notified: false };
@@ -327,12 +330,12 @@ function parseIsoDate(value: string | undefined): Date | undefined {
 
 /**
  * Factory that respects the PILOT_ESCALATION_JOB_ENABLED env flag (default:
- * enabled). Cadence, threshold, agreement start, operator, and dedup
- * re-notification cadence are all configurable via environment variables
+ * enabled). Payment day, threshold, agreement start, operator, and dedup
+ * re-notification cadence are configurable via environment variables
  * since they are properties of a specific ally's agreement that does not
  * exist yet:
  *
- *  - PILOT_ESCALATION_CADENCE_DAYS (default 30)
+ *  - PILOT_PAYMENT_DAY (default 5, from 1 to 28)
  *  - PILOT_ESCALATION_THRESHOLD_CYCLES (default 2)
  *  - PILOT_ESCALATION_AGREEMENT_START (ISO date, required to run)
  *  - PILOT_ESCALATION_OPERATOR_USER_ID (required to run)
@@ -351,7 +354,7 @@ export function createPilotEscalationJobFromEnv(): PilotEscalationJob | null {
 
   return new PilotEscalationJob({
     pollIntervalMs: parsePositiveNumber(process.env.PILOT_ESCALATION_POLL_INTERVAL_MS),
-    cadenceDays: parsePositiveNumber(process.env.PILOT_ESCALATION_CADENCE_DAYS),
+    paymentDay: parsePositiveNumber(process.env.PILOT_PAYMENT_DAY),
     thresholdCycles: parsePositiveNumber(process.env.PILOT_ESCALATION_THRESHOLD_CYCLES),
     agreementStartAt: parseIsoDate(process.env.PILOT_ESCALATION_AGREEMENT_START),
     renotifyIntervalMs: parsePositiveNumber(process.env.PILOT_ESCALATION_RENOTIFY_INTERVAL_MS),

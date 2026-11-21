@@ -6,7 +6,7 @@
  */
 
 export interface CycleEvidenceStatus {
-  /** The cycle identifier, e.g. `cycle-3`. */
+  /** The calendar month identifier, e.g. `2026-03`. */
   cycleId: string;
   /** Whether `record_evidence` was found on-chain for this cycle. */
   hasEvidence: boolean;
@@ -17,7 +17,7 @@ export interface CycleGapResult {
   breached: boolean;
   /** Count of consecutive missed cycles trailing the most recent expected cycle. */
   consecutiveMissed: number;
-  /** Cycle IDs that make up the trailing gap, oldest first. */
+  /** Calendar month IDs that make up the trailing gap, oldest first. */
   missedCycleIds: string[];
   /** The most recent missed cycle ID, or null if there is no trailing gap. */
   lastMissedCycleId: string | null;

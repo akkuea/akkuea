@@ -92,7 +92,7 @@ const API_DEFAULTS: [string, unknown][] = [
   ["PILOT_ESCALATION_JOB_ENABLED", true],
   ["PILOT_ESCALATION_AGREEMENT_START", undefined],
   ["PILOT_ESCALATION_OPERATOR_USER_ID", undefined],
-  ["PILOT_ESCALATION_CADENCE_DAYS", 30],
+  ["PILOT_PAYMENT_DAY", 5],
   ["PILOT_ESCALATION_THRESHOLD_CYCLES", 2],
   ["PILOT_ESCALATION_POLL_INTERVAL_MS", 21_600_000],
   ["PILOT_ESCALATION_RENOTIFY_INTERVAL_MS", 604_800_000],
@@ -204,8 +204,8 @@ describe("Pilot environment settings", () => {
         "00000000-0000-0000-0000-000000000000",
         "00000000-0000-0000-0000-000000000000",
       ],
-      ["PILOT_ESCALATION_CADENCE_DAYS", "14", 14],
-      ["PILOT_ESCALATION_CADENCE_DAYS", "30.5", 30.5],
+      ["PILOT_PAYMENT_DAY", "1", 1],
+      ["PILOT_PAYMENT_DAY", "28", 28],
       ["PILOT_ESCALATION_THRESHOLD_CYCLES", "3", 3],
       ["PILOT_ESCALATION_POLL_INTERVAL_MS", "60000", 60_000],
       ["PILOT_ESCALATION_POLL_INTERVAL_MS", "2147483647", 2_147_483_647],
@@ -351,7 +351,6 @@ describe("Pilot environment settings", () => {
     });
 
     const positiveNumbers = [
-      "PILOT_ESCALATION_CADENCE_DAYS",
       "PILOT_WHITELIST_REVIEW_SLA_HOURS",
       "PILOT_EVIDENCE_REVIEW_SLA_HOURS",
       "PILOT_REVIEW_METRICS_WINDOW_DAYS",
@@ -366,6 +365,7 @@ describe("Pilot environment settings", () => {
     }
 
     const positiveWholeNumbers = [
+      "PILOT_PAYMENT_DAY",
       "PILOT_ESCALATION_THRESHOLD_CYCLES",
       "PILOT_ESCALATION_POLL_INTERVAL_MS",
       "PILOT_ESCALATION_RENOTIFY_INTERVAL_MS",
@@ -378,6 +378,10 @@ describe("Pilot environment settings", () => {
         },
       );
     }
+
+    it("rejects a payment day above 28", () => {
+      expectRejected(validateApi, "PILOT_PAYMENT_DAY", "29");
+    });
 
     it("rejects a poll interval too large for a timer instead of letting it overflow", () => {
       expect(

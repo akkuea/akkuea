@@ -59,4 +59,6 @@ pub enum PayoutError {
     /// The income-token balances sum to more than its total supply, so the
     /// pro-rata split would pay out more than the cycle's holder pool.
     HolderBalancesExceedSupply = 31,
+    /// A role accept call did not match the pending address for that role.
+    NotPendingRole = 32,
 }

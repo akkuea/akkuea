@@ -33,6 +33,9 @@ pub enum DataKey {
     /// prove it never spends another holder's reserved funds.
     TotalWithheld,
     PendingAdmin,
+    PendingOperator,
+    PendingAlly,
+    PendingPlatformFeeRecipient,
 }
 
 pub struct Storage;
@@ -178,5 +181,49 @@ impl Storage {
 
     pub fn clear_pending_admin(env: &Env) {
         env.storage().instance().remove(&DataKey::PendingAdmin);
+    }
+
+    pub fn pending_operator(env: &Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::PendingOperator)
+    }
+
+    pub fn set_pending_operator(env: &Env, pending: &Address) {
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingOperator, pending);
+    }
+
+    pub fn clear_pending_operator(env: &Env) {
+        env.storage().instance().remove(&DataKey::PendingOperator);
+    }
+
+    pub fn pending_ally(env: &Env) -> Option<Address> {
+        env.storage().instance().get(&DataKey::PendingAlly)
+    }
+
+    pub fn set_pending_ally(env: &Env, pending: &Address) {
+        env.storage().instance().set(&DataKey::PendingAlly, pending);
+    }
+
+    pub fn clear_pending_ally(env: &Env) {
+        env.storage().instance().remove(&DataKey::PendingAlly);
+    }
+
+    pub fn pending_platform_fee_recipient(env: &Env) -> Option<Address> {
+        env.storage()
+            .instance()
+            .get(&DataKey::PendingPlatformFeeRecipient)
+    }
+
+    pub fn set_pending_platform_fee_recipient(env: &Env, pending: &Address) {
+        env.storage()
+            .instance()
+            .set(&DataKey::PendingPlatformFeeRecipient, pending);
+    }
+
+    pub fn clear_pending_platform_fee_recipient(env: &Env) {
+        env.storage()
+            .instance()
+            .remove(&DataKey::PendingPlatformFeeRecipient);
     }
 }

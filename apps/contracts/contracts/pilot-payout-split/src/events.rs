@@ -2,7 +2,7 @@
 
 use soroban_sdk::{contracttype, symbol_short, Address, Env, String};
 
-use crate::{Currency, DistributionSummary, EvidenceStatus};
+use crate::{Currency, DistributionSummary, EvidenceStatus, RotationRole};
 
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -346,5 +346,67 @@ pub fn emit_admin_transfer_cancelled(env: &Env, admin: Address) {
     env.events().publish(
         (symbol_short!("admincan"),),
         AdminTransferCancelledEvent { admin },
+    );
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RoleRotationStartedEvent {
+    pub role: RotationRole,
+    pub current: Address,
+    pub pending: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RoleRotationAcceptedEvent {
+    pub role: RotationRole,
+    pub previous: Address,
+    pub replacement: Address,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RoleRotationCancelledEvent {
+    pub role: RotationRole,
+    pub admin: Address,
+}
+
+pub fn emit_role_rotation_started(
+    env: &Env,
+    role: RotationRole,
+    current: Address,
+    pending: Address,
+) {
+    env.events().publish(
+        (symbol_short!("rstart"),),
+        RoleRotationStartedEvent {
+            role,
+            current,
+            pending,
+        },
+    );
+}
+
+pub fn emit_role_rotation_accepted(
+    env: &Env,
+    role: RotationRole,
+    previous: Address,
+    replacement: Address,
+) {
+    env.events().publish(
+        (symbol_short!("raccept"),),
+        RoleRotationAcceptedEvent {
+            role,
+            previous,
+            replacement,
+        },
+    );
+}
+
+pub fn emit_role_rotation_cancelled(env: &Env, role: RotationRole, admin: Address) {
+    env.events().publish(
+        (symbol_short!("rcancel"),),
+        RoleRotationCancelledEvent { role, admin },
     );
 }

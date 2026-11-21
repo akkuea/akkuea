@@ -1,50 +1,27 @@
 // @ts-expect-error: jsdom types not fully compatible with bun runtime
 import { JSDOM } from "jsdom";
 
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost",
-});
-(dom.window as unknown as { fetch: typeof fetch }).fetch = fetch;
-globalThis.window = dom.window as unknown as Window & typeof globalThis;
-globalThis.document = dom.window.document;
-globalThis.navigator = dom.window.navigator;
-globalThis.HTMLElement = dom.window.HTMLElement;
-globalThis.MutationObserver = dom.window.MutationObserver;
-(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+if (!globalThis.window) {
+  const dom = new JSDOM("<!doctype html><html><body></body></html>", {
+    url: "http://localhost",
+  });
+  (dom.window as unknown as { fetch: typeof fetch }).fetch = fetch;
+  globalThis.window = dom.window as unknown as Window & typeof globalThis;
+  globalThis.document = dom.window.document;
+  globalThis.navigator = dom.window.navigator;
+  globalThis.HTMLElement = dom.window.HTMLElement;
+  globalThis.MutationObserver = dom.window.MutationObserver;
+  (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+}
 
 import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import React from "react";
-import { render, cleanup, act, waitFor } from "@testing-library/react";
+import { cleanup, act, waitFor } from "@testing-library/react";
+import { renderWithIntl } from "@/test/renderWithIntl";
 import fs from "fs";
 import path from "path";
 
-// Mock next-intl and navigation modules before any component import
-mock.module("next-intl", () => ({
-  useTranslations: () => (key: string) => key,
-  useLocale: () => "en",
-  NextIntlClientProvider: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
-}));
-
-mock.module("next-intl/routing", () => ({
-  defineRouting: (config: unknown) => config,
-}));
-
-mock.module("next-intl/navigation", () => ({
-  createNavigation: () => ({
-    Link: ({ children, href, ...props }: Record<string, unknown>) =>
-      React.createElement("a", { href, ...props }, children as React.ReactNode),
-    redirect: vi.fn(),
-    usePathname: () => "/dashboard",
-    useRouter: () => ({
-      push: vi.fn(),
-      replace: vi.fn(),
-      prefetch: vi.fn(),
-      back: vi.fn(),
-    }),
-  }),
-}));
-
+// Mock routing without touching next-intl module directly
 mock.module("@/i18n/routing", () => ({
   Link: ({ children, href, ...props }: Record<string, unknown>) =>
     React.createElement("a", { href, ...props }, children as React.ReactNode),
@@ -208,7 +185,7 @@ describe("Dashboard and GameEventStream behavioral consolidation (#1340)", () =>
   });
 
   it("renders dashboard inside GameEventProvider with exactly one EventSource open", () => {
-    const view = render(
+    const view = renderWithIntl(
       <GameEventProvider>
         <DashboardPage />
       </GameEventProvider>,
@@ -247,7 +224,7 @@ describe("Dashboard and GameEventStream behavioral consolidation (#1340)", () =>
       );
     }
 
-    const view = render(
+    const view = renderWithIntl(
       <GameEventProvider>
         <TestConsumer />
       </GameEventProvider>,
@@ -273,7 +250,7 @@ describe("Dashboard and GameEventStream behavioral consolidation (#1340)", () =>
   });
 
   it("verifies unmounting closes the connection and cleans up listeners", () => {
-    const view = render(
+    const view = renderWithIntl(
       <GameEventProvider>
         <DashboardPage />
       </GameEventProvider>,

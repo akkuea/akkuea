@@ -4,6 +4,7 @@ import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
 import { getPilotWhitelistContractId } from '../config/contracts';
 import { stellarService } from './StellarService';
 import { auditService } from './AuditService';
+import { BadRequestError, NotFoundError } from '../utils/errors';
 
 export class WhitelistService {
   /**
@@ -117,7 +118,7 @@ export class WhitelistService {
     actor: string = 'system',
   ): Promise<string> {
     if (!reason || reason.trim().length === 0) {
-      throw new Error('Revocation reason is required');
+      throw new BadRequestError('Revocation reason is required');
     }
 
     const request = await db.query.pilotWhitelistRequests.findFirst({
@@ -125,11 +126,11 @@ export class WhitelistService {
     });
 
     if (!request) {
-      throw new Error('Whitelist request not found');
+      throw new NotFoundError('Whitelist request not found');
     }
 
     if (request.status !== 'approved') {
-      throw new Error('Only approved requests can be revoked');
+      throw new BadRequestError('Only approved requests can be revoked');
     }
 
     const contractId = getPilotWhitelistContractId();

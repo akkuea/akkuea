@@ -3,6 +3,7 @@ import { db } from '../db';
 import { WhitelistService } from '../services/WhitelistService';
 import { stellarService } from '../services/StellarService';
 import { auditService } from '../services/AuditService';
+import { BadRequestError, NotFoundError } from '../utils/errors';
 
 describe('WhitelistService unit tests', () => {
   let whitelistService: WhitelistService;
@@ -47,6 +48,7 @@ describe('WhitelistService unit tests', () => {
     expect(whitelistService.revokeRequest('test-req-123', '   ')).rejects.toThrow(
       'Revocation reason is required',
     );
+    expect(whitelistService.revokeRequest('test-req-123', '')).rejects.toThrow(BadRequestError);
   });
 
   it('rejects revocation when request is not found', async () => {
@@ -58,6 +60,9 @@ describe('WhitelistService unit tests', () => {
 
     expect(whitelistService.revokeRequest('nonexistent-id', 'test reason')).rejects.toThrow(
       'Whitelist request not found',
+    );
+    expect(whitelistService.revokeRequest('nonexistent-id', 'test reason')).rejects.toThrow(
+      NotFoundError,
     );
   });
 
@@ -71,6 +76,9 @@ describe('WhitelistService unit tests', () => {
 
     expect(whitelistService.revokeRequest('test-req-123', 'test reason')).rejects.toThrow(
       'Only approved requests can be revoked',
+    );
+    expect(whitelistService.revokeRequest('test-req-123', 'test reason')).rejects.toThrow(
+      BadRequestError,
     );
   });
 

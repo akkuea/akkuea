@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import { db } from '../db';
 import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
 import { whitelistService } from '../services/WhitelistService';
@@ -6,8 +7,8 @@ import {
   type ReviewMetricsResult,
 } from '../services/ReviewTurnaroundService';
 import type { MetricsWindowQuery } from '../services/reviewTurnaround';
-import { eq } from 'drizzle-orm';
 import { isInternalOperationsAuthorized } from '../utils/internalOperationsAuth';
+import { BadRequestError } from '../utils/errors';
 
 /** Minimal context shape consumed by WhitelistController.status. */
 interface StatusContext {
@@ -28,10 +29,10 @@ export class WhitelistController {
 
     if (existing) {
       if (existing.status === 'pending') {
-        throw new Error('A whitelist request is already pending for this address');
+        throw new BadRequestError('A whitelist request is already pending for this address');
       }
       if (existing.status === 'approved') {
-        throw new Error('This address is already whitelisted');
+        throw new BadRequestError('This address is already whitelisted');
       }
       // If previously rejected or revoked, allow re-submission: delete the old record
       // so the investor gets a clean slate after fixing whatever was wrong.
@@ -85,7 +86,7 @@ export class WhitelistController {
       return { success: true, txHash };
     } else if (action === 'reject') {
       if (!reason) {
-        throw new Error('Rejection reason is required');
+        throw new BadRequestError('Rejection reason is required');
       }
       if (actor) {
         await whitelistService.rejectRequest(id, reason, actor);
@@ -95,14 +96,14 @@ export class WhitelistController {
       return { success: true };
     } else if (action === 'revoke') {
       if (!reason) {
-        throw new Error('Revocation reason is required');
+        throw new BadRequestError('Revocation reason is required');
       }
       const txHash = actor
         ? await whitelistService.revokeRequest(id, reason, actor)
         : await whitelistService.revokeRequest(id, reason);
       return { success: true, txHash };
     } else {
-      throw new Error('Invalid action');
+      throw new BadRequestError('Invalid action');
     }
   }
 
@@ -113,7 +114,7 @@ export class WhitelistController {
     const actor = ctx.headers?.['x-operator-wallet'];
 
     if (!reason || reason.trim().length === 0) {
-      throw new Error('Revocation reason is required');
+      throw new BadRequestError('Revocation reason is required');
     }
 
     const txHash = actor

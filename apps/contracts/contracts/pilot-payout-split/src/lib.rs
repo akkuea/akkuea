@@ -4412,6 +4412,38 @@ pub mod tests {
     }
 
     #[test]
+    fn role_rotation_accept_rejects_a_replacement_that_became_another_role() {
+        let s = setup();
+        let replacement = Address::generate(&s.env);
+
+        s.payout.rotate_operator_start(&s.admin, &replacement);
+        s.payout.rotate_ally_start(&s.admin, &replacement);
+        s.payout.rotate_ally_accept(&replacement);
+
+        let operator_accept = s.payout.try_rotate_operator_accept(&replacement);
+        assert_eq!(
+            operator_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
+
+        s.payout.rotate_operator_cancel(&s.admin);
+        let replacement_ally = Address::generate(&s.env);
+        s.payout.rotate_operator_start(&s.admin, &replacement_ally);
+        s.payout.rotate_ally_start(&s.admin, &replacement_ally);
+        s.payout.rotate_operator_accept(&replacement_ally);
+
+        let ally_accept = s.payout.try_rotate_ally_accept(&replacement_ally);
+        assert_eq!(
+            ally_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
+    }
+
+    #[test]
     fn role_rotation_emits_start_accept_and_cancel_events() {
         let s = setup();
         let replacement = Address::generate(&s.env);
@@ -4478,6 +4510,74 @@ pub mod tests {
             .try_rotate_operator_start(&s.admin, &Address::generate(&s.env));
         assert_eq!(
             after_exit,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_accept = s.payout.try_rotate_operator_accept(&replacement);
+        assert_eq!(
+            after_exit_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_cancel = s.payout.try_rotate_operator_cancel(&s.admin);
+        assert_eq!(
+            after_exit_cancel,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_ally_start = s
+            .payout
+            .try_rotate_ally_start(&s.admin, &Address::generate(&s.env));
+        assert_eq!(
+            after_exit_ally_start,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_ally_accept = s.payout.try_rotate_ally_accept(&s.ally);
+        assert_eq!(
+            after_exit_ally_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_ally_cancel = s.payout.try_rotate_ally_cancel(&s.admin);
+        assert_eq!(
+            after_exit_ally_cancel,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_fee_start = s
+            .payout
+            .try_rotate_fee_recipient_start(&s.admin, &Address::generate(&s.env));
+        assert_eq!(
+            after_exit_fee_start,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_fee_accept = s.payout.try_rotate_fee_recipient_accept(&s.admin);
+        assert_eq!(
+            after_exit_fee_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_fee_cancel = s.payout.try_rotate_fee_recipient_cancel(&s.admin);
+        assert_eq!(
+            after_exit_fee_cancel,
             Err(Ok(Error::from_contract_error(
                 PayoutError::ContractExited as u32
             )))

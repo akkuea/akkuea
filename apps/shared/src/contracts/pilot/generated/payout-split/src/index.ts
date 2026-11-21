@@ -1,33 +1,24 @@
 import { Buffer } from "buffer";
-import { Address } from "@stellar/stellar-sdk";
 import {
-  AssembledTransaction,
   Client as ContractClient,
-  ClientOptions as ContractClientOptions,
-  MethodOptions,
-  Result,
   Spec as ContractSpec,
 } from "@stellar/stellar-sdk/contract";
 import type {
+  AssembledTransaction,
+  ClientOptions as ContractClientOptions,
+  MethodOptions,
   u32,
-  i32,
   u64,
-  i64,
-  u128,
   i128,
-  u256,
-  i256,
   Option,
-  Timepoint,
-  Duration,
 } from "@stellar/stellar-sdk/contract";
-export * from "@stellar/stellar-sdk";
-export * as contract from "@stellar/stellar-sdk/contract";
-export * as rpc from "@stellar/stellar-sdk/rpc";
 
-if (typeof window !== "undefined") {
-  //@ts-ignore Buffer exists
-  window.Buffer = window.Buffer || Buffer;
+// Timepoint and Duration are not exported by stellar-sdk/contract in v13.x
+export type Timepoint = bigint;
+export type Duration = bigint;
+
+if (typeof globalThis !== "undefined" && !globalThis.Buffer) {
+  (globalThis as typeof globalThis & { Buffer: typeof Buffer }).Buffer = Buffer;
 }
 
 /**
@@ -35,8 +26,7 @@ if (typeof window !== "undefined") {
  * preference resolves to `Usdc`, so pre-existing holders are unaffected.
  */
 export type Currency =
-  | { tag: "Usdc"; values: void }
-  | { tag: "Eurc"; values: void };
+  { tag: "Usdc"; values: void } | { tag: "Eurc"; values: void };
 
 /**
  * Durable on-chain record of a permanent ally/property exit. Written exactly
@@ -448,7 +438,7 @@ export type DataKey =
   | { tag: "PendingAlly"; values: void }
   | { tag: "PendingPlatformFeeRecipient"; values: void };
 
-export interface Client {
+export interface PilotPayoutSplitClientInterface {
   /**
    * Construct and simulate a exit transaction. Returns an `AssembledTransaction` object which will have a `result` field containing the result of the simulation. If this transaction changes contract state, you will need to call `signAndSend()` on the returned object.
    * Permanently terminate the ally/property relationship.
@@ -978,9 +968,9 @@ export interface Client {
     options?: MethodOptions,
   ) => Promise<AssembledTransaction<null>>;
 }
-export class Client extends ContractClient {
-  static async deploy<T = Client>(
-    /** Options for initializing a Client as well as for calling a method, with extras specific to deploying. */
+export class PilotPayoutSplitClient extends ContractClient {
+  static override async deploy<T = PilotPayoutSplitClient>(
+    /** Options for initializing a PilotPayoutSplitClient as well as for calling a method, with extras specific to deploying. */
     options: MethodOptions &
       Omit<ContractClientOptions, "contractId"> & {
         /** The hash of the Wasm blob, which must already be installed on-chain. */
@@ -993,7 +983,7 @@ export class Client extends ContractClient {
   ): Promise<AssembledTransaction<T>> {
     return ContractClient.deploy(null, options);
   }
-  constructor(public readonly options: ContractClientOptions) {
+  constructor(public override readonly options: ContractClientOptions) {
     super(
       new ContractSpec([
         "AAAAAgAAAIhTZXR0bGVtZW50IGN1cnJlbmN5IGNob3NlbiBieSBhIHRva2VuIGhvbGRlci4gQWJzZW5jZSBvZiBhIHN0b3JlZApwcmVmZXJlbmNlIHJlc29sdmVzIHRvIGBVc2RjYCwgc28gcHJlLWV4aXN0aW5nIGhvbGRlcnMgYXJlIHVuYWZmZWN0ZWQuAAAAAAAAAAhDdXJyZW5jeQAAAAIAAAAAAAAAAAAAAARVc2RjAAAAAAAAAAAAAAAERXVyYw==",

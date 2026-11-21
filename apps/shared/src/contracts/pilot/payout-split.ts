@@ -32,8 +32,7 @@ if (typeof globalThis !== "undefined" && !globalThis.Buffer) {
  * preference resolves to `Usdc`, so pre-existing holders are unaffected.
  */
 export type Currency =
-  | { tag: "Usdc"; values: void }
-  | { tag: "Eurc"; values: void };
+  { tag: "Usdc"; values: void } | { tag: "Eurc"; values: void };
 
 /**
  * Durable on-chain record of a permanent ally/property exit. Written exactly

@@ -1,64 +1,106 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { describe, expect, it, mock, beforeEach, afterEach } from 'bun:test';
-import { db } from '../db';
-import { whitelistService } from '../services/WhitelistService';
+import { describe, expect, it, mock, beforeEach, afterEach, spyOn } from 'bun:test';
+import { Keypair, StrKey } from '@stellar/stellar-sdk';
 import Elysia from 'elysia';
+import { db } from '../db';
+import { errorHandler } from '../middleware/errorHandler';
+import { stellarService } from '../services/StellarService';
 import { whitelistRoutes } from './whitelist';
 
 // Setup a minimal app for testing routes
 import { internalOperationsRoutes } from './internalOperations';
-const testApp = new Elysia().use(whitelistRoutes).use(internalOperationsRoutes);
+const testApp = new Elysia().use(errorHandler).use(whitelistRoutes).use(internalOperationsRoutes);
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
 
-describe('Whitelist API Routes', () => {
-  const mockWallet = 'GDK7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZ';
-  let mockDbStore: any[] = [];
+interface StoredRequest {
+  id: string;
+  walletAddress: string;
+  fullName?: string;
+  idType?: string;
+  idReference?: string;
+  status: string;
+  rejectionReason?: string;
+  createdAt?: Date;
+  reviewedAt?: Date;
+}
 
-  function extractWalletAddress(obj: any): string | undefined {
-    if (obj == null || typeof obj !== 'object') return undefined;
-    if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
-      for (const chunk of obj.queryChunks) {
-        if (chunk?.constructor?.name === 'Param' && typeof chunk.value === 'string') {
-          return chunk.value;
-        }
-      }
-    }
-    if ('value' in obj && typeof obj.value === 'string') return obj.value;
-    return undefined;
+interface ErrorBody {
+  success: boolean;
+  error: string;
+  message: string;
+  statusCode: number;
+}
+
+/**
+ * Collects the string parameters bound in a Drizzle SQL expression. The
+ * controller and service query whitelist rows by either wallet address or id,
+ * and both arrive as bound parameters, so the mock store can resolve the row
+ * without modelling Drizzle's query builder.
+ */
+function collectParamValues(value: unknown, acc: string[] = []): string[] {
+  if (value == null || typeof value !== 'object') return acc;
+
+  if (Array.isArray(value)) {
+    for (const item of value) collectParamValues(item, acc);
+    return acc;
+  }
+
+  const candidate = value as { value?: unknown; queryChunks?: unknown[] };
+  if (typeof candidate.value === 'string') acc.push(candidate.value);
+  if (Array.isArray(candidate.queryChunks)) {
+    for (const chunk of candidate.queryChunks) collectParamValues(chunk, acc);
+  }
+  return acc;
+}
+
+function matchesWhere(row: StoredRequest, where: unknown): boolean {
+  const values = collectParamValues(where);
+  return values.includes(row.walletAddress) || values.includes(row.id);
+}
+
+describe('Whitelist API Routes', () => {
+  let mockDbStore: StoredRequest[] = [];
+  let adminKeypair: Keypair;
+  const originalEnv = {
+    WHITELIST_CONTRACT_ID: process.env.WHITELIST_CONTRACT_ID,
+    STELLAR_ADMIN_PUBLIC_KEY: process.env.STELLAR_ADMIN_PUBLIC_KEY,
+    STELLAR_ADMIN_SECRET: process.env.STELLAR_ADMIN_SECRET,
+  };
+
+  /** A fresh, checksum-valid Stellar public key for each request. */
+  function newWallet(): string {
+    return Keypair.random().publicKey();
   }
 
   beforeEach(() => {
     mockDbStore = [];
+    adminKeypair = Keypair.random();
+    process.env.WHITELIST_CONTRACT_ID = 'CDQYJRBYP62Y2BSMDEUBJYM2I4V3JE2RL7TCR3JPTW42NRLUXWKUS3MZ';
+    process.env.STELLAR_ADMIN_PUBLIC_KEY = adminKeypair.publicKey();
+    process.env.STELLAR_ADMIN_SECRET = adminKeypair.secret();
 
-    // Mock whitelist service (re-apply after each mock.restore)
-    mock.module('../services/WhitelistService', () => {
-      return {
-        whitelistService: {
-          approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
-          rejectRequest: mock(() => Promise.resolve()),
-        },
-      };
-    });
+    // The happy path for approve calls the on-chain service; stub only that
+    // out so the real WhitelistService database logic still runs.
+    spyOn(stellarService, 'submitWhitelistApprove').mockResolvedValue('mock_tx_hash');
 
     // Mock db queries
-    (db as any).query = {
+    (db as unknown as Record<string, unknown>).query = {
       pilotWhitelistRequests: {
-        findFirst: mock(async ({ where }: any) => {
-          const walletAddr = extractWalletAddress(where);
-          if (walletAddr) {
-            return mockDbStore.find((r) => r.walletAddress === walletAddr);
+        findFirst: mock(async ({ where, orderBy }: { where?: unknown; orderBy?: unknown }) => {
+          const matches = mockDbStore.filter((row) => matchesWhere(row, where));
+          if (orderBy) {
+            matches.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
           }
-          return undefined;
+          return matches[0];
         }),
         findMany: mock(async () => mockDbStore),
       },
     };
 
-    (db as any).insert = mock(() => ({
-      values: (val: any) => ({
+    (db as unknown as Record<string, unknown>).insert = mock(() => ({
+      values: (val: Omit<StoredRequest, 'id'>) => ({
         returning: async () => {
-          const inserted = {
+          const inserted: StoredRequest = {
             id: `test_id_${Date.now()}_${Math.random().toString(36).slice(2)}`,
             ...val,
           };
@@ -68,23 +110,14 @@ describe('Whitelist API Routes', () => {
       }),
     }));
 
-    (db as any).update = mock(() => ({
-      set: (val: any) => ({
-        where: async () => {
-          if (mockDbStore.length > 0) {
-            Object.assign(mockDbStore[0], val);
+    (db as unknown as Record<string, unknown>).update = mock(() => ({
+      set: (val: Partial<StoredRequest>) => ({
+        where: async (whereExpr: unknown) => {
+          for (const row of mockDbStore) {
+            if (matchesWhere(row, whereExpr)) Object.assign(row, val);
           }
         },
       }),
-    }));
-
-    (db as any).delete = mock(() => ({
-      where: async (whereExpr: any) => {
-        const walletAddr = extractWalletAddress(whereExpr);
-        if (walletAddr) {
-          mockDbStore = mockDbStore.filter((r) => r.walletAddress !== walletAddr);
-        }
-      },
     }));
   });
 
@@ -93,66 +126,226 @@ describe('Whitelist API Routes', () => {
     // Direct property assignment on the db Proxy mutates _dbTarget, which
     // persists across test files in the same bun process. mock.restore()
     // only undoes mock() calls, not these mutations, so delete them
-    // unconditionally: beforeEach always re-populates all four from scratch,
+    // unconditionally: beforeEach always re-populates them from scratch,
     // so there's no prior legitimate state to preserve.
     for (const prop of ['query', 'insert', 'update', 'delete']) {
-      delete (db as any)[prop];
+      delete (db as unknown as Record<string, unknown>)[prop];
+    }
+
+    for (const [key, value] of Object.entries(originalEnv)) {
+      if (value === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = value;
+      }
     }
   });
 
-  it('should submit a new whitelist request successfully', async () => {
-    const response = await testApp.handle(
+  function postRequest(body: Record<string, unknown>) {
+    return testApp.handle(
       new Request('http://localhost/pilot/whitelist/request', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          walletAddress: mockWallet,
-          fullName: 'Test User',
-          idType: 'passport',
-          idReference: 'A1234567',
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       }),
     );
+  }
+
+  function validRequest(walletAddress: string, fullName = 'Test User') {
+    return {
+      walletAddress,
+      fullName,
+      idType: 'passport',
+      idReference: 'A1234567',
+    };
+  }
+
+  function review(id: string, body: Record<string, unknown>) {
+    return testApp.handle(
+      new Request(`http://localhost/internal/operations/pilot/whitelist/${id}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-internal-api-key': 'test-secret' },
+        body: JSON.stringify(body),
+      }),
+    );
+  }
+
+  it('should submit a new whitelist request successfully', async () => {
+    const wallet = newWallet();
+
+    const response = await postRequest(validRequest(wallet));
 
     expect(response.status).toBe(200);
-    const result = (await response.json()) as any;
+    const result = (await response.json()) as {
+      success: boolean;
+      data: StoredRequest;
+    };
     expect(result.success).toBe(true);
-    expect(result.data.walletAddress).toBe(mockWallet);
+    expect(result.data.walletAddress).toBe(wallet);
     expect(result.data.status).toBe('pending');
     expect(mockDbStore.length).toBe(1);
   });
 
-  it('should fail to submit a duplicate request', async () => {
+  it('returns 409 with a showable message for a second request on a pending wallet', async () => {
+    const wallet = newWallet();
+    mockDbStore.push({ id: 'existing_id', walletAddress: wallet, status: 'pending' });
+
+    const response = await postRequest(validRequest(wallet));
+
+    expect(response.status).toBe(409);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('CONFLICT');
+    expect(result.message).toContain('already pending');
+    expect(mockDbStore.length).toBe(1);
+  });
+
+  it('returns 409 for a request on an already approved wallet', async () => {
+    const wallet = newWallet();
+    mockDbStore.push({ id: 'approved_id', walletAddress: wallet, status: 'approved' });
+
+    const response = await postRequest(validRequest(wallet));
+
+    expect(response.status).toBe(409);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.error).toBe('CONFLICT');
+    expect(result.message).toContain('already whitelisted');
+  });
+
+  it('rejects a non-key string with 400', async () => {
+    const response = await postRequest(validRequest('not-a-key'));
+
+    expect(response.status).toBe(400);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.success).toBe(false);
+    expect(mockDbStore.length).toBe(0);
+  });
+
+  it('rejects a 56-character string with a bad checksum with 400', async () => {
+    const validWallet = newWallet();
+    const badChecksum = `${validWallet.slice(0, -1)}${validWallet.endsWith('A') ? 'B' : 'A'}`;
+    expect(badChecksum).toHaveLength(56);
+
+    const response = await postRequest(validRequest(badChecksum));
+
+    expect(response.status).toBe(400);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.success).toBe(false);
+    expect(mockDbStore.length).toBe(0);
+  });
+
+  it('rejects a contract address (C...) with 400', async () => {
+    const contractAddress = StrKey.encodeContract(Keypair.random().rawPublicKey());
+    expect(contractAddress.startsWith('C')).toBe(true);
+    expect(contractAddress).toHaveLength(56);
+
+    const response = await postRequest(validRequest(contractAddress));
+
+    expect(response.status).toBe(400);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.success).toBe(false);
+    expect(mockDbStore.length).toBe(0);
+  });
+
+  it('keeps the rejected record when the wallet submits a new request', async () => {
+    const wallet = newWallet();
     mockDbStore.push({
-      id: 'existing_id',
-      walletAddress: mockWallet,
+      id: 'old_rejected_id',
+      walletAddress: wallet,
+      status: 'rejected',
+      fullName: 'Old Submission',
+      idType: 'passport',
+      idReference: 'OLD123',
+      rejectionReason: 'Document illegible',
+    });
+
+    const response = await postRequest(validRequest(wallet, 'New Submission'));
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as { success: boolean; data: StoredRequest };
+    expect(result.success).toBe(true);
+    expect(result.data.status).toBe('pending');
+    expect(result.data.fullName).toBe('New Submission');
+
+    const requestsForWallet = mockDbStore.filter((row) => row.walletAddress === wallet);
+    expect(requestsForWallet.length).toBe(2);
+
+    const rejected = requestsForWallet.find((row) => row.id === 'old_rejected_id');
+    expect(rejected).toBeDefined();
+    expect(rejected?.status).toBe('rejected');
+    expect(rejected?.rejectionReason).toBe('Document illegible');
+  });
+
+  it('rejects a status lookup for an invalid Stellar address with 400', async () => {
+    const response = await testApp.handle(
+      new Request('http://localhost/pilot/whitelist/status/not-a-key'),
+    );
+
+    expect(response.status).toBe(400);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a status lookup for a bad-checksum address with 400', async () => {
+    const validWallet = newWallet();
+    const badChecksum = `${validWallet.slice(0, -1)}${validWallet.endsWith('A') ? 'B' : 'A'}`;
+
+    const response = await testApp.handle(
+      new Request(`http://localhost/pilot/whitelist/status/${badChecksum}`),
+    );
+
+    expect(response.status).toBe(400);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.error).toBe('BAD_REQUEST');
+  });
+
+  it('returns the newest request status after a rejected request was resubmitted', async () => {
+    const wallet = newWallet();
+    mockDbStore.push({
+      id: 'old_rejected_id',
+      walletAddress: wallet,
+      status: 'rejected',
+      rejectionReason: 'Document illegible',
+      createdAt: new Date('2026-01-01T00:00:00Z'),
+    });
+    mockDbStore.push({
+      id: 'new_pending_id',
+      walletAddress: wallet,
       status: 'pending',
+      createdAt: new Date('2026-02-01T00:00:00Z'),
     });
 
     const response = await testApp.handle(
-      new Request('http://localhost/pilot/whitelist/request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          walletAddress: mockWallet,
-          fullName: 'Test User 2',
-          idType: 'national_id',
-          idReference: 'B7654321',
-        }),
-      }),
+      new Request(`http://localhost/pilot/whitelist/status/${wallet}`),
     );
 
-    expect(response.status).not.toBe(200);
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as {
+      success: boolean;
+      status: string;
+      rejectionReason?: string;
+    };
+    expect(result.status).toBe('pending');
+    expect(result.rejectionReason).toBeUndefined();
+  });
+
+  it('still returns the status for a valid wallet', async () => {
+    const wallet = newWallet();
+
+    const response = await testApp.handle(
+      new Request(`http://localhost/pilot/whitelist/status/${wallet}`),
+    );
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as { success: boolean; status: string };
+    expect(result.success).toBe(true);
+    expect(result.status).toBe('none');
   });
 
   it('should fetch pending requests', async () => {
     mockDbStore.push({
       id: 'pending_id',
-      walletAddress: mockWallet,
+      walletAddress: newWallet(),
       status: 'pending',
     });
 
@@ -164,116 +357,84 @@ describe('Whitelist API Routes', () => {
     );
 
     expect(response.status).toBe(200);
-    const result = (await response.json()) as any;
+    const result = (await response.json()) as { success: boolean; data: unknown[] };
     expect(result.success).toBe(true);
     expect(result.data.length).toBe(1);
   });
 
-  it('should review a request', async () => {
-    const response = await testApp.handle(
-      new Request('http://localhost/internal/operations/pilot/whitelist/req_id_1/review', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-internal-api-key': 'test-secret' },
-        body: JSON.stringify({ action: 'approve' }),
-      }),
-    );
+  it('should approve a request', async () => {
+    const wallet = newWallet();
+    mockDbStore.push({ id: 'req_id_1', walletAddress: wallet, status: 'pending' });
 
-    const status = response.status;
-    const result = (await response.json()) as any;
-    console.log('REVIEW RESPONSE:', status, result);
-    expect(status).toBe(200);
-    expect(result.success).toBe(true);
-    expect(result.txHash).toBe('mock_tx_hash');
-    expect(whitelistService.approveRequest).toHaveBeenCalledWith('req_id_1');
-  });
-
-  it('should allow resubmission after rejection', async () => {
-    const resubmitWallet = 'GDC3C4X5R7N2X7CII7SPRD4U6ZLKZKAJZDW6N4Q4QAV3FJ7Q3N7GJ5P6';
-
-    // Seed a rejected request for this wallet
-    mockDbStore.push({
-      id: 'old_rejected_id',
-      walletAddress: resubmitWallet,
-      status: 'rejected',
-      fullName: 'Old Submission',
-      idType: 'passport',
-      idReference: 'OLD123',
-    });
-
-    const response = await testApp.handle(
-      new Request('http://localhost/pilot/whitelist/request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          walletAddress: resubmitWallet,
-          fullName: 'New Submission',
-          idType: 'national_id',
-          idReference: 'NEW456',
-        }),
-      }),
-    );
+    const response = await review('req_id_1', { action: 'approve' });
 
     expect(response.status).toBe(200);
-    const result = (await response.json()) as any;
+    const result = (await response.json()) as { success: boolean; txHash: string };
     expect(result.success).toBe(true);
-    expect(result.data.status).toBe('pending');
-    expect(result.data.fullName).toBe('New Submission');
-
-    // Only the new request should exist; the old one was deleted
-    const requestsForWallet = mockDbStore.filter((r) => r.walletAddress === resubmitWallet);
-    expect(requestsForWallet.length).toBe(1);
-    expect(requestsForWallet[0].id).not.toBe('old_rejected_id');
+    expect(result.txHash).toBe('mock_tx_hash');
+    expect(stellarService.submitWhitelistApprove).toHaveBeenCalledWith(
+      process.env.WHITELIST_CONTRACT_ID as string,
+      adminKeypair.publicKey(),
+      adminKeypair.secret(),
+      wallet,
+    );
+    expect(mockDbStore[0]?.status).toBe('approved');
   });
 
-  it('should block resubmission when request is pending', async () => {
-    mockDbStore.push({
-      id: 'pending_id',
-      walletAddress: mockWallet,
-      status: 'pending',
-    });
+  it('returns 404 when reviewing an unknown request id', async () => {
+    const response = await review('unknown-id', { action: 'approve' });
 
-    const response = await testApp.handle(
-      new Request('http://localhost/pilot/whitelist/request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          walletAddress: mockWallet,
-          fullName: 'Test User',
-          idType: 'passport',
-          idReference: 'A1234567',
-        }),
-      }),
-    );
-
-    expect(response.status).not.toBe(200);
+    expect(response.status).toBe(404);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('NOT_FOUND');
+    expect(result.message).toContain('not found');
   });
 
-  it('should block resubmission when address is already approved', async () => {
-    mockDbStore.push({
-      id: 'approved_id',
-      walletAddress: mockWallet,
-      status: 'approved',
+  it('returns 409 when approving an already approved request', async () => {
+    mockDbStore.push({ id: 'approved_id', walletAddress: newWallet(), status: 'approved' });
+
+    const response = await review('approved_id', { action: 'approve' });
+
+    expect(response.status).toBe(409);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.error).toBe('CONFLICT');
+    expect(result.message).toContain('already approved');
+  });
+
+  it('returns 400 when rejecting without a reason', async () => {
+    mockDbStore.push({ id: 'pending_id', walletAddress: newWallet(), status: 'pending' });
+
+    const response = await review('pending_id', { action: 'reject' });
+
+    expect(response.status).toBe(400);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.error).toBe('BAD_REQUEST');
+    expect(result.message).toContain('reason is required');
+    expect(mockDbStore[0]?.status).toBe('pending');
+  });
+
+  it('records the rejection reason when rejecting a pending request', async () => {
+    mockDbStore.push({ id: 'pending_id', walletAddress: newWallet(), status: 'pending' });
+
+    const response = await review('pending_id', {
+      action: 'reject',
+      reason: 'Document illegible',
     });
 
-    const response = await testApp.handle(
-      new Request('http://localhost/pilot/whitelist/request', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          walletAddress: mockWallet,
-          fullName: 'Test User',
-          idType: 'passport',
-          idReference: 'A1234567',
-        }),
-      }),
-    );
+    expect(response.status).toBe(200);
+    expect(mockDbStore[0]?.status).toBe('rejected');
+    expect(mockDbStore[0]?.rejectionReason).toBe('Document illegible');
+    expect(mockDbStore[0]?.reviewedAt).toBeDefined();
+  });
 
-    expect(response.status).not.toBe(200);
+  it('returns 400 for an invalid review action', async () => {
+    mockDbStore.push({ id: 'pending_id', walletAddress: newWallet(), status: 'pending' });
+
+    const response = await review('pending_id', { action: 'hold' });
+
+    expect(response.status).toBe(400);
+    const result = (await response.json()) as ErrorBody;
+    expect(result.success).toBe(false);
   });
 });

@@ -127,3 +127,65 @@ describe('ValidationService.sanitizeString', () => {
     expect(ValidationService.sanitizeString('  <b>hi</b>  ')).toBe('bhi/b');
   });
 });
+
+describe('ValidationService.validateShareOwnership', () => {
+  it('accepts a valid ownership record', () => {
+    expect(
+      ValidationService.validateShareOwnership({ owner: G_ADDRESS, shares: 10 }).isValid,
+    ).toBe(true);
+  });
+
+  it('rejects a non-numeric share count', () => {
+    const r = ValidationService.validateShareOwnership({ owner: G_ADDRESS, shares: 'abc' });
+    expect(r.isValid).toBe(false);
+  });
+
+  it('rejects an invalid owner address', () => {
+    const r = ValidationService.validateShareOwnership({ owner: 'GNOTVALID', shares: 10 });
+    expect(r.isValid).toBe(false);
+  });
+});
+
+describe('ValidationService.validateStellarAddress', () => {
+  it('accepts a valid G address', () => {
+    expect(ValidationService.validateStellarAddress(G_ADDRESS).isValid).toBe(true);
+  });
+
+  it('rejects a malformed address', () => {
+    expect(ValidationService.validateStellarAddress('GNOTVALID').isValid).toBe(false);
+  });
+
+  it('rejects an empty address', () => {
+    expect(ValidationService.validateStellarAddress('').isValid).toBe(false);
+  });
+});
+
+describe('ValidationService.validateEmail', () => {
+  it('accepts a valid email', () => {
+    expect(ValidationService.validateEmail('user@example.com').isValid).toBe(true);
+  });
+
+  it('rejects an email without an @', () => {
+    expect(ValidationService.validateEmail('userexample.com').isValid).toBe(false);
+  });
+
+  it('rejects an empty email', () => {
+    expect(ValidationService.validateEmail('').isValid).toBe(false);
+  });
+});
+
+describe('ValidationService.validateKYCDocument', () => {
+  it('accepts a valid KYC document', () => {
+    const doc = { type: 'passport', number: 'X1234567', expiresAt: new Date(Date.now() + 86400000).toISOString() };
+    expect(ValidationService.validateKYCDocument(doc).isValid).toBe(true);
+  });
+
+  it('rejects an expired KYC document', () => {
+    const doc = { type: 'passport', number: 'X1234567', expiresAt: new Date(Date.now() - 86400000).toISOString() };
+    expect(ValidationService.validateKYCDocument(doc).isValid).toBe(false);
+  });
+
+  it('rejects a KYC document with missing fields', () => {
+    expect(ValidationService.validateKYCDocument({}).isValid).toBe(false);
+  });
+});

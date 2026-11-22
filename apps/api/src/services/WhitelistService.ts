@@ -3,6 +3,7 @@ import { db } from '../db';
 import { pilotWhitelistRequests } from '../db/schema/pilotWhitelist';
 import { getPilotWhitelistContractId } from '../config/contracts';
 import { stellarService } from './StellarService';
+import { ConflictError, NotFoundError } from '../utils/errors';
 
 export class WhitelistService {
   /**
@@ -14,11 +15,11 @@ export class WhitelistService {
     });
 
     if (!request) {
-      throw new Error('Whitelist request not found');
+      throw new NotFoundError('Whitelist request not found');
     }
 
     if (request.status === 'approved') {
-      throw new Error('Request is already approved');
+      throw new ConflictError('Request is already approved');
     }
 
     const contractId = getPilotWhitelistContractId();
@@ -54,11 +55,11 @@ export class WhitelistService {
     });
 
     if (!request) {
-      throw new Error('Whitelist request not found');
+      throw new NotFoundError('Whitelist request not found');
     }
 
     if (request.status === 'approved') {
-      throw new Error('Cannot reject an already approved request');
+      throw new ConflictError('Cannot reject an already approved request');
     }
 
     await db

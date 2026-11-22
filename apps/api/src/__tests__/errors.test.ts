@@ -6,6 +6,7 @@ import { errorHandler } from '../middleware/errorHandler';
 import {
   AppError,
   BadRequestError,
+  ConflictError,
   NotFoundError,
   UnauthorizedError,
   ForbiddenError,
@@ -63,6 +64,26 @@ describe('Error Utilities', () => {
       expect(error.statusCode).toBe(404);
       expect(error.code).toBe('NOT_FOUND');
       expect(error.name).toBe('NotFoundError');
+    });
+  });
+
+  describe('ConflictError', () => {
+    it('should create a ConflictError with status 409', () => {
+      const error = new ConflictError('Request already pending');
+
+      expect(error.message).toBe('Request already pending');
+      expect(error.statusCode).toBe(409);
+      expect(error.code).toBe('CONFLICT');
+      expect(error.name).toBe('ConflictError');
+    });
+
+    it('should keep the conflict message and status through handleError', () => {
+      const response = handleError(new ConflictError('Already whitelisted'));
+
+      expect(response.success).toBe(false);
+      expect(response.error).toBe('CONFLICT');
+      expect(response.message).toBe('Already whitelisted');
+      expect(response.statusCode).toBe(409);
     });
   });
 

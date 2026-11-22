@@ -4,70 +4,37 @@ import { JSDOM } from "jsdom";
 const dom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "http://localhost",
 });
-(dom.window as unknown as { fetch: typeof fetch }).fetch = fetch;
-globalThis.window = dom.window as unknown as Window & typeof globalThis;
-globalThis.document = dom.window.document;
-globalThis.navigator = dom.window.navigator;
-globalThis.HTMLElement = dom.window.HTMLElement;
-globalThis.MutationObserver = dom.window.MutationObserver;
-(globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(dom.window as any).fetch = fetch;
+globalThis.window = dom.window as any;
+globalThis.document = dom.window.document as any;
+globalThis.navigator = dom.window.navigator as any;
+globalThis.HTMLElement = dom.window.HTMLElement as any;
+globalThis.MutationObserver = dom.window.MutationObserver as any;
+(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
+// Bind axe-core to the same initial JSDOM realm as @testing-library/react
+import "axe-core";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import React from "react";
 import { cleanup, act, waitFor } from "@testing-library/react";
-import { renderWithIntl } from "@/test/renderWithIntl";
-import fs from "fs";
-import path from "path";
 
 // Mock routing without touching next-intl module directly
 mock.module("@/i18n/routing", () => ({
-  Link: ({ children, href, ...props }: Record<string, unknown>) =>
-    React.createElement("a", { href, ...props }, children as React.ReactNode),
+  Link: ({ children, href, ...props }: any) =>
+    React.createElement("a", { href, ...props }, children),
   useRouter: () => ({
-    push: vi.fn(),
-    replace: vi.fn(),
-    prefetch: vi.fn(),
-    back: vi.fn(),
+    push: () => {},
+    replace: () => {},
+    prefetch: () => {},
+    back: () => {},
   }),
   usePathname: () => "/dashboard",
 }));
 
-// Mock sub-components that depend on external router/theme
-mock.module("@/components/game/PilotCta", () => ({
-  PilotCta: () => React.createElement("div", { "data-testid": "pilot-cta" }),
-}));
-
-mock.module("@/components/layout/ThemeToggle", () => ({
-  ThemeToggle: () => React.createElement("div", { "data-testid": "theme-toggle" }),
-}));
-
-mock.module("@/components/layout/LocaleSwitcher", () => ({
-  LocaleSwitcher: () => React.createElement("div", { "data-testid": "locale-switcher" }),
-}));
-
-// Mock framer-motion to bypass animations in tests
-mock.module("framer-motion", () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) =>
-    React.createElement(React.Fragment, null, children),
-  motion: new Proxy(
-    {},
-    {
-      get: (_target, tagName: string) =>
-        React.forwardRef(function PassthroughMotion(
-          { children, ...props }: Record<string, unknown>,
-          ref,
-        ) {
-          return React.createElement(
-            tagName,
-            { ref, ...props },
-            children as React.ReactNode,
-          );
-        }),
-    },
-  ),
-}));
-
+import { renderWithIntl } from "@/test/renderWithIntl";
 import { GameEventProvider, useGameEvents } from "@/context/GameEventContext";
+import fs from "fs";
+import path from "path";
 
 /**
  * Fully-typed MockEventSource conforming to EventSource and EventTarget interfaces.
@@ -179,7 +146,6 @@ describe("Dashboard and GameEventStream behavioral consolidation (#1340)", () =>
     cleanup();
     globalThis.fetch = originalFetch;
     globalThis.EventSource = originalEventSource;
-    vi.restoreAllMocks();
   });
 
   it("renders dashboard inside GameEventProvider with exactly one EventSource open", () => {

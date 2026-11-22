@@ -5,6 +5,7 @@ export const pilotWhitelistStatusEnum = pgEnum('pilot_whitelist_status', [
   'pending',
   'approved',
   'rejected',
+  'revoked',
 ]);
 
 export const pilotWhitelistIdTypeEnum = pgEnum('pilot_whitelist_id_type', [

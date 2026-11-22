@@ -24,6 +24,7 @@ import {
 } from "@/services/pilot/writes";
 import { holderAmountFor } from "@/services/pilot/reads";
 import { pilotAllyAddress } from "@/services/pilot/config";
+import { parseEvidenceLink } from "@/services/pilot/evidenceLink";
 import { DistributionCosignPanel } from "./DistributionCosignPanel";
 import { EvidenceStatusBadge } from "./EvidenceSubmissionForm";
 import { EvidenceVerification } from "./EvidenceVerification";
@@ -119,6 +120,9 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
   const status = cycle.evidence?.status;
   const canReview = status === "submitted" || status === "under_review";
   const canDistribute = status === "approved" && !cycle.distribution;
+  const parsedEvidenceLink = cycle.evidenceLink
+    ? parseEvidenceLink(cycle.evidenceLink)
+    : null;
 
   async function run(
     action: "open" | "approve" | "reject" | "dispute",
@@ -169,17 +173,27 @@ function QueueItem({ cycle, isPaused, onDone, wallet }: QueueItemProps) {
               {shortenHash(cycle.evidenceHashHex)}
             </p>
           )}
-          {cycle.evidenceLink && (
-            <a
-              href={cycle.evidenceLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:underline"
-            >
-              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("queue.openStatement")}
-            </a>
-          )}
+          {cycle.evidenceLink &&
+            (parsedEvidenceLink ? (
+              <a
+                href={parsedEvidenceLink.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-1.5 text-xs text-cyan-400 hover:underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                {t("queue.openStatement")}
+              </a>
+            ) : (
+              <p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-neutral-400">
+                <span className="break-all font-mono">
+                  {cycle.evidenceLink}
+                </span>
+                <span className="text-amber-400">
+                  ({t("queue.invalidLink")})
+                </span>
+              </p>
+            ))}
           {cycle.evidenceLink && cycle.evidenceHashHex && (
             <EvidenceVerification
               evidenceLink={cycle.evidenceLink}

@@ -253,6 +253,7 @@
       "hashing": "Calculando el hash localmente",
       "linkLabel": "Enlace de la evidencia",
       "linkHint": "Dónde puede un revisor obtener el estado para contrastarlo con el hash.",
+      "invalidLink": "El enlace de la evidencia debe ser una URL https:// válida.",
       "amountLabel": "Ingreso total (USDC)",
       "submit": "Enviar a revisión",
       "submitted": "Enviado. El operador ya puede revisar este ciclo.",
@@ -271,6 +272,7 @@
       "pausedNotice": "El contrato de pagos está pausado. Las acciones de revisión quedan deshabilitadas hasta que un administrador lo reanude.",
       "reported": "Reportó {amount}",
       "openStatement": "Abrir el estado para contrastarlo con el hash",
+      "invalidLink": "Enlace no válido (debe usar https://)",
       "reasonLabel": "Motivo",
       "reasonPlaceholder": "Obligatorio para rechazar, opcional para aprobar",
       "startReview": "Iniciar revisión",
@@ -411,7 +413,8 @@
       "unreachable": "No se pudo obtener el documento, así que no se verificó.",
       "fileFallback": "Si ya tienes el documento, calcula aquí el hash de tu propia copia para compararlo tú mismo.",
       "chooseFile": "Calcular el hash de un archivo descargado",
-      "failed": "No se pudo calcular el hash del documento."
+      "failed": "No se pudo calcular el hash del documento.",
+      "invalidLink": "El enlace de la evidencia no es una URL https:// válida."
     }
   }
 }

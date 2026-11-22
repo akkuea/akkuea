@@ -14,7 +14,7 @@ globalThis.MutationObserver = dom.window.MutationObserver as any;
 
 // Bind axe-core to the same initial JSDOM realm as @testing-library/react
 import "axe-core";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
 import React from "react";
 import { cleanup, act, waitFor } from "@testing-library/react";
 
@@ -213,7 +213,10 @@ describe("Dashboard and GameEventStream behavioral consolidation (#1340)", () =>
     view.unmount();
   });
 
-  it("verifies unmounting closes the connection and cleans up listeners", () => {
+  it("verifies unmounting closes the connection and cleans up listeners and timers", () => {
+    const clearIntervalSpy = spyOn(globalThis, "clearInterval");
+    const clearTimeoutSpy = spyOn(globalThis, "clearTimeout");
+
     const view = renderWithIntl(
       <GameEventProvider>
         <DashboardPage />
@@ -224,11 +227,18 @@ describe("Dashboard and GameEventStream behavioral consolidation (#1340)", () =>
     const instance = MockEventSource.instances[0];
     expect(instance.closed).toBe(false);
 
-    // Unmount
+    instance.triggerError(); // schedules the reconnect timeout
+
     view.unmount();
 
     expect(instance.closed).toBe(true);
     expect(instance.readyState).toBe(2);
+    expect(clearIntervalSpy).toHaveBeenCalled();
+    expect(clearTimeoutSpy).toHaveBeenCalled();
+    expect(MockEventSource.instances.length).toBe(1); // nothing reconnects after unmount
+
+    clearIntervalSpy.mockRestore();
+    clearTimeoutSpy.mockRestore();
   });
 
   it("verifies no react-hooks/exhaustive-deps suppression remains in dashboard page", () => {

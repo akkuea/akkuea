@@ -1,5 +1,5 @@
 {
-  "id": "829c6407-a1be-49f5-8ff0-ed097f08930a",
+  "id": "73feb29e-4e99-427e-9caa-d93ea853c8cb",
   "prevId": "b9d0e3b1-4f2a-4e98-9f61-7c24a5b61d03",
   "version": "7",
   "dialect": "postgresql",
@@ -641,8 +641,8 @@
         }
       },
       "indexes": {
-        "borrow_positions_pool_id_borrower_id_unique": {
-          "name": "borrow_positions_pool_id_borrower_id_unique",
+        "borrow_positions_pool_id_borrower_id_idx": {
+          "name": "borrow_positions_pool_id_borrower_id_idx",
           "columns": [
             {
               "expression": "pool_id",
@@ -657,7 +657,7 @@
               "nulls": "last"
             }
           ],
-          "isUnique": true,
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -839,12 +839,6 @@
           "type": "varchar(56)",
           "primaryKey": false,
           "notNull": true
-        },
-        "contract_pool_id": {
-          "name": "contract_pool_id",
-          "type": "varchar(64)",
-          "primaryKey": false,
-          "notNull": false
         },
         "total_deposits": {
           "name": "total_deposits",
@@ -1804,18 +1798,27 @@
           "notNull": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "pilot_whitelist_requests_wallet_address_unique": {
-          "name": "pilot_whitelist_requests_wallet_address_unique",
-          "nullsNotDistinct": false,
+      "indexes": {
+        "pilot_whitelist_requests_active_wallet_unique": {
+          "name": "pilot_whitelist_requests_active_wallet_unique",
           "columns": [
-            "wallet_address"
-          ]
+            {
+              "expression": "wallet_address",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"pilot_whitelist_requests\".\"status\" in ('pending', 'approved')",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

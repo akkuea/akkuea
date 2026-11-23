@@ -9,8 +9,10 @@
 import { describe, test, expect, beforeEach, afterEach, mock } from 'bun:test';
 import Elysia from 'elysia';
 import jwt from 'jsonwebtoken';
+import { Keypair } from '@stellar/stellar-sdk';
 import { db } from '../db';
 import { whitelistRoutes } from '../routes/whitelist';
+import { errorHandler } from '../middleware/errorHandler';
 import { setClientAddressResolverForTesting } from '../middleware/rateLimit';
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-secret';
@@ -40,21 +42,32 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-default-key-for-dev';
 
 // Setup a minimal app for testing routes
 import { internalOperationsRoutes } from '../routes/internalOperations';
-const testApp = new Elysia().use(whitelistRoutes).use(internalOperationsRoutes);
+const testApp = new Elysia().use(errorHandler).use(whitelistRoutes).use(internalOperationsRoutes);
 
-const WALLET_56 = 'GDK7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZ';
-const WALLET_B = 'GDC3C4X5R7N2X7CII7SPRD4U6ZLKZKAJZDW6N4Q4QAV3FJ7Q3N7GJ5P6';
+const WALLET_56 = Keypair.random().publicKey();
+const WALLET_B = Keypair.random().publicKey();
 
+function newWallet(): string {
+  return Keypair.random().publicKey();
+}
+
+/** First string parameter bound in a Drizzle SQL expression, however deeply nested. */
 function extractWalletAddress(obj: any): string | undefined {
   if (obj == null || typeof obj !== 'object') return undefined;
-  if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
-    for (const chunk of obj.queryChunks) {
-      if (chunk?.constructor?.name === 'Param' && typeof chunk.value === 'string') {
-        return chunk.value;
-      }
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const found = extractWalletAddress(item);
+      if (found) return found;
     }
+    return undefined;
   }
   if ('value' in obj && typeof obj.value === 'string') return obj.value;
+  if (obj.queryChunks && Array.isArray(obj.queryChunks)) {
+    for (const chunk of obj.queryChunks) {
+      const found = extractWalletAddress(chunk);
+      if (found) return found;
+    }
+  }
   return undefined;
 }
 
@@ -62,16 +75,6 @@ let mockDbStore: any[] = [];
 
 beforeEach(() => {
   mockDbStore = [];
-
-  // Mock whitelist service (re-apply after each mock.restore)
-  mock.module('../services/WhitelistService', () => {
-    return {
-      whitelistService: {
-        approveRequest: mock(() => Promise.resolve('mock_tx_hash')),
-        rejectRequest: mock(() => Promise.resolve()),
-      },
-    };
-  });
 
   (db as any).query = {
     pilotWhitelistRequests: {
@@ -148,7 +151,7 @@ async function postWhitelistRequest(wallet: string, name = 'Test User', clientAd
 
 describe('Whitelist manual verification', () => {
   test('POST /request returns 200 with status pending', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+    const wallet = newWallet();
     const res = await postWhitelistRequest(wallet);
     expect(res.status).toBe(200);
 
@@ -159,7 +162,7 @@ describe('Whitelist manual verification', () => {
   });
 
   test('rate limit headers are present on request', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+    const wallet = newWallet();
     const res = await postWhitelistRequest(wallet, 'Header Test', '198.51.100.10');
     expect(res.status).toBe(200);
 
@@ -178,8 +181,7 @@ describe('Whitelist manual verification', () => {
 
     // The default budget is 10 requests per 60s for one client.
     for (let i = 0; i < 11; i++) {
-      const wallet = `GD${String(i + 300).padStart(54, '0')}`;
-      const res = await postWhitelistRequest(wallet, `RL User ${i}`, '198.51.100.11');
+      const res = await postWhitelistRequest(newWallet(), `RL User ${i}`, '198.51.100.11');
       statuses.push(res.status);
     }
 
@@ -187,8 +189,8 @@ describe('Whitelist manual verification', () => {
     expect(statuses[10]).toBe(429);
   });
 
-  test('duplicate pending request returns error', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+  test('duplicate pending request returns 409', async () => {
+    const wallet = newWallet();
     mockDbStore.push({
       id: 'existing',
       walletAddress: wallet,
@@ -196,7 +198,10 @@ describe('Whitelist manual verification', () => {
     });
 
     const res = await postWhitelistRequest(wallet);
-    expect(res.status).not.toBe(200);
+    expect(res.status).toBe(409);
+    const body = (await res.json()) as any;
+    expect(body.error).toBe('CONFLICT');
+    expect(body.message).toContain('already pending');
   });
 
   test('resubmission after rejection creates new pending request', async () => {
@@ -216,13 +221,15 @@ describe('Whitelist manual verification', () => {
     expect(body.data.status).toBe('pending');
     expect(body.data.fullName).toBe('New Submission');
 
+    // The rejected row is retained alongside the new pending request.
     const forWallet = mockDbStore.filter((r) => r.walletAddress === WALLET_B);
-    expect(forWallet.length).toBe(1);
-    expect(forWallet[0].id).not.toBe('old_rejected');
+    expect(forWallet.length).toBe(2);
+    expect(forWallet.some((r) => r.id === 'old_rejected' && r.status === 'rejected')).toBe(true);
+    expect(forWallet.some((r) => r.id !== 'old_rejected' && r.status === 'pending')).toBe(true);
   });
 
   test('blocked when already approved', async () => {
-    const wallet = `GD${String(Date.now()).padStart(54, '0')}`;
+    const wallet = newWallet();
     mockDbStore.push({
       id: 'approved',
       walletAddress: wallet,
@@ -230,7 +237,7 @@ describe('Whitelist manual verification', () => {
     });
 
     const res = await postWhitelistRequest(wallet);
-    expect(res.status).not.toBe(200);
+    expect(res.status).toBe(409);
   });
 
   test('GET /status returns none for unknown wallet', async () => {
@@ -334,7 +341,7 @@ describe('Whitelist manual verification', () => {
             [TEST_CLIENT_HEADER]: '198.51.100.12',
           },
           body: JSON.stringify({
-            walletAddress: `GD${String(i + 20).padStart(54, '0')}`,
+            walletAddress: newWallet(),
             fullName: `Bypass User ${i}`,
             idType: 'passport',
             idReference: `BYPASS-${i}`,
@@ -349,11 +356,7 @@ describe('Whitelist manual verification', () => {
     expect(statuses.slice(0, 10)).toEqual(Array.from({ length: 10 }, () => 200));
     expect(statuses[10]).toBe(429);
 
-    const blocked = await postWhitelistRequest(
-      `GD${String(400).padStart(54, '0')}`,
-      'Blocked User',
-      '198.51.100.12',
-    );
+    const blocked = await postWhitelistRequest(newWallet(), 'Blocked User', '198.51.100.12');
     const body = (await blocked.json()) as { error?: string; success?: boolean };
     expect(body.error).toBe('RATE_LIMITED');
     expect(body.success).toBe(false);

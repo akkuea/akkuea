@@ -1,0 +1,2 @@
+ALTER TABLE "pilot_whitelist_requests" DROP CONSTRAINT "pilot_whitelist_requests_wallet_address_unique";--> statement-breakpoint
+CREATE UNIQUE INDEX "pilot_whitelist_requests_active_wallet_unique" ON "pilot_whitelist_requests" USING btree ("wallet_address") WHERE "pilot_whitelist_requests"."status" in ('pending', 'approved');

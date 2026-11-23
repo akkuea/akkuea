@@ -50,6 +50,25 @@ Object.defineProperty(globalThis, "MutationObserver", {
   writable: true,
 });
 
+for (const key of [
+  "Event",
+  "CustomEvent",
+  "UIEvent",
+  "MouseEvent",
+  "KeyboardEvent",
+  "FocusEvent",
+  "InputEvent",
+  "HTMLInputElement",
+  "HTMLTextAreaElement",
+  "HTMLSelectElement",
+  "HTMLButtonElement",
+] as const) {
+  Object.defineProperty(globalThis, key, {
+    value: dom.window[key],
+    writable: true,
+  });
+}
+
 Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
   writable: true,

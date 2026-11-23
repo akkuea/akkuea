@@ -253,6 +253,7 @@
       "hashing": "Calculando el hash localmente",
       "linkLabel": "Enlace de la evidencia",
       "linkHint": "Dónde puede un revisor obtener el estado para contrastarlo con el hash.",
+      "invalidLink": "El enlace de la evidencia debe ser una URL https:// válida.",
       "amountLabel": "Ingreso total (USDC)",
       "submit": "Enviar a revisión",
       "submitted": "Enviado. El operador ya puede revisar este ciclo.",
@@ -271,6 +272,7 @@
       "pausedNotice": "El contrato de pagos está pausado. Las acciones de revisión quedan deshabilitadas hasta que un administrador lo reanude.",
       "reported": "Reportó {amount}",
       "openStatement": "Abrir el estado para contrastarlo con el hash",
+      "invalidLink": "Enlace no válido (debe usar https://)",
       "reasonLabel": "Motivo",
       "reasonPlaceholder": "Obligatorio para rechazar, opcional para aprobar",
       "startReview": "Iniciar revisión",
@@ -411,94 +413,8 @@
       "unreachable": "No se pudo obtener el documento, así que no se verificó.",
       "fileFallback": "Si ya tienes el documento, calcula aquí el hash de tu propia copia para compararlo tú mismo.",
       "chooseFile": "Calcular el hash de un archivo descargado",
-      "failed": "No se pudo calcular el hash del documento."
-    },
-    "whitelist": {
-      "onboarding": {
-        "title": "Registro de inversionista",
-        "subtitle": "Solicitud de lista blanca del programa piloto",
-        "steps": {
-          "personal": {
-            "title": "Datos personales",
-            "description": "Tu nombre y tipo de documento"
-          },
-          "wallet": {
-            "title": "Conexión de billetera",
-            "description": "Conecta una dirección de Stellar"
-          },
-          "review": {
-            "title": "Revisión",
-            "description": "Envía tu solicitud"
-          }
-        },
-        "statusLoading": "Cargando el estado de tu lista blanca...",
-        "emptyTitle": "Sin solicitud de lista blanca",
-        "emptyDescription": "Todavía no has enviado una solicitud de lista blanca. Inicia tu solicitud para unirte al piloto.",
-        "startApplication": "Iniciar solicitud",
-        "pendingTitle": "Revisión pendiente",
-        "pendingDescription": "El operador está revisando tu solicitud de lista blanca. Vuelve a consultar más tarde.",
-        "approvedTitle": "¡Estás en la lista blanca!",
-        "approvedDescription": "Tu dirección fue aprobada para el piloto. Ya puedes participar en las ofertas.",
-        "rejectedTitle": "Solicitud rechazada",
-        "rejectedDescription": "Lamentablemente, tu solicitud de lista blanca fue rechazada.",
-        "rejectionReasonLabel": "Motivo:",
-        "reapply": "Volver a solicitar",
-        "fields": {
-          "fullName": "Nombre completo",
-          "fullNamePlaceholder": "Juan Pérez",
-          "idType": "Tipo de documento oficial",
-          "idTypes": {
-            "passport": "Pasaporte",
-            "national_id": "Documento nacional de identidad",
-            "drivers_license": "Licencia de conducir"
-          },
-          "idReference": "Número de referencia del documento",
-          "idReferencePlaceholder": "Número de documento"
-        },
-        "walletStepTitle": "Conecta tu billetera",
-        "walletStepDescription": "Conecta tu billetera de Stellar para asociarla a tu solicitud de lista blanca.",
-        "connectWallet": "Conectar billetera",
-        "summary": {
-          "name": "Nombre",
-          "idType": "Tipo de documento",
-          "idReference": "Ref. del documento",
-          "wallet": "Billetera",
-          "disclaimer": "Al enviar este formulario, confirmas que la información proporcionada es correcta y aceptas los términos y condiciones del piloto."
-        },
-        "back": "Atrás",
-        "continue": "Continuar",
-        "submit": "Enviar solicitud",
-        "submitFailed": "No se pudo enviar la solicitud de lista blanca"
-      },
-      "review": {
-        "pageTitle": "Cola de lista blanca del piloto",
-        "metadataTitle": "Revisión de lista blanca",
-        "loading": "Cargando solicitudes pendientes...",
-        "loadFailed": "No se pudo cargar la cola de la lista blanca",
-        "emptyTitle": "Sin solicitudes pendientes",
-        "emptyDescription": "No hay solicitudes de lista blanca esperando revisión en la cola.",
-        "pendingBadge": "Pendiente",
-        "fields": {
-          "wallet": "Billetera:",
-          "idType": "Tipo de documento:",
-          "idReference": "Ref. del documento:",
-          "submitted": "Enviada:",
-          "fullName": "Nombre completo",
-          "walletAddress": "Dirección de la billetera",
-          "idTypeModal": "Tipo de documento",
-          "idReferenceFull": "Número de referencia del documento"
-        },
-        "reviewAction": "Revisar",
-        "modalTitle": "Revisar solicitud de lista blanca",
-        "modalDescription": "Revisando la solicitud de {name}",
-        "rejectionReasonLabel": "Motivo del rechazo (opcional)",
-        "rejectionReasonPlaceholder": "Obligatorio para rechazar...",
-        "reasonRequired": "Se requiere un motivo para rechazar una solicitud.",
-        "approveFailed": "No se pudo aprobar la solicitud",
-        "rejectFailed": "No se pudo rechazar la solicitud",
-        "reject": "Rechazar solicitud",
-        "approve": "Aprobar y agregar a la lista blanca"
-      }
+      "failed": "No se pudo calcular el hash del documento.",
+      "invalidLink": "El enlace de la evidencia no es una URL https:// válida."
     }
   }
 }

@@ -107,6 +107,14 @@ When a sale settles:
 1. The full `price` in LAND is transferred from the buyer to the seller.
 2. Property ownership is transferred to the buyer.
 3. The listing for that property is removed.
+4. The property's rental checkpoint (`lastClaimedLedger`) is reset to the
+   current ledger.
+
+Rent is **reset on transfer**. Listing a property is an ownership change, so
+the seller forfeits unclaimed epochs and must claim before listing. Escrow
+time does not accrue rent for the seller or the buyer, and the buyer's rent
+starts at the ledger where the sale settles. The improvement level is
+preserved across listing, buying and cancelling.
 
 ---
 

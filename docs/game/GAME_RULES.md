@@ -83,6 +83,10 @@ Want to buy or sell properties from other players? The marketplace lets you trad
 3. Tap "Buy Now" and confirm
 4. The trade happens instantly-you get the property, the seller gets your LAND
 
+**Rent When You Trade**
+
+Rent is settled per owner, not per tile. When you list a property, its unclaimed rent is reset, so claim first if you want the LAND you have already earned. Time in escrow earns nothing for you or the buyer, and a buyer starts earning from the moment the sale settles. The property's improvement level always carries over to the new owner.
+
 **Why Trade?**
 
 - Upgrade a property, then sell it for profit if you improve it enough

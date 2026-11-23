@@ -323,12 +323,13 @@ pub struct PilotPayoutSplit;
 
 #[contractimpl]
 impl PilotPayoutSplit {
-    /// Initialize payout configuration, including the two required evidence approvers.
+    /// Initialize payout configuration atomically at deployment, including the
+    /// two required evidence approvers.
     ///
     /// `eurc_token` is the EURC asset contract offered as settlement alternative
     /// and `swap_router` the verified Soroswap AMM router used to convert USDC
     /// shares at payout time. Both are stored, never hardcoded.
-    pub fn initialize(
+    pub fn __constructor(
         env: Env,
         admin: Address,
         operator: Address,
@@ -341,9 +342,6 @@ impl PilotPayoutSplit {
         swap_router: Address,
     ) {
         extend_instance(&env);
-        if Storage::is_initialized(&env) {
-            panic_with_error!(&env, PayoutError::AlreadyInitialized);
-        }
 
         if operator == ally {
             panic_with_error!(&env, PayoutError::SignerCollision);
@@ -1747,9 +1745,8 @@ pub mod tests {
         let fee_recipient = Address::generate(&env);
         let whitelist_admin = Address::generate(&env);
 
-        let whitelist_id = env.register(PilotWhitelist, ());
+        let whitelist_id = env.register(PilotWhitelist, (&whitelist_admin,));
         let whitelist = PilotWhitelistClient::new(&env, &whitelist_id);
-        whitelist.initialize(&whitelist_admin);
 
         let mut holders = Vec::new(&env);
         let mut amounts = Vec::new(&env);
@@ -1760,15 +1757,17 @@ pub mod tests {
             amounts.push_back(*amount);
         }
 
-        let income_token_id = env.register(PilotIncomeToken, ());
-        let token = PilotIncomeTokenClient::new(&env, &income_token_id);
-        token.initialize(
-            &admin,
-            &whitelist_id,
-            &String::from_str(&env, "Akkuea Pilot Income"),
-            &String::from_str(&env, "AKIN"),
-            &7,
+        let income_token_id = env.register(
+            PilotIncomeToken,
+            (
+                &admin,
+                &whitelist_id,
+                &String::from_str(&env, "Akkuea Pilot Income"),
+                &String::from_str(&env, "AKIN"),
+                &7u32,
+            ),
         );
+        let token = PilotIncomeTokenClient::new(&env, &income_token_id);
 
         // `mint_fixed_supply` itself rejects an empty holder set
         // (`IncomeTokenError::EmptyHolderSet`), so skip it entirely for the
@@ -1791,19 +1790,21 @@ pub mod tests {
         let router = MockSoroswapRouterClient::new(&env, &router_id);
         router.initialize(&usdc_contract.address(), &eurc_contract.address());
 
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
-        payout.initialize(
-            &admin,
-            &operator,
-            &ally,
-            &fee_recipient,
-            &income_token_id,
-            &whitelist_id,
-            &usdc_contract.address(),
-            &eurc_contract.address(),
-            &router_id,
+        let payout_id = env.register(
+            PilotPayoutSplit,
+            (
+                &admin,
+                &operator,
+                &ally,
+                &fee_recipient,
+                &income_token_id,
+                &whitelist_id,
+                &usdc_contract.address(),
+                &eurc_contract.address(),
+                &router_id,
+            ),
         );
+        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
 
         usdc.mint(&payout_id, &100_000);
 
@@ -2159,16 +2160,19 @@ pub mod tests {
     }
 
     #[test]
-    fn eurc_swap_path_status_is_none_before_initialization() {
-        let env = Env::default();
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
-
-        assert_eq!(payout.eurc_swap_path_status(), None);
+    fn constructor_sets_admin_at_registration() {
+        let s = setup();
+        let stored_admin = s
+            .env
+            .as_contract(&s.payout_id, || Storage::address(&s.env, &DataKey::Admin));
+        assert_eq!(stored_admin, Some(s.admin.clone()));
+        s.payout.pause(&s.admin);
+        assert!(s.payout.is_paused());
     }
 
     #[test]
-    fn initialize_rejects_degenerate_swap_configuration() {
+    #[should_panic(expected = "Error(Contract, #20)")]
+    fn constructor_rejects_degenerate_swap_configuration() {
         let env = Env::default();
         let admin = Address::generate(&env);
         let operator = Address::generate(&env);
@@ -2177,27 +2181,22 @@ pub mod tests {
         let income_token = Address::generate(&env);
         let whitelist = Address::generate(&env);
         let usdc = Address::generate(&env);
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
+        let router = Address::generate(&env);
 
         // EURC equal to USDC leaves the swap path meaningless.
-        let res = payout.try_initialize(
-            &admin,
-            &operator,
-            &ally,
-            &fee_recipient,
-            &income_token,
-            &whitelist,
-            &usdc,
-            &usdc,
-            &Address::generate(&env),
-        );
-
-        assert_eq!(
-            res,
-            Err(Ok(Error::from_contract_error(
-                PayoutError::RouterNotConfigured as u32
-            )))
+        env.register(
+            PilotPayoutSplit,
+            (
+                &admin,
+                &operator,
+                &ally,
+                &fee_recipient,
+                &income_token,
+                &whitelist,
+                &usdc,
+                &usdc,
+                &router,
+            ),
         );
     }
 
@@ -2395,20 +2394,21 @@ pub mod tests {
         let usdc = Address::generate(&env);
         let eurc = Address::generate(&env);
         let router = Address::generate(&env);
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
-
-        payout.initialize(
-            &admin,
-            &operator,
-            &ally,
-            &fee_recipient,
-            &income_token,
-            &whitelist,
-            &usdc,
-            &eurc,
-            &router,
+        let payout_id = env.register(
+            PilotPayoutSplit,
+            (
+                &admin,
+                &operator,
+                &ally,
+                &fee_recipient,
+                &income_token,
+                &whitelist,
+                &usdc,
+                &eurc,
+                &router,
+            ),
         );
+        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
 
         let reason = String::from_str(&env, "ally ceased operations");
         env.mock_auths(&[MockAuth {
@@ -2684,20 +2684,21 @@ pub mod tests {
         let usdc = Address::generate(&env);
         let eurc = Address::generate(&env);
         let router = Address::generate(&env);
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
-
-        payout.initialize(
-            &admin,
-            &operator,
-            &ally,
-            &fee_recipient,
-            &income_token,
-            &whitelist,
-            &usdc,
-            &eurc,
-            &router,
+        let payout_id = env.register(
+            PilotPayoutSplit,
+            (
+                &admin,
+                &operator,
+                &ally,
+                &fee_recipient,
+                &income_token,
+                &whitelist,
+                &usdc,
+                &eurc,
+                &router,
+            ),
         );
+        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
 
         let cycle_id = cycle(&env, "2026-07");
         let hash = evidence_hash(&env);
@@ -2733,7 +2734,8 @@ pub mod tests {
     }
 
     #[test]
-    fn initialize_rejects_same_operator_and_ally() {
+    #[should_panic(expected = "Error(Contract, #17)")]
+    fn constructor_rejects_same_operator_and_ally() {
         let env = Env::default();
         let admin = Address::generate(&env);
         let signer = Address::generate(&env);
@@ -2741,26 +2743,22 @@ pub mod tests {
         let income_token = Address::generate(&env);
         let whitelist = Address::generate(&env);
         let usdc = Address::generate(&env);
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
+        let eurc = Address::generate(&env);
+        let router = Address::generate(&env);
 
-        let res = payout.try_initialize(
-            &admin,
-            &signer,
-            &signer,
-            &fee_recipient,
-            &income_token,
-            &whitelist,
-            &usdc,
-            &Address::generate(&env),
-            &Address::generate(&env),
-        );
-
-        assert_eq!(
-            res,
-            Err(Ok(Error::from_contract_error(
-                PayoutError::SignerCollision as u32
-            )))
+        env.register(
+            PilotPayoutSplit,
+            (
+                &admin,
+                &signer,
+                &signer,
+                &fee_recipient,
+                &income_token,
+                &whitelist,
+                &usdc,
+                &eurc,
+                &router,
+            ),
         );
     }
 

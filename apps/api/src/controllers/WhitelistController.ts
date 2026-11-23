@@ -23,9 +23,19 @@ interface RequestContext {
 /** Minimal context shape consumed by WhitelistController.review. */
 interface ReviewContext {
   params: { id: string };
+  headers?: Record<string, string | undefined>;
   body: {
-    action: 'approve' | 'reject';
+    action: 'approve' | 'reject' | 'revoke';
     reason?: string;
+  };
+}
+
+/** Minimal context shape consumed by WhitelistController.revoke. */
+interface RevokeContext {
+  params: { id: string };
+  headers?: Record<string, string | undefined>;
+  body: {
+    reason: string;
   };
 }
 
@@ -91,9 +101,12 @@ export class WhitelistController {
   static async review(ctx: ReviewContext) {
     const { id } = ctx.params;
     const { action, reason } = ctx.body;
+    const actor = ctx.headers?.['x-operator-wallet'];
 
     if (action === 'approve') {
-      const txHash = await whitelistService.approveRequest(id);
+      const txHash = actor
+        ? await whitelistService.approveRequest(id, actor)
+        : await whitelistService.approveRequest(id);
       return { success: true, txHash };
     }
 
@@ -101,11 +114,40 @@ export class WhitelistController {
       if (!reason) {
         throw new BadRequestError('Rejection reason is required');
       }
-      await whitelistService.rejectRequest(id, reason);
+      if (actor) {
+        await whitelistService.rejectRequest(id, reason, actor);
+      } else {
+        await whitelistService.rejectRequest(id, reason);
+      }
       return { success: true };
     }
 
+    if (action === 'revoke') {
+      if (!reason) {
+        throw new BadRequestError('Revocation reason is required');
+      }
+      const txHash = actor
+        ? await whitelistService.revokeRequest(id, reason, actor)
+        : await whitelistService.revokeRequest(id, reason);
+      return { success: true, txHash };
+    }
+
     throw new BadRequestError('Invalid action');
+  }
+
+  static async revoke(ctx: RevokeContext) {
+    const { id } = ctx.params;
+    const { reason } = ctx.body;
+    const actor = ctx.headers?.['x-operator-wallet'];
+
+    if (!reason || reason.trim().length === 0) {
+      throw new BadRequestError('Revocation reason is required');
+    }
+
+    const txHash = actor
+      ? await whitelistService.revokeRequest(id, reason, actor)
+      : await whitelistService.revokeRequest(id, reason);
+    return { success: true, txHash };
   }
 
   static async status(ctx: StatusContext) {

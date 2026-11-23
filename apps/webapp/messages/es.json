@@ -207,6 +207,94 @@
     "title": "Administrador"
   },
   "Pilot": {
+    "whitelist": {
+      "onboarding": {
+        "metadataTitle": "Solicitud de lista blanca",
+        "title": "Incorporación de inversores",
+        "subtitle": "Solicitud de lista blanca del programa piloto",
+        "statusLoading": "Cargando el estado de tu lista blanca...",
+        "emptyTitle": "Sin solicitud de lista blanca",
+        "emptyDescription": "Todavía no has enviado una solicitud de lista blanca. Inicia tu solicitud para unirte al piloto.",
+        "startApplication": "Iniciar solicitud",
+        "pendingTitle": "Revisión pendiente",
+        "pendingDescription": "Tu solicitud de lista blanca está siendo revisada por el operador. Vuelve a consultar más tarde.",
+        "approvedTitle": "¡Estás en la lista blanca!",
+        "approvedDescription": "Tu dirección ha sido aprobada para el piloto. Ya puedes participar en las ofertas.",
+        "rejectedTitle": "Solicitud rechazada",
+        "rejectedDescription": "Lamentablemente, tu solicitud de lista blanca fue rechazada.",
+        "rejectionReasonLabel": "Motivo:",
+        "reapply": "Volver a solicitar",
+        "submitFailed": "No se pudo enviar la solicitud de lista blanca",
+        "steps": {
+          "personal": {
+            "title": "Datos personales",
+            "description": "Tu nombre y tipo de documento"
+          },
+          "wallet": {
+            "title": "Conexión de billetera",
+            "description": "Conecta tu dirección de Stellar"
+          },
+          "review": {
+            "title": "Revisión",
+            "description": "Envía tu solicitud"
+          }
+        },
+        "fields": {
+          "fullName": "Nombre completo",
+          "fullNamePlaceholder": "Juan Pérez",
+          "idType": "Tipo de documento oficial",
+          "idReference": "Número de referencia del documento",
+          "idReferencePlaceholder": "Número de documento",
+          "idTypes": {
+            "passport": "Pasaporte",
+            "national_id": "Documento nacional de identidad",
+            "drivers_license": "Licencia de conducir"
+          }
+        },
+        "walletStepTitle": "Conecta tu billetera",
+        "walletStepDescription": "Conecta tu billetera de Stellar para asociarla con tu solicitud de lista blanca.",
+        "connectWallet": "Conectar billetera",
+        "summary": {
+          "name": "Nombre",
+          "idType": "Tipo de documento",
+          "idReference": "Referencia del documento",
+          "wallet": "Billetera",
+          "disclaimer": "Al enviar este formulario, confirmas que la información proporcionada es correcta y aceptas los términos y condiciones del piloto."
+        },
+        "back": "Atrás",
+        "continue": "Continuar",
+        "submit": "Enviar solicitud"
+      },
+      "review": {
+        "metadataTitle": "Revisión de lista blanca",
+        "pageTitle": "Cola de lista blanca del piloto",
+        "loading": "Cargando solicitudes pendientes...",
+        "loadFailed": "No se pudo cargar la cola de lista blanca",
+        "emptyTitle": "No hay solicitudes pendientes",
+        "emptyDescription": "No hay solicitudes de lista blanca esperando revisión en la cola.",
+        "pendingBadge": "Pendiente",
+        "reviewAction": "Revisar",
+        "modalTitle": "Revisar solicitud de lista blanca",
+        "modalDescription": "Revisando la solicitud de {name}",
+        "rejectionReasonLabel": "Motivo del rechazo (opcional)",
+        "rejectionReasonPlaceholder": "Obligatorio para rechazar...",
+        "reasonRequired": "Se requiere un motivo para rechazar una solicitud.",
+        "reject": "Rechazar solicitud",
+        "approve": "Aprobar y agregar a la lista blanca",
+        "rejectFailed": "No se pudo rechazar la solicitud",
+        "approveFailed": "No se pudo aprobar la solicitud",
+        "fields": {
+          "fullName": "Nombre completo",
+          "wallet": "Billetera:",
+          "walletAddress": "Dirección de billetera",
+          "idType": "Tipo de documento:",
+          "idTypeModal": "Tipo de documento",
+          "idReference": "Referencia del documento:",
+          "idReferenceFull": "Número de referencia del documento",
+          "submitted": "Enviada:"
+        }
+      }
+    },
     "ally": {
       "pageTitle": "Reportar evidencia de ingresos",
       "pageSubtitle": "Envía el estado de ingresos de este ciclo y sigue su revisión. El archivo permanece en tu dispositivo: solo su hash llega a la cadena."

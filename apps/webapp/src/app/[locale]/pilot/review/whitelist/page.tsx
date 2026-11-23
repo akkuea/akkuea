@@ -1,5 +1,4 @@
 import { getTranslations } from "next-intl/server";
-import { useTranslations } from "next-intl";
 import { GridBackground } from "@/components/landing";
 import { ErrorBoundary } from "@/components/ui";
 import { WhitelistReviewQueue } from "@/components/pilot/WhitelistReviewQueue";
@@ -10,15 +9,18 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "Pilot" });
+  const t = await getTranslations({
+    locale,
+    namespace: "Pilot.whitelist.review",
+  });
   const tAdmin = await getTranslations({ locale, namespace: "PilotAdmin" });
   return {
-    title: `${t("whitelist.review.metadataTitle")} | ${tAdmin("title")}`,
+    title: `${t("metadataTitle")} | ${tAdmin("title")}`,
   };
 }
 
-export default function PilotReviewWhitelistPage() {
-  const t = useTranslations("Pilot.whitelist.review");
+export default async function PilotReviewWhitelistPage() {
+  const t = await getTranslations("Pilot.whitelist.review");
 
   return (
     <div className="noise-bg w-full h-full min-h-screen relative py-20 px-[4%]">

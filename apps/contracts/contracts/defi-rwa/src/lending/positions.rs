@@ -241,40 +241,21 @@ impl PositionStorage {
             .checked_sub(repaid_amount)
             .ok_or(ContractError::BalanceOverflow)?;
 
-        let collateral_released = if remaining_debt == 0 {
-            position.collateral_amount
-        } else {
-            position
-                .collateral_amount
-                .checked_mul(repaid_amount)
-                .and_then(|value| value.checked_div(current_debt))
-                .ok_or(ContractError::BalanceOverflow)?
-        };
-
         if remaining_debt == 0 {
-            return Ok((None, repaid_amount, 0, collateral_released));
+            return Ok((None, repaid_amount, 0, position.collateral_amount));
         }
 
-        let collateral_amount = position
-            .collateral_amount
-            .checked_sub(collateral_released)
-            .ok_or(ContractError::BalanceOverflow)?;
         let updated_position = BorrowPosition {
             pool_id: position.pool_id.clone(),
             borrower: position.borrower.clone(),
             principal: remaining_debt,
             index_at_borrow: InterestStorage::get_interest_index(env, &position.pool_id),
-            collateral_amount,
+            collateral_amount: position.collateral_amount,
             collateral_asset: position.collateral_asset.clone(),
             borrowed_at: position.borrowed_at,
         };
 
-        Ok((
-            Some(updated_position),
-            repaid_amount,
-            remaining_debt,
-            collateral_released,
-        ))
+        Ok((Some(updated_position), repaid_amount, remaining_debt, 0))
     }
 
     /// Get user's borrow pool IDs

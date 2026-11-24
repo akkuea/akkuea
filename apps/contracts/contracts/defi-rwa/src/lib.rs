@@ -626,7 +626,8 @@ impl PropertyTokenContract {
             .unwrap_or(0)
             .checked_add(collateral_amount)
             .ok_or(ContractError::BalanceOverflow)?;
-        let collateral_price = PriceOracle::get_price(&env, &collateral_asset);
+        let collateral_price = PriceOracle::try_record_price(&env, &collateral_asset)
+            .unwrap_or_else(|error| panic_with_error!(&env, error));
         let collateral_value = collateral_price
             .checked_mul(combined_collateral)
             .and_then(|value| value.checked_div(PRECISION))
@@ -756,7 +757,8 @@ impl PropertyTokenContract {
         };
 
         // Check health factor – position must be underwater
-        let collateral_price = PriceOracle::get_price(&env, &position.collateral_asset);
+        let collateral_price = PriceOracle::try_record_price(&env, &position.collateral_asset)
+            .unwrap_or_else(|error| panic_with_error!(&env, error));
         let collateral_value = collateral_price
             .checked_mul(position.collateral_amount)
             .and_then(|value| value.checked_div(PRECISION))
@@ -1036,7 +1038,12 @@ impl PropertyTokenContract {
     pub fn set_oracle(env: Env, oracle_address: Address, caller: Address) {
         caller.require_auth();
         AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
+        let old = PriceOracle::get_oracle_address(&env).ok();
         PriceOracle::set_oracle_address(&env, &oracle_address);
+        env.events().publish(
+            (soroban_sdk::symbol_short!("oracle"),),
+            (old, oracle_address),
+        );
     }
 
     /// Configure oracle guardrail parameters.
@@ -1046,10 +1053,37 @@ impl PropertyTokenContract {
     pub fn set_oracle_config(env: Env, caller: Address, max_age: u64, min_price: i128) {
         caller.require_auth();
         AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
-        if max_age > 0 {
-            PriceOracle::set_max_age(&env, max_age);
-        }
+        let old = Self::get_oracle_config(env.clone());
+        let max_age = if max_age == 0 {
+            lending::DEFAULT_MAX_AGE
+        } else {
+            max_age
+        };
+        PriceOracle::set_max_age(&env, max_age);
         PriceOracle::set_min_price(&env, min_price);
+        env.events().publish(
+            (soroban_sdk::symbol_short!("or_cfg"),),
+            (old, (max_age, min_price)),
+        );
+    }
+
+    pub fn set_asset_oracle_guard(
+        env: Env,
+        caller: Address,
+        asset: Address,
+        config: OracleGuardConfig,
+    ) -> Result<(), ContractError> {
+        caller.require_auth();
+        AdminControl::require_admin(&env, &caller)?;
+        PriceOracle::set_asset_guard(&env, &asset, &config)
+    }
+
+    pub fn get_asset_oracle_guard(env: Env, asset: Address) -> Option<OracleGuardConfig> {
+        PriceOracle::get_asset_guard(&env, &asset)
+    }
+
+    pub fn get_last_oracle_price(env: Env, asset: Address) -> Option<OraclePriceSnapshot> {
+        PriceOracle::get_last_oracle_price(&env, &asset)
     }
 
     // ─── Query Views ────────────────────────────
@@ -1115,10 +1149,17 @@ impl PropertyTokenContract {
         user: Address,
         pool_id: String,
     ) -> Result<i128, ContractError> {
-        let position =
-            PositionStorage::get_borrow(&env, &user, &pool_id).expect("borrow position not found");
-        let pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
-        let collateral_price = PriceOracle::get_price(&env, &position.collateral_asset);
+        let position: BorrowPosition = env
+            .storage()
+            .persistent()
+            .get(&LendingKey::BorrowPosition(user, pool_id.clone()))
+            .expect("borrow position not found");
+        let pool: LendingPool = env
+            .storage()
+            .persistent()
+            .get(&LendingKey::Pool(pool_id))
+            .expect("pool not found");
+        let collateral_price = PriceOracle::try_get_price(&env, &position.collateral_asset)?;
         let collateral_value = collateral_price
             .checked_mul(position.collateral_amount)
             .and_then(|value| value.checked_div(PRECISION))

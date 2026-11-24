@@ -5,30 +5,41 @@ function mapCreateWalletError(error: unknown): {
   message: string;
   status: number;
 } {
-  const message =
+  const rawMessage =
     error instanceof Error ? error.message : "Failed to create wallet";
 
-  if (message.includes("not configured")) {
-    return { message, status: 500 };
+  console.error("[privy/create-wallet] Error:", rawMessage);
+
+  if (rawMessage.includes("not configured")) {
+    return {
+      message: "Privy credentials not configured on the server.",
+      status: 500,
+    };
   }
 
   if (
-    message.includes("Missing Privy access token") ||
-    message.includes("JWS") ||
-    message.includes("auth token")
+    rawMessage.includes("Missing Privy access token") ||
+    rawMessage.includes("JWS") ||
+    rawMessage.includes("auth token")
   ) {
-    return { message, status: 401 };
+    return { message: "Invalid or missing access token.", status: 401 };
   }
 
-  if (message.includes("Privy server credentials are invalid")) {
-    return { message, status: 500 };
+  if (rawMessage.includes("Privy server credentials are invalid")) {
+    return {
+      message: "Privy server credentials are invalid.",
+      status: 500,
+    };
   }
 
-  if (message.includes("Stellar embedded wallets are not enabled")) {
-    return { message, status: 403 };
+  if (rawMessage.includes("Stellar embedded wallets are not enabled")) {
+    return {
+      message: "Stellar embedded wallets are not enabled for this Privy app.",
+      status: 403,
+    };
   }
 
-  return { message, status: 502 };
+  return { message: "Failed to create wallet.", status: 502 };
 }
 
 /**

@@ -2,16 +2,15 @@
 //!
 //! These complement the existing in-crate `tests` module by covering paths it
 //! did not exercise:
-//! - `GameEngine::initialize` rejecting a second call with
-//!   `EngineError::AlreadyInitialized` (the one public entry point whose error
-//!   path had no coverage).
+//! - `GameEngine::__constructor` storing NFT, token, and treasury addresses
+//!   atomically at contract registration.
 //! - Direct branch coverage for the pure `calculate_accrued_income` helper: the
 //!   early return when no time has passed, a sub-epoch elapse, the vacant
 //!   multiplier, an unknown level (which defaults to vacant), and monotonic
 //!   growth of income across improvement levels.
 
 use crate::constants::*;
-use crate::{calculate_accrued_income, EngineError, GameEngine, GameEngineClient};
+use crate::{calculate_accrued_income, GameEngine, StorageKey};
 use soroban_sdk::{testutils::Address as _, Address, Env};
 
 // ---------------- Pure helper: calculate_accrued_income ----------------
@@ -60,23 +59,36 @@ fn accrued_income_grows_with_improvement_level() {
     assert!(skyscraper >= commercial);
 }
 
-// ---------------- Contract: initialize error path ----------------
+// ---------------- Contract: constructor wiring ----------------
 
 #[test]
-fn double_initialize_fails_with_already_initialized() {
+fn constructor_stores_config_at_registration() {
     let env = Env::default();
 
     let nft = Address::generate(&env);
     let token = Address::generate(&env);
     let treasury = Address::generate(&env);
 
-    let engine_id = env.register(GameEngine, ());
-    let engine_client = GameEngineClient::new(&env, &engine_id);
+    let engine_id = env.register(GameEngine, (&nft, &token, &treasury));
 
-    // First initialization succeeds.
-    engine_client.initialize(&nft, &token, &treasury);
-
-    // A second initialization must fail with AlreadyInitialized.
-    let res = engine_client.try_initialize(&nft, &token, &treasury);
-    assert_eq!(res, Err(Ok(EngineError::AlreadyInitialized.into())));
+    env.as_contract(&engine_id, || {
+        assert_eq!(
+            env.storage()
+                .instance()
+                .get::<StorageKey, Address>(&StorageKey::NftContract),
+            Some(nft.clone())
+        );
+        assert_eq!(
+            env.storage()
+                .instance()
+                .get::<StorageKey, Address>(&StorageKey::TokenContract),
+            Some(token.clone())
+        );
+        assert_eq!(
+            env.storage()
+                .instance()
+                .get::<StorageKey, Address>(&StorageKey::Treasury),
+            Some(treasury.clone())
+        );
+    });
 }

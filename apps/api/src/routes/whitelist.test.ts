@@ -82,6 +82,7 @@ describe('Whitelist API Routes', () => {
     // The happy path for approve calls the on-chain service; stub only that
     // out so the real WhitelistService database logic still runs.
     spyOn(stellarService, 'submitWhitelistApprove').mockResolvedValue('mock_tx_hash');
+    spyOn(stellarService, 'submitWhitelistRevoke').mockResolvedValue('mock_revoke_tx_hash');
 
     // Mock db queries
     (db as unknown as Record<string, unknown>).query = {
@@ -112,10 +113,18 @@ describe('Whitelist API Routes', () => {
 
     (db as unknown as Record<string, unknown>).update = mock(() => ({
       set: (val: Partial<StoredRequest>) => ({
-        where: async (whereExpr: unknown) => {
+        where: (whereExpr: unknown) => {
+          const updated: StoredRequest[] = [];
           for (const row of mockDbStore) {
-            if (matchesWhere(row, whereExpr)) Object.assign(row, val);
+            if (matchesWhere(row, whereExpr)) {
+              Object.assign(row, val);
+              updated.push(row);
+            }
           }
+          return {
+            returning: async () => updated,
+            then: (resolve: (arg: unknown) => void) => resolve(updated),
+          };
         },
       }),
     }));
@@ -436,5 +445,157 @@ describe('Whitelist API Routes', () => {
     expect(response.status).toBe(400);
     const result = (await response.json()) as ErrorBody;
     expect(result.success).toBe(false);
+  });
+
+  it('should revoke a request via /review with action=revoke', async () => {
+    const wallet = newWallet();
+    mockDbStore.push({ id: 'approved_req_1', walletAddress: wallet, status: 'approved' });
+
+    const response = await review('approved_req_1', {
+      action: 'revoke',
+      reason: 'Sanctions violation',
+    });
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as { success: boolean; txHash: string };
+    expect(result.success).toBe(true);
+    expect(result.txHash).toBe('mock_revoke_tx_hash');
+    expect(stellarService.submitWhitelistRevoke).toHaveBeenCalledWith(
+      process.env.WHITELIST_CONTRACT_ID as string,
+      adminKeypair.publicKey(),
+      adminKeypair.secret(),
+      wallet,
+    );
+    expect(mockDbStore[0]?.status).toBe('revoked');
+    expect(mockDbStore[0]?.rejectionReason).toBe('Sanctions violation');
+  });
+
+  it('should revoke a request via dedicated POST /:id/revoke', async () => {
+    const wallet = newWallet();
+    mockDbStore.push({ id: 'approved_req_2', walletAddress: wallet, status: 'approved' });
+
+    const response = await testApp.handle(
+      new Request('http://localhost/internal/operations/pilot/whitelist/approved_req_2/revoke', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-api-key': 'test-secret',
+          'x-operator-wallet': 'GBU54MOHX7J3F2C2X4R56Y7PZZY4QJ6GZ46X34PXZY2C46Y7PZZY4QJ6',
+        },
+        body: JSON.stringify({ reason: 'Compliance audit failed' }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as { success: boolean; txHash: string };
+    expect(result.success).toBe(true);
+    expect(result.txHash).toBe('mock_revoke_tx_hash');
+    expect(mockDbStore[0]?.status).toBe('revoked');
+    expect(mockDbStore[0]?.rejectionReason).toBe('Compliance audit failed');
+  });
+
+  it('allows resubmission after revocation without deleting the revoked record', async () => {
+    const revokeWallet = newWallet();
+    mockDbStore.push({
+      id: 'old_revoked_id',
+      walletAddress: revokeWallet,
+      status: 'revoked',
+      rejectionReason: 'Sanctions list match',
+      fullName: 'Old Revoked Submission',
+      idType: 'passport',
+      idReference: 'REVOKED123',
+    });
+
+    const response = await postRequest(validRequest(revokeWallet, 'New Submission After Revoke'));
+
+    expect(response.status).toBe(200);
+    const result = (await response.json()) as { success: boolean; data: StoredRequest };
+    expect(result.success).toBe(true);
+    expect(result.data.status).toBe('pending');
+    expect(result.data.fullName).toBe('New Submission After Revoke');
+
+    // Both the new pending request and the historical revoked row exist
+    const requestsForWallet = mockDbStore.filter((r) => r.walletAddress === revokeWallet);
+    expect(requestsForWallet.length).toBe(2);
+    const revoked = requestsForWallet.find((r) => r.id === 'old_revoked_id');
+    expect(revoked).toBeDefined();
+    expect(revoked?.status).toBe('revoked');
+  });
+
+  describe('Revocation 4xx error cases', () => {
+    const errorCases = [
+      { status: 'pending', label: 'pending request' },
+      { status: 'rejected', label: 'rejected request' },
+      { status: 'revoked', label: 'already revoked request' },
+    ];
+
+    for (const { status, label } of errorCases) {
+      it(`POST /:id/revoke returns 4xx for a ${label}`, async () => {
+        const wallet = newWallet();
+        mockDbStore.push({ id: `req_${status}_1`, walletAddress: wallet, status });
+
+        const response = await testApp.handle(
+          new Request(
+            `http://localhost/internal/operations/pilot/whitelist/req_${status}_1/revoke`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-internal-api-key': 'test-secret',
+              },
+              body: JSON.stringify({ reason: 'Compliance issue' }),
+            },
+          ),
+        );
+
+        expect(response.status).toBe(400);
+        const result = (await response.json()) as ErrorBody;
+        expect(result.success).toBe(false);
+      });
+
+      it(`POST /:id/review with action=revoke returns 4xx for a ${label}`, async () => {
+        const wallet = newWallet();
+        mockDbStore.push({ id: `req_${status}_review`, walletAddress: wallet, status });
+
+        const response = await review(`req_${status}_review`, {
+          action: 'revoke',
+          reason: 'Compliance issue',
+        });
+
+        expect(response.status).toBe(400);
+        const result = (await response.json()) as ErrorBody;
+        expect(result.success).toBe(false);
+      });
+    }
+
+    it('POST /:id/revoke returns 404 for a missing request', async () => {
+      const response = await testApp.handle(
+        new Request('http://localhost/internal/operations/pilot/whitelist/nonexistent_id/revoke', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-internal-api-key': 'test-secret',
+          },
+          body: JSON.stringify({ reason: 'Compliance issue' }),
+        }),
+      );
+
+      expect(response.status).toBe(404);
+      const result = (await response.json()) as ErrorBody;
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('NOT_FOUND');
+    });
+
+    it('POST /:id/review with action=revoke returns 404 for a missing request', async () => {
+      const response = await review('nonexistent_id', {
+        action: 'revoke',
+        reason: 'Compliance issue',
+      });
+
+      expect(response.status).toBe(404);
+      const result = (await response.json()) as ErrorBody;
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('NOT_FOUND');
+    });
   });
 });

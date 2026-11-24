@@ -132,13 +132,7 @@ pub fn get_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Add
 ///
 /// Extends the persistent TTL on every non-zero write (#1411).
 #[allow(dead_code)]
-pub fn set_allowance(
-    env: &Env,
-    property_id: u64,
-    owner: &Address,
-    spender: &Address,
-    amount: u64,
-) {
+pub fn set_allowance(env: &Env, property_id: u64, owner: &Address, spender: &Address, amount: u64) {
     let key = StorageKey::Allowance(property_id, owner.clone(), spender.clone());
     if amount == 0 {
         env.storage().persistent().remove(&key);

@@ -1,0 +1,80 @@
+name: Land - Quality and Security CI
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "apps/akkuea-land/**"
+      - "apps/shared/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/land-ci.yml"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "apps/akkuea-land/**"
+      - "apps/shared/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/land-ci.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build-and-test:
+    name: Build and Test Land
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: package.json
+
+      - name: Cache node modules
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-v2-${{ hashFiles('**/bun.lock') }}
+
+      - name: Install dependencies
+        run: |
+          bun install --frozen-lockfile
+
+      - name: Build shared library (required for land type checking)
+        run: |
+          cd apps/shared
+          bun run build
+
+      - name: Type checking
+        run: |
+          cd apps/akkuea-land
+          bun run type-check
+
+      - name: ESLint checking
+        run: |
+          cd apps/akkuea-land
+          bun run lint
+
+      - name: Format checking with Prettier
+        run: |
+          cd apps/akkuea-land
+          bunx prettier --check "src/**/*.{ts,tsx}"
+
+      - name: Run unit tests
+        run: |
+          cd apps/akkuea-land
+          # Plain `bun test`: the three failing tests were fixed at their
+          # root causes (see #1414), so no --isolate masking is needed here.
+          bun test
+
+      - name: Build application
+        run: |
+          cd apps/akkuea-land
+          bun run build

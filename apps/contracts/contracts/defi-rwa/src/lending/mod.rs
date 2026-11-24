@@ -13,6 +13,6 @@ mod valuation;
 pub use interest::{InterestRateModel, InterestStorage, PRECISION, SECONDS_PER_YEAR};
 pub use keys::{lending_bump, LendingKey, OraclePriceSnapshot};
 pub use oracle::PriceOracle;
-pub use pool::{LendingPool, PoolStorage};
+pub use pool::{LendingPool, PoolStorage, DEFAULT_MIN_POSITION_DEBT};
 pub use positions::{BorrowPosition, DepositPosition, PositionStorage};
 pub use valuation::{Rounding, Valuation};

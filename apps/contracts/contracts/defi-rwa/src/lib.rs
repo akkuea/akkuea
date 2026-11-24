@@ -16,7 +16,10 @@ mod storage;
 
 // Public re-exports for consumers and tests
 pub use lending::{
-    events::{DepositEvent, PoolCreatedEvent, ReservesWithdrawnEvent, WithdrawEvent},
+    events::{
+        BadDebtWrittenOffEvent, DepositEvent, PoolCreatedEvent, ReservesWithdrawnEvent,
+        WithdrawEvent,
+    },
     lending_bump, BorrowPosition, DepositPosition, InterestRateModel, InterestStorage, LendingKey,
     LendingPool, OraclePriceSnapshot, PoolStorage, PositionStorage, PRECISION, SECONDS_PER_YEAR,
 };
@@ -231,6 +234,64 @@ fn value_position(
         pool_decimals,
         debt_value: Valuation::value_at_price(pool_price, pool_decimals, debt, Rounding::Up)?,
     })
+}
+
+/// Write off debt that no collateral backs any more.
+///
+/// The pool reserves absorb the loss first. Whatever they cannot cover lowers
+/// `total_deposits` and scales the supply index down by the same ratio, so every
+/// depositor's claim shrinks in proportion instead of the shortfall landing on
+/// whoever withdraws last. The caller removes the debt from `total_borrows`.
+fn write_off_bad_debt(
+    env: &Env,
+    pool_id: &String,
+    borrower: &Address,
+    amount: i128,
+) -> Result<(), ContractError> {
+    let reserves = PoolStorage::get_reserves(env, pool_id);
+    let covered_by_reserves = amount.min(reserves);
+    PoolStorage::set_reserves(
+        env,
+        pool_id,
+        reserves
+            .checked_sub(covered_by_reserves)
+            .ok_or(ContractError::BalanceOverflow)?,
+    );
+
+    let shortfall = amount
+        .checked_sub(covered_by_reserves)
+        .ok_or(ContractError::BalanceOverflow)?;
+    let total_deposits = PoolStorage::get_total_deposits(env, pool_id);
+    let socialized = shortfall.min(total_deposits);
+    if socialized > 0 {
+        let remaining_deposits = total_deposits
+            .checked_sub(socialized)
+            .ok_or(ContractError::BalanceOverflow)?;
+        // The ratio is rounded down so the sum of depositor claims never
+        // exceeds the reduced total_deposits.
+        let ratio = remaining_deposits
+            .checked_mul(PRECISION)
+            .and_then(|value| value.checked_div(total_deposits))
+            .ok_or(ContractError::BalanceOverflow)?;
+        let supply_index = InterestStorage::get_supply_index(env, pool_id);
+        let new_supply_index = supply_index
+            .checked_mul(ratio)
+            .and_then(|value| value.checked_div(PRECISION))
+            .ok_or(ContractError::BalanceOverflow)?
+            .max(1);
+        InterestStorage::set_supply_index(env, pool_id, new_supply_index);
+        PoolStorage::set_total_deposits(env, pool_id, remaining_deposits);
+    }
+
+    lending_events::emit_bad_debt_written_off(
+        env,
+        pool_id,
+        borrower,
+        amount,
+        covered_by_reserves,
+        socialized,
+    );
+    Ok(())
 }
 
 // ───────────────────────────────────────────────
@@ -788,15 +849,29 @@ impl PropertyTokenContract {
     /// of the borrower's debt and receives the equivalent collateral value plus a
     /// liquidation penalty (bonus).
     ///
+    /// * The close factor caps the debt repaid per call, unless the debt left
+    ///   after that cap would fall below the pool's minimum position debt, in
+    ///   which case the whole position can be closed.
+    /// * When the collateral cannot cover the repaid debt plus penalty, all of it
+    ///   is seized and `debt_to_cover` is lowered to what that collateral pays
+    ///   for, so the liquidator never pays more than the value received.
+    /// * When no collateral is left and debt remains, that debt is written off:
+    ///   reserves absorb it first and depositors share the rest through the
+    ///   supply index. The position is closed in the same call.
+    ///
     /// # Arguments
-    /// * `liquidator`       – Address of the account performing the liquidation.
-    /// * `pool_id`          – The lending pool identifier.
-    /// * `borrower_address` – Address of the underwater borrower.
-    /// * `debt_to_cover`    – Amount of debt the liquidator wants to repay
+    /// * `liquidator`       - Address of the account performing the liquidation.
+    /// * `pool_id`          - The lending pool identifier.
+    /// * `borrower_address` - Address of the underwater borrower.
+    /// * `debt_to_cover`    - Amount of debt the liquidator wants to repay
     ///                        (capped at the borrower's current debt).
     ///
     /// # Returns
     /// The resulting (possibly zeroed-out) borrow position.
+    ///
+    /// # Errors
+    /// `ContractError::LiquidationAmountZero` when the call would repay no debt
+    /// or seize no collateral.
     pub fn liquidate(
         env: Env,
         liquidator: Address,
@@ -822,22 +897,24 @@ impl PropertyTokenContract {
             .expect("borrow position not found");
 
         let current_debt = PositionStorage::calculate_current_debt(&env, &position)?;
-        let debt_to_cover = if debt_to_cover > current_debt {
-            current_debt
-        } else {
-            debt_to_cover
-        };
+        let debt_to_cover = debt_to_cover.min(current_debt);
 
-        // Enforce close factor - cap % of debt liquidatable per tx
+        // Enforce close factor - cap % of debt liquidatable per tx, unless the
+        // debt it would leave behind is dust that could never be closed.
         let max_liquidatable = current_debt
             .checked_mul(pool.close_factor)
             .and_then(|value| value.checked_div(PRECISION))
             .ok_or(ContractError::BalanceOverflow)?;
-        let debt_to_cover = if debt_to_cover > max_liquidatable {
-            max_liquidatable
+        let debt_left_at_cap = current_debt
+            .checked_sub(max_liquidatable)
+            .ok_or(ContractError::BalanceOverflow)?;
+        let min_position_debt = PoolStorage::get_min_position_debt(&env, &pool_id);
+        let liquidation_cap = if max_liquidatable == 0 || debt_left_at_cap < min_position_debt {
+            current_debt
         } else {
-            debt_to_cover
+            max_liquidatable
         };
+        let debt_to_cover = debt_to_cover.min(liquidation_cap);
 
         // Check health factor – position must be underwater
         let valuation = value_position(
@@ -884,18 +961,57 @@ impl PropertyTokenContract {
             valuation.collateral_decimals,
             collateral_seize_value,
         )?;
-        let collateral_to_seize = if collateral_to_seize > position.collateral_amount {
-            position.collateral_amount
-        } else {
-            collateral_to_seize
-        };
 
+        // When the collateral cannot pay for the requested debt plus penalty,
+        // seize all of it and lower the debt covered to what it pays for,
+        // rounded down so the liquidator never pays more than it receives.
+        let (debt_to_cover, penalty, collateral_to_seize) =
+            if collateral_to_seize > position.collateral_amount {
+                let penalty_factor = PRECISION
+                    .checked_add(pool.liquidation_penalty)
+                    .ok_or(ContractError::BalanceOverflow)?;
+                let payable_value = Valuation::mul_div(
+                    valuation.collateral_value,
+                    PRECISION,
+                    penalty_factor,
+                    Rounding::Down,
+                )?;
+                let reduced_debt = Valuation::amount_for_value(
+                    valuation.pool_price,
+                    valuation.pool_decimals,
+                    payable_value,
+                )?
+                .min(debt_to_cover);
+                let reduced_penalty = reduced_debt
+                    .checked_mul(pool.liquidation_penalty)
+                    .and_then(|value| value.checked_div(PRECISION))
+                    .ok_or(ContractError::BalanceOverflow)?;
+                (reduced_debt, reduced_penalty, position.collateral_amount)
+            } else {
+                (debt_to_cover, penalty, collateral_to_seize)
+            };
+
+        if debt_to_cover <= 0 || collateral_to_seize <= 0 {
+            return Err(ContractError::LiquidationAmountZero);
+        }
+
+        let collateral_left = position
+            .collateral_amount
+            .checked_sub(collateral_to_seize)
+            .ok_or(ContractError::BalanceOverflow)?;
         let remaining_debt = current_debt
             .checked_sub(debt_to_cover)
             .ok_or(ContractError::BalanceOverflow)?;
+        // Debt that no collateral backs any more is written off in this call.
+        let bad_debt = if collateral_left == 0 {
+            remaining_debt
+        } else {
+            0
+        };
+        let closes_position = remaining_debt == 0 || bad_debt > 0;
 
-        // ── EFFECTS phase (CEI) – update state before token transfers ──
-        if remaining_debt == 0 {
+        // ── EFFECTS phase (CEI) - update state before token transfers ──
+        if closes_position {
             PositionStorage::remove_borrow(&env, &borrower_address, &pool_id);
         } else {
             let current_index = InterestStorage::get_interest_index(&env, &pool_id);
@@ -904,27 +1020,31 @@ impl PropertyTokenContract {
                 borrower: borrower_address.clone(),
                 principal: remaining_debt,
                 index_at_borrow: current_index,
-                collateral_amount: position
-                    .collateral_amount
-                    .checked_sub(collateral_to_seize)
-                    .ok_or(ContractError::BalanceOverflow)?,
+                collateral_amount: collateral_left,
                 collateral_asset: position.collateral_asset.clone(),
                 borrowed_at: position.borrowed_at,
             };
             PositionStorage::set_borrow(&env, &updated_position);
         }
 
+        let debt_removed = debt_to_cover
+            .checked_add(bad_debt)
+            .ok_or(ContractError::BalanceOverflow)?;
         let total_borrows = PoolStorage::get_total_borrows(&env, &pool_id);
-        let updated_total_borrows = if debt_to_cover > total_borrows {
+        let updated_total_borrows = if debt_removed > total_borrows {
             0
         } else {
             total_borrows
-                .checked_sub(debt_to_cover)
+                .checked_sub(debt_removed)
                 .ok_or(ContractError::BalanceOverflow)?
         };
         PoolStorage::set_total_borrows(&env, &pool_id, updated_total_borrows);
 
-        // ── INTERACTIONS phase – token transfers ──
+        if bad_debt > 0 {
+            write_off_bad_debt(&env, &pool_id, &borrower_address, bad_debt)?;
+        }
+
+        // ── INTERACTIONS phase - token transfers ──
         let pool_token = token::Client::new(&env, &pool.asset_address);
         pool_token.transfer(&liquidator, &env.current_contract_address(), &debt_to_cover);
 
@@ -936,12 +1056,12 @@ impl PropertyTokenContract {
         );
 
         // Return any excess collateral to the borrower on full close
-        let excess = position
-            .collateral_amount
-            .checked_sub(collateral_to_seize)
-            .ok_or(ContractError::BalanceOverflow)?;
-        if remaining_debt == 0 && excess > 0 {
-            collateral_token.transfer(&env.current_contract_address(), &borrower_address, &excess);
+        if remaining_debt == 0 && collateral_left > 0 {
+            collateral_token.transfer(
+                &env.current_contract_address(),
+                &borrower_address,
+                &collateral_left,
+            );
         }
 
         // Emit event
@@ -955,26 +1075,24 @@ impl PropertyTokenContract {
             penalty,
         );
 
-        Ok(if remaining_debt == 0 {
+        let current_index = InterestStorage::get_interest_index(&env, &pool_id);
+        Ok(if closes_position {
             BorrowPosition {
-                pool_id: pool_id.clone(),
+                pool_id,
                 borrower: borrower_address,
                 principal: 0,
-                index_at_borrow: InterestStorage::get_interest_index(&env, &pool_id),
+                index_at_borrow: current_index,
                 collateral_amount: 0,
                 collateral_asset: position.collateral_asset,
                 borrowed_at: position.borrowed_at,
             }
         } else {
             BorrowPosition {
-                pool_id: pool_id.clone(),
+                pool_id,
                 borrower: borrower_address,
                 principal: remaining_debt,
-                index_at_borrow: InterestStorage::get_interest_index(&env, &pool_id),
-                collateral_amount: position
-                    .collateral_amount
-                    .checked_sub(collateral_to_seize)
-                    .ok_or(ContractError::BalanceOverflow)?,
+                index_at_borrow: current_index,
+                collateral_amount: collateral_left,
                 collateral_asset: position.collateral_asset,
                 borrowed_at: position.borrowed_at,
             }
@@ -1085,6 +1203,38 @@ impl PropertyTokenContract {
             old,
             new_close_factor,
         );
+    }
+
+    /// Configure the debt, in pool asset base units, below which a liquidation
+    /// may close the whole position regardless of the close factor.
+    ///
+    /// * `caller`            - Must be the contract admin.
+    /// * `min_position_debt` - Zero or a positive amount.
+    pub fn set_min_position_debt(
+        env: Env,
+        caller: Address,
+        pool_id: String,
+        min_position_debt: i128,
+    ) {
+        require_admin(&env, &caller);
+        if min_position_debt < 0 {
+            panic!("min position debt cannot be negative");
+        }
+        PoolStorage::get(&env, &pool_id).expect("pool not found");
+        let old = PoolStorage::get_min_position_debt(&env, &pool_id);
+        PoolStorage::set_min_position_debt(&env, &pool_id, min_position_debt);
+        LendingEvents::pool_updated(
+            &env,
+            pool_id,
+            String::from_str(&env, "min_position_debt"),
+            old,
+            min_position_debt,
+        );
+    }
+
+    /// Return the debt below which a liquidation may close the whole position.
+    pub fn get_min_position_debt(env: Env, pool_id: String) -> i128 {
+        PoolStorage::get_min_position_debt(&env, &pool_id)
     }
 
     pub fn accrue_interest(env: Env, pool_id: String) -> Result<(), ContractError> {

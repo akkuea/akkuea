@@ -195,6 +195,22 @@ Parameter notes:
 | `liquidation_penalty`   | 1e18 = 100%  | `100000000000000000` | 10% - liquidator bonus                                       |
 | `reserve_factor`        | basis points | `100`                | 1% of interest goes to protocol reserve                      |
 
+Liquidation also uses a per-pool minimum position debt, in base units of the pool asset. When the debt a liquidation would leave behind after the close factor falls below it, the whole position can be closed in one call, so small positions are never stranded. It defaults to `10000000` (1 token at 7 decimals) and the admin can change it with `set_min_position_debt`:
+
+```bash
+stellar contract invoke \
+  --id $CONTRACT_ID \
+  --source-account $ADMIN_ADDRESS \
+  --network testnet \
+  -- \
+  set_min_position_debt \
+  --caller $ADMIN_ADDRESS \
+  --pool_id "xlm-pool-v1" \
+  --min_position_debt 10000000
+```
+
+When a liquidation seizes all of a position's collateral and debt remains, that debt is written off in the same call: the pool reserves absorb it first and the rest lowers every depositor's balance in proportion. Each write-off emits a `bad_debt` event with the amount, the part covered by reserves and the part shared by depositors.
+
 ---
 
 ## Step 5 - Grant operational roles

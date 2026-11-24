@@ -145,12 +145,15 @@ impl PositionStorage {
     }
 
     /// Calculate the current depositor claim, rounding down in the pool's favor.
+    ///
+    /// The supply index can also fall when a liquidation socializes bad debt,
+    /// in which case the claim shrinks in proportion.
     pub fn calculate_deposit_balance(
         env: &Env,
         position: &DepositPosition,
     ) -> Result<i128, ContractError> {
         let current_index = InterestStorage::get_supply_index(env, &position.pool_id);
-        if position.index_at_deposit == 0 || current_index <= position.index_at_deposit {
+        if position.index_at_deposit == 0 || current_index == position.index_at_deposit {
             return Ok(position.amount);
         }
 

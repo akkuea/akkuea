@@ -3854,15 +3854,21 @@ fn test_liquidate_healthy_position_rejected() {
     });
 }
 
-/// Test 4: Liquidation with zero collateral left (clamp triggered).
+/// Test 4: Clamped seize lowers the debt covered and writes off the rest.
 ///
 /// When the penalty pushes collateral_to_seize above position.collateral_amount,
-/// the seized amount is clamped to the full collateral, leaving zero collateral.
-/// With 50% close factor, debt covered = 250. Price drops to $0.10/XLM.
-/// Seize = (250 + 12.5) / 0.10 = 2625 → clamped to 2000 XLM.
+/// the seized amount is clamped to the full collateral. With a 50% close factor
+/// the request is capped to 250, and at $0.10/XLM the seize would be
+/// (250 + 12.5) / 0.10 = 2625 XLM, clamped to the 2000 XLM posted.
+///
+/// 2000 XLM at $0.10 is worth 200 USDC, so the liquidator pays
+/// floor(200 / 1.05) = 190.476190 USDC instead of 250. The remaining
+/// 309.523810 USDC is no longer backed by collateral: it is written off in the
+/// same call and the position is closed. The pool has no reserves, so the loss
+/// is taken from total_deposits.
 #[test]
-fn test_liquidate_zero_collateral_left() {
-    let (env, contract_id, oracle_id, borrower, liquidator, pool_id, _usdc_addr, xlm_addr) =
+fn test_liquidate_clamped_seize_reduces_debt_and_writes_off_rest() {
+    let (env, contract_id, oracle_id, borrower, liquidator, pool_id, usdc_addr, xlm_addr) =
         setup_liquidation_env();
 
     // Drop price to $0.10/XLM to trigger clamp (2625 > 2000)
@@ -3876,9 +3882,14 @@ fn test_liquidate_zero_collateral_left() {
         );
     });
 
-    use soroban_sdk::token::StellarAssetClient;
+    use soroban_sdk::token::{StellarAssetClient, TokenClient};
     let xlm_token = StellarAssetClient::new(&env, &xlm_addr);
+    let usdc_client = TokenClient::new(&env, &usdc_addr);
     let liquidator_xlm_before = xlm_token.balance(&liquidator);
+    let liquidator_usdc_before = usdc_client.balance(&liquidator);
+    let deposits_before = env.as_contract(&contract_id, || {
+        PoolStorage::get_total_deposits(&env, &pool_id)
+    });
 
     // Liquidate: close factor caps to 250, clamp seizes all 2000 XLM
     let result = env.as_contract(&contract_id, || {
@@ -3891,31 +3902,75 @@ fn test_liquidate_zero_collateral_left() {
         )
     });
     let result = result.unwrap();
+    assert_eq!(result.principal, 0, "position is closed");
+    assert_eq!(result.collateral_amount, 0);
 
-    assert_eq!(
-        result.principal, 250_000_000,
-        "remaining debt after capped liquidation"
-    );
-
-    // Position should still exist with zero collateral
+    // No position may keep debt without collateral
     let stored = env.as_contract(&contract_id, || {
         PositionStorage::get_borrow(&env, &borrower, &pool_id)
     });
-    assert!(stored.is_some(), "position should still exist");
-    let stored = stored.unwrap();
-    assert_eq!(
-        stored.collateral_amount, 0,
-        "all collateral should be seized (clamped)"
-    );
-    assert_eq!(stored.principal, 250_000_000);
+    assert!(stored.is_none(), "position should be removed");
 
     // Liquidator received ALL 2000 XLM (clamped from 2625)
-    let liquidator_xlm_after = xlm_token.balance(&liquidator);
-    let xlm_received = liquidator_xlm_after - liquidator_xlm_before;
+    let xlm_received = xlm_token.balance(&liquidator) - liquidator_xlm_before;
     assert_eq!(
         xlm_received, 2_000_000_000_i128,
         "all 2000 XLM collateral seized (clamped)"
     );
+
+    // Liquidator paid only what the seized collateral is worth, net of penalty
+    let usdc_spent = liquidator_usdc_before - usdc_client.balance(&liquidator);
+    assert_eq!(usdc_spent, 190_476_190_i128);
+    let seized_value = xlm_received * low_price / PRECISION;
+    assert!(
+        usdc_spent * (PRECISION + 50_000_000_000_000_000) / PRECISION <= seized_value,
+        "liquidator must not pay more than seized value / (1 + penalty)"
+    );
+
+    // The whole 500 debt left the books: 190.476190 repaid, 309.523810 written off
+    let (total_borrows, total_deposits, reserves) = env.as_contract(&contract_id, || {
+        (
+            PoolStorage::get_total_borrows(&env, &pool_id),
+            PoolStorage::get_total_deposits(&env, &pool_id),
+            PoolStorage::get_reserves(&env, &pool_id),
+        )
+    });
+    assert_eq!(total_borrows, 0);
+    assert_eq!(reserves, 0);
+    assert_eq!(total_deposits, deposits_before - 309_523_810);
+}
+
+/// A liquidation that would move nothing is rejected with a typed error and
+/// leaves the position untouched.
+///
+/// At a price of 1e-18 per XLM the 2000 XLM collateral is worth less than one
+/// base unit of USDC, so no debt can be covered by seizing it.
+#[test]
+fn test_liquidate_zero_effective_amount_rejected() {
+    let (env, contract_id, oracle_id, borrower, liquidator, pool_id, _usdc_addr, xlm_addr) =
+        setup_liquidation_env();
+
+    env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(env.clone(), xlm_addr.clone(), 1, env.ledger().timestamp());
+    });
+
+    let result = env.as_contract(&contract_id, || {
+        PropertyTokenContract::liquidate(
+            env.clone(),
+            liquidator.clone(),
+            pool_id.clone(),
+            borrower.clone(),
+            500_000_000_i128,
+        )
+    });
+    assert!(matches!(result, Err(ContractError::LiquidationAmountZero)));
+
+    let stored = env.as_contract(&contract_id, || {
+        PositionStorage::get_borrow(&env, &borrower, &pool_id)
+    });
+    let stored = stored.expect("position must be unchanged");
+    assert_eq!(stored.principal, 500_000_000);
+    assert_eq!(stored.collateral_amount, 2_000_000_000);
 }
 
 /// Test 5: Double liquidation closes position, third attempt panics.

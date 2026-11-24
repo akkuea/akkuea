@@ -352,6 +352,221 @@ fn subsequent_borrow_merges_debt_and_collateral_and_checks_combined_health() {
     );
 }
 
+fn set_collateral_price(s: &AccountingSetup, price: i128) {
+    s.env.as_contract(&s.oracle, || {
+        AccountingOracle::set_price(
+            s.env.clone(),
+            s.collateral.clone(),
+            price,
+            s.env.ledger().timestamp(),
+        );
+    });
+}
+
+/// Fund the pool reserves with real tokens so cash and books stay in step.
+fn fund_reserves(s: &AccountingSetup, amount: i128) {
+    StellarAssetClient::new(&s.env, &s.asset).mint(&s.contract, &amount);
+    s.env.as_contract(&s.contract, || {
+        PoolStorage::add_reserves(&s.env, &s.pool_id, amount).unwrap();
+    });
+}
+
+fn bad_debt_events(s: &AccountingSetup) -> std::vec::Vec<BadDebtWrittenOffEvent> {
+    use soroban_sdk::{symbol_short, xdr, TryFromVal, Val};
+    s.env
+        .events()
+        .all()
+        .filter_by_contract(&s.contract)
+        .events()
+        .iter()
+        .filter_map(|event| {
+            let xdr::ContractEventBody::V0(body) = &event.body;
+            let topic = Val::try_from_val(&s.env, body.topics.first()?).ok()?;
+            let topic = Symbol::try_from_val(&s.env, &topic).ok()?;
+            if topic != symbol_short!("bad_debt") {
+                return None;
+            }
+            let data = Val::try_from_val(&s.env, &body.data).ok()?;
+            BadDebtWrittenOffEvent::try_from_val(&s.env, &data).ok()
+        })
+        .collect()
+}
+
+/// Borrow 100 against 200 collateral at 1.0, then crash the collateral to 0.10
+/// and liquidate. The 50% close factor caps the request at 50, but 200
+/// collateral at 0.10 is only worth 20, so all of it is seized and the
+/// liquidator pays floor(20 / 1.05) = 19.047619. The other 80.952381 of debt is
+/// no longer backed and is written off.
+fn crash_and_liquidate(
+    s: &AccountingSetup,
+    borrower: &Address,
+) -> (i128, i128, std::vec::Vec<BadDebtWrittenOffEvent>) {
+    let liquidator = Address::generate(&s.env);
+    borrow(s, borrower, 100_000_000, 200_000_000);
+    set_collateral_price(s, PRECISION / 10);
+    StellarAssetClient::new(&s.env, &s.asset).mint(&liquidator, &100_000_000);
+    s.client
+        .liquidate(&liquidator, &s.pool_id, borrower, &100_000_000_i128);
+    let events = bad_debt_events(s);
+    let paid = 100_000_000 - TokenClient::new(&s.env, &s.asset).balance(&liquidator);
+    let seized = TokenClient::new(&s.env, &s.collateral).balance(&liquidator);
+    (paid, seized, events)
+}
+
+#[test]
+fn bad_debt_is_covered_by_reserves_first() {
+    let s = setup_accounting();
+    let first = Address::generate(&s.env);
+    let second = Address::generate(&s.env);
+    let borrower = Address::generate(&s.env);
+    deposit(&s, &first, 600_000_000);
+    deposit(&s, &second, 400_000_000);
+    fund_reserves(&s, 100_000_000);
+
+    let (paid, seized, events) = crash_and_liquidate(&s, &borrower);
+    assert_eq!(seized, 200_000_000);
+    assert_eq!(paid, 19_047_619);
+
+    assert_eq!(
+        events,
+        std::vec![BadDebtWrittenOffEvent {
+            pool_id: s.pool_id.clone(),
+            borrower: borrower.clone(),
+            amount: 80_952_381,
+            covered_by_reserves: 80_952_381,
+            socialized: 0,
+        }]
+    );
+    assert!(s
+        .client
+        .try_get_borrow_position(&borrower, &s.pool_id)
+        .is_err());
+    assert_eq!(s.client.get_total_borrows(&s.pool_id), 0);
+    assert_eq!(s.client.get_reserves(&s.pool_id), 19_047_619);
+    assert_eq!(s.client.get_total_deposits(&s.pool_id), 1_000_000_000);
+    assert_eq!(current_claim(&s, &first), 600_000_000);
+    assert_eq!(current_claim(&s, &second), 400_000_000);
+
+    s.client.withdraw(&first, &s.pool_id, &600_000_000);
+    s.client.withdraw(&second, &s.pool_id, &400_000_000);
+    assert_eq!(
+        TokenClient::new(&s.env, &s.asset).balance(&s.contract),
+        s.client.get_reserves(&s.pool_id),
+        "only the reserves left after the write-off remain"
+    );
+}
+
+#[test]
+fn bad_debt_beyond_reserves_is_shared_by_depositors() {
+    let s = setup_accounting();
+    let first = Address::generate(&s.env);
+    let second = Address::generate(&s.env);
+    let borrower = Address::generate(&s.env);
+    deposit(&s, &first, 600_000_000);
+    deposit(&s, &second, 400_000_000);
+    fund_reserves(&s, 30_000_000);
+
+    let (paid, _, events) = crash_and_liquidate(&s, &borrower);
+    assert_eq!(paid, 19_047_619);
+
+    // 80.952381 of bad debt: 30 from reserves, 50.952381 from depositors
+    assert_eq!(
+        events,
+        std::vec![BadDebtWrittenOffEvent {
+            pool_id: s.pool_id.clone(),
+            borrower: borrower.clone(),
+            amount: 80_952_381,
+            covered_by_reserves: 30_000_000,
+            socialized: 50_952_381,
+        }]
+    );
+    assert_eq!(s.client.get_total_borrows(&s.pool_id), 0);
+    assert_eq!(s.client.get_reserves(&s.pool_id), 0);
+    assert_eq!(s.client.get_total_deposits(&s.pool_id), 949_047_619);
+
+    // Each claim shrinks by the same ratio, rounded down
+    let first_claim = current_claim(&s, &first);
+    let second_claim = current_claim(&s, &second);
+    assert_eq!(first_claim, 569_428_571);
+    assert_eq!(second_claim, 379_619_047);
+    assert!(first_claim + second_claim <= s.client.get_total_deposits(&s.pool_id));
+
+    // The books match the tokens held, and both depositors can exit in full
+    let cash = TokenClient::new(&s.env, &s.asset).balance(&s.contract);
+    assert_eq!(
+        cash,
+        s.client.get_total_deposits(&s.pool_id) + s.client.get_reserves(&s.pool_id)
+            - s.client.get_total_borrows(&s.pool_id)
+    );
+    s.client.withdraw(&second, &s.pool_id, &second_claim);
+    s.client.withdraw(&first, &s.pool_id, &first_claim);
+    let final_cash = TokenClient::new(&s.env, &s.asset).balance(&s.contract);
+    assert!(
+        (0..=2).contains(&final_cash),
+        "only rounding dust may remain, got {final_cash}"
+    );
+}
+
+#[test]
+fn dust_position_is_closed_without_changing_the_close_factor() {
+    let s = setup_accounting();
+    let depositor = Address::generate(&s.env);
+    let borrower = Address::generate(&s.env);
+    let liquidator = Address::generate(&s.env);
+    deposit(&s, &depositor, 1_000_000_000);
+
+    // 8 units of debt sit below the default 10 unit minimum position debt
+    borrow(&s, &borrower, 8_000_000, 16_000_000);
+    set_collateral_price(&s, 6 * PRECISION / 10);
+    StellarAssetClient::new(&s.env, &s.asset).mint(&liquidator, &8_000_000);
+
+    let closed = s
+        .client
+        .liquidate(&liquidator, &s.pool_id, &borrower, &8_000_000_i128);
+    assert!(bad_debt_events(&s).is_empty());
+    assert_eq!(closed.principal, 0);
+    assert!(s
+        .client
+        .try_get_borrow_position(&borrower, &s.pool_id)
+        .is_err());
+    assert_eq!(s.client.get_total_borrows(&s.pool_id), 0);
+    // (8 + 0.4 penalty) / 0.6 = 14 collateral seized, 2 returned to the borrower
+    let collateral = TokenClient::new(&s.env, &s.collateral);
+    assert_eq!(collateral.balance(&liquidator), 14_000_000);
+    assert_eq!(collateral.balance(&borrower), 2_000_000);
+}
+
+#[test]
+fn min_position_debt_is_admin_configurable() {
+    let s = setup_accounting();
+    let depositor = Address::generate(&s.env);
+    let borrower = Address::generate(&s.env);
+    let liquidator = Address::generate(&s.env);
+    deposit(&s, &depositor, 1_000_000_000);
+    assert_eq!(
+        s.client.get_min_position_debt(&s.pool_id),
+        DEFAULT_MIN_POSITION_DEBT
+    );
+
+    let outsider = Address::generate(&s.env);
+    assert!(s
+        .client
+        .try_set_min_position_debt(&outsider, &s.pool_id, &0_i128)
+        .is_err());
+    s.client
+        .set_min_position_debt(&s.admin, &s.pool_id, &0_i128);
+    assert_eq!(s.client.get_min_position_debt(&s.pool_id), 0);
+
+    // With no minimum the close factor applies again: only half is covered
+    borrow(&s, &borrower, 8_000_000, 16_000_000);
+    set_collateral_price(&s, 6 * PRECISION / 10);
+    StellarAssetClient::new(&s.env, &s.asset).mint(&liquidator, &8_000_000);
+    let partial = s
+        .client
+        .liquidate(&liquidator, &s.pool_id, &borrower, &8_000_000_i128);
+    assert_eq!(partial.principal, 4_000_000);
+}
+
 fn assert_accounting_invariant(s: &AccountingSetup, depositors: &[Address; 2], dust: i128) {
     let claims = depositors.iter().try_fold(0_i128, |sum, depositor| {
         let claim = s.env.as_contract(&s.contract, || {

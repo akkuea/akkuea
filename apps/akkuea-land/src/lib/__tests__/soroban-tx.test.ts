@@ -25,7 +25,7 @@ import defiRwaContractsTestnet from "@akkuea/shared/contracts.testnet.json";
 // module mocks across files in one run. ClaimPropertyStep.test.tsx mocks it
 // with only buildBuyFromTreasuryXdr and a fake TREASURY_ADDRESS, so any
 // assertion reading the "@/lib/soroban-tx" specifier can see the stub
-// instead of the real module — that is why TREASURY_ADDRESS failed in the
+// instead of the real module - that is why TREASURY_ADDRESS failed in the
 // full run while passing on its own. A query-suffixed specifier loads a
 // separate, unmocked instance, so every assertion in this file reads the
 // real code; the "@/lib/soroban-tx" specifier is not imported at all.

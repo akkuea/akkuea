@@ -14,7 +14,16 @@ globalThis.MutationObserver = dom.window.MutationObserver as any;
 
 // Bind axe-core to the same initial JSDOM realm as @testing-library/react
 import "axe-core";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 import React from "react";
 import { cleanup, act, waitFor } from "@testing-library/react";
 
@@ -165,17 +174,19 @@ describe("Dashboard and GameEventStream behavioral consolidation (#1340)", () =>
 
   it("verifies stream failure lets polling update the ledger sequence", async () => {
     let polledLedger = 50000;
-    const fetchMock = mock(async (_url: string | URL | Request, _init?: RequestInit) => {
-      polledLedger += 50;
-      return new Response(
-        JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          result: { sequence: polledLedger },
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    });
+    const fetchMock = mock(
+      async (_url: string | URL | Request, _init?: RequestInit) => {
+        polledLedger += 50;
+        return new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            result: { sequence: polledLedger },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      },
+    );
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     function TestConsumer() {

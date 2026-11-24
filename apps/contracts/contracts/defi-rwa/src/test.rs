@@ -261,6 +261,114 @@ fn setup_borrow_test() -> BorrowTestSetup<'static> {
 // ─── Pool creation ─────────────────────────────
 
 #[test]
+fn pool_admin_validates_risk_and_bounds_interest_rates() {
+    let s = setup();
+    let pool = create_default_pool(&s);
+    assert_eq!(
+        s.contract_client
+            .get_collateral_allowlist(&pool)
+            .unwrap()
+            .len(),
+        0
+    );
+    assert_eq!(
+        s.contract_client.get_minimum_health_factor(&pool),
+        3 * PRECISION / 2
+    );
+    let factors = [0, PRECISION, -1];
+    for factor in factors {
+        assert!(matches!(
+            s.contract_client.try_set_pool_risk(
+                &s.admin,
+                &pool,
+                &factor,
+                &(PRECISION * 4 / 5),
+                &0,
+                &1000,
+            ),
+            Err(Ok(ContractError::InvalidPoolRisk))
+        ));
+    }
+    s.contract_client.set_pool_risk(
+        &s.admin,
+        &pool,
+        &(PRECISION / 2),
+        &(PRECISION * 4 / 5),
+        &0,
+        &1000,
+    );
+    assert!(s
+        .contract_client
+        .try_set_pool_risk(
+            &Address::generate(&s.env),
+            &pool,
+            &(PRECISION / 2),
+            &(PRECISION * 4 / 5),
+            &0,
+            &1000,
+        )
+        .is_err());
+    let mut model = InterestRateModel {
+        base_rate: 3 * PRECISION,
+        ..InterestRateModel::default()
+    };
+    assert!(matches!(
+        s.contract_client
+            .try_set_pool_interest_model(&s.admin, &pool, &model),
+        Err(Ok(ContractError::InvalidInterestModel))
+    ));
+    model.base_rate = PRECISION / 20;
+    s.contract_client
+        .set_pool_interest_model(&s.admin, &pool, &model);
+    s.contract_client
+        .set_minimum_health_factor(&s.admin, &pool, &PRECISION);
+    assert_eq!(
+        s.contract_client.get_minimum_health_factor(&pool),
+        PRECISION
+    );
+}
+
+#[test]
+fn legacy_pool_migrates_allowlist_and_allows_repay_when_inactive() {
+    let s = setup_borrow_test();
+    let admin = s
+        .env
+        .as_contract(&s.contract_id, || get_lending_admin(&s.env));
+    assert!(s
+        .contract_client
+        .get_collateral_allowlist(&s.pool_id)
+        .is_none());
+    assert_eq!(
+        s.contract_client.get_minimum_health_factor(&s.pool_id),
+        3 * PRECISION / 2
+    );
+    s.contract_client
+        .add_collateral_asset(&admin, &s.pool_id, &s.xlm_address);
+    s.contract_client
+        .remove_collateral_asset(&admin, &s.pool_id, &s.xlm_address);
+    assert!(matches!(
+        s.contract_client
+            .try_borrow(&s.borrower, &s.pool_id, &1, &s.xlm_address, &1),
+        Err(Ok(ContractError::CollateralNotAllowed))
+    ));
+    s.contract_client
+        .set_pool_active(&admin, &s.pool_id, &false);
+    assert!(matches!(
+        s.contract_client.try_deposit(&s.borrower, &s.pool_id, &1),
+        Err(Ok(ContractError::PoolInactive))
+    ));
+    assert!(matches!(
+        s.contract_client
+            .try_borrow(&s.borrower, &s.pool_id, &1, &s.xlm_address, &1),
+        Err(Ok(ContractError::PoolInactive))
+    ));
+    let closed = s
+        .contract_client
+        .repay(&s.borrower, &s.pool_id, &1_000_000_000);
+    assert_eq!(closed.principal, 0);
+}
+
+#[test]
 fn test_create_pool() {
     let s = setup();
     let pool_id = create_default_pool(&s);
@@ -4356,72 +4464,19 @@ fn test_liquidate_negative_debt_to_cover() {
     });
 }
 
-/// Liquidate from an inactive pool is rejected.
+/// Existing debt in an inactive pool can still be liquidated.
 #[test]
-#[should_panic(expected = "Pool is not active")]
 fn test_liquidate_inactive_pool() {
-    use soroban_sdk::token::StellarAssetClient;
-
-    let env = Env::default();
-    env.mock_all_auths();
-
-    let admin = Address::generate(&env);
-    let contract_id = env.register(PropertyTokenContract, (&admin,));
-    let oracle_id = env.register(MockOracleContract, ());
-
-    let borrower = Address::generate(&env);
-    let liquidator = Address::generate(&env);
-
-    let usdc_admin = Address::generate(&env);
-    let usdc_contract = env.register_stellar_asset_contract_v2(usdc_admin.clone());
-    let usdc_token = StellarAssetClient::new(&env, &usdc_contract.address());
-
-    let _xlm_admin = Address::generate(&env);
-    let _xlm_contract = env.register_stellar_asset_contract_v2(_xlm_admin.clone());
-    let _xlm_token = StellarAssetClient::new(&env, &_xlm_contract.address());
-
-    let pool_id = String::from_str(&env, "USDC-POOL");
-
-    // Create pool with is_active = false
-    let pool = LendingPool {
-        id: pool_id.clone(),
-        name: String::from_str(&env, "USDC Lending Pool"),
-        asset: String::from_str(&env, "USDC"),
-        asset_address: usdc_contract.address().clone(),
-        collateral_factor: 750_000_000_000_000_000,
-        liquidation_threshold: 800_000_000_000_000_000,
-        liquidation_penalty: 50_000_000_000_000_000,
-        close_factor: 500_000_000_000_000_000,
-        reserve_factor: 1000,
-        is_active: false, // Inactive!
-        created_at: env.ledger().timestamp(),
-    };
-
-    env.as_contract(&contract_id, || {
-        PoolStorage::set(&env, &pool);
-        PoolStorage::set_total_deposits(&env, &pool_id, 10_000_000_000);
-        PoolStorage::set_total_borrows(&env, &pool_id, 0);
-
-        let model = InterestRateModel::default();
-        InterestStorage::set_model(&env, &pool_id, &model);
-        InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
-        InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
-        PriceOracle::set_oracle_address(&env, &oracle_id);
-    });
-
-    usdc_token.mint(&liquidator, &2_000_000_000);
-
-    // Liquidation of inactive pool should panic
-    env.as_contract(&contract_id, || {
-        PropertyTokenContract::liquidate(
-            env.clone(),
-            liquidator.clone(),
-            pool_id.clone(),
-            borrower.clone(),
-            100_000_000_i128,
-        )
-        .unwrap()
-    });
+    let (env, contract_id, _oracle, borrower, liquidator, pool_id, _usdc, xlm) =
+        setup_liquidation_env();
+    let admin = env.as_contract(&contract_id, || get_lending_admin(&env));
+    let client = PropertyTokenContractClient::new(&env, &contract_id);
+    client.add_collateral_asset(&admin, &pool_id, &xlm);
+    client.remove_collateral_asset(&admin, &pool_id, &xlm);
+    client.set_pool_active(&admin, &pool_id, &false);
+    let before = client.get_borrow_position(&borrower, &pool_id);
+    let after = client.liquidate(&liquidator, &pool_id, &borrower, &1_000_000);
+    assert!(after.principal < before.principal);
 }
 
 /// Liquidate from a paused pool is rejected.
@@ -4640,7 +4695,7 @@ fn test_borrow_exceeds_collateral_factor_limit() {
 
 /// set_close_factor panics on invalid bounds (≤0 or >100%).
 #[test]
-#[should_panic(expected = "close factor must be between 0 and 1.0 (PRECISION)")]
+#[should_panic(expected = "Error(Contract, #50)")]
 fn test_set_close_factor_negative_value() {
     let (env, contract_id, _oracle_id, _borrower, _liquidator, pool_id, _usdc_addr, _xlm_addr) =
         setup_liquidation_env();

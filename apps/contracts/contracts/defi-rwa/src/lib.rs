@@ -31,6 +31,36 @@ use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env,
 // Internal imports
 use lending::events as lending_events;
 
+const MAX_COLLATERAL_ASSETS: u32 = 16;
+
+fn collateral_list_key(pool: &String) -> (soroban_sdk::Symbol, String) {
+    (soroban_sdk::symbol_short!("coll_list"), pool.clone())
+}
+
+fn minimum_health_key(pool: &String) -> (soroban_sdk::Symbol, String) {
+    (soroban_sdk::symbol_short!("minhealth"), pool.clone())
+}
+
+fn validate_pool_risk(
+    collateral: i128,
+    threshold: i128,
+    penalty: i128,
+    close: i128,
+    reserve: u32,
+) -> Result<(), ContractError> {
+    if collateral <= 0
+        || collateral >= threshold
+        || threshold > PRECISION
+        || !(0..=PRECISION).contains(&penalty)
+        || !(1..=PRECISION).contains(&close)
+        || !(1..=10_000).contains(&reserve)
+        || threshold * (PRECISION + penalty) / PRECISION >= PRECISION
+    {
+        return Err(ContractError::InvalidPoolRisk);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod test;
 
@@ -417,9 +447,14 @@ impl PropertyTokenContract {
         if PoolStorage::exists(&env, &pool_id) {
             panic!("pool already exists");
         }
-        if reserve_factor > 10_000 {
-            panic!("reserve factor cannot exceed 10000 basis points");
-        }
+        validate_pool_risk(
+            collateral_factor,
+            liquidation_threshold,
+            liquidation_penalty,
+            close_factor,
+            reserve_factor,
+        )
+        .unwrap_or_else(|error| panic_with_error!(&env, error));
 
         let pool = LendingPool {
             id: pool_id.clone(),
@@ -437,6 +472,9 @@ impl PropertyTokenContract {
 
         PoolStorage::set(&env, &pool);
         PoolStorage::add_to_list(&env, &pool_id);
+        env.storage()
+            .instance()
+            .set(&collateral_list_key(&pool_id), &Vec::<Address>::new(&env));
 
         let model = InterestRateModel::default();
         InterestStorage::set_model(&env, &pool_id, &model);
@@ -449,6 +487,183 @@ impl PropertyTokenContract {
         PoolStorage::set_reserves(&env, &pool_id, 0);
 
         lending_events::emit_pool_created(&env, &admin, &pool_id);
+    }
+
+    pub fn set_pool_risk(
+        env: Env,
+        caller: Address,
+        pool_id: String,
+        collateral_factor: i128,
+        liquidation_threshold: i128,
+        liquidation_penalty: i128,
+        reserve_factor: u32,
+    ) -> Result<(), ContractError> {
+        require_admin(&env, &caller);
+        let mut pool = PoolStorage::get(&env, &pool_id).expect("Pool not found");
+        validate_pool_risk(
+            collateral_factor,
+            liquidation_threshold,
+            liquidation_penalty,
+            pool.close_factor,
+            reserve_factor,
+        )?;
+        accrue_interest_internal(&env, &pool_id)?;
+        let changes = [
+            (
+                "collateral_factor",
+                pool.collateral_factor,
+                collateral_factor,
+            ),
+            (
+                "liquidation_threshold",
+                pool.liquidation_threshold,
+                liquidation_threshold,
+            ),
+            (
+                "liquidation_penalty",
+                pool.liquidation_penalty,
+                liquidation_penalty,
+            ),
+            (
+                "reserve_factor",
+                i128::from(pool.reserve_factor),
+                i128::from(reserve_factor),
+            ),
+        ];
+        pool.collateral_factor = collateral_factor;
+        pool.liquidation_threshold = liquidation_threshold;
+        pool.liquidation_penalty = liquidation_penalty;
+        pool.reserve_factor = reserve_factor;
+        PoolStorage::set(&env, &pool);
+        for (field, old, new) in changes {
+            if old != new {
+                LendingEvents::pool_updated(
+                    &env,
+                    pool_id.clone(),
+                    String::from_str(&env, field),
+                    old,
+                    new,
+                );
+            }
+        }
+        Ok(())
+    }
+
+    pub fn set_pool_interest_model(
+        env: Env,
+        caller: Address,
+        pool_id: String,
+        model: InterestRateModel,
+    ) -> Result<(), ContractError> {
+        require_admin(&env, &caller);
+        PoolStorage::get(&env, &pool_id).expect("Pool not found");
+        let max_rate = 2 * PRECISION;
+        if !(1..PRECISION).contains(&model.optimal_utilization)
+            || [model.base_rate, model.slope1, model.slope2]
+                .iter()
+                .any(|rate| !(0..=max_rate).contains(rate))
+            || model.base_rate + model.slope1 + model.slope2 > max_rate
+        {
+            return Err(ContractError::InvalidInterestModel);
+        }
+        accrue_interest_internal(&env, &pool_id)?;
+        let old = InterestStorage::get_model(&env, &pool_id);
+        InterestStorage::set_model(&env, &pool_id, &model);
+        env.events().publish(
+            (soroban_sdk::symbol_short!("rate_cfg"), pool_id),
+            (old, model),
+        );
+        Ok(())
+    }
+
+    pub fn set_pool_active(env: Env, caller: Address, pool_id: String, active: bool) {
+        require_admin(&env, &caller);
+        let mut pool = PoolStorage::get(&env, &pool_id).expect("Pool not found");
+        if pool.is_active != active {
+            pool.is_active = active;
+            PoolStorage::set(&env, &pool);
+            LendingEvents::pool_updated(
+                &env,
+                pool_id,
+                String::from_str(&env, "is_active"),
+                i128::from(!active),
+                i128::from(active),
+            );
+        }
+    }
+
+    /// None identifies legacy pools that have not migrated to an allowlist.
+    pub fn get_collateral_allowlist(env: Env, pool_id: String) -> Option<Vec<Address>> {
+        env.storage().instance().get(&collateral_list_key(&pool_id))
+    }
+
+    pub fn add_collateral_asset(
+        env: Env,
+        caller: Address,
+        pool_id: String,
+        asset: Address,
+    ) -> Result<(), ContractError> {
+        require_admin(&env, &caller);
+        PoolStorage::get(&env, &pool_id).expect("Pool not found");
+        let mut allowed =
+            Self::get_collateral_allowlist(env.clone(), pool_id.clone()).unwrap_or(Vec::new(&env));
+        if !allowed.contains(&asset) {
+            if allowed.len() >= MAX_COLLATERAL_ASSETS {
+                return Err(ContractError::CollateralListFull);
+            }
+            allowed.push_back(asset);
+            env.storage()
+                .instance()
+                .set(&collateral_list_key(&pool_id), &allowed);
+        }
+        Ok(())
+    }
+
+    pub fn remove_collateral_asset(env: Env, caller: Address, pool_id: String, asset: Address) {
+        require_admin(&env, &caller);
+        PoolStorage::get(&env, &pool_id).expect("Pool not found");
+        let mut allowed =
+            Self::get_collateral_allowlist(env.clone(), pool_id.clone()).unwrap_or(Vec::new(&env));
+        if let Some(index) = allowed.first_index_of(&asset) {
+            allowed.remove(index);
+        }
+        env.storage()
+            .instance()
+            .set(&collateral_list_key(&pool_id), &allowed);
+    }
+
+    pub fn get_minimum_health_factor(env: Env, pool_id: String) -> i128 {
+        env.storage()
+            .instance()
+            .get(&minimum_health_key(&pool_id))
+            .unwrap_or(PRECISION * 3 / 2)
+    }
+
+    pub fn set_minimum_health_factor(
+        env: Env,
+        caller: Address,
+        pool_id: String,
+        minimum: i128,
+    ) -> Result<(), ContractError> {
+        require_admin(&env, &caller);
+        PoolStorage::get(&env, &pool_id).expect("Pool not found");
+        if !(PRECISION..=5 * PRECISION).contains(&minimum) {
+            return Err(ContractError::InvalidPoolRisk);
+        }
+        let old = Self::get_minimum_health_factor(env.clone(), pool_id.clone());
+        env.storage()
+            .instance()
+            .set(&minimum_health_key(&pool_id), &minimum);
+        if old != minimum {
+            LendingEvents::pool_updated(
+                &env,
+                pool_id,
+                String::from_str(&env, "minimum_health_factor"),
+                old,
+                minimum,
+            );
+        }
+        Ok(())
     }
 
     // ─── Lending Operations ─────────────────────
@@ -466,7 +681,7 @@ impl PropertyTokenContract {
         }
         let pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
         if !pool.is_active {
-            panic!("pool is not active");
+            return Err(ContractError::PoolInactive);
         }
         PoolStorage::require_not_paused(&env, &pool_id)?;
 
@@ -587,7 +802,7 @@ impl PropertyTokenContract {
         PauseControl::require_not_paused(&env)?;
         let pool = PoolStorage::get(&env, &pool_id).expect("Pool not found");
         if !pool.is_active {
-            panic!("Pool is not active");
+            return Err(ContractError::PoolInactive);
         }
         PoolStorage::require_not_paused(&env, &pool_id)?;
 
@@ -611,6 +826,11 @@ impl PropertyTokenContract {
         if let Some(existing_position) = &existing {
             if existing_position.collateral_asset != collateral_asset {
                 panic_with_error!(&env, ContractError::CollateralAssetMismatch);
+            }
+        }
+        if let Some(allowed) = Self::get_collateral_allowlist(env.clone(), pool_id.clone()) {
+            if !allowed.contains(&collateral_asset) {
+                return Err(ContractError::CollateralNotAllowed);
             }
         }
         let current_debt = match &existing {
@@ -646,10 +866,7 @@ impl PropertyTokenContract {
             combined_debt,
             pool.liquidation_threshold,
         )?;
-        let min_health_factor = 15_i128
-            .checked_mul(PRECISION)
-            .and_then(|value| value.checked_div(10))
-            .ok_or(ContractError::BalanceOverflow)?;
+        let min_health_factor = Self::get_minimum_health_factor(env.clone(), pool_id.clone());
         if health_factor < min_health_factor {
             panic!("Health factor too low");
         }
@@ -727,9 +944,6 @@ impl PropertyTokenContract {
         }
 
         let pool = PoolStorage::get(&env, &pool_id).expect("Pool not found");
-        if !pool.is_active {
-            panic!("Pool is not active");
-        }
         PoolStorage::require_not_paused(&env, &pool_id)?;
 
         accrue_interest_internal(&env, &pool_id)?;
@@ -891,9 +1105,6 @@ impl PropertyTokenContract {
         }
 
         let pool = PoolStorage::get(&env, &pool_id).expect("Pool not found");
-        if !pool.is_active {
-            panic!("Pool is not active");
-        }
         // Deliberately not gated by either the global or the per-pool pause:
         // repay only reduces the caller's own debt, so blocking it would trap
         // borrowers under an accruing balance, and could force a liquidation
@@ -970,7 +1181,7 @@ impl PropertyTokenContract {
     pub fn set_close_factor(env: Env, caller: Address, pool_id: String, new_close_factor: i128) {
         require_admin(&env, &caller);
         if new_close_factor <= 0 || new_close_factor > PRECISION {
-            panic!("close factor must be between 0 and 1.0 (PRECISION)");
+            panic_with_error!(&env, ContractError::InvalidPoolRisk);
         }
         let mut pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
         let old = pool.close_factor;

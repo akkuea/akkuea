@@ -392,6 +392,8 @@ fn budget_check_borrow() {
         &1000_u32,
     );
 
+    s.client
+        .add_collateral_asset(&s.admin, &pool_id, &collateral_address);
     // Deploy mock oracle and set prices
     let oracle_address = s.env.register(MockOracleContract, ());
     let oracle_client = MockOracleContractClient::new(&s.env, &oracle_address);
@@ -449,6 +451,8 @@ fn budget_check_repay() {
         &1000_u32,
     );
 
+    s.client
+        .add_collateral_asset(&s.admin, &pool_id, &collateral_address);
     // Deploy mock oracle
     let oracle_address = s.env.register(MockOracleContract, ());
     let oracle_client = MockOracleContractClient::new(&s.env, &oracle_address);

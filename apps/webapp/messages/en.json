@@ -162,7 +162,11 @@
     "tokenize": "Tokenize",
     "lending": "Lending",
     "map": "Map",
-    "connect": "Connect"
+    "connect": "Connect",
+    "pilotInvestor": "Investor",
+    "pilotOnboarding": "Join Pilot",
+    "pilotAlly": "Ally",
+    "pilotReview": "Review"
   },
   "Treasury": {
     "title": "Treasury",

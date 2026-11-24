@@ -1807,6 +1807,28 @@ fn collateral_top_up_remains_available_during_both_pauses() {
         collateral_before + 1_000_000_000
     );
     assert!(s.contract_client.get_health_factor(&s.borrower, &s.pool_id) > PRECISION);
+    s.env.as_contract(&s.contract_id, || {
+        PauseControl::unpause(&s.env, &admin).unwrap()
+    });
+    s.contract_client.unpause_pool(&admin, &s.pool_id);
+    assert!(s
+        .contract_client
+        .try_liquidate(&admin, &s.pool_id, &s.borrower, &1)
+        .is_err());
+
+    s.env.mock_auths(&[]);
+    assert!(s
+        .contract_client
+        .try_add_collateral(&s.borrower, &s.pool_id, &1)
+        .is_err());
+    assert!(s
+        .contract_client
+        .try_withdraw_collateral(&s.borrower, &s.pool_id, &1)
+        .is_err());
+    assert_eq!(
+        token.balance(&s.contract_id),
+        collateral_before + 1_000_000_000
+    );
 }
 
 #[test]

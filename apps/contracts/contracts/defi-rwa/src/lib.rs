@@ -33,8 +33,8 @@ use lending::events as lending_events;
 
 const MIN_BORROW_HEALTH_FACTOR: i128 = PRECISION + PRECISION / 2;
 
-fn collateral_value(env: &Env, asset: &Address, amount: i128) -> Result<i128, ContractError> {
-    PriceOracle::try_get_price(env, asset)?
+fn collateral_value(price: i128, amount: i128) -> Result<i128, ContractError> {
+    price
         .checked_mul(amount)
         .and_then(|value| value.checked_div(PRECISION))
         .ok_or(ContractError::BalanceOverflow)
@@ -635,7 +635,8 @@ impl PropertyTokenContract {
             .unwrap_or(0)
             .checked_add(collateral_amount)
             .ok_or(ContractError::BalanceOverflow)?;
-        let collateral_value = collateral_value(&env, &collateral_asset, combined_collateral)?;
+        let price = PriceOracle::get_price(&env, &collateral_asset);
+        let collateral_value = collateral_value(price, combined_collateral)?;
 
         // Enforce max borrow based on collateral factor (LTV)
         let max_borrow = collateral_value
@@ -750,7 +751,8 @@ impl PropertyTokenContract {
             .collateral_amount
             .checked_sub(amount)
             .ok_or(ContractError::BalanceOverflow)?;
-        let value = collateral_value(&env, &position.collateral_asset, position.collateral_amount)?;
+        let price = PriceOracle::try_get_price(&env, &position.collateral_asset)?;
+        let value = collateral_value(price, position.collateral_amount)?;
         let debt = PositionStorage::calculate_current_debt(&env, &position)?;
         let health =
             PositionStorage::calculate_health_factor(value, debt, pool.liquidation_threshold)?;

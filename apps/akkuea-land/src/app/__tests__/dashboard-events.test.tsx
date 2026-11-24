@@ -12,8 +12,6 @@ globalThis.HTMLElement = dom.window.HTMLElement as any;
 globalThis.MutationObserver = dom.window.MutationObserver as any;
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
-// Bind axe-core to the same initial JSDOM realm as @testing-library/react
-import "axe-core";
 import {
   afterEach,
   beforeAll,

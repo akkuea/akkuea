@@ -1,17 +1,7 @@
-// @ts-expect-error: jsdom types not fully compatible with bun runtime
-import { JSDOM } from "jsdom";
-
-// Standard browser mock environment setup for JSDOM in Bun environment
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost",
-});
-(dom.window as any).fetch = fetch;
-globalThis.window = dom.window as any;
-globalThis.document = dom.window.document as any;
-globalThis.navigator = dom.window.navigator as any;
-globalThis.HTMLElement = dom.window.HTMLElement as any;
-globalThis.MutationObserver = dom.window.MutationObserver as any;
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+// All land tests share one JSDOM realm (see src/test/setupJsdom.ts).
+// axe-core captures window/document when it is first imported, so renders
+// and axe.run calls must use the same realm or axe rejects the container.
+import { ensureSharedDom } from "@/test/setupJsdom";
 
 import { afterAll, beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import React, { forwardRef } from "react";
@@ -85,8 +75,21 @@ vi.mock("@/lib/soroban-tx", () => ({
   TREASURY_ADDRESS: TEST_TREASURY_ADDRESS,
 }));
 
-import { PropertyPanel } from "../PropertyPanel";
 import { TREASURY_ADDRESS } from "@/lib/soroban-tx";
+
+// Bun shares module mocks across test files in one run, and
+// CityMap.test.tsx mocks "../PropertyPanel" with a stub that renders only
+// the property name. That mock leaks into this file, so importing the panel
+// normally would test the stub instead of the real component. Load the real
+// component through a query-suffixed specifier, which Bun treats as a
+// separate module, the same way soroban-tx.test.ts loads
+// "../soroban-tx?unmocked".
+const UNMOCKED_PROPERTY_PANEL = "../PropertyPanel/index.tsx?unmocked";
+const { PropertyPanel } = (await import(
+  UNMOCKED_PROPERTY_PANEL
+)) as typeof import("../PropertyPanel");
+
+beforeEach(ensureSharedDom);
 
 const baseProperty: GameProperty = {
   id: "550e8400-e29b-41d4-a716-446655440001",

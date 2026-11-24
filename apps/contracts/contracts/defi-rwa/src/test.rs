@@ -5102,6 +5102,82 @@ fn test_non_admin_cannot_list_property() {
 }
 
 #[test]
+fn investor_registry_gates_share_receipts_and_allows_exit() {
+    use pilot_whitelist::{PilotWhitelist, PilotWhitelistClient};
+    use soroban_sdk::{testutils::Events as _, IntoVal};
+
+    let (id, env, owner, buyer, payment, property) = setup_purchase_test();
+    let client = PropertyTokenContractClient::new(&env, &id);
+    let admin = env.as_contract(&id, || AdminControl::get_admin(&env).unwrap());
+    let recipient = Address::generate(&env);
+    let spender = Address::generate(&env);
+    let registry = env.register(PilotWhitelist, (&admin,));
+    let whitelist = PilotWhitelistClient::new(&env, &registry);
+
+    assert_eq!(client.get_investor_registry(), None);
+    let denied = Err(Ok(Error::from_contract_error(
+        ContractError::InvestorNotApproved as u32,
+    )));
+    assert_eq!(
+        client.try_set_investor_registry(&buyer, &registry),
+        Err(Ok(Error::from_contract_error(
+            ContractError::NotAdmin as u32
+        )))
+    );
+    client.set_investor_registry(&admin, &registry);
+    assert_eq!(
+        env.events().all().filter_by_contract(&id),
+        soroban_sdk::vec![
+            &env,
+            (
+                id.clone(),
+                (symbol_short!("invreg"),).into_val(&env),
+                (None::<Address>, registry.clone()).into_val(&env),
+            )
+        ],
+    );
+    assert_eq!(client.get_investor_registry(), Some(registry.clone()));
+
+    let token = TokenClient::new(&env, &payment);
+    let before = (token.balance(&buyer), token.balance(&owner));
+    assert_eq!(
+        client.try_purchase_shares(&buyer, &property, &5, &payment),
+        denied
+    );
+    assert_eq!((token.balance(&buyer), token.balance(&owner)), before);
+    assert_eq!(client.get_balance(&property, &buyer), 0);
+
+    whitelist.approve(&admin, &buyer);
+    client.purchase_shares(&buyer, &property, &5, &payment);
+    assert_eq!(client.get_balance(&property, &buyer), 5);
+    assert_eq!(
+        client.try_transfer_shares(&buyer, &recipient, &property, &1),
+        denied
+    );
+    client.approve(&buyer, &spender, &property, &1);
+    assert_eq!(
+        client.try_transfer_from(&spender, &buyer, &recipient, &property, &1),
+        denied
+    );
+    assert_eq!(
+        client.try_mint_shares(&admin, &property, &recipient, &1),
+        denied
+    );
+
+    whitelist.approve(&admin, &recipient);
+    whitelist.revoke(&admin, &buyer);
+    client.transfer_shares(&buyer, &recipient, &property, &1);
+    client.transfer_from(&spender, &buyer, &recipient, &property, &1);
+    client.burn_shares(&buyer, &property, &1);
+    assert_eq!(client.get_balance(&property, &buyer), 2);
+    assert_eq!(client.get_balance(&property, &recipient), 2);
+    assert_eq!(
+        client.try_transfer_shares(&recipient, &buyer, &property, &1),
+        denied
+    );
+}
+
+#[test]
 fn test_purchase_rejects_unlisted_payment_token() {
     assert_eq!(ContractError::PaymentTokenMismatch as u32, 29);
     assert_eq!(ContractError::CollateralAssetMismatch as u32, 30);

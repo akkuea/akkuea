@@ -47,6 +47,10 @@ pub enum ContractError {
     CollateralAssetMismatch = 30,
     /// The requested reserve withdrawal exceeds withdrawable reserves
     InsufficientReserves = 31,
+    InvalidOracleGuard = 60,
+    PriceAboveCeiling = 61,
+    InsufficientOracleHistory = 62,
+    OraclePriceDeviation = 63,
 }
 
 pub struct AdminControl;

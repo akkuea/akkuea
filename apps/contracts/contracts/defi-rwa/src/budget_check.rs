@@ -83,6 +83,17 @@ impl MockOracleContract {
             Asset::Other(_) => None,
         }
     }
+    pub fn prices(env: Env, asset: Asset, records: u32) -> Option<soroban_sdk::Vec<PriceData>> {
+        let last = Self::lastprice(env.clone(), asset)?;
+        let mut history = soroban_sdk::Vec::new(&env);
+        for offset in 0..records {
+            history.push_back(PriceData {
+                price: last.price,
+                timestamp: last.timestamp.checked_sub(u64::from(offset))?,
+            });
+        }
+        Some(history)
+    }
     pub fn decimals(_env: Env) -> u32 {
         18
     }
@@ -397,6 +408,17 @@ fn budget_check_borrow() {
     let oracle_client = MockOracleContractClient::new(&s.env, &oracle_address);
     s.client.set_oracle(&oracle_address, &s.admin);
     oracle_client.set_price(&collateral_address, &(2 * PRECISION), &1000_u64);
+    s.client.set_asset_oracle_guard(
+        &s.admin,
+        &collateral_address,
+        &OracleGuardConfig {
+            max_age: 60,
+            min_price: PRECISION,
+            max_price: 3 * PRECISION,
+            deviation_bps: 500,
+            records: 4,
+        },
+    );
 
     // Seed pool liquidity
     let lp = Address::generate(&s.env);

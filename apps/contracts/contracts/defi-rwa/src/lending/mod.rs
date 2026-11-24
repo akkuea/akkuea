@@ -11,6 +11,7 @@ mod positions;
 
 pub use interest::{InterestRateModel, InterestStorage, PRECISION, SECONDS_PER_YEAR};
 pub use keys::{lending_bump, LendingKey, OraclePriceSnapshot};
-pub use oracle::PriceOracle;
+pub(crate) use oracle::DEFAULT_MAX_AGE;
+pub use oracle::{OracleGuardConfig, PriceOracle};
 pub use pool::{LendingPool, PoolStorage};
 pub use positions::{BorrowPosition, DepositPosition, PositionStorage};

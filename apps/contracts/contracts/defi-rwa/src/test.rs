@@ -56,6 +56,21 @@ impl MockOracleContract {
     pub fn decimals(_env: Env) -> u32 {
         18
     }
+    pub fn set_history(env: Env, asset: Address, history: Vec<PriceData>) {
+        env.storage()
+            .persistent()
+            .set(&(Symbol::new(&env, "history"), asset), &history);
+    }
+    pub fn prices(env: Env, asset: Asset, records: u32) -> Option<Vec<PriceData>> {
+        let Asset::Stellar(address) = asset else {
+            return None;
+        };
+        let history: Vec<PriceData> = env
+            .storage()
+            .persistent()
+            .get(&(Symbol::new(&env, "history"), address))?;
+        Some(history.slice(..history.len().min(records)))
+    }
     pub fn resolution(_env: Env) -> u32 {
         1
     }
@@ -259,6 +274,101 @@ fn setup_borrow_test() -> BorrowTestSetup<'static> {
 // ═══════════════════════════════════════════════
 
 // ─── Pool creation ─────────────────────────────
+
+#[test]
+fn asset_oracle_guard_uses_fresh_prior_median_and_preserves_legacy_assets() {
+    let s = setup_borrow_test();
+    let admin = s
+        .env
+        .as_contract(&s.contract_id, || AdminControl::get_admin(&s.env).unwrap());
+    let oracle = s.env.as_contract(&s.contract_id, || {
+        PriceOracle::get_oracle_address(&s.env).unwrap()
+    });
+    let feed = MockOracleContractClient::new(&s.env, &oracle);
+    s.env.ledger().set_timestamp(100);
+    let guard = OracleGuardConfig {
+        max_age: 10,
+        min_price: PRECISION / 2,
+        max_price: 2 * PRECISION,
+        deviation_bps: 1_000,
+        records: 5,
+    };
+    assert!(matches!(
+        s.contract_client
+            .try_set_asset_oracle_guard(&s.borrower, &s.xlm_address, &guard,),
+        Err(Ok(ContractError::NotAdmin))
+    ));
+    s.contract_client
+        .set_asset_oracle_guard(&admin, &s.xlm_address, &guard);
+    feed.set_price(&s.xlm_address, &PRECISION, &100);
+    assert!(matches!(
+        s.contract_client
+            .try_get_health_factor(&s.borrower, &s.pool_id),
+        Err(Ok(ContractError::InsufficientOracleHistory))
+    ));
+    feed.set_history(
+        &s.xlm_address,
+        &soroban_sdk::vec![
+            &s.env,
+            PriceData {
+                price: 9 * PRECISION,
+                timestamp: 89
+            },
+            PriceData {
+                price: PRECISION * 98 / 100,
+                timestamp: 97
+            },
+            PriceData {
+                price: PRECISION,
+                timestamp: 98
+            },
+            PriceData {
+                price: PRECISION * 102 / 100,
+                timestamp: 99
+            },
+        ],
+    );
+    for price in [PRECISION * 150 / 100, PRECISION * 60 / 100] {
+        feed.set_price(&s.xlm_address, &price, &100);
+        assert!(matches!(
+            s.contract_client
+                .try_get_health_factor(&s.borrower, &s.pool_id),
+            Err(Ok(ContractError::OraclePriceDeviation))
+        ));
+        assert!(matches!(
+            s.contract_client
+                .try_borrow(&s.borrower, &s.pool_id, &1, &s.xlm_address, &10),
+            Err(Ok(ContractError::OraclePriceDeviation))
+        ));
+        assert!(matches!(
+            s.contract_client
+                .try_liquidate(&admin, &s.pool_id, &s.borrower, &1),
+            Err(Ok(ContractError::OraclePriceDeviation))
+        ));
+    }
+    feed.set_price(&s.xlm_address, &(PRECISION * 105 / 100), &100);
+    assert!(s.contract_client.get_health_factor(&s.borrower, &s.pool_id) > PRECISION);
+    assert_eq!(
+        s.contract_client
+            .get_last_oracle_price(&s.xlm_address)
+            .unwrap()
+            .timestamp,
+        0
+    );
+
+    feed.set_price(&s.usdc_address, &(1000 * PRECISION), &100);
+    assert_eq!(
+        s.env
+            .as_contract(&s.contract_id, || PriceOracle::try_get_price(
+                &s.env,
+                &s.usdc_address
+            )),
+        Ok(1000 * PRECISION)
+    );
+    s.contract_client.set_oracle_config(&admin, &100, &0);
+    s.contract_client.set_oracle_config(&admin, &0, &0);
+    assert_eq!(s.contract_client.get_oracle_config(), (3600, 0));
+}
 
 #[test]
 fn test_create_pool() {
@@ -2372,7 +2482,16 @@ fn test_oracle_fresh_price() {
         "Fresh price should be returned as-is (18 dec oracle)"
     );
 
-    // Successful fetch persists price + timestamp together in storage
+    // A read leaves no snapshot. A state-changing caller can record it.
+    assert!(t.env.as_contract(&t.contract_id, || {
+        PriceOracle::get_last_oracle_price(&t.env, &t.asset_address).is_none()
+    }));
+    t.env.as_contract(&t.contract_id, || {
+        assert_eq!(
+            PriceOracle::try_record_price(&t.env, &t.asset_address),
+            Ok(PRECISION)
+        );
+    });
     let snapshot = t.env.as_contract(&t.contract_id, || {
         PriceOracle::get_last_oracle_price(&t.env, &t.asset_address)
     });

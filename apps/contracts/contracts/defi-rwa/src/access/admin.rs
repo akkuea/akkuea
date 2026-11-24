@@ -47,6 +47,11 @@ pub enum ContractError {
     CollateralAssetMismatch = 30,
     /// The requested reserve withdrawal exceeds withdrawable reserves
     InsufficientReserves = 31,
+    InvalidPoolRisk = 50,
+    InvalidInterestModel = 51,
+    CollateralNotAllowed = 52,
+    CollateralListFull = 53,
+    PoolInactive = 54,
 }
 
 pub struct AdminControl;

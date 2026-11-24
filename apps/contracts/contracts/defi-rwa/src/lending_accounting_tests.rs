@@ -95,6 +95,7 @@ fn setup_accounting() -> AccountingSetup<'static> {
         &500_000_000_000_000_000_i128,
         &1000_u32,
     );
+    client.add_collateral_asset(&admin, &pool_id, &collateral);
     client.set_oracle(&oracle, &admin);
     client.set_oracle_config(&admin, &u64::MAX, &0_i128);
 

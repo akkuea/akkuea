@@ -143,8 +143,12 @@ const reviewPropertyRoute = new Elysia()
   );
 
 const reviewWhitelistSchema = t.Object({
-  action: t.Union([t.Literal('approve'), t.Literal('reject')]),
+  action: t.Union([t.Literal('approve'), t.Literal('reject'), t.Literal('revoke')]),
   reason: t.Optional(t.String()),
+});
+
+const revokeWhitelistSchema = t.Object({
+  reason: t.String({ minLength: 1 }),
 });
 
 const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
@@ -155,16 +159,50 @@ const whitelistOperationsRoute = new Elysia({ prefix: '/pilot/whitelist' })
       tags: ['Internal Operations'],
     },
   })
-  .post('/:id/review', (ctx) => WhitelistController.review(ctx), {
-    body: reviewWhitelistSchema,
-    params: t.Object({
-      id: t.String(),
-    }),
-    detail: {
-      summary: 'Review whitelist request (Admin)',
-      tags: ['Internal Operations'],
+  .post(
+    '/:id/review',
+    async (ctx) => {
+      try {
+        return await WhitelistController.review(ctx);
+      } catch (error) {
+        const errorResponse = handleError(error);
+        ctx.set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
     },
-  });
+    {
+      body: reviewWhitelistSchema,
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: 'Review whitelist request (Admin)',
+        tags: ['Internal Operations'],
+      },
+    },
+  )
+  .post(
+    '/:id/revoke',
+    async (ctx) => {
+      try {
+        return await WhitelistController.revoke(ctx);
+      } catch (error) {
+        const errorResponse = handleError(error);
+        ctx.set.status = errorResponse.statusCode;
+        return errorResponse;
+      }
+    },
+    {
+      body: revokeWhitelistSchema,
+      params: t.Object({
+        id: t.String(),
+      }),
+      detail: {
+        summary: 'Revoke whitelisted investor (Admin)',
+        tags: ['Internal Operations'],
+      },
+    },
+  );
 
 const auditOperationsRoute = new Elysia()
   .use(internalKeyAuth)

@@ -1,421 +1,420 @@
 {
-    "Landing":  {
-                    "Hero":  {
-                                 "liveOnTestnet":  "Live on Stellar Testnet",
-                                 "realEstate":  "Real Estate.",
-                                 "tokenized":  "Tokenized.",
-                                 "democratized":  "Democratized.",
-                                 "investDesc":  "Invest in premium real estate across Latin America and Africa.",
-                                 "startingFrom":  "Starting from ",
-                                 "poweredBy":  ". Powered by ",
-                                 "exploreProperties":  "Explore Properties",
-                                 "tokenizeProperty":  "Tokenize Your Property",
-                                 "targetAum":  "Target AUM",
-                                 "properties":  "Properties",
-                                 "investors":  "Investors",
-                                 "marquee":  [
-                                                 "REAL ESTATE",
-                                                 "TOKENIZATION",
-                                                 "DEFI",
-                                                 "STELLAR",
-                                                 "BLOCKCHAIN",
-                                                 "FRACTIONAL",
-                                                 "OWNERSHIP",
-                                                 "EMERGING MARKETS"
-                                             ],
-                                 "asciiTitle":  "REAL WORLD",
-                                 "asciiSubtitle":  "ASSETS"
-                             },
-                    "AnimatedStats":  {
-                                          "metrics":  "[METRICS]",
-                                          "title":  "Driving the RWA Revolution",
-                                          "subtitle":  "Real results from real estate tokenization in emerging markets",
-                                          "platformGrowth":  "Platform Growth YoY",
-                                          "targetAum":  "Target AUM by 2027",
-                                          "propertiesTokenized":  "Properties Tokenized",
-                                          "activeInvestors":  "Active Investors"
-                                      },
-                    "Features":  {
-                                     "whyChoose":  "Why Choose Akkuea",
-                                     "builtFor":  "Built for the Future",
-                                     "ofFinance":  "of Finance",
-                                     "description":  "Combining blockchain technology with real-world assets to create a transparent, efficient, and accessible investment platform.",
-                                     "secure":  "SECURE",
-                                     "transparent":  "TRANSPARENT",
-                                     "efficient":  "EFFICIENT",
-                                     "items":  {
-                                                   "fractional":  {
-                                                                      "title":  "Fractional Ownership",
-                                                                      "desc":  "Own premium real estate with investments starting at $100. NFT-based shares ensure transparent ownership."
-                                                                  },
-                                                   "security":  {
-                                                                    "title":  "Institutional Security",
-                                                                    "desc":  "Multi-sig wallets, hardware security modules, and comprehensive insurance protect your investments."
-                                                                },
-                                                   "defi":  {
-                                                                "title":  "DeFi Lending",
-                                                                "desc":  "Use tokenized real estate as collateral or earn yields by providing liquidity to lending pools."
-                                                            },
-                                                   "emerging":  {
-                                                                    "title":  "Emerging Markets",
-                                                                    "desc":  "Access high-growth real estate markets in Latin America and Africa."
-                                                                },
-                                                   "oracles":  {
-                                                                   "title":  "Chainlink Oracles",
-                                                                   "desc":  "Real-time property valuations powered by Chainlink oracles ensure accurate pricing."
-                                                               },
-                                                   "zk":  {
-                                                              "title":  "ZK Privacy",
-                                                              "desc":  "Zero-knowledge proofs verify eligibility without revealing sensitive details."
-                                                          },
-                                                   "settlement":  {
-                                                                      "title":  "Instant Settlement",
-                                                                      "desc":  "Stellar blockchain enables near-instant transactions with fees under $0.01."
-                                                                  },
-                                                   "kyc":  {
-                                                               "title":  "KYC Compliant",
-                                                               "desc":  "Fully compliant with regulatory requirements. Verified investors only."
-                                                           }
-                                               }
-                                 },
-                    "HowItWorks":  {
-                                       "gettingStarted":  "Getting Started",
-                                       "title":  "How It Works",
-                                       "subtitle":  "Start investing in tokenized real estate in four simple steps",
-                                       "ready":  "Ready to start? Connect your wallet above.",
-                                       "steps":  {
-                                                     "connect":  {
-                                                                     "title":  "Connect Wallet",
-                                                                     "desc":  "Link your Stellar wallet and complete KYC verification to unlock the platform."
-                                                                 },
-                                                     "browse":  {
-                                                                    "title":  "Browse Properties",
-                                                                    "desc":  "Explore tokenized properties across Latin America and Africa with full transparency."
-                                                                },
-                                                     "invest":  {
-                                                                    "title":  "Invest",
-                                                                    "desc":  "Purchase fractional ownership tokens with stablecoins. Receive NFT certificates."
-                                                                },
-                                                     "earn":  {
-                                                                  "title":  "Earn Returns",
-                                                                  "desc":  "Collect rental income, benefit from appreciation, or use as DeFi collateral."
-                                                              }
-                                                 }
-                                   },
-                    "CTA":  {
-                                "platformLive":  "Platform Live",
-                                "titlePart1":  "Ready to Build Your",
-                                "titlePart2":  "Real Estate Portfolio?",
-                                "description":  "Join thousands of investors already earning yields from tokenized properties. Start with as little as $100 and diversify globally.",
-                                "startInvesting":  "Start Investing Now",
-                                "listProperty":  "List Your Property",
-                                "security":  "Bank-grade security",
-                                "compliance":  "Regulatory compliant",
-                                "settlements":  "Instant settlements"
-                            }
-                },
-    "Dashboard":  {
-                      "title":  "Dashboard",
-                      "overview":  "Your portfolio overview",
-                      "connectWallet":  "Connect Your Wallet",
-                      "connectWalletDesc":  "Connect your Stellar wallet to view your portfolio, manage investments, and access DeFi features.",
-                      "walletAddress":  "Wallet Address",
-                      "walletBalance":  "Wallet Balance",
-                      "portfolioValue":  "Portfolio Value",
-                      "estimated":  "Estimated",
-                      "properties":  "Properties",
-                      "noHoldings":  "No holdings",
-                      "avgYield":  "Avg. Yield",
-                      "supplyApy":  "Supply APY",
-                      "healthFactor":  "Health Factor",
-                      "noBorrows":  "No borrows",
-                      "healthFactorUnavailable":  "Unavailable",
-                      "yourProperties":  "Your Properties",
-                      "borrowed":  "borrowed",
-                      "noPropertiesYet":  "No properties in your portfolio yet.",
-                      "browseMarketplace":  "Browse the marketplace to start investing.",
-                      "allocation":  "Allocation",
-                      "activeLoans":  "Active Loans",
-                      "accruedInterest":  "Accrued Interest",
-                      "deposits":  "Deposits",
-                      "totalDeposited":  "Total Deposited",
-                      "emptyState":  "Your portfolio is empty. Connect a wallet with assets to see your investments.",
-                      "refresh":  "Refresh",
-                      "copyAddress":  "Copy address",
-                      "viewExplorer":  "View on explorer",
-                      "retry":  "Retry",
-                      "assetSingle":  "asset",
-                      "assetPlural":  "assets"
-                  },
-    "PropertyReportCard":  {
-                               "shares":  "shares",
-                               "verified":  "Verified",
-                               "perShare":  "/ share",
-                               "apy":  "APY"
-                           },
-    "AllocationChart":  {
-                            "noData":  "No allocation data"
-                        },
-    "Navbar":  {
-                   "dashboard":  "Dashboard",
-                   "marketplace":  "Marketplace",
-                   "tokenize":  "Tokenize",
-                   "lending":  "Lending",
-                   "map":  "Map",
-                   "connect":  "Connect",
-                   "pilotInvestor":  "Investor",
-                   "pilotOnboarding":  "Join Pilot",
-                   "pilotAlly":  "Ally",
-                   "pilotReview":  "Review"
-               },
-    "Treasury":  {
-                     "title":  "Treasury",
-                     "whatThisIs":  "Where the accumulated platform fee is held, and what it is doing.",
-                     "whyItExists":  "The platform fee builds up in a Stellar account. Rather than leave it sitting idle, it is deposited into two DeFi venues that are already deployed and already audited: DeFindex\u0027s Blend strategy, and Etherfuse\u0027s Stablebonds. This is treasury management, the balance earns a return instead of nothing. It is not an exercise in producing numbers to point at.",
-                     "howToVerify":  "Because it settles on chain, the record is checkable by anyone. Every figure on this page is read from the vault contracts when the page loads; none of it is estimated or projected. The links below go to the contracts and the treasury account on stellar.expert, so you can confirm each number against the ledger yourself.",
-                     "positionValue":  "Position value",
-                     "sharesHeld":  "{shares} vault shares",
-                     "noDepositYet":  "No funds deposited into this venue yet.",
-                     "vaultTotal":  "Vault total",
-                     "vaultFee":  "Vault fee",
-                     "paused":  "Paused",
-                     "viewVault":  "Vault on stellar.expert",
-                     "viewAccount":  "Treasury account",
-                     "viewTx":  "Transaction",
-                     "contractId":  "Contract {id}",
-                     "noVenuesConfigured":  "No treasury venue is configured for this network yet, so there is no position to show.",
-                     "venuesUnavailable":  "Some venues could not be read",
-                     "historyTitle":  "Movements",
-                     "historyNote":  "Every recorded deposit and withdrawal, including attempts that the venue rejected.",
-                     "column":  {
-                                    "date":  "Date",
-                                    "action":  "Action",
-                                    "amount":  "Amount",
-                                    "result":  "Result",
-                                    "record":  "On chain"
-                                },
-                     "operation":  {
-                                       "deposit":  "Deposit",
-                                       "withdraw":  "Withdraw"
-                                   },
-                     "status":  {
-                                    "submitted":  "Submitted",
-                                    "failed":  "Failed"
-                                },
-                     "readFailed":  "Could not read the treasury position",
-                     "retry":  "Retry",
-                     "readAtNote":  "Read live from Stellar {network}. Treasury account: {account}.",
-                     "noAccountConfigured":  "not configured"
-                 },
-    "PilotAdmin":  {
-                       "title":  "Admin"
-                   },
-    "Pilot":  {
-                  "ally":  {
-                               "pageTitle":  "Report income evidence",
-                               "pageSubtitle":  "Submit this cycle\u0027s income statement and follow it through review. The file stays on your device: only its hash reaches the chain."
-                           },
-                  "operator":  {
-                                   "pageTitle":  "Evidence review",
-                                   "pageSubtitle":  "Approve or reject the ally\u0027s reported cycles, then execute the payout once a cycle is approved."
-                               },
-                  "investor":  {
-                                   "pageTitle":  "Your pilot position",
-                                   "pageSubtitle":  "Holdings, the ally\u0027s cycle-by-cycle payment record, and the property behind it. Every status is read from the contract."
-                               },
-                  "cycleStatus":  {
-                                      "on_time":  "On time",
-                                      "late":  "Late",
-                                      "disputed":  "Disputed",
-                                      "not_received":  "Not received",
-                                      "pending":  "Pending"
-                                  },
-                  "evidenceStatus":  {
-                                         "submitted":  "Submitted",
-                                         "under_review":  "In review",
-                                         "approved":  "Approved",
-                                         "rejected":  "Rejected",
-                                         "disputed":  "Disputed"
-                                     },
-                  "timeline":  {
-                                   "title":  "Income cycles",
-                                   "emptyTitle":  "No cycles yet",
-                                   "emptyDescription":  "The pilot has not reached its first income cycle. Statuses appear here as soon as the ally reports one.",
-                                   "staleReading":  "Showing the last reading that succeeded.",
-                                   "expected":  "Expected {date}",
-                                   "expectedAndPaid":  "Expected {date}, paid {paidDate}",
-                                   "escalationTitle":  "The ally has not reported for {count} consecutive cycles",
-                                   "escalationDescription":  "No income evidence reached the payout contract for these cycles. This is an on-chain fact, not an estimate: the contract holds no record for them."
-                               },
-                  "submission":  {
-                                     "title":  "Evidence for {cycle}",
-                                     "subtitle":  "The file stays on your device. Only its SHA-256 hash is written on-chain.",
-                                     "connectTitle":  "Connect your wallet to submit evidence",
-                                     "connectDescription":  "Submissions are signed by the ally address registered in the payout contract.",
-                                     "connect":  "Connect wallet",
-                                     "fileLabel":  "Income statement",
-                                     "hashing":  "Hashing locally",
-                                     "linkLabel":  "Evidence link",
-                                     "linkHint":  "Where a reviewer can retrieve the statement to check it against the hash.",
-                                     "amountLabel":  "Total income (USDC)",
-                                     "submit":  "Submit for review",
-                                     "submitted":  "Submitted. The operator can now review this cycle.",
-                                     "rejectedPrefix":  "Rejected: {reason}",
-                                     "lockedNotice":  "This cycle is already recorded on-chain. A new submission is only possible after a rejection.",
-                                     "pausedNotice":  "The payout contract is paused. Submissions are disabled until an admin resumes it.",
-                                     "hashUnavailable":  "Could not hash the selected file.",
-                                     "submitFailed":  "The submission was not accepted on-chain."
-                                 },
-                  "queue":  {
-                                "title":  "Review queue",
-                                "emptyTitle":  "Nothing waiting on review",
-                                "emptyDescription":  "Every cycle the ally has reported is either distributed or already resolved.",
-                                "connectNotice":  "Connect the operator wallet to approve, reject, or distribute.",
-                                "connect":  "Connect wallet",
-                                "pausedNotice":  "The payout contract is paused. Review actions are disabled until an admin resumes it.",
-                                "reported":  "Reported {amount}",
-                                "openStatement":  "Open the statement to check it against the hash",
-                                "reasonLabel":  "Reason",
-                                "reasonPlaceholder":  "Required to reject, optional to approve",
-                                "startReview":  "Start review",
-                                "approve":  "Approve",
-                                "reject":  "Reject",
-                                "reasonHint":  "A rejection without a reason is refused by the contract, so the ally always learns what to correct.",
-                                "connectFirst":  "Connect the operator wallet to act on this cycle.",
-                                "actionFailed":  "The transaction was not accepted on-chain.",
-                                "readyToDistribute":  "Approved and ready to distribute.",
-                                "flagDispute":  "Flag dispute"
-                            },
-                  "cosign":  {
-                                 "prepareHint":  "The payout contract requires the operator and the ally to authorize the same transaction. Prepare it here, then share it with the ally to co-sign.",
-                                 "prepareButton":  "Prepare distribution",
-                                 "summaryTitle":  "Review before signing",
-                                 "summaryContract":  "Contract",
-                                 "summaryCycle":  "Cycle",
-                                 "summaryOperator":  "Operator",
-                                 "summaryAlly":  "Ally",
-                                 "summaryTotal":  "Total to holders",
-                                 "summaryHolderCount":  "Holder count",
-                                 "summaryPlatformFee":  "Platform fee",
-                                 "summaryEurcFloor":  "EURC price floor",
-                                 "noEurcHolders":  "Not required (no holder has opted into EURC)",
-                                 "needsSignatureFrom":  "Still needs a signature from: {addresses}",
-                                 "shareLabel":  "Share this with the ally to co-sign",
-                                 "copyButton":  "Copy",
-                                 "copied":  "Copied",
-                                 "pasteAllyResponseLabel":  "Paste the ally\u0027s signed response here",
-                                 "pasteAllyResponsePlaceholder":  "Paste the payload the ally sent back after co-signing",
-                                 "checkResponseButton":  "Check response",
-                                 "finalizeButton":  "Finalize and submit",
-                                 "distributed":  "Distribution submitted. Transaction {hash}...",
-                                 "allyNotConfigured":  "The pilot\u0027s ally address is not configured (NEXT_PUBLIC_PILOT_ALLY_ADDRESS). Distribution cannot be prepared until it is set.",
-                                 "allyPanelTitle":  "Co-sign a distribution",
-                                 "allyPanelHint":  "Paste the request the operator shared with you: a distribution, a co-signed evidence record, or an exit. You will see exactly what you are authorizing before signing anything.",
-                                 "pasteRequestPlaceholder":  "Paste the payload the operator shared with you",
-                                 "reviewButton":  "Review",
-                                 "coSignButton":  "Co-sign",
-                                 "returnPayloadLabel":  "Send this back to the operator",
-                                 "walletCannotSignAuthEntries":  "The connected wallet cannot sign authorization entries. Connect with a wallet that supports it, such as Freighter, to co-sign a distribution.",
-                                 "summaryEvidenceHash":  "Evidence hash",
-                                 "recordEvidenceTitle":  "Record evidence directly",
-                                 "recordEvidenceHint":  "Both you and the ally sign this in one transaction, so the cycle lands already approved instead of going through the separate submit-and-review steps.",
-                                 "cycleIdLabel":  "Cycle",
-                                 "recordEvidenceDistributed":  "Evidence recorded. Transaction {hash}...",
-                                 "exitTitle":  "End the pilot",
-                                 "exitHint":  "Permanently terminates the ally/property relationship. This cannot be undone: no evidence can be recorded and no further distribution can execute after this.",
-                                 "exitReasonLabel":  "Reason",
-                                 "exitReasonPlaceholder":  "Why is this pilot ending?",
-                                 "exitButton":  "End this pilot",
-                                 "exitConfirmNotice":  "This is permanent and cannot be reversed. Both the operator and the ally must sign it.",
-                                 "exitConfirmButton":  "Yes, end it permanently",
-                                 "exitCancelButton":  "Cancel",
-                                 "exitDone":  "This pilot has exited. Transaction {hash}..."
-                             },
-                  "holdings":  {
-                                   "title":  "Your holdings",
-                                   "connectTitle":  "Connect your wallet to see your position",
-                                   "connectDescription":  "The cycle history below is public and does not need a wallet.",
-                                   "connect":  "Connect wallet",
-                                   "emptyTitle":  "No holdings yet",
-                                   "emptyDescription":  "This wallet does not hold the pilot income token. Once tokens are issued to it, your position and payouts appear here.",
-                                   "staleReading":  "Showing the last reading that succeeded.",
-                                   "whitelisted":  "Approved on the pilot whitelist",
-                                   "notWhitelisted":  "Not approved on the pilot whitelist",
-                                   "notWhitelistedHint":  "The payout contract skips holders who are not approved, so approval is required to receive a distribution.",
-                                   "tokensHeld":  "Tokens held",
-                                   "shareOfSupply":  "Share of supply",
-                                   "shareHint":  "of {supply} issued",
-                                   "distributedToYou":  "Distributed to you",
-                                   "distributedHint":  "Across every completed cycle"
-                               },
-                  "property":  {
-                                   "title":  "Property evidence",
-                                   "subtitle":  "An independent look at the property behind the income, alongside the hashed statement.",
-                                   "emptyTitle":  "No property capture yet",
-                                   "emptyDescription":  "The ally\u0027s property has not been captured in 3D. The cycle history above is unaffected.",
-                                   "defaultName":  "Pilot property"
-                               },
-                  "state":  {
-                                "exitTitle":  "This pilot has ended",
-                                "exitReason":  "Reason recorded on-chain: {reason}",
-                                "exitAt":  "Exited on {date}",
-                                "pausedTitle":  "Payouts are paused",
-                                "pausedDescription":  "An admin paused the payout contract. New evidence, review, and distribution are blocked until it is resumed. Payout history and any claimable funds remain available."
-                            },
-                  "eurc":  {
-                               "title":  "Settlement currency",
-                               "subtitle":  "Choose the currency your share of each cycle is paid in. The choice is stored on-chain and applies from the next distribution.",
-                               "current":  {
-                                               "usdc":  "Paid in USDC",
-                                               "eurc":  "Paid in EURC"
-                                           },
-                               "toggleLabel":  "Receive EURC",
-                               "toggleDescription":  "Convert each cycle\u0027s USDC share to EURC at payout time",
-                               "riskNotice":  "EURC shares are swapped on-chain at payout time. If the pool cannot meet the minimum rate the operator and ally agreed for that cycle, your share is not converted: it stays in the contract as USDC and you can claim it here.",
-                               "pausedNotice":  "The payout contract is paused. Currency changes are disabled until an admin resumes it.",
-                               "save":  "Save preference",
-                               "saved":  "Preference updated on-chain.",
-                               "connectTitle":  "Connect your wallet to change your settlement currency",
-                               "connectDescription":  "Only the holder\u0027s own signature can change which currency they are paid in.",
-                               "connect":  "Connect wallet",
-                               "connectFirst":  "Connect your wallet before changing your preference.",
-                               "actionFailed":  "The preference change was not accepted on-chain."
-                           },
-                  "withheld":  {
-                                   "title":  "Withheld balance",
-                                   "explanation":  "USDC reserved in the contract for you after a failed EURC conversion. It is yours and can be claimed at any time, even while the contract is paused or the pilot has ended.",
-                                   "claim":  "Claim in USDC",
-                                   "claimed":  "Claimed. The USDC has been sent to your wallet.",
-                                   "connectTitle":  "Connect your wallet to claim your withheld USDC",
-                                   "connectDescription":  "{amount} is reserved in the payout contract for you.",
-                                   "connect":  "Connect wallet",
-                                   "connectFirst":  "Connect your wallet before claiming.",
-                                   "actionFailed":  "The claim was not accepted on-chain."
-                               },
-                  "history":  {
-                                  "title":  "Your payout history",
-                                  "emptyTitle":  "No payouts yet",
-                                  "emptyDescription":  "Once a cycle is distributed, the amount and currency you were actually paid appear here, read from the contract.",
-                                  "staleReading":  "Showing the last reading that succeeded.",
-                                  "withheldBadge":  "Withheld",
-                                  "currency":  {
-                                                   "usdc":  "USDC",
-                                                   "eurc":  "EURC"
-                                               },
-                                  "paidAs":  "Paid {amount} for this cycle",
-                                  "withheldRow":  "{amount} withheld and still claimable in USDC",
-                                  "noPayout":  "You held no tokens for this cycle, so there was no payout.",
-                                  "notDistributed":  "Not distributed yet.",
-                                  "verifyOnChain":  "Verify this cycle on the explorer"
-                              },
-                  "verify":  {
-                                 "action":  "Verify this evidence",
-                                 "match":  "The document matches the hash recorded on-chain.",
-                                 "mismatch":  "The document does not match the hash recorded on-chain.",
-                                 "unreachable":  "The document could not be retrieved, so it was not verified.",
-                                 "fileFallback":  "If you already have the document, hash your own copy here to compare it yourself.",
-                                 "chooseFile":  "Hash a downloaded file",
-                                 "failed":  "The document could not be hashed."
-                             }
-              }
+  "Landing": {
+    "Hero": {
+      "liveOnTestnet": "Live on Stellar Testnet",
+      "realEstate": "Real Estate.",
+      "tokenized": "Tokenized.",
+      "democratized": "Democratized.",
+      "investDesc": "Invest in premium real estate across Latin America and Africa.",
+      "startingFrom": "Starting from ",
+      "poweredBy": ". Powered by ",
+      "exploreProperties": "Explore Properties",
+      "tokenizeProperty": "Tokenize Your Property",
+      "targetAum": "Target AUM",
+      "properties": "Properties",
+      "investors": "Investors",
+      "marquee": [
+        "REAL ESTATE",
+        "TOKENIZATION",
+        "DEFI",
+        "STELLAR",
+        "BLOCKCHAIN",
+        "FRACTIONAL",
+        "OWNERSHIP",
+        "EMERGING MARKETS"
+      ],
+      "asciiTitle": "REAL WORLD",
+      "asciiSubtitle": "ASSETS"
+    },
+    "AnimatedStats": {
+      "metrics": "[METRICS]",
+      "title": "Driving the RWA Revolution",
+      "subtitle": "Real results from real estate tokenization in emerging markets",
+      "platformGrowth": "Platform Growth YoY",
+      "targetAum": "Target AUM by 2027",
+      "propertiesTokenized": "Properties Tokenized",
+      "activeInvestors": "Active Investors"
+    },
+    "Features": {
+      "whyChoose": "Why Choose Akkuea",
+      "builtFor": "Built for the Future",
+      "ofFinance": "of Finance",
+      "description": "Combining blockchain technology with real-world assets to create a transparent, efficient, and accessible investment platform.",
+      "secure": "SECURE",
+      "transparent": "TRANSPARENT",
+      "efficient": "EFFICIENT",
+      "items": {
+        "fractional": {
+          "title": "Fractional Ownership",
+          "desc": "Own premium real estate with investments starting at $100. NFT-based shares ensure transparent ownership."
+        },
+        "security": {
+          "title": "Institutional Security",
+          "desc": "Multi-sig wallets, hardware security modules, and comprehensive insurance protect your investments."
+        },
+        "defi": {
+          "title": "DeFi Lending",
+          "desc": "Use tokenized real estate as collateral or earn yields by providing liquidity to lending pools."
+        },
+        "emerging": {
+          "title": "Emerging Markets",
+          "desc": "Access high-growth real estate markets in Latin America and Africa."
+        },
+        "oracles": {
+          "title": "Chainlink Oracles",
+          "desc": "Real-time property valuations powered by Chainlink oracles ensure accurate pricing."
+        },
+        "zk": {
+          "title": "ZK Privacy",
+          "desc": "Zero-knowledge proofs verify eligibility without revealing sensitive details."
+        },
+        "settlement": {
+          "title": "Instant Settlement",
+          "desc": "Stellar blockchain enables near-instant transactions with fees under $0.01."
+        },
+        "kyc": {
+          "title": "KYC Compliant",
+          "desc": "Fully compliant with regulatory requirements. Verified investors only."
+        }
+      }
+    },
+    "HowItWorks": {
+      "gettingStarted": "Getting Started",
+      "title": "How It Works",
+      "subtitle": "Start investing in tokenized real estate in four simple steps",
+      "ready": "Ready to start? Connect your wallet above.",
+      "steps": {
+        "connect": {
+          "title": "Connect Wallet",
+          "desc": "Link your Stellar wallet and complete KYC verification to unlock the platform."
+        },
+        "browse": {
+          "title": "Browse Properties",
+          "desc": "Explore tokenized properties across Latin America and Africa with full transparency."
+        },
+        "invest": {
+          "title": "Invest",
+          "desc": "Purchase fractional ownership tokens with stablecoins. Receive NFT certificates."
+        },
+        "earn": {
+          "title": "Earn Returns",
+          "desc": "Collect rental income, benefit from appreciation, or use as DeFi collateral."
+        }
+      }
+    },
+    "CTA": {
+      "platformLive": "Platform Live",
+      "titlePart1": "Ready to Build Your",
+      "titlePart2": "Real Estate Portfolio?",
+      "description": "Join thousands of investors already earning yields from tokenized properties. Start with as little as $100 and diversify globally.",
+      "startInvesting": "Start Investing Now",
+      "listProperty": "List Your Property",
+      "security": "Bank-grade security",
+      "compliance": "Regulatory compliant",
+      "settlements": "Instant settlements"
+    }
+  },
+  "Dashboard": {
+    "title": "Dashboard",
+    "overview": "Your portfolio overview",
+    "connectWallet": "Connect Your Wallet",
+    "connectWalletDesc": "Connect your Stellar wallet to view your portfolio, manage investments, and access DeFi features.",
+    "walletAddress": "Wallet Address",
+    "walletBalance": "Wallet Balance",
+    "portfolioValue": "Portfolio Value",
+    "estimated": "Estimated",
+    "properties": "Properties",
+    "noHoldings": "No holdings",
+    "avgYield": "Avg. Yield",
+    "supplyApy": "Supply APY",
+    "healthFactor": "Health Factor",
+    "noBorrows": "No borrows",
+    "healthFactorUnavailable": "Unavailable",
+    "yourProperties": "Your Properties",
+    "borrowed": "borrowed",
+    "noPropertiesYet": "No properties in your portfolio yet.",
+    "browseMarketplace": "Browse the marketplace to start investing.",
+    "allocation": "Allocation",
+    "activeLoans": "Active Loans",
+    "accruedInterest": "Accrued Interest",
+    "deposits": "Deposits",
+    "totalDeposited": "Total Deposited",
+    "emptyState": "Your portfolio is empty. Connect a wallet with assets to see your investments.",
+    "refresh": "Refresh",
+    "copyAddress": "Copy address",
+    "viewExplorer": "View on explorer",
+    "retry": "Retry",
+    "assetSingle": "asset",
+    "assetPlural": "assets"
+  },
+  "PropertyReportCard": {
+    "shares": "shares",
+    "verified": "Verified",
+    "perShare": "/ share",
+    "apy": "APY"
+  },
+  "AllocationChart": {
+    "noData": "No allocation data"
+  },
+  "Navbar": {
+    "dashboard": "Dashboard",
+    "marketplace": "Marketplace",
+    "tokenize": "Tokenize",
+    "lending": "Lending",
+    "map": "Map",
+    "connect": "Connect"
+  },
+  "Treasury": {
+    "title": "Treasury",
+    "whatThisIs": "Where the accumulated platform fee is held, and what it is doing.",
+    "whyItExists": "The platform fee builds up in a Stellar account. Rather than leave it sitting idle, it is deposited into two DeFi venues that are already deployed and already audited: DeFindex's Blend strategy, and Etherfuse's Stablebonds. This is treasury management, the balance earns a return instead of nothing. It is not an exercise in producing numbers to point at.",
+    "howToVerify": "Because it settles on chain, the record is checkable by anyone. Every figure on this page is read from the vault contracts when the page loads; none of it is estimated or projected. The links below go to the contracts and the treasury account on stellar.expert, so you can confirm each number against the ledger yourself.",
+    "positionValue": "Position value",
+    "sharesHeld": "{shares} vault shares",
+    "noDepositYet": "No funds deposited into this venue yet.",
+    "vaultTotal": "Vault total",
+    "vaultFee": "Vault fee",
+    "paused": "Paused",
+    "viewVault": "Vault on stellar.expert",
+    "viewAccount": "Treasury account",
+    "viewTx": "Transaction",
+    "contractId": "Contract {id}",
+    "noVenuesConfigured": "No treasury venue is configured for this network yet, so there is no position to show.",
+    "venuesUnavailable": "Some venues could not be read",
+    "historyTitle": "Movements",
+    "historyNote": "Every recorded deposit and withdrawal, including attempts that the venue rejected.",
+    "column": {
+      "date": "Date",
+      "action": "Action",
+      "amount": "Amount",
+      "result": "Result",
+      "record": "On chain"
+    },
+    "operation": {
+      "deposit": "Deposit",
+      "withdraw": "Withdraw"
+    },
+    "status": {
+      "submitted": "Submitted",
+      "failed": "Failed"
+    },
+    "readFailed": "Could not read the treasury position",
+    "retry": "Retry",
+    "readAtNote": "Read live from Stellar {network}. Treasury account: {account}.",
+    "noAccountConfigured": "not configured"
+  },
+  "PilotAdmin": {
+    "title": "Admin"
+  },
+  "Pilot": {
+    "ally": {
+      "pageTitle": "Report income evidence",
+      "pageSubtitle": "Submit this cycle's income statement and follow it through review. The file stays on your device: only its hash reaches the chain."
+    },
+    "operator": {
+      "pageTitle": "Evidence review",
+      "pageSubtitle": "Approve or reject the ally's reported cycles, then execute the payout once a cycle is approved."
+    },
+    "investor": {
+      "pageTitle": "Your pilot position",
+      "pageSubtitle": "Holdings, the ally's cycle-by-cycle payment record, and the property behind it. Every status is read from the contract."
+    },
+    "cycleStatus": {
+      "on_time": "On time",
+      "late": "Late",
+      "disputed": "Disputed",
+      "not_received": "Not received",
+      "pending": "Pending"
+    },
+    "evidenceStatus": {
+      "submitted": "Submitted",
+      "under_review": "In review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "disputed": "Disputed"
+    },
+    "timeline": {
+      "title": "Income cycles",
+      "emptyTitle": "No cycles yet",
+      "emptyDescription": "The pilot has not reached its first income cycle. Statuses appear here as soon as the ally reports one.",
+      "staleReading": "Showing the last reading that succeeded.",
+      "expected": "Expected {date}",
+      "expectedAndPaid": "Expected {date}, paid {paidDate}",
+      "escalationTitle": "The ally has not reported for {count} consecutive cycles",
+      "escalationDescription": "No income evidence reached the payout contract for these cycles. This is an on-chain fact, not an estimate: the contract holds no record for them."
+    },
+    "submission": {
+      "title": "Evidence for {cycle}",
+      "subtitle": "The file stays on your device. Only its SHA-256 hash is written on-chain.",
+      "connectTitle": "Connect your wallet to submit evidence",
+      "connectDescription": "Submissions are signed by the ally address registered in the payout contract.",
+      "connect": "Connect wallet",
+      "fileLabel": "Income statement",
+      "hashing": "Hashing locally",
+      "linkLabel": "Evidence link",
+      "linkHint": "Where a reviewer can retrieve the statement to check it against the hash.",
+      "invalidLink": "Evidence link must be a valid https:// URL.",
+      "amountLabel": "Total income (USDC)",
+      "submit": "Submit for review",
+      "submitted": "Submitted. The operator can now review this cycle.",
+      "rejectedPrefix": "Rejected: {reason}",
+      "lockedNotice": "This cycle is already recorded on-chain. A new submission is only possible after a rejection.",
+      "pausedNotice": "The payout contract is paused. Submissions are disabled until an admin resumes it.",
+      "hashUnavailable": "Could not hash the selected file.",
+      "submitFailed": "The submission was not accepted on-chain."
+    },
+    "queue": {
+      "title": "Review queue",
+      "emptyTitle": "Nothing waiting on review",
+      "emptyDescription": "Every cycle the ally has reported is either distributed or already resolved.",
+      "connectNotice": "Connect the operator wallet to approve, reject, or distribute.",
+      "connect": "Connect wallet",
+      "pausedNotice": "The payout contract is paused. Review actions are disabled until an admin resumes it.",
+      "reported": "Reported {amount}",
+      "openStatement": "Open the statement to check it against the hash",
+      "invalidLink": "Invalid link (must use https://)",
+      "reasonLabel": "Reason",
+      "reasonPlaceholder": "Required to reject, optional to approve",
+      "startReview": "Start review",
+      "approve": "Approve",
+      "reject": "Reject",
+      "reasonHint": "A rejection without a reason is refused by the contract, so the ally always learns what to correct.",
+      "connectFirst": "Connect the operator wallet to act on this cycle.",
+      "actionFailed": "The transaction was not accepted on-chain.",
+      "readyToDistribute": "Approved and ready to distribute.",
+      "flagDispute": "Flag dispute"
+    },
+    "cosign": {
+      "prepareHint": "The payout contract requires the operator and the ally to authorize the same transaction. Prepare it here, then share it with the ally to co-sign.",
+      "prepareButton": "Prepare distribution",
+      "summaryTitle": "Review before signing",
+      "summaryContract": "Contract",
+      "summaryCycle": "Cycle",
+      "summaryOperator": "Operator",
+      "summaryAlly": "Ally",
+      "summaryTotal": "Total to holders",
+      "summaryHolderCount": "Holder count",
+      "summaryPlatformFee": "Platform fee",
+      "summaryEurcFloor": "EURC price floor",
+      "noEurcHolders": "Not required (no holder has opted into EURC)",
+      "needsSignatureFrom": "Still needs a signature from: {addresses}",
+      "shareLabel": "Share this with the ally to co-sign",
+      "copyButton": "Copy",
+      "copied": "Copied",
+      "pasteAllyResponseLabel": "Paste the ally's signed response here",
+      "pasteAllyResponsePlaceholder": "Paste the payload the ally sent back after co-signing",
+      "checkResponseButton": "Check response",
+      "finalizeButton": "Finalize and submit",
+      "distributed": "Distribution submitted. Transaction {hash}...",
+      "allyNotConfigured": "The pilot's ally address is not configured (NEXT_PUBLIC_PILOT_ALLY_ADDRESS). Distribution cannot be prepared until it is set.",
+      "allyPanelTitle": "Co-sign a distribution",
+      "allyPanelHint": "Paste the request the operator shared with you: a distribution, a co-signed evidence record, or an exit. You will see exactly what you are authorizing before signing anything.",
+      "pasteRequestPlaceholder": "Paste the payload the operator shared with you",
+      "reviewButton": "Review",
+      "coSignButton": "Co-sign",
+      "returnPayloadLabel": "Send this back to the operator",
+      "walletCannotSignAuthEntries": "The connected wallet cannot sign authorization entries. Connect with a wallet that supports it, such as Freighter, to co-sign a distribution.",
+      "summaryEvidenceHash": "Evidence hash",
+      "recordEvidenceTitle": "Record evidence directly",
+      "recordEvidenceHint": "Both you and the ally sign this in one transaction, so the cycle lands already approved instead of going through the separate submit-and-review steps.",
+      "cycleIdLabel": "Cycle",
+      "recordEvidenceDistributed": "Evidence recorded. Transaction {hash}...",
+      "exitTitle": "End the pilot",
+      "exitHint": "Permanently terminates the ally/property relationship. This cannot be undone: no evidence can be recorded and no further distribution can execute after this.",
+      "exitReasonLabel": "Reason",
+      "exitReasonPlaceholder": "Why is this pilot ending?",
+      "exitButton": "End this pilot",
+      "exitConfirmNotice": "This is permanent and cannot be reversed. Both the operator and the ally must sign it.",
+      "exitConfirmButton": "Yes, end it permanently",
+      "exitCancelButton": "Cancel",
+      "exitDone": "This pilot has exited. Transaction {hash}..."
+    },
+    "holdings": {
+      "title": "Your holdings",
+      "connectTitle": "Connect your wallet to see your position",
+      "connectDescription": "The cycle history below is public and does not need a wallet.",
+      "connect": "Connect wallet",
+      "emptyTitle": "No holdings yet",
+      "emptyDescription": "This wallet does not hold the pilot income token. Once tokens are issued to it, your position and payouts appear here.",
+      "staleReading": "Showing the last reading that succeeded.",
+      "whitelisted": "Approved on the pilot whitelist",
+      "notWhitelisted": "Not approved on the pilot whitelist",
+      "notWhitelistedHint": "The payout contract skips holders who are not approved, so approval is required to receive a distribution.",
+      "tokensHeld": "Tokens held",
+      "shareOfSupply": "Share of supply",
+      "shareHint": "of {supply} issued",
+      "distributedToYou": "Distributed to you",
+      "distributedHint": "Across every completed cycle"
+    },
+    "property": {
+      "title": "Property evidence",
+      "subtitle": "An independent look at the property behind the income, alongside the hashed statement.",
+      "emptyTitle": "No property capture yet",
+      "emptyDescription": "The ally's property has not been captured in 3D. The cycle history above is unaffected.",
+      "defaultName": "Pilot property"
+    },
+    "state": {
+      "exitTitle": "This pilot has ended",
+      "exitReason": "Reason recorded on-chain: {reason}",
+      "exitAt": "Exited on {date}",
+      "pausedTitle": "Payouts are paused",
+      "pausedDescription": "An admin paused the payout contract. New evidence, review, and distribution are blocked until it is resumed. Payout history and any claimable funds remain available."
+    },
+    "eurc": {
+      "title": "Settlement currency",
+      "subtitle": "Choose the currency your share of each cycle is paid in. The choice is stored on-chain and applies from the next distribution.",
+      "current": {
+        "usdc": "Paid in USDC",
+        "eurc": "Paid in EURC"
+      },
+      "toggleLabel": "Receive EURC",
+      "toggleDescription": "Convert each cycle's USDC share to EURC at payout time",
+      "riskNotice": "EURC shares are swapped on-chain at payout time. If the pool cannot meet the minimum rate the operator and ally agreed for that cycle, your share is not converted: it stays in the contract as USDC and you can claim it here.",
+      "pausedNotice": "The payout contract is paused. Currency changes are disabled until an admin resumes it.",
+      "save": "Save preference",
+      "saved": "Preference updated on-chain.",
+      "connectTitle": "Connect your wallet to change your settlement currency",
+      "connectDescription": "Only the holder's own signature can change which currency they are paid in.",
+      "connect": "Connect wallet",
+      "connectFirst": "Connect your wallet before changing your preference.",
+      "actionFailed": "The preference change was not accepted on-chain."
+    },
+    "withheld": {
+      "title": "Withheld balance",
+      "explanation": "USDC reserved in the contract for you after a failed EURC conversion. It is yours and can be claimed at any time, even while the contract is paused or the pilot has ended.",
+      "claim": "Claim in USDC",
+      "claimed": "Claimed. The USDC has been sent to your wallet.",
+      "connectTitle": "Connect your wallet to claim your withheld USDC",
+      "connectDescription": "{amount} is reserved in the payout contract for you.",
+      "connect": "Connect wallet",
+      "connectFirst": "Connect your wallet before claiming.",
+      "actionFailed": "The claim was not accepted on-chain."
+    },
+    "history": {
+      "title": "Your payout history",
+      "emptyTitle": "No payouts yet",
+      "emptyDescription": "Once a cycle is distributed, the amount and currency you were actually paid appear here, read from the contract.",
+      "staleReading": "Showing the last reading that succeeded.",
+      "withheldBadge": "Withheld",
+      "currency": {
+        "usdc": "USDC",
+        "eurc": "EURC"
+      },
+      "paidAs": "Paid {amount} for this cycle",
+      "withheldRow": "{amount} withheld and still claimable in USDC",
+      "noPayout": "You held no tokens for this cycle, so there was no payout.",
+      "notDistributed": "Not distributed yet.",
+      "verifyOnChain": "Verify this cycle on the explorer"
+    },
+    "verify": {
+      "action": "Verify this evidence",
+      "match": "The document matches the hash recorded on-chain.",
+      "mismatch": "The document does not match the hash recorded on-chain.",
+      "unreachable": "The document could not be retrieved, so it was not verified.",
+      "fileFallback": "If you already have the document, hash your own copy here to compare it yourself.",
+      "chooseFile": "Hash a downloaded file",
+      "failed": "The document could not be hashed.",
+      "invalidLink": "Evidence link is not a valid https:// URL."
+    }
+  }
 }

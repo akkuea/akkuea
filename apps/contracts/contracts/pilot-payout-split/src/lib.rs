@@ -44,6 +44,19 @@ pub const PLATFORM_FEE_PERCENT: i128 = 10;
 pub const PERCENT_DENOMINATOR: i128 = 100;
 pub const REQUIRED_EVIDENCE_HASH_BYTES: u32 = 32;
 
+/// Byte length of a cycle id. A cycle id is exactly `YYYY-MM` with a month
+/// from `01` to `12`, the only format the dashboard enumerates and reads.
+pub const CYCLE_ID_LEN: u32 = 7;
+
+/// Maximum byte length of an `evidence_link`. The link is written to contract
+/// storage and copied into an event, so it must be bounded.
+pub const MAX_EVIDENCE_LINK_LEN: u32 = 256;
+
+/// Maximum byte length of the `reason` passed to `review_evidence`,
+/// `flag_dispute` and `exit`. Each reason is written to contract storage and
+/// copied into an event, so it must be bounded.
+pub const MAX_REASON_LEN: u32 = 512;
+
 /// Scaling factor for the minimum USDC-to-EURC exchange-rate bound. Both USDC
 /// and EURC are 7-decimal Stellar assets, so `min_eurc_per_usdc` of 10_000_000
 /// means a 1:1 rate, 9_500_000 means at least 0.95 EURC per USDC, etc.
@@ -94,6 +107,15 @@ pub trait SoroswapRouter {
 pub enum Currency {
     Usdc,
     Eurc,
+}
+
+/// Role whose address can be rotated by the admin through a two-step flow.
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum RotationRole {
+    Operator,
+    Ally,
+    PlatformFeeRecipient,
 }
 
 /// On-chain record of one rejected swap leg. Persisted per cycle so a rejected
@@ -301,12 +323,13 @@ pub struct PilotPayoutSplit;
 
 #[contractimpl]
 impl PilotPayoutSplit {
-    /// Initialize payout configuration, including the two required evidence approvers.
+    /// Initialize payout configuration atomically at deployment, including the
+    /// two required evidence approvers.
     ///
     /// `eurc_token` is the EURC asset contract offered as settlement alternative
     /// and `swap_router` the verified Soroswap AMM router used to convert USDC
     /// shares at payout time. Both are stored, never hardcoded.
-    pub fn initialize(
+    pub fn __constructor(
         env: Env,
         admin: Address,
         operator: Address,
@@ -319,9 +342,6 @@ impl PilotPayoutSplit {
         swap_router: Address,
     ) {
         extend_instance(&env);
-        if Storage::is_initialized(&env) {
-            panic_with_error!(&env, PayoutError::AlreadyInitialized);
-        }
 
         if operator == ally {
             panic_with_error!(&env, PayoutError::SignerCollision);
@@ -369,6 +389,7 @@ impl PilotPayoutSplit {
         Self::require_ally(&env, &ally);
         Self::require_not_exited(&env);
         Self::require_not_paused(&env);
+        Self::require_valid_cycle_id(&env, &cycle_id);
 
         if total_income <= 0 {
             panic_with_error!(&env, PayoutError::ZeroAmount);
@@ -381,6 +402,12 @@ impl PilotPayoutSplit {
         if evidence_link.is_empty() {
             panic_with_error!(&env, PayoutError::MissingEvidenceLink);
         }
+        Self::require_max_len(
+            &env,
+            &evidence_link,
+            MAX_EVIDENCE_LINK_LEN,
+            PayoutError::EvidenceLinkTooLong,
+        );
 
         if Storage::evidence(&env, &cycle_id).is_some() {
             panic_with_error!(&env, PayoutError::CycleAlreadyRecorded);
@@ -429,6 +456,7 @@ impl PilotPayoutSplit {
         Self::require_ally(&env, &ally);
         Self::require_not_exited(&env);
         Self::require_not_paused(&env);
+        Self::require_valid_cycle_id(&env, &cycle_id);
 
         if total_income <= 0 {
             panic_with_error!(&env, PayoutError::ZeroAmount);
@@ -441,6 +469,12 @@ impl PilotPayoutSplit {
         if evidence_link.is_empty() {
             panic_with_error!(&env, PayoutError::MissingEvidenceLink);
         }
+        Self::require_max_len(
+            &env,
+            &evidence_link,
+            MAX_EVIDENCE_LINK_LEN,
+            PayoutError::EvidenceLinkTooLong,
+        );
 
         let previous_status = Storage::evidence(&env, &cycle_id).map(|existing| {
             let resubmittable = !existing.distributed
@@ -532,6 +566,7 @@ impl PilotPayoutSplit {
         if !approved && reason.is_empty() {
             panic_with_error!(&env, PayoutError::MissingReviewReason);
         }
+        Self::require_max_len(&env, &reason, MAX_REASON_LEN, PayoutError::ReasonTooLong);
 
         let now = env.ledger().timestamp();
         record.status = if approved {
@@ -566,6 +601,7 @@ impl PilotPayoutSplit {
         if reason.is_empty() {
             panic_with_error!(&env, PayoutError::MissingReviewReason);
         }
+        Self::require_max_len(&env, &reason, MAX_REASON_LEN, PayoutError::ReasonTooLong);
 
         let mut record = Storage::evidence(&env, &cycle_id)
             .unwrap_or_else(|| panic_with_error!(&env, PayoutError::EvidenceNotFound));
@@ -1199,6 +1235,175 @@ impl PilotPayoutSplit {
         Storage::pending_admin(&env)
     }
 
+    /// Begin replacing the operator. The admin is the recovery authority, so
+    /// the current operator does not need to co-sign a lost-key recovery.
+    /// Rotation remains available while paused, but not after terminal exit.
+    pub fn rotate_operator_start(env: Env, admin: Address, new_operator: Address) {
+        extend_instance(&env);
+        admin.require_auth();
+        Self::require_admin(&env, &admin);
+        Self::require_not_exited(&env);
+
+        let ally = Storage::address(&env, &DataKey::Ally)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        if new_operator == ally {
+            panic_with_error!(&env, PayoutError::SignerCollision);
+        }
+
+        let current = Storage::address(&env, &DataKey::Operator)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        Storage::set_pending_operator(&env, &new_operator);
+        events::emit_role_rotation_started(&env, RotationRole::Operator, current, new_operator);
+    }
+
+    /// Accept a pending operator replacement. Only the named replacement can
+    /// accept, preventing a mistyped address from taking the role.
+    pub fn rotate_operator_accept(env: Env, new_operator: Address) {
+        extend_instance(&env);
+        new_operator.require_auth();
+        Self::require_not_exited(&env);
+
+        if Storage::pending_operator(&env) != Some(new_operator.clone()) {
+            panic_with_error!(&env, PayoutError::NotPendingRole);
+        }
+        let ally = Storage::address(&env, &DataKey::Ally)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        if new_operator == ally {
+            panic_with_error!(&env, PayoutError::SignerCollision);
+        }
+        let previous = Storage::address(&env, &DataKey::Operator)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        Storage::set_address(&env, &DataKey::Operator, &new_operator);
+        Storage::clear_pending_operator(&env);
+        events::emit_role_rotation_accepted(&env, RotationRole::Operator, previous, new_operator);
+    }
+
+    /// Cancel a pending operator replacement. Only the current admin can
+    /// cancel, and cancellation remains available while the contract is
+    /// paused.
+    pub fn rotate_operator_cancel(env: Env, admin: Address) {
+        extend_instance(&env);
+        admin.require_auth();
+        Self::require_admin(&env, &admin);
+        Self::require_not_exited(&env);
+        Storage::clear_pending_operator(&env);
+        events::emit_role_rotation_cancelled(&env, RotationRole::Operator, admin);
+    }
+
+    pub fn pending_operator(env: Env) -> Option<Address> {
+        Storage::pending_operator(&env)
+    }
+
+    /// Begin replacing the ally. The admin is the recovery authority, so the
+    /// current ally does not need to co-sign a lost-key recovery.
+    pub fn rotate_ally_start(env: Env, admin: Address, new_ally: Address) {
+        extend_instance(&env);
+        admin.require_auth();
+        Self::require_admin(&env, &admin);
+        Self::require_not_exited(&env);
+
+        let operator = Storage::address(&env, &DataKey::Operator)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        if new_ally == operator {
+            panic_with_error!(&env, PayoutError::SignerCollision);
+        }
+
+        let current = Storage::address(&env, &DataKey::Ally)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        Storage::set_pending_ally(&env, &new_ally);
+        events::emit_role_rotation_started(&env, RotationRole::Ally, current, new_ally);
+    }
+
+    /// Accept a pending ally replacement. Only the named replacement can
+    /// accept, preventing a mistyped address from taking the role.
+    pub fn rotate_ally_accept(env: Env, new_ally: Address) {
+        extend_instance(&env);
+        new_ally.require_auth();
+        Self::require_not_exited(&env);
+
+        if Storage::pending_ally(&env) != Some(new_ally.clone()) {
+            panic_with_error!(&env, PayoutError::NotPendingRole);
+        }
+        let operator = Storage::address(&env, &DataKey::Operator)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        if new_ally == operator {
+            panic_with_error!(&env, PayoutError::SignerCollision);
+        }
+        let previous = Storage::address(&env, &DataKey::Ally)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        Storage::set_address(&env, &DataKey::Ally, &new_ally);
+        Storage::clear_pending_ally(&env);
+        events::emit_role_rotation_accepted(&env, RotationRole::Ally, previous, new_ally);
+    }
+
+    /// Cancel a pending ally replacement.
+    pub fn rotate_ally_cancel(env: Env, admin: Address) {
+        extend_instance(&env);
+        admin.require_auth();
+        Self::require_admin(&env, &admin);
+        Self::require_not_exited(&env);
+        Storage::clear_pending_ally(&env);
+        events::emit_role_rotation_cancelled(&env, RotationRole::Ally, admin);
+    }
+
+    pub fn pending_ally(env: Env) -> Option<Address> {
+        Storage::pending_ally(&env)
+    }
+
+    /// Begin replacing the platform fee recipient. This uses the same
+    /// two-step flow as signer rotation so a typo cannot redirect fees.
+    pub fn rotate_fee_recipient_start(env: Env, admin: Address, new_recipient: Address) {
+        extend_instance(&env);
+        admin.require_auth();
+        Self::require_admin(&env, &admin);
+        Self::require_not_exited(&env);
+
+        let current = Storage::address(&env, &DataKey::PlatformFeeRecipient)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        Storage::set_pending_platform_fee_recipient(&env, &new_recipient);
+        events::emit_role_rotation_started(
+            &env,
+            RotationRole::PlatformFeeRecipient,
+            current,
+            new_recipient,
+        );
+    }
+
+    /// Accept a pending platform fee recipient replacement.
+    pub fn rotate_fee_recipient_accept(env: Env, new_recipient: Address) {
+        extend_instance(&env);
+        new_recipient.require_auth();
+        Self::require_not_exited(&env);
+
+        if Storage::pending_platform_fee_recipient(&env) != Some(new_recipient.clone()) {
+            panic_with_error!(&env, PayoutError::NotPendingRole);
+        }
+        let previous = Storage::address(&env, &DataKey::PlatformFeeRecipient)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        Storage::set_address(&env, &DataKey::PlatformFeeRecipient, &new_recipient);
+        Storage::clear_pending_platform_fee_recipient(&env);
+        events::emit_role_rotation_accepted(
+            &env,
+            RotationRole::PlatformFeeRecipient,
+            previous,
+            new_recipient,
+        );
+    }
+
+    /// Cancel a pending platform fee recipient replacement.
+    pub fn rotate_fee_recipient_cancel(env: Env, admin: Address) {
+        extend_instance(&env);
+        admin.require_auth();
+        Self::require_admin(&env, &admin);
+        Self::require_not_exited(&env);
+        Storage::clear_pending_platform_fee_recipient(&env);
+        events::emit_role_rotation_cancelled(&env, RotationRole::PlatformFeeRecipient, admin);
+    }
+
+    pub fn pending_fee_recipient(env: Env) -> Option<Address> {
+        Storage::pending_platform_fee_recipient(&env)
+    }
+
     /// Permanently terminate the ally/property relationship.
     ///
     /// One-way and irreversible: once called, `record_evidence` and
@@ -1231,6 +1436,7 @@ impl PilotPayoutSplit {
         if reason.is_empty() {
             panic_with_error!(&env, PayoutError::MissingExitReason);
         }
+        Self::require_max_len(&env, &reason, MAX_REASON_LEN, PayoutError::ReasonTooLong);
 
         let record = ExitRecord {
             reason: reason.clone(),
@@ -1311,6 +1517,40 @@ impl PilotPayoutSplit {
     fn require_not_exited(env: &Env) {
         if Storage::exit_record(env).is_some() {
             panic_with_error!(env, PayoutError::ContractExited);
+        }
+    }
+
+    /// Reject a `cycle_id` that is not exactly `YYYY-MM` with a month from
+    /// `01` to `12`. Applied only where a cycle is created, so reading,
+    /// reviewing or disputing a cycle that already exists is unaffected.
+    fn require_valid_cycle_id(env: &Env, cycle_id: &String) {
+        if cycle_id.len() != CYCLE_ID_LEN {
+            panic_with_error!(env, PayoutError::InvalidCycleId);
+        }
+        let mut buf = [0u8; CYCLE_ID_LEN as usize];
+        cycle_id.copy_into_slice(&mut buf);
+        let shape_ok = buf.iter().enumerate().all(|(i, byte)| {
+            if i == 4 {
+                *byte == b'-'
+            } else {
+                byte.is_ascii_digit()
+            }
+        });
+        // Checked before the month is computed, so a non-digit byte can never
+        // underflow the subtraction below.
+        if !shape_ok {
+            panic_with_error!(env, PayoutError::InvalidCycleId);
+        }
+        let month = (buf[5] - b'0') * 10 + (buf[6] - b'0');
+        if !(1..=12).contains(&month) {
+            panic_with_error!(env, PayoutError::InvalidCycleId);
+        }
+    }
+
+    /// Reject a free-text argument longer than `max` bytes with `error`.
+    fn require_max_len(env: &Env, value: &String, max: u32, error: PayoutError) {
+        if value.len() > max {
+            panic_with_error!(env, error);
         }
     }
 }
@@ -1505,9 +1745,8 @@ pub mod tests {
         let fee_recipient = Address::generate(&env);
         let whitelist_admin = Address::generate(&env);
 
-        let whitelist_id = env.register(PilotWhitelist, ());
+        let whitelist_id = env.register(PilotWhitelist, (&whitelist_admin,));
         let whitelist = PilotWhitelistClient::new(&env, &whitelist_id);
-        whitelist.initialize(&whitelist_admin);
 
         let mut holders = Vec::new(&env);
         let mut amounts = Vec::new(&env);
@@ -1518,15 +1757,17 @@ pub mod tests {
             amounts.push_back(*amount);
         }
 
-        let income_token_id = env.register(PilotIncomeToken, ());
-        let token = PilotIncomeTokenClient::new(&env, &income_token_id);
-        token.initialize(
-            &admin,
-            &whitelist_id,
-            &String::from_str(&env, "Akkuea Pilot Income"),
-            &String::from_str(&env, "AKIN"),
-            &7,
+        let income_token_id = env.register(
+            PilotIncomeToken,
+            (
+                &admin,
+                &whitelist_id,
+                &String::from_str(&env, "Akkuea Pilot Income"),
+                &String::from_str(&env, "AKIN"),
+                &7u32,
+            ),
         );
+        let token = PilotIncomeTokenClient::new(&env, &income_token_id);
 
         // `mint_fixed_supply` itself rejects an empty holder set
         // (`IncomeTokenError::EmptyHolderSet`), so skip it entirely for the
@@ -1549,19 +1790,21 @@ pub mod tests {
         let router = MockSoroswapRouterClient::new(&env, &router_id);
         router.initialize(&usdc_contract.address(), &eurc_contract.address());
 
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
-        payout.initialize(
-            &admin,
-            &operator,
-            &ally,
-            &fee_recipient,
-            &income_token_id,
-            &whitelist_id,
-            &usdc_contract.address(),
-            &eurc_contract.address(),
-            &router_id,
+        let payout_id = env.register(
+            PilotPayoutSplit,
+            (
+                &admin,
+                &operator,
+                &ally,
+                &fee_recipient,
+                &income_token_id,
+                &whitelist_id,
+                &usdc_contract.address(),
+                &eurc_contract.address(),
+                &router_id,
+            ),
         );
+        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
 
         usdc.mint(&payout_id, &100_000);
 
@@ -1917,16 +2160,19 @@ pub mod tests {
     }
 
     #[test]
-    fn eurc_swap_path_status_is_none_before_initialization() {
-        let env = Env::default();
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
-
-        assert_eq!(payout.eurc_swap_path_status(), None);
+    fn constructor_sets_admin_at_registration() {
+        let s = setup();
+        let stored_admin = s
+            .env
+            .as_contract(&s.payout_id, || Storage::address(&s.env, &DataKey::Admin));
+        assert_eq!(stored_admin, Some(s.admin.clone()));
+        s.payout.pause(&s.admin);
+        assert!(s.payout.is_paused());
     }
 
     #[test]
-    fn initialize_rejects_degenerate_swap_configuration() {
+    #[should_panic(expected = "Error(Contract, #20)")]
+    fn constructor_rejects_degenerate_swap_configuration() {
         let env = Env::default();
         let admin = Address::generate(&env);
         let operator = Address::generate(&env);
@@ -1935,27 +2181,22 @@ pub mod tests {
         let income_token = Address::generate(&env);
         let whitelist = Address::generate(&env);
         let usdc = Address::generate(&env);
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
+        let router = Address::generate(&env);
 
         // EURC equal to USDC leaves the swap path meaningless.
-        let res = payout.try_initialize(
-            &admin,
-            &operator,
-            &ally,
-            &fee_recipient,
-            &income_token,
-            &whitelist,
-            &usdc,
-            &usdc,
-            &Address::generate(&env),
-        );
-
-        assert_eq!(
-            res,
-            Err(Ok(Error::from_contract_error(
-                PayoutError::RouterNotConfigured as u32
-            )))
+        env.register(
+            PilotPayoutSplit,
+            (
+                &admin,
+                &operator,
+                &ally,
+                &fee_recipient,
+                &income_token,
+                &whitelist,
+                &usdc,
+                &usdc,
+                &router,
+            ),
         );
     }
 
@@ -1988,7 +2229,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "bad-hash"),
+            &cycle(&s.env, "2026-01"),
             &short_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/bad"),
             &10_000,
@@ -2009,7 +2250,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "zero"),
+            &cycle(&s.env, "2026-02"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/zero"),
             &0,
@@ -2079,7 +2320,7 @@ pub mod tests {
         let record_res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "paused"),
+            &cycle(&s.env, "2026-03"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/paused"),
             &10_000,
@@ -2094,7 +2335,7 @@ pub mod tests {
         let execute_res = s.payout.try_execute_distribution(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "missing"),
+            &cycle(&s.env, "2026-04"),
             &TEST_MIN_RATE,
         );
         assert_eq!(
@@ -2153,20 +2394,21 @@ pub mod tests {
         let usdc = Address::generate(&env);
         let eurc = Address::generate(&env);
         let router = Address::generate(&env);
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
-
-        payout.initialize(
-            &admin,
-            &operator,
-            &ally,
-            &fee_recipient,
-            &income_token,
-            &whitelist,
-            &usdc,
-            &eurc,
-            &router,
+        let payout_id = env.register(
+            PilotPayoutSplit,
+            (
+                &admin,
+                &operator,
+                &ally,
+                &fee_recipient,
+                &income_token,
+                &whitelist,
+                &usdc,
+                &eurc,
+                &router,
+            ),
         );
+        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
 
         let reason = String::from_str(&env, "ally ceased operations");
         env.mock_auths(&[MockAuth {
@@ -2214,7 +2456,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "exited"),
+            &cycle(&s.env, "2026-05"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/exited"),
             &10_000,
@@ -2352,7 +2594,7 @@ pub mod tests {
         let res = s.payout.try_record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "both"),
+            &cycle(&s.env, "2026-06"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/both"),
             &10_000,
@@ -2442,22 +2684,23 @@ pub mod tests {
         let usdc = Address::generate(&env);
         let eurc = Address::generate(&env);
         let router = Address::generate(&env);
-        let payout_id = env.register(PilotPayoutSplit, ());
+        let payout_id = env.register(
+            PilotPayoutSplit,
+            (
+                &admin,
+                &operator,
+                &ally,
+                &fee_recipient,
+                &income_token,
+                &whitelist,
+                &usdc,
+                &eurc,
+                &router,
+            ),
+        );
         let payout = PilotPayoutSplitClient::new(&env, &payout_id);
 
-        payout.initialize(
-            &admin,
-            &operator,
-            &ally,
-            &fee_recipient,
-            &income_token,
-            &whitelist,
-            &usdc,
-            &eurc,
-            &router,
-        );
-
-        let cycle_id = cycle(&env, "single-signer");
+        let cycle_id = cycle(&env, "2026-07");
         let hash = evidence_hash(&env);
         let link = String::from_str(&env, "ipfs://evidence/single-signer");
         env.mock_auths(&[MockAuth {
@@ -2491,7 +2734,8 @@ pub mod tests {
     }
 
     #[test]
-    fn initialize_rejects_same_operator_and_ally() {
+    #[should_panic(expected = "Error(Contract, #17)")]
+    fn constructor_rejects_same_operator_and_ally() {
         let env = Env::default();
         let admin = Address::generate(&env);
         let signer = Address::generate(&env);
@@ -2499,26 +2743,22 @@ pub mod tests {
         let income_token = Address::generate(&env);
         let whitelist = Address::generate(&env);
         let usdc = Address::generate(&env);
-        let payout_id = env.register(PilotPayoutSplit, ());
-        let payout = PilotPayoutSplitClient::new(&env, &payout_id);
+        let eurc = Address::generate(&env);
+        let router = Address::generate(&env);
 
-        let res = payout.try_initialize(
-            &admin,
-            &signer,
-            &signer,
-            &fee_recipient,
-            &income_token,
-            &whitelist,
-            &usdc,
-            &Address::generate(&env),
-            &Address::generate(&env),
-        );
-
-        assert_eq!(
-            res,
-            Err(Ok(Error::from_contract_error(
-                PayoutError::SignerCollision as u32
-            )))
+        env.register(
+            PilotPayoutSplit,
+            (
+                &admin,
+                &signer,
+                &signer,
+                &fee_recipient,
+                &income_token,
+                &whitelist,
+                &usdc,
+                &eurc,
+                &router,
+            ),
         );
     }
 
@@ -2647,7 +2887,7 @@ pub mod tests {
         s.payout.record_evidence(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "budget-25"),
+            &cycle(&s.env, "2026-11"),
             &evidence_hash(&s.env),
             &String::from_str(&s.env, "ipfs://evidence/budget-25"),
             &325_000,
@@ -2657,7 +2897,7 @@ pub mod tests {
         let summary = s.payout.execute_distribution(
             &s.operator,
             &s.ally,
-            &cycle(&s.env, "budget-25"),
+            &cycle(&s.env, "2026-11"),
             &TEST_MIN_RATE,
         );
         let cpu = s.env.cost_estimate().budget().cpu_instruction_cost();
@@ -3345,7 +3585,7 @@ pub mod tests {
         for (stage, outcomes) in table {
             for (action, expected) in actions.iter().zip(outcomes.iter()) {
                 let s = setup();
-                let c = cycle(&s.env, "table");
+                let c = cycle(&s.env, "2026-01");
                 drive_to(&s, &c, stage);
                 let before = s.payout.get_evidence(&c);
 
@@ -3381,8 +3621,8 @@ pub mod tests {
     #[test]
     fn exited_contract_blocks_every_evidence_action() {
         let s = setup();
-        let submitted = cycle(&s.env, "submitted");
-        let under_review = cycle(&s.env, "under-review");
+        let submitted = cycle(&s.env, "2026-01");
+        let under_review = cycle(&s.env, "2026-02");
         submit_cycle(&s, &submitted, "ipfs://submitted", 10_000);
         submit_cycle(&s, &under_review, "ipfs://under-review", 10_000);
         s.payout.start_review(&s.operator, &under_review);
@@ -3395,7 +3635,7 @@ pub mod tests {
             PayoutError::ContractExited as u32,
         ));
 
-        assert_eq!(apply(&s, &cycle(&s.env, "new"), Action::Submit), exited);
+        assert_eq!(apply(&s, &cycle(&s.env, "2026-03"), Action::Submit), exited);
         assert_eq!(apply(&s, &submitted, Action::StartReview), exited);
         assert_eq!(apply(&s, &under_review, Action::Approve), exited);
         assert_eq!(apply(&s, &under_review, Action::Reject), exited);
@@ -3980,6 +4220,432 @@ pub mod tests {
         );
     }
 
+    // --- Pilot role rotation ---
+
+    #[test]
+    fn operator_rotation_replaces_every_operator_authority() {
+        let s = setup();
+        let replacement = Address::generate(&s.env);
+        let review_cycle = cycle(&s.env, "2026-09");
+        let record_cycle = cycle(&s.env, "2026-10");
+
+        s.payout.rotate_operator_start(&s.admin, &replacement);
+        assert_eq!(s.payout.pending_operator(), Some(replacement.clone()));
+        s.payout.rotate_operator_accept(&replacement);
+        assert_eq!(s.payout.pending_operator(), None);
+
+        let old_record = s.payout.try_record_evidence(
+            &s.operator,
+            &s.ally,
+            &record_cycle,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://old-operator"),
+            &10_000,
+        );
+        assert_eq!(
+            old_record,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+
+        s.payout.submit_evidence(
+            &s.ally,
+            &review_cycle,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://review"),
+            &10_000,
+        );
+        let old_start = s.payout.try_start_review(&s.operator, &review_cycle);
+        assert_eq!(
+            old_start,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        s.payout.start_review(&replacement, &review_cycle);
+
+        let old_review = s.payout.try_review_evidence(
+            &s.operator,
+            &review_cycle,
+            &true,
+            &String::from_str(&s.env, ""),
+        );
+        assert_eq!(
+            old_review,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        s.payout.review_evidence(
+            &replacement,
+            &review_cycle,
+            &true,
+            &String::from_str(&s.env, ""),
+        );
+
+        s.payout.record_evidence(
+            &replacement,
+            &s.ally,
+            &record_cycle,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://new-operator"),
+            &10_000,
+        );
+        let old_execute =
+            s.payout
+                .try_execute_distribution(&s.operator, &s.ally, &record_cycle, &TEST_MIN_RATE);
+        assert_eq!(
+            old_execute,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        s.payout
+            .execute_distribution(&replacement, &s.ally, &record_cycle, &TEST_MIN_RATE);
+
+        let old_exit = s.payout.try_exit(
+            &s.operator,
+            &s.ally,
+            &String::from_str(&s.env, "old operator"),
+        );
+        assert_eq!(
+            old_exit,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        s.payout.exit(
+            &replacement,
+            &s.ally,
+            &String::from_str(&s.env, "normal close"),
+        );
+        assert!(s.payout.exit_status().is_some());
+    }
+
+    #[test]
+    fn ally_rotation_removes_old_cosigner_and_accepts_new_one() {
+        let s = setup();
+        let replacement = Address::generate(&s.env);
+        let c = cycle(&s.env, "2026-09");
+
+        s.payout.rotate_ally_start(&s.admin, &replacement);
+        s.payout.rotate_ally_accept(&replacement);
+        assert_eq!(s.payout.pending_ally(), None);
+
+        let old_record = s.payout.try_record_evidence(
+            &s.operator,
+            &s.ally,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://old-ally"),
+            &10_000,
+        );
+        assert_eq!(
+            old_record,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+
+        s.payout.record_evidence(
+            &s.operator,
+            &replacement,
+            &c,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://new-ally"),
+            &10_000,
+        );
+    }
+
+    #[test]
+    fn only_admin_can_start_role_rotation() {
+        let s = setup();
+        let replacement = Address::generate(&s.env);
+
+        let operator_start = s
+            .payout
+            .try_rotate_operator_start(&s.operator, &replacement);
+        assert_eq!(
+            operator_start,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        let ally_start = s.payout.try_rotate_ally_start(&s.ally, &replacement);
+        assert_eq!(
+            ally_start,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+        let fee_start = s
+            .payout
+            .try_rotate_fee_recipient_start(&s.operator, &replacement);
+        assert_eq!(
+            fee_start,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::Unauthorized as u32
+            )))
+        );
+
+        assert_eq!(s.payout.pending_operator(), None);
+        assert_eq!(s.payout.pending_ally(), None);
+        assert_eq!(s.payout.pending_fee_recipient(), None);
+    }
+
+    #[test]
+    fn fee_recipient_rotation_receives_the_exact_next_fee() {
+        let s = setup();
+        let replacement = Address::generate(&s.env);
+
+        s.payout.rotate_fee_recipient_start(&s.admin, &replacement);
+        s.payout.rotate_fee_recipient_accept(&replacement);
+        record_default(&s);
+        s.payout.execute_distribution(
+            &s.operator,
+            &s.ally,
+            &cycle(&s.env, "2026-08"),
+            &TEST_MIN_RATE,
+        );
+
+        assert_eq!(s.usdc.balance(&replacement), 1_000);
+        assert_eq!(s.usdc.balance(&s.fee_recipient), 0);
+    }
+
+    #[test]
+    fn role_rotation_rejects_collisions_and_wrong_or_cancelled_accepts() {
+        let s = setup();
+        let replacement = Address::generate(&s.env);
+        let wrong = Address::generate(&s.env);
+
+        let operator_collision = s.payout.try_rotate_operator_start(&s.admin, &s.ally);
+        assert_eq!(
+            operator_collision,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
+        let ally_collision = s.payout.try_rotate_ally_start(&s.admin, &s.operator);
+        assert_eq!(
+            ally_collision,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
+
+        s.payout.rotate_operator_start(&s.admin, &replacement);
+        let wrong_operator_accept = s.payout.try_rotate_operator_accept(&wrong);
+        assert_eq!(
+            wrong_operator_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingRole as u32
+            )))
+        );
+        s.payout.rotate_operator_cancel(&s.admin);
+        assert_eq!(s.payout.pending_operator(), None);
+        let cancelled_operator_accept = s.payout.try_rotate_operator_accept(&replacement);
+        assert_eq!(
+            cancelled_operator_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingRole as u32
+            )))
+        );
+
+        s.payout.rotate_ally_start(&s.admin, &replacement);
+        s.payout.rotate_ally_cancel(&s.admin);
+        let cancelled_ally_accept = s.payout.try_rotate_ally_accept(&replacement);
+        assert_eq!(
+            cancelled_ally_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingRole as u32
+            )))
+        );
+
+        s.payout.rotate_fee_recipient_start(&s.admin, &replacement);
+        s.payout.rotate_fee_recipient_cancel(&s.admin);
+        let cancelled_fee_accept = s.payout.try_rotate_fee_recipient_accept(&replacement);
+        assert_eq!(
+            cancelled_fee_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::NotPendingRole as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn role_rotation_accept_rejects_a_replacement_that_became_another_role() {
+        let s = setup();
+        let replacement = Address::generate(&s.env);
+
+        s.payout.rotate_operator_start(&s.admin, &replacement);
+        s.payout.rotate_ally_start(&s.admin, &replacement);
+        s.payout.rotate_ally_accept(&replacement);
+
+        let operator_accept = s.payout.try_rotate_operator_accept(&replacement);
+        assert_eq!(
+            operator_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
+
+        s.payout.rotate_operator_cancel(&s.admin);
+        let replacement_ally = Address::generate(&s.env);
+        s.payout.rotate_operator_start(&s.admin, &replacement_ally);
+        s.payout.rotate_ally_start(&s.admin, &replacement_ally);
+        s.payout.rotate_operator_accept(&replacement_ally);
+
+        let ally_accept = s.payout.try_rotate_ally_accept(&replacement_ally);
+        assert_eq!(
+            ally_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::SignerCollision as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn role_rotation_emits_start_accept_and_cancel_events() {
+        let s = setup();
+        let replacement = Address::generate(&s.env);
+
+        s.payout.rotate_operator_start(&s.admin, &replacement);
+        assert_eq!(
+            s.env
+                .events()
+                .all()
+                .filter_by_contract(&s.payout_id)
+                .events()
+                .len(),
+            1
+        );
+        s.payout.rotate_operator_accept(&replacement);
+        assert_eq!(
+            s.env
+                .events()
+                .all()
+                .filter_by_contract(&s.payout_id)
+                .events()
+                .len(),
+            1
+        );
+        s.payout.rotate_ally_start(&s.admin, &s.operator);
+        assert_eq!(
+            s.env
+                .events()
+                .all()
+                .filter_by_contract(&s.payout_id)
+                .events()
+                .len(),
+            1
+        );
+        s.payout.rotate_ally_cancel(&s.admin);
+        assert_eq!(
+            s.env
+                .events()
+                .all()
+                .filter_by_contract(&s.payout_id)
+                .events()
+                .len(),
+            1
+        );
+    }
+
+    #[test]
+    fn role_rotation_works_while_paused_but_not_after_exit() {
+        let s = setup();
+        let replacement = Address::generate(&s.env);
+
+        s.payout.pause(&s.admin);
+        s.payout.rotate_operator_start(&s.admin, &replacement);
+        s.payout.rotate_operator_accept(&replacement);
+        assert_eq!(s.payout.pending_operator(), None);
+
+        s.payout.exit(
+            &replacement,
+            &s.ally,
+            &String::from_str(&s.env, "wind down"),
+        );
+        let after_exit = s
+            .payout
+            .try_rotate_operator_start(&s.admin, &Address::generate(&s.env));
+        assert_eq!(
+            after_exit,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_accept = s.payout.try_rotate_operator_accept(&replacement);
+        assert_eq!(
+            after_exit_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_cancel = s.payout.try_rotate_operator_cancel(&s.admin);
+        assert_eq!(
+            after_exit_cancel,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_ally_start = s
+            .payout
+            .try_rotate_ally_start(&s.admin, &Address::generate(&s.env));
+        assert_eq!(
+            after_exit_ally_start,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_ally_accept = s.payout.try_rotate_ally_accept(&s.ally);
+        assert_eq!(
+            after_exit_ally_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_ally_cancel = s.payout.try_rotate_ally_cancel(&s.admin);
+        assert_eq!(
+            after_exit_ally_cancel,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_fee_start = s
+            .payout
+            .try_rotate_fee_recipient_start(&s.admin, &Address::generate(&s.env));
+        assert_eq!(
+            after_exit_fee_start,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_fee_accept = s.payout.try_rotate_fee_recipient_accept(&s.admin);
+        assert_eq!(
+            after_exit_fee_accept,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+
+        let after_exit_fee_cancel = s.payout.try_rotate_fee_recipient_cancel(&s.admin);
+        assert_eq!(
+            after_exit_fee_cancel,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractExited as u32
+            )))
+        );
+    }
+
     // --- Typed error coverage ---
 
     #[test]
@@ -4175,6 +4841,217 @@ pub mod tests {
 
         assert_eq!(preference_ttl, TTL_EXTEND_TO);
         assert_eq!(instance_ttl, TTL_EXTEND_TO);
+    }
+
+    /// A string of exactly `len` ASCII bytes.
+    fn string_of_len(env: &Env, len: u32) -> String {
+        String::from_bytes(env, &std::vec![b'a'; len as usize])
+    }
+
+    #[test]
+    fn cycle_id_must_be_yyyy_mm_with_a_real_month() {
+        let s = setup();
+        let link = String::from_str(&s.env, "ipfs://evidence/cycle");
+
+        for valid in ["2026-03", "2026-01", "2026-12"] {
+            let c = cycle(&s.env, valid);
+            s.payout.record_evidence(
+                &s.operator,
+                &s.ally,
+                &c,
+                &evidence_hash(&s.env),
+                &link,
+                &10_000,
+            );
+            assert!(s.payout.get_evidence(&c).is_some(), "{}", valid);
+        }
+        let submitted = cycle(&s.env, "2027-03");
+        submit_cycle(&s, &submitted, "ipfs://evidence/cycle", 10_000);
+        assert_eq!(
+            s.payout.get_evidence(&submitted).unwrap().status,
+            EvidenceStatus::Submitted
+        );
+
+        for invalid in [
+            "2026-3", "2026-13", "2026-00", "26-03", "2026/03", "", "abcdefg",
+        ] {
+            let c = cycle(&s.env, invalid);
+            let recorded = s.payout.try_record_evidence(
+                &s.operator,
+                &s.ally,
+                &c,
+                &evidence_hash(&s.env),
+                &link,
+                &10_000,
+            );
+            assert_eq!(
+                recorded,
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::InvalidCycleId as u32
+                ))),
+                "record_evidence {:?}",
+                invalid
+            );
+            let submitted =
+                s.payout
+                    .try_submit_evidence(&s.ally, &c, &evidence_hash(&s.env), &link, &10_000);
+            assert_eq!(
+                submitted,
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::InvalidCycleId as u32
+                ))),
+                "submit_evidence {:?}",
+                invalid
+            );
+            assert_eq!(s.payout.get_evidence(&c), None, "{:?}", invalid);
+        }
+    }
+
+    #[test]
+    fn get_evidence_still_reads_an_existing_cycle_with_a_legacy_id() {
+        let s = setup();
+        record_default(&s);
+        let legacy = cycle(&s.env, "march");
+        let mut record = s.payout.get_evidence(&cycle(&s.env, "2026-08")).unwrap();
+        record.cycle_id = legacy.clone();
+        s.env.as_contract(&s.payout_id, || {
+            Storage::set_evidence(&s.env, &legacy, &record);
+        });
+
+        assert_eq!(s.payout.get_evidence(&legacy), Some(record));
+    }
+
+    #[test]
+    fn evidence_link_is_bounded_on_record_and_submit() {
+        let s = setup();
+        let at_max = string_of_len(&s.env, MAX_EVIDENCE_LINK_LEN);
+        let over_max = string_of_len(&s.env, MAX_EVIDENCE_LINK_LEN + 1);
+
+        let recorded = cycle(&s.env, "2026-03");
+        assert_eq!(
+            s.payout.try_record_evidence(
+                &s.operator,
+                &s.ally,
+                &recorded,
+                &evidence_hash(&s.env),
+                &over_max,
+                &10_000,
+            ),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::EvidenceLinkTooLong as u32
+            )))
+        );
+        assert_eq!(s.payout.get_evidence(&recorded), None);
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &recorded,
+            &evidence_hash(&s.env),
+            &at_max,
+            &10_000,
+        );
+        assert_eq!(
+            s.payout.get_evidence(&recorded).unwrap().evidence_link,
+            at_max
+        );
+
+        let submitted = cycle(&s.env, "2026-04");
+        assert_eq!(
+            s.payout.try_submit_evidence(
+                &s.ally,
+                &submitted,
+                &evidence_hash(&s.env),
+                &over_max,
+                &10_000,
+            ),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::EvidenceLinkTooLong as u32
+            )))
+        );
+        assert_eq!(s.payout.get_evidence(&submitted), None);
+        s.payout.submit_evidence(
+            &s.ally,
+            &submitted,
+            &evidence_hash(&s.env),
+            &at_max,
+            &10_000,
+        );
+        assert_eq!(
+            s.payout.get_evidence(&submitted).unwrap().evidence_link,
+            at_max
+        );
+    }
+
+    #[test]
+    fn review_reason_is_bounded() {
+        let s = setup();
+        let c = cycle(&s.env, "2026-03");
+        submit_cycle(&s, &c, "ipfs://evidence/review", 10_000);
+        let at_max = string_of_len(&s.env, MAX_REASON_LEN);
+        let over_max = string_of_len(&s.env, MAX_REASON_LEN + 1);
+        let before = s.payout.get_evidence(&c);
+
+        for approved in [false, true] {
+            assert_eq!(
+                s.payout
+                    .try_review_evidence(&s.operator, &c, &approved, &over_max),
+                Err(Ok(Error::from_contract_error(
+                    PayoutError::ReasonTooLong as u32
+                ))),
+                "approved = {}",
+                approved
+            );
+        }
+        assert_eq!(s.payout.get_evidence(&c), before);
+
+        s.payout.review_evidence(&s.operator, &c, &false, &at_max);
+        let record = s.payout.get_evidence(&c).unwrap();
+        assert_eq!(record.status, EvidenceStatus::Rejected);
+        assert_eq!(record.review_reason, at_max);
+    }
+
+    #[test]
+    fn dispute_reason_is_bounded() {
+        let s = setup();
+        record_default(&s);
+        let c = cycle(&s.env, "2026-08");
+        let before = s.payout.get_evidence(&c);
+
+        assert_eq!(
+            s.payout
+                .try_flag_dispute(&s.admin, &c, &string_of_len(&s.env, MAX_REASON_LEN + 1)),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ReasonTooLong as u32
+            )))
+        );
+        assert_eq!(s.payout.get_evidence(&c), before);
+
+        let at_max = string_of_len(&s.env, MAX_REASON_LEN);
+        s.payout.flag_dispute(&s.admin, &c, &at_max);
+        let record = s.payout.get_evidence(&c).unwrap();
+        assert_eq!(record.status, EvidenceStatus::Disputed);
+        assert_eq!(record.review_reason, at_max);
+    }
+
+    #[test]
+    fn exit_reason_is_bounded() {
+        let s = setup();
+
+        assert_eq!(
+            s.payout.try_exit(
+                &s.operator,
+                &s.ally,
+                &string_of_len(&s.env, MAX_REASON_LEN + 1)
+            ),
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ReasonTooLong as u32
+            )))
+        );
+        assert_eq!(s.payout.exit_status(), None);
+
+        let at_max = string_of_len(&s.env, MAX_REASON_LEN);
+        s.payout.exit(&s.operator, &s.ally, &at_max);
+        assert_eq!(s.payout.exit_status().unwrap().reason, at_max);
     }
 }
 

@@ -397,6 +397,7 @@ fn budget_check_borrow() {
     let oracle_client = MockOracleContractClient::new(&s.env, &oracle_address);
     s.client.set_oracle(&oracle_address, &s.admin);
     oracle_client.set_price(&collateral_address, &(2 * PRECISION), &1000_u64);
+    oracle_client.set_price(&s.token_address, &PRECISION, &1000_u64);
 
     // Seed pool liquidity
     let lp = Address::generate(&s.env);
@@ -454,6 +455,7 @@ fn budget_check_repay() {
     let oracle_client = MockOracleContractClient::new(&s.env, &oracle_address);
     s.client.set_oracle(&oracle_address, &s.admin);
     oracle_client.set_price(&collateral_address, &(2 * PRECISION), &1000_u64);
+    oracle_client.set_price(&s.token_address, &PRECISION, &1000_u64);
 
     // Seed pool
     let lp = Address::generate(&s.env);

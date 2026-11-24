@@ -67,6 +67,16 @@ impl MockOracleContract {
     }
 }
 
+/// Give a pool asset an oracle price of 1.0, so debt keeps the value of its
+/// token amount in tests that do not exercise pool asset pricing.
+fn price_pool_asset(env: &Env, oracle_id: &Address, asset: &Address) {
+    MockOracleContractClient::new(env, oracle_id).set_price(
+        asset,
+        &PRECISION,
+        &env.ledger().timestamp(),
+    );
+}
+
 fn setup() -> TestSetup<'static> {
     let env = Env::default();
     env.mock_all_auths();
@@ -220,6 +230,7 @@ fn setup_borrow_test() -> BorrowTestSetup<'static> {
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     env.as_contract(&oracle_id, || {
@@ -1205,6 +1216,7 @@ fn test_borrow_with_sufficient_collateral() {
 
         // Set oracle address
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price in oracle: $1.00 (1 * PRECISION = 1e18)
@@ -1331,6 +1343,7 @@ fn test_borrow_with_insufficient_collateral() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price: $1.00
@@ -1421,6 +1434,7 @@ fn test_borrow_from_paused_pool() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
 
         // PAUSE THE POOL
         PoolStorage::set_paused(&env, &pool_id, true);
@@ -1511,6 +1525,7 @@ fn test_borrow_exceeding_liquidity() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price high so collateral is sufficient
@@ -1674,6 +1689,7 @@ fn test_borrow_with_zero_index() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price
@@ -2748,7 +2764,6 @@ fn test_oracle_guarded_price_alias() {
 // ─── Test 12: End-to-end borrow with stale oracle ──────
 
 #[test]
-#[should_panic(expected = "Error(Contract, #22)")]
 fn test_borrow_with_stale_oracle() {
     use soroban_sdk::token::StellarAssetClient;
 
@@ -2799,6 +2814,7 @@ fn test_borrow_with_stale_oracle() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price with timestamp 2 hours ago - STALE
@@ -2818,7 +2834,7 @@ fn test_borrow_with_stale_oracle() {
     usdc_token.mint(&contract_id, &10_000_000_000);
 
     // Borrow should fail because oracle price is stale
-    env.as_contract(&contract_id, || {
+    let result = env.as_contract(&contract_id, || {
         PropertyTokenContract::borrow(
             env.clone(),
             borrower.clone(),
@@ -2827,14 +2843,13 @@ fn test_borrow_with_stale_oracle() {
             xlm_contract.address().clone(),
             2_000_000_000,
         )
-        .unwrap()
     });
+    assert!(matches!(result, Err(ContractError::StalePrice)));
 }
 
 // ─── Test 13: End-to-end borrow with zero oracle price ─
 
 #[test]
-#[should_panic(expected = "Error(Contract, #24)")]
 fn test_borrow_with_zero_oracle_price() {
     use soroban_sdk::token::StellarAssetClient;
 
@@ -2880,6 +2895,7 @@ fn test_borrow_with_zero_oracle_price() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price to ZERO - invalid
@@ -2893,7 +2909,7 @@ fn test_borrow_with_zero_oracle_price() {
     usdc_token.mint(&contract_id, &10_000_000_000);
 
     // Borrow should fail because oracle price is zero
-    env.as_contract(&contract_id, || {
+    let result = env.as_contract(&contract_id, || {
         PropertyTokenContract::borrow(
             env.clone(),
             borrower.clone(),
@@ -2902,8 +2918,8 @@ fn test_borrow_with_zero_oracle_price() {
             xlm_contract.address().clone(),
             2_000_000_000,
         )
-        .unwrap()
     });
+    assert!(matches!(result, Err(ContractError::InvalidPrice)));
 }
 
 // ─── Global pause blocks every value-moving entry point (issue #1273) ────────
@@ -3549,6 +3565,7 @@ fn setup_liquidation_env() -> (
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set initial XLM price: $1.00
@@ -3793,6 +3810,7 @@ fn test_liquidate_healthy_position_rejected() {
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Keep price at $1.00 - position is healthy
@@ -4407,6 +4425,7 @@ fn test_liquidate_inactive_pool() {
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     usdc_token.mint(&liquidator, &2_000_000_000);
@@ -4607,6 +4626,7 @@ fn test_borrow_exceeds_collateral_factor_limit() {
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     env.as_contract(&oracle_id, || {
@@ -4723,6 +4743,7 @@ fn test_deposit_overflow_returns_typed_error() {
         // Set oracle address (using a dummy oracle for now)
         let oracle_id = env.register(MockOracleContract, ());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Mint tokens to depositor so they can deposit
@@ -4789,6 +4810,7 @@ fn test_borrow_overflow_returns_typed_error() {
         // Set oracle address
         let oracle_id = env.register(MockOracleContract, ());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
 
         // Set XLM price in oracle: $1.00
         env.as_contract(&oracle_id, || {
@@ -4942,6 +4964,7 @@ fn test_normal_price_is_still_accepted() {
 
         // Set oracle address to our dedicated oracle contract
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set a normal price with current timestamp

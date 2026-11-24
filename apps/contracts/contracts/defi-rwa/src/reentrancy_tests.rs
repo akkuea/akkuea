@@ -150,6 +150,12 @@ fn setup_reentrancy_env() -> ReentrancyTestEnv<'static> {
             PRECISION,
             env.ledger().timestamp(),
         );
+        ReentrancyMockOracle::set_price(
+            env.clone(),
+            usdc_contract.address().clone(),
+            PRECISION,
+            env.ledger().timestamp(),
+        );
     });
 
     // Fund participants

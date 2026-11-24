@@ -11,7 +11,7 @@ import {
  */
 export const CreateUserDto = z.object({
   walletAddress: stellarAddressSchema,
-  email: z.string().email().optional(),
+  email: z.email().optional(),
   displayName: z.string().min(2).max(50).optional(),
 });
 
@@ -19,7 +19,7 @@ export const CreateUserDto = z.object({
  * Update user request schema
  */
 export const UpdateUserDto = z.object({
-  email: z.string().email().optional(),
+  email: z.email().optional(),
   displayName: z.string().min(2).max(50).optional(),
 });
 
@@ -27,9 +27,9 @@ export const UpdateUserDto = z.object({
  * User response schema
  */
 export const UserResponseDto = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   walletAddress: z.string(),
-  email: z.string().email().nullable(),
+  email: z.email().nullable(),
   displayName: z.string().nullable(),
   kycStatus: kycStatusSchema,
   kycTier: kycTierSchema,

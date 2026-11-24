@@ -46,8 +46,7 @@ export interface ReviewTurnaroundServiceOptions {
   evidenceReader?: EvidenceReaderLike;
   sla?: PilotReviewSlaConfig;
   agreementStartAt?: Date | null;
-  cadenceDays?: number;
-  cycleIdPrefix?: string;
+  paymentDay?: number;
   contractId?: string;
   now?: () => Date;
 }
@@ -91,8 +90,7 @@ export class ReviewTurnaroundService {
   private readonly injectedEvidenceReader: EvidenceReaderLike | undefined;
   private readonly slaOverride: PilotReviewSlaConfig | undefined;
   private readonly agreementStartOverride: Date | null | undefined;
-  private readonly cadenceDaysOverride: number | undefined;
-  private readonly cycleIdPrefix: string;
+  private readonly paymentDayOverride: number | undefined;
   private readonly contractIdOverride: string | undefined;
   private readonly now: () => Date;
 
@@ -101,8 +99,7 @@ export class ReviewTurnaroundService {
     this.injectedEvidenceReader = options?.evidenceReader;
     this.slaOverride = options?.sla;
     this.agreementStartOverride = options?.agreementStartAt;
-    this.cadenceDaysOverride = options?.cadenceDays;
-    this.cycleIdPrefix = options?.cycleIdPrefix ?? 'cycle-';
+    this.paymentDayOverride = options?.paymentDay;
     this.contractIdOverride = options?.contractId;
     this.now = options?.now ?? (() => new Date());
   }
@@ -116,10 +113,8 @@ export class ReviewTurnaroundService {
     return parseIsoDate(process.env.PILOT_ESCALATION_AGREEMENT_START);
   }
 
-  private cadenceDays(): number {
-    return (
-      this.cadenceDaysOverride ?? parsePositiveNumber(process.env.PILOT_ESCALATION_CADENCE_DAYS, 30)
-    );
+  private paymentDay(): number {
+    return this.paymentDayOverride ?? parsePositiveNumber(process.env.PILOT_PAYMENT_DAY, 5);
   }
 
   private contractId(): string {
@@ -193,8 +188,7 @@ export class ReviewTurnaroundService {
     const cycles = buildExpectedCycles(
       {
         agreementStartAt,
-        cadenceDays: this.cadenceDays(),
-        cycleIdPrefix: this.cycleIdPrefix,
+        paymentDay: this.paymentDay(),
       },
       this.now(),
     ).filter(

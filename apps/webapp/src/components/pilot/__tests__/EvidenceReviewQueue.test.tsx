@@ -124,4 +124,55 @@ describe("EvidenceReviewQueue", () => {
     });
     expect((reject as HTMLButtonElement).disabled).toBe(true);
   });
+
+  it("renders a valid https link as an anchor", () => {
+    const view = render(
+      <EvidenceReviewQueueView
+        {...baseProps}
+        cycles={[
+          {
+            ...awaitingReviewCycle,
+            evidenceLink: "https://example.org/statement.pdf",
+          },
+        ]}
+      />,
+    );
+    const anchor = view.container.querySelector(
+      'a[href="https://example.org/statement.pdf"]',
+    );
+    expect(anchor).not.toBeNull();
+  });
+
+  it("never renders a non-https stored link as an anchor and shows a warning", () => {
+    const nonHttpsLinks = [
+      "http://example.org/statement.pdf",
+      "javascript:alert(1)",
+      "data:text/plain;base64,abc",
+      "/relative/path.pdf",
+      "string with spaces",
+    ];
+
+    for (const badLink of nonHttpsLinks) {
+      const view = render(
+        <EvidenceReviewQueueView
+          {...baseProps}
+          cycles={[
+            {
+              ...awaitingReviewCycle,
+              cycleId: "2026-04",
+              evidenceLink: badLink,
+            },
+          ]}
+        />,
+      );
+      const anchor = view.container.querySelector(`a[href="${badLink}"]`);
+      expect(anchor).toBeNull();
+      const scope = within(view.container);
+      expect(scope.queryByText(badLink)).not.toBeNull();
+      expect(
+        scope.queryByText(/invalid link \(must use https:\/\/\)/i),
+      ).not.toBeNull();
+      cleanup();
+    }
+  });
 });

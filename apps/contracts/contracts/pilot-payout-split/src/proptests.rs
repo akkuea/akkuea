@@ -16,7 +16,7 @@ mod tests {
         let s = setup_with_balance_values(&[1, 1, 1]);
         s.usdc.mint(&s.payout_id, &100_000);
 
-        let cycle_id = cycle(&s.env, "dust-test");
+        let cycle_id = cycle(&s.env, "2026-01");
         s.payout.record_evidence(
             &s.operator,
             &s.ally,
@@ -26,7 +26,7 @@ mod tests {
             &100, // total_income
         );
 
-        let cycle_id2 = cycle(&s.env, "dust-test-2");
+        let cycle_id2 = cycle(&s.env, "2026-02");
         s.payout.record_evidence(
             &s.operator,
             &s.ally,
@@ -48,12 +48,11 @@ mod tests {
             101
         );
         assert_eq!(s.payout.total_dust(), 1);
-        assert_eq!(s.payout.get_total_dust(), 1);
 
         let fee_recipient_before = s.usdc.balance(&s.fee_recipient);
         let released = s
             .payout
-            .release_dust(&s.operator, &s.ally, &s.fee_recipient, &1);
+            .release_dust(&s.operator, &s.ally, &1);
         assert_eq!(released, 1);
         assert_eq!(s.payout.total_dust(), 0);
         assert_eq!(s.usdc.balance(&s.fee_recipient), fee_recipient_before + 1);
@@ -73,7 +72,7 @@ mod tests {
                 // If there are no holders, the contract panics with EmptyHolderSet, which is expected.
                 // We test this explicitly to ensure the typed error is returned.
                 s.usdc.mint(&s.payout_id, &total_income);
-                let cycle_id = cycle(&s.env, "fuzz");
+                let cycle_id = cycle(&s.env, "2026-01");
                 s.payout.record_evidence(
                     &s.operator,
                     &s.ally,
@@ -99,7 +98,7 @@ mod tests {
             }
 
             s.usdc.mint(&s.payout_id, &total_income);
-            let cycle_id = cycle(&s.env, "fuzz");
+            let cycle_id = cycle(&s.env, "2026-01");
             s.payout.record_evidence(
                 &s.operator,
                 &s.ally,
@@ -148,13 +147,11 @@ mod tests {
 
             // 5. Tracked dust matches summary dust and is releasable to the documented destination.
             assert_eq!(s.payout.total_dust(), summary.dust);
-            assert_eq!(s.payout.get_total_dust(), summary.dust);
             if summary.dust > 0 {
                 let fee_recipient_before = s.usdc.balance(&s.fee_recipient);
                 let released = s.payout.release_dust(
                     &s.operator,
                     &s.ally,
-                    &s.fee_recipient,
                     &summary.dust,
                 );
                 assert_eq!(released, summary.dust);
@@ -198,7 +195,7 @@ mod tests {
 
             let mut expected_dust = 0i128;
             for (idx, income) in incomes.iter().enumerate() {
-                let cycle_str = std::format!("cycle-{}", idx);
+                let cycle_str = std::format!("2026-{:02}", idx + 1);
                 let c = cycle(&s.env, &cycle_str);
                 s.payout.record_evidence(
                     &s.operator,
@@ -225,7 +222,7 @@ mod tests {
             let half = expected_dust / 2;
             if half > 0 {
                 let fee_recipient_before = s.usdc.balance(&s.fee_recipient);
-                let released = s.payout.release_dust(&s.operator, &s.ally, &s.fee_recipient, &half);
+                let released = s.payout.release_dust(&s.operator, &s.ally, &half);
                 assert_eq!(released, half);
                 expected_dust -= half;
                 assert_eq!(s.payout.total_dust(), expected_dust);
@@ -237,7 +234,6 @@ mod tests {
                 let released = s.payout.release_dust(
                     &s.operator,
                     &s.ally,
-                    &s.fee_recipient,
                     &expected_dust,
                 );
                 assert_eq!(released, expected_dust);

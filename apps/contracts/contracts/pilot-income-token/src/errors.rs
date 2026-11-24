@@ -4,7 +4,6 @@ use soroban_sdk::contracterror;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[repr(u32)]
 pub enum IncomeTokenError {
-    AlreadyInitialized = 1,
     NotInitialized = 2,
     Unauthorized = 3,
     AlreadyMinted = 4,
@@ -31,4 +30,6 @@ pub enum IncomeTokenError {
     /// A mint or correction transfer would leave more than `MAX_HOLDERS`
     /// addresses holding a balance.
     TooManyHolders = 18,
+    /// `mint_fixed_supply` or `transfer` was called after `mark_wound_down`.
+    ContractWoundDown = 19,
 }

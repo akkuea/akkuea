@@ -53,7 +53,6 @@ pub trait GameLandToken {
 #[contracterror]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum EngineError {
-    AlreadyInitialized = 1,
     NotOwner = 2,
     AlreadyMaxLevel = 3,
     NothingToClaim = 4,
@@ -66,7 +65,6 @@ pub enum StorageKey {
     NftContract,
     TokenContract,
     Treasury,
-    Initialized,
 }
 
 #[contract]
@@ -74,10 +72,12 @@ pub struct GameEngine;
 
 #[contractimpl]
 impl GameEngine {
-    pub fn initialize(env: Env, nft_contract: Address, token_contract: Address, treasury: Address) {
-        if env.storage().instance().has(&StorageKey::Initialized) {
-            panic_with_error!(&env, EngineError::AlreadyInitialized);
-        }
+    pub fn __constructor(
+        env: Env,
+        nft_contract: Address,
+        token_contract: Address,
+        treasury: Address,
+    ) {
         env.storage()
             .instance()
             .set(&StorageKey::NftContract, &nft_contract);
@@ -87,9 +87,6 @@ impl GameEngine {
         env.storage()
             .instance()
             .set(&StorageKey::Treasury, &treasury);
-        env.storage()
-            .instance()
-            .set(&StorageKey::Initialized, &true);
     }
 
     pub fn improve(env: Env, caller: Address, property_id: u32) {
@@ -388,23 +385,16 @@ mod tests {
         let treasury = Address::generate(&env);
         let owner = Address::generate(&env);
 
-        // Register contracts
-        let engine_id = env.register(GameEngine, ());
-        let nft_id = env.register(GamePropertyNft, ());
-        let token_id = env.register(GameLandToken, ());
+        // Pre-allocate the engine address so NFT and LandToken receive it in
+        // their constructors before GameEngine is registered at that address.
+        let engine_id = Address::generate(&env);
+        let nft_id = env.register(GamePropertyNft, (&treasury, &engine_id));
+        let token_id = env.register(GameLandToken, (&treasury, &engine_id, &true));
+        env.register_at(&engine_id, GameEngine, (&nft_id, &token_id, &treasury));
 
         let engine_client = GameEngineClient::new(&env, &engine_id);
         let nft_client = GamePropertyNftClient::new(&env, &nft_id);
         let token_client = GameLandTokenClient::new(&env, &token_id);
-
-        // Initialize PropertyNFT
-        nft_client.initialize(&treasury, &engine_id);
-
-        // Initialize LandToken in testnet_mode = true
-        token_client.initialize(&treasury, &engine_id, &true);
-
-        // Initialize GameEngine
-        engine_client.initialize(&nft_id, &token_id, &treasury);
 
         // Claim faucet tokens to give owner starting LAND balance (1,000 LAND)
         token_client.faucet(&owner);
@@ -712,5 +702,112 @@ mod tests {
         // Both should have earned exactly 5 epochs at the vacant rate.
         assert_eq!(earned_multiple, earned_single);
         assert_eq!(earned_multiple, BASE_RENTAL_RATE * 5);
+    }
+
+    #[test]
+    fn test_transfer_resets_rental_for_new_owner() {
+        let test = setup_test();
+        let alice = Address::generate(&test.env);
+
+        // A treasury tile ages 5 epochs before it is handed over.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (5 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+
+        test.nft_client.transfer(&test.treasury, &alice, &1);
+
+        // The new owner starts at the transfer ledger: no backlog is payable.
+        assert_eq!(test.engine_client.get_accrued_income(&1), 0);
+        let res = test.engine_client.try_claim_rental(&alice, &1);
+        assert_eq!(res, Err(Ok(EngineError::NothingToClaim.into())));
+
+        // Still inside the first epoch after the transfer.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (EPOCH_LENGTH - 1) as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(test.engine_client.get_accrued_income(&1), 0);
+        let res = test.engine_client.try_claim_rental(&alice, &1);
+        assert_eq!(res, Err(Ok(EngineError::NothingToClaim.into())));
+
+        // One full epoch after the transfer pays exactly one vacant epoch.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += 1;
+        test.env.ledger().set(ledger);
+        assert_eq!(test.engine_client.get_accrued_income(&1), BASE_RENTAL_RATE);
+
+        let balance_before = test.token_client.balance(&alice);
+        test.engine_client.claim_rental(&alice, &1);
+        assert_eq!(
+            test.token_client.balance(&alice) - balance_before,
+            BASE_RENTAL_RATE
+        );
+    }
+
+    #[test]
+    fn test_buyer_never_receives_sellers_backlog() {
+        let test = setup_test();
+        let bob = Address::generate(&test.env);
+        let carol = Address::generate(&test.env);
+
+        test.nft_client.transfer(&test.treasury, &bob, &2);
+
+        // Bob holds for 3 epochs without claiming.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (3 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(
+            test.engine_client.get_accrued_income(&2),
+            BASE_RENTAL_RATE * 3
+        );
+
+        // The sale transfers the tile at ledger 300 and checkpoints the rent.
+        test.nft_client.transfer(&bob, &carol, &2);
+        assert_eq!(test.engine_client.get_accrued_income(&2), 0);
+
+        // Carol only earns her own epochs, never Bob's 3.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += EPOCH_LENGTH as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(test.engine_client.get_accrued_income(&2), BASE_RENTAL_RATE);
+
+        let balance_before = test.token_client.balance(&carol);
+        test.engine_client.claim_rental(&carol, &2);
+        assert_eq!(
+            test.token_client.balance(&carol) - balance_before,
+            BASE_RENTAL_RATE
+        );
+    }
+
+    #[test]
+    fn test_transfer_preserves_level_and_resets_rental() {
+        let test = setup_test();
+        let alice = Address::generate(&test.env);
+        let (num, den) = MULTIPLIER_RESIDENTIAL;
+
+        test.engine_client.improve(&test.owner, &0);
+
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += (4 * EPOCH_LENGTH) as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(
+            test.engine_client.get_accrued_income(&0),
+            BASE_RENTAL_RATE * num / den * 4
+        );
+
+        test.nft_client.transfer(&test.owner, &alice, &0);
+
+        let prop = test.nft_client.get_property(&0);
+        assert_eq!(prop.owner, alice);
+        assert_eq!(prop.level, LEVEL_RESIDENTIAL);
+        assert_eq!(test.engine_client.get_accrued_income(&0), 0);
+
+        // One epoch after the transfer accrues at the preserved level.
+        let mut ledger = test.env.ledger().get();
+        ledger.sequence_number += EPOCH_LENGTH as u32;
+        test.env.ledger().set(ledger);
+        assert_eq!(
+            test.engine_client.get_accrued_income(&0),
+            BASE_RENTAL_RATE * num / den
+        );
     }
 }

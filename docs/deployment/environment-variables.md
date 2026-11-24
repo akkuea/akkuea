@@ -95,18 +95,21 @@ The KYC expiry job runs in the background to mark expired KYC records and send r
 
 The escalation job proactively watches `pilot-payout-split`'s on-chain evidence history and notifies an operator when the pilot ally has missed two (configurable) or more consecutive expected reporting cycles, instead of leaving this as a passive dashboard-only signal. See `apps/api/src/workers/pilotEscalationJob.ts`.
 
-The reporting cadence, breach threshold, and re-notification cadence are all configurable because they are properties of a specific ally's agreement, which does not exist yet for the pilot. `PILOT_ESCALATION_AGREEMENT_START` and `PILOT_ESCALATION_OPERATOR_USER_ID` are required for the job to actually run; without them it logs a warning each tick and does nothing (it does not crash).
+The payment day and breach threshold are configurable because they are properties of a specific ally's agreement. Cycles use the same `YYYY-MM` identifiers as evidence submissions; a cycle's evidence is due on its payment day in the following month. `PILOT_ESCALATION_AGREEMENT_START` and `PILOT_ESCALATION_OPERATOR_USER_ID` are required for the job to actually run; without them it logs a warning each tick and does nothing (it does not crash).
 
-| Variable                                | Example Value                         | Required                               | Description                                                                                                                                    |
-| --------------------------------------- | ------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PILOT_ESCALATION_JOB_ENABLED`          | `true`                                | No (default: `true`)                   | Set to `false` to disable the escalation background job entirely (e.g. in test environments)                                                   |
-| `PILOT_ESCALATION_AGREEMENT_START`      | `2026-01-15T00:00:00.000Z`            | Yes (to run)                           | ISO date the ally's reporting agreement began. Without this the job skips every tick                                                           |
-| `PILOT_ESCALATION_OPERATOR_USER_ID`     | `b3f1...` (a user UUID)               | Yes (to run)                           | User ID of the operator to notify through the existing notification pipeline. Without this the job skips every tick                            |
-| `PILOT_ESCALATION_CADENCE_DAYS`         | `30`                                  | No (default: `30`)                     | Expected evidence-reporting cadence, in days, per the ally's agreement                                                                         |
-| `PILOT_ESCALATION_THRESHOLD_CYCLES`     | `2`                                   | No (default: `2`)                      | Consecutive missed cycles that constitutes a breach                                                                                            |
-| `PILOT_ESCALATION_POLL_INTERVAL_MS`     | `21600000`                            | No (default: 6h)                       | How often the job runs, in milliseconds                                                                                                        |
-| `PILOT_ESCALATION_RENOTIFY_INTERVAL_MS` | `604800000`                           | No (default: 7d)                       | While the same breach persists unresolved, how often to re-send the notification rather than staying silent forever. Not re-sent on every poll |
-| `PILOT_PAYOUT_SPLIT_CONTRACT_ID`        | `CXXX...` (56 chars, starts with `C`) | No (falls back to deployment artifact) | Overrides the resolved `pilot-payout-split` contract ID for this network                                                                       |
+Every variable in this section, in [Pilot Review Turnaround SLA](#pilot-review-turnaround-sla), and in [Pilot Contract Overrides](#pilot-contract-overrides) is validated at startup by `apiEnvSchema` (`apps/shared/src/env/schemas.ts`). A value that is set but malformed stops the API from starting, with a message naming the variable; it is never silently replaced by the default. An unset or empty optional variable uses the listed default. "Set by" names who supplies the value: the Akkuea operator who runs the API, or the signed ally agreement, whose terms the operator copies in.
+
+| Variable                                | Example Value                          | Required             | Set by          | Description                                                                                                                                                                                                       |
+| --------------------------------------- | -------------------------------------- | -------------------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PILOT_ESCALATION_JOB_ENABLED`          | `true`                                 | No (default: `true`) | Akkuea operator | `true` or `false` (case-insensitive). Set to `false` to disable the escalation background job entirely (e.g. in test environments)                                                                                |
+| `PILOT_ESCALATION_AGREEMENT_START`      | `2026-01-15T00:00:00.000Z`             | Yes (to run)         | Ally agreement  | Date the ally's reporting agreement began: an ISO 8601 date (`2026-01-15`) or a date-time with `Z` or an offset. Must be a real calendar date. No default: without it the job skips every tick                    |
+| `PILOT_ESCALATION_OPERATOR_USER_ID`     | `3f2b8c1e-5d4a-4c7b-9e1f-0a2b3c4d5e6f` | Yes (to run)         | Akkuea operator | `users.id` UUID of the operator to notify through the existing notification pipeline. No default: without it the job skips every tick                                                                             |
+| `PILOT_PAYMENT_DAY`                     | `5`                                    | No (default: `5`)    | Ally agreement  | Day of the month, in the month after the evidence cycle, that income is due. A whole number from `1` to `28`, matching the dashboard setting                                                                         |
+| `PILOT_ESCALATION_THRESHOLD_CYCLES`     | `2`                                    | No (default: `2`)    | Ally agreement  | Consecutive missed calendar-month cycles that constitutes a breach (a positive whole number)                                                                                                                       |
+| `PILOT_ESCALATION_POLL_INTERVAL_MS`     | `21600000`                             | No (default: 6h)     | Akkuea operator | How often the job runs, in milliseconds: a whole number from `1` to `2147483647` (about 24.8 days, the longest interval a timer supports). Default is `21600000`                                                  |
+| `PILOT_ESCALATION_RENOTIFY_INTERVAL_MS` | `604800000`                            | No (default: 7d)     | Akkuea operator | While the same breach persists unresolved, how often to re-send the notification rather than staying silent forever, in milliseconds (a positive whole number). Not re-sent on every poll. Default is `604800000` |
+
+The job reads `pilot-payout-split` at the contract ID resolved for the configured network; see [Pilot Contract Overrides](#pilot-contract-overrides) to point it at a different deployment.
 
 ### Idempotency Cleanup Job
 
@@ -121,11 +124,22 @@ The idempotency cleanup job periodically deletes expired rows from `idempotency_
 
 Whitelist-review and evidence-review turnaround against the documented SLA (see `docs/operations/pilot-review-sla.md`). Exposed at `GET /pilot/whitelist/metrics` (operator key required). The targets are calendar hours so they can change with a signed ally's expectations without a code change.
 
-| Variable                           | Example Value | Required           | Description                                                                                |
-| ---------------------------------- | ------------- | ------------------ | ------------------------------------------------------------------------------------------ |
-| `PILOT_WHITELIST_REVIEW_SLA_HOURS` | `48`          | No (default: `48`) | Hours from whitelist request submission (`createdAt`) to operator review (`reviewedAt`)    |
-| `PILOT_EVIDENCE_REVIEW_SLA_HOURS`  | `48`          | No (default: `48`) | Hours from a reporting cycle's due date to on-chain `record_evidence` (`recorded_at`)      |
-| `PILOT_REVIEW_METRICS_WINDOW_DAYS` | `30`          | No (default: `30`) | Default lookback for `GET /pilot/whitelist/metrics` when `from` / `windowDays` are omitted |
+Each value must be a positive number (decimals allowed). Like the escalation job variables above, they are validated at startup: a malformed value stops the API from starting with a message naming the variable, and an unset value uses the listed default.
+
+| Variable                           | Example Value | Required           | Set by                                                | Description                                                                                          |
+| ---------------------------------- | ------------- | ------------------ | ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `PILOT_WHITELIST_REVIEW_SLA_HOURS` | `48`          | No (default: `48`) | Akkuea operator (from the ally agreement once signed) | Hours from whitelist request submission (`createdAt`) to operator review (`reviewedAt`)              |
+| `PILOT_EVIDENCE_REVIEW_SLA_HOURS`  | `48`          | No (default: `48`) | Akkuea operator (from the ally agreement once signed) | Hours from a reporting cycle's due date to on-chain `record_evidence` (`recorded_at`)                |
+| `PILOT_REVIEW_METRICS_WINDOW_DAYS` | `30`          | No (default: `30`) | Akkuea operator                                       | Default lookback, in days, for `GET /pilot/whitelist/metrics` when `from` / `windowDays` are omitted |
+
+### Pilot Contract Overrides
+
+The API resolves the pilot contract IDs from the committed deployment artifacts in `apps/shared/src/contracts.<network>.json`, which is the normal case (see `apps/api/src/config/contracts.ts` and `docs/deployment/deploy-pilot-contracts.md`). Set these only to point the API at a custom deployment. Each must be a valid Soroban contract ID; like the other pilot variables, a malformed value stops the API from starting with a message naming the variable.
+
+| Variable                         | Example Value                         | Required                               | Set by                     | Description                                                                                                                                            |
+| -------------------------------- | ------------------------------------- | -------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PILOT_PAYOUT_SPLIT_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | No (falls back to deployment artifact) | Akkuea operator (deployer) | Overrides the `pilot-payout-split` contract ID for this network. Read by the escalation job and the review-turnaround metrics                          |
+| `WHITELIST_CONTRACT_ID`          | `CXXX...` (56 chars, starts with `C`) | No (falls back to deployment artifact) | Akkuea operator (deployer) | Overrides the `pilot-whitelist` contract ID for this network. Used when an operator approves a whitelist request. Note the name has no `PILOT_` prefix |
 
 ### Stellar / Soroban - Network
 
@@ -167,23 +181,36 @@ Whitelist-review and evidence-review turnaround against the documented SLA (see 
 ### Webapp - Pilot Dashboard
 
 Read by `apps/webapp` in the browser, so every variable here is public by
-design. None of them is a secret, and none should ever hold one.
+design. None of them is a secret, and none should ever hold one. All of them
+are set by the Akkuea operator who deploys the dashboard; the ones marked
+"Ally agreement" are terms of the signed ally agreement that the operator
+copies in.
 
 Contract IDs are optional overrides: with all three empty, the dashboard reads
 the committed deployment artifacts in `apps/shared/src/contracts.<network>.json`,
 which is the normal case. Set them only to point a local dashboard at a custom
 deployment. See `docs/deployment/deploy-pilot-contracts.md`.
 
-| Variable                                     | Example Value                         | Required | Description                                                                                                                                         |
-| -------------------------------------------- | ------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `NEXT_PUBLIC_STELLAR_NETWORK`                | `testnet`                             | No       | Network the pilot dashboard reads from. `testnet` (default) or `mainnet`                                                                            |
-| `NEXT_PUBLIC_SOROBAN_RPC_URL`                | `https://soroban-testnet.stellar.org` | No       | Soroban RPC override. Defaults to the public endpoint for the selected network                                                                      |
-| `NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | No       | Overrides the payout-split contract ID from the deployment artifact                                                                                 |
-| `NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | No       | Overrides the income token contract ID from the deployment artifact                                                                                 |
-| `NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID`    | `CXXX...` (56 chars, starts with `C`) | No       | Overrides the whitelist contract ID from the deployment artifact                                                                                    |
-| `NEXT_PUBLIC_PILOT_START_CYCLE`              | `2026-01`                             | No       | First income cycle the dashboard reports on, as `YYYY-MM`. Cycles are enumerated from here to the current month. Defaults to `2026-01`              |
-| `NEXT_PUBLIC_PILOT_PAYMENT_DAY`              | `5`                                   | No       | Day of the month, in the month after the cycle, that the ally's income is due. A term of the ally's agreement, not a software constant. Default `5` |
-| `NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL`       | `https://example.org/property.splat`  | No       | Gaussian splat capture of the ally's property, shown in the investor view. Absent renders a documented empty state                                  |
+Every `NEXT_PUBLIC_PILOT_*` variable is validated by `webappEnvSchema`
+(`apps/shared/src/env/schemas.ts`) when the webapp builds or its dev server
+starts. A value that is set but malformed fails the build with a message naming
+the variable; it is never silently replaced by the default. An unset or empty
+optional variable uses the listed default. Because these values are inlined
+into the browser bundle, changing one requires a rebuild.
+
+| Variable                                     | Example Value                         | Required                    | Set by                     | Description                                                                                                                                                                                                                                                                                 |
+| -------------------------------------------- | ------------------------------------- | --------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_STELLAR_NETWORK`                | `testnet`                             | No                          | Akkuea operator            | Network the pilot dashboard reads from. `testnet` (default) or `mainnet`                                                                                                                                                                                                                    |
+| `NEXT_PUBLIC_SOROBAN_RPC_URL`                | `https://soroban-testnet.stellar.org` | No                          | Akkuea operator            | Soroban RPC override. Defaults to the public endpoint for the selected network                                                                                                                                                                                                              |
+| `NEXT_PUBLIC_PILOT_ALLY_ADDRESS`             | `GXXX...` (56 chars, starts with `G`) | Yes (for co-signed actions) | Ally agreement             | The ally's Stellar public key, with a valid checksum. `pilot-payout-split` stores it with no public getter, so the dashboard reads it from here. No default: without it every co-signed action (`execute_distribution`, `record_evidence`, `exit`) fails with `PilotAllyNotConfiguredError` |
+| `NEXT_PUBLIC_PILOT_PAYOUT_SPLIT_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | No                          | Akkuea operator (deployer) | Overrides the payout-split contract ID from the deployment artifact. Must be a valid Soroban contract ID                                                                                                                                                                                    |
+| `NEXT_PUBLIC_PILOT_INCOME_TOKEN_CONTRACT_ID` | `CXXX...` (56 chars, starts with `C`) | No                          | Akkuea operator (deployer) | Overrides the income token contract ID from the deployment artifact. Must be a valid Soroban contract ID                                                                                                                                                                                    |
+| `NEXT_PUBLIC_PILOT_WHITELIST_CONTRACT_ID`    | `CXXX...` (56 chars, starts with `C`) | No                          | Akkuea operator (deployer) | Overrides the whitelist contract ID from the deployment artifact. Must be a valid Soroban contract ID                                                                                                                                                                                       |
+| `NEXT_PUBLIC_PILOT_START_CYCLE`              | `2026-01`                             | No (default: `2026-01`)     | Ally agreement             | First income cycle the dashboard reports on, as `YYYY-MM` (month `01` to `12`). Cycles are enumerated from here to the current month                                                                                                                                                        |
+| `NEXT_PUBLIC_PILOT_PAYMENT_DAY`              | `5`                                   | No (default: `5`)           | Ally agreement             | Day of the month, in the month after the cycle, that the ally's income is due. A whole number from `1` to `28`. A term of the ally's agreement, not a software constant                                                                                                                     |
+| `NEXT_PUBLIC_PILOT_PROPERTY_SPLAT_URL`       | `https://example.org/property.splat`  | No                          | Akkuea operator            | Gaussian splat capture of the ally's property (an `https` URL), shown in the investor view. Absent renders a documented empty state                                                                                                                                                         |
+| `NEXT_PUBLIC_PILOT_COSIGN_EXPIRY_HOURS`      | `24`                                  | No (default: `24`)          | Akkuea operator            | How long, in hours, the ally's signature on a prepared co-signed action stays valid. A positive number (decimals allowed)                                                                                                                                                                   |
+| `NEXT_PUBLIC_PILOT_EURC_SLIPPAGE_BPS`        | `100`                                 | No (default: `100`, 1%)     | Akkuea operator            | Slippage tolerance, in basis points, applied to the live quote when preparing an `execute_distribution` with any holder paid in EURC. A whole number from `0` to `9999`                                                                                                                     |
 
 ---
 

@@ -26,7 +26,7 @@ describe('internal property operations audit actor', () => {
   test('uses the trusted proxy identity and ignores any actor in the request body', async () => {
     const response = await app.handle(
       new Request(
-        'http://localhost/internal/operations/properties/00000000-0000-0000-0000-000000000001/review',
+        'http://localhost/internal/operations/properties/00000000-0000-4000-a000-000000000001/review',
         {
           method: 'POST',
           headers: {
@@ -46,7 +46,7 @@ describe('internal property operations audit actor', () => {
   test('requires the trusted actor header for review actions', async () => {
     const response = await app.handle(
       new Request(
-        'http://localhost/internal/operations/properties/00000000-0000-0000-0000-000000000001/review',
+        'http://localhost/internal/operations/properties/00000000-0000-4000-a000-000000000001/review',
         {
           method: 'POST',
           headers: {

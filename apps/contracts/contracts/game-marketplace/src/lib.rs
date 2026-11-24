@@ -11,7 +11,6 @@ use soroban_sdk::{
 #[repr(u32)]
 pub enum MarketError {
     NotInitialized = 1,
-    AlreadyInitialized = 2,
     AlreadyListed = 3,
     NotListed = 4,
     NotSeller = 5,
@@ -121,11 +120,8 @@ pub struct GameMarketplace;
 
 #[contractimpl]
 impl GameMarketplace {
-    /// One-time initialisation: store the NFT and LAND token contract addresses.
-    pub fn initialize(env: Env, nft_contract: Address, land_token: Address) {
-        if env.storage().instance().has(&DataKey::NftContract) {
-            panic_with_error!(&env, MarketError::AlreadyInitialized);
-        }
+    /// Atomically store the NFT and LAND token contract addresses at deployment.
+    pub fn __constructor(env: Env, nft_contract: Address, land_token: Address) {
         env.storage()
             .instance()
             .set(&DataKey::NftContract, &nft_contract);
@@ -141,6 +137,16 @@ impl GameMarketplace {
     /// The seller must have already called `approve(seller, marketplace, property_id)`
     /// on the NFT contract. This function calls `transfer_from` to take custody.
     /// `price` must be strictly positive.
+    ///
+    /// Rent uses the reset-on-transfer policy implemented in `game-property-nft`.
+    /// Escrow is an ownership change, so listing moves the tile's
+    /// `last_claimed_ledger` to the current ledger: the seller forfeits any
+    /// unclaimed rent and must call `claim_rental` before listing, and time
+    /// spent in escrow never accrues rent for the seller or the buyer. `buy`
+    /// checkpoints again when it hands the tile to the buyer, so the buyer's
+    /// accrual starts at the purchase ledger and never includes the seller's
+    /// backlog. The improvement `level` is preserved through `list`, `buy`
+    /// and `cancel`.
     pub fn list(env: Env, seller: Address, property_id: u32, price: i128) {
         seller.require_auth();
 
@@ -388,11 +394,15 @@ mod tests {
     extern crate std;
 
     use super::*;
+    use game_engine::calculate_accrued_income;
+    use game_engine::constants::{
+        BASE_RENTAL_RATE, EPOCH_LENGTH, MULTIPLIER_COMMERCIAL, MULTIPLIER_RESIDENTIAL,
+    };
     use game_property_nft::{GamePropertyNft, GamePropertyNftClient};
     use soroban_sdk::{
         testutils::{
             storage::{Instance as _, Persistent as _},
-            Address as _,
+            Address as _, Ledger,
         },
         token::{StellarAssetClient, TokenClient},
         Address, Env,
@@ -401,6 +411,7 @@ mod tests {
     struct Setup<'a> {
         env: Env,
         treasury: Address,
+        game_engine: Address,
         marketplace_id: Address,
         marketplace: GameMarketplaceClient<'a>,
         nft: GamePropertyNftClient<'a>,
@@ -416,19 +427,18 @@ mod tests {
         let game_engine = Address::generate(&env);
         let land_admin = Address::generate(&env);
 
-        let nft_id = env.register(GamePropertyNft, ());
+        let nft_id = env.register(GamePropertyNft, (&treasury, &game_engine));
         let nft = GamePropertyNftClient::new(&env, &nft_id);
-        nft.initialize(&treasury, &game_engine);
 
         let land_id = env.register_stellar_asset_contract_v2(land_admin).address();
 
-        let marketplace_id = env.register(GameMarketplace, ());
+        let marketplace_id = env.register(GameMarketplace, (&nft_id, &land_id));
         let marketplace = GameMarketplaceClient::new(&env, &marketplace_id);
-        marketplace.initialize(&nft_id, &land_id);
 
         Setup {
             env,
             treasury,
+            game_engine,
             marketplace_id,
             marketplace,
             nft,
@@ -438,6 +448,23 @@ mod tests {
 
     fn mint_land(s: &Setup, to: &Address, amount: i128) {
         StellarAssetClient::new(&s.env, &s.land_id).mint(to, &amount);
+    }
+
+    fn set_sequence(env: &Env, sequence: u64) {
+        let mut ledger = env.ledger().get();
+        ledger.sequence_number = sequence as u32;
+        env.ledger().set(ledger);
+    }
+
+    /// Rent the tile has accrued at the current ledger, using the same formula
+    /// as `GameEngine::get_accrued_income`.
+    fn accrued(s: &Setup, property_id: u32) -> i128 {
+        let prop = s.nft.get_property(&property_id);
+        calculate_accrued_income(
+            s.env.ledger().get().sequence_number as u64,
+            prop.last_claimed_ledger,
+            prop.level,
+        )
     }
 
     #[test]
@@ -548,36 +575,21 @@ mod tests {
         assert_eq!(result, Err(Ok(MarketError::AlreadyListed.into())));
     }
 
-    // ── initialize ────────────────────────────────────────────────────────────
+    // ── constructor ───────────────────────────────────────────────────────────
 
     #[test]
-    fn test_initialize_starts_with_no_listings() {
+    fn test_constructor_configures_contracts_and_starts_with_no_listings() {
         let s = setup();
 
         assert!(s.marketplace.get_listing(&0).is_none());
         assert_eq!(s.marketplace.get_all_listings(&0, &10).len(), 0);
-    }
-
-    #[test]
-    fn test_initialize_twice_fails() {
-        let s = setup();
-
-        let result = s.marketplace.try_initialize(&s.nft.address, &s.land_id);
-        assert_eq!(result, Err(Ok(MarketError::AlreadyInitialized.into())));
+        // Configured NFT and LAND contracts are wired at registration.
+        s.nft.approve(&s.treasury, &s.marketplace_id, &0);
+        s.marketplace.list(&s.treasury, &0, &500);
+        assert_eq!(s.marketplace.get_listing(&0).unwrap().seller, s.treasury);
     }
 
     // ── list ──────────────────────────────────────────────────────────────────
-
-    #[test]
-    fn test_list_before_initialize_fails() {
-        let s = setup();
-        let uninitialized_id = s.env.register(GameMarketplace, ());
-        let uninitialized = GameMarketplaceClient::new(&s.env, &uninitialized_id);
-        s.nft.approve(&s.treasury, &uninitialized_id, &7);
-
-        let result = uninitialized.try_list(&s.treasury, &7, &100);
-        assert_eq!(result, Err(Ok(MarketError::NotInitialized.into())));
-    }
 
     #[test]
     fn test_list_without_nft_approval_fails() {
@@ -846,10 +858,19 @@ mod tests {
         // CPU is deliberately not used as a scaling proof here: the test host
         // charges per-access costs proportional to the total state a test
         // created, so every call (even a plain `nft.get_owner`) gets more
-        // expensive as listings are added. This bound is only a regression
-        // guard: the instance-based implementation measured 11,377,627 CPU in
-        // case B, the index-based one measures about 6.6M.
-        assert!(cpu_300 <= 10_000_000, "cpu_300={cpu_300}");
+        // expensive as listings are added. Instead this is a regression guard
+        // against the old marketplace that rewrote the whole order book on
+        // every `buy`: that implementation measured 11,377,627 CPU in case B
+        // before rent checkpoints existed.
+        //
+        // Since issue #1325 every transfer also reads and writes the tile's
+        // rent checkpoint in `game-property-nft`. That only adds work to the
+        // old implementation, so comparing against its measured cost still
+        // fails it, while the index-based implementation with checkpoints
+        // measures 10,625,129 and stays below the line. The write-bytes
+        // assertions above remain the primary flat-storage proof.
+        const INSTANCE_ORDER_BOOK_CPU: u64 = 11_377_627;
+        assert!(cpu_300 < INSTANCE_ORDER_BOOK_CPU, "cpu_300={cpu_300}");
     }
 
     #[test]
@@ -929,5 +950,81 @@ mod tests {
         assert_eq!(second.seller, s.treasury);
         assert_eq!(second.property_id, 25);
         assert_eq!(second.price, 888);
+    }
+
+    // ── issue #1325: rent is reset on every ownership change ──────────────────
+
+    #[test]
+    fn test_buy_resets_rental_accrual_for_buyer() {
+        let s = setup();
+        let bob = Address::generate(&s.env);
+        let carol = Address::generate(&s.env);
+        mint_land(&s, &carol, 1_000);
+
+        s.nft.transfer(&s.treasury, &bob, &40);
+        s.nft.set_improvement_level(&s.game_engine, &40, &2);
+        let (num, den) = MULTIPLIER_COMMERCIAL;
+
+        // Bob holds a commercial tile for 5 epochs and never claims.
+        set_sequence(&s.env, 5 * EPOCH_LENGTH);
+        assert_eq!(accrued(&s, 40), BASE_RENTAL_RATE * num / den * 5);
+
+        s.nft.approve(&bob, &s.marketplace_id, &40);
+        s.marketplace.list(&bob, &40, &100);
+
+        // Listing checkpoints the tile: Bob forfeits the backlog.
+        assert_eq!(accrued(&s, 40), 0);
+        assert_eq!(s.nft.get_property(&40).level, 2);
+
+        // Escrow time never accrues, and the buyer starts at the sale ledger.
+        set_sequence(&s.env, 8 * EPOCH_LENGTH);
+        s.marketplace.buy(&carol, &40);
+
+        let prop = s.nft.get_property(&40);
+        assert_eq!(prop.owner, carol);
+        assert_eq!(prop.level, 2);
+        assert_eq!(prop.last_claimed_ledger, 8 * EPOCH_LENGTH);
+        assert_eq!(accrued(&s, 40), 0);
+
+        // Half an epoch later there is still nothing to collect.
+        set_sequence(&s.env, 8 * EPOCH_LENGTH + EPOCH_LENGTH / 2);
+        assert_eq!(accrued(&s, 40), 0);
+
+        // One full epoch after the purchase pays exactly one epoch.
+        set_sequence(&s.env, 9 * EPOCH_LENGTH);
+        assert_eq!(accrued(&s, 40), BASE_RENTAL_RATE * num / den);
+    }
+
+    #[test]
+    fn test_cancel_does_not_pay_rent_for_escrow_period() {
+        let s = setup();
+        let seller = Address::generate(&s.env);
+
+        s.nft.transfer(&s.treasury, &seller, &41);
+        s.nft.set_improvement_level(&s.game_engine, &41, &1);
+        let (num, den) = MULTIPLIER_RESIDENTIAL;
+
+        // Two epochs of rent are pending when the seller lists the tile.
+        set_sequence(&s.env, 2 * EPOCH_LENGTH);
+        assert_eq!(accrued(&s, 41), BASE_RENTAL_RATE * num / den * 2);
+
+        s.nft.approve(&seller, &s.marketplace_id, &41);
+        s.marketplace.list(&seller, &41, &300);
+
+        // Three epochs pass while the tile sits in escrow, then it comes back.
+        set_sequence(&s.env, 5 * EPOCH_LENGTH);
+        s.marketplace.cancel(&seller, &41);
+
+        let prop = s.nft.get_property(&41);
+        assert_eq!(prop.owner, seller);
+        assert_eq!(prop.level, 1);
+        assert_eq!(prop.last_claimed_ledger, 5 * EPOCH_LENGTH);
+
+        // No rent is payable for the escrow period.
+        assert_eq!(accrued(&s, 41), 0);
+
+        // Accrual restarts from the cancellation ledger at the kept level.
+        set_sequence(&s.env, 6 * EPOCH_LENGTH);
+        assert_eq!(accrued(&s, 41), BASE_RENTAL_RATE * num / den);
     }
 }

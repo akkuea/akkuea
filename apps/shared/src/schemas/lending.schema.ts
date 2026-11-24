@@ -11,7 +11,7 @@ import {
  * Schema for LendingPool
  */
 export const lendingPoolSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   name: z.string().min(1),
   asset: z.string().min(1),
   assetAddress: stellarAddressSchema,
@@ -34,8 +34,8 @@ export const lendingPoolSchema = z.object({
  * Schema for DepositPosition
  */
 export const depositPositionSchema = z.object({
-  id: z.string().uuid(),
-  poolId: z.string().uuid(),
+  id: z.uuid(),
+  poolId: z.uuid(),
   depositor: stellarAddressSchema,
   amount: positiveAmountSchema,
   shares: positiveAmountSchema,
@@ -48,8 +48,8 @@ export const depositPositionSchema = z.object({
  * Schema for BorrowPosition
  */
 export const borrowPositionSchema = z.object({
-  id: z.string().uuid(),
-  poolId: z.string().uuid(),
+  id: z.uuid(),
+  poolId: z.uuid(),
   borrower: stellarAddressSchema,
   principal: positiveAmountSchema,
   accruedInterest: nonNegativeAmountSchema,

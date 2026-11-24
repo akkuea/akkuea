@@ -13,7 +13,9 @@
  *  - the retired database-only write routes returning 410.
  */
 import { afterAll, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { randomUUID } from 'node:crypto';
 import { Elysia } from 'elysia';
+import { and, eq, inArray } from 'drizzle-orm';
 import {
   Account,
   Contract,
@@ -32,6 +34,8 @@ import { lendingRepository } from '../repositories/LendingRepository';
 import { userRepository } from '../repositories/UserRepository';
 import { ApiError } from '../errors/ApiError';
 import { NotificationService } from '../services/NotificationService';
+import { db } from '../db';
+import { borrowPositions, lendingPools, transactions, users } from '../db/schema';
 
 const NETWORK_PASSPHRASE = Networks.TESTNET;
 const CONTRACT_ID = 'CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX';
@@ -169,6 +173,43 @@ const verifiedDeposit = {
   args: [WALLET, CONTRACT_POOL_ID, BigInt(1_000_000_000)],
 };
 
+type ConfirmableAction = 'withdraw' | 'borrow' | 'repay';
+
+function makeActionResponse(
+  action: ConfirmableAction,
+  overrides: {
+    status?: string;
+    contractId?: string;
+    functionName?: string;
+    source?: string;
+    actor?: string;
+    poolId?: string;
+  } = {},
+) {
+  const actor = overrides.actor ?? WALLET;
+  const args = [
+    nativeToScVal(actor, { type: 'address' }),
+    nativeToScVal(overrides.poolId ?? CONTRACT_POOL_ID, { type: 'string' }),
+    nativeToScVal(BigInt(1_000_000_000), { type: 'i128' }),
+  ];
+  if (action === 'borrow') {
+    args.push(
+      nativeToScVal(OTHER_WALLET, { type: 'address' }),
+      nativeToScVal(BigInt(5_000_000_000), { type: 'i128' }),
+    );
+  }
+
+  return fakeResponse({
+    status: overrides.status,
+    envelopeXdr: buildLendingEnvelope({
+      contractId: overrides.contractId ?? CONTRACT_ID,
+      functionName: overrides.functionName ?? action,
+      source: overrides.source ?? actor,
+      args,
+    }),
+  });
+}
+
 const totals = {
   totalDeposits: BigInt(1_000_000_000),
   totalBorrows: BigInt(0),
@@ -213,7 +254,7 @@ beforeEach(() => {
       shares: BigInt(1_000_000_000),
     })),
     getLendingBorrowPosition: mock(async () => null),
-    getLendingHealthFactor: mock(async () => null),
+    getLendingHealthFactor: mock(async () => BigInt(0)),
   };
   repositoryMocks = {
     findActivePool: mock(async () => poolFixture),
@@ -464,6 +505,111 @@ describe('StellarService.verifyContractTransaction', () => {
   });
 });
 
+describe('StellarService lending position reads', () => {
+  it('propagates deposit-position RPC failures', async () => {
+    const rpcFailure = new Error('RPC timeout');
+    const service = makeStellarService(fakeResponse());
+    (service as any).createDefiLendingClient = () => ({
+      getUserDeposits: async () => ({ result: [CONTRACT_POOL_ID] }),
+      getDepositPosition: async () => {
+        throw rpcFailure;
+      },
+    });
+
+    await expect(
+      service.getLendingDepositPosition(CONTRACT_ID, CONTRACT_POOL_ID, WALLET, WALLET),
+    ).rejects.toBe(rpcFailure);
+  });
+
+  it('propagates borrow-position RPC failures', async () => {
+    const rpcFailure = new Error('RPC timeout');
+    const service = makeStellarService(fakeResponse());
+    (service as any).createDefiLendingClient = () => ({
+      getUserBorrows: async () => ({ result: [CONTRACT_POOL_ID] }),
+      getBorrowPosition: async () => {
+        throw rpcFailure;
+      },
+    });
+
+    await expect(
+      service.getLendingBorrowPosition(CONTRACT_ID, CONTRACT_POOL_ID, WALLET, WALLET),
+    ).rejects.toBe(rpcFailure);
+  });
+
+  it('propagates health-factor RPC failures', async () => {
+    const rpcFailure = new Error('RPC timeout');
+    const service = makeStellarService(fakeResponse());
+    (service as any).createDefiLendingClient = () => ({
+      getHealthFactor: async () => {
+        throw rpcFailure;
+      },
+    });
+
+    await expect(
+      service.getLendingHealthFactor(CONTRACT_ID, CONTRACT_POOL_ID, WALLET, WALLET),
+    ).rejects.toBe(rpcFailure);
+  });
+
+  it('unwraps successful health-factor contract results', async () => {
+    const healthFactor = BigInt('1500000000000000000');
+    const service = makeStellarService(fakeResponse());
+    (service as any).createDefiLendingClient = () => ({
+      getHealthFactor: async () => ({ result: { unwrap: () => healthFactor } }),
+    });
+
+    await expect(
+      service.getLendingHealthFactor(CONTRACT_ID, CONTRACT_POOL_ID, WALLET, WALLET),
+    ).resolves.toBe(healthFactor);
+  });
+
+  it('propagates contract errors returned by the health-factor getter', async () => {
+    const contractFailure = new Error('borrow position not found');
+    const service = makeStellarService(fakeResponse());
+    (service as any).createDefiLendingClient = () => ({
+      getHealthFactor: async () => ({
+        result: {
+          unwrap: () => {
+            throw contractFailure;
+          },
+        },
+      }),
+    });
+
+    await expect(
+      service.getLendingHealthFactor(CONTRACT_ID, CONTRACT_POOL_ID, WALLET, WALLET),
+    ).rejects.toBe(contractFailure);
+  });
+
+  it('returns null only when the contract position index confirms absence', async () => {
+    const service = makeStellarService(fakeResponse());
+    const getDepositPosition = mock(async () => ({
+      result: { amount: BigInt(1), shares: BigInt(1) },
+    }));
+    const getBorrowPosition = mock(async () => ({
+      result: {
+        principal: BigInt(1),
+        collateral_amount: BigInt(1),
+        collateral_asset: OTHER_WALLET,
+      },
+    }));
+    (service as any).createDefiLendingClient = () => ({
+      getUserDeposits: async () => ({ result: [] }),
+      getUserBorrows: async () => ({ result: [] }),
+      getDepositPosition,
+      getBorrowPosition,
+    });
+
+    await expect(
+      service.getLendingDepositPosition(CONTRACT_ID, CONTRACT_POOL_ID, WALLET, WALLET),
+    ).resolves.toBeNull();
+    await expect(
+      service.getLendingBorrowPosition(CONTRACT_ID, CONTRACT_POOL_ID, WALLET, WALLET),
+    ).resolves.toBeNull();
+    expect(getDepositPosition).not.toHaveBeenCalled();
+    expect(getBorrowPosition).not.toHaveBeenCalled();
+  });
+});
+
 describe('confirm endpoints cache contract state', () => {
   it('writes Postgres from the values the contract getters return', async () => {
     const response = await LendingController.confirmDeposit(authCtx({ txHash: TX_HASH }));
@@ -501,6 +647,90 @@ describe('confirm endpoints cache contract state', () => {
     expect(repositoryMocks.recordConfirmedAction).not.toHaveBeenCalled();
   });
 
+  for (const action of ['withdraw', 'borrow', 'repay'] as const) {
+    const confirm = (ctx: ReturnType<typeof authCtx>) => {
+      if (action === 'withdraw') return LendingController.confirmWithdraw(ctx);
+      if (action === 'borrow') return LendingController.confirmBorrow(ctx);
+      return LendingController.confirmRepay(ctx);
+    };
+
+    describe(`confirm ${action} rejects unverified transactions`, () => {
+      const failures = [
+        ['a failed transaction', { status: 'FAILED' }, 422],
+        ['a different contract', { contractId: OTHER_CONTRACT_ID }, 422],
+        ['a different function', { functionName: 'deposit' }, 422],
+        ['a different actor', { actor: OTHER_WALLET }, 403],
+        ['a different pool', { poolId: 'another-pool' }, 422],
+      ] as const;
+
+      for (const [description, overrides, statusCode] of failures) {
+        it(`does not write for ${description}`, async () => {
+          const response = makeActionResponse(action, overrides);
+          serviceMocks.verifyContractTransaction = mock(
+            async (hash: string, contractId: string, functionName: string) =>
+              makeStellarService(response).verifyContractTransaction(
+                hash,
+                contractId,
+                functionName,
+              ),
+          );
+          (stellarService as any).verifyContractTransaction =
+            serviceMocks.verifyContractTransaction;
+
+          await expect(confirm(authCtx({ txHash: TX_HASH }))).rejects.toMatchObject({
+            statusCode,
+          });
+          expect(repositoryMocks.recordConfirmedAction).not.toHaveBeenCalled();
+        });
+      }
+    });
+  }
+
+  it('does not delete an existing deposit when the post-withdraw position read fails', async () => {
+    const rpcFailure = new Error('RPC timeout');
+    serviceMocks.getLendingDepositPosition = mock(async () => {
+      throw rpcFailure;
+    });
+    (stellarService as any).getLendingDepositPosition = serviceMocks.getLendingDepositPosition;
+
+    await expect(LendingController.confirmWithdraw(authCtx({ txHash: TX_HASH }))).rejects.toBe(
+      rpcFailure,
+    );
+    expect(repositoryMocks.recordConfirmedAction).not.toHaveBeenCalled();
+  });
+
+  it('does not delete an existing borrow when the post-repay position read fails', async () => {
+    const rpcFailure = new Error('RPC timeout');
+    serviceMocks.getLendingBorrowPosition = mock(async () => {
+      throw rpcFailure;
+    });
+    (stellarService as any).getLendingBorrowPosition = serviceMocks.getLendingBorrowPosition;
+
+    await expect(LendingController.confirmRepay(authCtx({ txHash: TX_HASH }))).rejects.toBe(
+      rpcFailure,
+    );
+    expect(repositoryMocks.recordConfirmedAction).not.toHaveBeenCalled();
+  });
+
+  it('does not update database positions when the post-borrow health-factor read fails', async () => {
+    const rpcFailure = new Error('RPC timeout');
+    serviceMocks.getLendingBorrowPosition = mock(async () => ({
+      principal: BigInt(2_500_000_000),
+      collateralAmount: BigInt(6_000_000_000),
+      collateralAsset: OTHER_WALLET,
+    }));
+    serviceMocks.getLendingHealthFactor = mock(async () => {
+      throw rpcFailure;
+    });
+    (stellarService as any).getLendingBorrowPosition = serviceMocks.getLendingBorrowPosition;
+    (stellarService as any).getLendingHealthFactor = serviceMocks.getLendingHealthFactor;
+
+    await expect(LendingController.confirmBorrow(authCtx({ txHash: TX_HASH }))).rejects.toBe(
+      rpcFailure,
+    );
+    expect(repositoryMocks.recordConfirmedAction).not.toHaveBeenCalled();
+  });
+
   it('rejects a transaction signed by a different actor', async () => {
     serviceMocks.verifyContractTransaction = mock(async () => ({
       ...verifiedDeposit,
@@ -533,18 +763,94 @@ describe('confirm endpoints cache contract state', () => {
   });
 
   it('treats duplicate confirmation as idempotent', async () => {
-    repositoryMocks.recordConfirmedAction = mock(async () => ({
-      recorded: false,
-      transaction: { id: 'tx-1', hash: TX_HASH, status: 'confirmed' },
-    }));
+    let hasRecordedHash = false;
+    let databaseWrites = 0;
+    repositoryMocks.recordConfirmedAction = mock(async () => {
+      if (hasRecordedHash) {
+        return {
+          recorded: false,
+          transaction: { id: 'tx-1', hash: TX_HASH, status: 'confirmed' },
+        };
+      }
+      hasRecordedHash = true;
+      databaseWrites += 1;
+      return {
+        recorded: true,
+        transaction: { id: 'tx-1', hash: TX_HASH, status: 'confirmed' },
+      };
+    });
     (lendingRepository as any).recordConfirmedAction = repositoryMocks.recordConfirmedAction;
 
-    const response = await LendingController.confirmDeposit(authCtx({ txHash: TX_HASH }));
-    const body = (await response.json()) as { recorded: boolean };
+    const first = await LendingController.confirmDeposit(authCtx({ txHash: TX_HASH }));
+    const second = await LendingController.confirmDeposit(authCtx({ txHash: TX_HASH }));
+    const firstBody = (await first.json()) as { recorded: boolean };
+    const secondBody = (await second.json()) as { recorded: boolean };
 
-    expect(response.status).toBe(200);
-    expect(body.recorded).toBe(false);
-    expect(repositoryMocks.recordConfirmedAction).toHaveBeenCalledTimes(1);
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(firstBody.recorded).toBe(true);
+    expect(secondBody.recorded).toBe(false);
+    expect(repositoryMocks.recordConfirmedAction).toHaveBeenCalledTimes(2);
+    expect(databaseWrites).toBe(1);
+  });
+
+  it('updates the existing borrow row on a second confirmed borrow', async () => {
+    let confirmationCount = 0;
+    const borrowRows = new Map<string, Record<string, unknown>>();
+    serviceMocks.verifyContractTransaction = mock(async () => {
+      confirmationCount += 1;
+      return {
+        txHash: confirmationCount === 1 ? TX_HASH : 'b'.repeat(64),
+        sourceAccount: WALLET,
+        contractId: CONTRACT_ID,
+        functionName: 'borrow',
+        args: [
+          WALLET,
+          CONTRACT_POOL_ID,
+          BigInt(1_000_000_000),
+          OTHER_WALLET,
+          BigInt(5_000_000_000),
+        ],
+      };
+    });
+    (stellarService as any).verifyContractTransaction = serviceMocks.verifyContractTransaction;
+    serviceMocks.getLendingBorrowPosition = mock(async () =>
+      confirmationCount === 1
+        ? {
+            principal: BigInt(1_500_000_000),
+            collateralAmount: BigInt(3_000_000_000),
+            collateralAsset: OTHER_WALLET,
+          }
+        : {
+            principal: BigInt(2_500_000_000),
+            collateralAmount: BigInt(6_000_000_000),
+            collateralAsset: OTHER_WALLET,
+          },
+    );
+    serviceMocks.getLendingHealthFactor = mock(async () => BigInt('1500000000000000000'));
+    (stellarService as any).getLendingBorrowPosition = serviceMocks.getLendingBorrowPosition;
+    (stellarService as any).getLendingHealthFactor = serviceMocks.getLendingHealthFactor;
+    repositoryMocks.recordConfirmedAction = mock(async (input: Record<string, any>) => {
+      const key = `${input.poolId}:${input.userId}`;
+      borrowRows.set(key, input.borrow);
+      return {
+        recorded: true,
+        transaction: { id: `tx-${confirmationCount}`, hash: input.hash, status: 'confirmed' },
+      };
+    });
+    (lendingRepository as any).recordConfirmedAction = repositoryMocks.recordConfirmedAction;
+
+    await LendingController.confirmBorrow(authCtx({ txHash: TX_HASH }));
+    await LendingController.confirmBorrow(authCtx({ txHash: 'b'.repeat(64) }));
+
+    expect(repositoryMocks.recordConfirmedAction).toHaveBeenCalledTimes(2);
+    expect(borrowRows.size).toBe(1);
+    expect(borrowRows.get(`${POOL_ID}:${USER_ID}`)).toEqual({
+      principal: '250.0000000',
+      collateralAmount: '600.0000000',
+      collateralAsset: OTHER_WALLET,
+      healthFactor: '1.5000',
+    });
   });
 
   it('caches the merged borrow position returned by the contract after a later borrow', async () => {
@@ -634,7 +940,9 @@ describe('liquidation', () => {
       collateralAmount: BigInt(2_000_000_000),
       collateralAsset: OTHER_WALLET,
     }));
+    serviceMocks.getLendingHealthFactor = mock(async () => BigInt('1500000000000000000'));
     (stellarService as any).getLendingBorrowPosition = serviceMocks.getLendingBorrowPosition;
+    (stellarService as any).getLendingHealthFactor = serviceMocks.getLendingHealthFactor;
 
     const response = await LendingController.confirmLiquidation({
       params: { id: POOL_ID, borrowerId: BORROWER_ID },
@@ -734,5 +1042,142 @@ describe('retired database-only write routes', () => {
     expect((lendingRepository as any).borrow).toBeUndefined();
     expect((lendingRepository as any).repay).toBeUndefined();
     expect((lendingRepository as any).liquidate).toBeUndefined();
+  });
+});
+
+describe.skipIf(!process.env.DATABASE_URL)('confirmed borrow database integration', () => {
+  it('preserves a position on RPC failure, upserts a later borrow, and ignores duplicate hashes', async () => {
+    const wallet = Keypair.random().publicKey();
+    const poolContractId = `test-${randomUUID()}`;
+    const hashes = [
+      randomUUID().replaceAll('-', '').repeat(2),
+      randomUUID().replaceAll('-', '').repeat(2),
+    ];
+    let userId: string | undefined;
+    let poolId: string | undefined;
+
+    try {
+      const [user] = await db.insert(users).values({ walletAddress: wallet }).returning();
+      if (!user) {
+        throw new Error('Failed to create the confirmed-borrow test user');
+      }
+      userId = user.id;
+      const [pool] = await db
+        .insert(lendingPools)
+        .values({
+          name: 'Confirmed borrow integration pool',
+          asset: 'USDC',
+          assetAddress: wallet,
+          contractPoolId: poolContractId,
+          collateralFactor: '0.75',
+          liquidationThreshold: '0.80',
+          liquidationPenalty: '0.05',
+        })
+        .returning();
+      if (!pool) {
+        throw new Error('Failed to create the confirmed-borrow test pool');
+      }
+      poolId = pool.id;
+
+      repositoryMocks.findById = mock(async () => ({
+        ...poolFixture,
+        id: poolId,
+        contractPoolId: poolContractId,
+      }));
+      (lendingRepository as any).findById = repositoryMocks.findById;
+      (lendingRepository as any).recordConfirmedAction =
+        originalRepositoryMethods.recordConfirmedAction;
+
+      const verifiedBorrow = (txHash: string) => ({
+        txHash,
+        sourceAccount: wallet,
+        contractId: CONTRACT_ID,
+        functionName: 'borrow',
+        args: [wallet, poolContractId, BigInt(1_000_000_000), OTHER_WALLET, BigInt(5_000_000_000)],
+      });
+      const verifiedTransactions = [
+        verifiedBorrow(hashes[0]!),
+        verifiedBorrow(randomUUID().replaceAll('-', '').repeat(2)),
+        verifiedBorrow(hashes[1]!),
+        verifiedBorrow(hashes[1]!),
+      ];
+      serviceMocks.verifyContractTransaction = mock(async () => verifiedTransactions.shift()!);
+      (stellarService as any).verifyContractTransaction = serviceMocks.verifyContractTransaction;
+
+      let borrowReadCount = 0;
+      serviceMocks.getLendingBorrowPosition = mock(async () => {
+        borrowReadCount += 1;
+        if (borrowReadCount === 2) {
+          throw new Error('RPC timeout');
+        }
+
+        return {
+          principal: BigInt(
+            borrowReadCount === 1
+              ? 1_500_000_000
+              : borrowReadCount === 3
+                ? 2_500_000_000
+                : 9_000_000_000,
+          ),
+          collateralAmount: BigInt(6_000_000_000),
+          collateralAsset: OTHER_WALLET,
+        };
+      });
+      (stellarService as any).getLendingBorrowPosition = serviceMocks.getLendingBorrowPosition;
+      serviceMocks.getLendingHealthFactor = mock(async () => BigInt('1500000000000000000'));
+      (stellarService as any).getLendingHealthFactor = serviceMocks.getLendingHealthFactor;
+
+      const context = (txHash: string) =>
+        authCtx(
+          { txHash },
+          {
+            params: { id: poolId! },
+            userId,
+            wallet,
+          },
+        );
+      const readPosition = async () => {
+        const [position] = await db
+          .select()
+          .from(borrowPositions)
+          .where(and(eq(borrowPositions.poolId, poolId!), eq(borrowPositions.borrowerId, userId!)));
+        expect(position).toBeDefined();
+        return position!;
+      };
+
+      const firstConfirmation = await LendingController.confirmBorrow(context(hashes[0]!));
+      expect(((await firstConfirmation.json()) as { recorded: boolean }).recorded).toBe(true);
+      expect((await readPosition()).principal).toBe('150.0000000');
+
+      await expect(
+        LendingController.confirmBorrow(context(randomUUID().replaceAll('-', '').repeat(2))),
+      ).rejects.toThrow('RPC timeout');
+      expect((await readPosition()).principal).toBe('150.0000000');
+
+      const secondConfirmation = await LendingController.confirmBorrow(context(hashes[1]!));
+      expect(((await secondConfirmation.json()) as { recorded: boolean }).recorded).toBe(true);
+      expect((await readPosition()).principal).toBe('250.0000000');
+
+      const duplicateConfirmation = await LendingController.confirmBorrow(context(hashes[1]!));
+      expect(((await duplicateConfirmation.json()) as { recorded: boolean }).recorded).toBe(false);
+      expect((await readPosition()).principal).toBe('250.0000000');
+
+      const recordedTransactions = await db
+        .select()
+        .from(transactions)
+        .where(inArray(transactions.hash, hashes));
+      expect(recordedTransactions).toHaveLength(2);
+    } finally {
+      if (poolId) {
+        await db.delete(borrowPositions).where(eq(borrowPositions.poolId, poolId));
+      }
+      await db.delete(transactions).where(inArray(transactions.hash, hashes));
+      if (poolId) {
+        await db.delete(lendingPools).where(eq(lendingPools.id, poolId));
+      }
+      if (userId) {
+        await db.delete(users).where(eq(users.id, userId));
+      }
+    }
   });
 });

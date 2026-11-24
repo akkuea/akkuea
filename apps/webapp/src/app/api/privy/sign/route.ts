@@ -23,21 +23,21 @@ const BASE64_REGEX = /^[A-Za-z0-9+/]+={0,2}$/;
 
 const signBodySchema = z.object({
   walletId: z
-    .string({ required_error: "walletId is required" })
+    .string({ error: "walletId is required" })
     .min(1, "walletId is required")
     .max(128, "walletId is too long")
     .regex(PRIVY_WALLET_ID_REGEX, "Invalid walletId format"),
   address: z
-    .string({ required_error: "address is required" })
+    .string({ error: "address is required" })
     .length(56, "address must be exactly 56 characters")
     .refine(isStellarPublicKey, "Invalid Stellar public key"),
   txXdr: z
-    .string({ required_error: "txXdr is required" })
+    .string({ error: "txXdr is required" })
     .min(1, "txXdr is required")
     .max(65536, "txXdr exceeds maximum allowed size")
     .regex(BASE64_REGEX, "Invalid txXdr base64 format"),
   networkPassphrase: z
-    .string({ required_error: "networkPassphrase is required" })
+    .string({ error: "networkPassphrase is required" })
     .min(1, "networkPassphrase is required")
     .max(256, "networkPassphrase is too long"),
 });

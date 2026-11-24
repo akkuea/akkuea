@@ -141,6 +141,13 @@
       "when": 1795369823479,
       "tag": "0019_ancient_skreet",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1795520235855,
+      "tag": "0020_spotty_rogue",
+      "breakpoints": true
     }
   ]
 }

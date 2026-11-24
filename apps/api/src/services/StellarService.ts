@@ -266,6 +266,7 @@ export class StellarService {
         sourceAccount,
       );
       if (typedTransaction) {
+        this.unwrapContractResult(typedTransaction.result);
         return typedTransaction.toXDR();
       }
 
@@ -290,7 +291,9 @@ export class StellarService {
       signerSecret,
     );
     if (typedTransaction) {
+      this.unwrapContractResult(typedTransaction.result);
       const sentTransaction = await typedTransaction.signAndSend();
+      this.unwrapContractResult(sentTransaction.result);
       return this.getSentTransactionHash(sentTransaction);
     }
 
@@ -581,18 +584,16 @@ export class StellarService {
     sourceAccount: string,
   ): Promise<ContractDepositPosition | null> {
     const client = this.createDefiLendingClient(contractId, sourceAccount);
-    try {
-      const transaction = await client.getDepositPosition({ user: wallet, poolId });
-      if (!transaction.result) {
-        return null;
-      }
-      return {
-        amount: transaction.result.amount,
-        shares: transaction.result.shares,
-      };
-    } catch {
+    const userDeposits = await client.getUserDeposits(wallet);
+    if (!userDeposits.result.includes(poolId)) {
       return null;
     }
+
+    const transaction = await client.getDepositPosition({ user: wallet, poolId });
+    return {
+      amount: transaction.result.amount,
+      shares: transaction.result.shares,
+    };
   }
 
   /** The contract's borrow position for a wallet, or null when none exists. */
@@ -603,34 +604,39 @@ export class StellarService {
     sourceAccount: string,
   ): Promise<ContractBorrowPosition | null> {
     const client = this.createDefiLendingClient(contractId, sourceAccount);
-    try {
-      const transaction = await client.getBorrowPosition({ user: wallet, poolId });
-      if (!transaction.result) {
-        return null;
-      }
-      return {
-        principal: transaction.result.principal,
-        collateralAmount: transaction.result.collateral_amount,
-        collateralAsset: transaction.result.collateral_asset,
-      };
-    } catch {
+    const userBorrows = await client.getUserBorrows(wallet);
+    if (!userBorrows.result.includes(poolId)) {
       return null;
     }
+
+    const transaction = await client.getBorrowPosition({ user: wallet, poolId });
+    return {
+      principal: transaction.result.principal,
+      collateralAmount: transaction.result.collateral_amount,
+      collateralAsset: transaction.result.collateral_asset,
+    };
   }
 
-  /** The contract's health factor for a wallet, or null when it cannot be read. */
+  /** Reads the contract health factor for a wallet, propagating read failures. */
   async getLendingHealthFactor(
     contractId: string,
     poolId: string,
     wallet: string,
     sourceAccount: string,
-  ): Promise<bigint | null> {
+  ): Promise<bigint> {
     const client = this.createDefiLendingClient(contractId, sourceAccount);
-    try {
-      const transaction = await client.getHealthFactor({ user: wallet, poolId });
-      return transaction.result ?? null;
-    } catch {
-      return null;
+    const transaction = await client.getHealthFactor({ user: wallet, poolId });
+    return transaction.result.unwrap();
+  }
+
+  private unwrapContractResult(result: unknown): void {
+    if (
+      typeof result === 'object' &&
+      result !== null &&
+      'unwrap' in result &&
+      typeof result.unwrap === 'function'
+    ) {
+      result.unwrap();
     }
   }
 

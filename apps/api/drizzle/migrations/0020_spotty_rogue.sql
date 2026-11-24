@@ -1,5 +1,5 @@
-DROP INDEX IF EXISTS "borrow_positions_pool_id_borrower_id_idx";--> statement-breakpoint
-ALTER TABLE "lending_pools" ADD COLUMN IF NOT EXISTS "contract_pool_id" varchar(64);--> statement-breakpoint
+DROP INDEX "borrow_positions_pool_id_borrower_id_idx";--> statement-breakpoint
+ALTER TABLE "lending_pools" ADD COLUMN "contract_pool_id" varchar(64);--> statement-breakpoint
 LOCK TABLE "borrow_positions" IN SHARE ROW EXCLUSIVE MODE;--> statement-breakpoint
 DO $$
 BEGIN
@@ -54,4 +54,5 @@ USING duplicate_positions
 WHERE positions."pool_id" = duplicate_positions."pool_id"
   AND positions."borrower_id" = duplicate_positions."borrower_id"
   AND positions."id" <> duplicate_positions."survivor_id";--> statement-breakpoint
-CREATE UNIQUE INDEX IF NOT EXISTS "borrow_positions_pool_id_borrower_id_unique" ON "borrow_positions" USING btree ("pool_id","borrower_id");
+CREATE UNIQUE INDEX "borrow_positions_pool_id_borrower_id_unique" ON "borrow_positions" USING btree ("pool_id","borrower_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "lending_pools_contract_pool_id_unique" ON "lending_pools" USING btree ("contract_pool_id");

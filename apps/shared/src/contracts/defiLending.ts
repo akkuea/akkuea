@@ -1,6 +1,7 @@
 import type {
   AssembledTransaction,
   MethodOptions,
+  Result,
 } from "@stellar/stellar-sdk/contract";
 import type { Client as CombinedContractClient } from "./generated/rwaDefi.js";
 import {
@@ -89,7 +90,7 @@ export class DefiLendingContractClient {
   deposit(
     args: PoolActionArgs,
     options?: MethodOptions,
-  ): Promise<AssembledTransaction<null>> {
+  ): Promise<AssembledTransaction<Result<void>>> {
     return this.client.deposit(
       {
         depositor: args.actor,
@@ -103,7 +104,7 @@ export class DefiLendingContractClient {
   withdraw(
     args: PoolActionArgs,
     options?: MethodOptions,
-  ): Promise<AssembledTransaction<null>> {
+  ): Promise<AssembledTransaction<Result<void>>> {
     return this.client.withdraw(
       {
         depositor: args.actor,
@@ -117,7 +118,7 @@ export class DefiLendingContractClient {
   borrow(
     args: BorrowArgs,
     options?: MethodOptions,
-  ): Promise<AssembledTransaction<BorrowPosition>> {
+  ): Promise<AssembledTransaction<Result<BorrowPosition>>> {
     return this.client.borrow(
       {
         borrower: args.actor,
@@ -133,7 +134,7 @@ export class DefiLendingContractClient {
   repay(
     args: PoolActionArgs,
     options?: MethodOptions,
-  ): Promise<AssembledTransaction<BorrowPosition>> {
+  ): Promise<AssembledTransaction<Result<BorrowPosition>>> {
     return this.client.repay(
       {
         borrower: args.actor,
@@ -147,7 +148,7 @@ export class DefiLendingContractClient {
   liquidate(
     args: LiquidateArgs,
     options?: MethodOptions,
-  ): Promise<AssembledTransaction<BorrowPosition>> {
+  ): Promise<AssembledTransaction<Result<BorrowPosition>>> {
     return this.client.liquidate(
       {
         liquidator: args.liquidator,
@@ -162,7 +163,7 @@ export class DefiLendingContractClient {
   accrueInterest(
     poolId: string,
     options?: MethodOptions,
-  ): Promise<AssembledTransaction<null>> {
+  ): Promise<AssembledTransaction<Result<void>>> {
     return this.client.accrue_interest(
       {
         pool_id: poolId,
@@ -236,7 +237,7 @@ export class DefiLendingContractClient {
   getHealthFactor(
     args: PoolUserArgs,
     options?: MethodOptions,
-  ): Promise<AssembledTransaction<bigint>> {
+  ): Promise<AssembledTransaction<Result<bigint>>> {
     return this.client.get_health_factor(
       {
         user: args.user,

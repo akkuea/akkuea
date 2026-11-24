@@ -1,1 +1,0 @@
-CREATE UNIQUE INDEX "lending_pools_contract_pool_id_unique" ON "lending_pools" USING btree ("contract_pool_id");

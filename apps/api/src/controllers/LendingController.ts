@@ -113,10 +113,7 @@ export class LendingController {
   }
 
   /** Contract health factor (1.0 = 1e18) stored in the 4-decimal column. */
-  private static healthFactorToDecimal(value: bigint | null): string {
-    if (value === null) {
-      return '0.0000';
-    }
+  private static healthFactorToDecimal(value: bigint): string {
     return formatBigIntAsDecimalString(value / BigInt(10) ** BigInt(FACTOR_DECIMALS - 4), 4);
   }
 

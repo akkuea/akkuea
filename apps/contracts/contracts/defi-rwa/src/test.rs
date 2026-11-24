@@ -1709,7 +1709,7 @@ fn test_borrow_with_zero_index() {
 }
 
 #[test]
-fn test_repay_partial_releases_pro_rata_collateral() {
+fn test_repay_partial_keeps_collateral_and_improves_health() {
     let s = setup_borrow_test();
     let usdc_token = TokenClient::new(&s.env, &s.usdc_address);
     let xlm_token = TokenClient::new(&s.env, &s.xlm_address);
@@ -1718,6 +1718,15 @@ fn test_repay_partial_releases_pro_rata_collateral() {
     ledger.timestamp += SECONDS_PER_YEAR;
     s.env.ledger().set(ledger);
     s.contract_client.accrue_interest(&s.pool_id);
+    let oracle = s.env.as_contract(&s.contract_id, || {
+        PriceOracle::get_oracle_address(&s.env).unwrap()
+    });
+    MockOracleContractClient::new(&s.env, &oracle).set_price(
+        &s.xlm_address,
+        &PRECISION,
+        &s.env.ledger().timestamp(),
+    );
+    let health_before = s.contract_client.get_health_factor(&s.borrower, &s.pool_id);
 
     let debt_before = s
         .contract_client
@@ -1726,7 +1735,7 @@ fn test_repay_partial_releases_pro_rata_collateral() {
         PositionStorage::calculate_current_debt(&s.env, &debt_before).unwrap()
     });
     let repay_amount = current_debt / 2;
-    let expected_collateral_release = (debt_before.collateral_amount * repay_amount) / current_debt;
+    let collateral_before = xlm_token.balance(&s.contract_id);
 
     let repaid_position = s
         .contract_client
@@ -1735,17 +1744,115 @@ fn test_repay_partial_releases_pro_rata_collateral() {
     assert_eq!(repaid_position.principal, current_debt - repay_amount);
     assert_eq!(
         repaid_position.collateral_amount,
-        debt_before.collateral_amount - expected_collateral_release
+        debt_before.collateral_amount
     );
 
     let borrower_xlm_balance = xlm_token.balance(&s.borrower);
-    assert_eq!(borrower_xlm_balance, expected_collateral_release);
+    assert_eq!(borrower_xlm_balance, 0);
+    assert_eq!(xlm_token.balance(&s.contract_id), collateral_before);
+    assert!(s.contract_client.get_health_factor(&s.borrower, &s.pool_id) > health_before);
 
     let borrower_usdc_balance = usdc_token.balance(&s.borrower);
     assert_eq!(borrower_usdc_balance, 3_000_000_000 - repay_amount);
 
     let total_borrows = s.contract_client.get_total_borrows(&s.pool_id);
     assert_eq!(total_borrows, current_debt - repay_amount);
+}
+
+#[test]
+fn collateral_top_up_remains_available_during_both_pauses() {
+    use soroban_sdk::{testutils::Events as _, IntoVal};
+
+    let s = setup_borrow_test();
+    let admin = s
+        .env
+        .as_contract(&s.contract_id, || AdminControl::get_admin(&s.env).unwrap());
+    let token = TokenClient::new(&s.env, &s.xlm_address);
+    StellarAssetClient::new(&s.env, &s.xlm_address).mint(&s.borrower, &2_000_000_000);
+    let oracle = s.env.as_contract(&s.contract_id, || {
+        PriceOracle::get_oracle_address(&s.env).unwrap()
+    });
+    MockOracleContractClient::new(&s.env, &oracle).set_price(
+        &s.xlm_address,
+        &(PRECISION / 2),
+        &s.env.ledger().timestamp(),
+    );
+    assert!(s.contract_client.get_health_factor(&s.borrower, &s.pool_id) < PRECISION);
+    let collateral_before = token.balance(&s.contract_id);
+    s.contract_client.pause_pool(&admin, &s.pool_id);
+    s.env.as_contract(&s.contract_id, || {
+        PauseControl::pause(&s.env, &admin).unwrap()
+    });
+    let position = s
+        .contract_client
+        .add_collateral(&s.borrower, &s.pool_id, &1_000_000_000);
+    assert_eq!(
+        s.env.events().all().filter_by_contract(&s.contract_id),
+        soroban_sdk::vec![
+            &s.env,
+            (
+                s.contract_id.clone(),
+                (
+                    soroban_sdk::symbol_short!("coll_add"),
+                    s.pool_id.clone(),
+                    s.borrower.clone()
+                )
+                    .into_val(&s.env),
+                (1_000_000_000_i128, position.collateral_amount).into_val(&s.env),
+            )
+        ],
+    );
+    assert_eq!(
+        token.balance(&s.contract_id),
+        collateral_before + 1_000_000_000
+    );
+    assert!(s.contract_client.get_health_factor(&s.borrower, &s.pool_id) > PRECISION);
+}
+
+#[test]
+fn collateral_withdrawal_enforces_exact_health_floor_and_fresh_price() {
+    use soroban_sdk::{testutils::Events as _, IntoVal};
+
+    let s = setup_borrow_test();
+    let token = TokenClient::new(&s.env, &s.xlm_address);
+    let start = token.balance(&s.contract_id);
+    assert!(matches!(
+        s.contract_client
+            .try_withdraw_collateral(&s.borrower, &s.pool_id, &125_000_001),
+        Err(Ok(ContractError::CollateralHealthTooLow))
+    ));
+    assert_eq!(token.balance(&s.contract_id), start);
+    let position = s
+        .contract_client
+        .withdraw_collateral(&s.borrower, &s.pool_id, &125_000_000);
+    assert_eq!(
+        s.env.events().all().filter_by_contract(&s.contract_id),
+        soroban_sdk::vec![
+            &s.env,
+            (
+                s.contract_id.clone(),
+                (
+                    soroban_sdk::symbol_short!("coll_out"),
+                    s.pool_id.clone(),
+                    s.borrower.clone()
+                )
+                    .into_val(&s.env),
+                (125_000_000_i128, position.collateral_amount).into_val(&s.env),
+            )
+        ],
+    );
+    assert_eq!(
+        s.contract_client.get_health_factor(&s.borrower, &s.pool_id),
+        super::MIN_BORROW_HEALTH_FACTOR
+    );
+    assert_eq!(token.balance(&s.contract_id), start - 125_000_000);
+
+    s.env.ledger().set_timestamp(3_601);
+    assert!(matches!(
+        s.contract_client
+            .try_withdraw_collateral(&s.borrower, &s.pool_id, &1),
+        Err(Ok(ContractError::StalePrice))
+    ));
 }
 
 #[test]

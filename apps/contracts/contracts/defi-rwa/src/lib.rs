@@ -31,6 +31,15 @@ use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env,
 // Internal imports
 use lending::events as lending_events;
 
+const MIN_BORROW_HEALTH_FACTOR: i128 = PRECISION + PRECISION / 2;
+
+fn collateral_value(env: &Env, asset: &Address, amount: i128) -> Result<i128, ContractError> {
+    PriceOracle::try_get_price(env, asset)?
+        .checked_mul(amount)
+        .and_then(|value| value.checked_div(PRECISION))
+        .ok_or(ContractError::BalanceOverflow)
+}
+
 #[cfg(test)]
 mod test;
 
@@ -626,11 +635,7 @@ impl PropertyTokenContract {
             .unwrap_or(0)
             .checked_add(collateral_amount)
             .ok_or(ContractError::BalanceOverflow)?;
-        let collateral_price = PriceOracle::get_price(&env, &collateral_asset);
-        let collateral_value = collateral_price
-            .checked_mul(combined_collateral)
-            .and_then(|value| value.checked_div(PRECISION))
-            .ok_or(ContractError::BalanceOverflow)?;
+        let collateral_value = collateral_value(&env, &collateral_asset, combined_collateral)?;
 
         // Enforce max borrow based on collateral factor (LTV)
         let max_borrow = collateral_value
@@ -646,11 +651,7 @@ impl PropertyTokenContract {
             combined_debt,
             pool.liquidation_threshold,
         )?;
-        let min_health_factor = 15_i128
-            .checked_mul(PRECISION)
-            .and_then(|value| value.checked_div(10))
-            .ok_or(ContractError::BalanceOverflow)?;
-        if health_factor < min_health_factor {
+        if health_factor < MIN_BORROW_HEALTH_FACTOR {
             panic!("Health factor too low");
         }
 
@@ -693,6 +694,79 @@ impl PropertyTokenContract {
             collateral_amount,
             collateral_asset,
             health_factor,
+        );
+        Ok(position)
+    }
+
+    pub fn add_collateral(
+        env: Env,
+        borrower: Address,
+        pool_id: String,
+        amount: i128,
+    ) -> Result<BorrowPosition, ContractError> {
+        borrower.require_auth();
+        if amount <= 0 {
+            return Err(ContractError::InvalidCollateralAmount);
+        }
+        let mut position = PositionStorage::get_borrow(&env, &borrower, &pool_id)
+            .ok_or(ContractError::BorrowPositionNotFound)?;
+        position.collateral_amount = position
+            .collateral_amount
+            .checked_add(amount)
+            .ok_or(ContractError::BalanceOverflow)?;
+        PositionStorage::set_borrow(&env, &position);
+        token::Client::new(&env, &position.collateral_asset).transfer(
+            &borrower,
+            &env.current_contract_address(),
+            &amount,
+        );
+        env.events().publish(
+            (soroban_sdk::symbol_short!("coll_add"), pool_id, borrower),
+            (amount, position.collateral_amount),
+        );
+        Ok(position)
+    }
+
+    pub fn withdraw_collateral(
+        env: Env,
+        borrower: Address,
+        pool_id: String,
+        amount: i128,
+    ) -> Result<BorrowPosition, ContractError> {
+        borrower.require_auth();
+        PauseControl::require_not_paused(&env)?;
+        PoolStorage::require_not_paused(&env, &pool_id)?;
+        if amount <= 0 {
+            return Err(ContractError::InvalidCollateralAmount);
+        }
+        let mut position = PositionStorage::get_borrow(&env, &borrower, &pool_id)
+            .ok_or(ContractError::BorrowPositionNotFound)?;
+        if amount > position.collateral_amount {
+            return Err(ContractError::InsufficientCollateral);
+        }
+        let pool = PoolStorage::get(&env, &pool_id).expect("Pool not found");
+        accrue_interest_internal(&env, &pool_id)?;
+        position.collateral_amount = position
+            .collateral_amount
+            .checked_sub(amount)
+            .ok_or(ContractError::BalanceOverflow)?;
+        let value = collateral_value(&env, &position.collateral_asset, position.collateral_amount)?;
+        let debt = PositionStorage::calculate_current_debt(&env, &position)?;
+        let health =
+            PositionStorage::calculate_health_factor(value, debt, pool.liquidation_threshold)?;
+        if health < MIN_BORROW_HEALTH_FACTOR {
+            return Err(ContractError::CollateralHealthTooLow);
+        }
+
+        PositionStorage::set_borrow(&env, &position);
+        token::Client::new(&env, &position.collateral_asset).transfer(
+            &env.current_contract_address(),
+            &borrower,
+            &amount,
+        );
+        env.events().publish(
+            (soroban_sdk::symbol_short!("coll_out"), pool_id, borrower),
+            (amount, position.collateral_amount),
         );
         Ok(position)
     }
@@ -911,12 +985,14 @@ impl PropertyTokenContract {
         let pool_token = token::Client::new(&env, &pool.asset_address);
         pool_token.transfer(&borrower, &env.current_contract_address(), &repaid_amount);
 
-        let collateral_token = token::Client::new(&env, &position.collateral_asset);
-        collateral_token.transfer(
-            &env.current_contract_address(),
-            &borrower,
-            &collateral_released,
-        );
+        if collateral_released != 0 {
+            let collateral_token = token::Client::new(&env, &position.collateral_asset);
+            collateral_token.transfer(
+                &env.current_contract_address(),
+                &borrower,
+                &collateral_released,
+            );
+        }
 
         let current_index = InterestStorage::get_interest_index(&env, &pool_id);
         let result_position = match &updated_position {

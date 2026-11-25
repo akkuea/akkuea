@@ -48,6 +48,8 @@ pub enum ContractError {
     /// The requested reserve withdrawal exceeds withdrawable reserves
     InsufficientReserves = 31,
     InvestorNotApproved = 32,
+    /// A liquidation would repay no debt or seize no collateral
+    LiquidationAmountZero = 33,
 }
 
 pub struct AdminControl;

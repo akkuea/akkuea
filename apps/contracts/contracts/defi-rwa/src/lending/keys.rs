@@ -108,6 +108,10 @@ pub enum LendingKey {
     /// Cached decimals of a collateral token
     /// Storage: Persistent
     AssetDecimals(Address),
+
+    /// Debt below which a liquidation may close the whole position
+    /// Storage: Persistent
+    PoolMinPositionDebt(String),
 }
 
 /// TTL bump amounts for lending storage

@@ -918,9 +918,7 @@ export interface PilotPayoutSplitClientInterface {
   /**
    * Return the total unreleased rounding dust accumulated across all distribution cycles.
    */
-  total_dust: (
-    options?: MethodOptions,
-  ) => Promise<AssembledTransaction<i128>>;
+  total_dust: (options?: MethodOptions) => Promise<AssembledTransaction<i128>>;
 
   /**
    * Release accumulated rounding dust to the stored platform fee recipient.

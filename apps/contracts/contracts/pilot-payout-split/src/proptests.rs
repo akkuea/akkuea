@@ -50,9 +50,7 @@ mod tests {
         assert_eq!(s.payout.total_dust(), 1);
 
         let fee_recipient_before = s.usdc.balance(&s.fee_recipient);
-        let released = s
-            .payout
-            .release_dust(&s.operator, &s.ally, &1);
+        let released = s.payout.release_dust(&s.operator, &s.ally, &1);
         assert_eq!(released, 1);
         assert_eq!(s.payout.total_dust(), 0);
         assert_eq!(s.usdc.balance(&s.fee_recipient), fee_recipient_before + 1);

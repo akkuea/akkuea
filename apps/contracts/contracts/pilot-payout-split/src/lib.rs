@@ -1138,12 +1138,7 @@ impl PilotPayoutSplit {
     /// Checked arithmetic ensures the release amount cannot exceed `total_dust`,
     /// cannot be released twice, and cannot encroach upon funds reserved in
     /// `TotalWithheld`.
-    pub fn release_dust(
-        env: Env,
-        operator: Address,
-        ally: Address,
-        amount: i128,
-    ) -> i128 {
+    pub fn release_dust(env: Env, operator: Address, ally: Address, amount: i128) -> i128 {
         extend_instance(&env);
         operator.require_auth();
         ally.require_auth();
@@ -4998,25 +4993,19 @@ pub mod tests {
         let fee_recipient_before = s.usdc.balance(&s.fee_recipient);
 
         // Partial release: release 1 dust to stored fee recipient
-        let released1 = s
-            .payout
-            .release_dust(&s.operator, &s.ally, &1);
+        let released1 = s.payout.release_dust(&s.operator, &s.ally, &1);
         assert_eq!(released1, 1);
         assert_eq!(s.payout.total_dust(), 1);
         assert_eq!(s.usdc.balance(&s.fee_recipient), fee_recipient_before + 1);
 
         // Full release of remaining dust
-        let released2 = s
-            .payout
-            .release_dust(&s.operator, &s.ally, &1);
+        let released2 = s.payout.release_dust(&s.operator, &s.ally, &1);
         assert_eq!(released2, 1);
         assert_eq!(s.payout.total_dust(), 0);
         assert_eq!(s.usdc.balance(&s.fee_recipient), fee_recipient_before + 2);
 
         // Cannot release dust twice
-        let res = s
-            .payout
-            .try_release_dust(&s.operator, &s.ally, &1);
+        let res = s.payout.try_release_dust(&s.operator, &s.ally, &1);
         assert_eq!(
             res,
             Err(Ok(Error::from_contract_error(
@@ -5044,9 +5033,7 @@ pub mod tests {
         assert_eq!(s.payout.total_dust(), 1);
 
         // Zero amount rejected
-        let zero_res = s
-            .payout
-            .try_release_dust(&s.operator, &s.ally, &0);
+        let zero_res = s.payout.try_release_dust(&s.operator, &s.ally, &0);
         assert_eq!(
             zero_res,
             Err(Ok(Error::from_contract_error(
@@ -5055,9 +5042,7 @@ pub mod tests {
         );
 
         // Exceeding total dust rejected
-        let excess_res = s
-            .payout
-            .try_release_dust(&s.operator, &s.ally, &2);
+        let excess_res = s.payout.try_release_dust(&s.operator, &s.ally, &2);
         assert_eq!(
             excess_res,
             Err(Ok(Error::from_contract_error(
@@ -5067,9 +5052,7 @@ pub mod tests {
 
         // Paused contract blocks release
         s.payout.pause(&s.admin);
-        let paused_res = s
-            .payout
-            .try_release_dust(&s.operator, &s.ally, &1);
+        let paused_res = s.payout.try_release_dust(&s.operator, &s.ally, &1);
         assert_eq!(
             paused_res,
             Err(Ok(Error::from_contract_error(
@@ -5084,9 +5067,7 @@ pub mod tests {
             &s.ally,
             &String::from_str(&s.env, "pilot complete"),
         );
-        let released_after_exit = s
-            .payout
-            .release_dust(&s.operator, &s.ally, &1);
+        let released_after_exit = s.payout.release_dust(&s.operator, &s.ally, &1);
         assert_eq!(released_after_exit, 1);
         assert_eq!(s.payout.total_dust(), 0);
     }
@@ -5128,9 +5109,7 @@ pub mod tests {
         assert_eq!(s.usdc.balance(&s.payout_id), 45);
 
         // Attempting to release dust now must fail because it would encroach on withheld funds.
-        let fail_res = s
-            .payout
-            .try_release_dust(&s.operator, &s.ally, &1);
+        let fail_res = s.payout.try_release_dust(&s.operator, &s.ally, &1);
         assert_eq!(
             fail_res,
             Err(Ok(Error::from_contract_error(
@@ -5142,9 +5121,7 @@ pub mod tests {
         s.usdc.mint(&s.payout_id, &1);
 
         // Now release succeeds, leaving exactly the 45 withheld USDC.
-        let released = s
-            .payout
-            .release_dust(&s.operator, &s.ally, &1);
+        let released = s.payout.release_dust(&s.operator, &s.ally, &1);
         assert_eq!(released, 1);
         assert_eq!(s.payout.total_dust(), 0);
         assert_eq!(s.usdc.balance(&s.payout_id), 45);

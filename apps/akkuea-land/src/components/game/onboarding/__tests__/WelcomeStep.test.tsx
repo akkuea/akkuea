@@ -1,17 +1,7 @@
-// @ts-expect-error: jsdom types not fully compatible with bun runtime
-import { JSDOM } from "jsdom";
-
-// Standard browser mock environment setup for JSDOM in Bun environment
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost",
-});
-(dom.window as any).fetch = fetch;
-globalThis.window = dom.window as any;
-globalThis.document = dom.window.document as any;
-globalThis.navigator = dom.window.navigator as any;
-globalThis.HTMLElement = dom.window.HTMLElement as any;
-globalThis.MutationObserver = dom.window.MutationObserver as any;
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+// All land tests share one JSDOM realm (see src/test/setupJsdom.ts).
+// axe-core captures window/document when it is first imported, so renders
+// and axe.run calls must use the same realm or axe rejects the container.
+import { ensureSharedDom } from "@/test/setupJsdom";
 
 import { describe, it, expect, mock, vi, beforeEach } from "bun:test";
 import React from "react";
@@ -37,6 +27,8 @@ mock.module("framer-motion", () => {
 });
 
 import { WelcomeStep } from "../WelcomeStep";
+
+beforeEach(ensureSharedDom);
 
 describe("WelcomeStep", () => {
   beforeEach(() => {

@@ -395,13 +395,14 @@ cd apps/webapp && bun run test:e2e
 
 ## CI/CD: Workflows Must Pass
 
-Akkuea runs five GitHub Actions workflows on every pull request. **All five must pass before a pull request can be merged.** No exceptions.
+Akkuea runs six GitHub Actions workflows on every pull request. **All six must pass before a pull request can be merged.** No exceptions.
 
 | Workflow           | What it validates                                                                                       |
 | ------------------ | ------------------------------------------------------------------------------------------------------- |
 | `monorepo-ci.yml`  | Workspace integrity, the single dependency audit, cross-workspace integration, security compliance scan |
 | `api-ci.yml`       | API lint, type-check, unit and integration tests, build                                                 |
 | `webapp-ci.yml`    | Webapp lint, type-check, unit tests, build, Playwright e2e tests (isolated job)                         |
+| `land-ci.yml`      | Land (Akkuea Land) lint, type-check, unit tests, build                                                  |
 | `shared-ci.yml`    | Shared library lint, type-check, build                                                                  |
 | `contracts-ci.yml` | Rust format (`rustfmt`), linting (`cargo clippy`), unit tests, WASM build                               |
 
@@ -446,7 +447,7 @@ Do not ask maintainers to merge a pull request with failing workflows. If a work
 ### Before you open it
 
 - [ ] Your branch is rebased on the latest `upstream/develop`.
-- [ ] All five CI workflows pass locally (lint, typecheck, tests, build).
+- [ ] All six CI workflows pass locally (lint, typecheck, tests, build).
 - [ ] Your commits are atomic and follow the Conventional Commits format.
 - [ ] Your changes are limited to what the issue requested - no bonus features, no unrelated cleanup.
 - [ ] You have not introduced any new warnings in TypeScript, ESLint, or Cargo Clippy output.
@@ -522,6 +523,7 @@ Use this checklist in your pull request description. Every item must be checked 
 - [ ] `monorepo-ci.yml` passes
 - [ ] `api-ci.yml` passes
 - [ ] `webapp-ci.yml` passes
+- [ ] `land-ci.yml` passes
 - [ ] `shared-ci.yml` passes
 - [ ] `contracts-ci.yml` passes (if contracts were modified)
 

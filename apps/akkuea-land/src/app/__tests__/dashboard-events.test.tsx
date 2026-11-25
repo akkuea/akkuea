@@ -1,20 +1,18 @@
-// @ts-expect-error: jsdom types not fully compatible with bun runtime
-import { JSDOM } from "jsdom";
+// All land tests share one JSDOM realm (see src/test/setupJsdom.ts).
+// axe-core captures window/document when it is first imported, so renders
+// and axe.run calls must use the same realm or axe rejects the container.
+import { ensureSharedDom } from "@/test/setupJsdom";
 
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost",
-});
-(dom.window as any).fetch = fetch;
-globalThis.window = dom.window as any;
-globalThis.document = dom.window.document as any;
-globalThis.navigator = dom.window.navigator as any;
-globalThis.HTMLElement = dom.window.HTMLElement as any;
-globalThis.MutationObserver = dom.window.MutationObserver as any;
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-
-// Bind axe-core to the same initial JSDOM realm as @testing-library/react
-import "axe-core";
-import { afterEach, beforeAll, beforeEach, describe, expect, it, mock, spyOn } from "bun:test";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  spyOn,
+} from "bun:test";
 import React from "react";
 import { cleanup, act, waitFor } from "@testing-library/react";
 
@@ -35,6 +33,8 @@ import { renderWithIntl } from "@/test/renderWithIntl";
 import { GameEventProvider, useGameEvents } from "@/context/GameEventContext";
 import fs from "fs";
 import path from "path";
+
+beforeEach(ensureSharedDom);
 
 /**
  * Fully-typed MockEventSource conforming to EventSource and EventTarget interfaces.
@@ -165,17 +165,19 @@ describe("Dashboard and GameEventStream behavioral consolidation (#1340)", () =>
 
   it("verifies stream failure lets polling update the ledger sequence", async () => {
     let polledLedger = 50000;
-    const fetchMock = mock(async (_url: string | URL | Request, _init?: RequestInit) => {
-      polledLedger += 50;
-      return new Response(
-        JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          result: { sequence: polledLedger },
-        }),
-        { status: 200, headers: { "Content-Type": "application/json" } },
-      );
-    });
+    const fetchMock = mock(
+      async (_url: string | URL | Request, _init?: RequestInit) => {
+        polledLedger += 50;
+        return new Response(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            id: 1,
+            result: { sequence: polledLedger },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      },
+    );
     globalThis.fetch = fetchMock as unknown as typeof fetch;
 
     function TestConsumer() {

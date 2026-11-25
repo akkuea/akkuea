@@ -10,6 +10,11 @@
  * No real network connection is opened. Every test drives the fake by hand.
  */
 
+// All land tests share one JSDOM realm (see src/test/setupJsdom.ts).
+// axe-core captures window/document when it is first imported, so renders
+// and axe.run calls must use the same realm or axe rejects the container.
+import { ensureSharedDom } from "@/test/setupJsdom";
+
 import {
   afterAll,
   afterEach,
@@ -22,28 +27,9 @@ import {
 import { createElement } from "react";
 import type { GameEvent, GameEventType } from "@akkuea/shared";
 
-// ── jsdom setup for render ───────────────────────────────────────────────────
-
-// @ts-expect-error: jsdom types not fully compatible with bun runtime
-import { JSDOM } from "jsdom";
-
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost",
-});
-// jsdom has no fetch; axe-core (used by the a11y tests) needs one on window.
-(dom.window as any).fetch = fetch;
-
-// Restore what this file replaces so later files in the same bun process keep
-// their own DOM setup.
-const originalGlobals = {
-  window: globalThis.window,
-  document: globalThis.document,
-  EventSource: (globalThis as any).EventSource,
-};
-
-globalThis.window = dom.window as any;
-globalThis.document = dom.window.document as any;
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+// The FakeEventSource below replaces the real EventSource for this file only;
+// the original is restored in afterAll so later files keep the real one.
+const originalEventSource = (globalThis as any).EventSource;
 
 // ── Fake EventSource ─────────────────────────────────────────────────────────
 
@@ -95,6 +81,8 @@ class FakeEventSource {
 import { act, cleanup, render } from "@testing-library/react";
 import { GameEventProvider } from "@/context/GameEventContext";
 import { useGameEventStream } from "../useGameEventStream";
+
+beforeEach(ensureSharedDom);
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -158,9 +146,7 @@ afterEach(() => {
 });
 
 afterAll(() => {
-  globalThis.window = originalGlobals.window;
-  globalThis.document = originalGlobals.document;
-  (globalThis as any).EventSource = originalGlobals.EventSource;
+  (globalThis as any).EventSource = originalEventSource;
 });
 
 describe("useGameEventStream - connection lifecycle", () => {

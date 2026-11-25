@@ -19,6 +19,8 @@ An oracle incident manifests as a typed `ContractError` from the Soroban contrac
 | `PriceBelowFloor`      | 25   | Normalized price is below the configured `min_price` floor     |
 | `PriceScalingOverflow` | 27   | Decimal normalization overflowed or underflowed                |
 
+Both the pool asset (what is borrowed) and the collateral asset are priced through this guarded path, so an incident on either feed has the same effect. `borrow()`, `liquidate()` and `get_health_factor()` return these errors as typed results.
+
 All of these terminate every `borrow()` / `liquidate()` call that needs a price. `deposit()`, `withdraw()`, and `repay()` are **not** affected - existing depositors and borrowers can still exit positions. Only new borrowing and liquidations that reprice collateral are blocked.
 
 On each **successful** guarded fetch the contract also stores an `OraclePriceSnapshot` `{ price, timestamp }` under `LastOraclePrice(asset)` for observability. Stale or invalid prices are never persisted.

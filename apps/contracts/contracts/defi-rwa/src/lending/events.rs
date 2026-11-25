@@ -36,6 +36,20 @@ pub struct ReservesWithdrawnEvent {
     pub amount: i128,
 }
 
+/// Emitted when a liquidation writes off debt that no collateral backs
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BadDebtWrittenOffEvent {
+    pub pool_id: String,
+    pub borrower: Address,
+    /// Total debt removed from the books
+    pub amount: i128,
+    /// Portion absorbed by the pool reserves
+    pub covered_by_reserves: i128,
+    /// Portion shared by depositors through the supply index
+    pub socialized: i128,
+}
+
 /// Emit a deposit event
 pub fn emit_deposit(env: &Env, depositor: &Address, pool_id: &String, amount: i128) {
     let event = DepositEvent {
@@ -84,4 +98,24 @@ pub fn emit_reserves_withdrawn(
     };
     env.events()
         .publish((soroban_sdk::symbol_short!("res_wd"),), event);
+}
+
+/// Emit a bad debt write-off event
+pub fn emit_bad_debt_written_off(
+    env: &Env,
+    pool_id: &String,
+    borrower: &Address,
+    amount: i128,
+    covered_by_reserves: i128,
+    socialized: i128,
+) {
+    let event = BadDebtWrittenOffEvent {
+        pool_id: pool_id.clone(),
+        borrower: borrower.clone(),
+        amount,
+        covered_by_reserves,
+        socialized,
+    };
+    env.events()
+        .publish((soroban_sdk::symbol_short!("bad_debt"),), event);
 }

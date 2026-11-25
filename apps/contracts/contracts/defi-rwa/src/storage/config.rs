@@ -1,5 +1,6 @@
 use soroban_sdk::{contracttype, Address, Env, String};
 
+use crate::access::roles::RoleKey;
 use super::keys::StorageKey;
 
 /// Token configuration for the property tokenization contract
@@ -109,8 +110,7 @@ pub fn get_admin(env: &Env) -> Option<Address> {
 /// This uses a dedicated storage key for quick admin lookups
 #[allow(dead_code)]
 pub fn set_admin(env: &Env, admin: &Address) {
-    let key = StorageKey::Admin;
-    env.storage().instance().set(&key, admin);
+    env.storage().instance().set(&RoleKey::Admin, admin);
 }
 
 /// Gets the property counter for generating unique IDs

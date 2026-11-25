@@ -193,6 +193,46 @@ fn accrue_interest_internal(env: &Env, pool_id: &String) -> Result<(), ContractE
     Ok(())
 }
 
+/// Oracle-priced view of a borrow position, with debt and collateral valued
+/// in the same 18-decimal quote unit by [`Valuation`].
+struct PositionValuation {
+    collateral_price: i128,
+    collateral_decimals: u32,
+    collateral_value: i128,
+    pool_price: i128,
+    pool_decimals: u32,
+    debt_value: i128,
+}
+
+/// Value a position's collateral and debt through the guarded oracle path.
+///
+/// Rounds in the pool's favor: debt value up, collateral value down.
+fn value_position(
+    env: &Env,
+    pool: &LendingPool,
+    collateral_asset: &Address,
+    collateral_amount: i128,
+    debt: i128,
+) -> Result<PositionValuation, ContractError> {
+    let pool_decimals = Valuation::pool_asset_decimals(env, &pool.id, &pool.asset_address);
+    let pool_price = PriceOracle::try_get_price(env, &pool.asset_address)?;
+    let collateral_decimals = Valuation::collateral_decimals(env, collateral_asset);
+    let collateral_price = PriceOracle::try_get_price(env, collateral_asset)?;
+    Ok(PositionValuation {
+        collateral_price,
+        collateral_decimals,
+        collateral_value: Valuation::value_at_price(
+            collateral_price,
+            collateral_decimals,
+            collateral_amount,
+            Rounding::Down,
+        )?,
+        pool_price,
+        pool_decimals,
+        debt_value: Valuation::value_at_price(pool_price, pool_decimals, debt, Rounding::Up)?,
+    })
+}
+
 // ───────────────────────────────────────────────
 // Contract definition
 // ───────────────────────────────────────────────
@@ -458,6 +498,7 @@ impl PropertyTokenContract {
         if reserve_factor > 10_000 {
             panic!("reserve factor cannot exceed 10000 basis points");
         }
+        let asset_decimals = token::Client::new(&env, &asset_address).decimals();
 
         let pool = LendingPool {
             id: pool_id.clone(),
@@ -475,6 +516,7 @@ impl PropertyTokenContract {
 
         PoolStorage::set(&env, &pool);
         PoolStorage::add_to_list(&env, &pool_id);
+        Valuation::set_pool_asset_decimals(&env, &pool_id, asset_decimals);
 
         let model = InterestRateModel::default();
         InterestStorage::set_model(&env, &pool_id, &model);
@@ -664,24 +706,28 @@ impl PropertyTokenContract {
             .unwrap_or(0)
             .checked_add(collateral_amount)
             .ok_or(ContractError::BalanceOverflow)?;
-        let collateral_price = PriceOracle::get_price(&env, &collateral_asset);
-        let collateral_value = collateral_price
-            .checked_mul(combined_collateral)
-            .and_then(|value| value.checked_div(PRECISION))
-            .ok_or(ContractError::BalanceOverflow)?;
+        let valuation = value_position(
+            &env,
+            &pool,
+            &collateral_asset,
+            combined_collateral,
+            combined_debt,
+        )?;
 
-        // Enforce max borrow based on collateral factor (LTV)
-        let max_borrow = collateral_value
-            .checked_mul(pool.collateral_factor)
-            .and_then(|value| value.checked_div(PRECISION))
-            .ok_or(ContractError::BalanceOverflow)?;
-        if combined_debt > max_borrow {
+        // Enforce max borrow based on collateral factor (LTV), in value terms
+        let max_borrow_value = Valuation::mul_div(
+            valuation.collateral_value,
+            pool.collateral_factor,
+            PRECISION,
+            Rounding::Down,
+        )?;
+        if valuation.debt_value > max_borrow_value {
             panic!("Borrow exceeds collateral factor limit");
         }
 
         let health_factor = PositionStorage::calculate_health_factor(
-            collateral_value,
-            combined_debt,
+            valuation.collateral_value,
+            valuation.debt_value,
             pool.liquidation_threshold,
         )?;
         let min_health_factor = 15_i128
@@ -794,32 +840,50 @@ impl PropertyTokenContract {
         };
 
         // Check health factor – position must be underwater
-        let collateral_price = PriceOracle::get_price(&env, &position.collateral_asset);
-        let collateral_value = collateral_price
-            .checked_mul(position.collateral_amount)
-            .and_then(|value| value.checked_div(PRECISION))
-            .ok_or(ContractError::BalanceOverflow)?;
-        let health_factor = PositionStorage::calculate_health_factor(
-            collateral_value,
+        let valuation = value_position(
+            &env,
+            &pool,
+            &position.collateral_asset,
+            position.collateral_amount,
             current_debt,
+        )?;
+        let health_factor = PositionStorage::calculate_health_factor(
+            valuation.collateral_value,
+            valuation.debt_value,
             pool.liquidation_threshold,
         )?;
         if health_factor >= PRECISION {
             panic!("Position is not underwater");
         }
 
-        // Calculate liquidation bonus and collateral to seize
+        // Calculate the liquidation bonus (in pool asset units, for the event)
+        // and the collateral to seize: the repaid value plus penalty, converted
+        // to collateral units. Both values round down, so the seized collateral
+        // never exceeds what the repaid value plus penalty covers.
         let penalty = debt_to_cover
             .checked_mul(pool.liquidation_penalty)
             .and_then(|value| value.checked_div(PRECISION))
             .ok_or(ContractError::BalanceOverflow)?;
-        let collateral_seize_value = debt_to_cover
-            .checked_add(penalty)
+        let repaid_value = Valuation::value_at_price(
+            valuation.pool_price,
+            valuation.pool_decimals,
+            debt_to_cover,
+            Rounding::Down,
+        )?;
+        let penalty_value = Valuation::mul_div(
+            repaid_value,
+            pool.liquidation_penalty,
+            PRECISION,
+            Rounding::Down,
+        )?;
+        let collateral_seize_value = repaid_value
+            .checked_add(penalty_value)
             .ok_or(ContractError::BalanceOverflow)?;
-        let collateral_to_seize = collateral_seize_value
-            .checked_mul(PRECISION)
-            .and_then(|value| value.checked_div(collateral_price))
-            .ok_or(ContractError::BalanceOverflow)?;
+        let collateral_to_seize = Valuation::amount_for_value(
+            valuation.collateral_price,
+            valuation.collateral_decimals,
+            collateral_seize_value,
+        )?;
         let collateral_to_seize = if collateral_to_seize > position.collateral_amount {
             position.collateral_amount
         } else {
@@ -1156,16 +1220,18 @@ impl PropertyTokenContract {
         let position =
             PositionStorage::get_borrow(&env, &user, &pool_id).expect("borrow position not found");
         let pool = PoolStorage::get(&env, &pool_id).expect("pool not found");
-        let collateral_price = PriceOracle::get_price(&env, &position.collateral_asset);
-        let collateral_value = collateral_price
-            .checked_mul(position.collateral_amount)
-            .and_then(|value| value.checked_div(PRECISION))
-            .ok_or(ContractError::BalanceOverflow)?;
         let current_debt = PositionStorage::calculate_current_debt(&env, &position)?;
+        let valuation = value_position(
+            &env,
+            &pool,
+            &position.collateral_asset,
+            position.collateral_amount,
+            current_debt,
+        )?;
 
         PositionStorage::calculate_health_factor(
-            collateral_value,
-            current_debt,
+            valuation.collateral_value,
+            valuation.debt_value,
             pool.liquidation_threshold,
         )
     }

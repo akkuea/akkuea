@@ -100,6 +100,14 @@ pub enum LendingKey {
     /// Pool's accumulated depositor supply index
     /// Storage: Persistent
     PoolSupplyIndex(String),
+
+    /// Decimals of a pool's asset token
+    /// Storage: Persistent
+    PoolAssetDecimals(String),
+
+    /// Cached decimals of a collateral token
+    /// Storage: Persistent
+    AssetDecimals(Address),
 }
 
 /// TTL bump amounts for lending storage

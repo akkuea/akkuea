@@ -2,6 +2,7 @@ use soroban_sdk::{contracttype, Address, Env, String, Vec};
 
 use super::interest::InterestStorage;
 use super::keys::{lending_bump, LendingKey};
+use super::valuation::{Rounding, Valuation};
 use crate::access::ContractError;
 
 /// Deposit position for a user in a pool
@@ -357,9 +358,11 @@ impl PositionStorage {
 
         // health = (collateral * liquidation_threshold / PRECISION) / debt * PRECISION
         // Result is in PRECISION units: e.g., 1.5 * PRECISION
-        collateral_value
-            .checked_mul(liquidation_threshold)
-            .and_then(|value| value.checked_div(debt_value))
-            .ok_or(ContractError::BalanceOverflow)
+        Valuation::mul_div(
+            collateral_value,
+            liquidation_threshold,
+            debt_value,
+            Rounding::Down,
+        )
     }
 }

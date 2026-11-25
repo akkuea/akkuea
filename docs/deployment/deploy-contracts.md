@@ -103,6 +103,8 @@ For mainnet, replace `--network testnet` with `--network mainnet` and use your i
 
 > **This step is not optional.** The oracle address must be configured before any `borrow()` call is made. If this step is skipped, every borrow attempt will panic with: `Oracle address not configured` (`oracle.rs:19`).
 
+> **Every pool asset needs a price too.** Debt and collateral are both valued through the oracle, in a common 18-decimal unit, using each token's own `decimals()`. The oracle must publish a price for each pool's `asset_address` as well as for every collateral asset, or `borrow()` and `liquidate()` fail with `PriceNotAvailable`.
+
 ```bash
 # ORACLE_ADDRESS is the Soroban contract ID of a SEP-40 compatible price feed
 stellar contract invoke \

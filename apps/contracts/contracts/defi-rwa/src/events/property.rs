@@ -266,8 +266,6 @@ impl PropertyEvents {
         }
         .publish(env);
     }
-        AdminTransferCompleted { old_admin, new_admin }.publish(env);
-    }
 
     pub fn admin_transfer_cancelled(env: &Env, cancelled_by: Address) {
         AdminTransferCancelled { cancelled_by }.publish(env);

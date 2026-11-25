@@ -12,6 +12,9 @@
  * globals at it; `ensureSharedDom` re-points them, so test files that run
  * after a file with its own JSDOM still render and audit in this realm.
  * Import it before `axe-core` in every test file that calls `axe.run`.
+ * The shared realm also provides `localStorage`: the onboarding helper
+ * reads the bare `localStorage` global, so the onboarding tests use this
+ * realm's storage instead of building their own JSDOM for it.
  */
 
 // @ts-expect-error: jsdom types not fully compatible with bun runtime
@@ -28,6 +31,7 @@ export function ensureSharedDom(): void {
   globalThis.navigator = dom.window.navigator as any;
   globalThis.HTMLElement = dom.window.HTMLElement as any;
   globalThis.MutationObserver = dom.window.MutationObserver as any;
+  (globalThis as any).localStorage = dom.window.localStorage as any;
   (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 }
 

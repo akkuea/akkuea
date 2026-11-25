@@ -15,39 +15,18 @@
  * No real timers fire and no network is involved.
  */
 
-import {
-  afterAll,
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "bun:test";
+// All land tests share one JSDOM realm (see src/test/setupJsdom.ts).
+// axe-core captures window/document when it is first imported, so renders
+// and axe.run calls must use the same realm or axe rejects the container.
+import { ensureSharedDom } from "@/test/setupJsdom";
 
-// @ts-expect-error: jsdom types not fully compatible with bun runtime
-import { JSDOM } from "jsdom";
-
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost",
-});
-// jsdom has no fetch; axe-core (used by the a11y tests) needs one on window.
-(dom.window as any).fetch = fetch;
-
-// Restore what this file replaces so later files in the same bun process keep
-// their own DOM setup.
-const originalGlobals = {
-  window: globalThis.window,
-  document: globalThis.document,
-};
-
-globalThis.window = dom.window as any;
-globalThis.document = dom.window.document as any;
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+import { afterEach, beforeEach, describe, expect, it, vi } from "bun:test";
 
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { useMapEvents } from "../useMapEvents";
 import type { GameProperty } from "../../types/game.types";
+
+beforeEach(ensureSharedDom);
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -130,11 +109,6 @@ afterEach(() => {
   cleanup();
   randomSpy.mockRestore();
   vi.useRealTimers();
-});
-
-afterAll(() => {
-  globalThis.window = originalGlobals.window;
-  globalThis.document = originalGlobals.document;
 });
 
 describe("useMapEvents - event types", () => {

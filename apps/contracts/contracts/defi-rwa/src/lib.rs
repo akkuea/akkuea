@@ -26,7 +26,28 @@ pub use events::*;
 pub use lending::*;
 pub use storage::*;
 
-use soroban_sdk::{contract, contractimpl, panic_with_error, token, Address, Env, String, Vec};
+use soroban_sdk::{
+    contract, contractclient, contractimpl, panic_with_error, symbol_short, token, Address, Env,
+    String, Vec,
+};
+
+#[contractclient(name = "InvestorRegistryClient")]
+pub trait InvestorRegistry {
+    fn is_approved(env: Env, address: Address) -> bool;
+}
+
+const INVESTOR_REGISTRY: soroban_sdk::Symbol = symbol_short!("invreg");
+
+fn require_approved_investor(env: &Env, recipient: &Address) {
+    if let Some(registry) = PropertyTokenContract::get_investor_registry(env.clone()) {
+        if !matches!(
+            InvestorRegistryClient::new(env, &registry).try_is_approved(recipient),
+            Ok(Ok(true))
+        ) {
+            panic_with_error!(env, ContractError::InvestorNotApproved);
+        }
+    }
+}
 
 // Internal imports
 use lending::events as lending_events;
@@ -188,6 +209,19 @@ impl PropertyTokenContract {
 
     // ─── Share Management (Admin) ──────────────
 
+    pub fn set_investor_registry(env: Env, admin: Address, registry: Address) {
+        admin.require_auth();
+        AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
+        let previous = Self::get_investor_registry(env.clone());
+        env.storage().instance().set(&INVESTOR_REGISTRY, &registry);
+        env.events()
+            .publish((symbol_short!("invreg"),), (previous, registry));
+    }
+
+    pub fn get_investor_registry(env: Env) -> Option<Address> {
+        env.storage().instance().get(&INVESTOR_REGISTRY)
+    }
+
     pub fn mint_shares(
         env: Env,
         admin: Address,
@@ -203,6 +237,7 @@ impl PropertyTokenContract {
             panic!("Amount must be greater than zero");
         }
 
+        require_approved_investor(&env, &recipient);
         let total = get_total_shares(&env, property_id);
         let new_total = total.checked_add(amount).expect("Total shares overflow");
         set_total_shares(&env, property_id, new_total);
@@ -237,6 +272,7 @@ impl PropertyTokenContract {
         if amount == 0 {
             panic!("Amount must be greater than zero");
         }
+        require_approved_investor(&env, &to);
         transfer_shares(&env, property_id, &from, &to, amount)
             .unwrap_or_else(|e| panic_with_error!(&env, e));
 
@@ -262,6 +298,7 @@ impl PropertyTokenContract {
         if amount == 0 {
             panic!("Amount must be greater than zero");
         }
+        require_approved_investor(&env, &to);
         spend_allowance(&env, property_id, &from, &spender, amount)
             .unwrap_or_else(|e| panic_with_error!(&env, e));
         transfer_shares(&env, property_id, &from, &to, amount)
@@ -381,6 +418,7 @@ impl PropertyTokenContract {
             .checked_mul(price_per_share)
             .expect("Cost calculation overflow");
 
+        require_approved_investor(&env, &buyer);
         let token_client = token::Client::new(&env, &stored_payment_token);
         token_client.transfer(&buyer, &property.owner, &total_cost);
 

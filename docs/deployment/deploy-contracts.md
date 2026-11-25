@@ -6,7 +6,7 @@ This guide covers the complete deployment of the Akkuea smart contracts to Stell
 **Output WASM:** `apps/contracts/target/wasm32v1-none/release/rwa_defi_contract.wasm`
 **Runtime:** Stellar Soroban (Rust, not EVM/Solidity)
 
-> **Automated deployment:** `scripts/deploy.sh` (run as `bun run deploy:contracts`) performs Steps 1, 2, 3, and 5 of this guide in one command, including the mandatory oracle setup. Read this guide fully anyway: it explains what each step is for, and Step 4 (pools) and Step 6 (API configuration) are always manual.
+> **Automated deployment:** `scripts/deploy.sh` (run as `bun run deploy:contracts`) performs Steps 1, 2, 3, and 5 of this guide in one command, including the mandatory oracle setup. Read this guide fully anyway: it explains what each step is for. Pool, investor registry, and API configuration are manual.
 
 > **Note on previous documentation:** `docs/contracts/deployment.md` referenced incorrect source paths (`apps/contracts/src/real_estate_token.rs`, `apps/contracts/src/defi_lending.rs`) and a non-existent `scripts/deploy.sh`. Those paths and that script do not exist. This document supersedes that guide.
 
@@ -219,7 +219,25 @@ Available roles: `Admin`, `Pauser`, `Oracle`, `Verifier`, `Liquidator`, `Emergen
 
 ---
 
-## Step 6 - Configure the API
+## Step 6 - Configure the investor registry
+
+Before enabling share sales, configure a deployed investor registry on the
+same network. The registry must expose `is_approved(address) -> bool`.
+`pilot-whitelist` implements this interface. Approve the eligible investor
+addresses in the registry before launch.
+
+```bash
+stellar contract invoke \
+  --id "$CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  -- set_investor_registry --admin "$ADMIN_ADDRESS" --registry "$REGISTRY_ID"
+```
+
+Read back `get_investor_registry` and confirm that it returns the deployed
+registry address before publishing listings.
+
+## Step 7 - Configure the API
 
 Update `apps/api/.env`:
 
@@ -318,7 +336,7 @@ The `defi-rwa` contract has **no upgrade entry point**: once deployed, its WASM 
 
 1. Build the corrected WASM (Step 1) and deploy it with constructor arguments (Step 2). This produces a new `CONTRACT_ID`.
 2. Redo the post-deployment configuration on the new contract: `set_oracle` and `set_oracle_config` (Step 3), pool creation (Step 4), and role grants (Step 5).
-3. Update `apps/api/.env` and every client configuration to the new `CONTRACT_ID` (Step 6), and keep the old contract ID documented as retired in `docs/contracts/deployment.md`.
+3. Configure the investor registry (Step 6). Update `apps/api/.env` and every client configuration to the new `CONTRACT_ID` (Step 7), and keep the old contract ID documented as retired in `docs/contracts/deployment.md`.
 
 State does not carry over automatically: shares, pools, and positions live in the old contract's storage. Whether and how to migrate existing positions is a product and legal decision to make before deploying, not something this guide can decide. For the pilot's contracts, the full operational procedure is [`docs/operations/runbook-pilot-contract-migration.md`](../operations/runbook-pilot-contract-migration.md), rehearsed on testnet.
 

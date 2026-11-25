@@ -236,19 +236,11 @@ impl PropertyEvents {
     }
 
     pub fn emergency_role_granted(env: &Env, target: Address, granted_by: Address) {
-        EmergencyRoleGranted {
-            target,
-            granted_by,
-        }
-        .publish(env);
+        EmergencyRoleGranted { target, granted_by }.publish(env);
     }
 
     pub fn emergency_role_revoked(env: &Env, target: Address, revoked_by: Address) {
-        EmergencyRoleRevoked {
-            target,
-            revoked_by,
-        }
-        .publish(env);
+        EmergencyRoleRevoked { target, revoked_by }.publish(env);
     }
 
     pub fn admin_transfer_started(env: &Env, current_admin: Address, pending_admin: Address) {

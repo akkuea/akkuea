@@ -5426,7 +5426,7 @@ fn test_reading_unlisted_property_does_not_create_listing_entries() {
 }
 
 // =========================================================================
-// Issue #1411 — Admin events, two-step transfer, race-safe allowance
+// Issue #1411 - Admin events, two-step transfer, race-safe allowance
 // =========================================================================
 
 // ─── Admin key convergence ────────────────────────────────────────────────
@@ -5559,7 +5559,7 @@ fn test_set_oracle_emits_event() {
     client.set_oracle(&oracle_id, &admin);
 }
 
-// ─── set_oracle_config — negative min_price panics, valid args emit event ─
+// ─── set_oracle_config - negative min_price panics, valid args emit event ─
 
 #[test]
 #[should_panic(expected = "min_price must be non-negative")]
@@ -5632,7 +5632,11 @@ fn test_revoke_emergency_role_emits_event() {
 
     // After revoke the guard must NOT be able to pause.
     s.env.as_contract(&s.contract_address, || {
-        assert!(!RoleStorage::has_role(&s.env, &guard, &Role::EmergencyGuard));
+        assert!(!RoleStorage::has_role(
+            &s.env,
+            &guard,
+            &Role::EmergencyGuard
+        ));
     });
 }
 

@@ -48,6 +48,35 @@ test.describe("WhitelistReviewQueue", () => {
     ).toBeVisible();
   });
 
+  test("spanish: renders the queue and review dialog in Spanish", async ({
+    page,
+  }) => {
+    await mockConnectedWallet(page);
+    await mockWhitelistQueue(page, [buildWhitelistRequest()]);
+
+    await page.goto("/es/pilot/review/whitelist");
+
+    await expect(
+      page.getByRole("heading", { name: "Cola de lista blanca del piloto" }),
+    ).toBeVisible();
+    await expect(page.getByText("Pendiente")).toBeVisible();
+    await page.getByRole("button", { name: "Revisar" }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByRole("button", {
+        name: "Aprobar y agregar a la lista blanca",
+      }),
+    ).toBeVisible();
+    await expect(
+      dialog.getByPlaceholder("Obligatorio para rechazar..."),
+    ).toBeVisible();
+    await expect(
+      dialog.getByRole("button", { name: "Rechazar solicitud" }),
+    ).toBeVisible();
+  });
+
   test("approve: approving a request removes it from the pending queue", async ({
     page,
   }) => {

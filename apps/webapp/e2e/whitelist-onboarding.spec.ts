@@ -109,6 +109,53 @@ test.describe("WhitelistOnboardingForm", () => {
       page.getByRole("heading", { name: "Review Pending" }),
     ).toBeVisible();
   });
+  test("spanish: renders the empty state and form labels in Spanish", async ({
+    page,
+  }) => {
+    await mockConnectedWallet(page);
+    await mockWhitelistStatus(page, { status: "none" });
+
+    await page.goto("/es/pilot/onboarding");
+
+    await expect(page.getByText("Sin solicitud de lista blanca")).toBeVisible();
+    await page.getByRole("button", { name: "Iniciar solicitud" }).click();
+
+    await expect(page.getByText("Nombre completo")).toBeVisible();
+    await expect(page.getByText("Tipo de documento oficial")).toBeVisible();
+    await expect(page.getByPlaceholder("Número de documento")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Continuar" })).toBeVisible();
+
+    await page.getByPlaceholder("Juan Pérez").fill("Juana Prueba");
+    await page.getByPlaceholder("Número de documento").fill("P-00000000");
+    await page.getByRole("button", { name: "Continuar" }).click();
+
+    // With the wallet already connected, step 1 advances straight to review.
+    await expect(page.getByText("Nombre", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Enviar solicitud" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Atrás" })).toBeVisible();
+  });
+
+  const spanishStatusCases = [
+    { status: "pending" as const, heading: "Revisión pendiente" },
+    { status: "approved" as const, heading: "¡Estás en la lista blanca!" },
+    { status: "rejected" as const, heading: "Solicitud rechazada" },
+  ];
+
+  for (const { status, heading } of spanishStatusCases) {
+    test(`spanish: renders the ${status} state in Spanish`, async ({
+      page,
+    }) => {
+      await mockConnectedWallet(page);
+      await mockWhitelistStatus(page, { status });
+
+      await page.goto("/es/pilot/onboarding");
+
+      await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+    });
+  }
+
   test("back from review returns to the wallet step even when already connected", async ({
     page,
   }) => {
@@ -121,14 +168,17 @@ test.describe("WhitelistOnboardingForm", () => {
     await page.getByPlaceholder("Document Number").fill("P-00000000");
     await page.getByRole("button", { name: "Continue" }).click();
 
-    await expect(page.getByRole("button", { name: "Submit Request" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Submit Request" }),
+    ).toBeVisible();
     await page.getByRole("button", { name: "Back" }).click();
 
     await expect(
       page.getByRole("heading", { name: "Connect Your Wallet" }),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Connect Wallet" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Connect Wallet" }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Continue" })).toBeEnabled();
   });
-
 });

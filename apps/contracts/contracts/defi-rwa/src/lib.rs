@@ -184,7 +184,10 @@ impl PropertyTokenContract {
     // ─── Constructor ───────────────────────────
     pub fn __constructor(env: Env, admin: Address) {
         set_lending_admin(&env, &admin);
-        AdminControl::initialize(&env, &admin).expect("admin init failed");
+        // Initialize AdminControl only if not already set (idempotent for test harness).
+        if !AdminControl::is_initialized(&env) {
+            AdminControl::initialize(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
+        }
     }
 
     // ─── Share Management (Admin) ──────────────

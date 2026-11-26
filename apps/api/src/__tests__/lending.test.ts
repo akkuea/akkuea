@@ -2,9 +2,16 @@ import { describe, expect, it, beforeAll, afterAll } from 'bun:test';
 import { Elysia } from 'elysia';
 import { lendingRoutes } from '../routes/lending';
 import { errorHandler } from '../middleware/errorHandler';
+import { LendingController } from '../controllers/LendingController';
 import { CreatePoolDto, DepositDto, WithdrawDto, BorrowDto, RepayDto } from '../dto/lending.dto';
-import { VALID_STELLAR_ADDRESS, VALID_UUID } from '@akkuea/shared';
+import {
+  borrowPositionSchema,
+  lendingPoolSchema,
+  VALID_STELLAR_ADDRESS,
+  VALID_UUID,
+} from '@akkuea/shared';
 const TEST_WALLET = 'GCO5CVUVFNX4KZQMYCALTJ5QSG6USOVLFQ74AQCCX7TGJKBNZ33KC5ZC'; // Unique wallet for lending tests
+const VALID_STELLAR_CONTRACT_ID = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
 
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-ops-secret';
 process.env.LIQUIDATOR_API_KEY = 'test-liquidator-secret';
@@ -12,7 +19,7 @@ process.env.LIQUIDATOR_API_KEY = 'test-liquidator-secret';
 const validPoolBody = {
   name: 'USDC Lending Pool',
   asset: 'USDC',
-  assetAddress: VALID_STELLAR_ADDRESS,
+  assetAddress: VALID_STELLAR_CONTRACT_ID,
   collateralFactor: '0.75',
   liquidationThreshold: '0.80',
   liquidationPenalty: '0.05',
@@ -21,16 +28,62 @@ const validPoolBody = {
 };
 
 describe('Lending DTO Validation', () => {
+  it('accepts Soroban contract IDs in shared lending records', () => {
+    const now = new Date().toISOString();
+    const pool = lendingPoolSchema.safeParse({
+      id: VALID_UUID,
+      name: 'Test Pool',
+      asset: 'XLM',
+      assetAddress: VALID_STELLAR_CONTRACT_ID,
+      totalDeposits: '0',
+      totalBorrows: '0',
+      availableLiquidity: '0',
+      utilizationRate: 0,
+      supplyAPY: 0,
+      borrowAPY: 0,
+      collateralFactor: 75,
+      liquidationThreshold: 80,
+      liquidationPenalty: 5,
+      reserveFactor: 1000,
+      isActive: true,
+      isPaused: false,
+      createdAt: now,
+    });
+    const borrow = borrowPositionSchema.safeParse({
+      id: VALID_UUID,
+      poolId: VALID_UUID,
+      borrower: VALID_STELLAR_ADDRESS,
+      principal: '1',
+      accruedInterest: '0',
+      collateralAmount: '2',
+      collateralAsset: VALID_STELLAR_CONTRACT_ID,
+      healthFactor: 2,
+      borrowedAt: now,
+      lastAccrualAt: now,
+    });
+
+    expect(pool.success).toBe(true);
+    expect(borrow.success).toBe(true);
+  });
+
   describe('CreatePoolDto', () => {
     it('should accept valid pool data including closeFactor', () => {
       const result = CreatePoolDto.safeParse(validPoolBody);
       expect(result.success).toBe(true);
     });
 
+    it('should reject a wallet address where a Soroban asset contract is required', () => {
+      const result = CreatePoolDto.safeParse({
+        ...validPoolBody,
+        assetAddress: VALID_STELLAR_ADDRESS,
+      });
+      expect(result.success).toBe(false);
+    });
+
     it('should reject missing name', () => {
       const result = CreatePoolDto.safeParse({
         asset: 'USDC',
-        assetAddress: VALID_STELLAR_ADDRESS,
+        assetAddress: VALID_STELLAR_CONTRACT_ID,
         collateralFactor: '0.75',
         liquidationThreshold: '0.80',
         liquidationPenalty: '0.05',
@@ -81,7 +134,7 @@ describe('Lending DTO Validation', () => {
       const result = BorrowDto.safeParse({
         borrowAmount: '1000',
         collateralAmount: '1500',
-        collateralAsset: VALID_STELLAR_ADDRESS,
+        collateralAsset: VALID_STELLAR_CONTRACT_ID,
       });
       expect(result.success).toBe(true);
     });
@@ -134,6 +187,28 @@ describe('Lending Routes', () => {
   });
 
   describe('POST /lending/pools (operator only)', () => {
+    it('accepts a Soroban asset contract address', async () => {
+      const originalCreatePool = LendingController.createPool;
+      LendingController.createPool = async () =>
+        new Response(JSON.stringify({ id: VALID_UUID }), { status: 201 });
+
+      try {
+        const response = await app.handle(
+          new Request('http://localhost/lending/pools', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-internal-api-key': 'test-ops-secret',
+            },
+            body: JSON.stringify(validPoolBody),
+          }),
+        );
+        expect(response.status).toBe(201);
+      } finally {
+        LendingController.createPool = originalCreatePool;
+      }
+    });
+
     it('should return 403 without the operator key', async () => {
       const response = await app.handle(
         new Request('http://localhost/lending/pools', {

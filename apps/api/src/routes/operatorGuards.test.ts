@@ -2,6 +2,8 @@ import { describe, expect, it, mock, beforeEach } from 'bun:test';
 import { Elysia } from 'elysia';
 import { VALID_STELLAR_ADDRESS, VALID_UUID } from '@akkuea/shared';
 
+const VALID_STELLAR_CONTRACT_ID = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
+
 process.env.OPERATIONS_BACKEND_CREDENTIAL = 'test-ops-secret';
 process.env.LIQUIDATOR_API_KEY = 'test-liquidator-secret';
 
@@ -174,7 +176,7 @@ const guardedRoutes: GuardedRoute[] = [
     body: JSON.stringify({
       name: 'Guarded pool',
       asset: 'USDC',
-      assetAddress: VALID_STELLAR_ADDRESS,
+      assetAddress: VALID_STELLAR_CONTRACT_ID,
       collateralFactor: '0.75',
       liquidationThreshold: '0.80',
       liquidationPenalty: '0.05',

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   stellarAddressSchema,
+  stellarContractAddressSchema,
   positiveAmountSchema,
   nonNegativeAmountSchema,
   basisPointsSchema,
@@ -14,7 +15,7 @@ export const lendingPoolSchema = z.object({
   id: z.uuid(),
   name: z.string().min(1),
   asset: z.string().min(1),
-  assetAddress: stellarAddressSchema,
+  assetAddress: stellarContractAddressSchema,
   totalDeposits: nonNegativeAmountSchema,
   totalBorrows: nonNegativeAmountSchema,
   availableLiquidity: nonNegativeAmountSchema,
@@ -54,7 +55,7 @@ export const borrowPositionSchema = z.object({
   principal: positiveAmountSchema,
   accruedInterest: nonNegativeAmountSchema,
   collateralAmount: positiveAmountSchema,
-  collateralAsset: stellarAddressSchema,
+  collateralAsset: stellarContractAddressSchema,
   healthFactor: z.number().positive(),
   borrowedAt: isoDateSchema,
   lastAccrualAt: isoDateSchema,

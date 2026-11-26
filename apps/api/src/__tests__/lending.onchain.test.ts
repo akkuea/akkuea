@@ -21,6 +21,7 @@ import {
   Contract,
   Keypair,
   Networks,
+  StrKey,
   TransactionBuilder,
   nativeToScVal,
   rpc as SorobanRpc,
@@ -40,6 +41,7 @@ import { borrowPositions, lendingPools, transactions, users } from '../db/schema
 const NETWORK_PASSPHRASE = Networks.TESTNET;
 const CONTRACT_ID = 'CBFOZBCYMIDIZLNHT6ANMBU6LSGC6REM6Z5M4ST35E5T5FDWWZAWZLTX';
 const OTHER_CONTRACT_ID = 'CBFQV2RY5VHVFU3HT2I72FLXWY5YNZC37LWJSOZQCX45B76NBO4YZHM4';
+const ASSET_CONTRACT_ID = 'CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC';
 const TX_HASH = 'a'.repeat(64);
 
 const POOL_ID = '11111111-1111-4111-8111-111111111111';
@@ -62,7 +64,7 @@ const poolFixture = {
   id: POOL_ID,
   name: 'USDC Pool',
   asset: 'USDC',
-  assetAddress: OTHER_WALLET,
+  assetAddress: ASSET_CONTRACT_ID,
   contractPoolId: CONTRACT_POOL_ID,
   totalDeposits: '0.0000000',
   totalBorrows: '0.0000000',
@@ -102,6 +104,7 @@ function fakeResponse(
   overrides: {
     status?: string;
     envelopeXdr?: xdr.TransactionEnvelope;
+    events?: { contractEventsXdr: xdr.ContractEvent[][] };
   } = {},
 ) {
   return {
@@ -141,8 +144,46 @@ function fakeResponse(
         }),
       }),
     ),
-    events: { contractEventsXdr: [] },
+    events: overrides.events ?? { contractEventsXdr: [] },
   } as unknown as Awaited<ReturnType<SorobanRpc.Server['getTransaction']>>;
+}
+
+function makeRepayEvent(
+  params: {
+    contractId?: string;
+    borrower?: string;
+    poolId?: string;
+    amount?: bigint;
+  } = {},
+): xdr.ContractEvent {
+  const data = xdr.ScVal.scvMap([
+    new xdr.ScMapEntry({
+      key: xdr.ScVal.scvSymbol('amount'),
+      val: nativeToScVal(params.amount ?? BigInt(500_000_000), { type: 'i128' }),
+    }),
+    new xdr.ScMapEntry({
+      key: xdr.ScVal.scvSymbol('borrower'),
+      val: nativeToScVal(params.borrower ?? WALLET, { type: 'address' }),
+    }),
+    new xdr.ScMapEntry({
+      key: xdr.ScVal.scvSymbol('pool_id'),
+      val: nativeToScVal(params.poolId ?? CONTRACT_POOL_ID, { type: 'string' }),
+    }),
+  ]);
+
+  return new xdr.ContractEvent({
+    ext: xdr.ExtensionPoint.v0(),
+    contractId: new xdr.ContractId(
+      Uint8Array.from(StrKey.decodeContract(params.contractId ?? CONTRACT_ID)),
+    ),
+    type: xdr.ContractEventType.contract,
+    body: xdr.ContractEventBody.v0(
+      new xdr.ContractEventV0({
+        topics: [xdr.ScVal.scvSymbol('repay')],
+        data,
+      }),
+    ),
+  });
 }
 
 function makeStellarService(response: unknown): StellarService {
@@ -194,7 +235,7 @@ function makeActionResponse(
   ];
   if (action === 'borrow') {
     args.push(
-      nativeToScVal(OTHER_WALLET, { type: 'address' }),
+      nativeToScVal(ASSET_CONTRACT_ID, { type: 'address' }),
       nativeToScVal(BigInt(5_000_000_000), { type: 'i128' }),
     );
   }
@@ -207,6 +248,13 @@ function makeActionResponse(
       source: overrides.source ?? actor,
       args,
     }),
+    ...(action === 'repay'
+      ? {
+          events: {
+            contractEventsXdr: [[makeRepayEvent({ borrower: actor, poolId: overrides.poolId })]],
+          },
+        }
+      : {}),
   });
 }
 
@@ -290,7 +338,7 @@ describe('POST /lending/pools is operator-only', () => {
   const body = JSON.stringify({
     name: 'USDC Pool',
     asset: 'USDC',
-    assetAddress: OTHER_WALLET,
+    assetAddress: ASSET_CONTRACT_ID,
     collateralFactor: '0.75',
     liquidationThreshold: '0.80',
     liquidationPenalty: '0.05',
@@ -327,6 +375,7 @@ describe('POST /lending/pools is operator-only', () => {
     const response = await post({ 'x-internal-api-key': 'test-ops-secret' });
 
     expect(response.status).toBe(201);
+    expect(await response.json()).toMatchObject({ txHash: TX_HASH });
     expect(serviceMocks.createLendingPool).toHaveBeenCalledTimes(1);
 
     const call = serviceMocks.createLendingPool.mock.calls[0]?.[0] as Record<string, any>;
@@ -385,7 +434,7 @@ describe('prepare endpoints build the correct contract call', () => {
       authCtx({
         borrowAmount: '300',
         collateralAmount: '500',
-        collateralAsset: OTHER_WALLET,
+        collateralAsset: ASSET_CONTRACT_ID,
       }),
     );
 
@@ -395,7 +444,7 @@ describe('prepare endpoints build the correct contract call', () => {
       wallet: WALLET,
       poolId: CONTRACT_POOL_ID,
       amount: BigInt(3_000_000_000),
-      collateralAsset: OTHER_WALLET,
+      collateralAsset: ASSET_CONTRACT_ID,
       collateralAmount: BigInt(5_000_000_000),
     });
   });
@@ -475,6 +524,65 @@ describe('StellarService.verifyContractTransaction', () => {
     await expect(
       service.verifyContractTransaction(TX_HASH, CONTRACT_ID, 'deposit'),
     ).rejects.toMatchObject({ statusCode: 404 });
+  });
+
+  it('uses the amount emitted by the Repay event instead of the requested amount', async () => {
+    const service = makeStellarService(
+      fakeResponse({
+        envelopeXdr: buildLendingEnvelope({
+          contractId: CONTRACT_ID,
+          functionName: 'repay',
+          source: WALLET,
+          args: [
+            nativeToScVal(WALLET, { type: 'address' }),
+            nativeToScVal(CONTRACT_POOL_ID, { type: 'string' }),
+            nativeToScVal(BigInt(1_000_000_000), { type: 'i128' }),
+          ],
+        }),
+        events: { contractEventsXdr: [[makeRepayEvent({ amount: 13n })]] },
+      }),
+    );
+
+    const verified = await service.verifyContractTransaction(TX_HASH, CONTRACT_ID, 'repay');
+
+    expect(verified.actualAmount).toBe(13n);
+  });
+
+  it('rejects a repay transaction with no matching Repay event', async () => {
+    const response = makeActionResponse('repay');
+    const service = makeStellarService({ ...response, events: { contractEventsXdr: [] } });
+
+    await expect(
+      service.verifyContractTransaction(TX_HASH, CONTRACT_ID, 'repay'),
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      message: expect.stringContaining('no Repay event'),
+    });
+  });
+
+  it('rejects a Repay event for a different borrower or pool', async () => {
+    const service = makeStellarService(
+      fakeResponse({
+        envelopeXdr: buildLendingEnvelope({
+          contractId: CONTRACT_ID,
+          functionName: 'repay',
+          source: WALLET,
+          args: [
+            nativeToScVal(WALLET, { type: 'address' }),
+            nativeToScVal(CONTRACT_POOL_ID, { type: 'string' }),
+            nativeToScVal(BigInt(1_000_000_000), { type: 'i128' }),
+          ],
+        }),
+        events: { contractEventsXdr: [[makeRepayEvent({ borrower: OTHER_WALLET })]] },
+      }),
+    );
+
+    await expect(
+      service.verifyContractTransaction(TX_HASH, CONTRACT_ID, 'repay'),
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      message: expect.stringContaining('does not match'),
+    });
   });
 
   it('verifies the four-argument liquidation call', async () => {
@@ -700,6 +808,11 @@ describe('confirm endpoints cache contract state', () => {
   });
 
   it('does not delete an existing borrow when the post-repay position read fails', async () => {
+    serviceMocks.verifyContractTransaction = mock(async () => ({
+      ...verifiedDeposit,
+      actualAmount: BigInt(500_000_000),
+    }));
+    (stellarService as any).verifyContractTransaction = serviceMocks.verifyContractTransaction;
     const rpcFailure = new Error('RPC timeout');
     serviceMocks.getLendingBorrowPosition = mock(async () => {
       throw rpcFailure;
@@ -893,6 +1006,7 @@ describe('confirm endpoints cache contract state', () => {
       contractId: CONTRACT_ID,
       functionName: 'repay',
       args: [WALLET, CONTRACT_POOL_ID, BigInt(500_000_000)],
+      actualAmount: BigInt(13),
     }));
     (stellarService as any).verifyContractTransaction = serviceMocks.verifyContractTransaction;
     serviceMocks.getLendingBorrowPosition = mock(async () => null);
@@ -905,6 +1019,7 @@ describe('confirm endpoints cache contract state', () => {
       any
     >;
     expect(recorded.borrow).toBeNull();
+    expect(recorded.amount).toBe('0.0000013');
   });
 });
 

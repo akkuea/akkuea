@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { stellarAddressSchema, positiveAmountSchema } from '@akkuea/shared';
+import {
+  stellarAddressSchema,
+  stellarContractAddressSchema,
+  positiveAmountSchema,
+} from '@akkuea/shared';
 
 /**
  * Decimal string that allows zero (for rates/factors)
@@ -12,7 +16,7 @@ const decimalString = z.string().regex(/^\d+(\.\d+)?$/, 'Must be a decimal strin
 export const CreatePoolDto = z.object({
   name: z.string().min(1, 'Pool name is required').max(255),
   asset: z.string().min(1, 'Asset symbol is required').max(20),
-  assetAddress: stellarAddressSchema,
+  assetAddress: stellarContractAddressSchema,
   collateralFactor: decimalString,
   liquidationThreshold: decimalString,
   liquidationPenalty: decimalString,
@@ -40,7 +44,7 @@ export const WithdrawDto = z.object({
 export const BorrowDto = z.object({
   borrowAmount: positiveAmountSchema,
   collateralAmount: positiveAmountSchema,
-  collateralAsset: stellarAddressSchema,
+  collateralAsset: stellarContractAddressSchema,
 });
 
 /**

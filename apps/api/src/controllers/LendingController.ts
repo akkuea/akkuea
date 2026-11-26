@@ -206,7 +206,7 @@ export class LendingController {
     // a cached row to exactly one on-chain pool.
     const poolId = randomUUID();
 
-    await stellarService.createLendingPool({
+    const { txHash } = await stellarService.createLendingPool({
       contractId,
       adminPublicKey,
       adminSecret,
@@ -235,7 +235,7 @@ export class LendingController {
     });
 
     await this.invalidatePoolsCache();
-    return this.jsonResponse(pool, 201);
+    return this.jsonResponse({ ...pool, txHash }, 201);
   }
 
   /**
@@ -408,6 +408,10 @@ export class LendingController {
       throw ApiError.validation('Transaction targets a different pool');
     }
     const amountUnits = this.requireBigIntArg(verified.args, 2, 'amount');
+    const recordedAmountUnits = action === 'repay' ? verified.actualAmount : amountUnits;
+    if (recordedAmountUnits === undefined) {
+      throw ApiError.validation('Repay transaction is missing its confirmed on-chain amount');
+    }
 
     const totals = await stellarService.getLendingPoolTotals(
       contractId,
@@ -477,7 +481,7 @@ export class LendingController {
       type: action,
       hash: verified.txHash,
       userId: user.id,
-      amount: this.unitsToDecimal(amountUnits),
+      amount: this.unitsToDecimal(recordedAmountUnits),
       asset: pool.asset,
       poolId: pool.id,
       contractPoolId,

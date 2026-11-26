@@ -1,6 +1,7 @@
 // Common schemas
 export {
   stellarAddressSchema,
+  stellarContractAddressSchema,
   positiveAmountSchema,
   nonNegativeAmountSchema,
   percentageSchema,

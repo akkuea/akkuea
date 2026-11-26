@@ -1,5 +1,6 @@
 import { Elysia } from 'elysia';
 import { z } from 'zod';
+import { stellarContractAddressSchema } from '@akkuea/shared';
 import {
   validate,
   uuidParamSchema,
@@ -79,7 +80,7 @@ const amountSchema = z.object({
 const borrowSchema = z.object({
   borrowAmount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
   collateralAmount: z.string().regex(/^\d+(\.\d+)?$/, 'Must be a positive decimal string'),
-  collateralAsset: stellarAddressSchema,
+  collateralAsset: stellarContractAddressSchema,
 });
 
 const confirmSchema = z.object({
@@ -96,7 +97,7 @@ const liquidationPrepareSchema = z.object({
 const createPoolSchema = z.object({
   name: z.string().min(1).max(255),
   asset: z.string().min(1).max(20),
-  assetAddress: stellarAddressSchema,
+  assetAddress: stellarContractAddressSchema,
   collateralFactor: z.string().regex(/^\d+(\.\d+)?$/),
   liquidationThreshold: z.string().regex(/^\d+(\.\d+)?$/),
   liquidationPenalty: z.string().regex(/^\d+(\.\d+)?$/),

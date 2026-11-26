@@ -5,6 +5,7 @@ import {
   Horizon,
   Keypair,
   Networks,
+  SorobanDataBuilder,
   StrKey,
   Transaction,
   TransactionBuilder,
@@ -135,6 +136,8 @@ export interface VerifiedContractTransaction {
   functionName: string;
   /** Decoded native arguments of the single contract invocation. */
   args: unknown[];
+  /** Amount actually repaid, decoded from the contract event. Present only for repay. */
+  actualAmount?: bigint;
 }
 
 /** Everything confirmed about a submitted `purchase_shares` transaction. */
@@ -155,6 +158,24 @@ export interface VerifiedPurchaseTransaction {
 
 /** Event name that identifies the `SharePurchase` event (snake_case topic 0). */
 const SHARE_PURCHASE_EVENT = 'share_purchase';
+const LENDING_ACTIONS = new Set(['deposit', 'withdraw', 'borrow', 'repay']);
+
+export function assembleLendingTransactionWithFeeBuffer(
+  transaction: Transaction,
+  simulation: SorobanRpc.Api.SimulateTransactionSuccessResponse,
+): TransactionBuilder {
+  const minimumResourceFee = BigInt(simulation.minResourceFee);
+  const bufferedResourceFee = minimumResourceFee + (minimumResourceFee + 1n) / 2n;
+  const transactionData = new SorobanDataBuilder(simulation.transactionData.build()).setResourceFee(
+    bufferedResourceFee.toString(),
+  );
+
+  return SorobanRpc.assembleTransaction(transaction, {
+    ...simulation,
+    minResourceFee: bufferedResourceFee.toString(),
+    transactionData,
+  });
+}
 
 /** Contract events as parsed by the Soroban RPC client from `getTransaction`. */
 type RpcContractEvent =
@@ -267,6 +288,20 @@ export class StellarService {
       );
       if (typedTransaction) {
         this.unwrapContractResult(typedTransaction.result);
+        if (LENDING_ACTIONS.has(method)) {
+          const { built, simulation } = typedTransaction;
+          if (
+            !(built instanceof Transaction) ||
+            !simulation ||
+            !SorobanRpc.Api.isSimulationSuccess(simulation)
+          ) {
+            throw new Error('Lending transaction simulation did not produce resources');
+          }
+          typedTransaction.built = assembleLendingTransactionWithFeeBuffer(
+            built,
+            simulation,
+          ).build();
+        }
         return typedTransaction.toXDR();
       }
 
@@ -428,7 +463,7 @@ export class StellarService {
   ): Promise<{ txHash: string; contractId: string }> {
     this.assertValidContractId(params.contractId);
     this.assertValidAddress(params.adminPublicKey);
-    this.assertValidAddress(params.assetAddress);
+    this.assertValidContractId(params.assetAddress);
     if (!params.poolId) {
       throw ApiError.badRequest('Pool id is required');
     }
@@ -492,7 +527,7 @@ export class StellarService {
       if (!params.collateralAsset) {
         throw ApiError.badRequest('Collateral asset is required to borrow');
       }
-      this.assertValidAddress(params.collateralAsset);
+      this.assertValidContractId(params.collateralAsset);
       if (!params.collateralAmount || params.collateralAmount <= BigInt(0)) {
         throw ApiError.badRequest('Collateral amount must be greater than zero');
       }
@@ -674,6 +709,10 @@ export class StellarService {
       expectedContractId,
       expectedFunction,
     );
+    const actualAmount =
+      expectedFunction === 'repay'
+        ? this.verifyRepayEvent(args, this.extractContractEvents(response), expectedContractId)
+        : undefined;
 
     return {
       txHash: response.txHash,
@@ -681,6 +720,7 @@ export class StellarService {
       contractId: expectedContractId,
       functionName: expectedFunction,
       args: args.map((arg) => scValToNative(arg)),
+      ...(actualAmount !== undefined ? { actualAmount } : {}),
     };
   }
 
@@ -865,6 +905,78 @@ export class StellarService {
     return null;
   }
 
+  private verifyRepayEvent(
+    args: xdr.ScVal[],
+    events: RpcContractEvent[],
+    expectedContractId: string,
+  ): bigint {
+    if (args.length !== 3 || !args[0] || !args[1] || !args[2]) {
+      throw ApiError.validation('repay must be called with exactly three arguments');
+    }
+
+    const borrower = this.asNativeAddress(args[0]);
+    const poolId = scValToNative(args[1]);
+    const requestedAmount = this.asNativeBigInt(args[2]);
+    if (typeof poolId !== 'string') {
+      throw ApiError.validation('repay pool_id argument must be a string');
+    }
+
+    const event = this.parseRepayEvent(events, expectedContractId);
+    if (!event) {
+      throw ApiError.validation(
+        `Transaction emitted no Repay event for contract ${expectedContractId}`,
+      );
+    }
+    if (event.borrower !== borrower || event.poolId !== poolId) {
+      throw ApiError.validation('Repay event does not match the transaction arguments');
+    }
+    if (event.amount <= 0n || event.amount > requestedAmount) {
+      throw ApiError.validation('Repay event amount is outside the requested repayment amount');
+    }
+
+    return event.amount;
+  }
+
+  private parseRepayEvent(
+    events: RpcContractEvent[],
+    expectedContractId: string,
+  ): { borrower: string; poolId: string; amount: bigint } | null {
+    for (const event of events) {
+      const eventContractId = event.contractId
+        ? Address.contract(event.contractId.toBytes()).toString()
+        : null;
+      if (eventContractId !== expectedContractId || event.body.type !== 'v0') {
+        continue;
+      }
+
+      const [topic] = event.body.v0.topics;
+      if (topic?.type !== 'scvSymbol' || topic.value !== 'repay') {
+        continue;
+      }
+      if (event.body.v0.data.type !== 'scvMap') {
+        throw ApiError.validation('Repay event data must be a map');
+      }
+
+      const data = scValToNative(event.body.v0.data);
+      if (
+        typeof data !== 'object' ||
+        data === null ||
+        typeof data.borrower !== 'string' ||
+        typeof data.pool_id !== 'string'
+      ) {
+        throw ApiError.validation('Repay event is missing its borrower or pool_id');
+      }
+
+      return {
+        borrower: data.borrower,
+        poolId: data.pool_id,
+        amount: this.asEventAmount(data.amount),
+      };
+    }
+
+    return null;
+  }
+
   /** Contract events of a successful transaction, from RPC or its meta. */
   private extractContractEvents(
     response: SorobanRpc.Api.GetSuccessfulTransactionResponse,
@@ -914,7 +1026,7 @@ export class StellarService {
     if (typeof value === 'string' && /^-?\d+$/.test(value)) {
       return BigInt(value);
     }
-    throw ApiError.validation('SharePurchase event is missing an integer amount');
+    throw ApiError.validation('Contract event is missing an integer amount');
   }
 
   /** Prefers the underlying cause's message over the generic wrapper. */

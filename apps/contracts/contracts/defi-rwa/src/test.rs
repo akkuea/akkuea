@@ -67,6 +67,16 @@ impl MockOracleContract {
     }
 }
 
+/// Give a pool asset an oracle price of 1.0, so debt keeps the value of its
+/// token amount in tests that do not exercise pool asset pricing.
+fn price_pool_asset(env: &Env, oracle_id: &Address, asset: &Address) {
+    MockOracleContractClient::new(env, oracle_id).set_price(
+        asset,
+        &PRECISION,
+        &env.ledger().timestamp(),
+    );
+}
+
 fn setup() -> TestSetup<'static> {
     let env = Env::default();
     env.mock_all_auths();
@@ -220,6 +230,7 @@ fn setup_borrow_test() -> BorrowTestSetup<'static> {
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     env.as_contract(&oracle_id, || {
@@ -1205,6 +1216,7 @@ fn test_borrow_with_sufficient_collateral() {
 
         // Set oracle address
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price in oracle: $1.00 (1 * PRECISION = 1e18)
@@ -1331,6 +1343,7 @@ fn test_borrow_with_insufficient_collateral() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price: $1.00
@@ -1421,6 +1434,7 @@ fn test_borrow_from_paused_pool() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
 
         // PAUSE THE POOL
         PoolStorage::set_paused(&env, &pool_id, true);
@@ -1511,6 +1525,7 @@ fn test_borrow_exceeding_liquidity() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price high so collateral is sufficient
@@ -1674,6 +1689,7 @@ fn test_borrow_with_zero_index() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price
@@ -2748,7 +2764,6 @@ fn test_oracle_guarded_price_alias() {
 // ─── Test 12: End-to-end borrow with stale oracle ──────
 
 #[test]
-#[should_panic(expected = "Error(Contract, #22)")]
 fn test_borrow_with_stale_oracle() {
     use soroban_sdk::token::StellarAssetClient;
 
@@ -2799,6 +2814,7 @@ fn test_borrow_with_stale_oracle() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price with timestamp 2 hours ago - STALE
@@ -2818,7 +2834,7 @@ fn test_borrow_with_stale_oracle() {
     usdc_token.mint(&contract_id, &10_000_000_000);
 
     // Borrow should fail because oracle price is stale
-    env.as_contract(&contract_id, || {
+    let result = env.as_contract(&contract_id, || {
         PropertyTokenContract::borrow(
             env.clone(),
             borrower.clone(),
@@ -2827,14 +2843,13 @@ fn test_borrow_with_stale_oracle() {
             xlm_contract.address().clone(),
             2_000_000_000,
         )
-        .unwrap()
     });
+    assert!(matches!(result, Err(ContractError::StalePrice)));
 }
 
 // ─── Test 13: End-to-end borrow with zero oracle price ─
 
 #[test]
-#[should_panic(expected = "Error(Contract, #24)")]
 fn test_borrow_with_zero_oracle_price() {
     use soroban_sdk::token::StellarAssetClient;
 
@@ -2880,6 +2895,7 @@ fn test_borrow_with_zero_oracle_price() {
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
 
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set XLM price to ZERO - invalid
@@ -2893,7 +2909,7 @@ fn test_borrow_with_zero_oracle_price() {
     usdc_token.mint(&contract_id, &10_000_000_000);
 
     // Borrow should fail because oracle price is zero
-    env.as_contract(&contract_id, || {
+    let result = env.as_contract(&contract_id, || {
         PropertyTokenContract::borrow(
             env.clone(),
             borrower.clone(),
@@ -2902,8 +2918,8 @@ fn test_borrow_with_zero_oracle_price() {
             xlm_contract.address().clone(),
             2_000_000_000,
         )
-        .unwrap()
     });
+    assert!(matches!(result, Err(ContractError::InvalidPrice)));
 }
 
 // ─── Global pause blocks every value-moving entry point (issue #1273) ────────
@@ -3549,6 +3565,7 @@ fn setup_liquidation_env() -> (
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set initial XLM price: $1.00
@@ -3793,6 +3810,7 @@ fn test_liquidate_healthy_position_rejected() {
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Keep price at $1.00 - position is healthy
@@ -3836,15 +3854,21 @@ fn test_liquidate_healthy_position_rejected() {
     });
 }
 
-/// Test 4: Liquidation with zero collateral left (clamp triggered).
+/// Test 4: Clamped seize lowers the debt covered and writes off the rest.
 ///
 /// When the penalty pushes collateral_to_seize above position.collateral_amount,
-/// the seized amount is clamped to the full collateral, leaving zero collateral.
-/// With 50% close factor, debt covered = 250. Price drops to $0.10/XLM.
-/// Seize = (250 + 12.5) / 0.10 = 2625 → clamped to 2000 XLM.
+/// the seized amount is clamped to the full collateral. With a 50% close factor
+/// the request is capped to 250, and at $0.10/XLM the seize would be
+/// (250 + 12.5) / 0.10 = 2625 XLM, clamped to the 2000 XLM posted.
+///
+/// 2000 XLM at $0.10 is worth 200 USDC, so the liquidator pays
+/// floor(200 / 1.05) = 190.476190 USDC instead of 250. The remaining
+/// 309.523810 USDC is no longer backed by collateral: it is written off in the
+/// same call and the position is closed. The pool has no reserves, so the loss
+/// is taken from total_deposits.
 #[test]
-fn test_liquidate_zero_collateral_left() {
-    let (env, contract_id, oracle_id, borrower, liquidator, pool_id, _usdc_addr, xlm_addr) =
+fn test_liquidate_clamped_seize_reduces_debt_and_writes_off_rest() {
+    let (env, contract_id, oracle_id, borrower, liquidator, pool_id, usdc_addr, xlm_addr) =
         setup_liquidation_env();
 
     // Drop price to $0.10/XLM to trigger clamp (2625 > 2000)
@@ -3858,9 +3882,14 @@ fn test_liquidate_zero_collateral_left() {
         );
     });
 
-    use soroban_sdk::token::StellarAssetClient;
+    use soroban_sdk::token::{StellarAssetClient, TokenClient};
     let xlm_token = StellarAssetClient::new(&env, &xlm_addr);
+    let usdc_client = TokenClient::new(&env, &usdc_addr);
     let liquidator_xlm_before = xlm_token.balance(&liquidator);
+    let liquidator_usdc_before = usdc_client.balance(&liquidator);
+    let deposits_before = env.as_contract(&contract_id, || {
+        PoolStorage::get_total_deposits(&env, &pool_id)
+    });
 
     // Liquidate: close factor caps to 250, clamp seizes all 2000 XLM
     let result = env.as_contract(&contract_id, || {
@@ -3873,31 +3902,75 @@ fn test_liquidate_zero_collateral_left() {
         )
     });
     let result = result.unwrap();
+    assert_eq!(result.principal, 0, "position is closed");
+    assert_eq!(result.collateral_amount, 0);
 
-    assert_eq!(
-        result.principal, 250_000_000,
-        "remaining debt after capped liquidation"
-    );
-
-    // Position should still exist with zero collateral
+    // No position may keep debt without collateral
     let stored = env.as_contract(&contract_id, || {
         PositionStorage::get_borrow(&env, &borrower, &pool_id)
     });
-    assert!(stored.is_some(), "position should still exist");
-    let stored = stored.unwrap();
-    assert_eq!(
-        stored.collateral_amount, 0,
-        "all collateral should be seized (clamped)"
-    );
-    assert_eq!(stored.principal, 250_000_000);
+    assert!(stored.is_none(), "position should be removed");
 
     // Liquidator received ALL 2000 XLM (clamped from 2625)
-    let liquidator_xlm_after = xlm_token.balance(&liquidator);
-    let xlm_received = liquidator_xlm_after - liquidator_xlm_before;
+    let xlm_received = xlm_token.balance(&liquidator) - liquidator_xlm_before;
     assert_eq!(
         xlm_received, 2_000_000_000_i128,
         "all 2000 XLM collateral seized (clamped)"
     );
+
+    // Liquidator paid only what the seized collateral is worth, net of penalty
+    let usdc_spent = liquidator_usdc_before - usdc_client.balance(&liquidator);
+    assert_eq!(usdc_spent, 190_476_190_i128);
+    let seized_value = xlm_received * low_price / PRECISION;
+    assert!(
+        usdc_spent * (PRECISION + 50_000_000_000_000_000) / PRECISION <= seized_value,
+        "liquidator must not pay more than seized value / (1 + penalty)"
+    );
+
+    // The whole 500 debt left the books: 190.476190 repaid, 309.523810 written off
+    let (total_borrows, total_deposits, reserves) = env.as_contract(&contract_id, || {
+        (
+            PoolStorage::get_total_borrows(&env, &pool_id),
+            PoolStorage::get_total_deposits(&env, &pool_id),
+            PoolStorage::get_reserves(&env, &pool_id),
+        )
+    });
+    assert_eq!(total_borrows, 0);
+    assert_eq!(reserves, 0);
+    assert_eq!(total_deposits, deposits_before - 309_523_810);
+}
+
+/// A liquidation that would move nothing is rejected with a typed error and
+/// leaves the position untouched.
+///
+/// At a price of 1e-18 per XLM the 2000 XLM collateral is worth less than one
+/// base unit of USDC, so no debt can be covered by seizing it.
+#[test]
+fn test_liquidate_zero_effective_amount_rejected() {
+    let (env, contract_id, oracle_id, borrower, liquidator, pool_id, _usdc_addr, xlm_addr) =
+        setup_liquidation_env();
+
+    env.as_contract(&oracle_id, || {
+        MockOracleContract::set_price(env.clone(), xlm_addr.clone(), 1, env.ledger().timestamp());
+    });
+
+    let result = env.as_contract(&contract_id, || {
+        PropertyTokenContract::liquidate(
+            env.clone(),
+            liquidator.clone(),
+            pool_id.clone(),
+            borrower.clone(),
+            500_000_000_i128,
+        )
+    });
+    assert!(matches!(result, Err(ContractError::LiquidationAmountZero)));
+
+    let stored = env.as_contract(&contract_id, || {
+        PositionStorage::get_borrow(&env, &borrower, &pool_id)
+    });
+    let stored = stored.expect("position must be unchanged");
+    assert_eq!(stored.principal, 500_000_000);
+    assert_eq!(stored.collateral_amount, 2_000_000_000);
 }
 
 /// Test 5: Double liquidation closes position, third attempt panics.
@@ -4407,6 +4480,7 @@ fn test_liquidate_inactive_pool() {
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     usdc_token.mint(&liquidator, &2_000_000_000);
@@ -4607,6 +4681,7 @@ fn test_borrow_exceeds_collateral_factor_limit() {
         InterestStorage::set_interest_index(&env, &pool_id, PRECISION);
         InterestStorage::set_last_accrual(&env, &pool_id, env.ledger().timestamp());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     env.as_contract(&oracle_id, || {
@@ -4723,6 +4798,7 @@ fn test_deposit_overflow_returns_typed_error() {
         // Set oracle address (using a dummy oracle for now)
         let oracle_id = env.register(MockOracleContract, ());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Mint tokens to depositor so they can deposit
@@ -4789,6 +4865,7 @@ fn test_borrow_overflow_returns_typed_error() {
         // Set oracle address
         let oracle_id = env.register(MockOracleContract, ());
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
 
         // Set XLM price in oracle: $1.00
         env.as_contract(&oracle_id, || {
@@ -4942,6 +5019,7 @@ fn test_normal_price_is_still_accepted() {
 
         // Set oracle address to our dedicated oracle contract
         PriceOracle::set_oracle_address(&env, &oracle_id);
+        price_pool_asset(&env, &oracle_id, &pool.asset_address);
     });
 
     // Set a normal price with current timestamp
@@ -5098,6 +5176,82 @@ fn test_non_admin_cannot_list_property() {
             !storage::property::PropertyMetadata::exists(&s.env, property_id)
         }),
         "rejected listing must not persist property metadata"
+    );
+}
+
+#[test]
+fn investor_registry_gates_share_receipts_and_allows_exit() {
+    use pilot_whitelist::{PilotWhitelist, PilotWhitelistClient};
+    use soroban_sdk::{testutils::Events as _, IntoVal};
+
+    let (id, env, owner, buyer, payment, property) = setup_purchase_test();
+    let client = PropertyTokenContractClient::new(&env, &id);
+    let admin = env.as_contract(&id, || AdminControl::get_admin(&env).unwrap());
+    let recipient = Address::generate(&env);
+    let spender = Address::generate(&env);
+    let registry = env.register(PilotWhitelist, (&admin,));
+    let whitelist = PilotWhitelistClient::new(&env, &registry);
+
+    assert_eq!(client.get_investor_registry(), None);
+    let denied = Err(Ok(Error::from_contract_error(
+        ContractError::InvestorNotApproved as u32,
+    )));
+    assert_eq!(
+        client.try_set_investor_registry(&buyer, &registry),
+        Err(Ok(Error::from_contract_error(
+            ContractError::NotAdmin as u32
+        )))
+    );
+    client.set_investor_registry(&admin, &registry);
+    assert_eq!(
+        env.events().all().filter_by_contract(&id),
+        soroban_sdk::vec![
+            &env,
+            (
+                id.clone(),
+                (symbol_short!("invreg"),).into_val(&env),
+                (None::<Address>, registry.clone()).into_val(&env),
+            )
+        ],
+    );
+    assert_eq!(client.get_investor_registry(), Some(registry.clone()));
+
+    let token = TokenClient::new(&env, &payment);
+    let before = (token.balance(&buyer), token.balance(&owner));
+    assert_eq!(
+        client.try_purchase_shares(&buyer, &property, &5, &payment),
+        denied
+    );
+    assert_eq!((token.balance(&buyer), token.balance(&owner)), before);
+    assert_eq!(client.get_balance(&property, &buyer), 0);
+
+    whitelist.approve(&admin, &buyer);
+    client.purchase_shares(&buyer, &property, &5, &payment);
+    assert_eq!(client.get_balance(&property, &buyer), 5);
+    assert_eq!(
+        client.try_transfer_shares(&buyer, &recipient, &property, &1),
+        denied
+    );
+    client.approve(&buyer, &spender, &property, &1);
+    assert_eq!(
+        client.try_transfer_from(&spender, &buyer, &recipient, &property, &1),
+        denied
+    );
+    assert_eq!(
+        client.try_mint_shares(&admin, &property, &recipient, &1),
+        denied
+    );
+
+    whitelist.approve(&admin, &recipient);
+    whitelist.revoke(&admin, &buyer);
+    client.transfer_shares(&buyer, &recipient, &property, &1);
+    client.transfer_from(&spender, &buyer, &recipient, &property, &1);
+    client.burn_shares(&buyer, &property, &1);
+    assert_eq!(client.get_balance(&property, &buyer), 2);
+    assert_eq!(client.get_balance(&property, &recipient), 2);
+    assert_eq!(
+        client.try_transfer_shares(&recipient, &buyer, &property, &1),
+        denied
     );
 }
 

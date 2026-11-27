@@ -122,6 +122,7 @@ ROOT_DEPS='^(package\.json|bun\.lock)$'
 SHARED_PATHS="^apps/shared/|$ROOT_DEPS|^\.github/workflows/shared-ci\.yml$"
 API_PATHS="^apps/api/|$ROOT_DEPS|^\.github/workflows/api-ci\.yml$"
 WEBAPP_PATHS="^apps/webapp/|$ROOT_DEPS|^\.github/workflows/webapp-ci\.yml$"
+LAND_PATHS="^apps/akkuea-land/|$ROOT_DEPS|^apps/shared/|^\.github/workflows/land-ci\.yml$"
 MONOREPO_PATHS="^(apps|docs|scripts|\.github)/|$ROOT_DEPS"
 CONTRACTS_PATHS='^apps/contracts/|^\.github/workflows/contracts-ci\.yml$'
 
@@ -280,6 +281,18 @@ if touched "$WEBAPP_PATHS" && need bun "https://bun.sh" "webapp"; then
   else
     SKIPPED+=("webapp: Playwright end-to-end tests (run with E2E=1 make check)")
   fi
+fi
+
+# ---------------------------------------------------------------------------
+# Land - Land CI (land-ci.yml)
+
+if touched "$LAND_PATHS" && need bun "https://bun.sh" "land"; then
+  build_shared
+  run apps/akkuea-land "land: type check" bun run type-check
+  run apps/akkuea-land "land: lint" bun run lint
+  run apps/akkuea-land "land: format check" bunx prettier --check "src/**/*.{ts,tsx}"
+  run apps/akkuea-land "land: tests" bun test
+  run apps/akkuea-land "land: production build" bun run build
 fi
 
 # ---------------------------------------------------------------------------

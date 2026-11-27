@@ -10,6 +10,11 @@
  * All network calls are mocked so tests never make real RPC requests.
  */
 
+// All land tests share one JSDOM realm (see src/test/setupJsdom.ts).
+// axe-core captures window/document when it is first imported, so renders
+// and axe.run calls must use the same realm or axe rejects the container.
+import { ensureSharedDom } from "@/test/setupJsdom";
+
 import { describe, it, expect, vi, beforeEach } from "bun:test";
 
 // ── Shared mock data ─────────────────────────────────────────────────────────
@@ -45,20 +50,9 @@ vi.mock("@/lib/soroban-tx", () => ({
 
 import { useGameWallet, useWalletStore } from "../useGameWallet";
 
-// ── jsdom setup for renderHook ───────────────────────────────────────────────
-
-// @ts-expect-error: jsdom types not fully compatible with bun runtime
-import { JSDOM } from "jsdom";
-
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost",
-});
-globalThis.window = dom.window as any;
-globalThis.document = dom.window.document as any;
-globalThis.navigator = dom.window.navigator as any;
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-
 import { act, renderHook } from "@testing-library/react";
+
+beforeEach(ensureSharedDom);
 
 beforeEach(() => {
   vi.clearAllMocks();

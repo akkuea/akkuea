@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import { NextRequest } from "next/server";
-import { middleware } from "../../middleware";
+import { middleware } from "../middleware";
 import { sanitizeCallbackUrl } from "../lib/sanitizeCallbackUrl";
 
 const ORIGIN = "https://app.example.com";

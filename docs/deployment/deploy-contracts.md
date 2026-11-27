@@ -6,7 +6,7 @@ This guide covers the complete deployment of the Akkuea smart contracts to Stell
 **Output WASM:** `apps/contracts/target/wasm32v1-none/release/rwa_defi_contract.wasm`
 **Runtime:** Stellar Soroban (Rust, not EVM/Solidity)
 
-> **Automated deployment:** `scripts/deploy.sh` (run as `bun run deploy:contracts`) performs Steps 1, 2, 3, and 5 of this guide in one command, including the mandatory oracle setup. Read this guide fully anyway: it explains what each step is for, and Step 4 (pools) and Step 6 (API configuration) are always manual.
+> **Automated deployment:** `scripts/deploy.sh` (run as `bun run deploy:contracts`) performs Steps 1, 2, 3, and 5 of this guide in one command, including the mandatory oracle setup. Read this guide fully anyway: it explains what each step is for. Pool, investor registry, and API configuration are manual.
 
 > **Note on previous documentation:** `docs/contracts/deployment.md` referenced incorrect source paths (`apps/contracts/src/real_estate_token.rs`, `apps/contracts/src/defi_lending.rs`) and a non-existent `scripts/deploy.sh`. Those paths and that script do not exist. This document supersedes that guide.
 
@@ -103,6 +103,8 @@ For mainnet, replace `--network testnet` with `--network mainnet` and use your i
 
 > **This step is not optional.** The oracle address must be configured before any `borrow()` call is made. If this step is skipped, every borrow attempt will panic with: `Oracle address not configured` (`oracle.rs:19`).
 
+> **Every pool asset needs a price too.** Debt and collateral are both valued through the oracle, in a common 18-decimal unit, using each token's own `decimals()`. The oracle must publish a price for each pool's `asset_address` as well as for every collateral asset, or `borrow()` and `liquidate()` fail with `PriceNotAvailable`.
+
 ```bash
 # ORACLE_ADDRESS is the Soroban contract ID of a SEP-40 compatible price feed
 stellar contract invoke \
@@ -193,6 +195,22 @@ Parameter notes:
 | `liquidation_penalty`   | 1e18 = 100%  | `100000000000000000` | 10% - liquidator bonus                                       |
 | `reserve_factor`        | basis points | `100`                | 1% of interest goes to protocol reserve                      |
 
+Liquidation also uses a per-pool minimum position debt, in base units of the pool asset. When the debt a liquidation would leave behind after the close factor falls below it, the whole position can be closed in one call, so small positions are never stranded. It defaults to `10000000` (1 token at 7 decimals) and the admin can change it with `set_min_position_debt`:
+
+```bash
+stellar contract invoke \
+  --id $CONTRACT_ID \
+  --source-account $ADMIN_ADDRESS \
+  --network testnet \
+  -- \
+  set_min_position_debt \
+  --caller $ADMIN_ADDRESS \
+  --pool_id "xlm-pool-v1" \
+  --min_position_debt 10000000
+```
+
+When a liquidation seizes all of a position's collateral and debt remains, that debt is written off in the same call: the pool reserves absorb it first and the rest lowers every depositor's balance in proportion. Each write-off emits a `bad_debt` event with the amount, the part covered by reserves and the part shared by depositors.
+
 ---
 
 ## Step 5 - Grant operational roles
@@ -219,7 +237,25 @@ Available roles: `Admin`, `Pauser`, `Oracle`, `Verifier`, `Liquidator`, `Emergen
 
 ---
 
-## Step 6 - Configure the API
+## Step 6 - Configure the investor registry
+
+Before enabling share sales, configure a deployed investor registry on the
+same network. The registry must expose `is_approved(address) -> bool`.
+`pilot-whitelist` implements this interface. Approve the eligible investor
+addresses in the registry before launch.
+
+```bash
+stellar contract invoke \
+  --id "$CONTRACT_ID" \
+  --source-account testnet-deployer \
+  --network testnet \
+  -- set_investor_registry --admin "$ADMIN_ADDRESS" --registry "$REGISTRY_ID"
+```
+
+Read back `get_investor_registry` and confirm that it returns the deployed
+registry address before publishing listings.
+
+## Step 7 - Configure the API
 
 Update `apps/api/.env`:
 
@@ -318,7 +354,7 @@ The `defi-rwa` contract has **no upgrade entry point**: once deployed, its WASM 
 
 1. Build the corrected WASM (Step 1) and deploy it with constructor arguments (Step 2). This produces a new `CONTRACT_ID`.
 2. Redo the post-deployment configuration on the new contract: `set_oracle` and `set_oracle_config` (Step 3), pool creation (Step 4), and role grants (Step 5).
-3. Update `apps/api/.env` and every client configuration to the new `CONTRACT_ID` (Step 6), and keep the old contract ID documented as retired in `docs/contracts/deployment.md`.
+3. Configure the investor registry (Step 6). Update `apps/api/.env` and every client configuration to the new `CONTRACT_ID` (Step 7), and keep the old contract ID documented as retired in `docs/contracts/deployment.md`.
 
 State does not carry over automatically: shares, pools, and positions live in the old contract's storage. Whether and how to migrate existing positions is a product and legal decision to make before deploying, not something this guide can decide. For the pilot's contracts, the full operational procedure is [`docs/operations/runbook-pilot-contract-migration.md`](../operations/runbook-pilot-contract-migration.md), rehearsed on testnet.
 

@@ -5,6 +5,10 @@ use crate::access::ContractError;
 use super::interest::PRECISION;
 use super::keys::{lending_bump, LendingKey};
 
+/// Default debt, in pool asset base units, below which a liquidation may close
+/// the whole position regardless of the close factor (1 token at 7 decimals).
+pub const DEFAULT_MIN_POSITION_DEBT: i128 = 10_000_000;
+
 /// Lending pool configuration and state
 #[derive(Clone)]
 #[contracttype]
@@ -129,6 +133,26 @@ impl PoolStorage {
             .ok_or(ContractError::BalanceOverflow)?;
         Self::set_reserves(env, pool_id, updated);
         Ok(())
+    }
+
+    /// Get the debt below which a liquidation may close the whole position
+    pub fn get_min_position_debt(env: &Env, pool_id: &String) -> i128 {
+        let key = LendingKey::PoolMinPositionDebt(pool_id.clone());
+        env.storage()
+            .persistent()
+            .get(&key)
+            .unwrap_or(DEFAULT_MIN_POSITION_DEBT)
+    }
+
+    /// Set the debt below which a liquidation may close the whole position
+    pub fn set_min_position_debt(env: &Env, pool_id: &String, amount: i128) {
+        let key = LendingKey::PoolMinPositionDebt(pool_id.clone());
+        env.storage().persistent().set(&key, &amount);
+        env.storage().persistent().extend_ttl(
+            &key,
+            lending_bump::PERSISTENT_BUMP,
+            lending_bump::PERSISTENT_BUMP,
+        );
     }
 
     /// Calculate utilization rate

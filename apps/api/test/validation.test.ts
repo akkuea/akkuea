@@ -13,7 +13,12 @@ type ValidationBody = {
 
 const UUID = '123e4567-e89b-12d3-a456-426614174000';
 
-function jsonRequest(url: string, method: string, body: unknown, headers: Record<string, string> = {}) {
+function jsonRequest(
+  url: string,
+  method: string,
+  body: unknown,
+  headers: Record<string, string> = {},
+) {
   return new Request(url, {
     method,
     headers: { 'Content-Type': 'application/json', ...headers },
@@ -168,15 +173,16 @@ describe('Per-route validation isolation', () => {
       expectNotAValidationError(await readBody(response), 'body');
     });
 
-    it('rejects an invalid body on the later POST /lending/pools/:id/deposit route', async () => {
+    it('no longer validates a body on the retired POST /lending/pools/:id/deposit route', async () => {
       const response = await lendingApp.handle(
         jsonRequest(`http://localhost/lending/pools/${UUID}/deposit`, 'POST', {}),
       );
 
-      expect(response.status).toBe(400);
+      // The database-only write route is gone; it must not 400 as if it still
+      // accepted a deposit body.
+      expect(response.status).toBe(410);
       const body = await readBody(response);
-      expect(body.code).toBe('VALIDATION_ERROR');
-      expect(body.details?.source).toBe('body');
+      expect((body as unknown as { error?: string }).error).toBe('GONE');
     });
   });
 
@@ -184,9 +190,7 @@ describe('Per-route validation isolation', () => {
     const notificationApp = new Elysia().use(notificationRoutes);
 
     it('accepts a request without query params on GET /notifications', async () => {
-      const response = await notificationApp.handle(
-        new Request('http://localhost/notifications'),
-      );
+      const response = await notificationApp.handle(new Request('http://localhost/notifications'));
 
       expectNotAValidationError(await readBody(response), 'query');
     });

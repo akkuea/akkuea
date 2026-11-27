@@ -8,6 +8,12 @@ export const stellarAddressSchema = z
   .length(56)
   .regex(/^G[A-Z2-7]{55}$/, "Invalid Stellar address format");
 
+/** Schema for a Soroban contract address. */
+export const stellarContractAddressSchema = z
+  .string()
+  .length(56)
+  .regex(/^C[A-Z2-7]{55}$/, "Invalid Stellar contract address format");
+
 /**
  * Schema for positive decimal amounts
  */

@@ -5,9 +5,9 @@ use super::oracle_types::{Asset, PriceData};
 use super::storage;
 use super::*;
 use soroban_sdk::{
-    testutils::{storage::Persistent as _, Address as _, Ledger as _},
+    testutils::{storage::Persistent as _, Address as _, Ledger as _, MockAuth, MockAuthInvoke},
     token::{StellarAssetClient, TokenClient},
-    Address, Env, Error, String, Symbol,
+    Address, Env, Error, IntoVal, String, Symbol,
 };
 
 use crate::{
@@ -1794,9 +1794,25 @@ fn test_repay_full_closes_position_and_releases_all_collateral() {
 fn test_repay_overpayment_is_clamped_to_current_debt() {
     let s = setup_borrow_test();
     let usdc_token = TokenClient::new(&s.env, &s.usdc_address);
+    let amount = 2_000_000_000_i128;
+    let token_transfer = [MockAuthInvoke {
+        contract: &s.usdc_address,
+        fn_name: "transfer",
+        args: (&s.borrower, &s.contract_id, &amount).into_val(&s.env),
+        sub_invokes: &[],
+    }];
+    let repay_call = MockAuthInvoke {
+        contract: &s.contract_id,
+        fn_name: "repay",
+        args: (&s.borrower, &s.pool_id, &amount).into_val(&s.env),
+        sub_invokes: &token_transfer,
+    };
+    s.env.mock_auths(&[MockAuth {
+        address: &s.borrower,
+        invoke: &repay_call,
+    }]);
 
-    s.contract_client
-        .repay(&s.borrower, &s.pool_id, &2_000_000_000);
+    s.contract_client.repay(&s.borrower, &s.pool_id, &amount);
 
     assert_eq!(usdc_token.balance(&s.borrower), 2_000_000_000);
     assert_eq!(s.contract_client.get_total_borrows(&s.pool_id), 0);

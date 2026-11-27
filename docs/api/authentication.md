@@ -178,13 +178,18 @@ All the following routes require a valid JWT in the `Authorization` header:
 
 ### Lending
 
-| Method | Route                         | Description         |
-| ------ | ----------------------------- | ------------------- |
-| POST   | `/lending/pools`              | Create lending pool |
-| POST   | `/lending/pools/:id/deposit`  | Deposit into pool   |
-| POST   | `/lending/pools/:id/withdraw` | Withdraw from pool  |
-| POST   | `/lending/pools/:id/borrow`   | Borrow from pool    |
-| POST   | `/lending/pools/:id/repay`    | Repay loan          |
+| Method | Route                                 | Description          |
+| ------ | ------------------------------------- | -------------------- |
+| POST   | `/lending/pools/:id/deposit/prepare`  | Prepare a deposit    |
+| POST   | `/lending/pools/:id/deposit/confirm`  | Confirm a deposit    |
+| POST   | `/lending/pools/:id/withdraw/prepare` | Prepare a withdrawal |
+| POST   | `/lending/pools/:id/withdraw/confirm` | Confirm a withdrawal |
+| POST   | `/lending/pools/:id/borrow/prepare`   | Prepare a borrow     |
+| POST   | `/lending/pools/:id/borrow/confirm`   | Confirm a borrow     |
+| POST   | `/lending/pools/:id/repay/prepare`    | Prepare a repayment  |
+| POST   | `/lending/pools/:id/repay/confirm`    | Confirm a repayment  |
+
+The legacy database-only `POST /lending/pools/:id/{deposit,withdraw,borrow,repay}` routes return `410 Gone`. Use the on-chain prepare/confirm routes above instead.
 
 ### Properties
 

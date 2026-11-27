@@ -5,6 +5,7 @@ import {
   Horizon,
   Keypair,
   Networks,
+  SorobanDataBuilder,
   StrKey,
   Transaction,
   TransactionBuilder,
@@ -69,6 +70,76 @@ export interface SharePurchaseEvent {
   totalCost: bigint;
 }
 
+/** The lending actions that are prepared and confirmed through Soroban. */
+export type LendingAction = 'deposit' | 'withdraw' | 'borrow' | 'repay';
+
+export interface PrepareLendingActionParams {
+  contractId: string;
+  action: LendingAction;
+  /** Authenticated wallet that signs and submits the transaction. */
+  wallet: string;
+  /** Contract-side pool identifier, not the database UUID. */
+  poolId: string;
+  amount: bigint;
+  collateralAsset?: string;
+  collateralAmount?: bigint;
+}
+
+export interface PrepareLiquidationParams {
+  contractId: string;
+  liquidator: string;
+  poolId: string;
+  borrowerAddress: string;
+  debtToCover: bigint;
+}
+
+export interface CreateLendingPoolParams {
+  contractId: string;
+  adminPublicKey: string;
+  adminSecret: string;
+  poolId: string;
+  name: string;
+  asset: string;
+  assetAddress: string;
+  collateralFactor: bigint;
+  liquidationThreshold: bigint;
+  liquidationPenalty: bigint;
+  closeFactor: bigint;
+  reserveFactor: number;
+}
+
+/** Deposit position fields read from the lending contract. */
+export interface ContractDepositPosition {
+  amount: bigint;
+  shares: bigint;
+}
+
+/** Borrow position fields read from the lending contract. */
+export interface ContractBorrowPosition {
+  principal: bigint;
+  collateralAmount: bigint;
+  collateralAsset: string;
+}
+
+/** Pool totals read from the contract's getters. */
+export interface LendingPoolTotals {
+  totalDeposits: bigint;
+  totalBorrows: bigint;
+  availableLiquidity: bigint;
+}
+
+/** A submitted contract call verified against Soroban RPC. */
+export interface VerifiedContractTransaction {
+  txHash: string;
+  sourceAccount: string;
+  contractId: string;
+  functionName: string;
+  /** Decoded native arguments of the single contract invocation. */
+  args: unknown[];
+  /** Amount actually repaid, decoded from the contract event. Present only for repay. */
+  actualAmount?: bigint;
+}
+
 /** Everything confirmed about a submitted `purchase_shares` transaction. */
 export interface VerifiedPurchaseTransaction {
   txHash: string;
@@ -87,6 +158,24 @@ export interface VerifiedPurchaseTransaction {
 
 /** Event name that identifies the `SharePurchase` event (snake_case topic 0). */
 const SHARE_PURCHASE_EVENT = 'share_purchase';
+const LENDING_ACTIONS = new Set(['deposit', 'withdraw', 'borrow', 'repay']);
+
+export function assembleLendingTransactionWithFeeBuffer(
+  transaction: Transaction,
+  simulation: SorobanRpc.Api.SimulateTransactionSuccessResponse,
+): TransactionBuilder {
+  const minimumResourceFee = BigInt(simulation.minResourceFee);
+  const bufferedResourceFee = minimumResourceFee + (minimumResourceFee + 1n) / 2n;
+  const transactionData = new SorobanDataBuilder(simulation.transactionData.build()).setResourceFee(
+    bufferedResourceFee.toString(),
+  );
+
+  return SorobanRpc.assembleTransaction(transaction, {
+    ...simulation,
+    minResourceFee: bufferedResourceFee.toString(),
+    transactionData,
+  });
+}
 
 /** Contract events as parsed by the Soroban RPC client from `getTransaction`. */
 type RpcContractEvent =
@@ -198,6 +287,21 @@ export class StellarService {
         sourceAccount,
       );
       if (typedTransaction) {
+        this.unwrapContractResult(typedTransaction.result);
+        if (LENDING_ACTIONS.has(method)) {
+          const { built, simulation } = typedTransaction;
+          if (
+            !(built instanceof Transaction) ||
+            !simulation ||
+            !SorobanRpc.Api.isSimulationSuccess(simulation)
+          ) {
+            throw new Error('Lending transaction simulation did not produce resources');
+          }
+          typedTransaction.built = assembleLendingTransactionWithFeeBuffer(
+            built,
+            simulation,
+          ).build();
+        }
         return typedTransaction.toXDR();
       }
 
@@ -222,7 +326,9 @@ export class StellarService {
       signerSecret,
     );
     if (typedTransaction) {
+      this.unwrapContractResult(typedTransaction.result);
       const sentTransaction = await typedTransaction.signAndSend();
+      this.unwrapContractResult(sentTransaction.result);
       return this.getSentTransactionHash(sentTransaction);
     }
 
@@ -348,6 +454,277 @@ export class StellarService {
   }
 
   /**
+   * Creates a lending pool on the defi-rwa contract with the admin signer.
+   * Resolves only once the transaction succeeded on-chain, so the caller can
+   * persist the database pool afterwards.
+   */
+  async createLendingPool(
+    params: CreateLendingPoolParams,
+  ): Promise<{ txHash: string; contractId: string }> {
+    this.assertValidContractId(params.contractId);
+    this.assertValidAddress(params.adminPublicKey);
+    this.assertValidContractId(params.assetAddress);
+    if (!params.poolId) {
+      throw ApiError.badRequest('Pool id is required');
+    }
+    if (!params.name || !params.asset) {
+      throw ApiError.badRequest('Pool name and asset are required');
+    }
+    if (params.collateralFactor <= BigInt(0) || params.liquidationThreshold <= BigInt(0)) {
+      throw ApiError.badRequest('Pool collateral factors must be greater than zero');
+    }
+    if (params.closeFactor <= BigInt(0)) {
+      throw ApiError.badRequest('Pool close factor must be greater than zero');
+    }
+
+    try {
+      const txHash = await this.callAndSubmitContract(
+        params.contractId,
+        'create_pool',
+        [
+          params.adminPublicKey,
+          params.poolId,
+          params.name,
+          params.asset,
+          params.assetAddress,
+          params.collateralFactor,
+          params.liquidationThreshold,
+          params.liquidationPenalty,
+          params.closeFactor,
+          params.reserveFactor,
+        ],
+        params.adminSecret,
+        params.adminPublicKey,
+      );
+
+      return { txHash, contractId: params.contractId };
+    } catch (error) {
+      throw ApiError.badRequest(
+        this.describeError(error, 'Failed to create the lending pool on-chain'),
+      );
+    }
+  }
+
+  /**
+   * Builds a simulated, unsigned lending transaction with the authenticated
+   * wallet as its source. The wallet signs and submits it; the API never signs
+   * user lending actions itself.
+   */
+  async prepareLendingAction(
+    params: PrepareLendingActionParams,
+  ): Promise<{ xdr: string; contractId: string }> {
+    this.assertValidContractId(params.contractId);
+    this.assertValidAddress(params.wallet);
+    if (!params.poolId) {
+      throw ApiError.badRequest('Pool id is required');
+    }
+    if (params.amount <= BigInt(0)) {
+      throw ApiError.badRequest('Amount must be greater than zero');
+    }
+
+    const args: unknown[] = [params.wallet, params.poolId, params.amount];
+    if (params.action === 'borrow') {
+      if (!params.collateralAsset) {
+        throw ApiError.badRequest('Collateral asset is required to borrow');
+      }
+      this.assertValidContractId(params.collateralAsset);
+      if (!params.collateralAmount || params.collateralAmount <= BigInt(0)) {
+        throw ApiError.badRequest('Collateral amount must be greater than zero');
+      }
+      args.push(params.collateralAsset, params.collateralAmount);
+    }
+
+    try {
+      const unsignedXdr = await this.callContract(
+        params.contractId,
+        params.action,
+        args,
+        params.wallet,
+      );
+
+      return { xdr: unsignedXdr, contractId: params.contractId };
+    } catch (error) {
+      throw ApiError.badRequest(
+        this.describeError(error, `Failed to prepare the ${params.action} transaction`),
+      );
+    }
+  }
+
+  /**
+   * Builds the unsigned four-argument `liquidate` transaction with the
+   * liquidator as its source.
+   */
+  async prepareLiquidation(
+    params: PrepareLiquidationParams,
+  ): Promise<{ xdr: string; contractId: string }> {
+    this.assertValidContractId(params.contractId);
+    this.assertValidAddress(params.liquidator);
+    this.assertValidAddress(params.borrowerAddress);
+    if (!params.poolId) {
+      throw ApiError.badRequest('Pool id is required');
+    }
+    if (params.debtToCover <= BigInt(0)) {
+      throw ApiError.badRequest('Debt to cover must be greater than zero');
+    }
+
+    try {
+      const unsignedXdr = await this.callContract(
+        params.contractId,
+        'liquidate',
+        [params.liquidator, params.poolId, params.borrowerAddress, params.debtToCover],
+        params.liquidator,
+      );
+
+      return { xdr: unsignedXdr, contractId: params.contractId };
+    } catch (error) {
+      throw ApiError.badRequest(
+        this.describeError(error, 'Failed to prepare the liquidation transaction'),
+      );
+    }
+  }
+
+  /** Pool totals read directly from the contract getters. */
+  async getLendingPoolTotals(
+    contractId: string,
+    poolId: string,
+    sourceAccount: string,
+  ): Promise<LendingPoolTotals> {
+    this.assertValidContractId(contractId);
+    const client = this.createDefiLendingClient(contractId, sourceAccount);
+
+    try {
+      const [deposits, borrows, liquidity] = await Promise.all([
+        client.getTotalDeposits(poolId),
+        client.getTotalBorrows(poolId),
+        client.getAvailableLiquidity(poolId),
+      ]);
+
+      return {
+        totalDeposits: this.requireContractResult(deposits.result, 'get_total_deposits'),
+        totalBorrows: this.requireContractResult(borrows.result, 'get_total_borrows'),
+        availableLiquidity: this.requireContractResult(liquidity.result, 'get_available_liquidity'),
+      };
+    } catch (error) {
+      throw ApiError.badRequest(
+        this.describeError(error, 'Failed to read the lending pool totals from the contract'),
+      );
+    }
+  }
+
+  /** The contract's deposit position for a wallet, or null when none exists. */
+  async getLendingDepositPosition(
+    contractId: string,
+    poolId: string,
+    wallet: string,
+    sourceAccount: string,
+  ): Promise<ContractDepositPosition | null> {
+    const client = this.createDefiLendingClient(contractId, sourceAccount);
+    const userDeposits = await client.getUserDeposits(wallet);
+    if (!userDeposits.result.includes(poolId)) {
+      return null;
+    }
+
+    const transaction = await client.getDepositPosition({ user: wallet, poolId });
+    return {
+      amount: transaction.result.amount,
+      shares: transaction.result.shares,
+    };
+  }
+
+  /** The contract's borrow position for a wallet, or null when none exists. */
+  async getLendingBorrowPosition(
+    contractId: string,
+    poolId: string,
+    wallet: string,
+    sourceAccount: string,
+  ): Promise<ContractBorrowPosition | null> {
+    const client = this.createDefiLendingClient(contractId, sourceAccount);
+    const userBorrows = await client.getUserBorrows(wallet);
+    if (!userBorrows.result.includes(poolId)) {
+      return null;
+    }
+
+    const transaction = await client.getBorrowPosition({ user: wallet, poolId });
+    return {
+      principal: transaction.result.principal,
+      collateralAmount: transaction.result.collateral_amount,
+      collateralAsset: transaction.result.collateral_asset,
+    };
+  }
+
+  /** Reads the contract health factor for a wallet, propagating read failures. */
+  async getLendingHealthFactor(
+    contractId: string,
+    poolId: string,
+    wallet: string,
+    sourceAccount: string,
+  ): Promise<bigint> {
+    const client = this.createDefiLendingClient(contractId, sourceAccount);
+    const transaction = await client.getHealthFactor({ user: wallet, poolId });
+    return transaction.result.unwrap();
+  }
+
+  private unwrapContractResult(result: unknown): void {
+    if (
+      typeof result === 'object' &&
+      result !== null &&
+      'unwrap' in result &&
+      typeof result.unwrap === 'function'
+    ) {
+      result.unwrap();
+    }
+  }
+
+  /**
+   * Loads a submitted transaction from Soroban RPC and verifies that it exists,
+   * succeeded, is not a fee bump, and invokes exactly the expected function on
+   * the expected contract. The decoded arguments are returned so the caller can
+   * check the acting wallet and pool against authenticated/database state.
+   */
+  async verifyContractTransaction(
+    txHash: string,
+    expectedContractId: string,
+    expectedFunction: string,
+  ): Promise<VerifiedContractTransaction> {
+    if (!/^[0-9a-fA-F]{64}$/.test(txHash)) {
+      throw ApiError.badRequest('Transaction hash must be a 64-character hex string');
+    }
+    this.assertValidContractId(expectedContractId);
+
+    const response = await this.getSorobanRpcServer().getTransaction(txHash);
+    if (response.status === SorobanRpc.Api.GetTransactionStatus.NOT_FOUND) {
+      throw ApiError.notFound(`Transaction ${txHash} was not found on Soroban RPC`);
+    }
+    if (response.status !== SorobanRpc.Api.GetTransactionStatus.SUCCESS) {
+      throw ApiError.validation(`Transaction ${txHash} did not succeed on-chain`);
+    }
+    if (response.feeBump) {
+      throw ApiError.validation(
+        `Transaction ${txHash} is a fee bump; only single transactions can be confirmed`,
+      );
+    }
+
+    const { sourceAccount, args } = this.parseContractInvocation(
+      response.envelopeXdr,
+      expectedContractId,
+      expectedFunction,
+    );
+    const actualAmount =
+      expectedFunction === 'repay'
+        ? this.verifyRepayEvent(args, this.extractContractEvents(response), expectedContractId)
+        : undefined;
+
+    return {
+      txHash: response.txHash,
+      sourceAccount,
+      contractId: expectedContractId,
+      functionName: expectedFunction,
+      args: args.map((arg) => scValToNative(arg)),
+      ...(actualAmount !== undefined ? { actualAmount } : {}),
+    };
+  }
+
+  /**
    * Loads a submitted transaction from Soroban RPC and verifies everything the
    * API can check structurally: it exists, it succeeded, it is not a fee bump,
    * it invokes `purchase_shares` on the expected contract with well-formed
@@ -410,39 +787,11 @@ export class StellarService {
     envelope: xdr.TransactionEnvelope,
     expectedContractId: string,
   ): { sourceAccount: string; call: VerifiedPurchaseTransaction['call'] } {
-    const transaction = new Transaction(envelope, this.networkPassphrase);
-    if (transaction.operations.length !== 1) {
-      throw ApiError.validation(
-        'A share purchase transaction must contain exactly one contract invocation',
-      );
-    }
-
-    const [operation] = transaction.operations;
-    if (operation?.type !== 'invokeHostFunction') {
-      throw ApiError.validation(
-        'A share purchase transaction must invoke the tokenization contract',
-      );
-    }
-
-    // The SDK types the parsed operation record loosely; at runtime an
-    // invokeHostFunction operation always carries the xdr host function.
-    const func = (operation as unknown as { func?: xdr.HostFunction }).func;
-    if (!func || func.type !== 'hostFunctionTypeInvokeContract') {
-      throw ApiError.validation('A share purchase transaction must invoke a contract function');
-    }
-
-    const { contractAddress, functionName, args } = func.invokeContract;
-    const contractId = Address.fromScAddress(contractAddress).toString();
-    if (contractId !== expectedContractId) {
-      throw ApiError.validation(
-        `Transaction invokes contract ${contractId}, expected ${expectedContractId}`,
-      );
-    }
-    if (functionName.toString() !== 'purchase_shares') {
-      throw ApiError.validation(
-        `Transaction calls ${functionName.toString()}, expected purchase_shares`,
-      );
-    }
+    const { sourceAccount, args } = this.parseContractInvocation(
+      envelope,
+      expectedContractId,
+      'purchase_shares',
+    );
     if (args.length !== 4) {
       throw ApiError.validation('purchase_shares must be called with exactly four arguments');
     }
@@ -452,7 +801,7 @@ export class StellarService {
     }
 
     return {
-      sourceAccount: transaction.source,
+      sourceAccount,
       call: {
         buyer: this.asNativeAddress(buyerArg),
         propertyId: this.asNativeBigInt(propertyIdArg),
@@ -460,6 +809,62 @@ export class StellarService {
         paymentToken: this.asNativeAddress(paymentTokenArg),
       },
     };
+  }
+
+  /**
+   * Decodes the single contract invocation a confirmed transaction must
+   * contain. Anything else (no invoke operation, several operations, a
+   * different contract or function) is rejected.
+   */
+  private parseContractInvocation(
+    envelope: xdr.TransactionEnvelope,
+    expectedContractId: string,
+    expectedFunction: string,
+  ): { sourceAccount: string; args: xdr.ScVal[] } {
+    const transaction = new Transaction(envelope, this.networkPassphrase);
+    if (transaction.operations.length !== 1) {
+      throw ApiError.validation(
+        `A ${expectedFunction} transaction must contain exactly one contract invocation`,
+      );
+    }
+
+    const [operation] = transaction.operations;
+    if (operation?.type !== 'invokeHostFunction') {
+      throw ApiError.validation(
+        `A ${expectedFunction} transaction must invoke a contract function`,
+      );
+    }
+
+    // The SDK types the parsed operation record loosely; at runtime an
+    // invokeHostFunction operation always carries the xdr host function.
+    const func = (operation as unknown as { func?: xdr.HostFunction }).func;
+    if (!func || func.type !== 'hostFunctionTypeInvokeContract') {
+      throw ApiError.validation(
+        `A ${expectedFunction} transaction must invoke a contract function`,
+      );
+    }
+
+    const { contractAddress, functionName, args } = func.invokeContract;
+    const contractId = Address.fromScAddress(contractAddress).toString();
+    if (contractId !== expectedContractId) {
+      throw ApiError.validation(
+        `Transaction invokes contract ${contractId}, expected ${expectedContractId}`,
+      );
+    }
+    if (functionName.toString() !== expectedFunction) {
+      throw ApiError.validation(
+        `Transaction calls ${functionName.toString()}, expected ${expectedFunction}`,
+      );
+    }
+
+    return { sourceAccount: transaction.source, args };
+  }
+
+  private requireContractResult<T>(result: T | undefined, getter: string): T {
+    if (result === undefined) {
+      throw ApiError.badRequest(`Contract getter ${getter} returned no result`);
+    }
+    return result;
   }
 
   /**
@@ -494,6 +899,78 @@ export class StellarService {
         buyer: String(data.buyer),
         shares: this.asEventAmount(data.shares),
         totalCost: this.asEventAmount(data.total_cost),
+      };
+    }
+
+    return null;
+  }
+
+  private verifyRepayEvent(
+    args: xdr.ScVal[],
+    events: RpcContractEvent[],
+    expectedContractId: string,
+  ): bigint {
+    if (args.length !== 3 || !args[0] || !args[1] || !args[2]) {
+      throw ApiError.validation('repay must be called with exactly three arguments');
+    }
+
+    const borrower = this.asNativeAddress(args[0]);
+    const poolId = scValToNative(args[1]);
+    const requestedAmount = this.asNativeBigInt(args[2]);
+    if (typeof poolId !== 'string') {
+      throw ApiError.validation('repay pool_id argument must be a string');
+    }
+
+    const event = this.parseRepayEvent(events, expectedContractId);
+    if (!event) {
+      throw ApiError.validation(
+        `Transaction emitted no Repay event for contract ${expectedContractId}`,
+      );
+    }
+    if (event.borrower !== borrower || event.poolId !== poolId) {
+      throw ApiError.validation('Repay event does not match the transaction arguments');
+    }
+    if (event.amount <= 0n || event.amount > requestedAmount) {
+      throw ApiError.validation('Repay event amount is outside the requested repayment amount');
+    }
+
+    return event.amount;
+  }
+
+  private parseRepayEvent(
+    events: RpcContractEvent[],
+    expectedContractId: string,
+  ): { borrower: string; poolId: string; amount: bigint } | null {
+    for (const event of events) {
+      const eventContractId = event.contractId
+        ? Address.contract(event.contractId.toBytes()).toString()
+        : null;
+      if (eventContractId !== expectedContractId || event.body.type !== 'v0') {
+        continue;
+      }
+
+      const [topic] = event.body.v0.topics;
+      if (topic?.type !== 'scvSymbol' || topic.value !== 'repay') {
+        continue;
+      }
+      if (event.body.v0.data.type !== 'scvMap') {
+        throw ApiError.validation('Repay event data must be a map');
+      }
+
+      const data = scValToNative(event.body.v0.data);
+      if (
+        typeof data !== 'object' ||
+        data === null ||
+        typeof data.borrower !== 'string' ||
+        typeof data.pool_id !== 'string'
+      ) {
+        throw ApiError.validation('Repay event is missing its borrower or pool_id');
+      }
+
+      return {
+        borrower: data.borrower,
+        poolId: data.pool_id,
+        amount: this.asEventAmount(data.amount),
       };
     }
 
@@ -549,7 +1026,7 @@ export class StellarService {
     if (typeof value === 'string' && /^-?\d+$/.test(value)) {
       return BigInt(value);
     }
-    throw ApiError.validation('SharePurchase event is missing an integer amount');
+    throw ApiError.validation('Contract event is missing an integer amount');
   }
 
   /** Prefers the underlying cause's message over the generic wrapper. */
@@ -779,7 +1256,22 @@ export class StellarService {
           collateralFactor: this.asBigInt(args[5]),
           liquidationThreshold: this.asBigInt(args[6]),
           liquidationPenalty: this.asBigInt(args[7]),
-          reserveFactor: this.asNumber(args[8]),
+          closeFactor: this.asBigInt(args[8]),
+          reserveFactor: this.asNumber(args[9]),
+        });
+      case 'liquidate':
+        return lendingClient.liquidate({
+          liquidator: this.asAddress(args[0]),
+          poolId: this.asString(args[1]),
+          borrowerAddress: this.asAddress(args[2]),
+          debtToCover: this.asBigInt(args[3]),
+        });
+      case 'get_available_liquidity':
+        return lendingClient.getAvailableLiquidity(this.asString(args[0]));
+      case 'get_health_factor':
+        return lendingClient.getHealthFactor({
+          user: this.asAddress(args[0]),
+          poolId: this.asString(args[1]),
         });
       case 'deposit':
         return lendingClient.deposit({

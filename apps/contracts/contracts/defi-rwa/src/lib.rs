@@ -118,20 +118,16 @@ fn require_admin(env: &Env, caller: &Address) {
 fn accrue_interest_internal(env: &Env, pool_id: &String) -> Result<(), ContractError> {
     let last_accrual = InterestStorage::get_last_accrual(env, pool_id);
     let now = env.ledger().timestamp();
-
-    if now <= last_accrual {
-        return Ok(());
-    }
-
-    let time_elapsed = now
-        .checked_sub(last_accrual)
-        .ok_or(ContractError::BalanceOverflow)?;
+    let time_elapsed = now.saturating_sub(last_accrual);
+    let accrual_timestamp = now.max(last_accrual);
+    let reserves = PoolStorage::get_reserves(env, pool_id);
+    // Transactions can execute in a later ledger than simulation, so mark conditional writes now.
+    PoolStorage::set_reserves(env, pool_id, reserves);
     let total_deposits = PoolStorage::get_total_deposits(env, pool_id);
     let total_borrows = PoolStorage::get_total_borrows(env, pool_id);
-    let reserves = PoolStorage::get_reserves(env, pool_id);
 
     if total_borrows == 0 {
-        InterestStorage::set_last_accrual(env, pool_id, now);
+        InterestStorage::set_last_accrual(env, pool_id, accrual_timestamp);
         return Ok(());
     }
 
@@ -192,7 +188,7 @@ fn accrue_interest_internal(env: &Env, pool_id: &String) -> Result<(), ContractE
         PoolStorage::add_reserves(env, pool_id, reserve_income)?;
     }
 
-    InterestStorage::set_last_accrual(env, pool_id, now);
+    InterestStorage::set_last_accrual(env, pool_id, accrual_timestamp);
     Ok(())
 }
 
@@ -1128,15 +1124,9 @@ impl PropertyTokenContract {
         let (updated_position, repaid_amount, remaining_debt, collateral_released) =
             PositionStorage::apply_repayment(&env, &position, amount)?;
 
-        let pool_token = token::Client::new(&env, &pool.asset_address);
-        pool_token.transfer(&borrower, &env.current_contract_address(), &repaid_amount);
-
-        let collateral_token = token::Client::new(&env, &position.collateral_asset);
-        collateral_token.transfer(
-            &env.current_contract_address(),
-            &borrower,
-            &collateral_released,
-        );
+        let refund_amount = amount
+            .checked_sub(repaid_amount)
+            .ok_or(ContractError::BalanceOverflow)?;
 
         let current_index = InterestStorage::get_interest_index(&env, &pool_id);
         let result_position = match &updated_position {
@@ -1155,11 +1145,6 @@ impl PropertyTokenContract {
             },
         };
 
-        match updated_position {
-            Some(updated) => PositionStorage::set_borrow(&env, &updated),
-            None => PositionStorage::remove_borrow(&env, &borrower, &pool_id),
-        }
-
         let total_borrows = PoolStorage::get_total_borrows(&env, &pool_id);
         let updated_total_borrows = if repaid_amount > total_borrows {
             0
@@ -1168,7 +1153,25 @@ impl PropertyTokenContract {
                 .checked_sub(repaid_amount)
                 .ok_or(ContractError::BalanceOverflow)?
         };
+
+        match updated_position {
+            Some(updated) => PositionStorage::set_borrow(&env, &updated),
+            None => PositionStorage::remove_borrow(&env, &borrower, &pool_id),
+        }
         PoolStorage::set_total_borrows(&env, &pool_id, updated_total_borrows);
+
+        let pool_token = token::Client::new(&env, &pool.asset_address);
+        pool_token.transfer(&borrower, &env.current_contract_address(), &amount);
+        if refund_amount > 0 {
+            pool_token.transfer(&env.current_contract_address(), &borrower, &refund_amount);
+        }
+
+        let collateral_token = token::Client::new(&env, &position.collateral_asset);
+        collateral_token.transfer(
+            &env.current_contract_address(),
+            &borrower,
+            &collateral_released,
+        );
 
         LendingEvents::repay(
             &env,

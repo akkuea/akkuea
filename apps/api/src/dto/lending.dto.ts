@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { stellarAddressSchema, positiveAmountSchema } from '@akkuea/shared';
+import {
+  stellarAddressSchema,
+  stellarContractAddressSchema,
+  positiveAmountSchema,
+} from '@akkuea/shared';
 
 /**
  * Decimal string that allows zero (for rates/factors)
@@ -12,10 +16,11 @@ const decimalString = z.string().regex(/^\d+(\.\d+)?$/, 'Must be a decimal strin
 export const CreatePoolDto = z.object({
   name: z.string().min(1, 'Pool name is required').max(255),
   asset: z.string().min(1, 'Asset symbol is required').max(20),
-  assetAddress: stellarAddressSchema,
+  assetAddress: stellarContractAddressSchema,
   collateralFactor: decimalString,
   liquidationThreshold: decimalString,
   liquidationPenalty: decimalString,
+  closeFactor: decimalString,
   reserveFactor: z.coerce.number().int().nonnegative().default(1000),
 });
 
@@ -39,7 +44,7 @@ export const WithdrawDto = z.object({
 export const BorrowDto = z.object({
   borrowAmount: positiveAmountSchema,
   collateralAmount: positiveAmountSchema,
-  collateralAsset: stellarAddressSchema,
+  collateralAsset: stellarContractAddressSchema,
 });
 
 /**
@@ -49,7 +54,26 @@ export const RepayDto = z.object({
   amount: positiveAmountSchema,
 });
 
+/**
+ * Confirmation of a submitted on-chain action
+ */
+export const ConfirmActionDto = z.object({
+  txHash: z
+    .string()
+    .regex(/^[0-9a-fA-F]{64}$/, 'Transaction hash must be a 64-character hex string'),
+});
+
+/**
+ * Liquidation preparation request
+ */
+export const LiquidatePrepareDto = z.object({
+  liquidator: stellarAddressSchema,
+  debtToCover: positiveAmountSchema,
+});
+
 export type CreatePoolInput = z.infer<typeof CreatePoolDto>;
+export type ConfirmActionInput = z.infer<typeof ConfirmActionDto>;
+export type LiquidatePrepareInput = z.infer<typeof LiquidatePrepareDto>;
 export type DepositInput = z.infer<typeof DepositDto>;
 export type WithdrawInput = z.infer<typeof WithdrawDto>;
 export type BorrowInput = z.infer<typeof BorrowDto>;

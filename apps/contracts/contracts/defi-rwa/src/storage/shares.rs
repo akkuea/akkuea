@@ -12,11 +12,10 @@ pub mod shares_bump {
     pub const PERSISTENT_THRESHOLD: u32 = 1_296_000; // ~150 days
 }
 
-/// Share balance tracking for property ownership
-///
-/// This module manages the ownership of property shares. Each balance entry
-/// represents how many shares a specific address owns for a given property.
-/// Storage is optimised by using composite keys (property_id, owner_address).
+// Share balance tracking for property ownership.
+// This module manages the ownership of property shares. Each balance entry
+// represents how many shares a specific address owns for a given property.
+// Storage is optimised by using composite keys (property_id, owner_address).
 
 /// Gets the share balance for a specific owner and property
 #[allow(dead_code)]

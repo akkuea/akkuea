@@ -1,7 +1,7 @@
 use soroban_sdk::{contracttype, Address, Env, String};
 
-use crate::access::roles::RoleKey;
 use super::keys::StorageKey;
+use crate::access::roles::RoleKey;
 
 /// Token configuration for the property tokenization contract
 ///

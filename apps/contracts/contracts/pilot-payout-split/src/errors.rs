@@ -69,4 +69,7 @@ pub enum PayoutError {
     /// A `reason` passed to `review_evidence`, `flag_dispute` or `exit` is
     /// longer than `MAX_REASON_LEN` bytes.
     ReasonTooLong = 35,
+    /// `release_dust` was invoked with an amount greater than the accumulated
+    /// unreleased dust, or there is no dust to release.
+    InsufficientDust = 36,
 }

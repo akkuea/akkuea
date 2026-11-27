@@ -642,8 +642,8 @@ impl PilotPayoutSplit {
     ///
     /// Rounding-dust policy: The 10% platform fee is calculated via integer division (truncating towards zero).
     /// The remainder (total_income - platform_fee) is the holder_amount. The pro-rata distributions are also
-    /// calculated via integer division. Any remaining dust from the pro-rata split is kept in the contract and
-    /// reported as `dust` in the `DistributionSummary`.
+    /// calculated via integer division. Any remaining dust from the pro-rata split is tracked in a running total
+    /// (`TotalDust`), reported as `dust` in the `DistributionSummary`, and releasable via `release_dust`.
     pub fn execute_distribution(
         env: Env,
         operator: Address,
@@ -713,9 +713,11 @@ impl PilotPayoutSplit {
         // income *on top of* every outstanding reserve is what guarantees a
         // withheld share can never be spent on someone else's payout.
         let reserved_before = Storage::total_withheld(&env);
+        let dust_before = Storage::total_dust(&env);
         let required_balance = record
             .total_income
             .checked_add(reserved_before)
+            .and_then(|value| value.checked_add(dust_before))
             .unwrap_or_else(|| panic_with_error!(&env, PayoutError::ArithmeticOverflow));
         if contract_balance < required_balance {
             panic_with_error!(&env, PayoutError::InsufficientPayoutBalance);
@@ -960,6 +962,9 @@ impl PilotPayoutSplit {
                 .unwrap_or_else(|| panic_with_error!(&env, PayoutError::ArithmeticOverflow));
             Storage::set_total_withheld(&env, reserved_after);
         }
+        if dust > 0 {
+            Storage::add_dust(&env, dust);
+        }
         events::emit_distribution_executed(&env, summary.clone());
         summary
     }
@@ -1114,6 +1119,64 @@ impl PilotPayoutSplit {
     /// the sum of outstanding holder claims without scanning every holder.
     pub fn total_withheld_balance(env: Env) -> i128 {
         Storage::total_withheld(&env)
+    }
+
+    /// Return the total unreleased rounding dust accumulated across all distribution cycles.
+    pub fn total_dust(env: Env) -> i128 {
+        Storage::total_dust(&env)
+    }
+
+    /// Release accumulated rounding dust to the stored platform fee recipient.
+    ///
+    /// Gated by the two-signer authorization (operator and ally) to maintain
+    /// mutual oversight on all fund movements. Pays directly to the stored
+    /// `PlatformFeeRecipient`, preventing recipient redirection.
+    ///
+    /// Deliberately NOT gated by `exit`: allows releasing accumulated dust even
+    /// after the pilot terminates, preventing terminal funds stranding.
+    ///
+    /// Checked arithmetic ensures the release amount cannot exceed `total_dust`,
+    /// cannot be released twice, and cannot encroach upon funds reserved in
+    /// `TotalWithheld`.
+    pub fn release_dust(env: Env, operator: Address, ally: Address, amount: i128) -> i128 {
+        extend_instance(&env);
+        operator.require_auth();
+        ally.require_auth();
+        Self::require_operator(&env, &operator);
+        Self::require_ally(&env, &ally);
+        Self::require_not_paused(&env);
+        let _guard = ExecutionGuard::acquire(&env).unwrap_or_else(|e| panic_with_error!(&env, e));
+
+        if amount <= 0 {
+            panic_with_error!(&env, PayoutError::ZeroAmount);
+        }
+
+        let accumulated = Storage::total_dust(&env);
+        if amount > accumulated {
+            panic_with_error!(&env, PayoutError::InsufficientDust);
+        }
+
+        let recipient = Storage::address(&env, &DataKey::PlatformFeeRecipient)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+
+        let usdc_token_address = Storage::address(&env, &DataKey::UsdcToken)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::NotInitialized));
+        let usdc = token::Client::new(&env, &usdc_token_address);
+        let contract_address = env.current_contract_address();
+        let contract_balance = usdc.balance(&contract_address);
+
+        let total_withheld = Storage::total_withheld(&env);
+        let required_balance = amount
+            .checked_add(total_withheld)
+            .unwrap_or_else(|| panic_with_error!(&env, PayoutError::ArithmeticOverflow));
+        if contract_balance < required_balance {
+            panic_with_error!(&env, PayoutError::InsufficientPayoutBalance);
+        }
+
+        Storage::sub_dust(&env, amount);
+        usdc.transfer(&contract_address, &recipient, &amount);
+        events::emit_dust_released(&env, recipient, amount);
+        amount
     }
 
     /// Release USDC this contract withheld after a failed EURC swap leg.
@@ -4843,6 +4906,232 @@ pub mod tests {
         assert_eq!(instance_ttl, TTL_EXTEND_TO);
     }
 
+    #[test]
+    fn multiple_distribution_cycles_accumulate_dust_exact_read() {
+        let s = setup_with_balance_values(&[1, 1, 1]);
+        s.usdc.mint(&s.payout_id, &100_000);
+
+        // Cycle 1: 101 income => 10 fee, 91 holder pool => 30*3=90 paid, 1 dust
+        let c1 = cycle(&s.env, "2026-01");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c1,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/dust-c1"),
+            &101,
+        );
+        let summary1 = s
+            .payout
+            .execute_distribution(&s.operator, &s.ally, &c1, &TEST_MIN_RATE);
+        assert_eq!(summary1.dust, 1);
+        assert_eq!(s.payout.total_dust(), 1);
+
+        // Cycle 2: 101 income => 1 dust
+        let c2 = cycle(&s.env, "2026-02");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c2,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/dust-c2"),
+            &101,
+        );
+        let summary2 = s
+            .payout
+            .execute_distribution(&s.operator, &s.ally, &c2, &TEST_MIN_RATE);
+        assert_eq!(summary2.dust, 1);
+        assert_eq!(s.payout.total_dust(), 2);
+
+        // Cycle 3: 104 income => 10 fee, 94 holder pool => 31*3=93 paid, 1 dust
+        let c3 = cycle(&s.env, "2026-03");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c3,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/dust-c3"),
+            &104,
+        );
+        let summary3 = s
+            .payout
+            .execute_distribution(&s.operator, &s.ally, &c3, &TEST_MIN_RATE);
+        assert_eq!(summary3.dust, 1);
+        assert_eq!(s.payout.total_dust(), 3);
+    }
+
+    #[test]
+    fn release_dust_transfers_exact_usdc_and_updates_running_total() {
+        let s = setup_with_balance_values(&[1, 1, 1]);
+        s.usdc.mint(&s.payout_id, &100_000);
+
+        let c1 = cycle(&s.env, "2026-01");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c1,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/dust-rel-1"),
+            &101,
+        );
+        s.payout
+            .execute_distribution(&s.operator, &s.ally, &c1, &TEST_MIN_RATE);
+
+        let c2 = cycle(&s.env, "2026-02");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c2,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/dust-rel-2"),
+            &101,
+        );
+        s.payout
+            .execute_distribution(&s.operator, &s.ally, &c2, &TEST_MIN_RATE);
+
+        assert_eq!(s.payout.total_dust(), 2);
+        let fee_recipient_before = s.usdc.balance(&s.fee_recipient);
+
+        // Partial release: release 1 dust to stored fee recipient
+        let released1 = s.payout.release_dust(&s.operator, &s.ally, &1);
+        assert_eq!(released1, 1);
+        assert_eq!(s.payout.total_dust(), 1);
+        assert_eq!(s.usdc.balance(&s.fee_recipient), fee_recipient_before + 1);
+
+        // Full release of remaining dust
+        let released2 = s.payout.release_dust(&s.operator, &s.ally, &1);
+        assert_eq!(released2, 1);
+        assert_eq!(s.payout.total_dust(), 0);
+        assert_eq!(s.usdc.balance(&s.fee_recipient), fee_recipient_before + 2);
+
+        // Cannot release dust twice
+        let res = s.payout.try_release_dust(&s.operator, &s.ally, &1);
+        assert_eq!(
+            res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::InsufficientDust as u32
+            )))
+        );
+    }
+
+    #[test]
+    fn release_dust_rejects_invalid_amount_or_unauthorized_state() {
+        let s = setup_with_balance_values(&[1, 1, 1]);
+        s.usdc.mint(&s.payout_id, &100_000);
+
+        let c1 = cycle(&s.env, "2026-01");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c1,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/dust-inv"),
+            &101,
+        );
+        s.payout
+            .execute_distribution(&s.operator, &s.ally, &c1, &TEST_MIN_RATE);
+        assert_eq!(s.payout.total_dust(), 1);
+
+        // Zero amount rejected
+        let zero_res = s.payout.try_release_dust(&s.operator, &s.ally, &0);
+        assert_eq!(
+            zero_res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ZeroAmount as u32
+            )))
+        );
+
+        // Exceeding total dust rejected
+        let excess_res = s.payout.try_release_dust(&s.operator, &s.ally, &2);
+        assert_eq!(
+            excess_res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::InsufficientDust as u32
+            )))
+        );
+
+        // Paused contract blocks release
+        s.payout.pause(&s.admin);
+        let paused_res = s.payout.try_release_dust(&s.operator, &s.ally, &1);
+        assert_eq!(
+            paused_res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::ContractPaused as u32
+            )))
+        );
+        s.payout.unpause(&s.admin);
+
+        // Exited contract allows release so dust is never stranded
+        s.payout.exit(
+            &s.operator,
+            &s.ally,
+            &String::from_str(&s.env, "pilot complete"),
+        );
+        let released_after_exit = s.payout.release_dust(&s.operator, &s.ally, &1);
+        assert_eq!(released_after_exit, 1);
+        assert_eq!(s.payout.total_dust(), 0);
+    }
+
+    #[test]
+    fn release_dust_never_touches_total_withheld() {
+        let s = setup_with_balance_values(&[1, 1]);
+        s.router.set_reserves(&0, &0);
+        let eurc_holder = s.holders.get(0).unwrap();
+        s.payout
+            .set_currency_preference(&eurc_holder, &Currency::Eurc);
+
+        // Income: 101 => fee: 10, holder amount: 91 => 45 per holder, 1 dust.
+        // eurc_holder leg fails with strict rate => 45 USDC withheld.
+        let c1 = cycle(&s.env, "2026-01");
+        s.payout.record_evidence(
+            &s.operator,
+            &s.ally,
+            &c1,
+            &evidence_hash(&s.env),
+            &String::from_str(&s.env, "ipfs://evidence/dust-withheld"),
+            &101,
+        );
+        s.usdc.mint(&s.payout_id, &101);
+        s.payout
+            .execute_distribution(&s.operator, &s.ally, &c1, &9_900_000i128);
+
+        assert_eq!(s.payout.total_withheld_balance(), 45);
+        assert_eq!(s.payout.total_dust(), 1);
+
+        // Burn down any initial test-setup surplus to exactly 45 (withheld) + 1 (dust) = 46.
+        let initial_balance = s.usdc.balance(&s.payout_id);
+        s.usdc.burn(&s.payout_id, &(initial_balance - 46));
+        assert_eq!(s.usdc.balance(&s.payout_id), 46);
+
+        // If contract balance is artificially burned below withheld + dust:
+        // burn 1 so balance is 45 (only covers withheld, not dust).
+        s.usdc.burn(&s.payout_id, &1);
+        assert_eq!(s.usdc.balance(&s.payout_id), 45);
+
+        // Attempting to release dust now must fail because it would encroach on withheld funds.
+        let fail_res = s.payout.try_release_dust(&s.operator, &s.ally, &1);
+        assert_eq!(
+            fail_res,
+            Err(Ok(Error::from_contract_error(
+                PayoutError::InsufficientPayoutBalance as u32
+            )))
+        );
+
+        // Restore the 1 USDC so balance is 46 again.
+        s.usdc.mint(&s.payout_id, &1);
+
+        // Now release succeeds, leaving exactly the 45 withheld USDC.
+        let released = s.payout.release_dust(&s.operator, &s.ally, &1);
+        assert_eq!(released, 1);
+        assert_eq!(s.payout.total_dust(), 0);
+        assert_eq!(s.usdc.balance(&s.payout_id), 45);
+
+        // Holder can claim their withheld funds untouched.
+        s.payout.claim_withheld(&eurc_holder);
+        assert_eq!(s.usdc.balance(&eurc_holder), 45);
+        assert_eq!(s.usdc.balance(&s.payout_id), 0);
+        assert_eq!(s.payout.total_withheld_balance(), 0);
+    }
     /// A string of exactly `len` ASCII bytes.
     fn string_of_len(env: &Env, len: u32) -> String {
         String::from_bytes(env, &std::vec![b'a'; len as usize])

@@ -5,6 +5,13 @@ use soroban_sdk::{contracttype, Address, Symbol};
 /// This enum defines unique storage keys to prevent collisions and organize
 /// contract data efficiently. Each key type corresponds to a specific data
 /// structure stored on-chain.
+///
+/// NOTE: `StorageKey::Admin` has been removed (#1411). The admin is now stored
+/// exclusively through `RoleKey::Admin` in `AdminControl` (access/admin.rs).
+/// Using a single key for the admin eliminates the aliasing risk where
+/// `StorageKey::Admin` and `RoleKey::Admin` serialized to the same bytes by
+/// coincidence â€” any future enum reordering or rename would have silently
+/// broken every admin check.
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StorageKey {
@@ -23,10 +30,6 @@ pub enum StorageKey {
     /// Total shares issued for a property
     /// Key: TotalShares(property_id)
     TotalShares(u64),
-
-    /// Admin address with special permissions
-    /// Single instance per contract
-    Admin,
 
     /// Property counter to generate unique property IDs
     /// Single instance per contract
@@ -62,7 +65,6 @@ impl StorageKey {
             StorageKey::Property(_) => Symbol::new(&soroban_sdk::Env::default(), "Prop"),
             StorageKey::ShareBalance(_, _) => Symbol::new(&soroban_sdk::Env::default(), "Share"),
             StorageKey::TotalShares(_) => Symbol::new(&soroban_sdk::Env::default(), "TotShrs"),
-            StorageKey::Admin => Symbol::new(&soroban_sdk::Env::default(), "Admin"),
             StorageKey::PropertyCounter => Symbol::new(&soroban_sdk::Env::default(), "PropCnt"),
             StorageKey::Allowance(_, _, _) => Symbol::new(&soroban_sdk::Env::default(), "Allow"),
             StorageKey::AvailableShares(_) => {

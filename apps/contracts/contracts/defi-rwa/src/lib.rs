@@ -306,6 +306,10 @@ impl PropertyTokenContract {
     // ─── Constructor ───────────────────────────
     pub fn __constructor(env: Env, admin: Address) {
         set_lending_admin(&env, &admin);
+        // Initialize AdminControl only if not already set (idempotent for test harness).
+        if !AdminControl::is_initialized(&env) {
+            AdminControl::initialize(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
+        }
     }
 
     // ─── Share Management (Admin) ──────────────
@@ -1289,6 +1293,7 @@ impl PropertyTokenContract {
         caller.require_auth();
         AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
         PriceOracle::set_oracle_address(&env, &oracle_address);
+        PropertyEvents::oracle_updated(&env, oracle_address, caller);
     }
 
     /// Configure oracle guardrail parameters.
@@ -1298,10 +1303,14 @@ impl PropertyTokenContract {
     pub fn set_oracle_config(env: Env, caller: Address, max_age: u64, min_price: i128) {
         caller.require_auth();
         AdminControl::require_admin(&env, &caller).unwrap_or_else(|e| panic_with_error!(&env, e));
+        if min_price < 0 {
+            panic!("min_price must be non-negative");
+        }
         if max_age > 0 {
             PriceOracle::set_max_age(&env, max_age);
         }
         PriceOracle::set_min_price(&env, min_price);
+        PropertyEvents::oracle_config_updated(&env, max_age, min_price, caller);
     }
 
     // ─── Query Views ────────────────────────────
@@ -1439,11 +1448,81 @@ impl PropertyTokenContract {
         admin.require_auth();
         AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
         RoleStorage::grant_role(&env, &target, &Role::EmergencyGuard);
+        PropertyEvents::emergency_role_granted(&env, target, admin);
     }
 
     pub fn revoke_emergency_role(env: Env, admin: Address, target: Address) {
         admin.require_auth();
         AdminControl::require_admin(&env, &admin).unwrap_or_else(|e| panic_with_error!(&env, e));
         RoleStorage::revoke_role(&env, &target, &Role::EmergencyGuard);
+        PropertyEvents::emergency_role_revoked(&env, target, admin);
+    }
+
+    // ─── Two-step Admin Transfer ────────────────
+
+    /// Initiate a two-step admin transfer. The current admin calls this to
+    /// nominate `new_admin`; the transfer is not complete until `new_admin`
+    /// calls `transfer_admin_accept`.
+    pub fn transfer_admin_start(env: Env, caller: Address, new_admin: Address) {
+        caller.require_auth();
+        AdminControl::transfer_admin_start(&env, &caller, &new_admin)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+        PropertyEvents::admin_transfer_started(&env, caller, new_admin);
+    }
+
+    /// Complete a pending admin transfer. Must be called by the nominated
+    /// `new_admin` address.
+    pub fn transfer_admin_accept(env: Env, new_admin: Address) {
+        new_admin.require_auth();
+        let old_admin = AdminControl::get_admin(&env).expect("admin not set");
+        AdminControl::transfer_admin_accept(&env, &new_admin)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+        PropertyEvents::admin_transfer_completed(&env, old_admin, new_admin);
+    }
+
+    /// Cancel a pending admin transfer. Can only be called by the current admin.
+    pub fn transfer_admin_cancel(env: Env, caller: Address) {
+        caller.require_auth();
+        AdminControl::transfer_admin_cancel(&env, &caller)
+            .unwrap_or_else(|e| panic_with_error!(&env, e));
+        PropertyEvents::admin_transfer_cancelled(&env, caller);
+    }
+
+    /// Return the pending admin address, if a transfer has been initiated.
+    pub fn pending_admin(env: Env) -> Option<Address> {
+        AdminControl::get_pending_admin(&env)
+    }
+
+    // ─── Race-safe Allowance ────────────────────
+
+    /// Atomically increase the spender's allowance by `delta`.
+    /// Avoids the ERC-20 front-running race: use this instead of `approve`
+    /// when adjusting an existing allowance.
+    pub fn increase_allowance(
+        env: Env,
+        owner: Address,
+        spender: Address,
+        property_id: u64,
+        delta: u64,
+    ) {
+        owner.require_auth();
+        let current = get_allowance(&env, property_id, &owner, &spender);
+        let new_allowance = current.checked_add(delta).expect("allowance overflow");
+        set_allowance(&env, property_id, &owner, &spender, new_allowance);
+    }
+
+    /// Atomically decrease the spender's allowance by `delta`, saturating at 0.
+    /// If `delta` exceeds the current allowance the allowance is set to zero.
+    pub fn decrease_allowance(
+        env: Env,
+        owner: Address,
+        spender: Address,
+        property_id: u64,
+        delta: u64,
+    ) {
+        owner.require_auth();
+        let current = get_allowance(&env, property_id, &owner, &spender);
+        let new_allowance = current.saturating_sub(delta);
+        set_allowance(&env, property_id, &owner, &spender, new_allowance);
     }
 }

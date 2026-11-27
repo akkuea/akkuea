@@ -4912,7 +4912,7 @@ pub mod tests {
         s.usdc.mint(&s.payout_id, &100_000);
 
         // Cycle 1: 101 income => 10 fee, 91 holder pool => 30*3=90 paid, 1 dust
-        let c1 = cycle(&s.env, "dust-c1");
+        let c1 = cycle(&s.env, "2026-01");
         s.payout.record_evidence(
             &s.operator,
             &s.ally,
@@ -4928,7 +4928,7 @@ pub mod tests {
         assert_eq!(s.payout.total_dust(), 1);
 
         // Cycle 2: 101 income => 1 dust
-        let c2 = cycle(&s.env, "dust-c2");
+        let c2 = cycle(&s.env, "2026-02");
         s.payout.record_evidence(
             &s.operator,
             &s.ally,
@@ -4944,7 +4944,7 @@ pub mod tests {
         assert_eq!(s.payout.total_dust(), 2);
 
         // Cycle 3: 104 income => 10 fee, 94 holder pool => 31*3=93 paid, 1 dust
-        let c3 = cycle(&s.env, "dust-c3");
+        let c3 = cycle(&s.env, "2026-03");
         s.payout.record_evidence(
             &s.operator,
             &s.ally,

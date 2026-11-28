@@ -21,23 +21,33 @@ const isStellarPublicKey = (val: string): boolean => {
 const PRIVY_WALLET_ID_REGEX = /^[a-zA-Z0-9_\-:]+$/;
 const BASE64_REGEX = /^[A-Za-z0-9+/]+={0,2}$/;
 
+/**
+ * Zod 4 replaced `required_error` with a single `error` option. Returning
+ * `undefined` for anything but a missing value keeps the default message for
+ * wrong-type input, which is what `required_error` did.
+ */
+const requiredError =
+  (field: string) =>
+  (issue: { input?: unknown }): string | undefined =>
+    issue.input === undefined ? `${field} is required` : undefined;
+
 const signBodySchema = z.object({
   walletId: z
-    .string()
+    .string({ error: requiredError("walletId") })
     .min(1, "walletId is required")
     .max(128, "walletId is too long")
     .regex(PRIVY_WALLET_ID_REGEX, "Invalid walletId format"),
   address: z
-    .string()
+    .string({ error: requiredError("address") })
     .length(56, "address must be exactly 56 characters")
     .refine(isStellarPublicKey, "Invalid Stellar public key"),
   txXdr: z
-    .string()
+    .string({ error: requiredError("txXdr") })
     .min(1, "txXdr is required")
     .max(65536, "txXdr exceeds maximum allowed size")
     .regex(BASE64_REGEX, "Invalid txXdr base64 format"),
   networkPassphrase: z
-    .string()
+    .string({ error: requiredError("networkPassphrase") })
     .min(1, "networkPassphrase is required")
     .max(256, "networkPassphrase is too long"),
 });

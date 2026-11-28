@@ -27,6 +27,34 @@ const isOperatorConfigured =
   typeof process !== "undefined" &&
   Boolean(process.env.NEXT_PUBLIC_PILOT_OPERATOR_ADDRESS);
 
+export type PilotLink = { key: string; href: string };
+
+/**
+ * Returns the pilot navigation links based on operator configuration.
+ * Public links (investor, onboarding) are always included.
+ * Operator-only links (ally, review) are included when
+ * NEXT_PUBLIC_PILOT_OPERATOR_ADDRESS is set.
+ */
+export function getPilotLinks(operatorConfigured: boolean): PilotLink[] {
+  const publicLinks: PilotLink[] = [
+    { key: "pilotInvestor", href: "/pilot/investor" },
+    { key: "pilotOnboarding", href: "/pilot/onboarding" },
+  ];
+  if (!operatorConfigured) return publicLinks;
+  return [
+    ...publicLinks,
+    { key: "pilotAlly", href: "/pilot/ally" },
+    { key: "pilotReview", href: "/pilot/review/whitelist" },
+  ];
+}
+
+/**
+ * Returns true when the given pathname matches or is under the given href.
+ */
+export function isNavItemActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(href + "/");
+}
+
 export function Navbar() {
   const pathname = usePathname();
   useTheme();
@@ -40,35 +68,21 @@ export function Navbar() {
     { name: t("lending"), href: "/lending", icon: Landmark },
   ];
 
-  const pilotPublicLinks = [
-    {
-      name: t("pilotInvestor"),
-      href: "/pilot/investor",
-      icon: HandCoins,
-    },
-    {
-      name: t("pilotOnboarding"),
-      href: "/pilot/onboarding",
-      icon: Rocket,
-    },
-  ];
+  const pilotIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    pilotInvestor: HandCoins,
+    pilotOnboarding: Rocket,
+    pilotAlly: UserCheck,
+    pilotReview: ClipboardCheck,
+  };
 
-  const pilotOperatorLinks = isOperatorConfigured
-    ? [
-        {
-          name: t("pilotAlly"),
-          href: "/pilot/ally",
-          icon: UserCheck,
-        },
-        {
-          name: t("pilotReview"),
-          href: "/pilot/review/whitelist",
-          icon: ClipboardCheck,
-        },
-      ]
-    : [];
+  const pilotLinks = getPilotLinks(isOperatorConfigured);
+  const pilotNavItems = pilotLinks.map((l) => ({
+    name: t(l.key as Parameters<typeof t>[0]),
+    href: l.href,
+    icon: pilotIconMap[l.key],
+  }));
 
-  const allLinks = [...navigation, ...pilotPublicLinks, ...pilotOperatorLinks];
+  const allLinks = [...navigation, ...pilotNavItems];
 
   return (
     <motion.header
@@ -120,9 +134,8 @@ export function Navbar() {
             {/* Pilot separator and links */}
             <span className="mx-1 h-4 w-px bg-[#262626]" aria-hidden="true" />
 
-            {[...pilotPublicLinks, ...pilotOperatorLinks].map((item) => {
-              const isActive =
-                pathname === item.href || pathname.startsWith(item.href + "/");
+            {pilotNavItems.map((item) => {
+              const isActive = isNavItemActive(pathname, item.href);
               return (
                 <Link
                   key={item.name}
@@ -190,9 +203,7 @@ export function Navbar() {
             >
               <div className="py-3 space-y-1">
                 {allLinks.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    pathname.startsWith(item.href + "/");
+                  const isActive = isNavItemActive(pathname, item.href);
                   return (
                     <Link
                       key={item.name}

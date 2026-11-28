@@ -12,12 +12,48 @@ import {
   LayoutDashboard,
   Store,
   Landmark,
+  Rocket,
+  UserCheck,
+  HandCoins,
+  ClipboardCheck,
 } from "lucide-react";
 import { useTheme } from "@/context/ThemeContext";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/layout/BrandLogo";
 import { WalletStatusWidget } from "@/components/layout/WalletStatusWidget";
 import { LanguageSelector } from "@/components/layout/LanguageSelector";
+
+const isOperatorConfigured =
+  typeof process !== "undefined" &&
+  Boolean(process.env.NEXT_PUBLIC_PILOT_OPERATOR_ADDRESS);
+
+export type PilotLink = { key: string; href: string };
+
+/**
+ * Returns the pilot navigation links based on operator configuration.
+ * Public links (investor, onboarding) are always included.
+ * Operator-only links (ally, review) are included when
+ * NEXT_PUBLIC_PILOT_OPERATOR_ADDRESS is set.
+ */
+export function getPilotLinks(operatorConfigured: boolean): PilotLink[] {
+  const publicLinks: PilotLink[] = [
+    { key: "pilotInvestor", href: "/pilot/investor" },
+    { key: "pilotOnboarding", href: "/pilot/onboarding" },
+  ];
+  if (!operatorConfigured) return publicLinks;
+  return [
+    ...publicLinks,
+    { key: "pilotAlly", href: "/pilot/ally" },
+    { key: "pilotReview", href: "/pilot/review/whitelist" },
+  ];
+}
+
+/**
+ * Returns true when the given pathname matches or is under the given href.
+ */
+export function isNavItemActive(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(href + "/");
+}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -31,6 +67,22 @@ export function Navbar() {
     { name: t("tokenize"), href: "/tokenize", icon: Building2 },
     { name: t("lending"), href: "/lending", icon: Landmark },
   ];
+
+  const pilotIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+    pilotInvestor: HandCoins,
+    pilotOnboarding: Rocket,
+    pilotAlly: UserCheck,
+    pilotReview: ClipboardCheck,
+  };
+
+  const pilotLinks = getPilotLinks(isOperatorConfigured);
+  const pilotNavItems = pilotLinks.map((l) => ({
+    name: t(l.key as Parameters<typeof t>[0]),
+    href: l.href,
+    icon: pilotIconMap[l.key],
+  }));
+
+  const allLinks = [...navigation, ...pilotNavItems];
 
   return (
     <motion.header
@@ -46,6 +98,7 @@ export function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
+            {/* Core links */}
             {navigation.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -77,6 +130,42 @@ export function Navbar() {
                 </Link>
               );
             })}
+
+            {/* Pilot separator and links */}
+            <span className="mx-1 h-4 w-px bg-[#262626]" aria-hidden="true" />
+
+            {pilotNavItems.map((item) => {
+              const isActive = isNavItemActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "relative px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 cursor-pointer",
+                    isActive
+                      ? "text-white"
+                      : "text-neutral-500 hover:text-white",
+                  )}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="navbar-active-pilot"
+                      className="absolute inset-0 bg-[#1a1a1a] rounded-md border border-[#262626]"
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 30,
+                      }}
+                    />
+                  )}
+                  <span className="relative flex items-center gap-1.5">
+                    <item.icon className="w-3.5 h-3.5" />
+                    {item.name}
+                  </span>
+                </Link>
+              );
+            })}
           </div>
 
           {/* Right Side Actions */}
@@ -89,6 +178,8 @@ export function Navbar() {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 rounded-md text-neutral-500 hover:text-white hover:bg-[#1a1a1a] transition-colors cursor-pointer"
               aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu"
             >
               {mobileMenuOpen ? (
                 <X className="w-4 h-4" />
@@ -103,6 +194,7 @@ export function Navbar() {
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
+              id="mobile-menu"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
@@ -110,13 +202,14 @@ export function Navbar() {
               className="md:hidden border-t border-[#262626] overflow-hidden"
             >
               <div className="py-3 space-y-1">
-                {navigation.map((item) => {
-                  const isActive = pathname === item.href;
+                {allLinks.map((item) => {
+                  const isActive = isNavItemActive(pathname, item.href);
                   return (
                     <Link
                       key={item.name}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
+                      aria-current={isActive ? "page" : undefined}
                       className={cn(
                         "flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-medium transition-colors cursor-pointer",
                         isActive

@@ -410,3 +410,18 @@ pub fn emit_role_rotation_cancelled(env: &Env, role: RotationRole, admin: Addres
         RoleRotationCancelledEvent { role, admin },
     );
 }
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DustReleasedEvent {
+    pub recipient: Address,
+    pub amount: i128,
+}
+
+/// Emitted when accumulated rounding dust is released from the contract.
+pub fn emit_dust_released(env: &Env, recipient: Address, amount: i128) {
+    env.events().publish(
+        (symbol_short!("dust_rel"),),
+        DustReleasedEvent { recipient, amount },
+    );
+}

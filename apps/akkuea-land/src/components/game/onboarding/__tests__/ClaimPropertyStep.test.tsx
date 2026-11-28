@@ -8,18 +8,10 @@
  * signAndSubmitTx.
  */
 
-// @ts-expect-error: jsdom types not fully compatible with bun runtime
-import { JSDOM } from "jsdom";
-
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost",
-});
-globalThis.window = dom.window as any;
-globalThis.document = dom.window.document as any;
-globalThis.navigator = dom.window.navigator as any;
-globalThis.HTMLElement = dom.window.HTMLElement as any;
-globalThis.MutationObserver = dom.window.MutationObserver as any;
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
+// All land tests share one JSDOM realm (see src/test/setupJsdom.ts).
+// axe-core captures window/document when it is first imported, so renders
+// and axe.run calls must use the same realm or axe rejects the container.
+import { ensureSharedDom } from "@/test/setupJsdom";
 
 import { beforeEach, describe, expect, it, mock, vi } from "bun:test";
 import React from "react";
@@ -74,6 +66,8 @@ vi.mock("@/hooks/useGameWallet", () => ({
 
 import { ClaimPropertyStep } from "../ClaimPropertyStep";
 import { TxNotConfirmedError } from "@/lib/tx-confirmation";
+
+beforeEach(ensureSharedDom);
 
 beforeEach(() => {
   cleanup();

@@ -162,11 +162,7 @@
     "tokenize": "Tokenize",
     "lending": "Lending",
     "map": "Map",
-    "connect": "Connect",
-    "pilotInvestor": "Investor",
-    "pilotOnboarding": "Join Pilot",
-    "pilotAlly": "Ally",
-    "pilotReview": "Review"
+    "connect": "Connect"
   },
   "Treasury": {
     "title": "Treasury",
@@ -211,6 +207,94 @@
     "title": "Admin"
   },
   "Pilot": {
+    "whitelist": {
+      "onboarding": {
+        "metadataTitle": "Whitelist Onboarding",
+        "title": "Investor Onboarding",
+        "subtitle": "Pilot Program Whitelist Request",
+        "statusLoading": "Loading your whitelist status...",
+        "emptyTitle": "No Whitelist Application",
+        "emptyDescription": "You haven't submitted a whitelist application yet. Start your application to join the pilot.",
+        "startApplication": "Start Application",
+        "pendingTitle": "Review Pending",
+        "pendingDescription": "Your whitelist request is currently under review by the operator. Please check back later.",
+        "approvedTitle": "You're Whitelisted!",
+        "approvedDescription": "Your address has been approved for the pilot. You can now participate in offerings.",
+        "rejectedTitle": "Application Rejected",
+        "rejectedDescription": "Unfortunately, your whitelist application was rejected.",
+        "rejectionReasonLabel": "Reason:",
+        "reapply": "Re-apply",
+        "submitFailed": "Failed to submit whitelist request",
+        "steps": {
+          "personal": {
+            "title": "Personal Details",
+            "description": "Your name and ID type"
+          },
+          "wallet": {
+            "title": "Wallet Connection",
+            "description": "Connect Stellar address"
+          },
+          "review": {
+            "title": "Review",
+            "description": "Submit application"
+          }
+        },
+        "fields": {
+          "fullName": "Full Name",
+          "fullNamePlaceholder": "John Doe",
+          "idType": "Government ID Type",
+          "idReference": "ID Reference Number",
+          "idReferencePlaceholder": "Document Number",
+          "idTypes": {
+            "passport": "Passport",
+            "national_id": "National ID",
+            "drivers_license": "Driver's License"
+          }
+        },
+        "walletStepTitle": "Connect Your Wallet",
+        "walletStepDescription": "Please connect your Stellar wallet to associate it with your whitelist application.",
+        "connectWallet": "Connect Wallet",
+        "summary": {
+          "name": "Name",
+          "idType": "ID Type",
+          "idReference": "ID Ref",
+          "wallet": "Wallet",
+          "disclaimer": "By submitting this form, you confirm that the information provided is accurate and you agree to the pilot terms and conditions."
+        },
+        "back": "Back",
+        "continue": "Continue",
+        "submit": "Submit Request"
+      },
+      "review": {
+        "metadataTitle": "Whitelist Review",
+        "pageTitle": "Pilot Whitelist Queue",
+        "loading": "Loading pending requests...",
+        "loadFailed": "Failed to load whitelist queue",
+        "emptyTitle": "No Pending Requests",
+        "emptyDescription": "There are no whitelist requests waiting for review in the queue.",
+        "pendingBadge": "Pending",
+        "reviewAction": "Review",
+        "modalTitle": "Review Whitelist Request",
+        "modalDescription": "Reviewing application for {name}",
+        "rejectionReasonLabel": "Rejection Reason (Optional)",
+        "rejectionReasonPlaceholder": "Required if rejecting...",
+        "reasonRequired": "A reason is required when rejecting a request.",
+        "reject": "Reject Request",
+        "approve": "Approve & Whitelist",
+        "rejectFailed": "Failed to reject request",
+        "approveFailed": "Failed to approve request",
+        "fields": {
+          "fullName": "Full Name",
+          "wallet": "Wallet:",
+          "walletAddress": "Wallet Address",
+          "idType": "ID Type:",
+          "idTypeModal": "ID Type",
+          "idReference": "ID Ref:",
+          "idReferenceFull": "ID Reference Number",
+          "submitted": "Submitted:"
+        }
+      }
+    },
     "ally": {
       "pageTitle": "Report income evidence",
       "pageSubtitle": "Submit this cycle's income statement and follow it through review. The file stays on your device: only its hash reaches the chain."

@@ -1613,6 +1613,7 @@ name = "rwa-defi-contract"
 version = "0.0.0"
 dependencies = [
  "itoa",
+ "pilot-whitelist",
  "proptest",
  "soroban-sdk",
 ]

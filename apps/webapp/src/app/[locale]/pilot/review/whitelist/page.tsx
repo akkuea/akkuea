@@ -9,20 +9,24 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "PilotAdmin" });
+  const t = await getTranslations({
+    locale,
+    namespace: "Pilot.whitelist.review",
+  });
+  const tAdmin = await getTranslations({ locale, namespace: "PilotAdmin" });
   return {
-    title: `Whitelist Review | ${t("title", { fallback: "Admin" })}`,
+    title: `${t("metadataTitle")} | ${tAdmin("title")}`,
   };
 }
 
-export default function PilotReviewWhitelistPage() {
+export default async function PilotReviewWhitelistPage() {
+  const t = await getTranslations("Pilot.whitelist.review");
+
   return (
     <div className="noise-bg w-full h-full min-h-screen relative py-20 px-[4%]">
       <GridBackground />
       <div className="max-w-6xl mx-auto relative z-10">
-        <h1 className="text-3xl font-bold text-white mb-8">
-          Pilot Whitelist Queue
-        </h1>
+        <h1 className="text-3xl font-bold text-white mb-8">{t("pageTitle")}</h1>
         <ErrorBoundary>
           <WhitelistReviewQueue />
         </ErrorBoundary>

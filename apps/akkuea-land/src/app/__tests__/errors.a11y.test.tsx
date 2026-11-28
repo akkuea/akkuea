@@ -1,18 +1,17 @@
-// @ts-expect-error: jsdom types not fully compatible with bun runtime
-import { JSDOM } from "jsdom";
+// All land tests share one JSDOM realm (see src/test/setupJsdom.ts).
+// axe-core captures window/document when it is first imported, so renders
+// and axe.run calls must use the same realm or axe rejects the container.
+import { ensureSharedDom } from "@/test/setupJsdom";
 
-const dom = new JSDOM("<!doctype html><html><body></body></html>", {
-  url: "http://localhost",
-});
-(dom.window as any).fetch = fetch;
-globalThis.window = dom.window as any;
-globalThis.document = dom.window.document as any;
-globalThis.navigator = dom.window.navigator as any;
-globalThis.HTMLElement = dom.window.HTMLElement as any;
-globalThis.MutationObserver = dom.window.MutationObserver as any;
-(globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
-
-import { afterEach, describe, expect, it, mock, vi } from "bun:test";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  mock,
+  vi,
+} from "bun:test";
 import React from "react";
 import { cleanup, fireEvent } from "@testing-library/react";
 import axe from "axe-core";
@@ -36,6 +35,8 @@ import MapError from "../[locale]/map/error";
 import MarketplaceError from "../[locale]/marketplace/error";
 import LoginError from "../[locale]/(auth)/login/error";
 import NotFound from "../[locale]/not-found";
+
+beforeEach(ensureSharedDom);
 
 const AXE_OPTIONS: axe.RunOptions = {
   runOnly: { type: "tag", values: ["wcag2a", "wcag2aa"] },

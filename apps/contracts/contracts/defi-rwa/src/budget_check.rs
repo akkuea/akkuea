@@ -245,6 +245,33 @@ fn assert_budget(env: &Env, label: &str, max_cpu: u64, max_mem: u64) {
 // ───────────────────────────────────────────────
 
 #[test]
+fn budget_check_purchase_shares_with_registry() {
+    use pilot_whitelist::{PilotWhitelist, PilotWhitelistClient};
+
+    let s = budget_setup();
+    let buyer = Address::generate(&s.env);
+    let owner = Address::generate(&s.env);
+    let registry = s.env.register(PilotWhitelist, (&s.admin,));
+    PilotWhitelistClient::new(&s.env, &registry).approve(&s.admin, &buyer);
+    s.client.set_investor_registry(&s.admin, &registry);
+    s.client
+        .list_property(&s.admin, &1, &owner, &100, &10, &s.token_address);
+    StellarAssetClient::new(&s.env, &s.token_address).mint(&buyer, &100);
+
+    s.env.cost_estimate().budget().reset_unlimited();
+    let result = s
+        .client
+        .try_purchase_shares(&buyer, &1, &1, &s.token_address);
+    assert_invocation_ok!(result, "purchase_shares_with_registry");
+    assert_budget(
+        &s.env,
+        "purchase_shares_with_registry",
+        10_000_000,
+        4_000_000,
+    );
+}
+
+#[test]
 fn budget_check_mint_shares() {
     let s = budget_setup();
     let recipient = Address::generate(&s.env);
@@ -397,6 +424,7 @@ fn budget_check_borrow() {
     let oracle_client = MockOracleContractClient::new(&s.env, &oracle_address);
     s.client.set_oracle(&oracle_address, &s.admin);
     oracle_client.set_price(&collateral_address, &(2 * PRECISION), &1000_u64);
+    oracle_client.set_price(&s.token_address, &PRECISION, &1000_u64);
 
     // Seed pool liquidity
     let lp = Address::generate(&s.env);
@@ -454,6 +482,7 @@ fn budget_check_repay() {
     let oracle_client = MockOracleContractClient::new(&s.env, &oracle_address);
     s.client.set_oracle(&oracle_address, &s.admin);
     oracle_client.set_price(&collateral_address, &(2 * PRECISION), &1000_u64);
+    oracle_client.set_price(&s.token_address, &PRECISION, &1000_u64);
 
     // Seed pool
     let lp = Address::generate(&s.env);
